@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Matjakt hjälper dig hitta veckans billigaste middagar utifrån din budget.">
+  <title>Matjakt – billigare middagar varje vecka</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css?v=3">
+</head>
+<body>
+  <header class="topbar"><div><div class="wordmark">Matjakt<span>.</span></div><p class="tagline">Veckans godaste beslut.</p></div><div class="week-tag"><span>VECKA</span> <strong id="weekTag">v. 35</strong></div></header>
+  <nav class="app-nav" aria-label="Snabbnavigering"><a href="#recipesHeading">Meny</a><a href="#basketHeading">Inköpslista</a></nav>
+  <main class="app" id="top">
+    <section class="intro"><p class="eyebrow">DIN PERSONLIGA VECKOMENY</p><h1>God mat.<br><em>Rätt pris.</em></h1><p>Vi sätter ihop en genomtänkt veckomeny och visar exakt vad den kostar i butik.</p></section>
+    <section class="panel budget-panel" aria-labelledby="settingsHeading">
+      <h2 class="sr-only" id="settingsHeading">Inställningar för veckomenyn</h2>
+      <label class="panel-label" for="postcodeInput">Ditt postnummer</label>
+      <div class="location-row"><input id="postcodeInput" class="postcode-input" value="80313" inputmode="numeric" maxlength="5" aria-describedby="locationHint"><button class="location-btn" id="locateBtn" type="button">Hitta mig</button></div>
+      <p class="location-hint" id="locationHint">Vi jämför butiker nära dig.</p>
+      <label class="panel-label" for="storeInput">Vilken butik handlar du i?</label>
+      <select id="storeInput" class="store-input">
+        <option value="auto">Billigast automatiskt</option>
+        <option value="alla">Alla butiker</option>
+        <option value="ICA">ICA</option>
+        <option value="Willys">Willys</option>
+        <option value="Hemköp">Hemköp</option>
+        <option value="Coop">Coop</option>
+      </select>
+      <label class="panel-label" for="budgetInput">Veckobudget</label><div class="budget-row"><input type="number" id="budgetInput" class="budget-input" value="800" min="0" step="50" inputmode="numeric"><span class="budget-currency">kr</span></div>
+      <div class="settings-grid">
+        <div><span class="panel-label">Personer</span><div class="stepper"><button class="stepper-btn" id="peopleMinus" aria-label="Färre personer">−</button><span class="stepper-value" id="peopleValue" aria-live="polite">2</span><button class="stepper-btn" id="peoplePlus" aria-label="Fler personer">+</button></div></div>
+        <div><span class="panel-label">Middagar</span><div class="stepper"><button class="stepper-btn" id="mealsMinus" aria-label="Färre middagar">−</button><span class="stepper-value" id="mealsValue" aria-live="polite">4</span><button class="stepper-btn" id="mealsPlus" aria-label="Fler middagar">+</button></div></div>
+      </div><button class="primary-btn" id="generateBtn">Skapa min veckomeny <span aria-hidden="true">→</span></button>
+    </section>
+    <section class="recipes-section" aria-labelledby="recipesHeading"><div class="section-heading"><div><p class="eyebrow">FÖRSLAG FÖR DIG</p><h2 id="recipesHeading">Veckans middagar</h2></div><button class="refresh-btn" id="refreshBtn">↻ Byt förslag</button></div><div class="recipe-search"><label class="sr-only" for="recipeSearch">Sök recept eller ingrediens</label><input id="recipeSearch" type="search" placeholder="Sök recept, ingrediens eller smak..." autocomplete="off"><span aria-hidden="true">⌕</span></div><div class="recipe-filters"><select id="categoryFilter" aria-label="Filtrera kategori"><option value="alla">Alla kategorier</option><option value="Vegetarisk">Vegetariskt</option><option value="Fisk">Fisk</option><option value="Familjefavorit">Familjefavorit</option><option value="Snabbt & enkelt">Snabbt & enkelt</option></select><select id="timeFilter" aria-label="Filtrera tillagningstid"><option value="0">Alla tider</option><option value="30">Max 30 min</option><option value="20">Max 20 min</option></select><label class="diet-toggle"><input id="favoriteFilter" type="checkbox"> Bara favoriter</label></div><div class="live-products" id="liveProducts"></div><p class="section-help" id="menuSummary"></p><div class="recipe-scroll" id="recipeScroll"></div></section>
+    <section class="basket" id="basketCard" aria-labelledby="basketHeading"><div class="basket-head"><div><p class="eyebrow">DIN PLAN</p><h2 id="basketHeading">Din veckokasse</h2></div><span id="basketCount">0 middagar</span></div><div id="basketLines"></div><div class="shopping-list" id="shoppingList"></div><div class="store-summary" id="storeSummary"></div><div class="basket-totals"><div><span>Att betala i butik</span><strong id="basketTotal">0 kr</strong></div><div class="remaining" id="basketRemainingRow"><span>Kvar av budgeten</span><strong id="basketRemaining">0 kr</strong></div></div><p class="cost-note">Priset avser hela förpackningar. Basvaror markerade ”hemma” ingår inte i summan.</p></section>
+  </main><nav class="bottom-nav" aria-label="Huvudmeny"><button class="bottom-nav-item active" type="button" data-view="home"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 22V12h6v10"/></svg></span><small>Hem</small></button><button class="bottom-nav-item" type="button" data-view="recipes"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></span><small>Recept</small></button><button class="bottom-nav-item" type="button" data-view="basket"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 13H5L6 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg></span><small>Inköpslista</small></button><button class="bottom-nav-item" type="button" data-view="pantry"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16v14H4z"/><path d="M8 7V4h8v3M8 11h8M8 15h5"/></svg></span><small>Skafferi</small></button></nav>
+  <section class="recipe-page" id="recipePage" hidden></section><script src="app.js?v=20"></script>
+</body></html>
