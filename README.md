@@ -33,6 +33,17 @@ playwright install chromium
 python ica_scraper.py
 ```
 
+### Starta Matjakt API
+
+```bash
+cd backend
+python api_server.py
+```
+
+API:t kör därefter på `http://127.0.0.1:8000`. Om frontend ligger på en annan
+adress vid hosting kan CORS-adressen ställas med miljövariabeln
+`MATJAKT_FRONTEND_ORIGIN`.
+
 **Viktigt:** CSS-selektorerna i scraperfilerna (t.ex. `[data-testid=product-price]`)
 är gissningar. Öppna respektive butiks webbplats i Chrome, tryck F12,
 högerklicka på "Välj butik"-knappen och på priset → Inspect, och

@@ -7,6 +7,7 @@ before deploying this publicly.
 """
 
 import json
+import os
 import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, urlparse
@@ -15,6 +16,7 @@ from playwright.sync_api import sync_playwright
 
 HOST = "127.0.0.1"
 PORT = 8000
+ALLOWED_ORIGIN = os.environ.get("MATJAKT_FRONTEND_ORIGIN", "http://localhost:5500")
 
 STORE_CONFIG = {
     "Willys": {
@@ -85,7 +87,7 @@ class ApiHandler(BaseHTTPRequestHandler):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "http://localhost:5500")
+        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
         self.send_header("Cache-Control", "public, max-age=900")
         self.end_headers()
         self.wfile.write(body)
