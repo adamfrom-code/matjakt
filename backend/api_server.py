@@ -9,13 +9,15 @@ before deploying this publicly.
 import json
 import os
 import re
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, quote, urlparse
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from playwright.sync_api import sync_playwright
+from services.recipe_providers import RecipeService, TheMealDbProvider
 
-HOST = "127.0.0.1"
-PORT = 8000
+HOST = os.environ.get("MATJAKT_HOST", "127.0.0.1")
+PORT = int(os.environ.get("MATJAKT_PORT", "8000"))
 ALLOWED_ORIGIN = os.environ.get("MATJAKT_FRONTEND_ORIGIN", "http://localhost:5500")
 
 STORE_CONFIG = {
@@ -47,6 +49,8 @@ STORE_CONFIG = {
 DEFAULT_ZIP = "11122"
 ICA_STORE_CACHE = {}
 CACHE = {}
+RECIPE_SERVICE = RecipeService([TheMealDbProvider()])
+FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 
 
 def clean_text(value):
@@ -162,7 +166,10 @@ def parse_products(page, chain, query):
     return products[:20]
 
 
-class ApiHandler(BaseHTTPRequestHandler):
+class ApiHandler(SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(FRONTEND_DIR), **kwargs)
+
     def send_json(self, status, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -175,16 +182,42 @@ class ApiHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/api/health":
-            self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG)})
+            self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG), "recipeProviders": sorted(RECIPE_SERVICE.providers)})
+            return
+        if parsed.path == "/api/v1/recipes/search":
+            query = clean_text(parse_qs(parsed.query).get("q", [""])[0])
+            if not 2 <= len(query) <= 100:
+                self.send_json(400, {"error": "Ange en receptsökning på 2–100 tecken"})
+                return
+            try:
+                recipes = [recipe.to_dict() for recipe in RECIPE_SERVICE.search(query)]
+                self.send_json(200, {"recipes": recipes})
+            except Exception:
+                self.send_json(502, {"error": "Receptkällan svarar inte just nu"})
+            return
+        recipe_prefix = "/api/v1/recipes/"
+        if parsed.path.startswith(recipe_prefix):
+            recipe_id = unquote(parsed.path[len(recipe_prefix):])
+            try:
+                recipe = RECIPE_SERVICE.get(recipe_id)
+                if not recipe:
+                    self.send_json(404, {"error": "Receptet hittades inte"})
+                else:
+                    self.send_json(200, {"recipe": recipe.to_dict()})
+            except Exception:
+                self.send_json(502, {"error": "Receptkällan svarar inte just nu"})
             return
         if parsed.path != "/api/products":
-            self.send_json(404, {"error": "Okänd endpoint"})
+            if parsed.path.startswith("/api/"):
+                self.send_json(404, {"error": "Okänd endpoint"})
+            else:
+                super().do_GET()
             return
         params = parse_qs(parsed.query)
         chain = params.get("butik", ["Willys"])[0]
         query = clean_text(params.get("q", [""])[0])
         zip_code = clean_text(params.get("zip", [DEFAULT_ZIP])[0]) or DEFAULT_ZIP
-        if chain not in STORE_CONFIG or len(query) < 2:
+        if chain not in STORE_CONFIG or not 2 <= len(query) <= 100 or not re.fullmatch(r"\d{5}", zip_code):
             self.send_json(400, {"error": "Ange butik Willys/Hemköp och en sökning på minst två tecken"})
             return
         try:
@@ -199,8 +232,8 @@ class ApiHandler(BaseHTTPRequestHandler):
             else:
                 products = CACHE.get(cache_key, [])
             self.send_json(200, {"butik": chain, "sokning": query, "produkter": products})
-        except Exception as error:
-            self.send_json(502, {"error": "Butikens webbsida kunde inte läsas", "detail": str(error)})
+        except Exception:
+            self.send_json(502, {"error": "Butikens webbsida kunde inte läsas"})
 
 
 if __name__ == "__main__":

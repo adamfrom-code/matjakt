@@ -1,0 +1,29 @@
+{
+  "name": "matjakt",
+  "version": "1.0.0",
+  "description": "En app där du anger hur mycket pengar du har att handla mat för denna\r vecka och antal personer i hushållet, och får receptförslag +\r inköpslista baserat på de billigaste priserna hos butiker i din närhet.",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test && python -m unittest discover -s backend/tests",
+    "check": "node --check frontend/app.js && python -m compileall -q backend",
+    "frontend": "python -m http.server 5500 --directory frontend",
+    "backend": "python backend/api_server.py"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adamfrom-code/matjakt.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/adamfrom-code/matjakt/issues"
+  },
+  "homepage": "https://github.com/adamfrom-code/matjakt#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0"
+  }
+}

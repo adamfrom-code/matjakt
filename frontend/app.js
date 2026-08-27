@@ -1,3 +1,9 @@
+import { readStoredState, writeStoredState } from "./src/state/storage.js";
+import { aggregateIngredients, budgetRemaining, calculateShoppingTotal, portionFactor } from "./src/services/calculations.js";
+import { filterRecipes } from "./src/services/recipe-search.js";
+import { productApiUrl as configuredProductApiUrl, recipeDetailApiUrl, recipeSearchApiUrl } from "./src/api/config.js";
+import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
+
 const RECEPT = [
   { id: "kycklinggryta", namn: "Kycklinggryta med ris", emoji: "🍛", butik: "Willys", tid: 30, typ: "Familjefavorit", portionspris: 24.5, inkopspris: 105.3, sparar: 31, ingredienser: ["Kycklinglårfilé", "Ris", "Kokosmjölk", "Curry & grönsaker"], hemma: ["Olja", "Salt"] },
   { id: "pastagratang", namn: "Pastagratäng med purjolök", emoji: "🍝", butik: "ICA", tid: 35, typ: "Vegetarisk", portionspris: 18, inkopspris: 72.6, sparar: 22, ingredienser: ["Pasta", "Purjolök", "Grädde", "Riven ost"], hemma: ["Salt", "Peppar"] },
@@ -7,14 +13,12 @@ const RECEPT = [
   { id: "fiskpasta", namn: "Krämig fiskpasta", emoji: "🐟", butik: "Coop", tid: 30, typ: "Fisk", portionspris: 27, inkopspris: 109.5, sparar: 20, ingredienser: ["Fryst torsk", "Pasta", "Crème fraiche", "Citron"], hemma: ["Salt", "Peppar"] }
 ];
 
-const TILE_TONES = ["tone-a", "tone-b", "tone-c", "tone-d", "tone-e"];
-const tileTone = id => TILE_TONES[[...id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % TILE_TONES.length];
-const recipePhoto = recipe => recipe.bild ? `<img class="recipe-photo" src="${recipe.bild}" alt="${recipe.namn}" loading="lazy">` : `<span class="recipe-photo recipe-tile ${tileTone(recipe.id)}" role="img" aria-label="${recipe.namn}">${recipe.emoji || "🍽️"}</span>`;
+const recipePhoto = recipe => recipe.bild ? `<img class="recipe-photo" src="${recipe.bild}" alt="${recipe.namn}" loading="lazy">` : `<span class="recipe-photo recipe-fallback" role="img" aria-label="Ingen matbild tillgänglig"><svg viewBox="0 0 64 64"><path d="M14 48h36M18 44a14 14 0 0 1 28 0M32 20v10M27 20h10"/></svg><small>Matjakt</small></span>`;
 
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
-const savedState = JSON.parse(localStorage.getItem("matjakt-state") || "{}");
+const savedState = readStoredState(localStorage);
 const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80313", position: null, sokning: "", kategori: "alla", maxTid: 0, baraFavoriter: false, apiRecipes: [], pantry: savedState.pantry || {}, liveValda: savedState.liveValda || [], liveProdukter: [], liveProduktMap: {}, liveLaddar: new Set(), valdaProdukter: savedState.valdaProdukter || {}, antal: savedState.antal || {}, favoriter: new Set(savedState.favoriter || []), plan: savedState.plan || {}, valda: new Set(), avklarade: new Set(), expanded: null };
-function saveState() { localStorage.setItem("matjakt-state", JSON.stringify({ budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, pantry: state.pantry, liveValda: state.liveValda, liveProdukter: state.liveProdukter, valdaProdukter: state.valdaProdukter, antal: state.antal, favoriter: [...state.favoriter], plan: state.plan })); }
+function saveState() { writeStoredState(localStorage, { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, pantry: state.pantry, liveValda: state.liveValda, valdaProdukter: state.valdaProdukter, antal: state.antal, favoriter: [...state.favoriter], plan: state.plan }); }
 const BRANCHES = [
   { kedja: "ICA", namn: "ICA Strömsbro", postnummer: "80313", lat: 60.692, lon: 17.168, avstandKm: 2.1, prisfaktor: 0.96 },
   { kedja: "ICA", namn: "ICA Söder", postnummer: "80313", lat: 60.667, lon: 17.141, avstandKm: 3.3, prisfaktor: 1.04 },
@@ -42,23 +46,63 @@ const PRODUCT_CATALOG = {
   "Kycklinglårfilé": { namn: "Kycklinglårfilé", marke: "ICA", storlek: "ca 600 g", pris: 69.95 },
   "Lök & vitlök": { namn: "Gul lök & vitlök", marke: "ICA", storlek: "500 g", pris: 19.95 },
   "Morötter": { namn: "Morötter", marke: "ICA", storlek: "1 kg", pris: 14.95 },
-  "Röda linser": { namn: "Röda linser", marke: "ICA", storlek: "400 g", pris: 19.95 }
+  "Röda linser": { namn: "Röda linser", marke: "ICA", storlek: "400 g", pris: 19.95 },
+  "Falukorv": { namn: "Falukorv", marke: "Scan", storlek: "800 g", pris: 39.95 },
+  "Tomatpuré": { namn: "Tomatpuré", marke: "Mutti", storlek: "140 g", pris: 14.95 },
+  "Fryst torsk": { namn: "Fryst torskfilé", marke: "Findus", storlek: "450 g", pris: 59.95 },
+  "Citron": { namn: "Citron", marke: "ICA", storlek: "1 st", pris: 6.95 },
+  "Laxfilé": { namn: "Laxfilé", marke: "ICA", storlek: "ca 600 g", pris: 89.95 },
+  "Dill": { namn: "Dill", marke: "ICA", storlek: "1 knippe", pris: 12.95 },
+  "Kidneybönor": { namn: "Kidneybönor", marke: "ICA", storlek: "400 g", pris: 13.95 },
+  "Paprika": { namn: "Paprika", marke: "ICA", storlek: "1 st", pris: 9.95 },
+  "Halloumi": { namn: "Halloumi", marke: "Arla", storlek: "225 g", pris: 44.95 },
+  "Matvete": { namn: "Matvete", marke: "Kungsörnen", storlek: "500 g", pris: 24.95 },
+  "Yoghurt": { namn: "Turkisk yoghurt", marke: "Arla", storlek: "500 g", pris: 24.95 },
+  "Kycklingfilé": { namn: "Kycklingfilé", marke: "ICA", storlek: "ca 500 g", pris: 79.95 },
+  "Äggnudlar": { namn: "Äggnudlar", marke: "Santa Maria", storlek: "250 g", pris: 19.95 },
+  "Wokgrönsaker": { namn: "Wokgrönsaker", marke: "Findus", storlek: "400 g", pris: 29.95 },
+  "Soja": { namn: "Sojasås", marke: "Kikkoman", storlek: "150 ml", pris: 29.95 },
+  "Lök": { namn: "Gul lök", marke: "ICA", storlek: "1 st", pris: 3.95 },
+  "Basilika": { namn: "Basilika", marke: "ICA", storlek: "1 kruka", pris: 24.95 },
+  "Ägg": { namn: "Ägg", marke: "ICA", storlek: "6-pack", pris: 34.95 },
+  "Bär": { namn: "Frysta bär", marke: "ICA", storlek: "300 g", pris: 29.95 },
+  "Mjölk": { namn: "Mjölk", marke: "Arla", storlek: "1 l", pris: 12.95 },
+  "Krossade tomater": { namn: "Krossade tomater", marke: "ICA", storlek: "400 g", pris: 11.95 },
+  "Vetemjöl": { namn: "Vetemjöl", marke: "Kungsörnen", storlek: "2 kg", pris: 24.95 },
+  "Crème fraiche": { namn: "Crème fraiche", marke: "Arla", storlek: "2 dl", pris: 15.95 },
+  "Potatis": { namn: "Potatis", marke: "ICA", storlek: "2 kg", pris: 24.95 }
 };
-const PACKAGE_INFO = { Pasta: { amount: 500, unit: "g" }, Ris: { amount: 1000, unit: "g" }, Grädde: { amount: 200, unit: "ml" }, "Riven ost": { amount: 150, unit: "g" }, Majs: { amount: 340, unit: "g" }, "Svarta bönor": { amount: 380, unit: "g" }, "Röda linser": { amount: 400, unit: "g" }, Kokosmjölk: { amount: 400, unit: "ml" }, "Krossade tomater": { amount: 400, unit: "g" } };
+const PACKAGE_INFO = {
+  Pasta: { amount: 500, unit: "g" }, Ris: { amount: 1000, unit: "g" }, Grädde: { amount: 200, unit: "ml" },
+  "Riven ost": { amount: 150, unit: "g" }, Majs: { amount: 340, unit: "g" }, "Svarta bönor": { amount: 380, unit: "g" },
+  "Röda linser": { amount: 400, unit: "g" }, Kokosmjölk: { amount: 400, unit: "ml" }, "Krossade tomater": { amount: 400, unit: "g" },
+  Falukorv: { amount: 800, unit: "g" }, "Tomatpuré": { amount: 140, unit: "g" }, "Fryst torsk": { amount: 450, unit: "g" },
+  Citron: { amount: 1, unit: "st" }, "Laxfilé": { amount: 600, unit: "g" }, Dill: { amount: 1, unit: "st" },
+  "Kidneybönor": { amount: 400, unit: "g" }, Paprika: { amount: 1, unit: "st" }, Halloumi: { amount: 225, unit: "g" },
+  Matvete: { amount: 500, unit: "g" }, Yoghurt: { amount: 500, unit: "g" }, "Kycklingfilé": { amount: 500, unit: "g" },
+  "Äggnudlar": { amount: 250, unit: "g" }, Wokgrönsaker: { amount: 400, unit: "g" }, Soja: { amount: 150, unit: "ml" },
+  Lök: { amount: 1, unit: "st" }, Basilika: { amount: 1, unit: "st" }, Ägg: { amount: 6, unit: "st" }, Bär: { amount: 300, unit: "g" },
+  Mjölk: { amount: 1000, unit: "ml" }, Vetemjöl: { amount: 2000, unit: "g" }, "Kycklinglårfilé": { amount: 600, unit: "g" },
+  "Curry & grönsaker": { amount: 28, unit: "g" }, Salsa: { amount: 230, unit: "g" }, "Lök & vitlök": { amount: 500, unit: "g" },
+  Morötter: { amount: 1000, unit: "g" }, "Crème fraiche": { amount: 200, unit: "g" }, Potatis: { amount: 2000, unit: "g" }
+};
 const RECIPE_QUANTITIES = {
   pastagratang: { Pasta: [250, "g"], "Purjolök": [0.5, "st"], Grädde: [200, "ml"], "Riven ost": [100, "g"] },
-  fiskpasta: { Pasta: [250, "g"], "Crème fraiche": [200, "g"] },
-  kycklinggryta: { Ris: [250, "g"], Kokosmjölk: [400, "ml"] },
-  linssoppa: { "Röda linser": [250, "g"], Kokosmjölk: [400, "ml"] },
-  korvstroganoff: { Ris: [250, "g"], Grädde: [200, "ml"] },
-  tacobonor: { Ris: [250, "g"], Majs: [150, "g"], "Svarta bönor": [380, "g"] },
-  lax: { Potatis: [800, "g"] },
-  chili: { Majs: [150, "g"], "Svarta bönor": [380, "g"] },
-  pannkakor: { "Vetemjöl": [250, "g"], Mjölk: [600, "ml"] }
+  fiskpasta: { "Fryst torsk": [450, "g"], Pasta: [250, "g"], "Crème fraiche": [200, "g"], Citron: [1, "st"] },
+  kycklinggryta: { "Kycklinglårfilé": [600, "g"], Ris: [250, "g"], Kokosmjölk: [400, "ml"], "Curry & grönsaker": [28, "g"] },
+  linssoppa: { "Röda linser": [250, "g"], Kokosmjölk: [400, "ml"], Morötter: [300, "g"], "Lök & vitlök": [150, "g"] },
+  korvstroganoff: { Falukorv: [400, "g"], Grädde: [200, "ml"], "Tomatpuré": [70, "g"], Ris: [250, "g"] },
+  tacobonor: { "Svarta bönor": [380, "g"], Ris: [250, "g"], Majs: [150, "g"], Salsa: [230, "g"] },
+  lax: { "Laxfilé": [600, "g"], Potatis: [800, "g"], Citron: [1, "st"], Dill: [1, "st"] },
+  halloumibowl: { Halloumi: [225, "g"], Matvete: [250, "g"], Paprika: [1, "st"], Yoghurt: [200, "g"] },
+  chili: { "Kidneybönor": [400, "g"], "Krossade tomater": [400, "g"], Majs: [150, "g"], Paprika: [2, "st"] },
+  kycklingwok: { "Kycklingfilé": [500, "g"], "Äggnudlar": [250, "g"], Wokgrönsaker: [400, "g"], Soja: [30, "ml"] },
+  tomatsoppa: { "Krossade tomater": [400, "g"], Grädde: [200, "ml"], Lök: [2, "st"], Basilika: [1, "st"] },
+  pannkakor: { "Vetemjöl": [250, "g"], Mjölk: [600, "ml"], Ägg: [4, "st"], Bär: [300, "g"] }
 };
-function mapApiMeal(meal) {
-  const ingredients = Array.from({ length: 20 }, (_, index) => ({ name: meal[`strIngredient${index + 1}`], measure: meal[`strMeasure${index + 1}`] })).filter(item => item.name).map(item => `${item.measure || ""} ${item.name}`.trim());
-  return { id: `meal-${meal.idMeal}`, namn: meal.strMeal, emoji: "🍽️", butik: "alla", tid: 0, typ: meal.strCategory || "Recept", portionspris: 0, inkopspris: 0, sparar: 0, ingredienser: ingredients, hemma: [], beskrivning: meal.strArea ? `${meal.strArea}-inspirerad rätt från TheMealDB.` : "Recept från TheMealDB.", steg: (meal.strInstructions || "").split(/\r?\n/).map(step => step.trim()).filter(Boolean), bild: meal.strMealThumb };
+function mapApiRecipe(recipe) {
+  const ingredients = (recipe.ingredients || []).map(item => escapeHtml(`${item.measure || ""} ${item.name || ""}`.trim())).filter(Boolean);
+  return { id: recipe.id, provider: recipe.provider, providerRecipeId: recipe.providerRecipeId, namn: escapeHtml(recipe.title), butik: "alla", tid: Number(recipe.prepMinutes) || 0, typ: "Provider-recept", portionspris: 0, inkopspris: 0, sparar: 0, ingredienser: ingredients, hemma: [], beskrivning: "Recept från extern receptkälla.", steg: (recipe.instructions || []).map(escapeHtml), bild: safeHttpUrl(recipe.imageUrl), imageSource: recipe.imageSource, servings: recipe.servings };
 }
 RECEPT.push(
   { id: "lax", namn: "Ugnsbakad lax med potatis", emoji: "🐟", butik: "ICA", tid: 35, typ: "Fisk", portionspris: 29, inkopspris: 116, sparar: 24, ingredienser: ["Laxfilé", "Potatis", "Citron", "Dill"], hemma: ["Salt", "Olja"], beskrivning: "En enkel ugnsmiddag med citron och dill.", steg: ["Sätt ugnen på 200°C.", "Lägg lax och potatis i en form.", "Toppa med citron och dill och baka tills laxen är klar."] },
@@ -85,7 +129,28 @@ const RECIPE_DETAILS = {
 const $ = id => document.getElementById(id);
 const money = value => `${Math.round(value).toLocaleString("sv-SE")} kr`;
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-const scaledPurchasePrice = (recipe, branch = selectedBranch()) => recipe.inkopspris * Math.max(1, Math.ceil(state.personer / 4)) * (branch?.prisfaktor || 1);
+const scaledPurchasePrice = (recipe, branch = selectedBranch()) => recipe.inkopspris * portionFactor(state.personer) * (branch?.prisfaktor || 1);
+function shoppingListCost(selected, branch) {
+  const factor = branch?.prisfaktor || 1;
+  return calculateShoppingTotal(aggregateShopping(selected), PRODUCT_CATALOG, state.pantry, factor);
+}
+function combinations(list, size) {
+  if (size === 0) return [[]];
+  if (list.length < size) return [];
+  const [first, ...rest] = list;
+  return [...combinations(rest, size - 1).map(combo => [first, ...combo]), ...combinations(rest, size)];
+}
+function bestMenuCombo(recipes, count, budget, branch) {
+  if (!recipes.length) return [];
+  if (recipes.length <= count) return [...recipes];
+  let best = null, bestCost = -1, fallback = null, fallbackCost = Infinity;
+  combinations(recipes, count).forEach(combo => {
+    const cost = shoppingListCost(combo, branch);
+    if (cost <= budget && cost > bestCost) { best = combo; bestCost = cost; }
+    if (cost < fallbackCost) { fallback = combo; fallbackCost = cost; }
+  });
+  return best || fallback || [];
+}
 function distanceKm(lat1, lon1, lat2, lon2) {
   const earthRadius = 6371, latDelta = (lat2 - lat1) * Math.PI / 180, lonDelta = (lon2 - lon1) * Math.PI / 180;
   const a = Math.sin(latDelta / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(lonDelta / 2) ** 2;
@@ -95,9 +160,10 @@ function nearbyBranches() { return state.position ? BRANCHES : BRANCHES.filter(b
 function cheapestBranch(chain = null) {
   const branches = nearbyBranches().filter(branch => !chain || branch.kedja === chain);
   return branches.map(branch => {
-    const recipes = RECEPT.filter(recipe => recipe.butik === branch.kedja).sort((a, b) => a.portionspris - b.portionspris).slice(0, state.middagar);
+    const candidates = RECEPT.filter(recipe => recipe.butik === branch.kedja);
+    const recipes = bestMenuCombo(candidates, state.middagar, state.budget, branch);
     const avstandKm = state.position ? distanceKm(state.position.lat, state.position.lon, branch.lat, branch.lon) : branch.avstandKm;
-    return { ...branch, avstandKm, recipes, total: recipes.reduce((sum, recipe) => sum + scaledPurchasePrice(recipe, branch), 0) };
+    return { ...branch, avstandKm, recipes, total: shoppingListCost(recipes, branch) };
   }).filter(result => result.recipes.length).sort((a, b) => a.total - b.total || a.avstandKm - b.avstandKm)[0] || null;
 }
 function selectedBranch() { return state.butik === "auto" ? cheapestBranch() : cheapestBranch(state.butik); }
@@ -106,23 +172,27 @@ function cheapestStore() {
 }
 
 const chosenStore = () => cheapestStore()?.kedja || state.butik;
-const productApiUrl = (store, query) => `http://127.0.0.1:8000/api/products?butik=${encodeURIComponent(store)}&q=${encodeURIComponent(query)}&zip=${encodeURIComponent(state.postnummer)}`;
+const productApiUrl = (store, query) => configuredProductApiUrl(store, query, state.postnummer);
+function sanitizeApiPayload(payload) {
+  if (!Array.isArray(payload?.produkter)) return payload;
+  return { ...payload, produkter: payload.produkter.map(product => ({ ...product, produktnamn: escapeHtml(product.produktnamn), marke_och_storlek: escapeHtml(product.marke_och_storlek), bild: safeHttpUrl(product.bild), url: safeHttpUrl(product.url), pris_kr: Number(product.pris_kr) || 0 })) };
+}
 const availableRecipes = () => state.butik === "alla" ? RECEPT : RECEPT.filter(recipe => recipe.butik === chosenStore());
 
 function chooseMenu(shouldScroll = true) {
+  const branch = selectedBranch();
+  const combo = bestMenuCombo(availableRecipes(), state.middagar, state.budget, branch);
   state.valda.clear();
-  [...availableRecipes()].sort((a, b) => a.portionspris - b.portionspris).slice(0, state.middagar).forEach(r => state.valda.add(r.id));
+  combo.forEach(r => state.valda.add(r.id));
   render();
   if (shouldScroll) {
-    $("top").className = "app view-recipes";
-    document.querySelectorAll(".bottom-nav-item").forEach(item => item.classList.remove("active"));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setView("week");
   }
 }
 
 function renderRecipes() {
-  const search = state.sokning.trim().toLocaleLowerCase("sv");
-  const recipes = (search ? [...RECEPT, ...state.apiRecipes] : availableRecipes()).filter(recipe => (!search || [recipe.namn, recipe.typ, ...recipe.ingredienser].join(" ").toLocaleLowerCase("sv").includes(search)) && (state.kategori === "alla" || recipe.typ === state.kategori) && (!state.maxTid || recipe.tid <= state.maxTid) && (!state.baraFavoriter || state.favoriter.has(recipe.id)));
+  const search = state.sokning.trim();
+  const recipes = filterRecipes(search ? [...RECEPT, ...state.apiRecipes] : availableRecipes(), search).filter(recipe => (state.kategori === "alla" || recipe.typ === state.kategori) && (!state.maxTid || recipe.tid <= state.maxTid) && (!state.baraFavoriter || state.favoriter.has(recipe.id)));
   const branch = selectedBranch();
   const storeLabel = state.butik === "auto" ? `${branch?.namn || "ingen butik hittades"} (billigast automatiskt)` : state.butik === "alla" ? "alla butiker" : `${branch?.namn || state.butik}`;
   $("locationHint").textContent = branch ? `${nearbyBranches().length} butiker jämförda · ${branch.namn} är billigast och ${branch.avstandKm.toFixed(1)} km bort.` : `Hittade inga inlästa butiker nära ${state.postnummer} ännu.`;
@@ -146,55 +216,57 @@ function renderRecipes() {
 }
 
 function openRecipeTab(id) { history.pushState({ recept: id }, "", `${location.pathname}?recept=${encodeURIComponent(id)}`); renderRecipePage(); }
-function renderRecipePage() {
+async function renderRecipePage() {
   const id = new URLSearchParams(location.search).get("recept");
   if (!id) { $("top").hidden = false; document.querySelector(".bottom-nav").hidden = false; $("recipePage").hidden = true; window.scrollTo(0, 0); return; }
-  const recipe = RECEPT.find(item => item.id === id);
+  let allRecipes = [...RECEPT, ...state.apiRecipes];
+  let recipe = allRecipes.find(item => item.id === id);
+  if (!recipe && id.includes(":")) {
+    try { const response = await fetch(recipeDetailApiUrl(id)); if (response.ok) { const data = await response.json(); recipe = mapApiRecipe(data.recipe); state.apiRecipes.push(recipe); allRecipes = [...RECEPT, ...state.apiRecipes]; } } catch { /* The friendly not-found state below remains visible. */ }
+  }
   if (!recipe) return;
   const details = RECIPE_DETAILS[id] || recipe;
   $("top").hidden = true; document.querySelector(".bottom-nav").hidden = true; $("recipePage").hidden = false;
-  $("recipePage").innerHTML = `<button class="back-link recipe-back" type="button">← Alla recept</button><article class="full-recipe">${recipe.bild ? `<img src="${recipe.bild}" alt="${recipe.namn}">` : `<span class="full-recipe-tile ${tileTone(recipe.id)}" role="img" aria-label="${recipe.namn}">${recipe.emoji || "🍽️"}</span>`}<p class="eyebrow">${recipe.typ}</p><h1>${recipe.namn}</h1><p class="full-recipe-description">${details.beskrivning || "En god svensk vardagsrätt."}</p><h2>Ingredienser</h2><ul>${recipe.ingredienser.map(item => `<li>${item}</li>`).join("")}</ul><h2>Gör så här</h2><ol>${(details.steg || []).map(step => `<li>${step}</li>`).join("")}</ol>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${details.tips}</p>` : ""}</article>`;
+  $("recipePage").innerHTML = `<button class="back-link recipe-back" type="button">← Alla recept</button><article class="full-recipe">${recipe.bild ? `<img src="${recipe.bild}" alt="${recipe.namn}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${recipe.typ}</p><h1>${recipe.namn}</h1><div class="recipe-detail-meta"><span>${recipe.tid ? recipe.tid + " min" : "Tid saknas"}</span><span>${recipe.servings || state.personer} portioner</span><span>${recipe.portionspris ? money(recipe.portionspris) + "/portion" : "Pris i butik"}</span></div><p class="full-recipe-description">${details.beskrivning || "En god svensk vardagsrätt."}</p><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${recipe.id}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button><h2>Ingredienser</h2><ul>${recipe.ingredienser.map(item => `<li>${item}</li>`).join("")}</ul><h2>Gör så här</h2><ol>${(details.steg || []).map(step => `<li>${step}</li>`).join("")}</ol>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${details.tips}</p>` : ""}</article>`;
   $("recipePage").querySelector(".recipe-back").addEventListener("click", () => history.back());
+  $("recipePage").querySelector("[data-recipe-add]").addEventListener("click", event => { state.valda.has(recipe.id) ? state.valda.delete(recipe.id) : state.valda.add(recipe.id); render(); event.currentTarget.querySelector("span").textContent = state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"; });
   requestAnimationFrame(() => window.scrollTo(0, 0));
-  let touchStartX = 0; $("recipePage").ontouchstart = event => { touchStartX = event.changedTouches[0].screenX; }; $("recipePage").ontouchend = event => { const distance = event.changedTouches[0].screenX - touchStartX; if (Math.abs(distance) < 70) return; const ids = RECEPT.map(item => item.id), currentIndex = ids.indexOf(id), targetIndex = distance < 0 ? currentIndex + 1 : currentIndex - 1; if (targetIndex >= 0 && targetIndex < ids.length) openRecipeTab(ids[targetIndex]); else if (distance > 0) history.back(); };
+  let touchStartX = 0; $("recipePage").ontouchstart = event => { touchStartX = event.changedTouches[0].screenX; }; $("recipePage").ontouchend = event => { const distance = event.changedTouches[0].screenX - touchStartX; if (Math.abs(distance) < 70) return; const ids = allRecipes.map(item => item.id), currentIndex = ids.indexOf(id), targetIndex = distance < 0 ? currentIndex + 1 : currentIndex - 1; if (targetIndex >= 0 && targetIndex < ids.length) openRecipeTab(ids[targetIndex]); else if (distance > 0) history.back(); };
 }
 
+function renderStoreComparison(selected) {
+  const container = $("storeCompare");
+  if (!container) return;
+  const branches = nearbyBranches();
+  if (!selected.length || !branches.length) { container.innerHTML = ""; return; }
+  const results = branches.map(branch => ({ branch, cost: shoppingListCost(selected, branch) })).sort((a, b) => a.cost - b.cost);
+  const cheapest = results[0], priciest = results[results.length - 1];
+  const savings = priciest.cost - cheapest.cost;
+  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>Billigast just nu</span><strong>${cheapest.branch.namn} · ${money(cheapest.cost)}</strong>${savings > 1 ? `<small>Du sparar ${money(savings)} mot ${priciest.branch.namn}</small>` : ""}</div><div class="store-compare-list">${results.map(r => `<div class="store-compare-row ${r.branch === cheapest.branch ? "cheapest" : ""}"><span>${r.branch.namn}</span><strong>${money(r.cost)}</strong></div>`).join("")}</div></div>`;
+}
+
+const CATEGORY_MAP = { "Frukt & grönt": ["Purjolök", "Morötter", "Lök", "Paprika", "Citron", "Dill", "Basilika", "Lök & vitlök"], Mejeri: ["Grädde", "Riven ost", "Yoghurt", "Mjölk", "Crème fraiche", "Ägg", "Halloumi"], "Kött & fisk": ["Kycklinglårfilé", "Kycklingfilé", "Falukorv", "Fryst torsk", "Laxfilé"], Torrvaror: ["Pasta", "Ris", "Matvete", "Äggnudlar", "Vetemjöl", "Röda linser", "Kidneybönor", "Svarta bönor", "Majs", "Krossade tomater", "Tomatpuré", "Salsa", "Soja"], Frys: ["Wokgrönsaker", "Bär"] };
+function itemCategory(name) { return Object.entries(CATEGORY_MAP).find(([, names]) => names.includes(name))?.[0] || "Övrigt"; }
+function shoppingItemMarkup(item) { const product = PRODUCT_CATALOG[item.namn] || { namn: item.namn, marke: "", pris: 0 }; const pantry = state.pantry[item.namn] || 0; const needed = Math.max(0, item.total - pantry); const packages = item.package ? Math.ceil(needed / item.package.amount) : Math.ceil(needed); const amount = packages ? `${packages} × ${item.package?.amount || 1} ${item.package?.unit || item.unit}` : "Finns hemma"; return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}><span class="product-info"><strong>${item.namn}</strong><small>${product.marke ? `${product.marke} · ` : ""}${amount}</small></span><strong>${product.pris ? money(product.pris * packages) : ""}</strong></label>`; }
+function renderPantry() { const items = Object.entries(state.pantry).filter(([, amount]) => Number(amount) > 0); $("pantryCount").textContent = items.length; $("pantryList").innerHTML = items.length ? items.map(([name, amount]) => `<div class="pantry-item"><span><strong>${name}</strong><small>${amount} ${PACKAGE_INFO[name]?.unit || "st"}</small></span><button type="button" data-remove-pantry="${name}" aria-label="Ta bort ${name}">×</button></div>`).join("") : `<div class="pantry-empty"><svg viewBox="0 0 64 64"><path d="M12 22h40v34H12zM20 22v-9h24v9M20 33h24M20 43h16"/></svg><h2>Ditt skafferi är tomt</h2><p>Lägg in det du redan har hemma så hjälper Matjakt dig att handla mindre.</p></div>`; document.querySelectorAll("[data-remove-pantry]").forEach(button => button.addEventListener("click", () => { delete state.pantry[button.dataset.removePantry]; saveState(); render(); })); }
 function renderBasket() {
   const selected = [...RECEPT, ...state.apiRecipes].filter((recipe, index, recipes) => state.valda.has(recipe.id) && recipes.findIndex(item => item.id === recipe.id) === index);
-  const total = selected.reduce((sum, r) => sum + scaledPurchasePrice(r), 0), remaining = state.budget - total;
-  $("basketCount").textContent = plural(selected.length, "middag", "middagar");
-  $("basketLines").innerHTML = selected.length ? selected.map((r, index) => `<div class="basket-line"><span><small>${DAYS[index] || `Dag ${index + 1}`}</small>${r.emoji} ${r.namn}</span><strong>${money(scaledPurchasePrice(r))}</strong></div>`).join("") : `<div class="basket-empty">Skapa en meny eller lägg till en rätt ovan.</div>`;
-  const shoppingItems = aggregateShopping(selected);
-  const shoppingBranch = selectedBranch();
-  const shoppingStore = state.butik === "alla" ? (selected[0]?.butik || "ICA") : chosenStore();
-  $("shoppingList").innerHTML = shoppingItems.length ? `<h3>Inköpslista <span>${shoppingItems.length} varor</span></h3><p class="shopping-store">Handla hos ${shoppingBranch?.namn || shoppingStore} · mängder sammanräknade</p>${shoppingItems.map(item => { const product = PRODUCT_CATALOG[item.namn] || { namn: item.namn, marke: "Produkt hittas i butik", storlek: "", pris: 0 }; const pantry = state.pantry[item.namn] || 0; const kvar = Math.max(0, item.total - pantry); const packages = item.package ? Math.ceil(kvar / item.package.amount) : Math.ceil(kvar); const purchaseText = packages ? (item.package ? `köp ${packages} x ${item.package.amount} ${item.package.unit}` : `köp ${packages} förpackning${packages === 1 ? "" : "ar"}`) : "Du har tillräckligt hemma"; const selectedProduct = state.valdaProdukter[item.namn] ? [...state.liveProdukter, ...state.liveValda].find(candidate => candidate.url === state.valdaProdukter[item.namn]) : null; const shownProduct = selectedProduct || product; return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}><img class="shopping-product-image ${shownProduct.bild ? "has-image" : ""}" src="${shownProduct.bild || ""}" alt="${shownProduct.marke_och_storlek || shownProduct.namn || item.namn}" loading="lazy"><span class="product-info"><strong>${shownProduct.marke ? `${shownProduct.marke} ` : ""}${shownProduct.namn || item.namn}</strong><small>${shownProduct.marke_och_storlek || (item.package ? `${item.total} ${item.unit} totalt · ${purchaseText}` : `${item.total} st · ${purchaseText}`)}</small>${state.liveProdukter.length ? `<select class="product-choice-inline" data-product-choice="${item.namn}" aria-label="Välj märke och förpackning för ${item.namn}"><option value="">Byt märke eller storlek</option>${state.liveProdukter.map(candidate => `<option value="${candidate.url}" ${state.valdaProdukter[item.namn] === candidate.url ? "selected" : ""}>${candidate.marke_och_storlek || candidate.produktnamn} · ${candidate.pris_kr.toLocaleString("sv-SE")} kr</option>`).join("")}</select>` : ""}</span><span class="pantry-control"><small>Hemma</small><input type="number" min="0" step="50" value="${pantry || ""}" placeholder="0" data-pantry="${item.namn}" aria-label="Hur mycket ${item.namn} du har hemma">${item.package ? `<em>${item.unit}</em>` : ""}</span><a href="${shownProduct.url || STORE_SEARCH[shoppingStore](shownProduct.namn)}" target="_blank" rel="noopener" aria-label="Öppna ${shownProduct.namn} hos ${shoppingBranch?.namn || shoppingStore}">Öppna</a></label>`; }).join("")}` : "";
-  document.querySelectorAll(".product-info strong").forEach(label => { label.textContent = label.textContent.replace(/^Produkt hittas i butik\s*/i, ""); });
-  loadBasketProductImages(shoppingItems, shoppingStore);
-  renderProductChoices();
+  const total = shoppingListCost(selected, selectedBranch()), remaining = budgetRemaining(state.budget, total), shoppingItems = aggregateShopping(selected);
+  $("basketCount").textContent = plural(selected.length, "middag", "middagar"); $("weekBudget").textContent = money(state.budget);
+  $("basketLines").innerHTML = selected.length ? selected.map((recipe, index) => `<article class="basket-line"><span><small>${DAYS[index] || `Dag ${index + 1}`}</small>${recipe.namn}</span><strong>${money(scaledPurchasePrice(recipe))}</strong><div class="basket-line-actions"><button type="button" data-details="${recipe.id}">Visa recept</button><button type="button" data-swap="${recipe.id}">Byt rätt</button></div></article>`).join("") : `<div class="basket-empty"><strong>Ingen vecka ännu</strong><p>Gå till Hem och skapa din första matvecka.</p></div>`;
+  const groups = shoppingItems.reduce((result, item) => { const category = itemCategory(item.namn); (result[category] ||= []).push(item); return result; }, {});
+  $("shoppingList").innerHTML = shoppingItems.length ? Object.entries(groups).map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingItemMarkup).join("")}</section>`).join("") : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
   document.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => { input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping); renderBasket(); }));
-  document.querySelectorAll("[data-pantry]").forEach(input => input.addEventListener("input", () => { state.pantry[input.dataset.pantry] = Number(input.value) || 0; saveState(); renderBasket(); }));
-  document.querySelectorAll("[data-product-choice]").forEach(select => select.addEventListener("change", () => { state.valdaProdukter[select.dataset.productChoice] = select.value; saveState(); renderBasket(); }));
-  const stores = selected.reduce((acc, r) => { acc[r.butik] = (acc[r.butik] || 0) + scaledPurchasePrice(r); return acc; }, {});
-  $("storeSummary").innerHTML = Object.keys(stores).length ? `<h3>Butiksstopp</h3>${Object.entries(stores).map(([store, price]) => `<div><span>${shoppingBranch?.namn || store}</span><strong>${money(price)}</strong></div>`).join("")}` : "";
-  $("basketTotal").textContent = money(total); $("basketRemaining").textContent = money(Math.abs(remaining));
-  $("basketRemainingRow").classList.toggle("over-budget", remaining < 0);
-  $("basketRemainingRow").querySelector("span").textContent = remaining < 0 ? "Över budget" : "Kvar av budgeten";
+  document.querySelectorAll("[data-details]").forEach(button => button.addEventListener("click", () => openRecipeTab(button.dataset.details)));
+  document.querySelectorAll("[data-swap]").forEach(button => button.addEventListener("click", () => { const current = button.dataset.swap; const replacement = availableRecipes().find(recipe => !state.valda.has(recipe.id)); state.valda.delete(current); if (replacement) state.valda.add(replacement.id); render(); }));
+  const completed = shoppingItems.filter(item => state.avklarade.has(item.namn)).length, progress = shoppingItems.length ? completed / shoppingItems.length * 100 : 0;
+  $("shoppingProgress").textContent = `${completed} av ${shoppingItems.length} varor`; $("shoppingCost").textContent = `${money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
+  $("basketTotal").textContent = money(total); $("basketRemaining").textContent = money(Math.abs(remaining)); $("basketRemainingRow").classList.toggle("over-budget", remaining < 0); $("basketRemainingRow").querySelector("span").textContent = remaining < 0 ? "Över budget" : "Kvar";
+  renderStoreComparison(selected); renderPantry();
 }
 
-function loadBasketProductImages(items, store) { if (!["Willys", "Hemköp", "ICA", "Coop"].includes(store)) return; const fallback = state.liveProdukter[0]; items.filter(item => !state.liveProduktMap[item.namn] && !state.liveLaddar.has(item.namn)).forEach(async item => { state.liveLaddar.add(item.namn); try { const response = await fetch(productApiUrl(store, item.namn)); const data = await response.json(); state.liveProduktMap[item.namn] = data.produkter?.[0] || fallback || null; } catch { state.liveProduktMap[item.namn] = fallback || null; } finally { state.liveLaddar.delete(item.namn); renderBasket(); applyLiveImages(); } }); }
-function applyLiveImages() { document.querySelectorAll("[data-pantry]").forEach(input => { const product = state.liveProduktMap[input.dataset.pantry]; const image = input.closest(".shopping-item")?.querySelector(".shopping-product-image"); if (product?.bild && image) { image.src = product.bild; image.classList.add("has-image"); image.alt = product.marke_och_storlek || product.produktnamn; } }); }
-function renderProductChoices() {}
-
 function aggregateShopping(selected) {
-  const totals = {};
-  selected.forEach(recipe => recipe.ingredienser.forEach(ingredient => {
-    const quantity = RECIPE_QUANTITIES[recipe.id]?.[ingredient];
-    const packageInfo = PACKAGE_INFO[ingredient];
-    const amount = quantity ? quantity[0] : 1, unit = quantity ? quantity[1] : "st";
-    if (!totals[ingredient]) totals[ingredient] = { namn: ingredient, total: 0, unit, package: packageInfo };
-    totals[ingredient].total += amount;
-  }));
-  return Object.values(totals).sort((a, b) => a.namn.localeCompare(b.namn, "sv"));
+  return aggregateIngredients(selected, RECIPE_QUANTITIES, PACKAGE_INFO, state.personer);
 }
 
 function updateSummary() { $("summaryBudget").textContent = money(state.budget); $("summaryPeople").textContent = plural(state.personer, "person", "personer"); $("summaryMeals").textContent = plural(state.middagar, "middag", "middagar"); }
@@ -209,30 +281,25 @@ let recipeApiRequestId = 0;
 async function fetchApiRecipes(query) {
   const requestId = ++recipeApiRequestId;
   try {
-    const response = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(query)}`);
+    const response = await fetch(recipeSearchApiUrl(query));
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (requestId !== recipeApiRequestId) return;
-    state.apiRecipes = (data.meals || []).map(mapApiMeal);
+    state.apiRecipes = (data.recipes || []).map(mapApiRecipe);
     renderRecipes();
   } catch { if (requestId !== recipeApiRequestId) return; state.apiRecipes = []; renderRecipes(); }
 }
-$("recipeSearch").addEventListener("input", async e => { state.sokning = e.target.value; const query = state.sokning.trim(); state.apiRecipes = []; renderRecipes(); if (query.length >= 3) fetchApiRecipes(query); if (query.length < 2 || state.butik === "alla") { $("liveProducts").innerHTML = ""; return; } $("liveProducts").innerHTML = `<p class="live-loading">Söker liveprodukter hos ${selectedBranch()?.namn || chosenStore()}...</p>`; try { const response = await fetch(productApiUrl(chosenStore(), query)); const data = await response.json(); if (state.sokning.trim() !== query) return; $("liveProducts").innerHTML = data.produkter?.length ? `<div class="live-products-head"><span>LIVE FRÅN BUTIKEN</span><strong>${data.produkter.length} produkter</strong></div><div class="live-product-grid">${data.produkter.map(product => `<a class="live-product" href="${product.url}" target="_blank" rel="noopener"><span class="live-product-name">${product.produktnamn}</span><small>${product.marke_och_storlek || "Storlek visas hos butiken"}</small><strong>${product.pris_kr.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} kr</strong></a>`).join("")}</div>` : `<p class="live-loading">Inga liveprodukter hittades.</p>`; } catch { $("liveProducts").innerHTML = `<p class="live-loading">Livebutiken svarar inte just nu. Starta backend-API:t på port 8000.</p>`; } });
+$("recipeSearch").addEventListener("input", async e => { state.sokning = e.target.value; const query = state.sokning.trim(); state.apiRecipes = []; renderRecipes(); if (query.length >= 3) fetchApiRecipes(query); if (query.length < 2 || state.butik === "alla") { $("liveProducts").innerHTML = ""; return; } $("liveProducts").innerHTML = `<p class="live-loading">Söker liveprodukter hos ${selectedBranch()?.namn || chosenStore()}...</p>`; try { const response = await fetch(productApiUrl(chosenStore(), query)); if (!response.ok) throw new Error(`HTTP ${response.status}`); const data = sanitizeApiPayload(await response.json()); if (state.sokning.trim() !== query) return; state.liveProdukter = data.produkter || []; $("liveProducts").innerHTML = state.liveProdukter.length ? `<div class="live-products-head"><span>LIVE FRÅN BUTIKEN</span><strong>${state.liveProdukter.length} produkter</strong></div><div class="live-product-grid">${state.liveProdukter.map(product => `<a class="live-product" href="${product.url}" target="_blank" rel="noopener"><span class="live-product-name">${product.produktnamn}</span><small>${product.marke_och_storlek || "Storlek visas hos butiken"}</small><strong>${product.pris_kr.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} kr</strong></a>`).join("")}</div>` : `<p class="live-loading">Inga liveprodukter hittades.</p>`; renderBasket(); } catch { state.liveProdukter = []; $("liveProducts").innerHTML = `<p class="live-loading">Livebutiken svarar inte just nu.</p>`; } });
 $("categoryFilter").addEventListener("change", e => { state.kategori = e.target.value; renderRecipes(); });
-let liveRequestId = 0;
-async function refreshLiveProducts() { const query = state.sokning.trim(); const requestId = ++liveRequestId; if (query.length < 2 || state.butik === "alla") { state.liveProdukter = []; renderBasket(); return; } try { const response = await fetch(productApiUrl(chosenStore(), query)); const data = await response.json(); if (requestId !== liveRequestId || state.sokning.trim() !== query) return; state.liveProdukter = data.produkter || []; $("liveProducts").innerHTML = state.liveProdukter.length ? `<div class="live-products-head"><span>LIVE FRÅN BUTIKEN</span><strong>${state.liveProdukter.length} produkter</strong></div><div class="live-product-grid">${state.liveProdukter.map(product => `<article class="live-product"><img src="${product.bild || ""}" alt="${product.produktnamn}" loading="lazy" onerror="this.remove()"><span class="live-product-name">${product.produktnamn}</span><small>${product.marke_och_storlek || "Storlek visas hos butiken"}</small><strong>${product.pris_kr.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} kr</strong></article>`).join("")}</div>` : `<p class="live-loading">Inga liveprodukter hittades.</p>`; renderBasket(); } catch { if (requestId !== liveRequestId) return; state.liveProdukter = []; $("liveProducts").innerHTML = `<p class="live-loading">Livebutiken svarar inte just nu.</p>`; } }
-$("recipeSearch").addEventListener("input", () => { clearTimeout(window.liveSearchTimer); window.liveSearchTimer = setTimeout(refreshLiveProducts, 300); });
-$("recipeSearch").addEventListener("input", async e => { const query = e.target.value.trim(); if (query.length < 2 || state.butik === "alla") { state.liveProdukter = []; return; } try { const response = await fetch(productApiUrl(chosenStore(), query)); const data = await response.json(); if (state.sokning.trim() === query) { state.liveProdukter = data.produkter || []; renderBasket(); } } catch { state.liveProdukter = []; } });
-async function loadLiveProductCards() { const query = state.sokning.trim(); if (query.length < 2 || state.butik === "alla") return; try { const response = await fetch(productApiUrl(chosenStore(), query)); const data = await response.json(); if (state.sokning.trim() !== query || !data.produkter?.length) return; $("liveProducts").innerHTML = `<div class="live-products-head"><span>LIVE FRÅN BUTIKEN</span><strong>${data.produkter.length} produkter</strong></div><div class="live-product-grid">${data.produkter.map(product => { const selected = state.liveValda.some(item => item.url === product.url); return `<article class="live-product ${selected ? "live-product-selected" : ""}"><img src="${product.bild || ""}" alt="${product.produktnamn}" loading="lazy" onerror="this.remove()"><span class="live-product-name">${product.produktnamn}</span><small>${product.marke_och_storlek || "Storlek visas hos butiken"}</small><strong>${product.pris_kr.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} kr</strong><button type="button" data-live-product='${JSON.stringify(product).replace(/'/g, "&#39;")}'>${selected ? "Vald i listan" : "Välj denna"}</button></article>`; }).join("")}</div>`; document.querySelectorAll("[data-live-product]").forEach(button => button.addEventListener("click", () => { const product = JSON.parse(button.dataset.liveProduct); state.liveValda = state.liveValda.some(item => item.url === product.url) ? state.liveValda.filter(item => item.url !== product.url) : [...state.liveValda, product]; saveState(); renderLiveSelection(); loadLiveProductCards(); })); } catch { /* Den befintliga lokala produktlistan finns kvar om livebutiken inte svarar. */ } }
 function renderLiveSelection() { const existing = document.querySelector(".live-selection"); if (existing) existing.remove(); if (!state.liveValda.length) return; $("shoppingList").insertAdjacentHTML("afterbegin", `<div class="live-selection"><h3>Valda butikprodukter</h3>${state.liveValda.map(product => `<div class="live-selection-item"><img src="${product.bild || ""}" alt="" onerror="this.remove()"><span><strong>${product.produktnamn}</strong><small>${product.marke_och_storlek || ""} · ${product.pris_kr.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} kr</small></span><a href="${product.url}" target="_blank" rel="noopener">Öppna</a></div>`).join("")}</div>`); }
-$("recipeSearch").addEventListener("input", () => loadLiveProductCards());
 $("timeFilter").addEventListener("change", e => { state.maxTid = Number(e.target.value); renderRecipes(); });
 $("favoriteFilter").addEventListener("change", e => { state.baraFavoriter = e.target.checked; renderRecipes(); });
-document.querySelectorAll(".bottom-nav-item").forEach(item => { if (item.querySelector("small")?.textContent === "Vecka") item.dataset.view = "week"; });
-document.querySelectorAll("[data-view]").forEach(item => item.addEventListener("click", () => { const view = item.dataset.view; $("top").className = `app view-${view}`; document.querySelectorAll(".bottom-nav-item").forEach(navItem => navItem.classList.toggle("active", navItem === item)); window.scrollTo({ top: 0, behavior: "smooth" }); }));
+function setView(view) { $("top").className = `app view-${view}`; document.querySelectorAll(".bottom-nav-item").forEach(item => item.classList.toggle("active", item.dataset.view === view)); window.scrollTo({ top: 0, behavior: "smooth" }); }
+document.querySelectorAll("[data-view]").forEach(item => item.addEventListener("click", () => setView(item.dataset.view)));
 $("peopleMinus").addEventListener("click", () => step("personer", -1, 1, 12)); $("peoplePlus").addEventListener("click", () => step("personer", 1, 1, 12));
 $("mealsMinus").addEventListener("click", () => step("middagar", -1, 1, 6)); $("mealsPlus").addEventListener("click", () => step("middagar", 1, 1, 6));
 $("generateBtn").addEventListener("click", chooseMenu); $("refreshBtn").addEventListener("click", () => { RECEPT.push(RECEPT.shift()); chooseMenu(); });
-const now = new Date(), first = new Date(now.getFullYear(), 0, 1); if ($("weekTag")) $("weekTag").textContent = `v. ${Math.ceil((((now - first) / 86400000) + first.getDay() + 1) / 7)}`;
+$("addPantryBtn").addEventListener("click", () => { const name = window.prompt("Vilken vara vill du lägga till?")?.trim(); if (!name) return; const amount = Number(window.prompt("Hur mycket har du hemma?", "1")); state.pantry[name] = Number.isFinite(amount) && amount > 0 ? amount : 1; saveState(); render(); });
 chooseMenu(false);
 renderRecipePage();
 window.addEventListener("popstate", renderRecipePage);

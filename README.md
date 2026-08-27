@@ -1,83 +1,88 @@
-# Veckokassen
+# Matjakt
 
-En app där du anger hur mycket pengar du har att handla mat för denna
-vecka och antal personer i hushållet, och får receptförslag +
-inköpslista baserat på de billigaste priserna hos butiker i din närhet.
+Matjakt är en mobile-first prototyp för veckoplanering, budgetoptimering och prisjämförelse. Produktlöftet är: **Säg din budget. Matjakt löser resten.**
 
-## Projektstruktur
+Fas 1 stabiliserar prototypen. Prisuppgifterna är ännu en blandning av lokal katalogdata och best-effort-sökning på butikernas publika webbplatser, inte en färdig prisdatabas.
 
-```
-veckokassen/
-├── backend/
-│   ├── common.py           # Delade dataklasser (Prisrad) + CSV/JSON-hjälpare
-│   ├── ica_scraper.py       # Playwright-scraper för handla.ica.se
-│   ├── willys_scraper.py    # Playwright-scraper för willys.se
-│   ├── coop_scraper.py      # Playwright-scraper för coop.se
-│   ├── requirements.txt
-│   └── sample_data/
-│       └── produkter.json   # Vilka produkter som ska prisjämföras
-└── frontend/
-    ├── index.html            # Prototyp av appens UI
-    ├── styles.css
-    └── app.js                # Mockdata just nu, redo att kopplas mot riktig data
-```
+## Krav och installation
 
-## Kom igång (backend/scraping)
+- Node.js 20+
+- Python 3.10+
+- Playwright/Chromium för liveproduktsökning
 
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate      # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+npm install
+python -m venv backend/venv
+# Aktivera den virtuella miljön, därefter:
+pip install -r backend/requirements.txt
 playwright install chromium
-python ica_scraper.py
 ```
 
-### Starta Matjakt API
+## Starta frontend och backend
 
 ```bash
-cd backend
-python api_server.py
+npm run frontend
+npm run backend
 ```
 
-API:t kör därefter på `http://127.0.0.1:8000`. Om frontend ligger på en annan
-adress vid hosting kan CORS-adressen ställas med miljövariabeln
-`MATJAKT_FRONTEND_ORIGIN`.
+Backendservern exponerar både appen och API:t på `http://127.0.0.1:8000`, vilket ger fungerande same-origin-anrop. `npm run frontend` kan fortfarande användas på `http://localhost:5500` för ren statisk UI-utveckling. ES-moduler kräver webbserver, så öppna inte HTML-filen via `file://`.
 
-**Viktigt:** CSS-selektorerna i scraperfilerna (t.ex. `[data-testid=product-price]`)
-är gissningar. Öppna respektive butiks webbplats i Chrome, tryck F12,
-högerklicka på "Välj butik"-knappen och på priset → Inspect, och
-uppdatera selektorerna i koden. Se kommentarerna i varje fil.
+Frontend använder `/api` som same-origin-standard. Om API:t finns på annan origin sätter deploymenten basadressen med `<meta name="matjakt-api-url" content="https://api.example.se/api">` i `frontend/index.html`. Lägg aldrig hemligheter där. För separat lokal drift kan metan tillfälligt peka på `http://127.0.0.1:8000/api`.
 
-## Kom igång (frontend)
+API-endpoints inkluderar:
 
-Öppna bara `frontend/index.html` i webbläsaren — inget byggsteg krävs.
-Just nu använder den mockdata (`MOCK_RECEPT` i app.js) istället för
-riktig prisdata, så du kan jobba på UI:t oberoende av scraperna.
+- `GET /api/health`
+- `GET /api/products?butik=ICA&q=pasta&zip=80313`
+- `GET /api/v1/recipes/search?q=chicken`
+- `GET /api/v1/recipes/themealdb:52772`
 
-## Varför Playwright och inte `requests`?
+Recept-API:t använder ett providerlager under `backend/services/recipe_providers/`. Frontend får alltid normaliserad titel, bild, ingredienser och instruktioner från samma providerresultat och känner inte till leverantörens externa API.
 
-Ingen av ICA, Willys eller Coop visar priser i den statiska HTML:en —
-priset laddas via JavaScript efter att en butik är vald. Playwright
-kör en riktig (headless) webbläsare som kan simulera det flödet.
-Ett snabbare men mer avancerat alternativ: hitta butikens interna
-JSON-API via webbläsarens nätverksflik (F12 → Network → Fetch/XHR)
-och anropa det direkt med `requests`. Se kommentaren längst ner i
-`ica_scraper.py` för hur man letar reda på det.
+## Miljövariabler
 
-## Roadmap / att fylla på
+Se `.env.example`. Pythonservern läser processmiljön direkt; en `.env` behöver laddas av skalet/processverktyget.
 
-- [ ] Hitta och verifiera rätt CSS-selektorer per butik (eller byta till
-      internt API-anrop, se ovan)
-- [ ] Lägg till fler produkter i `sample_data/produkter.json`
-- [ ] Bygg en receptdatabas (ingredienser + mängd + kostnad per portion)
-- [ ] Matcha recept mot budget + antal personer (enkel algoritm:
-      sortera recept efter kostnad/portion, plocka så många som ryms
-      i budgeten, med viktning så inte samma recept upprepas varje vecka)
-- [ ] Koppla frontend mot riktig data istället för mockdata i app.js
-- [ ] Geolokalisering: hitta närmaste butik per kedja (t.ex. Google Places API)
-- [ ] Juridik: se över butikernas användarvillkor innan skalning,
-      och överväg att kontakta butiker/befintliga prisjämförelsetjänster
-      (t.ex. matmoms.se, matpriser.nu) om datalicensiering istället för
-      egen skrapning i stor skala
-- [ ] I ett senare skede: partnerskap med kedjor för annonsering/rabatter
+| Variabel | Standard | Beskrivning |
+| --- | --- | --- |
+| `MATJAKT_HOST` | `127.0.0.1` | Backendens bind-adress |
+| `MATJAKT_PORT` | `8000` | Backendens port |
+| `MATJAKT_FRONTEND_ORIGIN` | `http://localhost:5500` | Tillåten CORS-origin |
+| `MATJAKT_API_URL` | `/api` i frontend | Dokumenterat runtime-värde för meta-taggen |
+
+Inga API-nycklar krävs och `.env` ignoreras av Git.
+
+## Tester och kontroller
+
+```bash
+npm test
+npm run check
+npm --prefix mobile exec tsc -- --noEmit
+```
+
+Testerna täcker portionsskalning, ingredienssummering, budget, shoppingtotal, persistent state, receptsökning samt backendens prisparsning.
+
+## Arkitektur
+
+```text
+frontend/
+  index.html, styles.css, app.js  UI och applikationsorkestrering
+  src/api/                       runtime-konfiguration och API-URL:er
+  src/services/                  ren beräknings- och söklogik
+  src/state/                     tolerant localStorage-persistens
+  src/utils/                     säker HTML- och URL-hantering
+backend/
+  api_server.py                  HTTP-API och kortlivad cache
+  *_scraper.py, common.py        fristående Playwright-scrapers
+mobile/                          tidigt Expo-skal
+android/                         Capacitor Android-projekt
+tests/                           frontendens enhetstester
+```
+
+`frontend/app.js` är fortfarande UI-kompositören, men domänlogik flyttas stegvis till `src/`. En full React/React Native-migrering ingår inte i Fas 1.
+
+## Kända begränsningar
+
+- Butikernas DOM och villkor kan ändras; selektorer och rätt till storskalig datainsamling måste verifieras före produktion.
+- Produktmatchning och priser är inte ännu auktoritativa.
+- API-cachen ligger i minnet och delas inte mellan processer.
+- Expo-katalogen är ett separat tidigt skal; Capacitor-webbfrontenden är prototypen som används.
