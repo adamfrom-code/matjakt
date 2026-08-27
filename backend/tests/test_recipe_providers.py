@@ -18,6 +18,7 @@ MEAL = {
     "strIngredient2": "chicken breasts",
     "strMeasure2": "4",
     "strInstructions": "Heat the oven.\r\nBake the chicken.",
+    "strSource": "https://example.com/teriyaki",
 }
 
 
@@ -59,6 +60,18 @@ class RecipeProviderTest(unittest.TestCase):
         self.assertEqual(value["ingredients"][0], {"name": "soy sauce", "measure": "3/4 cup"})
         self.assertEqual(value["instructions"], ["Heat the oven.", "Bake the chicken."])
         self.assertIn("providerRecipeId", value)
+        self.assertEqual(value["sourceUrl"], MEAL["strSource"])
+        self.assertEqual(value["language"], "en")
+
+    def test_one_broken_provider_does_not_break_search(self):
+        class BrokenProvider(FakeProvider):
+            name = "broken"
+
+            def search(self, query):
+                raise RuntimeError("provider unavailable")
+
+        recipes = RecipeService([BrokenProvider(), FakeProvider()]).search("chicken")
+        self.assertEqual(len(recipes), 1)
 
 
 if __name__ == "__main__":

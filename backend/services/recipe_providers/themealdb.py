@@ -40,4 +40,5 @@ class TheMealDbProvider(RecipeProvider):
             title=str(meal.get("strMeal") or "Namnlöst recept").strip(),
             image_url=image_url, image_source=cls.name if image_url else None,
             servings=None, prep_minutes=None, ingredients=ingredients, instructions=instructions,
+            source_url=str(meal.get("strSource") or "").strip() or None, language="en",
         )

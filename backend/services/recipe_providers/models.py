@@ -19,6 +19,8 @@ class Recipe:
     prep_minutes: int | None
     ingredients: list[RecipeIngredient]
     instructions: list[str]
+    source_url: str | None = None
+    language: str | None = None
 
     def to_dict(self):
         value = asdict(self)
@@ -33,4 +35,6 @@ class Recipe:
             "prepMinutes": value["prep_minutes"],
             "ingredients": value["ingredients"],
             "instructions": value["instructions"],
+            "sourceUrl": value["source_url"],
+            "language": value["language"],
         }

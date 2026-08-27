@@ -9,7 +9,10 @@ class RecipeService:
     def search(self, query: str) -> list[Recipe]:
         recipes = []
         for provider in self.providers.values():
-            recipes.extend(provider.search(query))
+            try:
+                recipes.extend(provider.search(query))
+            except Exception:
+                continue
         return recipes
 
     def get(self, recipe_id: str) -> Recipe | None:
