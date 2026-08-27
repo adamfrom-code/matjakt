@@ -29,7 +29,23 @@ STORE_CONFIG = {
         "base_url": "https://www.hemkop.se",
         "product_selector": '[data-testid="product-container"]',
     },
+    # ICA/Coop selectors below are best-effort guesses, same as ica_scraper.py /
+    # coop_scraper.py. Verify against the live site with DevTools before relying
+    # on them - see README.md "Kom igång (backend/scraping)".
+    # ICA is handled separately in parse_ica_products/resolve_ica_store - it has
+    # no search results at all until a store is picked for a postnummer, so it
+    # doesn't fit the generic search_url/product_selector shape used here.
+    "ICA": {},
+    # Verified live on 2026-08-27: coop.se has no stable data-testid, but every
+    # product card has a direct-child link to /handla/varor/... which is stable.
+    "Coop": {
+        "search_url": "https://www.coop.se/handla/sok/?q={query}",
+        "base_url": "https://www.coop.se",
+        "product_selector": 'div:has(> a[href*="/handla/varor/"])',
+    },
 }
+DEFAULT_ZIP = "11122"
+ICA_STORE_CACHE = {}
 CACHE = {}
 
 
@@ -45,6 +61,59 @@ def parse_price(text):
 def parse_willys_price(text):
     match = re.search(r"(\d+)\s+(\d{2})", clean_text(text))
     return float(f"{match.group(1)}.{match.group(2)}") if match else parse_price(text)
+
+
+def resolve_ica_store(page, zip_code):
+    """ICA has no search results at all until a pickup/delivery store is chosen
+    for a postnummer. Found via live network inspection: this JSON endpoint
+    backs their own "Välj butik" widget, so it's the same data they use."""
+    if zip_code in ICA_STORE_CACHE:
+        return ICA_STORE_CACHE[zip_code]
+    page.goto(f"https://handla.ica.se/api/store/v1?zip={quote(zip_code)}&customerType=B2C", wait_until="domcontentloaded", timeout=15000)
+    try:
+        data = json.loads(page.locator("pre").inner_text())
+    except Exception:
+        data = {}
+    stores = data.get("forPickupDelivery") or data.get("forHomeDelivery") or []
+    store = stores[0] if stores else None
+    ICA_STORE_CACHE[zip_code] = store
+    return store
+
+
+def parse_ica_products(page, query, zip_code):
+    store = resolve_ica_store(page, zip_code)
+    if not store:
+        return []
+    account_id = store["accountId"]
+    base_url = f"https://handlaprivatkund.ica.se/stores/{account_id}"
+    page.goto(f"{base_url}/search?q={quote(query)}", wait_until="domcontentloaded", timeout=30000)
+    products = []
+    for attempt in range(3):
+        page.wait_for_timeout(1800)
+        products = []
+        seen = set()
+        for card in page.locator(".product-card-container").all()[:80]:
+            link = card.locator('[data-test="fop-product-link"][aria-hidden="false"]').first
+            price_node = card.locator('[data-test="fop-price"]').first
+            if not link.count() or not price_node.count():
+                continue
+            name = clean_text(link.inner_text())
+            price = parse_price(price_node.inner_text())
+            href = link.get_attribute("href")
+            if not name or not price or not href:
+                continue
+            image_node = card.locator("img").first
+            image = image_node.get_attribute("src") if image_node.count() else ""
+            if image.startswith("//"):
+                image = f"https:{image}"
+            key = (name, price, href)
+            if key in seen:
+                continue
+            seen.add(key)
+            products.append({"kedja": "ICA", "produktnamn": name, "marke_och_storlek": store["name"], "bild": image or "", "pris_kr": price, "storlek": "", "lager": True, "url": f"https://handlaprivatkund.ica.se{href}", "sokning": query})
+        if products:
+            break
+    return products[:20]
 
 
 def parse_products(page, chain, query):
@@ -66,12 +135,23 @@ def parse_products(page, chain, query):
             name_node = card.locator('[itemprop="name"], [data-testid="product-title"]')
             brand_node = card.locator('[itemprop="brand"], [data-testid="display-manufacturer"]')
             name = clean_text(name_node.first.inner_text()) if name_node.count() else clean_text(link.inner_text())
+            aria_parts = []
+            if not name:
+                # Coop's product link only wraps the image; the name/brand/size
+                # live in the link's aria-label instead, e.g. "Mellanmjölk, Coop,
+                # 1.5 l, Pris 16 kronor och 27 öre styck, ...".
+                aria_parts = [clean_text(p) for p in (link.get_attribute("aria-label") or "").split(",")]
+                name = aria_parts[0] if aria_parts else ""
             brand = clean_text(brand_node.first.inner_text()) if brand_node.count() else ""
+            if not brand and len(aria_parts) > 2:
+                brand = f"{aria_parts[1]} {aria_parts[2]}".strip()
             volume_node = card.locator('[data-testid="display-volume"]')
             if volume_node.count():
                 brand = f"{brand} {clean_text(volume_node.first.inner_text())}".strip()
             image_node = card.locator("img").first
             image = image_node.get_attribute("src") if image_node.count() else ""
+            if image.startswith("//"):
+                image = f"https:{image}"
             key = (name, price, href)
             if key in seen:
                 continue
@@ -103,6 +183,7 @@ class ApiHandler(BaseHTTPRequestHandler):
         params = parse_qs(parsed.query)
         chain = params.get("butik", ["Willys"])[0]
         query = clean_text(params.get("q", [""])[0])
+        zip_code = clean_text(params.get("zip", [DEFAULT_ZIP])[0]) or DEFAULT_ZIP
         if chain not in STORE_CONFIG or len(query) < 2:
             self.send_json(400, {"error": "Ange butik Willys/Hemköp och en sökning på minst två tecken"})
             return
@@ -110,9 +191,9 @@ class ApiHandler(BaseHTTPRequestHandler):
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch(headless=True)
                 page = browser.new_page(locale="sv-SE")
-                products = parse_products(page, chain, query)
+                products = parse_ica_products(page, query, zip_code) if chain == "ICA" else parse_products(page, chain, query)
                 browser.close()
-            cache_key = (chain, query.lower())
+            cache_key = (chain, query.lower(), zip_code)
             if products:
                 CACHE[cache_key] = products
             else:

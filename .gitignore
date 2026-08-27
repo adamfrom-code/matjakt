@@ -3,3 +3,8 @@ backend/__pycache__/
 *.pyc
 .env
 .DS_Store
+node_modules/
+.idea/
+android/.gradle/
+android/build/
+android/app/build/
