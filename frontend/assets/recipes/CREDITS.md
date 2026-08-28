@@ -32,5 +32,35 @@ Receptbilderna kommer från Wikimedia Commons och är fritt licensierade. Ingen 
 | flaskkarre.jpg | Alpha from Melbourne, Australia | CC BY-SA 2.0 | https://commons.wikimedia.org/wiki/File:Roasted_Loin_of_Pork_(2287948470).jpg |
 | fetapasta.jpg | Delicious Adventures | CC BY 3.0 | https://commons.wikimedia.org/wiki/File:Baked_feta_pasta.jpg |
 | kalvschnitzel.jpg | JIP | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Wiener_Schnitzel_at_Hotel_Dermuth.jpg |
+| kycklingmatvete.jpg | HaJunkiyada | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Roasted_chicken_with_cauliflower_broccoli_potatoes_rice_and_salad.jpg |
+| citronkyckling.jpg | Prayitno | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Lemon_Brined_Roasted_Chicken.jpg |
+| biffmatvetesallad.jpg | Len Rizzi (Photographer) | Public domain | https://commons.wikimedia.org/wiki/File:Marinated_beef_steak_with_potato_vegetable_salad.jpg |
+| biffwok.jpg | Anagoria | CC BY 3.0 | https://commons.wikimedia.org/wiki/File:2016-08-20_Stir_fried_beef_slices_with_celery_in_a_Beijing_Restaurant_anagoria.jpg |
+| flaskcurrygryta.jpg | TurquoiseGoose | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Green_Curry_with_Crispy_Pulled_Pork_-_Eem.jpg |
+| flasktomatpasta.jpg | Silar | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:04666_Polish_spaghetti_pasta_with_sauce_made_of_pork_meat,_tomatoes,_garlic_and_olive.JPG |
+| kalvschnitzelmatvete.jpg | Jan Helebrant | CC0 | https://commons.wikimedia.org/wiki/File:Food_Wiener_schnitzel.jpg |
+| teriyakilax.jpg | Prayitno | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Grilled_Teriyaki_Salmon_(10900376705).jpg |
+| laxsallad.jpg | PattayaPatrol | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:DZ6_1891_Seared_salmon_in_a_rich_brown_sauce_with_grilled_potatoes_fresh_greens_and_toasted_bread_garnished_with_dill.jpg |
+| torskitomatsas.jpg | MOs810 | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Cod_in_tomato_sauce_(Oslo).jpg |
+| rakcurry.jpg | Sharbelle Fernandez | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Goa._Homemade_prawn_curry_with_boiled_Rice_and_Kismur..._IMG-20210120-WA0009.jpg |
+| raksallad.jpg | yomi yomi | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Shrimp_cream_salad_with_lemon_wedge.jpg |
+| kikartssallad.jpg | Vikingit | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:%D7%97%D7%95%D7%9E%D7%95%D7%A1_%D7%A2%D7%9D_%D7%A1%D7%9C%D7%98_%D7%99%D7%A9%D7%A8%D7%90%D7%9C%D7%99.jpg |
+| bonbowlmatvete.jpg | Siddharthagandhi26 | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Mexican_Bean_%26_Cheese_Salad.jpg |
+| svartbonsbowl.jpg | FranHogan | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Mexican_Salad_with_toasted_tortilla_strips.jpg |
+| tofucurry.jpg | Anna Korcheva | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Tofu_curry_with_rice.jpg |
+| teriyakitofu.jpg | Andy Li | CC0 | https://commons.wikimedia.org/wiki/File:Tofu_Steaks_-_Taro_2026-02-11.jpg |
+| halloumipasta.jpg | روتانا | CC BY 4.0 | https://commons.wikimedia.org/wiki/File:Fruit_Salad_with_Grilled_Halloumi_Cheese.jpg |
+| halloumicurry.jpg | Andy Li | CC0 | https://commons.wikimedia.org/wiki/File:Halloumi_Fries_-_The_Real_Pizza_Company_2026-03-30.jpg |
+| fetagryta.jpg | Yonihahasis | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Shiro_wet.jpg |
+| vegofarsgryta.jpg | Andy Li | CC0 | https://commons.wikimedia.org/wiki/File:NoBeef_mince_in_chipotle_burrito_-_A_Tribe_Called_Veg_2024-04-06.jpg |
+| korvgratang.jpg | Martin | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Baked_macaroni_and_cheese_1.jpg |
+| kottfarssas.jpg | Superbass | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Spaghetti_Bolognese_Lokal_K.jpg |
+| currykottfarsgryta.jpg | Ocdp | CC0 | https://commons.wikimedia.org/wiki/File:Beef_curry_rice_001.jpg |
+| tandoorikyckling.jpg | Joegoaukfishcurry2 | CC BY-SA 2.0 | https://commons.wikimedia.org/wiki/File:Chicken_Tandoori_full_(7843249604).jpg |
+| citronflaskfile.jpg | Sara Goldsmith | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Roast_pork_loin,_potatoes_(2585116058).jpg |
+| biffgraddtimjan.jpg | Daderot | CC0 | https://commons.wikimedia.org/wiki/File:Roast_beef_with_gravy,_mashed_potato,_and_vegetables_-_Massachusetts.jpg |
+| zucchinipastafeta.jpg | Julien Seguinot | CC BY-SA 2.0 | https://commons.wikimedia.org/wiki/File:Pasta_with_tomato_sauce_and_zucchini_(50540732361).jpg |
+| sparrispastacitron.jpg | Vegan Feast Catering | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Pasta_with_tomatoes_and_asparagus_(4880297603).jpg |
+| morotscurry.jpg | pelican from Tokyo, Japan | CC BY-SA 2.0 | https://commons.wikimedia.org/wiki/File:Carrot_curry_and_rice_(8479175466).jpg |
 
 CC BY/BY-SA-licenserna kräver namngivning av upphovsperson vid vidare spridning av bilderna utanför appen.
