@@ -53,7 +53,12 @@ class AccountStore:
         )
         # Added after the initial release - ALTER TABLE guarded with try/except since
         # sqlite3 has no "ADD COLUMN IF NOT EXISTS" and this file has no migration runner.
-        for column, definition in (("trial_ends_at", "TEXT"), ("trial_used", "INTEGER NOT NULL DEFAULT 0")):
+        for column, definition in (
+            ("trial_ends_at", "TEXT"), ("trial_used", "INTEGER NOT NULL DEFAULT 0"),
+            ("stripe_customer_id", "TEXT"), ("stripe_subscription_id", "TEXT"),
+            ("subscription_status", "TEXT"), ("subscription_plan", "TEXT"),
+            ("subscription_period_end", "TEXT"), ("subscription_cancel_at_period_end", "INTEGER NOT NULL DEFAULT 0"),
+        ):
             try:
                 self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
             except sqlite3.OperationalError:
@@ -62,13 +67,20 @@ class AccountStore:
 
     @staticmethod
     def _to_public(row) -> dict:
-        trial_ends_at = row["trial_ends_at"] if "trial_ends_at" in row.keys() else None
+        keys = row.keys()
+        trial_ends_at = row["trial_ends_at"] if "trial_ends_at" in keys else None
         trial_active = bool(trial_ends_at) and trial_ends_at > datetime.now(timezone.utc).isoformat()
+        sub_status = row["subscription_status"] if "subscription_status" in keys else None
+        subscription_active = sub_status in ("active", "trialing")
         return {
             "email": row["email"],
-            "premium": bool(row["premium"]) or trial_active,
+            "premium": bool(row["premium"]) or trial_active or subscription_active,
             "trialEndsAt": trial_ends_at if trial_active else None,
-            "trialUsed": bool(row["trial_used"]) if "trial_used" in row.keys() else False,
+            "trialUsed": bool(row["trial_used"]) if "trial_used" in keys else False,
+            "subscriptionStatus": sub_status,
+            "subscriptionPlan": row["subscription_plan"] if "subscription_plan" in keys else None,
+            "subscriptionPeriodEnd": row["subscription_period_end"] if "subscription_period_end" in keys else None,
+            "subscriptionCancelAtPeriodEnd": bool(row["subscription_cancel_at_period_end"]) if "subscription_cancel_at_period_end" in keys else False,
         }
 
     def register(self, email: str, password: str) -> tuple[str, dict]:
@@ -159,3 +171,30 @@ class AccountStore:
         )
         self._connection.commit()
         return self._to_public(self._session_user_row(token))
+
+    def billing_identity_for_token(self, token):
+        """Returns (user_id, email, existing_stripe_customer_id_or_None) for a session token."""
+        row = self._session_user_row(token)
+        if not row:
+            raise AccountError("Du måste vara inloggad")
+        return row["id"], row["email"], row["stripe_customer_id"]
+
+    def set_stripe_customer_id(self, user_id, customer_id):
+        self._connection.execute("UPDATE users SET stripe_customer_id = ? WHERE id = ?", (customer_id, user_id))
+        self._connection.commit()
+
+    def stripe_customer_id_for_token(self, token):
+        row = self._session_user_row(token)
+        if not row:
+            raise AccountError("Du måste vara inloggad")
+        if not row["stripe_customer_id"]:
+            raise AccountError("Ingen prenumeration hittades för det här kontot")
+        return row["stripe_customer_id"]
+
+    def apply_subscription_event(self, customer_id, subscription_id, status, period_end_iso, cancel_at_period_end, plan):
+        self._connection.execute(
+            """UPDATE users SET stripe_subscription_id = ?, subscription_status = ?, subscription_period_end = ?,
+               subscription_cancel_at_period_end = ?, subscription_plan = ? WHERE stripe_customer_id = ?""",
+            (subscription_id, status, period_end_iso, int(cancel_at_period_end), plan, customer_id),
+        )
+        self._connection.commit()

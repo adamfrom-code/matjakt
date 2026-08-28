@@ -166,8 +166,8 @@
       <section class="screen stats-screen" aria-labelledby="statsTitle">
         <header class="screen-header"><button class="back-link" type="button" data-view="home">← Hem</button><p class="eyebrow">Din historik</p><h1 id="statsTitle">Sparanderesultat</h1></header>
         <div class="stats-grid">
-          <div class="stats-card highlight"><span>Sparat denna vecka</span><strong id="statSavedWeek">0 kr</strong></div>
-          <div class="stats-card highlight"><span>Sparat denna månad</span><strong id="statSavedMonth">0 kr</strong></div>
+          <div class="stats-card highlight"><span>Uppskattat sparat denna vecka</span><strong id="statSavedWeek">0 kr</strong></div>
+          <div class="stats-card highlight"><span>Uppskattat sparat denna månad</span><strong id="statSavedMonth">0 kr</strong></div>
           <div class="stats-card"><span>Billigaste butiken för dig</span><strong id="statCheapestStore">-</strong></div>
           <div class="stats-card"><span>Snittkostnad per portion</span><strong id="statAvgPortion">-</strong></div>
         </div>
@@ -219,6 +219,12 @@
         <p class="account-email" id="accountEmail"></p>
         <p class="account-premium-status" id="accountPremiumStatus"></p>
 
+        <div class="subscription-panel" id="subscriptionPanel" hidden>
+          <p class="subscription-panel-line" id="subscriptionPanelLine"></p>
+          <button class="btn btn-ghost account-redeem-btn" type="button" id="manageBillingBtn">Hantera prenumeration</button>
+          <p class="account-error" id="portalError"></p>
+        </div>
+
         <div class="premium-pitch" id="premiumPitch">
           <h3>Matjakt Premium</h3>
           <ul class="premium-feature-list">
@@ -233,12 +239,14 @@
             <li>Sparhistorik</li>
           </ul>
           <div class="premium-pricing" role="tablist">
-            <button type="button" class="premium-price-tab active" data-price-tab="month"><span>Månad</span><strong>59 kr</strong><small>/mån</small></button>
-            <button type="button" class="premium-price-tab" data-price-tab="year"><span>År · Bäst värde</span><strong>499 kr</strong><small>/år · spara 209 kr</small></button>
+            <button type="button" class="premium-price-tab active" data-price-tab="month" data-plan="monthly"><span>Månad</span><strong>59 kr</strong><small>/mån</small></button>
+            <button type="button" class="premium-price-tab" data-price-tab="year" data-plan="yearly"><span>År · Bäst värde</span><strong>499 kr</strong><small>/år · spara 209 kr</small></button>
           </div>
-          <button class="btn btn-primary" type="button" id="startTrialBtn"><span>Prova gratis i 14 dagar</span></button>
+          <button class="btn btn-primary" type="button" id="subscribeBtn"><span>Prenumerera</span></button>
+          <p class="account-error" id="checkoutError"></p>
+          <button class="btn btn-ghost" type="button" id="startTrialBtn"><span>Eller prova gratis i 14 dagar</span></button>
           <p class="account-error" id="trialError"></p>
-          <p class="premium-pitch-note">Ingen betalning krävs för provperioden. Har du redan en kod?</p>
+          <p class="premium-pitch-note">Ingen kortuppgift krävs för provperioden - den avslutas automatiskt till gratisversionen om du inte prenumererar. Har du en kod?</p>
           <form id="accountRedeemForm" class="account-form">
             <label class="sr-only" for="premiumCode">Premium-kod</label>
             <input id="premiumCode" type="text" placeholder="Premium-kod" autocomplete="off">

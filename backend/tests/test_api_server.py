@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import http.client
 import json
 import os
@@ -451,7 +453,11 @@ class AuthHttpTest(unittest.TestCase):
         status, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
         self.assertEqual(status, 201)
         token = payload["token"]
-        self.assertEqual(payload["user"], {"email": email, "premium": False, "trialEndsAt": None, "trialUsed": False})
+        self.assertEqual(payload["user"], {
+            "email": email, "premium": False, "trialEndsAt": None, "trialUsed": False,
+            "subscriptionStatus": None, "subscriptionPlan": None, "subscriptionPeriodEnd": None,
+            "subscriptionCancelAtPeriodEnd": False,
+        })
         status, payload = self.get("/api/auth/me", token=token)
         self.assertEqual(status, 200)
         self.assertEqual(payload["user"]["email"], email)
@@ -490,6 +496,96 @@ class AuthHttpTest(unittest.TestCase):
         status, payload = self.post("/api/auth/start-trial", {}, token=token)
         self.assertEqual(status, 400)
         self.assertIn("error", payload)
+
+    def test_checkout_rejects_when_stripe_not_configured(self):
+        email = self._email()
+        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        status, payload = self.post("/api/billing/checkout", {"plan": "monthly"}, token=payload["token"])
+        self.assertEqual(status, 400)
+        self.assertIn("error", payload)
+
+    def test_checkout_creates_customer_once_and_returns_url(self):
+        original_price, original_key = api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_SECRET_KEY
+        original_create_customer, original_create_checkout = api_server.create_customer, api_server.create_checkout_session
+        api_server.STRIPE_PRICE_MONTHLY = "price_month"
+        api_server.STRIPE_SECRET_KEY = "sk_test_fake"
+        calls = {"create_customer": 0}
+
+        def fake_create_customer(secret_key, email, user_id):
+            calls["create_customer"] += 1
+            return "cus_fake123"
+
+        def fake_create_checkout_session(secret_key, customer_id, price_id, success_url, cancel_url):
+            return f"https://checkout.stripe.com/fake/{customer_id}/{price_id}"
+
+        api_server.create_customer = fake_create_customer
+        api_server.create_checkout_session = fake_create_checkout_session
+        try:
+            email = self._email()
+            _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+            token = payload["token"]
+            status, payload = self.post("/api/billing/checkout", {"plan": "monthly"}, token=token)
+            self.assertEqual(status, 200)
+            self.assertIn("cus_fake123", payload["url"])
+            self.assertIn("price_month", payload["url"])
+            # Second checkout call must reuse the same Stripe customer, not create a new one.
+            status, payload = self.post("/api/billing/checkout", {"plan": "monthly"}, token=token)
+            self.assertEqual(status, 200)
+            self.assertEqual(calls["create_customer"], 1)
+        finally:
+            api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_SECRET_KEY = original_price, original_key
+            api_server.create_customer, api_server.create_checkout_session = original_create_customer, original_create_checkout
+
+    def test_portal_rejects_without_existing_customer(self):
+        email = self._email()
+        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        status, payload = self.post("/api/billing/portal", {}, token=payload["token"])
+        self.assertEqual(status, 400)
+        self.assertIn("error", payload)
+
+    def test_webhook_rejects_invalid_signature(self):
+        original_secret = api_server.STRIPE_WEBHOOK_SECRET
+        api_server.STRIPE_WEBHOOK_SECRET = "whsec_test"
+        try:
+            status, payload = self.post("/api/billing/webhook", {"type": "customer.subscription.updated"})
+            self.assertEqual(status, 400)
+        finally:
+            api_server.STRIPE_WEBHOOK_SECRET = original_secret
+
+    def test_webhook_updates_subscription_and_grants_premium(self):
+        original_secret = api_server.STRIPE_WEBHOOK_SECRET
+        api_server.STRIPE_WEBHOOK_SECRET = "whsec_test"
+        try:
+            email = self._email()
+            _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+            token = payload["token"]
+            user_id, _, _ = api_server.ACCOUNT_STORE.billing_identity_for_token(token)
+            api_server.ACCOUNT_STORE.set_stripe_customer_id(user_id, "cus_webhook_test")
+            body = json.dumps({
+                "type": "customer.subscription.updated",
+                "data": {"object": {
+                    "id": "sub_123", "customer": "cus_webhook_test", "status": "active",
+                    "current_period_end": int(time.time()) + 30 * 86400, "cancel_at_period_end": False,
+                    "items": {"data": [{"price": {"id": "price_month"}}]},
+                }},
+            }).encode("utf-8")
+            timestamp = int(time.time())
+            signed_payload = f"{timestamp}.{body.decode('utf-8')}"
+            signature = hmac.new(b"whsec_test", signed_payload.encode("utf-8"), hashlib.sha256).hexdigest()
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            conn.request("POST", "/api/billing/webhook", body=body, headers={
+                "Content-Type": "application/json", "Stripe-Signature": f"t={timestamp},v1={signature}",
+            })
+            response = conn.getresponse()
+            status = response.status
+            response.read()
+            conn.close()
+            self.assertEqual(status, 200)
+            status, payload = self.get("/api/auth/me", token=token)
+            self.assertTrue(payload["user"]["premium"])
+            self.assertEqual(payload["user"]["subscriptionStatus"], "active")
+        finally:
+            api_server.STRIPE_WEBHOOK_SECRET = original_secret
 
     def test_redeem_premium_with_correct_code(self):
         email = self._email()

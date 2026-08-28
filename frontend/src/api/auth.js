@@ -66,3 +66,18 @@ export function startTrial(token) {
     headers: { Authorization: `Bearer ${token}` },
   }).then(parseJsonResponse);
 }
+
+export function startCheckout(token, plan) {
+  return fetch(`${API_BASE_URL}/billing/checkout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ plan }),
+  }).then(parseJsonResponse);
+}
+
+export function openBillingPortal(token) {
+  return fetch(`${API_BASE_URL}/billing/portal`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parseJsonResponse);
+}

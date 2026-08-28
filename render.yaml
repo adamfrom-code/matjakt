@@ -9,7 +9,17 @@ services:
     envVars:
       - key: MATJAKT_FRONTEND_ORIGIN
         value: https://adamfrom-code.github.io
+      - key: MATJAKT_APP_URL
+        value: https://adamfrom-code.github.io/matjakt
       - key: MATJAKT_PREMIUM_CODE
         sync: false
       - key: MATJAKT_MAX_SCRAPES
         value: "1"
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_MONTHLY
+        sync: false
+      - key: STRIPE_PRICE_YEARLY
+        sync: false

@@ -19,7 +19,11 @@ class AccountStoreTest(unittest.TestCase):
     def test_register_then_login(self):
         token, user = self.store.register("Ada@Example.com", "hemligt123")
         self.assertTrue(token)
-        self.assertEqual(user, {"email": "ada@example.com", "premium": False, "trialEndsAt": None, "trialUsed": False})
+        self.assertEqual(user, {
+            "email": "ada@example.com", "premium": False, "trialEndsAt": None, "trialUsed": False,
+            "subscriptionStatus": None, "subscriptionPlan": None, "subscriptionPeriodEnd": None,
+            "subscriptionCancelAtPeriodEnd": False,
+        })
         login_token, login_user = self.store.login("ada@example.com", "hemligt123")
         self.assertTrue(login_token)
         self.assertEqual(login_user, user)

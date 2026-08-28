@@ -4,8 +4,9 @@ import { createDebouncedSearch, filterRecipes, mergeRecipeResults } from "./src/
 import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/nutrition.js";
 import { expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts } from "./src/services/pantry.js";
 import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
+import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
 import { campaignsApiUrl, geocodeApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
-import { fetchCurrentUser, getStoredToken, login, logout as logoutRequest, redeemPremium, register, startTrial, storeToken } from "./src/api/auth.js";
+import { fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, startCheckout, startTrial, storeToken } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 
 const RECEPT = [
@@ -61,7 +62,7 @@ function wireFeedbackButtons(container, recipeId) {
 
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0 };
+const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0 };
 function saveState() { writeStoredState(localStorage, { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek }); }
 const FALLBACK_BRANCH = [{ kedja: "Willys", namn: "Butik nära dig (uppskattat)", lat: null, lon: null, avstandKm: 0, prisfaktor: 1 }];
 const PRODUCT_CATALOG = {
@@ -288,40 +289,25 @@ function combinations(list, size) {
   return [...combinations(rest, size - 1).map(combo => [first, ...combo]), ...combinations(rest, size)];
 }
 const comboRating = combo => combo.reduce((sum, recipe) => sum + (state.betyg[recipe.id] || 0), 0);
-const comboVariety = combo => new Set(combo.map(recipe => recipe.proteinkalla)).size;
-const comboProtein = combo => combo.reduce((sum, recipe) => sum + (recipe.protein || 0), 0);
 function recipeAffinity(recipe) {
   const fb = state.feedback[recipe.id];
   if (!fb) return 0;
   return (fb.liked ? 3 : 0) + Math.min(fb.cooked || 0, 3) * 1.5 - Math.min(fb.skipped || 0, 3);
 }
 const comboAffinity = combo => combo.reduce((sum, recipe) => sum + recipeAffinity(recipe), 0);
-const PLAN_OBJECTIVES = {
-  // Lower cost always wins first - "cheapest" ranks purely on it, the others use it
-  // as the tiebreaker so a combo never beats a materially cheaper one on rating/protein
-  // alone. Package-rounded cost already rewards recipes that share ingredients (fewer
-  // separate packages to buy), so minimizing cost also naturally reduces waste.
-  // comboAffinity nudges all three toward what the user has liked/cooked before -
-  // outright disliked recipes are excluded from the candidate pool entirely, see
-  // candidateRecipesForUser().
-  cheapest: (combo, cost) => -cost + comboAffinity(combo) * 3,
-  balanced: (combo, cost) => comboRating(combo) * 25 + comboVariety(combo) * 15 + comboAffinity(combo) * 8 - cost,
-  protein: (combo, cost) => comboProtein(combo) * 6 + comboAffinity(combo) * 4 - cost * 0.1,
-};
+function evaluateCombos(recipes, count, branch) {
+  return combinations(limitCandidatePool(recipes), count).map(combo => ({ combo, cost: shoppingListCost(combo, branch) }));
+}
 function bestMenuCombo(recipes, count, budget, branch, objective = "cheapest") {
   if (!recipes.length) return [];
   if (recipes.length <= count) return [...recipes];
-  const scoreFn = PLAN_OBJECTIVES[objective] || PLAN_OBJECTIVES.cheapest;
-  let best = null, bestScore = -Infinity, bestWithinBudget = false;
-  combinations(recipes, count).forEach(combo => {
-    const cost = shoppingListCost(combo, branch);
-    const withinBudget = cost <= budget;
-    const score = scoreFn(combo, cost);
-    // Combos within budget always outrank combos that go over it, regardless of score.
-    const better = !best || (withinBudget && !bestWithinBudget) || (withinBudget === bestWithinBudget && score > bestScore);
-    if (better) { best = combo; bestScore = score; bestWithinBudget = withinBudget; }
-  });
-  return best || [];
+  const evaluated = evaluateCombos(recipes, count, branch);
+  const pool = inBudgetPool(evaluated, budget);
+  let best;
+  if (objective === "protein") best = pickProtein(pool, comboAffinity);
+  else if (objective === "balanced") best = pickBalanced(pool, budget, comboRating, comboAffinity);
+  else best = pickCheapest(pool, comboAffinity);
+  return best ? best.combo : [];
 }
 function distanceKm(lat1, lon1, lat2, lon2) {
   const earthRadius = 6371, latDelta = (lat2 - lat1) * Math.PI / 180, lonDelta = (lon2 - lon1) * Math.PI / 180;
@@ -465,16 +451,19 @@ async function syncBranchComparison(shoppingItems, branches) {
   const key = `${state.postnummer}|${names.join(",")}`;
   if (branchComparisonSync.key !== key) { branchComparisonSync = { key, chains: new Set() }; state.liveBranchTotals = {}; }
   const chains = [...new Set(branches.map(branch => branch.kedja))].filter(chain => VALID_CHAINS.includes(chain) && !branchComparisonSync.chains.has(chain));
-  for (const chain of chains) {
-    branchComparisonSync.chains.add(chain);
-    if (branchComparisonSync.key !== key || !names.length) continue;
+  if (!names.length) return;
+  chains.forEach(chain => branchComparisonSync.chains.add(chain));
+  // Each chain is fetched independently and in parallel - a slow/timed-out chain (e.g.
+  // Coop) must not delay the others from starting or completing.
+  await Promise.allSettled(chains.map(async chain => {
+    if (branchComparisonSync.key !== key) return;
     try {
       const produkter = await fetchProductsBatch(chain, state.postnummer, names);
       if (branchComparisonSync.key !== key) return;
       const matched = Object.values(produkter).filter(Boolean);
-      if (matched.length) { state.liveBranchTotals[chain] = branchLiveTotal(shoppingItems, produkter); renderBasket(); }
+      if (matched.length) { state.liveBranchTotals[chain] = branchLiveTotal(shoppingItems, produkter); state.liveUpdatedAt = Date.now(); renderBasket(); }
     } catch { /* den här kedjan visar kvar den statiska uppskattningen om livehämtningen misslyckas */ }
-  }
+  }));
 }
 function renderStoreComparison(selected) {
   const container = $("storeCompare");
@@ -492,7 +481,9 @@ function renderStoreComparison(selected) {
   const listOrUpsell = results.length < 2 ? "" : premium
     ? `<div class="store-compare-list">${results.map(r => `<div class="store-compare-row ${r.branch === cheapest.branch ? "cheapest" : ""}"><span>${r.branch.namn}${r.isLive ? '<span class="live-badge">Live</span>' : '<span class="live-badge estimate">Uppskattat</span>'}</span><strong>${money(r.cost)}</strong></div>`).join("")}</div>`
     : `<button type="button" class="store-compare-upsell" id="storeCompareUpsell">🔒 Prova Premium gratis i 14 dagar och se hela jämförelsen mellan ${results.length} butiker</button>`;
-  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${cheapest.isLive ? "Lägst pris" : "Lägst uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savings > 1 ? `<small>${cheapest.isLive ? "Skillnad" : "Uppskattad skillnad"} ${money(savings)} mot ${priciest.branch.namn}</small>` : ""}</div>${listOrUpsell}</div>`;
+  const anyLive = results.some(r => r.isLive);
+  const updatedLabel = anyLive && state.liveUpdatedAt ? `<small class="store-compare-updated">Uppdaterad ${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}</small>` : "";
+  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${cheapest.isLive ? "Lägst pris" : "Lägst uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savings > 1 ? `<small>${cheapest.isLive ? "Skillnad" : "Uppskattad skillnad"} ${money(savings)} mot ${priciest.branch.namn}</small>` : ""}${updatedLabel}</div>${listOrUpsell}</div>`;
   $("storeCompareUpsell")?.addEventListener("click", openPremiumPitch);
   syncBranchComparison(shoppingItems, branches);
 }
@@ -530,7 +521,8 @@ function renderBasket() {
   document.querySelectorAll("[data-skipped]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.skipped; const fb = state.feedback[id] || {}; state.feedback[id] = { ...fb, skipped: (fb.skipped || 0) + 1 }; saveState(); renderBasket(); }));
   const completed = shoppingItems.filter(item => state.avklarade.has(item.namn)).length, progress = shoppingItems.length ? completed / shoppingItems.length * 100 : 0;
   const liveCount = shoppingItems.filter(item => state.livePriser[item.namn]).length;
-  $("shoppingProgress").textContent = `${completed} av ${shoppingItems.length} varor${liveCount ? ` · ${liveCount} med livepris` : ""}`; $("shoppingCost").textContent = `${money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
+  const updatedSuffix = liveCount && state.liveUpdatedAt ? ` (${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })})` : "";
+  $("shoppingProgress").textContent = `${completed} av ${shoppingItems.length} varor${liveCount ? ` · ${liveCount} med livepris${updatedSuffix}` : ""}`; $("shoppingCost").textContent = `${money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
   $("basketTotal").textContent = money(total); $("basketRemaining").textContent = money(Math.abs(remaining)); $("basketRemainingRow").classList.toggle("over-budget", remaining < 0); $("basketRemainingRow").querySelector("span").textContent = remaining < 0 ? "Över budget" : "Kvar";
   renderStoreComparison(selected); renderPantry();
   syncLivePrices(shoppingItems);
@@ -569,6 +561,7 @@ async function syncLivePrices(shoppingItems) {
     const produkter = await fetchProductsBatch(chain, state.postnummer, names);
     if (chosenStore() !== chain) return;
     state.livePriser = Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url) }]));
+    if (Object.keys(state.livePriser).length) state.liveUpdatedAt = Date.now();
     renderBasket();
   } catch { /* live-priser är ett tillägg ovanpå uppskattningen - misslyckas det visas bara uppskattningen kvar */ }
   finally { livePriceSync.loading = false; }
@@ -709,9 +702,21 @@ function renderAccount() {
   if (loggedIn) {
     $("accountEmail").textContent = state.user.email;
     const daysLeft = state.user.trialEndsAt ? Math.max(1, Math.ceil((new Date(state.user.trialEndsAt) - Date.now()) / 86400000)) : 0;
-    $("accountPremiumStatus").textContent = daysLeft ? `✓ Provperiod aktiv - ${plural(daysLeft, "dag", "dagar")} kvar` : state.user.premium ? "✓ Premium aktiverat" : "Inget Premium ännu";
+    const hasSubscription = ["active", "trialing", "past_due", "canceled", "unpaid"].includes(state.user.subscriptionStatus);
+    $("accountPremiumStatus").textContent = daysLeft ? `✓ Provperiod aktiv - ${plural(daysLeft, "dag", "dagar")} kvar (ingen betalning krävs)` : state.user.premium ? "✓ Premium aktiverat" : "Inget Premium ännu";
     $("premiumPitch").hidden = state.user.premium;
     $("startTrialBtn").hidden = state.user.trialUsed;
+    $("subscriptionPanel").hidden = !hasSubscription;
+    if (hasSubscription) {
+      const periodEnd = state.user.subscriptionPeriodEnd ? new Date(state.user.subscriptionPeriodEnd).toLocaleDateString("sv-SE") : "okänt datum";
+      const planLabel = state.user.subscriptionPlan === "yearly" ? "499 kr/år" : "59 kr/mån";
+      let line;
+      if (state.user.subscriptionStatus === "active" && state.user.subscriptionCancelAtPeriodEnd) line = `Din prenumeration (${planLabel}) är uppsagd och gäller till ${periodEnd}, sedan återgår kontot till gratisversionen.`;
+      else if (state.user.subscriptionStatus === "active") line = `Din prenumeration (${planLabel}) förnyas automatiskt ${periodEnd}.`;
+      else if (state.user.subscriptionStatus === "past_due") line = `Senaste betalningen (${planLabel}) gick inte igenom - uppdatera din betalmetod för att behålla Premium.`;
+      else line = `Din prenumeration är avslutad. Prenumerera igen när du vill.`;
+      $("subscriptionPanelLine").textContent = line;
+    }
   }
   const premium = Boolean(state.user?.premium);
   $("nutritionLocked").hidden = premium;
@@ -757,11 +762,14 @@ const PLAN_TYPES = [
   { key: "balanced", label: "Balanserad vecka", hint: "Bra variation och högt betygsatta rätter." },
   { key: "protein", label: "Proteinrik vecka", hint: "Mest protein för pengarna." },
 ];
+function priciestBranchFor(combo) {
+  return nearbyBranches().reduce((worst, candidate) => { const cost = shoppingListCost(combo, candidate); return !worst || cost > worst.cost ? { branch: candidate, cost } : worst; }, null);
+}
 function planCardMarkup(plan, branch) {
   const portionCost = plan.cost / (plan.combo.length * state.personer);
-  const priciest = Math.max(...nearbyBranches().map(candidate => shoppingListCost(plan.combo, candidate)));
-  const savings = priciest - plan.cost;
-  return `<div class="plan-card"><div class="plan-card-head"><strong>${plan.label}</strong><span>${plan.hint}</span></div><div class="plan-card-price"><b>${money(plan.cost)}</b><small>ca ${money(portionCost)} / portion</small></div>${savings > 1 ? `<p class="plan-card-savings">Sparar ${money(savings)} mot dyraste butiken nära dig</p>` : ""}<ul class="plan-card-meals">${plan.combo.map(recipe => `<li>${escapeHtml(recipe.namn)}</li>`).join("")}</ul><button class="btn btn-primary" type="button" data-choose-plan="${plan.key}"><span>Välj den här</span></button></div>`;
+  const priciest = priciestBranchFor(plan.combo);
+  const savings = priciest ? priciest.cost - plan.cost : 0;
+  return `<div class="plan-card"><div class="plan-card-head"><strong>${plan.label}</strong><span>${plan.hint}</span></div><div class="plan-card-price"><b>${money(plan.cost)}</b><small>ca ${money(portionCost)} / portion hos ${escapeHtml(branch?.namn || "din butik")}</small></div>${savings > 1 ? `<p class="plan-card-savings">Uppskattad besparing ca ${money(savings)} mot ${escapeHtml(priciest.branch.namn)} - priser ej live</p>` : ""}<ul class="plan-card-meals">${plan.combo.map(recipe => `<li>${escapeHtml(recipe.namn)}</li>`).join("")}</ul><button class="btn btn-primary" type="button" data-choose-plan="${plan.key}"><span>Välj den här</span></button></div>`;
 }
 function openPlanComparison() {
   const branch = selectedBranch();
@@ -772,8 +780,8 @@ function openPlanComparison() {
   $("planCards").innerHTML = plans.map(plan => planCardMarkup(plan, branch)).join("");
   document.querySelectorAll("[data-choose-plan]").forEach(button => button.addEventListener("click", () => {
     const plan = plans.find(candidate => candidate.key === button.dataset.choosePlan);
-    const priciest = Math.max(...nearbyBranches().map(candidate => shoppingListCost(plan.combo, candidate)));
-    state.savingsLog.push({ date: new Date().toISOString().slice(0, 10), savings: Math.max(0, priciest - plan.cost), branch: branch?.namn || "", portionCost: plan.cost / (plan.combo.length * state.personer) });
+    const priciest = priciestBranchFor(plan.combo);
+    state.savingsLog.push({ date: new Date().toISOString().slice(0, 10), savings: Math.max(0, (priciest?.cost || plan.cost) - plan.cost), branch: branch?.namn || "", portionCost: plan.cost / (plan.combo.length * state.personer) });
     state.savingsLog = state.savingsLog.slice(-60);
     state.swapsThisWeek = 0;
     state.valda.clear();
@@ -982,7 +990,23 @@ $("startTrialBtn").addEventListener("click", async () => {
     state.user = user; renderAccount(); chooseMenu(false); renderCampaignSection();
   } catch (error) { $("trialError").textContent = error.message; }
 });
-document.querySelectorAll("[data-price-tab]").forEach(tab => tab.addEventListener("click", () => document.querySelectorAll("[data-price-tab]").forEach(t => t.classList.toggle("active", t === tab))));
+let selectedPlan = "monthly";
+document.querySelectorAll("[data-price-tab]").forEach(tab => tab.addEventListener("click", () => { selectedPlan = tab.dataset.plan; document.querySelectorAll("[data-price-tab]").forEach(t => t.classList.toggle("active", t === tab)); }));
+$("subscribeBtn").addEventListener("click", async () => {
+  $("checkoutError").textContent = "";
+  if (!state.authToken) { $("checkoutError").textContent = "Skapa ett konto eller logga in först."; return; }
+  try {
+    const { url } = await startCheckout(state.authToken, selectedPlan);
+    window.location.href = url;
+  } catch (error) { $("checkoutError").textContent = error.message; }
+});
+$("manageBillingBtn").addEventListener("click", async () => {
+  $("portalError").textContent = "";
+  try {
+    const { url } = await openBillingPortal(state.authToken);
+    window.location.href = url;
+  } catch (error) { $("portalError").textContent = error.message; }
+});
 $("logoutBtn").addEventListener("click", async () => {
   if (state.authToken) { try { await logoutRequest(state.authToken); } catch { /* session redan ogiltig server-side, städa lokalt ändå */ } }
   state.authToken = null; state.user = null; storeToken(null);
@@ -1064,6 +1088,11 @@ renderRecipePage();
 refreshUser();
 syncNearbyBranches();
 if (!state.onboardingComplete) openOnboarding();
+const billingResult = new URLSearchParams(location.search).get("billing");
+if (billingResult) {
+  history.replaceState(null, "", location.pathname);
+  if (billingResult === "success") { refreshUser().then(() => openAccountModal()); chooseMenu(false); }
+}
 window.addEventListener("popstate", renderRecipePage);
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => { /* offline-stödet är ett tillägg - appen funkar utan det */ }));

@@ -13,6 +13,7 @@ import os
 import re
 import threading
 import time
+from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
@@ -20,6 +21,7 @@ from urllib.request import Request, urlopen
 
 from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
+from services.billing import StripeError, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature
 from services.recipe_providers import RecipeService, TheMealDbProvider
 
 logging.basicConfig(level=logging.INFO)
@@ -46,6 +48,11 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 HOST = os.environ.get("MATJAKT_HOST", "127.0.0.1")
 PORT = int(os.environ.get("MATJAKT_PORT", os.environ.get("PORT", "8000")))
 ALLOWED_ORIGIN = os.environ.get("MATJAKT_FRONTEND_ORIGIN", "http://localhost:5500")
+# Where Stripe should redirect the browser back to after checkout/the billing portal.
+# Distinct from ALLOWED_ORIGIN (used for the CORS header, which must be a bare origin
+# with no path) because GitHub Pages serves this app from a project subpath
+# (.../matjakt/), not the origin root.
+APP_URL = os.environ.get("MATJAKT_APP_URL", ALLOWED_ORIGIN).rstrip("/")
 CACHE_TTL_SECONDS = 900
 ICA_STORE_FAILURE_TTL_SECONDS = 300
 ICA_STORE_SUCCESS_TTL_SECONDS = 3600
@@ -58,6 +65,10 @@ CAMPAIGN_CAPABLE_CHAINS = ("Coop", "Hemköp")
 CAMPAIGN_SCAN_INGREDIENTS = ["Kycklingfilé", "Kycklinglårfilé", "Köttfärs", "Biff", "Fläskfilé", "Laxfilé", "Fryst torsk", "Räkor", "Kalvschnitzel", "Falukorv", "Halloumi"]
 GEOCODE_CACHE_TTL_SECONDS = 86400
 PREMIUM_CODE = os.environ.get("MATJAKT_PREMIUM_CODE", "")
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_PRICE_MONTHLY = os.environ.get("STRIPE_PRICE_MONTHLY", "")
+STRIPE_PRICE_YEARLY = os.environ.get("STRIPE_PRICE_YEARLY", "")
 AXFOOD_STORE_LIST_URL = {"Willys": "https://www.willys.se/axfood/rest/v1/store", "Hemköp": "https://www.hemkop.se/axfood/rest/v1/store"}
 STORE_LIST_CACHE_TTL_SECONDS = 86400
 ICA_STORE_LIST_TTL_SECONDS = 3600
@@ -452,6 +463,34 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return {}
         return json.loads(raw)
 
+    def _handle_stripe_webhook(self):
+        length = int(self.headers.get("Content-Length", 0) or 0)
+        raw = self.rfile.read(length) if length else b""
+        try:
+            verify_webhook_signature(raw, self.headers.get("Stripe-Signature", ""), STRIPE_WEBHOOK_SECRET)
+            event = parse_event(raw)
+        except StripeError as error:
+            logger.warning("Rejected Stripe webhook: %s", error)
+            self.send_json(400, {"error": str(error)})
+            return
+        except json.JSONDecodeError:
+            self.send_json(400, {"error": "Ogiltig JSON"})
+            return
+        event_type = event.get("type", "")
+        data = event.get("data", {}).get("object", {})
+        if event_type in ("customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"):
+            customer_id = data.get("customer")
+            period_end = data.get("current_period_end")
+            period_end_iso = datetime.fromtimestamp(period_end, tz=timezone.utc).isoformat() if period_end else None
+            items = data.get("items", {}).get("data", [])
+            price_id = items[0]["price"]["id"] if items else None
+            plan = "yearly" if price_id == STRIPE_PRICE_YEARLY else "monthly" if price_id == STRIPE_PRICE_MONTHLY else price_id
+            ACCOUNT_STORE.apply_subscription_event(
+                customer_id, data.get("id"), data.get("status"), period_end_iso,
+                bool(data.get("cancel_at_period_end")), plan,
+            )
+        self.send_json(200, {"received": True})
+
     def do_GET(self):
         self._json_response = False
         parsed = urlparse(self.path)
@@ -580,6 +619,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
         self._json_response = False
         parsed = urlparse(self.path)
+        if parsed.path == "/api/billing/webhook":
+            self._handle_stripe_webhook()
+            return
         try:
             payload = self._read_json_body()
         except (json.JSONDecodeError, UnicodeDecodeError):
@@ -617,6 +659,32 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 user = ACCOUNT_STORE.start_trial(self._bearer_token())
                 self.send_json(200, {"user": user})
             except AccountError as error:
+                self.send_json(400, {"error": str(error)})
+            return
+        if parsed.path == "/api/billing/checkout":
+            try:
+                price_id = STRIPE_PRICE_YEARLY if payload.get("plan") == "yearly" else STRIPE_PRICE_MONTHLY
+                if not price_id:
+                    raise StripeError("Stripe-priser är inte konfigurerade på servern ännu")
+                user_id, email, customer_id = ACCOUNT_STORE.billing_identity_for_token(self._bearer_token())
+                if not customer_id:
+                    customer_id = create_customer(STRIPE_SECRET_KEY, email, user_id)
+                    ACCOUNT_STORE.set_stripe_customer_id(user_id, customer_id)
+                url = create_checkout_session(
+                    STRIPE_SECRET_KEY, customer_id, price_id,
+                    success_url=f"{APP_URL}/?billing=success",
+                    cancel_url=f"{APP_URL}/?billing=cancelled",
+                )
+                self.send_json(200, {"url": url})
+            except (AccountError, StripeError) as error:
+                self.send_json(400, {"error": str(error)})
+            return
+        if parsed.path == "/api/billing/portal":
+            try:
+                customer_id = ACCOUNT_STORE.stripe_customer_id_for_token(self._bearer_token())
+                url = create_portal_session(STRIPE_SECRET_KEY, customer_id, return_url=f"{APP_URL}/")
+                self.send_json(200, {"url": url})
+            except (AccountError, StripeError) as error:
                 self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/products/batch":
