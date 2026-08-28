@@ -32,15 +32,21 @@ Frontend använder `/api` som same-origin-standard. Om API:t finns på annan ori
 API-endpoints inkluderar:
 
 - `GET /api/health`
-- `GET /api/products?butik=ICA&q=pasta&zip=80313`
+- `GET /api/products?butik=ICA&q=pasta&zip=80252`
+- `POST /api/products/batch` — `{ butik, zip, varor: ["Pasta", "Lök", ...] }`, används av veckans inköpslista för att hämta riktiga aktuella priser från vald butik istället för den statiska uppskattningen. Max 20 varor per anrop, delar samma cache/TTL som `/api/products`.
 - `GET /api/v1/recipes/search?q=chicken`
 - `GET /api/v1/recipes/themealdb:52772`
+- `GET /api/v1/recipes/by-pantry?items=Kycklingfilé,Lök` — matchar skafferi mot både de lokala recepten och TheMealDB (via `backend/services/recipe_providers/ingredient_map.py`), rankat på flest matchande ingredienser. Cachas 30 min per ingrediensuppsättning.
+- `GET /api/campaigns?butik=Coop&zip=80252` — Premium-funktion: skannar en liten uppsättning vanliga ingredienser efter kampanjpriser hos Coop/Hemköp (enda butikerna med tydlig kampanjmärkning i sökresultaten). Cachas 1 timme.
+- `GET /api/geocode?zip=41118` — postnummer → ort/lat/lon via zippopotam.us, används för riktig avståndsberäkning till butiksprofilerna.
+- `GET /api/stores?zip=80252` — riktiga butiker (namn, koordinater, avstånd) nära postnumret för alla fyra kedjor: Willys/Hemköp via Axfoods öppna butiks-REST-API, ICA via samma butiksuppslag som `/api/products`, Coop via en Playwright-driven sökning (deras API kräver en riktig browsersession). Cachas 24h (ICA 1h). Ersätter den tidigare hårdkodade Gävle/Stockholm/Göteborg-listan.
+- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/redeem` — konton och Premium-inlösen, se `backend/services/accounts/`.
 
 Recept-API:t använder ett providerlager under `backend/services/recipe_providers/`. Frontend får alltid normaliserad titel, bild, ingredienser och instruktioner från samma providerresultat och känner inte till leverantörens externa API.
 
 ## Miljövariabler
 
-Se `.env.example`. Pythonservern läser processmiljön direkt; en `.env` behöver laddas av skalet/processverktyget.
+Se `.env.example`. Kopiera den till `.env` och fyll i värden — `backend/api_server.py` läser filen automatiskt vid start (utan att skriva över variabler som redan är satta i skalet).
 
 | Variabel | Standard | Beskrivning |
 | --- | --- | --- |
@@ -56,7 +62,6 @@ Inga API-nycklar krävs och `.env` ignoreras av Git.
 ```bash
 npm test
 npm run check
-npm --prefix mobile exec tsc -- --noEmit
 ```
 
 Testerna täcker portionsskalning, ingredienssummering, budget, shoppingtotal, persistent state, receptsökning samt backendens prisparsning.
@@ -66,15 +71,14 @@ Testerna täcker portionsskalning, ingredienssummering, budget, shoppingtotal, p
 ```text
 frontend/
   index.html, styles.css, app.js  UI och applikationsorkestrering
+  manifest.json, sw.js           PWA: installerbar på hemskärmen, offline-cachad app-skal
   src/api/                       runtime-konfiguration och API-URL:er
   src/services/                  ren beräknings- och söklogik
   src/state/                     tolerant localStorage-persistens
   src/utils/                     säker HTML- och URL-hantering
 backend/
-  api_server.py                  HTTP-API och kortlivad cache
-  *_scraper.py, common.py        fristående Playwright-scrapers
-mobile/                          tidigt Expo-skal
-android/                         Capacitor Android-projekt
+  api_server.py                  HTTP-API, Playwright-scraping och tidsbegränsad cache
+android/                         Capacitor Android-projekt (webDir: frontend)
 tests/                           frontendens enhetstester
 ```
 
@@ -83,6 +87,10 @@ tests/                           frontendens enhetstester
 ## Kända begränsningar
 
 - Butikernas DOM och villkor kan ändras; selektorer och rätt till storskalig datainsamling måste verifieras före produktion.
-- Produktmatchning och priser är inte ännu auktoritativa.
-- API-cachen ligger i minnet och delas inte mellan processer.
-- Expo-katalogen är ett separat tidigt skal; Capacitor-webbfrontenden är prototypen som används.
+- Produktmatchning och priser är inte ännu auktoritativa. Veckans inköpslista hämtar riktiga liveaktuella priser per vara (`POST /api/products/batch`) genom en textsökning i butikens sökresultat — matchningen föredrar en produkt vars namn faktiskt börjar med varunamnet, men är fortfarande fritextbaserad och kan träffa fel produkt om butiken inte har någon bra sökträff.
+- ICA:s livepris-sökning (`/api/products`) är blockerad av en riktig CAPTCHA ("Human Verification") på deras sökresultatsida — inte något vi kan eller ska försöka kringgå. ICA-butiker visas därför alltid med den statiska prisuppskattningen, aldrig med "Live"-märkning. Butiksuppslaget (`resolve_ica_store`, `/api/stores`) fungerar dock fint, det är bara produktsökningen som är spärrad.
+- API-cachen ligger i minnet (15 min TTL, max 200 poster) och delas inte mellan processer.
+- Postnummer geokodas via `GET /api/geocode` (gratis, nyckelfritt uppslag mot zippopotam.us) och `/api/stores` hittar riktiga butiker var som helst i Sverige — första uppslaget för ett nytt postnummer kan ta upp till någon minut (Coop-sökningen driver en riktig webbläsarsession), därefter är det cachat 24h.
+- Android-appen (Capacitor, `webDir: frontend`) laddas inte same-origin med backend som webbfrontenden gör. Sätt `<meta name="matjakt-api-url">` i `frontend/index.html` till en driftsatt backend-URL och kör `npx cap sync android` innan en Android-build används mot något annat än en lokal utvecklingsmiljö.
+- Recepten har riktiga näringsvärden beräknade från Livsmedelsverkets öppna näringsdatabas (`backend/scripts/compute_recipe_nutrition.py`), men bara för de kvantifierade ingredienserna i receptet. Tillagningsfett (olja/smör under "Hemma") är inte kvantifierat och räknas inte in, så särskilt fettvärdet kan vara något lägre än verkligheten.
+- Premium är kontobaserat (riktig inloggning, se `backend/services/accounts/`) men inte betalningsbaserat ännu — Premium låses upp med en kod (`MATJAKT_PREMIUM_CODE`) tills en riktig betallösning kopplas på.

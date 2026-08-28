@@ -5,17 +5,27 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#f6f3ea">
   <meta name="description" content="Matjakt hjälper dig planera billigare middagar efter din budget.">
+  <!-- Sätt content till en driftsatt backend-URL (t.ex. https://api.example.se/api) innan Android-appen byggs/synkas -
+       utan detta anropar en Capacitor-app sin egen paketerade origin istället för en riktig server. Lämna tomt för
+       webbfrontend som körs same-origin med backend. -->
+  <meta name="matjakt-api-url" content="">
   <title>Matjakt – din smarta matvecka</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Matjakt">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=15">
+  <link rel="stylesheet" href="styles.css?v=25">
 </head>
 <body>
   <div class="phone-shell">
     <header class="topbar">
       <a class="wordmark" href="#" aria-label="Matjakt startsida">Matjakt<span>.</span></a>
-      <button class="profile-btn" type="button" aria-label="Öppna profil och inställningar">MJ</button>
+      <button class="profile-btn" type="button" id="profileBtn" aria-label="Öppna profil och inställningar">MJ</button>
     </header>
 
     <main class="app view-home" id="top">
@@ -30,14 +40,95 @@
             <div class="settings-content">
               <label for="budgetInput">Veckobudget</label><div class="budget-row"><input type="number" id="budgetInput" value="800" min="0" step="50" inputmode="numeric"><span>kr</span></div>
               <div class="settings-grid"><div><label>Personer</label><div class="stepper"><button id="peopleMinus" aria-label="Färre personer">−</button><span id="peopleValue">2</span><button id="peoplePlus" aria-label="Fler personer">+</button></div></div><div><label>Middagar</label><div class="stepper"><button id="mealsMinus" aria-label="Färre middagar">−</button><span id="mealsValue">4</span><button id="mealsPlus" aria-label="Fler middagar">+</button></div></div></div>
-              <label for="postcodeInput">Postnummer</label><div class="location-row"><input id="postcodeInput" value="80313" inputmode="numeric" maxlength="5"><button id="locateBtn" type="button">Hitta mig</button></div><p id="locationHint" class="location-hint">Vi jämför butiker nära dig.</p>
+              <label for="postcodeInput">Postnummer</label><div class="location-row"><input id="postcodeInput" value="80252" inputmode="numeric" maxlength="5"><button id="locateBtn" type="button">Hitta mig</button></div><p id="locationHint" class="location-hint">Vi jämför butiker nära dig.</p>
               <label for="storeInput">Butik</label><select id="storeInput"><option value="auto">Billigast automatiskt</option><option value="alla">Alla butiker</option><option value="ICA">ICA</option><option value="Willys">Willys</option><option value="Hemköp">Hemköp</option><option value="Coop">Coop</option></select>
+
+              <div class="nutrition-goals">
+                <div class="nutrition-goals-label"><span>Kost &amp; allergier</span></div>
+                <label for="kosttypInput">Kosttyp</label>
+                <select id="kosttypInput">
+                  <option value="">Alla recept</option>
+                  <option value="vegetariskt">Vegetariskt</option>
+                  <option value="veganskt">Veganskt</option>
+                </select>
+                <label>Undvik allergener</label>
+                <div class="protein-source-chips" id="allergenChips">
+                  <label><input type="checkbox" value="gluten"> Gluten</label>
+                  <label><input type="checkbox" value="laktos"> Laktos</label>
+                  <label><input type="checkbox" value="nötter"> Nötter</label>
+                  <label><input type="checkbox" value="skaldjur"> Skaldjur</label>
+                  <label><input type="checkbox" value="fisk"> Fisk</label>
+                  <label><input type="checkbox" value="ägg"> Ägg</label>
+                  <label><input type="checkbox" value="soja"> Soja</label>
+                </div>
+              </div>
+
+              <div class="nutrition-goals">
+                <div class="nutrition-goals-label"><span>Näringsmål</span><span class="premium-badge">Premium</span></div>
+                <p class="nutrition-locked" id="nutritionLocked">Logga in och lös in Premium för att styra veckan efter kalorier, protein och proteinkälla per måltid.</p>
+                <div class="nutrition-fields" id="nutritionFields" hidden>
+                  <label for="goalPreset">Mål</label>
+                  <select id="goalPreset">
+                    <option value="">Anpassat</option>
+                    <option value="hogprotein">Högprotein</option>
+                    <option value="lagkalori">Lågkalori</option>
+                    <option value="bulk">Bulk</option>
+                    <option value="cut">Cut</option>
+                    <option value="underhall">Underhåll</option>
+                  </select>
+                  <label for="kcalGoal">Kalorier per måltid</label>
+                  <select id="kcalGoal">
+                    <option value="">Ingen gräns</option>
+                    <option value="0-400">Under 400 kcal</option>
+                    <option value="400-500">400–500 kcal</option>
+                    <option value="500-600">500–600 kcal</option>
+                    <option value="600-700">600–700 kcal</option>
+                    <option value="700-900">700–900 kcal</option>
+                  </select>
+                  <label for="proteinGoal">Protein per måltid</label>
+                  <select id="proteinGoal">
+                    <option value="">Ingen gräns</option>
+                    <option value="20">Minst 20 g</option>
+                    <option value="30">Minst 30 g</option>
+                    <option value="40">Minst 40 g</option>
+                    <option value="50">Minst 50 g</option>
+                    <option value="60">Minst 60 g</option>
+                  </select>
+                  <label for="carbsGoal">Kolhydrater</label>
+                  <select id="carbsGoal">
+                    <option value="">Normala</option>
+                    <option value="0-30">Låga</option>
+                    <option value="60-999">Höga</option>
+                  </select>
+                  <label for="fatGoal">Fett</label>
+                  <select id="fatGoal">
+                    <option value="">Normalt</option>
+                    <option value="0-15">Lågt</option>
+                  </select>
+                  <label>Proteinkälla</label>
+                  <div class="protein-source-chips" id="proteinSourceChips">
+                    <label><input type="checkbox" value="kyckling"> Kyckling</label>
+                    <label><input type="checkbox" value="notkott"> Nötkött</label>
+                    <label><input type="checkbox" value="flask"> Fläsk</label>
+                    <label><input type="checkbox" value="fisk"> Fisk</label>
+                    <label><input type="checkbox" value="skaldjur"> Skaldjur</label>
+                    <label><input type="checkbox" value="vegetariskt"> Vegetariskt</label>
+                    <label><input type="checkbox" value="veganskt"> Veganskt</label>
+                  </div>
+                </div>
+              </div>
             </div>
           </details>
           <button class="btn btn-primary" id="generateBtn"><span>Skapa min vecka</span><span aria-hidden="true">→</span></button>
         </section>
 
         <section class="savings-card"><span class="savings-icon" aria-hidden="true">≈</span><p>Prisprognos<strong>Uppskattning</strong><small>Bekräfta alltid aktuella priser hos butiken</small></p></section>
+
+        <section class="campaign-section" id="campaignSection" aria-labelledby="campaignHeading">
+          <div class="section-heading"><div><p class="eyebrow">Premium</p><h2 id="campaignHeading">🏷️ Kampanjer just nu</h2></div></div>
+          <p class="nutrition-locked" id="campaignLocked">Logga in och lös in Premium för att se aktuella butikskampanjer hos Coop och Hemköp, med receptförslag.</p>
+          <div id="campaignList"></div>
+        </section>
 
         <section class="recipes-section" aria-labelledby="recipesHeading">
           <div class="section-heading"><div><p class="eyebrow">Utvalt för dig</p><h2 id="recipesHeading">Recept att gilla</h2></div><button class="btn-ghost" id="refreshBtn">Byt förslag</button></div>
@@ -65,8 +156,9 @@
       <section class="screen pantry-screen" aria-labelledby="pantryTitle">
         <header class="screen-header"><p class="eyebrow">Hemma hos dig</p><h1 id="pantryTitle">Skafferi</h1></header>
         <section class="pantry-hero"><span>Varor hemma</span><strong id="pantryCount">0</strong><p>Matjakt räknar bort det du redan har.</p></section>
-        <div class="segmented" role="tablist"><button class="active" type="button">Skafferi</button><button type="button">Kyl</button><button type="button">Frys</button></div>
+        <div class="segmented" role="tablist" id="pantryTabs"><button class="active" type="button" data-pantry-tab="skafferi">Skafferi</button><button type="button" data-pantry-tab="kyl">Kyl</button><button type="button" data-pantry-tab="frys">Frys</button></div>
         <button class="add-pantry-btn" id="addPantryBtn" type="button"><span>＋</span> Lägg till vara</button>
+        <button class="btn btn-primary cook-from-pantry-btn" id="cookFromPantryBtn" type="button"><span>🍳 Laga med det jag har</span></button>
         <div class="pantry-list" id="pantryList"></div>
       </section>
     </main>
@@ -79,6 +171,83 @@
     </nav>
   </div>
   <section class="recipe-page" id="recipePage" hidden></section>
-  <script type="module" src="app.js?v=30"></script>
+
+  <div class="account-modal" id="accountModal" hidden>
+    <button class="account-modal-backdrop" type="button" data-account-close aria-label="Stäng"></button>
+    <div class="account-modal-card" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
+      <button class="account-modal-close" type="button" data-account-close aria-label="Stäng">×</button>
+
+      <div id="accountLoggedOut">
+        <h2 id="accountModalTitle">Konto</h2>
+        <div class="account-tabs" role="tablist">
+          <button type="button" class="account-tab active" data-account-tab="login">Logga in</button>
+          <button type="button" class="account-tab" data-account-tab="register">Skapa konto</button>
+        </div>
+        <form id="accountLoginForm" class="account-form">
+          <label for="loginEmail">E-post</label>
+          <input id="loginEmail" type="email" required autocomplete="email">
+          <label for="loginPassword">Lösenord</label>
+          <input id="loginPassword" type="password" required autocomplete="current-password">
+          <p class="account-error" id="loginError"></p>
+          <button class="btn btn-primary" type="submit"><span>Logga in</span></button>
+        </form>
+        <form id="accountRegisterForm" class="account-form" hidden>
+          <label for="registerEmail">E-post</label>
+          <input id="registerEmail" type="email" required autocomplete="email">
+          <label for="registerPassword">Lösenord (minst 8 tecken)</label>
+          <input id="registerPassword" type="password" required minlength="8" autocomplete="new-password">
+          <p class="account-error" id="registerError"></p>
+          <button class="btn btn-primary" type="submit"><span>Skapa konto</span></button>
+        </form>
+      </div>
+
+      <div id="accountLoggedIn" hidden>
+        <h2>Ditt konto</h2>
+        <p class="account-email" id="accountEmail"></p>
+        <p class="account-premium-status" id="accountPremiumStatus"></p>
+        <form id="accountRedeemForm" class="account-form">
+          <label for="premiumCode">Premium-kod</label>
+          <input id="premiumCode" type="text" autocomplete="off">
+          <p class="account-error" id="redeemError"></p>
+          <button class="btn btn-ghost account-redeem-btn" type="submit">Lös in kod</button>
+        </form>
+        <button class="account-logout-btn" id="logoutBtn" type="button">Logga ut</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="account-modal" id="pantryModal" hidden>
+    <button class="account-modal-backdrop" type="button" data-pantry-close aria-label="Stäng"></button>
+    <div class="account-modal-card pantry-modal-card" role="dialog" aria-modal="true" aria-labelledby="pantryModalTitle">
+      <button class="account-modal-close" type="button" data-pantry-close aria-label="Stäng">×</button>
+      <h2 id="pantryModalTitle">Lägg till i skafferiet</h2>
+      <label class="sr-only" for="pantrySearch">Sök vara</label>
+      <input id="pantrySearch" type="search" placeholder="Sök t.ex. pasta, ris, ost..." autocomplete="off">
+      <div class="pantry-picker-list" id="pantryPickerList"></div>
+      <div class="pantry-add-confirm" id="pantryAddConfirm" hidden>
+        <h3 id="pantryAddConfirmName"></h3>
+        <label>Var förvarar du den?</label>
+        <div class="segmented" id="pantryAddLocation">
+          <button type="button" class="active" data-location="skafferi">Skafferi</button>
+          <button type="button" data-location="kyl">Kyl</button>
+          <button type="button" data-location="frys">Frys</button>
+        </div>
+        <label for="pantryAddExpiry">Bäst före (valfritt)</label>
+        <input type="date" id="pantryAddExpiry">
+        <button class="btn btn-primary" id="pantryAddConfirmBtn" type="button"><span>Lägg till</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="account-modal" id="cookModal" hidden>
+    <button class="account-modal-backdrop" type="button" data-cook-close aria-label="Stäng"></button>
+    <div class="account-modal-card" role="dialog" aria-modal="true" aria-labelledby="cookModalTitle">
+      <button class="account-modal-close" type="button" data-cook-close aria-label="Stäng">×</button>
+      <h2 id="cookModalTitle">Laga med det du har hemma</h2>
+      <div id="cookResults"></div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js?v=42"></script>
 </body>
 </html>

@@ -3,6 +3,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from .base import RecipeProvider
+from .ingredient_map import SWEDISH_TO_MEALDB_INGREDIENT
 from .models import Recipe, RecipeIngredient
 
 
@@ -21,6 +22,32 @@ class TheMealDbProvider(RecipeProvider):
     def get(self, provider_recipe_id: str) -> Recipe | None:
         meals = self._request("lookup.php", {"i": provider_recipe_id}).get("meals") or []
         return self.normalize(meals[0]) if meals else None
+
+    def search_by_pantry(self, swedish_ingredients: list[str], limit: int = 8) -> list[tuple[Recipe, list[str]]]:
+        """Find recipes that use ingredients the user already has, via TheMealDB's
+        filter-by-ingredient endpoint (one ingredient per call - there is no
+        multi-ingredient filter). Ranked by how many pantry ingredients match."""
+        terms_to_swedish: dict[str, list[str]] = {}
+        for name in swedish_ingredients:
+            term = SWEDISH_TO_MEALDB_INGREDIENT.get(name)
+            if term:
+                terms_to_swedish.setdefault(term, []).append(name)
+        if not terms_to_swedish:
+            return []
+        matched_swedish: dict[str, set[str]] = {}
+        for term, names in terms_to_swedish.items():
+            meals = self._request("filter.php", {"i": term}).get("meals") or []
+            for meal in meals:
+                meal_id = meal.get("idMeal")
+                if meal_id:
+                    matched_swedish.setdefault(meal_id, set()).update(names)
+        ranked_ids = sorted(matched_swedish, key=lambda meal_id: len(matched_swedish[meal_id]), reverse=True)[:limit]
+        results = []
+        for meal_id in ranked_ids:
+            recipe = self.get(meal_id)
+            if recipe:
+                results.append((recipe, sorted(matched_swedish[meal_id])))
+        return results
 
     @classmethod
     def normalize(cls, meal: dict) -> Recipe:

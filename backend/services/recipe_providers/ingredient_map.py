@@ -1,0 +1,63 @@
+"""Swedish pantry ingredient name -> TheMealDB ingredient term.
+
+TheMealDB's filter.php only matches its own fixed vocabulary (fetched once via
+list.php?i=list and checked by hand - see the Matjakt README/dev notes). A
+handful of pantry ingredients have no reasonable TheMealDB equivalent (e.g.
+"Halloumi", "Lingonsylt", "Bär") and are simply absent from this map; callers
+should skip pantry ingredients that don't appear here.
+"""
+
+SWEDISH_TO_MEALDB_INGREDIENT = {
+    "Grädde": "Cream",
+    "Majs": "Sweetcorn",
+    "Pasta": "Spaghetti",
+    "Purjolök": "Leek",
+    "Ris": "Rice",
+    "Riven ost": "Cheese",
+    "Salsa": "Salsa",
+    "Svarta bönor": "Black Beans",
+    "Kokosmjölk": "Coconut Milk",
+    "Kycklinglårfilé": "Chicken Thighs",
+    "Lök & vitlök": "Onion",
+    "Morötter": "Carrots",
+    "Röda linser": "Lentils",
+    "Falukorv": "Sausages",
+    "Tomatpuré": "Tomato Puree",
+    "Fryst torsk": "Cod",
+    "Citron": "Lemon",
+    "Laxfilé": "Salmon",
+    "Dill": "Dill",
+    "Kidneybönor": "Kidney Beans",
+    "Paprika": "Pepper",
+    "Matvete": "Bulgur Wheat",
+    "Yoghurt": "Yogurt",
+    "Kycklingfilé": "Chicken Breast",
+    "Äggnudlar": "Egg Noodles",
+    "Wokgrönsaker": "Vegetables",
+    "Soja": "Soy Sauce",
+    "Lök": "Onion",
+    "Basilika": "Basil",
+    "Ägg": "Eggs",
+    "Mjölk": "Milk",
+    "Krossade tomater": "Tomatoes",
+    "Vetemjöl": "Flour",
+    "Crème fraiche": "Creme Fraiche",
+    "Potatis": "Potatoes",
+    "Köttfärs": "Minced Beef",
+    "Lasagneplattor": "Lasagne Sheets",
+    "Zucchini": "Zucchini",
+    "Räkor": "Shrimp",
+    "Vitlök": "Garlic",
+    "Kikärtor": "Chickpeas",
+    "Fläskfilé": "Pork Tenderloin",
+    "Timjan": "Thyme",
+    "Biff": "Beef",
+    "Vegofärs": "Tofu",
+    "Tofu": "Tofu",
+    "Sparris": "Asparagus",
+    "Äppelmos": "Apples",
+    "Rödkål": "Cabbage",
+    "Feta": "Feta",
+    "Kalvschnitzel": "Veal",
+    "Kapris": "Capers",
+}

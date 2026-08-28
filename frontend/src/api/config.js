@@ -6,6 +6,26 @@ export function productApiUrl(store, query, postcode) {
   return `${API_BASE_URL}/products?${params}`;
 }
 
+export function productsBatchApiUrl() {
+  return `${API_BASE_URL}/products/batch`;
+}
+
+export function geocodeApiUrl(zip) {
+  return `${API_BASE_URL}/geocode?${new URLSearchParams({ zip })}`;
+}
+
+export function campaignsApiUrl(chain, zip) {
+  return `${API_BASE_URL}/campaigns?${new URLSearchParams({ butik: chain, zip })}`;
+}
+
+export function storesApiUrl(zip) {
+  return `${API_BASE_URL}/stores?${new URLSearchParams({ zip })}`;
+}
+
+export function recipesByPantryApiUrl(items) {
+  return `${API_BASE_URL}/v1/recipes/by-pantry?${new URLSearchParams({ items: items.join(",") })}`;
+}
+
 export function recipeSearchApiUrl(query) {
   return `${API_BASE_URL}/v1/recipes/search?${new URLSearchParams({ q: query })}`;
 }

@@ -5,6 +5,10 @@ export function filterRecipes(recipes, query) {
     .some(value => String(value).toLocaleLowerCase("sv").includes(normalized)));
 }
 
+export function mergeRecipeResults(retained, fresh) {
+  return [...retained, ...fresh].filter((recipe, index, all) => all.findIndex(item => item.id === recipe.id) === index);
+}
+
 export function createDebouncedSearch(search, delay = 300) {
   let timer;
   let controller;

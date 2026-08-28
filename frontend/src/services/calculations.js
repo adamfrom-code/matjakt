@@ -1,5 +1,5 @@
 export function portionFactor(people, basePortions = 4) {
-  return Math.max(1, Math.ceil(Number(people) / basePortions));
+  return Math.max(0.25, Number(people) / basePortions);
 }
 
 export function aggregateIngredients(recipes, quantities, packages, people) {
@@ -27,4 +27,8 @@ export function calculateShoppingTotal(items, catalog, pantry = {}, priceFactor 
 
 export function budgetRemaining(budget, total) {
   return Number(budget) - Number(total);
+}
+
+export function clampBudget(value) {
+  return Math.max(0, Number(value) || 0);
 }

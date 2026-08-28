@@ -74,5 +74,46 @@ class RecipeProviderTest(unittest.TestCase):
         self.assertEqual(len(recipes), 1)
 
 
+class PantrySearchTest(unittest.TestCase):
+    def test_search_by_pantry_ranks_by_number_of_matched_ingredients(self):
+        provider = TheMealDbProvider()
+        # "Chicken Breast" matches two meals, "Onion" matches one of the same two -
+        # meal 1 should rank first since it matches both pantry ingredients.
+        filter_results = {
+            "Chicken Breast": [{"idMeal": "1"}, {"idMeal": "2"}],
+            "Onion": [{"idMeal": "1"}],
+        }
+        provider._request = lambda endpoint, params: (
+            {"meals": filter_results[params["i"]]} if endpoint == "filter.php"
+            else {"meals": [{**MEAL, "idMeal": params["i"], "strMeal": f"Meal {params['i']}"}]}
+        )
+        results = provider.search_by_pantry(["Kycklingfilé", "Lök", "Halloumi"])
+        self.assertEqual([recipe.provider_recipe_id for recipe, _ in results], ["1", "2"])
+        self.assertEqual(results[0][1], ["Kycklingfilé", "Lök"])
+        self.assertEqual(results[1][1], ["Kycklingfilé"])
+
+    def test_search_by_pantry_ignores_ingredients_with_no_mealdb_mapping(self):
+        provider = TheMealDbProvider()
+        calls = []
+        provider._request = lambda endpoint, params: calls.append(params) or {"meals": []}
+        provider.search_by_pantry(["Halloumi", "Lingonsylt", "Bär"])
+        self.assertEqual(calls, [])
+
+    def test_recipe_service_dispatches_to_providers_that_support_pantry_search(self):
+        class PantryProvider(FakeProvider):
+            name = "pantryprovider"
+
+            def search_by_pantry(self, swedish_ingredients, limit=8):
+                return [(TheMealDbProvider.normalize(MEAL), swedish_ingredients)]
+
+        service = RecipeService([PantryProvider(), FakeProvider()])
+        results = service.search_by_pantry(["Kycklingfilé"])
+        self.assertEqual(len(results), 1)
+
+    def test_recipe_service_skips_providers_without_pantry_search(self):
+        results = RecipeService([FakeProvider()]).search_by_pantry(["Kycklingfilé"])
+        self.assertEqual(results, [])
+
+
 if __name__ == "__main__":
     unittest.main()

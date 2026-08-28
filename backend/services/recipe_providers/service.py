@@ -1,5 +1,9 @@
+import logging
+
 from .base import RecipeProvider
 from .models import Recipe
+
+logger = logging.getLogger("matjakt.api")
 
 
 class RecipeService:
@@ -12,6 +16,7 @@ class RecipeService:
             try:
                 recipes.extend(provider.search(query))
             except Exception:
+                logger.exception("Recipe provider %r failed for query %r", provider.name, query)
                 continue
         return recipes
 
@@ -24,3 +29,18 @@ class RecipeService:
         if recipe and recipe.id != recipe_id:
             raise ValueError("Provider returned a recipe with a mismatched id")
         return recipe
+
+    def search_by_pantry(self, swedish_ingredients: list[str], limit: int = 8) -> list[tuple[Recipe, list[str]]]:
+        """Ask every provider that supports pantry-based search (currently just
+        TheMealDB) for recipes matching the given Swedish ingredient names."""
+        results: list[tuple[Recipe, list[str]]] = []
+        for provider in self.providers.values():
+            method = getattr(provider, "search_by_pantry", None)
+            if not callable(method):
+                continue
+            try:
+                results.extend(method(swedish_ingredients, limit=limit))
+            except Exception:
+                logger.exception("Pantry-based search failed for provider %r", provider.name)
+        results.sort(key=lambda pair: len(pair[1]), reverse=True)
+        return results[:limit]
