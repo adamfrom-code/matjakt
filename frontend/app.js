@@ -3,7 +3,7 @@ import { aggregateIngredients, budgetRemaining, calculateShoppingTotal, clampBud
 import { createDebouncedSearch, filterRecipes, mergeRecipeResults } from "./src/services/recipe-search.js";
 import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/nutrition.js";
 import { expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts } from "./src/services/pantry.js";
-import { filterByDiet } from "./src/services/diet.js";
+import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
 import { campaignsApiUrl, geocodeApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
 import { fetchCurrentUser, getStoredToken, login, logout as logoutRequest, redeemPremium, register, storeToken } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
@@ -38,8 +38,8 @@ function wireRatingStars(container, recipeId) {
 
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) } };
-function saveState() { writeStoredState(localStorage, { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] } }); }
+const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []) };
+function saveState() { writeStoredState(localStorage, { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar] }); }
 const FALLBACK_BRANCH = [{ kedja: "Willys", namn: "Butik nära dig (uppskattat)", lat: null, lon: null, avstandKm: 0, prisfaktor: 1 }];
 const PRODUCT_CATALOG = {
   "Grädde": { namn: "Mat grädde 15%", marke: "Arla", storlek: "2 dl", pris: 15.95 },
@@ -205,20 +205,31 @@ function combinations(list, size) {
   return [...combinations(rest, size - 1).map(combo => [first, ...combo]), ...combinations(rest, size)];
 }
 const comboRating = combo => combo.reduce((sum, recipe) => sum + (state.betyg[recipe.id] || 0), 0);
-function bestMenuCombo(recipes, count, budget, branch) {
+const comboVariety = combo => new Set(combo.map(recipe => recipe.proteinkalla)).size;
+const comboProtein = combo => combo.reduce((sum, recipe) => sum + (recipe.protein || 0), 0);
+const PLAN_OBJECTIVES = {
+  // Lower cost always wins first - "cheapest" ranks purely on it, the others use it
+  // as the tiebreaker so a combo never beats a materially cheaper one on rating/protein
+  // alone. Package-rounded cost already rewards recipes that share ingredients (fewer
+  // separate packages to buy), so minimizing cost also naturally reduces waste.
+  cheapest: (combo, cost) => -cost,
+  balanced: (combo, cost) => comboRating(combo) * 25 + comboVariety(combo) * 15 - cost,
+  protein: (combo, cost) => comboProtein(combo) * 6 - cost * 0.1,
+};
+function bestMenuCombo(recipes, count, budget, branch, objective = "cheapest") {
   if (!recipes.length) return [];
   if (recipes.length <= count) return [...recipes];
-  let best = null, bestCost = -1, bestRating = -1, fallback = null, fallbackCost = Infinity;
+  const scoreFn = PLAN_OBJECTIVES[objective] || PLAN_OBJECTIVES.cheapest;
+  let best = null, bestScore = -Infinity, bestWithinBudget = false;
   combinations(recipes, count).forEach(combo => {
     const cost = shoppingListCost(combo, branch);
-    if (cost <= budget) {
-      const withinBudgetTolerance = cost > bestCost + 0.5;
-      const tiedButBetterRated = Math.abs(cost - bestCost) <= 0.5 && comboRating(combo) > bestRating;
-      if (withinBudgetTolerance || tiedButBetterRated) { best = combo; bestCost = Math.max(bestCost, cost); bestRating = comboRating(combo); }
-    }
-    if (cost < fallbackCost) { fallback = combo; fallbackCost = cost; }
+    const withinBudget = cost <= budget;
+    const score = scoreFn(combo, cost);
+    // Combos within budget always outrank combos that go over it, regardless of score.
+    const better = !best || (withinBudget && !bestWithinBudget) || (withinBudget === bestWithinBudget && score > bestScore);
+    if (better) { best = combo; bestScore = score; bestWithinBudget = withinBudget; }
   });
-  return best || fallback || [];
+  return best || [];
 }
 function distanceKm(lat1, lon1, lat2, lon2) {
   const earthRadius = 6371, latDelta = (lat2 - lat1) * Math.PI / 180, lonDelta = (lon2 - lon1) * Math.PI / 180;
@@ -232,7 +243,7 @@ async function syncNearbyBranches() {
   if (!/^\d{5}$/.test(zip) || branchesSync.key === zip || branchesSync.loading) return;
   branchesSync = { key: zip, loading: true };
   try {
-    const response = await fetch(storesApiUrl(zip));
+    const response = await fetch(storesApiUrl(zip), { signal: AbortSignal.timeout(20000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (state.postnummer !== zip) return;
@@ -242,8 +253,16 @@ async function syncNearbyBranches() {
   } catch { /* nätverket svarade inte - den uppskattade fallback-butiken visas kvar tills det går att försöka igen */ }
   finally { branchesSync.loading = false; }
 }
+function recipeMatchesDislikes(recipe) {
+  if (!state.ogillar.size) return false;
+  const text = recipe.ingredienser.join(" ").toLowerCase();
+  return [...state.ogillar].some(term => text.includes(term.toLowerCase()));
+}
+function localRecipesForUser() {
+  return filterByDiet(RECEPT, state.kost).filter(recipe => !recipeMatchesDislikes(recipe));
+}
 function nutritionFilteredRecipes() {
-  const dietFiltered = filterByDiet(RECEPT, state.kost);
+  const dietFiltered = localRecipesForUser();
   if (!state.user?.premium) return dietFiltered;
   return filterByNutritionGoals(dietFiltered, currentNutritionGoals());
 }
@@ -289,7 +308,7 @@ function chooseMenu(shouldScroll = true) {
 function renderRecipes() {
   const search = state.sokning.trim();
   const dietFilterActive = state.kost.kosttyp !== "" || state.kost.avoidAllergens.size > 0;
-  const recipes = filterRecipes(search ? [...filterByDiet(RECEPT, state.kost), ...(dietFilterActive ? [] : state.apiRecipes)] : availableRecipes(), search).filter(recipe => (state.kategori === "alla" || recipe.typ === state.kategori) && (!state.maxTid || recipe.tid <= state.maxTid) && (!state.baraFavoriter || state.favoriter.has(recipe.id)));
+  const recipes = filterRecipes(search ? [...localRecipesForUser(), ...(dietFilterActive ? [] : state.apiRecipes)] : availableRecipes(), search).filter(recipe => (state.kategori === "alla" || recipe.typ === state.kategori) && (!state.maxTid || recipe.tid <= state.maxTid) && (!state.baraFavoriter || state.favoriter.has(recipe.id)));
   const branch = selectedBranch();
   const storeLabel = state.butik === "auto" ? `${branch?.namn || "ingen butik hittades"} (lägst uppskattat)` : state.butik === "alla" ? "alla butiker" : `${branch?.namn || state.butik}`;
   const loading = !state.branches.length && branchesSync.loading;
@@ -405,7 +424,7 @@ function renderBasket() {
   $("shoppingList").innerHTML = shoppingItems.length ? Object.entries(groups).map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingItemMarkup).join("")}</section>`).join("") : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
   document.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => { input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping); saveState(); renderBasket(); }));
   document.querySelectorAll("[data-details]").forEach(button => button.addEventListener("click", () => openRecipeTab(button.dataset.details)));
-  document.querySelectorAll("[data-swap]").forEach(button => button.addEventListener("click", () => { const current = button.dataset.swap; const replacement = availableRecipes().find(recipe => !state.valda.has(recipe.id)); state.valda.delete(current); if (replacement) state.valda.add(replacement.id); saveState(); render(); }));
+  document.querySelectorAll("[data-swap]").forEach(button => button.addEventListener("click", () => openSwapModal(button.dataset.swap)));
   const completed = shoppingItems.filter(item => state.avklarade.has(item.namn)).length, progress = shoppingItems.length ? completed / shoppingItems.length * 100 : 0;
   const liveCount = shoppingItems.filter(item => state.livePriser[item.namn]).length;
   $("shoppingProgress").textContent = `${completed} av ${shoppingItems.length} varor${liveCount ? ` · ${liveCount} med livepris` : ""}`; $("shoppingCost").textContent = `${money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
@@ -429,7 +448,7 @@ async function fetchProductsBatch(chain, zip, names) {
   const produkter = {};
   for (const chunk of chunks) {
     try {
-      const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: chunk }) });
+      const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: chunk }), signal: AbortSignal.timeout(20000) });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       Object.assign(produkter, (await response.json()).produkter || {});
     } catch { /* den här biten missade - resten av listan hämtas ändå */ }
@@ -593,6 +612,140 @@ function renderAccount() {
   $("nutritionLocked").hidden = premium;
   $("nutritionFields").hidden = !premium;
 }
+let swapContext = null;
+function swapOptionMarkup(option, baseTotal) {
+  const delta = option.total - baseTotal;
+  const deltaLabel = Math.round(delta) === 0 ? "Samma pris för veckan" : `${delta > 0 ? "+" : "−"}${money(Math.abs(delta))} för veckan`;
+  return `<button type="button" class="swap-option" data-choose-swap="${escapeHtml(option.candidate.id)}"><div class="basket-line-photo">${recipePhoto(option.candidate)}</div><span><strong>${escapeHtml(option.candidate.namn)}</strong><small>${deltaLabel}</small></span></button>`;
+}
+function openSwapModal(currentId) {
+  const selected = [...RECEPT, ...state.apiRecipes].filter((recipe, index, recipes) => state.valda.has(recipe.id) && recipes.findIndex(item => item.id === recipe.id) === index);
+  const branch = selectedBranch();
+  const baseTotal = shoppingListCost(selected, branch);
+  const candidates = nutritionFilteredRecipes().filter(recipe => !state.valda.has(recipe.id));
+  const options = candidates.map(candidate => ({ candidate, total: shoppingListCost(selected.map(recipe => recipe.id === currentId ? candidate : recipe), branch) })).sort((a, b) => a.total - b.total).slice(0, 3);
+  if (!options.length) { $("swapOptions").innerHTML = `<p class="live-loading">Inga alternativ hittades som passar budget, butik och dina filter just nu.</p>`; $("swapModal").hidden = false; return; }
+  swapContext = { currentId };
+  $("swapOptions").innerHTML = options.map(option => swapOptionMarkup(option, baseTotal)).join("");
+  document.querySelectorAll("[data-choose-swap]").forEach(button => button.addEventListener("click", () => {
+    state.valda.delete(swapContext.currentId);
+    state.valda.add(button.dataset.chooseSwap);
+    saveState(); render(); closeSwapModal();
+  }));
+  $("swapModal").hidden = false;
+}
+function closeSwapModal() { $("swapModal").hidden = true; swapContext = null; }
+document.querySelectorAll("[data-swap-close]").forEach(button => button.addEventListener("click", closeSwapModal));
+
+const PLAN_TYPES = [
+  { key: "cheapest", label: "Billigast möjliga vecka", hint: "Lägsta totalkostnaden i kassan." },
+  { key: "balanced", label: "Balanserad vecka", hint: "Bra variation och högt betygsatta rätter." },
+  { key: "protein", label: "Proteinrik vecka", hint: "Mest protein för pengarna." },
+];
+function planCardMarkup(plan, branch) {
+  const portionCost = plan.cost / (plan.combo.length * state.personer);
+  const priciest = Math.max(...nearbyBranches().map(candidate => shoppingListCost(plan.combo, candidate)));
+  const savings = priciest - plan.cost;
+  return `<div class="plan-card"><div class="plan-card-head"><strong>${plan.label}</strong><span>${plan.hint}</span></div><div class="plan-card-price"><b>${money(plan.cost)}</b><small>ca ${money(portionCost)} / portion</small></div>${savings > 1 ? `<p class="plan-card-savings">Sparar ${money(savings)} mot dyraste butiken nära dig</p>` : ""}<ul class="plan-card-meals">${plan.combo.map(recipe => `<li>${escapeHtml(recipe.namn)}</li>`).join("")}</ul><button class="btn btn-primary" type="button" data-choose-plan="${plan.key}"><span>Välj den här</span></button></div>`;
+}
+function openPlanComparison() {
+  const branch = selectedBranch();
+  const candidates = nutritionFilteredRecipes();
+  if (!candidates.length) { chooseMenu(); return; }
+  const plans = PLAN_TYPES.map(type => { const combo = bestMenuCombo(candidates, state.middagar, state.budget, branch, type.key); return { ...type, combo, cost: shoppingListCost(combo, branch) }; }).filter(plan => plan.combo.length);
+  if (plans.length < 2) { chooseMenu(); return; }
+  $("planCards").innerHTML = plans.map(plan => planCardMarkup(plan, branch)).join("");
+  document.querySelectorAll("[data-choose-plan]").forEach(button => button.addEventListener("click", () => {
+    const plan = plans.find(candidate => candidate.key === button.dataset.choosePlan);
+    state.valda.clear();
+    plan.combo.forEach(recipe => state.valda.add(recipe.id));
+    saveState(); render(); closePlanModal(); setView("week");
+  }));
+  $("planModal").hidden = false;
+}
+function closePlanModal() { $("planModal").hidden = true; }
+document.querySelectorAll("[data-plan-close]").forEach(button => button.addEventListener("click", closePlanModal));
+
+const DISLIKE_SUGGESTIONS = ["Lök", "Svamp", "Fisk", "Skaldjur", "Nötter", "Inälvsmat", "Stark mat", "Kokosmjölk"];
+const ONBOARDING_STEPS = [
+  { title: "Vilka är ni hemma?", render: renderObHushall },
+  { title: "Budget & antal middagar", render: renderObBudget },
+  { title: "Kost & allergier", render: renderObKost },
+  { title: "Något ni hellre slipper?", render: renderObOgillar },
+  { title: "Hur mycket tid har ni?", render: renderObTid },
+  { title: "Kalorier & makron", render: renderObNaring },
+  { title: "Var handlar ni?", render: renderObButik },
+];
+let onboardingStep = 0;
+function renderObHushall() {
+  return `<div class="settings-grid"><div><label>Vuxna</label><div class="stepper"><button type="button" data-ob-adj="vuxna" data-delta="-1" aria-label="Färre vuxna">−</button><span>${state.hushall.vuxna}</span><button type="button" data-ob-adj="vuxna" data-delta="1" aria-label="Fler vuxna">+</button></div></div><div><label>Barn</label><div class="stepper"><button type="button" data-ob-adj="barn" data-delta="-1" aria-label="Färre barn">−</button><span>${state.hushall.barn}</span><button type="button" data-ob-adj="barn" data-delta="1" aria-label="Fler barn">+</button></div></div></div>`;
+}
+function renderObBudget() {
+  return `<label for="obBudget">Veckobudget</label><div class="budget-row"><input type="number" id="obBudget" value="${state.budget}" min="0" step="50" inputmode="numeric"><span>kr</span></div><div class="settings-grid"><div><label>Middagar per vecka</label><div class="stepper"><button type="button" data-ob-meals="-1" aria-label="Färre middagar">−</button><span>${state.middagar}</span><button type="button" data-ob-meals="1" aria-label="Fler middagar">+</button></div></div></div>`;
+}
+function renderObKost() {
+  return `<label for="obKosttyp">Kosttyp</label><select id="obKosttyp"><option value="" ${!state.kost.kosttyp ? "selected" : ""}>Vanlig, allt</option><option value="vegetariskt" ${state.kost.kosttyp === "vegetariskt" ? "selected" : ""}>Vegetariskt</option><option value="veganskt" ${state.kost.kosttyp === "veganskt" ? "selected" : ""}>Veganskt</option></select><label>Allergier att undvika</label><div class="protein-source-chips" id="obAllergenChips">${ALLERGENS.map(a => `<label><input type="checkbox" value="${a}" ${state.kost.avoidAllergens.has(a) ? "checked" : ""}> ${a[0].toUpperCase() + a.slice(1)}</label>`).join("")}</div>`;
+}
+function renderObOgillar() {
+  const chips = DISLIKE_SUGGESTIONS.map(term => `<label><input type="checkbox" value="${term}" ${state.ogillar.has(term) ? "checked" : ""}> ${term}</label>`).join("");
+  const tags = state.ogillar.size ? `<div class="ob-tag-list">${[...state.ogillar].filter(term => !DISLIKE_SUGGESTIONS.includes(term)).map(term => `<span class="ob-tag">${escapeHtml(term)}<button type="button" data-ob-remove-dislike="${escapeHtml(term)}" aria-label="Ta bort ${escapeHtml(term)}">×</button></span>`).join("")}</div>` : "";
+  return `<label>Vanliga saker att slippa</label><div class="protein-source-chips" id="obDislikeChips">${chips}</div><label for="obDislikeCustom">Något annat? Skriv och tryck Enter</label><input id="obDislikeCustom" type="text" placeholder="t.ex. oliver">${tags}`;
+}
+function renderObTid() {
+  return `<label for="obMaxTid">Hur lång tid vill ni lägga på matlagning?</label><select id="obMaxTid"><option value="0" ${!state.maxTid ? "selected" : ""}>Ingen gräns</option><option value="20" ${state.maxTid === 20 ? "selected" : ""}>Max 20 min</option><option value="30" ${state.maxTid === 30 ? "selected" : ""}>Max 30 min</option><option value="45" ${state.maxTid === 45 ? "selected" : ""}>Max 45 min</option></select>`;
+}
+function renderObNaring() {
+  const premium = Boolean(state.user?.premium);
+  return `<p class="ob-teaser">${premium ? `Du har redan Premium - ställ in exakta mål för kalorier, protein, kolhydrater och fett under "Justera veckan" på Hem.` : `Med Premium kan Matjakt styra veckan efter kalorier, protein, kolhydrater, fett och proteinkälla per måltid - inte bara pris. Du kan sätta det senare under "Justera veckan".`}</p>${premium ? "" : `<div class="ob-premium-badge">59 kr/mån · Premium</div>`}`;
+}
+function renderObButik() {
+  return `<label for="obPostcode">Postnummer</label><div class="location-row"><input id="obPostcode" value="${escapeHtml(state.postnummer)}" inputmode="numeric" maxlength="5"><button type="button" id="obLocateBtn">Hitta mig</button></div><p class="ob-error" id="obPostcodeError"></p><label for="obStore">Favoritbutik</label><select id="obStore"><option value="auto" ${state.butik === "auto" ? "selected" : ""}>Billigast automatiskt</option><option value="alla" ${state.butik === "alla" ? "selected" : ""}>Alla butiker</option><option value="ICA" ${state.butik === "ICA" ? "selected" : ""}>ICA</option><option value="Willys" ${state.butik === "Willys" ? "selected" : ""}>Willys</option><option value="Hemköp" ${state.butik === "Hemköp" ? "selected" : ""}>Hemköp</option><option value="Coop" ${state.butik === "Coop" ? "selected" : ""}>Coop</option></select>`;
+}
+function wireOnboardingStep() {
+  document.querySelectorAll("[data-ob-adj]").forEach(button => button.addEventListener("click", () => {
+    const key = button.dataset.obAdj, delta = Number(button.dataset.delta), min = key === "vuxna" ? 1 : 0;
+    state.hushall[key] = Math.max(min, state.hushall[key] + delta);
+    state.personer = state.hushall.vuxna + state.hushall.barn;
+    saveState(); renderOnboardingStep();
+  }));
+  $("obBudget")?.addEventListener("input", e => { state.budget = clampBudget(e.target.value); saveState(); });
+  document.querySelectorAll("[data-ob-meals]").forEach(button => button.addEventListener("click", () => {
+    state.middagar = Math.min(6, Math.max(1, state.middagar + Number(button.dataset.obMeals)));
+    saveState(); renderOnboardingStep();
+  }));
+  $("obKosttyp")?.addEventListener("change", e => { state.kost.kosttyp = e.target.value; saveState(); });
+  document.querySelectorAll("#obAllergenChips input").forEach(box => box.addEventListener("change", () => { state.kost.avoidAllergens = new Set([...document.querySelectorAll("#obAllergenChips input:checked")].map(b => b.value)); saveState(); }));
+  document.querySelectorAll("#obDislikeChips input").forEach(box => box.addEventListener("change", () => { box.checked ? state.ogillar.add(box.value) : state.ogillar.delete(box.value); saveState(); renderOnboardingStep(); }));
+  const customDislike = $("obDislikeCustom");
+  customDislike?.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); const value = customDislike.value.trim(); if (value) { state.ogillar.add(value); saveState(); renderOnboardingStep(); } } });
+  document.querySelectorAll("[data-ob-remove-dislike]").forEach(button => button.addEventListener("click", () => { state.ogillar.delete(button.dataset.obRemoveDislike); saveState(); renderOnboardingStep(); }));
+  $("obMaxTid")?.addEventListener("change", e => { state.maxTid = Number(e.target.value); saveState(); });
+  $("obPostcode")?.addEventListener("input", e => { state.postnummer = e.target.value.replace(/\D/g, "").slice(0, 5); saveState(); syncNearbyBranches(); });
+  $("obStore")?.addEventListener("change", e => { state.butik = e.target.value; saveState(); });
+  $("obLocateBtn")?.addEventListener("click", () => { if (!navigator.geolocation) return; navigator.geolocation.getCurrentPosition(({ coords }) => { state.position = { lat: coords.latitude, lon: coords.longitude }; saveState(); }, () => {}); });
+}
+function renderOnboardingStep() {
+  const current = ONBOARDING_STEPS[onboardingStep];
+  $("onboardingTitle").textContent = current.title;
+  $("onboardingBody").innerHTML = current.render();
+  wireOnboardingStep();
+  $("onboardingDots").innerHTML = ONBOARDING_STEPS.map((_, index) => `<i class="${index === onboardingStep ? "active" : ""}"></i>`).join("");
+  $("onboardingBack").hidden = onboardingStep === 0;
+  $("onboardingNext").querySelector("span").textContent = onboardingStep === ONBOARDING_STEPS.length - 1 ? "Skapa min vecka" : "Nästa";
+}
+function openOnboarding() { onboardingStep = 0; $("onboardingModal").hidden = false; renderOnboardingStep(); }
+function closeOnboarding() { $("onboardingModal").hidden = true; }
+$("onboardingNext").addEventListener("click", () => {
+  if (onboardingStep === ONBOARDING_STEPS.length - 1) {
+    if (!/^\d{5}$/.test(state.postnummer)) { $("obPostcodeError").textContent = "Ange ett giltigt postnummer (5 siffror)."; return; }
+    state.onboardingComplete = true; saveState(); closeOnboarding(); syncNearbyBranches(); openPlanComparison();
+    return;
+  }
+  onboardingStep++; renderOnboardingStep();
+});
+$("onboardingBack").addEventListener("click", () => { onboardingStep = Math.max(0, onboardingStep - 1); renderOnboardingStep(); });
+$("onboardingSkip").addEventListener("click", () => { state.onboardingComplete = true; saveState(); closeOnboarding(); });
+
 function openAccountModal() { $("accountModal").hidden = false; }
 function closeAccountModal() { $("accountModal").hidden = true; $("loginError").textContent = ""; $("registerError").textContent = ""; $("redeemError").textContent = ""; }
 $("profileBtn").addEventListener("click", openAccountModal);
@@ -636,7 +789,7 @@ async function renderCampaignSection() {
   campaignFetchKey = key;
   $("campaignList").innerHTML = `<p class="live-loading">Letar efter kampanjer hos ${chain}... kan ta en stund.</p>`;
   try {
-    const response = await fetch(campaignsApiUrl(chain, state.postnummer), { headers: { Authorization: `Bearer ${getStoredToken()}` } });
+    const response = await fetch(campaignsApiUrl(chain, state.postnummer), { headers: { Authorization: `Bearer ${getStoredToken()}` }, signal: AbortSignal.timeout(25000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (chosenStore() !== chain) return;
@@ -681,7 +834,7 @@ $("logoutBtn").addEventListener("click", async () => {
 });
 $("peopleMinus").addEventListener("click", () => step("personer", -1, 1, 12)); $("peoplePlus").addEventListener("click", () => step("personer", 1, 1, 12));
 $("mealsMinus").addEventListener("click", () => step("middagar", -1, 1, 6)); $("mealsPlus").addEventListener("click", () => step("middagar", 1, 1, 6));
-$("generateBtn").addEventListener("click", chooseMenu); $("refreshBtn").addEventListener("click", () => { RECEPT.push(RECEPT.shift()); chooseMenu(); });
+$("generateBtn").addEventListener("click", () => openPlanComparison()); $("refreshBtn").addEventListener("click", () => { RECEPT.push(RECEPT.shift()); chooseMenu(); });
 let pantryPickLocation = "skafferi";
 function renderPantryPicker(query) {
   const search = query.trim().toLowerCase();
@@ -733,12 +886,12 @@ async function openCookModal() {
   $("cookModal").hidden = false;
   const pantryNames = Object.keys(state.pantry);
   const dietFilterActive = state.kost.kosttyp !== "" || state.kost.avoidAllergens.size > 0;
-  const localMatches = matchLocalRecipesToPantry(filterByDiet(RECEPT, state.kost), pantryNames);
+  const localMatches = matchLocalRecipesToPantry(localRecipesForUser(), pantryNames);
   if (dietFilterActive) { renderCookResults(localMatches, [], true); return; }
   renderCookResults(localMatches, null);
   if (!pantryNames.length) { renderCookResults([], []); return; }
   try {
-    const response = await fetch(recipesByPantryApiUrl(pantryNames));
+    const response = await fetch(recipesByPantryApiUrl(pantryNames), { signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     renderCookResults(localMatches, data.recipes || []);
@@ -754,6 +907,7 @@ if (!state.valda.size) chooseMenu(false); else render();
 renderRecipePage();
 refreshUser();
 syncNearbyBranches();
+if (!state.onboardingComplete) openOnboarding();
 window.addEventListener("popstate", renderRecipePage);
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => { /* offline-stödet är ett tillägg - appen funkar utan det */ }));

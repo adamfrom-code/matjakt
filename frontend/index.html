@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=25">
+  <link rel="stylesheet" href="styles.css?v=26">
 </head>
 <body>
   <div class="phone-shell">
@@ -249,6 +249,40 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=44"></script>
+  <div class="account-modal onboarding-modal" id="onboardingModal" hidden>
+    <div class="account-modal-card onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+      <div class="onboarding-dots" id="onboardingDots"></div>
+      <p class="eyebrow">Din matvecka</p>
+      <h2 id="onboardingTitle"></h2>
+      <div id="onboardingBody"></div>
+      <div class="onboarding-nav">
+        <button class="btn-ghost" type="button" id="onboardingBack" hidden>Tillbaka</button>
+        <button class="btn btn-primary" type="button" id="onboardingNext"><span>Nästa</span></button>
+      </div>
+      <button class="onboarding-skip" type="button" id="onboardingSkip">Hoppa över, jag ställer in senare</button>
+    </div>
+  </div>
+
+  <div class="account-modal plan-modal" id="planModal" hidden>
+    <button class="account-modal-backdrop" type="button" data-plan-close aria-label="Stäng"></button>
+    <div class="account-modal-card plan-modal-card" role="dialog" aria-modal="true" aria-labelledby="planModalTitle">
+      <button class="account-modal-close" type="button" data-plan-close aria-label="Stäng">×</button>
+      <h2 id="planModalTitle">Välj din vecka</h2>
+      <p class="plan-modal-hint">Samma budget och butik - tre olika sätt att lägga upp veckan.</p>
+      <div id="planCards"></div>
+    </div>
+  </div>
+
+  <div class="account-modal" id="swapModal" hidden>
+    <button class="account-modal-backdrop" type="button" data-swap-close aria-label="Stäng"></button>
+    <div class="account-modal-card" role="dialog" aria-modal="true" aria-labelledby="swapModalTitle">
+      <button class="account-modal-close" type="button" data-swap-close aria-label="Stäng">×</button>
+      <h2 id="swapModalTitle">Byt rätt</h2>
+      <p class="plan-modal-hint" id="swapModalHint">Tre förslag som fortfarande passar din budget, butik, allergier och näringsmål.</p>
+      <div id="swapOptions"></div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js?v=45"></script>
 </body>
 </html>
