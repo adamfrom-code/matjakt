@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=26">
+  <link rel="stylesheet" href="styles.css?v=27">
 </head>
 <body>
   <div class="phone-shell">
@@ -218,12 +218,35 @@
         <h2>Ditt konto</h2>
         <p class="account-email" id="accountEmail"></p>
         <p class="account-premium-status" id="accountPremiumStatus"></p>
-        <form id="accountRedeemForm" class="account-form">
-          <label for="premiumCode">Premium-kod</label>
-          <input id="premiumCode" type="text" autocomplete="off">
-          <p class="account-error" id="redeemError"></p>
-          <button class="btn btn-ghost account-redeem-btn" type="submit">Lös in kod</button>
-        </form>
+
+        <div class="premium-pitch" id="premiumPitch">
+          <h3>Matjakt Premium</h3>
+          <ul class="premium-feature-list">
+            <li>Aktuella erbjudanden och kampanjer</li>
+            <li>Full jämförelse mellan butiker</li>
+            <li>Automatiskt val av billigaste butik</li>
+            <li>Kalorier, protein, kolhydrater och fett</li>
+            <li>Val av kött och proteinkälla</li>
+            <li>Matsvinnsoptimering</li>
+            <li>Appen lär sig vad du gillar</li>
+            <li>Obegränsade byten av maträtter</li>
+            <li>Sparhistorik</li>
+          </ul>
+          <div class="premium-pricing" role="tablist">
+            <button type="button" class="premium-price-tab active" data-price-tab="month"><span>Månad</span><strong>59 kr</strong><small>/mån</small></button>
+            <button type="button" class="premium-price-tab" data-price-tab="year"><span>År · Bäst värde</span><strong>499 kr</strong><small>/år · spara 209 kr</small></button>
+          </div>
+          <button class="btn btn-primary" type="button" id="startTrialBtn"><span>Prova gratis i 14 dagar</span></button>
+          <p class="account-error" id="trialError"></p>
+          <p class="premium-pitch-note">Ingen betalning krävs för provperioden. Har du redan en kod?</p>
+          <form id="accountRedeemForm" class="account-form">
+            <label class="sr-only" for="premiumCode">Premium-kod</label>
+            <input id="premiumCode" type="text" placeholder="Premium-kod" autocomplete="off">
+            <p class="account-error" id="redeemError"></p>
+            <button class="btn btn-ghost account-redeem-btn" type="submit">Lös in kod</button>
+          </form>
+        </div>
+
         <button class="account-logout-btn" id="logoutBtn" type="button">Logga ut</button>
       </div>
     </div>
@@ -295,6 +318,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=45"></script>
+  <script type="module" src="app.js?v=46"></script>
 </body>
 </html>

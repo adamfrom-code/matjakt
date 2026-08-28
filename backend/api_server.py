@@ -612,6 +612,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
             except AccountError as error:
                 self.send_json(400, {"error": str(error)})
             return
+        if parsed.path == "/api/auth/start-trial":
+            try:
+                user = ACCOUNT_STORE.start_trial(self._bearer_token())
+                self.send_json(200, {"user": user})
+            except AccountError as error:
+                self.send_json(400, {"error": str(error)})
+            return
         if parsed.path == "/api/products/batch":
             self._handle_products_batch(payload)
             return

@@ -19,7 +19,7 @@ class AccountStoreTest(unittest.TestCase):
     def test_register_then_login(self):
         token, user = self.store.register("Ada@Example.com", "hemligt123")
         self.assertTrue(token)
-        self.assertEqual(user, {"email": "ada@example.com", "premium": False})
+        self.assertEqual(user, {"email": "ada@example.com", "premium": False, "trialEndsAt": None, "trialUsed": False})
         login_token, login_user = self.store.login("ada@example.com", "hemligt123")
         self.assertTrue(login_token)
         self.assertEqual(login_user, user)
@@ -77,6 +77,29 @@ class AccountStoreTest(unittest.TestCase):
     def test_redeem_premium_requires_login(self):
         with self.assertRaises(AccountError):
             self.store.redeem_premium("okant-token", "hemlig-kod", expected_code="hemlig-kod")
+
+    def test_start_trial_grants_premium_with_end_date(self):
+        token, _ = self.store.register("ada@example.com", "hemligt123")
+        user = self.store.start_trial(token)
+        self.assertTrue(user["premium"])
+        self.assertIsNotNone(user["trialEndsAt"])
+        self.assertTrue(user["trialUsed"])
+
+    def test_start_trial_rejects_second_trial(self):
+        token, _ = self.store.register("ada@example.com", "hemligt123")
+        self.store.start_trial(token)
+        with self.assertRaises(AccountError):
+            self.store.start_trial(token)
+
+    def test_start_trial_rejects_existing_premium(self):
+        token, _ = self.store.register("ada@example.com", "hemligt123")
+        self.store.redeem_premium(token, "hemlig-kod", expected_code="hemlig-kod")
+        with self.assertRaises(AccountError):
+            self.store.start_trial(token)
+
+    def test_start_trial_requires_login(self):
+        with self.assertRaises(AccountError):
+            self.store.start_trial("okant-token")
 
 
 if __name__ == "__main__":

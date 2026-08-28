@@ -51,11 +51,25 @@ class AccountStore:
             );
             """
         )
+        # Added after the initial release - ALTER TABLE guarded with try/except since
+        # sqlite3 has no "ADD COLUMN IF NOT EXISTS" and this file has no migration runner.
+        for column, definition in (("trial_ends_at", "TEXT"), ("trial_used", "INTEGER NOT NULL DEFAULT 0")):
+            try:
+                self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
+            except sqlite3.OperationalError:
+                pass
         self._connection.commit()
 
     @staticmethod
     def _to_public(row) -> dict:
-        return {"email": row["email"], "premium": bool(row["premium"])}
+        trial_ends_at = row["trial_ends_at"] if "trial_ends_at" in row.keys() else None
+        trial_active = bool(trial_ends_at) and trial_ends_at > datetime.now(timezone.utc).isoformat()
+        return {
+            "email": row["email"],
+            "premium": bool(row["premium"]) or trial_active,
+            "trialEndsAt": trial_ends_at if trial_active else None,
+            "trialUsed": bool(row["trial_used"]) if "trial_used" in row.keys() else False,
+        }
 
     def register(self, email: str, password: str) -> tuple[str, dict]:
         email = (email or "").strip().lower()
@@ -74,7 +88,8 @@ class AccountStore:
         except sqlite3.IntegrityError:
             raise AccountError("Det finns redan ett konto med den e-postadressen")
         user_id = cursor.lastrowid
-        return self._create_session(user_id), {"email": email, "premium": False}
+        row = self._connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        return self._create_session(user_id), self._to_public(row)
 
     def login(self, email: str, password: str) -> tuple[str, dict]:
         email = (email or "").strip().lower()
@@ -102,10 +117,10 @@ class AccountStore:
         self._connection.execute("DELETE FROM sessions WHERE token = ?", (token,))
         self._connection.commit()
 
-    def user_for_token(self, token: str) -> dict | None:
+    def _session_user_row(self, token: str):
         if not token:
             return None
-        row = self._connection.execute(
+        return self._connection.execute(
             """
             SELECT users.* FROM sessions
             JOIN users ON users.id = sessions.user_id
@@ -113,6 +128,9 @@ class AccountStore:
             """,
             (token, datetime.now(timezone.utc).isoformat()),
         ).fetchone()
+
+    def user_for_token(self, token: str) -> dict | None:
+        row = self._session_user_row(token)
         return self._to_public(row) if row else None
 
     def redeem_premium(self, token: str, code: str, expected_code: str) -> dict:
@@ -120,16 +138,24 @@ class AccountStore:
             raise AccountError("Premium-inlösen är inte konfigurerad på servern")
         if not code or not secrets.compare_digest(code, expected_code):
             raise AccountError("Fel kod")
-        row = self._connection.execute(
-            """
-            SELECT users.* FROM sessions
-            JOIN users ON users.id = sessions.user_id
-            WHERE sessions.token = ? AND sessions.expires_at > ?
-            """,
-            (token, datetime.now(timezone.utc).isoformat()),
-        ).fetchone()
+        row = self._session_user_row(token)
         if not row:
             raise AccountError("Du måste vara inloggad")
         self._connection.execute("UPDATE users SET premium = 1 WHERE id = ?", (row["id"],))
         self._connection.commit()
-        return {"email": row["email"], "premium": True}
+        return self._to_public(self._session_user_row(token))
+
+    def start_trial(self, token: str) -> dict:
+        row = self._session_user_row(token)
+        if not row:
+            raise AccountError("Du måste vara inloggad")
+        if row["premium"]:
+            raise AccountError("Du har redan Premium")
+        if row["trial_used"]:
+            raise AccountError("Du har redan använt din gratis provperiod")
+        trial_ends_at = (datetime.now(timezone.utc) + timedelta(days=14)).isoformat()
+        self._connection.execute(
+            "UPDATE users SET trial_ends_at = ?, trial_used = 1 WHERE id = ?", (trial_ends_at, row["id"])
+        )
+        self._connection.commit()
+        return self._to_public(self._session_user_row(token))

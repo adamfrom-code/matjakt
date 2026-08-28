@@ -59,3 +59,10 @@ export function redeemPremium(token, code) {
     body: JSON.stringify({ code }),
   }).then(parseJsonResponse);
 }
+
+export function startTrial(token) {
+  return fetch(`${API_BASE_URL}/auth/start-trial`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parseJsonResponse);
+}
