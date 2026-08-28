@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#f6f3ea">
   <meta name="description" content="Matjakt hjälper dig planera billigare middagar efter din budget.">
-  <!-- Sätt content till en driftsatt backend-URL (t.ex. https://api.example.se/api) innan Android-appen byggs/synkas -
-       utan detta anropar en Capacitor-app sin egen paketerade origin istället för en riktig server. Lämna tomt för
-       webbfrontend som körs same-origin med backend. -->
+  <!-- Sätt content till en driftsatt backend-URL (t.ex. https://matjakt-backend.onrender.com/api) för GitHub Pages
+       och innan Android-appen byggs/synkas - utan detta anropar sidan sin egen origin istället för en riktig
+       server, vilket inte finns när frontend och backend körs på olika adresser. Lämna tomt bara när frontend
+       körs same-origin med backend (t.ex. lokalt via `npm run backend`). -->
   <meta name="matjakt-api-url" content="">
   <title>Matjakt – din smarta matvecka</title>
   <link rel="manifest" href="manifest.json">

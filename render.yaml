@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: matjakt-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: MATJAKT_FRONTEND_ORIGIN
+        value: https://adamfrom-code.github.io
+      - key: MATJAKT_PREMIUM_CODE
+        sync: false

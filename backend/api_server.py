@@ -44,7 +44,7 @@ def load_dotenv(path):
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 HOST = os.environ.get("MATJAKT_HOST", "127.0.0.1")
-PORT = int(os.environ.get("MATJAKT_PORT", "8000"))
+PORT = int(os.environ.get("MATJAKT_PORT", os.environ.get("PORT", "8000")))
 ALLOWED_ORIGIN = os.environ.get("MATJAKT_FRONTEND_ORIGIN", "http://localhost:5500")
 CACHE_TTL_SECONDS = 900
 ICA_STORE_FAILURE_TTL_SECONDS = 300
