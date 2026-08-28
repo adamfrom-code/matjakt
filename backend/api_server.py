@@ -504,6 +504,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
             else:
                 self.send_json(200, {"user": user})
             return
+        if parsed.path == "/api/account/state":
+            try:
+                stored = ACCOUNT_STORE.get_synced_state(self._bearer_token())
+                self.send_json(200, {"state": json.loads(stored) if stored else None})
+            except AccountError as error:
+                self.send_json(401, {"error": str(error)})
+            return
         if parsed.path == "/api/v1/recipes/search":
             query = clean_text(parse_qs(parsed.query).get("q", [""])[0])
             if not 2 <= len(query) <= 100:
@@ -660,6 +667,16 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(200, {"user": user})
             except AccountError as error:
                 self.send_json(400, {"error": str(error)})
+            return
+        if parsed.path == "/api/account/state":
+            if not isinstance(payload, dict):
+                self.send_json(400, {"error": "Ogiltigt format"})
+                return
+            try:
+                ACCOUNT_STORE.set_synced_state(self._bearer_token(), json.dumps(payload))
+                self.send_json(200, {"ok": True})
+            except AccountError as error:
+                self.send_json(401, {"error": str(error)})
             return
         if parsed.path == "/api/billing/checkout":
             try:

@@ -6,7 +6,7 @@ import { expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts
 import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
 import { campaignsApiUrl, geocodeApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
-import { fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, startCheckout, startTrial, storeToken } from "./src/api/auth.js";
+import { fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, saveAccountState, startCheckout, startTrial, storeToken } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 
 const RECEPT = [
@@ -63,7 +63,60 @@ function wireFeedbackButtons(container, recipeId) {
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 const savedState = readStoredState(localStorage);
 const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0 };
-function saveState() { writeStoredState(localStorage, { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek }); }
+function buildSyncPayload() {
+  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek };
+}
+function applySyncBlob(blob) {
+  if (!blob) return;
+  if (blob.budget !== undefined) state.budget = blob.budget;
+  if (blob.personer !== undefined) state.personer = blob.personer;
+  if (blob.middagar !== undefined) state.middagar = blob.middagar;
+  if (blob.butik !== undefined) state.butik = blob.butik;
+  if (blob.postnummer !== undefined) state.postnummer = blob.postnummer;
+  if (blob.maxTid !== undefined) state.maxTid = blob.maxTid;
+  if (blob.pantry !== undefined) state.pantry = normalizePantry(blob.pantry);
+  if (blob.favoriter !== undefined) state.favoriter = new Set(blob.favoriter);
+  if (blob.valda !== undefined) state.valda = new Set(blob.valda);
+  if (blob.avklarade !== undefined) state.avklarade = new Set(blob.avklarade);
+  if (blob.apiRecipes !== undefined) state.apiRecipes = blob.apiRecipes;
+  if (blob.naringsmal !== undefined) state.naringsmal = blob.naringsmal;
+  if (blob.betyg !== undefined) state.betyg = blob.betyg;
+  if (blob.kost !== undefined) state.kost = { kosttyp: blob.kost.kosttyp || "", avoidAllergens: new Set(blob.kost.avoidAllergens || []) };
+  if (blob.onboardingComplete !== undefined) state.onboardingComplete = blob.onboardingComplete;
+  if (blob.hushall !== undefined) state.hushall = blob.hushall;
+  if (blob.ogillar !== undefined) state.ogillar = new Set(blob.ogillar);
+  if (blob.feedback !== undefined) state.feedback = blob.feedback;
+  if (blob.savingsLog !== undefined) state.savingsLog = blob.savingsLog;
+  if (blob.swapsThisWeek !== undefined) state.swapsThisWeek = blob.swapsThisWeek;
+}
+let serverSyncTimer = null;
+function scheduleServerSync() {
+  if (!state.authToken) return;
+  clearTimeout(serverSyncTimer);
+  // Debounced: saveState() fires on nearly every interaction (pantry +/-, ratings,
+  // swaps...) - pushing to the server on every single one would be wasteful and
+  // could race with itself. One request ~1.5s after the last change is enough for
+  // "follows you to another phone", which is the actual requirement here.
+  serverSyncTimer = setTimeout(() => {
+    saveAccountState(state.authToken, buildSyncPayload()).catch(() => { /* nästa saveState-anrop försöker igen */ });
+  }, 1500);
+}
+async function pullAccountState() {
+  if (!state.authToken) return;
+  try {
+    const { state: remote } = await fetchAccountState(state.authToken);
+    if (remote) {
+      applySyncBlob(remote);
+      writeStoredState(localStorage, buildSyncPayload());
+      syncSettingsInputs(); render(); renderPantry(); restoreNutritionGoalsForm();
+    } else {
+      // First time this account has ever synced - bootstrap the server with
+      // whatever was already built up locally (e.g. as a guest before logging in).
+      await saveAccountState(state.authToken, buildSyncPayload());
+    }
+  } catch { /* offline eller serverfel - den lokala datan används tills nästa försök */ }
+}
+function saveState() { writeStoredState(localStorage, buildSyncPayload()); scheduleServerSync(); }
 const FALLBACK_BRANCH = [{ kedja: "Willys", namn: "Butik nära dig (uppskattat)", lat: null, lon: null, avstandKm: 0, prisfaktor: 1 }];
 const PRODUCT_CATALOG = {
   "Grädde": { namn: "Mat grädde 15%", marke: "Arla", storlek: "2 dl", pris: 15.95 },
@@ -573,9 +626,12 @@ function aggregateShopping(selected) {
 function updateSummary() { $("summaryBudget").textContent = money(state.budget); $("summaryPeople").textContent = plural(state.personer, "person", "personer"); $("summaryMeals").textContent = plural(state.middagar, "middag", "middagar"); }
 function render() { renderRecipes(); renderBasket(); updateSummary(); renderStats(); }
 function step(key, delta, min, max) { state[key] = Math.min(max, Math.max(min, state[key] + delta)); $(`${key === "personer" ? "people" : "meals"}Value`).textContent = state[key]; saveState(); render(); }
-$("budgetInput").value = state.budget; $("peopleValue").textContent = state.personer; $("mealsValue").textContent = state.middagar; $("storeInput").value = state.butik; $("postcodeInput").value = state.postnummer;
-$("kosttypInput").value = state.kost.kosttyp;
-document.querySelectorAll("#allergenChips input").forEach(box => { box.checked = state.kost.avoidAllergens.has(box.value); });
+function syncSettingsInputs() {
+  $("budgetInput").value = state.budget; $("peopleValue").textContent = state.personer; $("mealsValue").textContent = state.middagar; $("storeInput").value = state.butik; $("postcodeInput").value = state.postnummer;
+  $("kosttypInput").value = state.kost.kosttyp;
+  document.querySelectorAll("#allergenChips input").forEach(box => { box.checked = state.kost.avoidAllergens.has(box.value); });
+}
+syncSettingsInputs();
 $("budgetInput").addEventListener("input", e => { state.budget = clampBudget(e.target.value); saveState(); updateSummary(); renderBasket(); });
 const debouncedGeocode = createDebouncedSearch((zip, signal) => fetch(geocodeApiUrl(zip), { signal }).then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }), 400);
 $("postcodeInput").addEventListener("input", e => {
@@ -914,6 +970,7 @@ async function refreshUser() {
   try {
     const { user } = await fetchCurrentUser(state.authToken);
     state.user = user;
+    await pullAccountState();
   } catch {
     state.authToken = null;
     storeToken(null);
@@ -961,6 +1018,7 @@ $("accountLoginForm").addEventListener("submit", async event => {
   try {
     const { token, user } = await login($("loginEmail").value, $("loginPassword").value);
     state.authToken = token; state.user = user; storeToken(token);
+    await pullAccountState();
     event.target.reset(); renderAccount(); closeAccountModal();
   } catch (error) { $("loginError").textContent = error.message; }
 });
@@ -970,6 +1028,7 @@ $("accountRegisterForm").addEventListener("submit", async event => {
   try {
     const { token, user } = await register($("registerEmail").value, $("registerPassword").value);
     state.authToken = token; state.user = user; storeToken(token);
+    await pullAccountState();
     event.target.reset(); renderAccount(); closeAccountModal();
   } catch (error) { $("registerError").textContent = error.message; }
 });

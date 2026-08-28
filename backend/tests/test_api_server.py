@@ -497,6 +497,40 @@ class AuthHttpTest(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertIn("error", payload)
 
+    def test_account_state_round_trip(self):
+        email = self._email()
+        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        token = payload["token"]
+        status, payload = self.get("/api/account/state", token=token)
+        self.assertEqual(status, 200)
+        self.assertIsNone(payload["state"])
+        blob = {"budget": 900, "valda": ["lax", "chili"], "ogillar": ["lok"]}
+        status, payload = self.post("/api/account/state", blob, token=token)
+        self.assertEqual(status, 200)
+        status, payload = self.get("/api/account/state", token=token)
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["state"], blob)
+
+    def test_account_state_requires_login(self):
+        status, payload = self.get("/api/account/state")
+        self.assertEqual(status, 401)
+        status, payload = self.post("/api/account/state", {"budget": 100})
+        self.assertEqual(status, 401)
+
+    def test_account_state_rejects_non_object_payload(self):
+        email = self._email()
+        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        token = payload["token"]
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request("POST", "/api/account/state", body=json.dumps([1, 2, 3]), headers={
+            "Content-Type": "application/json", "Authorization": f"Bearer {token}",
+        })
+        response = conn.getresponse()
+        status = response.status
+        response.read()
+        conn.close()
+        self.assertEqual(status, 400)
+
     def test_checkout_rejects_when_stripe_not_configured(self):
         email = self._email()
         _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})

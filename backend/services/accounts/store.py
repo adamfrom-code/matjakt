@@ -58,6 +58,7 @@ class AccountStore:
             ("stripe_customer_id", "TEXT"), ("stripe_subscription_id", "TEXT"),
             ("subscription_status", "TEXT"), ("subscription_plan", "TEXT"),
             ("subscription_period_end", "TEXT"), ("subscription_cancel_at_period_end", "INTEGER NOT NULL DEFAULT 0"),
+            ("synced_state", "TEXT"),
         ):
             try:
                 self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
@@ -190,6 +191,19 @@ class AccountStore:
         if not row["stripe_customer_id"]:
             raise AccountError("Ingen prenumeration hittades för det här kontot")
         return row["stripe_customer_id"]
+
+    def get_synced_state(self, token) -> str | None:
+        row = self._session_user_row(token)
+        if not row:
+            raise AccountError("Du måste vara inloggad")
+        return row["synced_state"]
+
+    def set_synced_state(self, token, state_json: str):
+        row = self._session_user_row(token)
+        if not row:
+            raise AccountError("Du måste vara inloggad")
+        self._connection.execute("UPDATE users SET synced_state = ? WHERE id = ?", (state_json, row["id"]))
+        self._connection.commit()
 
     def apply_subscription_event(self, customer_id, subscription_id, status, period_end_iso, cancel_at_period_end, plan):
         self._connection.execute(

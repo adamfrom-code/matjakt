@@ -81,3 +81,17 @@ export function openBillingPortal(token) {
     headers: { Authorization: `Bearer ${token}` },
   }).then(parseJsonResponse);
 }
+
+export function fetchAccountState(token) {
+  return fetch(`${API_BASE_URL}/account/state`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parseJsonResponse);
+}
+
+export function saveAccountState(token, stateBlob) {
+  return fetch(`${API_BASE_URL}/account/state`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(stateBlob),
+  }).then(parseJsonResponse);
+}
