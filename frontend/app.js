@@ -353,12 +353,10 @@ async function syncBranchComparison(shoppingItems, branches) {
     branchComparisonSync.chains.add(chain);
     if (branchComparisonSync.key !== key || !names.length) continue;
     try {
-      const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip: state.postnummer, varor: names }) });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
+      const produkter = await fetchProductsBatch(chain, state.postnummer, names);
       if (branchComparisonSync.key !== key) return;
-      const matched = Object.values(data.produkter || {}).filter(Boolean);
-      if (matched.length) { state.liveBranchTotals[chain] = branchLiveTotal(shoppingItems, data.produkter); renderBasket(); }
+      const matched = Object.values(produkter).filter(Boolean);
+      if (matched.length) { state.liveBranchTotals[chain] = branchLiveTotal(shoppingItems, produkter); renderBasket(); }
     } catch { /* den här kedjan visar kvar den statiska uppskattningen om livehämtningen misslyckas */ }
   }
 }
@@ -416,6 +414,20 @@ function renderBasket() {
 }
 
 const VALID_CHAINS = ["ICA", "Willys", "Hemköp", "Coop"];
+const LIVE_PRICE_CHUNK_SIZE = 3;
+async function fetchProductsBatch(chain, zip, names) {
+  // Small parallel requests instead of one big sequential one - each item takes
+  // several seconds to scrape, and a single request holding ~10 items easily
+  // exceeds a hosting provider's proxy timeout on a cold cache. A chunk that
+  // fails just leaves those items unpriced instead of losing the whole batch.
+  const chunks = [];
+  for (let i = 0; i < names.length; i += LIVE_PRICE_CHUNK_SIZE) chunks.push(names.slice(i, i + LIVE_PRICE_CHUNK_SIZE));
+  const results = await Promise.all(chunks.map(chunk => fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: chunk }) })
+    .then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); })
+    .then(data => data.produkter || {})
+    .catch(() => ({}))));
+  return Object.assign({}, ...results);
+}
 let livePriceSync = { key: null, loading: false };
 async function syncLivePrices(shoppingItems) {
   const chain = chosenStore();
@@ -424,11 +436,9 @@ async function syncLivePrices(shoppingItems) {
   if (!names.length || !VALID_CHAINS.includes(chain) || livePriceSync.loading || livePriceSync.key === key) return;
   livePriceSync = { key, loading: true };
   try {
-    const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip: state.postnummer, varor: names }) });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
+    const produkter = await fetchProductsBatch(chain, state.postnummer, names);
     if (chosenStore() !== chain) return;
-    state.livePriser = Object.fromEntries(Object.entries(data.produkter || {}).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url) }]));
+    state.livePriser = Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url) }]));
     renderBasket();
   } catch { /* live-priser är ett tillägg ovanpå uppskattningen - misslyckas det visas bara uppskattningen kvar */ }
   finally { livePriceSync.loading = false; }
