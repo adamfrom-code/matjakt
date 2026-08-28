@@ -288,12 +288,13 @@ function chooseMenu(shouldScroll = true) {
 
 function renderRecipes() {
   const search = state.sokning.trim();
-  const recipes = filterRecipes(search ? [...filterByDiet(RECEPT, state.kost), ...state.apiRecipes] : availableRecipes(), search).filter(recipe => (state.kategori === "alla" || recipe.typ === state.kategori) && (!state.maxTid || recipe.tid <= state.maxTid) && (!state.baraFavoriter || state.favoriter.has(recipe.id)));
+  const dietFilterActive = state.kost.kosttyp !== "" || state.kost.avoidAllergens.size > 0;
+  const recipes = filterRecipes(search ? [...filterByDiet(RECEPT, state.kost), ...(dietFilterActive ? [] : state.apiRecipes)] : availableRecipes(), search).filter(recipe => (state.kategori === "alla" || recipe.typ === state.kategori) && (!state.maxTid || recipe.tid <= state.maxTid) && (!state.baraFavoriter || state.favoriter.has(recipe.id)));
   const branch = selectedBranch();
   const storeLabel = state.butik === "auto" ? `${branch?.namn || "ingen butik hittades"} (lägst uppskattat)` : state.butik === "alla" ? "alla butiker" : `${branch?.namn || state.butik}`;
   const loading = !state.branches.length && branchesSync.loading;
   $("locationHint").textContent = branch ? `${nearbyBranches().length} butiksprofiler jämförda${loading ? " (hämtar riktiga butiker nära dig...)" : ""} · ${branch.namn} har lägst uppskattat pris och ligger ${branch.avstandKm.toFixed(1)} km bort.` : `Hittade inga inlästa butiker nära ${state.postnummer} ännu.`;
-  $("menuSummary").textContent = search ? `${recipes.length} recept hittades. Externa recept kan vara på engelska och sakna svenska butikspriser.` : `${plural(Math.min(state.middagar, recipes.length), "middag", "middagar")} för ${plural(state.personer, "person", "personer")} från ${storeLabel}. Priserna är uppskattningar.`;
+  $("menuSummary").textContent = search ? (dietFilterActive ? `${recipes.length} recept hittades. Externa recept visas inte när kost-/allergifilter är aktivt, eftersom de inte har kontrollerade allergiuppgifter.` : `${recipes.length} recept hittades. Externa recept kan vara på engelska och sakna svenska butikspriser.`) : `${plural(Math.min(state.middagar, recipes.length), "middag", "middagar")} för ${plural(state.personer, "person", "personer")} från ${storeLabel}. Priserna är uppskattningar.`;
   $("recipeScroll").innerHTML = recipes.length ? recipes.map(recipe => {
     const selected = state.valda.has(recipe.id), expanded = state.expanded === recipe.id;
     const details = RECIPE_DETAILS[recipe.id] || recipe;
@@ -635,7 +636,7 @@ async function renderCampaignSection() {
   campaignFetchKey = key;
   $("campaignList").innerHTML = `<p class="live-loading">Letar efter kampanjer hos ${chain}... kan ta en stund.</p>`;
   try {
-    const response = await fetch(campaignsApiUrl(chain, state.postnummer));
+    const response = await fetch(campaignsApiUrl(chain, state.postnummer), { headers: { Authorization: `Bearer ${getStoredToken()}` } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (chosenStore() !== chain) return;
@@ -716,9 +717,11 @@ $("pantrySearch").addEventListener("input", e => renderPantryPicker(e.target.val
 function cookMatchRow(id, namn, matched, bild) {
   return `<button type="button" class="cook-match" data-cook-open="${escapeHtml(id)}">${bild ? `<img src="${escapeHtml(bild)}" alt="">` : `<span class="cook-match-fallback">🍽️</span>`}<span class="cook-match-info"><strong>${escapeHtml(namn)}</strong><small>Matchar: ${matched.map(escapeHtml).join(", ")}</small></span></button>`;
 }
-function renderCookResults(localMatches, externalRecipes) {
+function renderCookResults(localMatches, externalRecipes, hiddenByDiet = false) {
   const localHtml = localMatches.length ? `<h3>Från dina recept</h3><div class="cook-match-list">${localMatches.map(({ recipe, matched }) => cookMatchRow(recipe.id, recipe.namn, matched, recipe.bild)).join("")}</div>` : "";
-  const externalHtml = externalRecipes === null
+  const externalHtml = hiddenByDiet
+    ? `<p class="live-loading">Recept från receptdatabasen visas inte när kost-/allergifilter är aktivt, eftersom de inte har kontrollerade allergiuppgifter.</p>`
+    : externalRecipes === null
     ? `<h3>Från receptdatabasen</h3><p class="live-loading">Söker fler recept...</p>`
     : externalRecipes.length
       ? `<h3>Från receptdatabasen</h3><div class="cook-match-list">${externalRecipes.map(recipe => cookMatchRow(recipe.id, recipe.title, recipe.matchedIngredients, recipe.imageUrl)).join("")}</div>`
@@ -729,7 +732,9 @@ function renderCookResults(localMatches, externalRecipes) {
 async function openCookModal() {
   $("cookModal").hidden = false;
   const pantryNames = Object.keys(state.pantry);
+  const dietFilterActive = state.kost.kosttyp !== "" || state.kost.avoidAllergens.size > 0;
   const localMatches = matchLocalRecipesToPantry(filterByDiet(RECEPT, state.kost), pantryNames);
+  if (dietFilterActive) { renderCookResults(localMatches, [], true); return; }
   renderCookResults(localMatches, null);
   if (!pantryNames.length) { renderCookResults([], []); return; }
   try {

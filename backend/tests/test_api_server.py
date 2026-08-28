@@ -126,10 +126,18 @@ class ApiServerHttpTest(unittest.TestCase):
         cls.server.server_close()
         cls.thread.join(timeout=5)
 
-    def get(self, path):
+    def setUp(self):
+        self._original_code = api_server.PREMIUM_CODE
+        api_server.PREMIUM_CODE = "hemlig-kod"
+
+    def tearDown(self):
+        api_server.PREMIUM_CODE = self._original_code
+
+    def get(self, path, token=None):
         conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         try:
-            conn.request("GET", path)
+            headers = {"Authorization": f"Bearer {token}"} if token else {}
+            conn.request("GET", path, headers=headers)
             response = conn.getresponse()
             body = response.read()
             return response.status, json.loads(body) if body else None
@@ -149,6 +157,13 @@ class ApiServerHttpTest(unittest.TestCase):
             return response.status, json.loads(response_body) if response_body else None
         finally:
             conn.close()
+
+    def _premium_token(self):
+        email = f"user-{uuid.uuid4().hex}@example.com"
+        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        token = payload["token"]
+        self.post("/api/auth/redeem", {"code": "hemlig-kod"}, token=token)
+        return token
 
     def test_health(self):
         status, payload = self.get("/api/health")
@@ -288,8 +303,13 @@ class ApiServerHttpTest(unittest.TestCase):
         finally:
             api_server.geocode_postcode = original
 
+    def test_campaigns_rejects_missing_premium(self):
+        status, payload = self.get("/api/campaigns?butik=Coop&zip=11122")
+        self.assertEqual(status, 403)
+        self.assertIn("error", payload)
+
     def test_campaigns_rejects_unsupported_chain(self):
-        status, payload = self.get("/api/campaigns?butik=Willys&zip=11122")
+        status, payload = self.get("/api/campaigns?butik=Willys&zip=11122", token=self._premium_token())
         self.assertEqual(status, 400)
         self.assertIn("error", payload)
 
@@ -302,7 +322,7 @@ class ApiServerHttpTest(unittest.TestCase):
         }
         api_server.parse_products = lambda page, chain, query: by_query.get(query.lower(), [{"produktnamn": query, "pris_kr": 10, "kampanj": None}])
         try:
-            status, payload = self.get("/api/campaigns?butik=Coop&zip=11122")
+            status, payload = self.get("/api/campaigns?butik=Coop&zip=11122", token=self._premium_token())
             self.assertEqual(status, 200)
             deal_ingredients = [deal["ingrediens"] for deal in payload["kampanjer"]]
             self.assertIn("Kycklingfilé", deal_ingredients)

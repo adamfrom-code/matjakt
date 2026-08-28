@@ -618,6 +618,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
         self.send_json(404, {"error": "Okänd endpoint"})
 
     def _handle_campaigns(self, params):
+        user = ACCOUNT_STORE.user_for_token(self._bearer_token())
+        if not user or not user.get("premium"):
+            self.send_json(403, {"error": "Kampanjer kräver Premium"})
+            return
         chain = params.get("butik", [""])[0]
         zip_code = clean_text(params.get("zip", [DEFAULT_ZIP])[0]) or DEFAULT_ZIP
         if chain not in CAMPAIGN_CAPABLE_CHAINS or not re.fullmatch(r"\d{5}", zip_code):
