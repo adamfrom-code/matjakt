@@ -4,7 +4,7 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: .
-    plan: starter
+    plan: free
     healthCheckPath: /api/health
     envVars:
       - key: MATJAKT_FRONTEND_ORIGIN
