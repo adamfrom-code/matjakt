@@ -11,3 +11,5 @@ services:
         value: https://adamfrom-code.github.io
       - key: MATJAKT_PREMIUM_CODE
         sync: false
+      - key: MATJAKT_MAX_SCRAPES
+        value: "1"

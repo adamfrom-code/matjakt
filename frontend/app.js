@@ -416,17 +416,24 @@ function renderBasket() {
 const VALID_CHAINS = ["ICA", "Willys", "Hemköp", "Coop"];
 const LIVE_PRICE_CHUNK_SIZE = 3;
 async function fetchProductsBatch(chain, zip, names) {
-  // Small parallel requests instead of one big sequential one - each item takes
-  // several seconds to scrape, and a single request holding ~10 items easily
-  // exceeds a hosting provider's proxy timeout on a cold cache. A chunk that
-  // fails just leaves those items unpriced instead of losing the whole batch.
+  // Small SEQUENTIAL requests instead of one big one - each item takes several
+  // seconds to scrape, and a single request holding ~10 items easily exceeds a
+  // hosting provider's proxy timeout on a cold cache. Sequential (not
+  // Promise.all) on purpose: the backend runs headless Chromium per item, and
+  // a resource-constrained host chokes if several scrape requests land at
+  // once. A chunk that fails just leaves those items unpriced instead of
+  // losing the whole batch.
   const chunks = [];
   for (let i = 0; i < names.length; i += LIVE_PRICE_CHUNK_SIZE) chunks.push(names.slice(i, i + LIVE_PRICE_CHUNK_SIZE));
-  const results = await Promise.all(chunks.map(chunk => fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: chunk }) })
-    .then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); })
-    .then(data => data.produkter || {})
-    .catch(() => ({}))));
-  return Object.assign({}, ...results);
+  const produkter = {};
+  for (const chunk of chunks) {
+    try {
+      const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: chunk }) });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      Object.assign(produkter, (await response.json()).produkter || {});
+    } catch { /* den här biten missade - resten av listan hämtas ändå */ }
+  }
+  return produkter;
 }
 let livePriceSync = { key: null, loading: false };
 async function syncLivePrices(shoppingItems) {
