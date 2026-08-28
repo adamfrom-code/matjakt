@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Point the deployed site at the live backend
+        run: sed -i 's#<meta name="matjakt-api-url" content="">#<meta name="matjakt-api-url" content="https://matjakt.onrender.com/api">#' frontend/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
