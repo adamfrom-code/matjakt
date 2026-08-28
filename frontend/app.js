@@ -35,11 +35,34 @@ function wireRatingStars(container, recipeId) {
     wireRatingStars(container, recipeId);
   }));
 }
+function recipeFeedback(recipeId) { return state.feedback[recipeId] || {}; }
+function feedbackMarkup(recipeId) {
+  const fb = recipeFeedback(recipeId);
+  return `<div class="recipe-feedback"><button type="button" class="feedback-btn ${fb.liked ? "active" : ""}" data-like-recipe="${recipeId}">👍 Gillar</button><button type="button" class="feedback-btn dislike ${fb.disliked ? "active" : ""}" data-dislike-recipe="${recipeId}">👎 Gillar inte</button></div>`;
+}
+function wireFeedbackButtons(container, recipeId) {
+  container.querySelector("[data-like-recipe]")?.addEventListener("click", () => {
+    const fb = state.feedback[recipeId] || {};
+    state.feedback[recipeId] = { ...fb, liked: !fb.liked, disliked: false };
+    saveState();
+    const holder = container.querySelector(".recipe-feedback");
+    if (holder) holder.outerHTML = feedbackMarkup(recipeId);
+    wireFeedbackButtons(container, recipeId);
+  });
+  container.querySelector("[data-dislike-recipe]")?.addEventListener("click", () => {
+    const fb = state.feedback[recipeId] || {};
+    state.feedback[recipeId] = { ...fb, disliked: !fb.disliked, liked: false };
+    saveState();
+    const holder = container.querySelector(".recipe-feedback");
+    if (holder) holder.outerHTML = feedbackMarkup(recipeId);
+    wireFeedbackButtons(container, recipeId);
+  });
+}
 
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []) };
-function saveState() { writeStoredState(localStorage, { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar] }); }
+const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [] };
+function saveState() { writeStoredState(localStorage, { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog }); }
 const FALLBACK_BRANCH = [{ kedja: "Willys", namn: "Butik nära dig (uppskattat)", lat: null, lon: null, avstandKm: 0, prisfaktor: 1 }];
 const PRODUCT_CATALOG = {
   "Grädde": { namn: "Mat grädde 15%", marke: "Arla", storlek: "2 dl", pris: 15.95 },
@@ -207,14 +230,23 @@ function combinations(list, size) {
 const comboRating = combo => combo.reduce((sum, recipe) => sum + (state.betyg[recipe.id] || 0), 0);
 const comboVariety = combo => new Set(combo.map(recipe => recipe.proteinkalla)).size;
 const comboProtein = combo => combo.reduce((sum, recipe) => sum + (recipe.protein || 0), 0);
+function recipeAffinity(recipe) {
+  const fb = state.feedback[recipe.id];
+  if (!fb) return 0;
+  return (fb.liked ? 3 : 0) + Math.min(fb.cooked || 0, 3) * 1.5 - Math.min(fb.skipped || 0, 3);
+}
+const comboAffinity = combo => combo.reduce((sum, recipe) => sum + recipeAffinity(recipe), 0);
 const PLAN_OBJECTIVES = {
   // Lower cost always wins first - "cheapest" ranks purely on it, the others use it
   // as the tiebreaker so a combo never beats a materially cheaper one on rating/protein
   // alone. Package-rounded cost already rewards recipes that share ingredients (fewer
   // separate packages to buy), so minimizing cost also naturally reduces waste.
-  cheapest: (combo, cost) => -cost,
-  balanced: (combo, cost) => comboRating(combo) * 25 + comboVariety(combo) * 15 - cost,
-  protein: (combo, cost) => comboProtein(combo) * 6 - cost * 0.1,
+  // comboAffinity nudges all three toward what the user has liked/cooked before -
+  // outright disliked recipes are excluded from the candidate pool entirely, see
+  // candidateRecipesForUser().
+  cheapest: (combo, cost) => -cost + comboAffinity(combo) * 3,
+  balanced: (combo, cost) => comboRating(combo) * 25 + comboVariety(combo) * 15 + comboAffinity(combo) * 8 - cost,
+  protein: (combo, cost) => comboProtein(combo) * 6 + comboAffinity(combo) * 4 - cost * 0.1,
 };
 function bestMenuCombo(recipes, count, budget, branch, objective = "cheapest") {
   if (!recipes.length) return [];
@@ -266,9 +298,12 @@ function nutritionFilteredRecipes() {
   if (!state.user?.premium) return dietFiltered;
   return filterByNutritionGoals(dietFiltered, currentNutritionGoals());
 }
+function candidateRecipesForUser() {
+  return nutritionFilteredRecipes().filter(recipe => !state.feedback[recipe.id]?.disliked);
+}
 function cheapestBranch(chain = null) {
   const branches = nearbyBranches().filter(branch => !chain || branch.kedja === chain);
-  const candidates = nutritionFilteredRecipes();
+  const candidates = candidateRecipesForUser();
   return branches.map(branch => {
     const recipes = bestMenuCombo(candidates, state.middagar, state.budget, branch);
     const avstandKm = state.position ? distanceKm(state.position.lat, state.position.lon, branch.lat, branch.lon) : branch.avstandKm;
@@ -291,7 +326,7 @@ function sanitizeApiPayload(payload) {
   if (!Array.isArray(payload?.produkter)) return payload;
   return { ...payload, produkter: payload.produkter.map(product => ({ ...product, produktnamn: escapeHtml(product.produktnamn), marke_och_storlek: escapeHtml(product.marke_och_storlek), bild: safeHttpUrl(product.bild), url: safeHttpUrl(product.url), pris_kr: Number(product.pris_kr) || 0 })) };
 }
-const availableRecipes = () => nutritionFilteredRecipes();
+const availableRecipes = () => candidateRecipesForUser();
 
 function chooseMenu(shouldScroll = true) {
   const branch = selectedBranch();
@@ -345,10 +380,11 @@ async function renderRecipePage() {
   if (!recipe) return;
   const details = RECIPE_DETAILS[id] || recipe;
   $("top").hidden = true; document.querySelector(".bottom-nav").hidden = true; $("recipePage").hidden = false;
-  $("recipePage").innerHTML = `<button class="back-link recipe-back" type="button">← Alla recept</button><article class="full-recipe">${recipe.bild ? `<img src="${recipe.bild}" alt="${recipe.namn}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${recipe.typ}</p><h1>${recipe.namn}</h1><div class="recipe-detail-meta"><span>${recipe.tid ? recipe.tid + " min" : "Tid saknas"}</span><span>${recipe.servings || state.personer} portioner</span><span>${recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? money(recipe.portionspris) + "/portion" : "Uppskattat butikspris"}</span></div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${details.beskrivning || "En god svensk vardagsrätt."}</p><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${recipe.id}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button>${recipeRatingMarkup(recipe.id)}<h2>Ingredienser</h2><ul>${recipe.ingredienser.map(item => `<li>${item}</li>`).join("")}</ul><h2>Gör så här</h2><ol>${(details.steg || []).map(step => `<li>${step}</li>`).join("")}</ol>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${details.tips}</p>` : ""}</article>`;
+  $("recipePage").innerHTML = `<button class="back-link recipe-back" type="button">← Alla recept</button><article class="full-recipe">${recipe.bild ? `<img src="${recipe.bild}" alt="${recipe.namn}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${recipe.typ}</p><h1>${recipe.namn}</h1><div class="recipe-detail-meta"><span>${recipe.tid ? recipe.tid + " min" : "Tid saknas"}</span><span>${recipe.servings || state.personer} portioner</span><span>${recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? money(recipe.portionspris) + "/portion" : "Uppskattat butikspris"}</span></div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${details.beskrivning || "En god svensk vardagsrätt."}</p><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${recipe.id}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button>${recipeRatingMarkup(recipe.id)}${feedbackMarkup(recipe.id)}<h2>Ingredienser</h2><ul>${recipe.ingredienser.map(item => `<li>${item}</li>`).join("")}</ul><h2>Gör så här</h2><ol>${(details.steg || []).map(step => `<li>${step}</li>`).join("")}</ol>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${details.tips}</p>` : ""}</article>`;
   $("recipePage").querySelector(".recipe-back").addEventListener("click", () => history.back());
   $("recipePage").querySelector("[data-recipe-add]").addEventListener("click", event => { state.valda.has(recipe.id) ? state.valda.delete(recipe.id) : state.valda.add(recipe.id); saveState(); render(); event.currentTarget.querySelector("span").textContent = state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"; });
   wireRatingStars($("recipePage"), recipe.id);
+  wireFeedbackButtons($("recipePage"), recipe.id);
   requestAnimationFrame(() => window.scrollTo(0, 0));
   let touchStartX = 0; $("recipePage").ontouchstart = event => { touchStartX = event.changedTouches[0].screenX; }; $("recipePage").ontouchend = event => { const distance = event.changedTouches[0].screenX - touchStartX; if (Math.abs(distance) < 70) return; const ids = allRecipes.map(item => item.id), currentIndex = ids.indexOf(id), targetIndex = distance < 0 ? currentIndex + 1 : currentIndex - 1; if (targetIndex >= 0 && targetIndex < ids.length) openRecipeTab(ids[targetIndex]); else if (distance > 0) history.back(); };
 }
@@ -419,12 +455,14 @@ function renderBasket() {
   const selected = [...RECEPT, ...state.apiRecipes].filter((recipe, index, recipes) => state.valda.has(recipe.id) && recipes.findIndex(item => item.id === recipe.id) === index);
   const total = shoppingListCost(selected, selectedBranch()), remaining = budgetRemaining(state.budget, total), shoppingItems = aggregateShopping(selected);
   $("basketCount").textContent = plural(selected.length, "middag", "middagar"); $("weekBudget").textContent = money(state.budget);
-  $("basketLines").innerHTML = selected.length ? selected.map((recipe, index) => `<article class="basket-line"><div class="basket-line-photo">${recipePhoto(recipe)}</div><span><small>${DAYS[index] || `Dag ${index + 1}`}</small>${recipe.namn}<em>${recipe.tid ? `${recipe.tid} min` : "Tid saknas"}</em></span><strong>${recipe.priceStatus === "unavailable" ? "Pris saknas" : money(scaledPurchasePrice(recipe))}</strong><div class="basket-line-actions"><button type="button" data-details="${recipe.id}">Visa recept</button><button type="button" data-swap="${recipe.id}">Byt rätt</button></div></article>`).join("") : `<div class="basket-empty"><strong>Ingen vecka ännu</strong><p>Gå till Hem och skapa din första matvecka.</p></div>`;
+  $("basketLines").innerHTML = selected.length ? selected.map((recipe, index) => { const fb = recipeFeedback(recipe.id); return `<article class="basket-line"><div class="basket-line-photo">${recipePhoto(recipe)}</div><span><small>${DAYS[index] || `Dag ${index + 1}`}</small>${recipe.namn}<em>${recipe.tid ? `${recipe.tid} min` : "Tid saknas"}</em></span><strong>${recipe.priceStatus === "unavailable" ? "Pris saknas" : money(scaledPurchasePrice(recipe))}</strong><div class="basket-line-actions"><button type="button" data-details="${recipe.id}">Visa recept</button><button type="button" data-swap="${recipe.id}">Byt rätt</button><button type="button" class="basket-feedback-btn ${fb.cooked ? "marked" : ""}" data-cooked="${recipe.id}" aria-label="Lagade den här" title="Lagade den här">✓</button><button type="button" class="basket-feedback-btn ${fb.skipped ? "marked" : ""}" data-skipped="${recipe.id}" aria-label="Hoppade över" title="Hoppade över">✗</button></div></article>`; }).join("") : `<div class="basket-empty"><strong>Ingen vecka ännu</strong><p>Gå till Hem och skapa din första matvecka.</p></div>`;
   const groups = shoppingItems.reduce((result, item) => { const category = itemCategory(item.namn); (result[category] ||= []).push(item); return result; }, {});
   $("shoppingList").innerHTML = shoppingItems.length ? Object.entries(groups).map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingItemMarkup).join("")}</section>`).join("") : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
   document.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => { input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping); saveState(); renderBasket(); }));
   document.querySelectorAll("[data-details]").forEach(button => button.addEventListener("click", () => openRecipeTab(button.dataset.details)));
   document.querySelectorAll("[data-swap]").forEach(button => button.addEventListener("click", () => openSwapModal(button.dataset.swap)));
+  document.querySelectorAll("[data-cooked]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.cooked; const fb = state.feedback[id] || {}; state.feedback[id] = { ...fb, cooked: (fb.cooked || 0) + 1 }; saveState(); renderBasket(); }));
+  document.querySelectorAll("[data-skipped]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.skipped; const fb = state.feedback[id] || {}; state.feedback[id] = { ...fb, skipped: (fb.skipped || 0) + 1 }; saveState(); renderBasket(); }));
   const completed = shoppingItems.filter(item => state.avklarade.has(item.namn)).length, progress = shoppingItems.length ? completed / shoppingItems.length * 100 : 0;
   const liveCount = shoppingItems.filter(item => state.livePriser[item.namn]).length;
   $("shoppingProgress").textContent = `${completed} av ${shoppingItems.length} varor${liveCount ? ` · ${liveCount} med livepris` : ""}`; $("shoppingCost").textContent = `${money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
@@ -475,7 +513,7 @@ function aggregateShopping(selected) {
 }
 
 function updateSummary() { $("summaryBudget").textContent = money(state.budget); $("summaryPeople").textContent = plural(state.personer, "person", "personer"); $("summaryMeals").textContent = plural(state.middagar, "middag", "middagar"); }
-function render() { renderRecipes(); renderBasket(); updateSummary(); }
+function render() { renderRecipes(); renderBasket(); updateSummary(); renderStats(); }
 function step(key, delta, min, max) { state[key] = Math.min(max, Math.max(min, state[key] + delta)); $(`${key === "personer" ? "people" : "meals"}Value`).textContent = state[key]; saveState(); render(); }
 $("budgetInput").value = state.budget; $("peopleValue").textContent = state.personer; $("mealsValue").textContent = state.middagar; $("storeInput").value = state.butik; $("postcodeInput").value = state.postnummer;
 $("kosttypInput").value = state.kost.kosttyp;
@@ -622,7 +660,7 @@ function openSwapModal(currentId) {
   const selected = [...RECEPT, ...state.apiRecipes].filter((recipe, index, recipes) => state.valda.has(recipe.id) && recipes.findIndex(item => item.id === recipe.id) === index);
   const branch = selectedBranch();
   const baseTotal = shoppingListCost(selected, branch);
-  const candidates = nutritionFilteredRecipes().filter(recipe => !state.valda.has(recipe.id));
+  const candidates = candidateRecipesForUser().filter(recipe => !state.valda.has(recipe.id));
   const options = candidates.map(candidate => ({ candidate, total: shoppingListCost(selected.map(recipe => recipe.id === currentId ? candidate : recipe), branch) })).sort((a, b) => a.total - b.total).slice(0, 3);
   if (!options.length) { $("swapOptions").innerHTML = `<p class="live-loading">Inga alternativ hittades som passar budget, butik och dina filter just nu.</p>`; $("swapModal").hidden = false; return; }
   swapContext = { currentId };
@@ -650,13 +688,16 @@ function planCardMarkup(plan, branch) {
 }
 function openPlanComparison() {
   const branch = selectedBranch();
-  const candidates = nutritionFilteredRecipes();
+  const candidates = candidateRecipesForUser();
   if (!candidates.length) { chooseMenu(); return; }
   const plans = PLAN_TYPES.map(type => { const combo = bestMenuCombo(candidates, state.middagar, state.budget, branch, type.key); return { ...type, combo, cost: shoppingListCost(combo, branch) }; }).filter(plan => plan.combo.length);
   if (plans.length < 2) { chooseMenu(); return; }
   $("planCards").innerHTML = plans.map(plan => planCardMarkup(plan, branch)).join("");
   document.querySelectorAll("[data-choose-plan]").forEach(button => button.addEventListener("click", () => {
     const plan = plans.find(candidate => candidate.key === button.dataset.choosePlan);
+    const priciest = Math.max(...nearbyBranches().map(candidate => shoppingListCost(plan.combo, candidate)));
+    state.savingsLog.push({ date: new Date().toISOString().slice(0, 10), savings: Math.max(0, priciest - plan.cost), branch: branch?.namn || "", portionCost: plan.cost / (plan.combo.length * state.personer) });
+    state.savingsLog = state.savingsLog.slice(-60);
     state.valda.clear();
     plan.combo.forEach(recipe => state.valda.add(recipe.id));
     saveState(); render(); closePlanModal(); setView("week");
@@ -665,6 +706,33 @@ function openPlanComparison() {
 }
 function closePlanModal() { $("planModal").hidden = true; }
 document.querySelectorAll("[data-plan-close]").forEach(button => button.addEventListener("click", closePlanModal));
+
+function logEntriesSince(daysAgo) {
+  const cutoff = Date.now() - daysAgo * 86400000;
+  return state.savingsLog.filter(entry => new Date(entry.date).getTime() >= cutoff);
+}
+function reusedIngredientCount() {
+  const selected = [...RECEPT, ...state.apiRecipes].filter((recipe, index, recipes) => state.valda.has(recipe.id) && recipes.findIndex(item => item.id === recipe.id) === index);
+  if (!selected.length) return 0;
+  const shoppingItems = aggregateShopping(selected);
+  return shoppingItems.filter(item => selected.filter(recipe => recipe.ingredienser.includes(item.namn)).length > 1).length;
+}
+function renderStats() {
+  const savedWeek = logEntriesSince(7).reduce((sum, entry) => sum + entry.savings, 0);
+  const savedMonth = logEntriesSince(30).reduce((sum, entry) => sum + entry.savings, 0);
+  const branchCounts = {};
+  state.savingsLog.forEach(entry => { if (entry.branch) branchCounts[entry.branch] = (branchCounts[entry.branch] || 0) + 1; });
+  const cheapestName = Object.entries(branchCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || selectedBranch()?.namn || "-";
+  const avgPortion = state.savingsLog.length ? state.savingsLog.reduce((sum, entry) => sum + entry.portionCost, 0) / state.savingsLog.length : 0;
+  const reused = reusedIngredientCount();
+  $("statSavedWeek").textContent = money(savedWeek);
+  $("statSavedMonth").textContent = money(savedMonth);
+  $("statCheapestStore").textContent = cheapestName;
+  $("statAvgPortion").textContent = state.savingsLog.length ? money(avgPortion) : "-";
+  $("statWasteReduced").textContent = reused ? `${plural(reused, "ingrediens", "ingredienser")} återanvänds i flera rätter denna vecka` : "Skapa en vecka för att se detta";
+  $("savingsCardValue").textContent = state.savingsLog.length ? `${money(savedWeek)} sparat denna vecka` : "Skapa din första vecka";
+}
+$("openStatsBtn").addEventListener("click", () => { renderStats(); setView("stats"); });
 
 const DISLIKE_SUGGESTIONS = ["Lök", "Svamp", "Fisk", "Skaldjur", "Nötter", "Inälvsmat", "Stark mat", "Kokosmjölk"];
 const ONBOARDING_STEPS = [

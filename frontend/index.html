@@ -123,7 +123,7 @@
           <button class="btn btn-primary" id="generateBtn"><span>Skapa min vecka</span><span aria-hidden="true">→</span></button>
         </section>
 
-        <section class="savings-card"><span class="savings-icon" aria-hidden="true">≈</span><p>Prisprognos<strong>Uppskattning</strong><small>Bekräfta alltid aktuella priser hos butiken</small></p></section>
+        <button class="savings-card" type="button" id="openStatsBtn"><span class="savings-icon" aria-hidden="true">↗</span><p>Dina besparingar<strong id="savingsCardValue">Skapa din första vecka</strong><small>Se sparande, favoritbutik och matsvinn</small></p></button>
 
         <section class="campaign-section" id="campaignSection" aria-labelledby="campaignHeading">
           <div class="section-heading"><div><p class="eyebrow">Premium</p><h2 id="campaignHeading">🏷️ Kampanjer just nu</h2></div></div>
@@ -161,6 +161,18 @@
         <button class="add-pantry-btn" id="addPantryBtn" type="button"><span>＋</span> Lägg till vara</button>
         <button class="btn btn-primary cook-from-pantry-btn" id="cookFromPantryBtn" type="button"><span>🍳 Laga med det jag har</span></button>
         <div class="pantry-list" id="pantryList"></div>
+      </section>
+
+      <section class="screen stats-screen" aria-labelledby="statsTitle">
+        <header class="screen-header"><button class="back-link" type="button" data-view="home">← Hem</button><p class="eyebrow">Din historik</p><h1 id="statsTitle">Sparanderesultat</h1></header>
+        <div class="stats-grid">
+          <div class="stats-card highlight"><span>Sparat denna vecka</span><strong id="statSavedWeek">0 kr</strong></div>
+          <div class="stats-card highlight"><span>Sparat denna månad</span><strong id="statSavedMonth">0 kr</strong></div>
+          <div class="stats-card"><span>Billigaste butiken för dig</span><strong id="statCheapestStore">-</strong></div>
+          <div class="stats-card"><span>Snittkostnad per portion</span><strong id="statAvgPortion">-</strong></div>
+        </div>
+        <div class="stats-waste"><span>Minskat matsvinn</span><strong id="statWasteReduced">Skapa en vecka för att se detta</strong></div>
+        <p class="stats-note">Baserat på de veckor du skapat och valt i Matjakt. Uppskattade priser tills du bekräftar i kassan.</p>
       </section>
     </main>
 
