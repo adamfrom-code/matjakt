@@ -432,7 +432,7 @@ const chosenStore = () => cheapestStore()?.kedja || state.butik;
 const productApiUrl = (store, query) => configuredProductApiUrl(store, query, state.postnummer);
 function sanitizeApiPayload(payload) {
   if (!Array.isArray(payload?.produkter)) return payload;
-  return { ...payload, produkter: payload.produkter.map(product => ({ ...product, produktnamn: escapeHtml(product.produktnamn), marke_och_storlek: escapeHtml(product.marke_och_storlek), bild: safeHttpUrl(product.bild), url: safeHttpUrl(product.url), pris_kr: Number(product.pris_kr) || 0 })) };
+  return { ...payload, produkter: payload.produkter.map(product => ({ ...product, produktnamn: escapeHtml(product.produktnamn), marke_och_storlek: escapeHtml(product.marke_och_storlek), bild: product.bild ? safeHttpUrl(product.bild) : "", url: safeHttpUrl(product.url), pris_kr: Number(product.pris_kr) || 0 })) };
 }
 const availableRecipes = () => candidateRecipesForUser();
 
@@ -585,7 +585,7 @@ function shoppingItemMarkup(item) {
   const photo = live?.bild ? `<img class="shopping-product-image has-image" src="${live.bild}" alt="" loading="lazy">` : `<span class="shopping-product-image" aria-hidden="true">${escapeHtml(item.namn.slice(0, 1))}</span>`;
   return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}>${photo}<span class="product-info"><strong>${item.namn}</strong><small>${detail}</small></span><strong>${priceLabel}</strong></label>`;
 }
-function pantryStep(name) { return PACKAGE_INFO[name]?.unit === "st" ? 1 : 50; }
+function pantryStep(name) { return (PACKAGE_INFO[name]?.unit || "st") === "st" ? 1 : 50; }
 const PANTRY_TAB_LABELS = { skafferi: "Skafferi", kyl: "Kyl", frys: "Frys" };
 function renderPantry() {
   const allItems = Object.entries(state.pantry).filter(([, entry]) => entry.amount > 0);
@@ -1195,13 +1195,32 @@ let pantryPickLocation = "skafferi";
 function renderPantryPicker(query) {
   const search = query.trim().toLowerCase();
   const matches = Object.entries(PRODUCT_CATALOG).filter(([key, product]) => !search || key.toLowerCase().includes(search) || product.namn.toLowerCase().includes(search) || product.marke.toLowerCase().includes(search)).slice(0, 30);
-  $("pantryPickerList").innerHTML = matches.length ? matches.map(([key, product]) => `<button type="button" class="pantry-pick" data-pantry-pick="${escapeHtml(key)}"><span class="pantry-pick-info"><strong>${escapeHtml(product.namn)}</strong><small>${escapeHtml(product.marke)} · ${escapeHtml(product.storlek)}</small></span><span class="pantry-pick-add">+ Lägg till</span></button>`).join("") : `<p class="pantry-picker-empty">Inga varor matchar "${escapeHtml(query)}".</p>`;
-  document.querySelectorAll("[data-pantry-pick]").forEach(button => button.addEventListener("click", () => openPantryAddConfirm(button.dataset.pantryPick)));
+  $("pantryPickerList").innerHTML = matches.length ? matches.map(([key, product]) => `<button type="button" class="pantry-pick" data-pantry-pick="${escapeHtml(key)}"><span class="pantry-pick-info"><strong>${escapeHtml(product.namn)}</strong><small>${escapeHtml(product.marke)} · ${escapeHtml(product.storlek)}</small></span><span class="pantry-pick-add">+ Lägg till</span></button>`).join("") : !search ? "" : `<p class="pantry-picker-empty">Inga vanliga varor matchar "${escapeHtml(query)}".</p>`;
+  document.querySelectorAll("[data-pantry-pick]").forEach(button => button.addEventListener("click", () => openPantryAddConfirm(button.dataset.pantryPick, PRODUCT_CATALOG[button.dataset.pantryPick])));
 }
-function openPantryAddConfirm(key) {
-  const product = PRODUCT_CATALOG[key];
+let pantryLiveResults = [];
+const debouncedPantrySearch = createDebouncedSearch((query, signal) => fetch(productApiUrl(chosenStore(), query), { signal }).then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }), 300);
+function renderPantryLiveSearch(query) {
+  const search = query.trim();
+  const chain = chosenStore();
+  if (search.length < 2 || !VALID_CHAINS.includes(chain)) { $("pantryLiveResults").innerHTML = ""; return; }
+  $("pantryLiveResults").innerHTML = `<p class="live-loading">Söker hos ${chain}...</p>`;
+  debouncedPantrySearch(search).then(payload => {
+    const data = sanitizeApiPayload(payload);
+    pantryLiveResults = (data.produkter || []).slice(0, 12);
+    $("pantryLiveResults").innerHTML = pantryLiveResults.length ? `<p class="pantry-picker-section-label">Från ${chain}</p>${pantryLiveResults.map((product, index) => `<button type="button" class="pantry-pick" data-pantry-pick-live="${index}">${product.bild ? `<img class="pantry-pick-photo" src="${product.bild}" alt="" loading="lazy">` : `<span class="pantry-pick-photo placeholder" aria-hidden="true">${escapeHtml(product.produktnamn.slice(0, 1))}</span>`}<span class="pantry-pick-info"><strong>${product.produktnamn}</strong><small>${product.marke_och_storlek || `${product.pris_kr.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} kr`}</small></span><span class="pantry-pick-add">+ Lägg till</span></button>`).join("")}` : `<p class="pantry-picker-empty">Inga produkter hos ${chain} matchar "${escapeHtml(search)}".</p>`;
+    document.querySelectorAll("[data-pantry-pick-live]").forEach(button => button.addEventListener("click", () => {
+      const product = pantryLiveResults[Number(button.dataset.pantryPickLive)];
+      if (product) openPantryAddConfirm(product.produktnamn, { namn: product.produktnamn, marke: product.marke_och_storlek || "", storlek: "" });
+    }));
+  }).catch(error => {
+    if (error?.name === "AbortError") return;
+    $("pantryLiveResults").innerHTML = `<p class="pantry-picker-empty">Kunde inte söka hos ${chain} just nu.</p>`;
+  });
+}
+function openPantryAddConfirm(key, product) {
   pantryPickLocation = state.pantryTab;
-  $("pantryPickerList").hidden = true; $("pantrySearch").hidden = true;
+  $("pantryPickerList").hidden = true; $("pantrySearch").hidden = true; $("pantryLiveResults").hidden = true;
   $("pantryAddConfirm").hidden = false;
   $("pantryAddConfirmName").textContent = product.namn;
   $("pantryAddExpiry").value = "";
@@ -1214,14 +1233,14 @@ function openPantryAddConfirm(key) {
 }
 document.querySelectorAll("#pantryAddLocation button").forEach(button => button.addEventListener("click", () => { pantryPickLocation = button.dataset.location; document.querySelectorAll("#pantryAddLocation button").forEach(b => b.classList.toggle("active", b === button)); }));
 function openPantryModal() {
-  $("pantrySearch").value = ""; $("pantrySearch").hidden = false; $("pantryPickerList").hidden = false; $("pantryAddConfirm").hidden = true;
-  renderPantryPicker(""); $("pantryModal").hidden = false; $("pantrySearch").focus();
+  $("pantrySearch").value = ""; $("pantrySearch").hidden = false; $("pantryPickerList").hidden = false; $("pantryLiveResults").hidden = false; $("pantryAddConfirm").hidden = true;
+  renderPantryPicker(""); $("pantryLiveResults").innerHTML = ""; $("pantryModal").hidden = false; $("pantrySearch").focus();
 }
 function closePantryModal() { $("pantryModal").hidden = true; }
 $("addPantryBtn").addEventListener("click", openPantryModal);
 document.querySelectorAll("[data-pantry-close]").forEach(button => button.addEventListener("click", closePantryModal));
 document.querySelectorAll("#pantryTabs button").forEach(button => button.addEventListener("click", () => { state.pantryTab = button.dataset.pantryTab; renderPantry(); }));
-$("pantrySearch").addEventListener("input", e => renderPantryPicker(e.target.value));
+$("pantrySearch").addEventListener("input", e => { renderPantryPicker(e.target.value); renderPantryLiveSearch(e.target.value); });
 
 function cookMatchRow(id, namn, matched, bild) {
   return `<button type="button" class="cook-match" data-cook-open="${escapeHtml(id)}">${bild ? `<img src="${escapeHtml(bild)}" alt="">` : `<span class="cook-match-fallback">🍽️</span>`}<span class="cook-match-info"><strong>${escapeHtml(namn)}</strong><small>Matchar: ${matched.map(escapeHtml).join(", ")}</small></span></button>`;
