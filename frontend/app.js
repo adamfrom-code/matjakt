@@ -441,6 +441,13 @@ function chooseMenu(shouldScroll = true) {
   const combo = bestMenuCombo(availableRecipes(), state.middagar, state.budget, branch);
   state.valda.clear();
   combo.forEach(r => state.valda.add(r.id));
+  // A new set of meals makes any checked-off shopping items and cached live
+  // prices from the previous week meaningless - without this, starting a new
+  // week could show ingredients as "already bought" just because an item with
+  // the same name was checked off last week.
+  state.avklarade.clear();
+  state.livePriser = {};
+  state.liveBranchTotals = {};
   saveState();
   render();
   if (shouldScroll) {
@@ -561,7 +568,23 @@ function renderStoreComparison(selected) {
 
 const CATEGORY_MAP = { "Frukt & grönt": ["Purjolök", "Morötter", "Lök", "Paprika", "Citron", "Dill", "Basilika", "Lök & vitlök", "Zucchini", "Vitlök", "Timjan", "Sparris", "Rödkål"], Mejeri: ["Grädde", "Riven ost", "Yoghurt", "Mjölk", "Crème fraiche", "Ägg", "Halloumi", "Feta"], "Kött & fisk": ["Kycklinglårfilé", "Kycklingfilé", "Falukorv", "Fryst torsk", "Laxfilé", "Köttfärs", "Fläskfilé", "Biff", "Kalvschnitzel"], Torrvaror: ["Pasta", "Ris", "Matvete", "Äggnudlar", "Vetemjöl", "Röda linser", "Kidneybönor", "Svarta bönor", "Majs", "Krossade tomater", "Tomatpuré", "Salsa", "Soja", "Lasagneplattor", "Kikärtor", "Lingonsylt", "Vegofärs", "Tofu", "Äppelmos", "Kapris"], Frys: ["Wokgrönsaker", "Bär", "Räkor"] };
 function itemCategory(name) { return Object.entries(CATEGORY_MAP).find(([, names]) => names.includes(name))?.[0] || "Övrigt"; }
-function shoppingItemMarkup(item) { const product = PRODUCT_CATALOG[item.namn] || { namn: item.namn, marke: "", pris: 0 }; const pantry = state.pantry[item.namn]?.amount || 0; const needed = Math.max(0, item.total - pantry); const packages = item.package ? Math.ceil(needed / item.package.amount) : Math.ceil(needed); const amount = packages ? `${packages} × ${item.package?.amount || 1} ${item.package?.unit || item.unit}` : "Finns hemma"; const live = state.livePriser[item.namn]; const priceLabel = live ? `${money(live.pris_kr * (packages || 1))}<span class="live-badge">Live</span>` : product.pris ? money(product.pris * packages) : ""; return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}><span class="product-info"><strong>${item.namn}</strong><small>${live ? escapeHtml(live.produktnamn) : product.marke ? `${product.marke} · ` : ""}${live ? "" : amount}</small></span><strong>${priceLabel}</strong></label>`; }
+function shoppingItemMarkup(item) {
+  const product = PRODUCT_CATALOG[item.namn] || { namn: item.namn, marke: "", pris: 0 };
+  const pantry = state.pantry[item.namn]?.amount || 0;
+  const needed = Math.max(0, item.total - pantry);
+  const packages = item.package ? Math.ceil(needed / item.package.amount) : Math.ceil(needed);
+  const amount = packages ? `${packages} × ${item.package?.amount || 1} ${item.package?.unit || item.unit}` : "Finns hemma";
+  const live = state.livePriser[item.namn];
+  const priceLabel = live ? `${money(live.pris_kr * (packages || 1))}<span class="live-badge">Live</span>` : product.pris ? money(product.pris * packages) : "";
+  // PRODUCT_CATALOG uses "ICA" as a generic placeholder brand for estimated
+  // prices, not a claim that the item comes from ICA specifically - showing it
+  // next to a Willys/Coop list read as a store mismatch, so it's only shown
+  // when it names a real distinguishing brand.
+  const brand = product.marke && product.marke !== "ICA" ? `${product.marke} · ` : "";
+  const detail = live ? escapeHtml(live.produktnamn) : packages ? `${brand}Uppskattat · ${amount}` : amount;
+  const photo = live?.bild ? `<img class="shopping-product-image has-image" src="${live.bild}" alt="" loading="lazy">` : `<span class="shopping-product-image" aria-hidden="true">${escapeHtml(item.namn.slice(0, 1))}</span>`;
+  return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}>${photo}<span class="product-info"><strong>${item.namn}</strong><small>${detail}</small></span><strong>${priceLabel}</strong></label>`;
+}
 function pantryStep(name) { return PACKAGE_INFO[name]?.unit === "st" ? 1 : 50; }
 const PANTRY_TAB_LABELS = { skafferi: "Skafferi", kyl: "Kyl", frys: "Frys" };
 function renderPantry() {
@@ -594,6 +617,7 @@ function renderBasket() {
   const liveCount = shoppingItems.filter(item => state.livePriser[item.namn]).length;
   const updatedSuffix = liveCount && state.liveUpdatedAt ? ` (${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })})` : "";
   $("shoppingProgress").textContent = `${completed} av ${shoppingItems.length} varor${liveCount ? ` · ${liveCount} med livepris${updatedSuffix}` : ""}`; $("shoppingCost").textContent = `${money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
+  $("shoppingComplete").hidden = !(shoppingItems.length && completed === shoppingItems.length);
   $("basketTotal").textContent = money(total); $("basketRemaining").textContent = money(Math.abs(remaining)); $("basketRemainingRow").classList.toggle("over-budget", remaining < 0); $("basketRemainingRow").querySelector("span").textContent = remaining < 0 ? "Över budget" : "Kvar";
   renderStoreComparison(selected); renderPantry();
   document.querySelectorAll("[data-week-store]").forEach(button => button.classList.toggle("active", button.dataset.weekStore === state.butik));
@@ -655,7 +679,7 @@ async function syncLivePrices(shoppingItems) {
   try {
     const produkter = await fetchProductsBatch(chain, state.postnummer, names);
     if (chosenStore() !== chain) return;
-    state.livePriser = Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url) }]));
+    state.livePriser = Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "" }]));
     if (Object.keys(state.livePriser).length) state.liveUpdatedAt = Date.now();
     livePriceSync.loading = false;
     renderBasket();
@@ -682,7 +706,6 @@ const debouncedGeocode = createDebouncedSearch((zip, signal) => fetch(geocodeApi
 $("postcodeInput").addEventListener("input", e => {
   state.position = null;
   state.postnummer = e.target.value.replace(/\D/g, "");
-  state.livePriser = {}; state.liveBranchTotals = {};
   saveState(); chooseMenu(false);
   if (state.postnummer.length !== 5) return;
   const zip = state.postnummer;
@@ -693,8 +716,8 @@ $("postcodeInput").addEventListener("input", e => {
     saveState(); chooseMenu(false);
   }).catch(() => { /* geokodning misslyckades - postnumret används ändå för exakt/ungefärlig matchning som innan */ });
 });
-$("locateBtn").addEventListener("click", () => { if (!navigator.geolocation) return; $("locateBtn").textContent = "Hämtar..."; navigator.geolocation.getCurrentPosition(({ coords }) => { state.position = { lat: coords.latitude, lon: coords.longitude }; state.livePriser = {}; state.liveBranchTotals = {}; $("locateBtn").textContent = "Hittad"; chooseMenu(false); }, () => { $("locateBtn").textContent = "Försök igen"; }); });
-$("storeInput").addEventListener("change", e => { state.butik = e.target.value; state.livePriser = {}; saveState(); chooseMenu(); renderCampaignSection(); });
+$("locateBtn").addEventListener("click", () => { if (!navigator.geolocation) return; $("locateBtn").textContent = "Hämtar..."; navigator.geolocation.getCurrentPosition(({ coords }) => { state.position = { lat: coords.latitude, lon: coords.longitude }; $("locateBtn").textContent = "Hittad"; chooseMenu(false); }, () => { $("locateBtn").textContent = "Försök igen"; }); });
+$("storeInput").addEventListener("change", e => { state.butik = e.target.value; saveState(); chooseMenu(); renderCampaignSection(); });
 
 const GOAL_PRESETS = {
   hogprotein: { kcalGoal: "", proteinGoal: "40" },
@@ -889,6 +912,9 @@ function openPlanComparison() {
     state.swapsThisWeek = 0;
     state.valda.clear();
     plan.combo.forEach(recipe => state.valda.add(recipe.id));
+    state.avklarade.clear();
+    state.livePriser = {};
+    state.liveBranchTotals = {};
     saveState(); render(); closePlanModal(); setView("week");
   }));
   $("planModal").hidden = false;
@@ -1164,6 +1190,7 @@ $("logoutBtn").addEventListener("click", async () => {
 $("peopleMinus").addEventListener("click", () => step("personer", -1, 1, 12)); $("peoplePlus").addEventListener("click", () => step("personer", 1, 1, 12));
 $("mealsMinus").addEventListener("click", () => step("middagar", -1, 1, 6)); $("mealsPlus").addEventListener("click", () => step("middagar", 1, 1, 6));
 $("generateBtn").addEventListener("click", () => openPlanComparison()); $("refreshBtn").addEventListener("click", () => { RECEPT.push(RECEPT.shift()); chooseMenu(); });
+$("startNewWeekBtn").addEventListener("click", () => openPlanComparison());
 let pantryPickLocation = "skafferi";
 function renderPantryPicker(query) {
   const search = query.trim().toLowerCase();
