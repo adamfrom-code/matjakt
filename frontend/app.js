@@ -568,6 +568,22 @@ function renderStoreComparison(selected) {
 
 const CATEGORY_MAP = { "Frukt & grönt": ["Purjolök", "Morötter", "Lök", "Paprika", "Citron", "Dill", "Basilika", "Lök & vitlök", "Zucchini", "Vitlök", "Timjan", "Sparris", "Rödkål"], Mejeri: ["Grädde", "Riven ost", "Yoghurt", "Mjölk", "Crème fraiche", "Ägg", "Halloumi", "Feta"], "Kött & fisk": ["Kycklinglårfilé", "Kycklingfilé", "Falukorv", "Fryst torsk", "Laxfilé", "Köttfärs", "Fläskfilé", "Biff", "Kalvschnitzel"], Torrvaror: ["Pasta", "Ris", "Matvete", "Äggnudlar", "Vetemjöl", "Röda linser", "Kidneybönor", "Svarta bönor", "Majs", "Krossade tomater", "Tomatpuré", "Salsa", "Soja", "Lasagneplattor", "Kikärtor", "Lingonsylt", "Vegofärs", "Tofu", "Äppelmos", "Kapris"], Frys: ["Wokgrönsaker", "Bär", "Räkor"] };
 function itemCategory(name) { return Object.entries(CATEGORY_MAP).find(([, names]) => names.includes(name))?.[0] || "Övrigt"; }
+// Bundled locally (no network fetch) so every shopping item always shows something
+// relevant even offline or before a real product photo has loaded - never a bare
+// letter or a broken image. One simple, on-brand line icon per category; picking
+// the wrong product's photo to fill the space would be worse than an icon, so this
+// is deliberately generic rather than a guess.
+const CATEGORY_ICONS = {
+  "Frukt & grönt": '<path d="M12 9c-3 0-5.5 2.7-5.5 6.2C6.5 19 8.8 21 11 21c.7 0 1-.3 1-.3s.3.3 1 .3c2.2 0 4.5-2 4.5-5.8C17.5 11.7 15 9 12 9Z"/><path d="M12 9c0-2 1.2-3.3 2.8-3.6"/>',
+  Mejeri: '<path d="M10 3h4v3l2 2v11a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V8l2-2V3Z"/><path d="M9 13h6"/>',
+  "Kött & fisk": '<path d="M4 12c4-5 10-6 15-3-1 1-1 5 0 6-5 3-11 2-15-3Z"/><path d="M17 9l3-2v10l-3-2"/>',
+  Torrvaror: '<path d="M7 8h10v11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V8Z"/><path d="M9 8V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3M8 12h8"/>',
+  Frys: '<path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9"/>',
+  Övrigt: '<path d="M6 8h12l-1 12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8ZM9 8V6a3 3 0 0 1 6 0v2"/>',
+};
+function categoryIconMarkup(category) {
+  return `<span class="shopping-item-image placeholder" aria-hidden="true"><svg viewBox="0 0 24 24">${CATEGORY_ICONS[category] || CATEGORY_ICONS["Övrigt"]}</svg></span>`;
+}
 function renderAttribution(shoppingItems) {
   // Both Primat and Open Food Facts require visible attribution wherever
   // their data/images actually appear, not unconditionally - shown only for
@@ -585,23 +601,32 @@ function shoppingItemMarkup(item) {
   const pantry = state.pantry[item.namn]?.amount || 0;
   const needed = Math.max(0, item.total - pantry);
   const packages = item.package ? Math.ceil(needed / item.package.amount) : Math.ceil(needed);
-  const amount = packages ? `${packages} × ${item.package?.amount || 1} ${item.package?.unit || item.unit}` : "Finns hemma";
   const live = state.livePriser[item.namn];
-  // A real captured price (whether scraped this second or served from the
-  // backend's 24h cache - see cached_products) is shown as a plain, confident
-  // price with no "Live"/"Uppdaterad" badge - users don't need to know which
-  // internal path it came from, only that it's real. The one distinction that
-  // actually matters for trust is real vs. estimated (see "Uppskattat" in
-  // detail below), which is the only case the app is ever actually guessing.
+  const chain = chosenStore();
+  // The only two moments worth calling out to the user: a fetch for this
+  // specific item is genuinely still in flight, or the price shown is a
+  // static guess rather than a real captured one. A settled real price gets
+  // no badge at all - see the "no Live/Uppdaterad" reasoning this replaced.
+  const stillFetching = packages > 0 && !live && livePriceSync.loading && VALID_CHAINS.includes(chain);
+  const isEstimated = packages > 0 && !live && !stillFetching;
   const priceLabel = live ? money(live.pris_kr * (packages || 1)) : product.pris ? money(product.pris * packages) : "";
+  const displayName = live ? escapeHtml(live.produktnamn) : escapeHtml(item.namn);
   // PRODUCT_CATALOG uses "ICA" as a generic placeholder brand for estimated
   // prices, not a claim that the item comes from ICA specifically - showing it
   // next to a Willys/Coop list read as a store mismatch, so it's only shown
   // when it names a real distinguishing brand.
-  const brand = product.marke && product.marke !== "ICA" ? `${product.marke} · ` : "";
-  const detail = live ? escapeHtml(live.produktnamn) : packages ? `${brand}Uppskattat · ${amount}` : amount;
-  const photo = live?.bild ? `<img class="shopping-product-image has-image" src="${live.bild}" alt="" loading="lazy">` : `<span class="shopping-product-image placeholder" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 8h12l-1 12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8ZM9 8V6a3 3 0 0 1 6 0v2"/></svg></span>`;
-  return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}>${photo}<span class="product-info"><strong>${item.namn}</strong><small>${detail}</small></span><strong>${priceLabel}</strong></label>`;
+  // "1 st" as a package size is a no-op worth hiding (every produce item not
+  // sold by weight has one) - stating it next to a "1 st" quantity read as a
+  // typo ("1 st · 1 st"). Real sizes (g/ml/kruka/knippe) and quantities above
+  // one are the only pieces of this line actually worth a shopper's glance.
+  const sizeText = product.storlek && product.storlek !== "1 st" ? product.storlek : "";
+  const brandSize = live ? live.markeOchStorlek : [product.marke && product.marke !== "ICA" ? product.marke : "", sizeText].filter(Boolean).join(" ");
+  const qty = packages > 1 ? `${packages} st` : "";
+  const meta = !packages ? "Finns hemma" : escapeHtml([brandSize, qty].filter(Boolean).join(" · ") || "1 st");
+  const campaign = live?.kampanj?.text ? `<small class="shopping-item-campaign">🏷️ ${escapeHtml(live.kampanj.text)}</small>` : "";
+  const status = stillFetching ? '<small class="item-status loading">Hämtar…</small>' : isEstimated ? '<small class="item-status estimated">Uppskattat</small>' : "";
+  const photo = live?.bild ? `<img class="shopping-item-image has-image" src="${live.bild}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(item.namn));
+  return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${displayName}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong>${priceLabel}</strong>${status}</span></label>`;
 }
 function pantryStep(name) { return (PACKAGE_INFO[name]?.unit || "st") === "st" ? 1 : 50; }
 const PANTRY_TAB_LABELS = { skafferi: "Skafferi", kyl: "Kyl", frys: "Frys" };
@@ -631,10 +656,12 @@ function renderBasket() {
   document.querySelectorAll("[data-swap]").forEach(button => button.addEventListener("click", () => openSwapModal(button.dataset.swap)));
   document.querySelectorAll("[data-cooked]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.cooked; const fb = state.feedback[id] || {}; state.feedback[id] = { ...fb, cooked: (fb.cooked || 0) + 1 }; saveState(); renderBasket(); }));
   document.querySelectorAll("[data-skipped]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.skipped; const fb = state.feedback[id] || {}; state.feedback[id] = { ...fb, skipped: (fb.skipped || 0) + 1 }; saveState(); renderBasket(); }));
-  const completed = shoppingItems.filter(item => state.avklarade.has(item.namn)).length, progress = shoppingItems.length ? completed / shoppingItems.length * 100 : 0;
-  const liveCount = shoppingItems.filter(item => state.livePriser[item.namn]).length;
-  const updatedSuffix = liveCount && state.liveUpdatedAt ? ` (${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })})` : "";
-  $("shoppingProgress").textContent = `${completed} av ${shoppingItems.length} varor${liveCount ? ` · ${liveCount} med livepris${updatedSuffix}` : ""}`; $("shoppingCost").textContent = `${money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
+  const completed = shoppingItems.filter(item => state.avklarade.has(item.namn)).length, itemsLeft = shoppingItems.length - completed, progress = shoppingItems.length ? completed / shoppingItems.length * 100 : 0;
+  // No mention of how many items happen to have a live-fetched price, and no
+  // fetch timestamp - that's internal plumbing, not something a shopper needs
+  // to see. Only the plain, calm facts: what's left, and what it costs.
+  $("shoppingProgress").textContent = shoppingItems.length ? plural(itemsLeft, "vara kvar", "varor kvar") : "";
+  $("shoppingCost").textContent = `${money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
   $("shoppingComplete").hidden = !(shoppingItems.length && completed === shoppingItems.length);
   renderAttribution(shoppingItems);
   $("basketTotal").textContent = money(total); $("basketRemaining").textContent = money(Math.abs(remaining)); $("basketRemainingRow").classList.toggle("over-budget", remaining < 0); $("basketRemainingRow").querySelector("span").textContent = remaining < 0 ? "Över budget" : "Kvar";
@@ -650,7 +677,7 @@ function updateWeekStoreStatus() {
   const liveCount = shoppingItems.filter(item => state.livePriser[item.namn]).length;
   const chain = chosenStore();
   const fetchingLive = livePriceSync.loading;
-  $("weekStoreStatus").textContent = fetchingLive ? `Hämtar riktiga priser hos ${chain}...` : VALID_CHAINS.includes(chain) ? (liveCount ? `Visar riktiga priser hos ${chain}` : `Uppskattat pris - hämtar riktiga priser hos ${chain}...`) : chain === "alla" ? "Visar uppskattade priser, jämfört mot alla butiker" : "Visar uppskattade priser";
+  $("weekStoreStatus").textContent = fetchingLive ? `Hämtar priser hos ${chain}...` : VALID_CHAINS.includes(chain) ? (liveCount ? `Visar priser hos ${chain}` : `Uppskattat pris - hämtar priser hos ${chain}...`) : chain === "alla" ? "Visar uppskattade priser, jämfört mot alla butiker" : "Visar uppskattade priser";
   $("weekStoreStatus").classList.toggle("loading", fetchingLive);
 }
 function switchWeekStore(chain) {
@@ -697,7 +724,7 @@ async function fetchProductsBatch(chain, zip, names, onItem) {
   return produkter;
 }
 function mapLiveProducts(produkter) {
-  return Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "", kalla: product.kalla || "", bildKalla: product.bild_kalla || "" }]));
+  return Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), markeOchStorlek: String(product.marke_och_storlek || ""), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "", kalla: product.kalla || "", bildKalla: product.bild_kalla || "", kampanj: product.kampanj?.text ? { text: String(product.kampanj.text) } : null }]));
 }
 let livePriceSync = { key: null, loading: false };
 async function syncLivePrices(shoppingItems) {
