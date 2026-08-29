@@ -98,19 +98,26 @@ def resolve_stores(zip_code, api_key=None):
 def nearby_stores(zip_code, api_key=None):
     """Returns Primat's full ranked nearby-store list (not just the one pick
     per chain that resolve_stores gives), mapped to Matjakt's own
-    {"kedja","namn","ort","avstandKm"} shape - the same shape
+    {"kedja","namn","ort","avstandKm","primatKey"} shape - the same shape
     nearby_stores() in api_server.py already produces from
-    scraping/fetch_axfood_stores, so this is a drop-in alternative source.
-    Chains Matjakt doesn't have yet (Lidl, City Gross) are silently skipped
-    rather than passed through - see PRIMAT_TO_CHAIN. Distance (km) comes
-    straight from Primat; no need to geocode or haversine anything here."""
+    scraping/fetch_axfood_stores (plus primatKey, which only a Primat-sourced
+    branch has), so this is a drop-in alternative source. Chains Matjakt
+    doesn't have yet (Lidl, City Gross) are silently skipped rather than
+    passed through - see PRIMAT_TO_CHAIN. Distance (km) comes straight from
+    Primat; no need to geocode or haversine anything here.
+
+    primatKey ("chain:store_id", e.g. "coop:206401") is each store's own
+    identity in Primat's system - carried through so a caller can pin
+    product searches to this exact door (see fetch_from_primat's store_key)
+    instead of always getting whichever store primat_store_scope's default
+    resolution would have picked for the chain."""
     result = _resolve_raw(zip_code, api_key=api_key)
     stores = []
     for store in result.get("stores", []):
         chain = PRIMAT_TO_CHAIN.get(store.get("chain"))
         if not chain:
             continue
-        stores.append({"kedja": chain, "namn": store.get("name") or "", "ort": store.get("city") or "", "avstandKm": store.get("km")})
+        stores.append({"kedja": chain, "namn": store.get("name") or "", "ort": store.get("city") or "", "avstandKm": store.get("km"), "primatKey": store.get("key") or ""})
     return stores
 
 

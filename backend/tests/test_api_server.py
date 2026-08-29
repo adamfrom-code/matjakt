@@ -24,6 +24,19 @@ class ApiHelpersTest(unittest.TestCase):
     def test_clean_text(self):
         self.assertEqual(clean_text("  ekologisk\n mjölk "), "ekologisk mjölk")
 
+    def test_store_key_param_accepts_a_real_primat_key(self):
+        self.assertEqual(api_server.store_key_param("coop:206414"), "coop:206414")
+
+    def test_store_key_param_rejects_malformed_input(self):
+        for bad in ["", "coop", "coop:", ":206414", "coop 206414", "<script>alert(1)</script>", "a" * 41]:
+            self.assertIsNone(api_server.store_key_param(bad), bad)
+
+    def test_cache_scope_folds_a_store_key_into_the_zip(self):
+        self.assertEqual(api_server.cache_scope("80252", None), "80252")
+        self.assertEqual(api_server.cache_scope("80252", "coop:206414"), "80252#coop:206414")
+        # Different stores in the same zip must never collapse to one key.
+        self.assertNotEqual(api_server.cache_scope("80252", "coop:206401"), api_server.cache_scope("80252", "coop:206414"))
+
     def test_parse_price(self):
         self.assertEqual(parse_price("Pris 18,90 kr"), 18.9)
         self.assertIsNone(parse_price("pris saknas"))
@@ -375,7 +388,7 @@ class ApiServerHttpTest(unittest.TestCase):
         # themselves within their own try/finally, same pattern as
         # sync_playwright/parse_products elsewhere in this file.
         self._original_fetch_from_primat = api_server.fetch_from_primat
-        api_server.fetch_from_primat = lambda chain, query, zip_code: []
+        api_server.fetch_from_primat = lambda chain, query, zip_code, store_key=None: []
         # Same reasoning as fetch_from_primat above, for the Open Food Facts
         # image lookup stamp_match() runs on every product - default to
         # "nothing found" so no test depends on a live network call.
@@ -469,7 +482,7 @@ class ApiServerHttpTest(unittest.TestCase):
         original_parse_products, original_fetch_from_primat = api_server.parse_products, api_server.fetch_from_primat
         scrape_calls = []
         api_server.parse_products = lambda page, chain, query: scrape_calls.append(1) or [{"produktnamn": "Fräsch scrape", "pris_kr": 1}]
-        api_server.fetch_from_primat = lambda chain, query, zip_code: [
+        api_server.fetch_from_primat = lambda chain, query, zip_code, store_key=None: [
             {"kedja": chain, "produktnamn": "Citron Klass 1 (Primat)", "marke_och_storlek": "", "bild": "", "pris_kr": 6.9,
              "storlek": "", "lager": True, "url": "https://www.willys.se/x", "sokning": query, "kampanj": None, "gtin": "123", "kalla": "primat"}
         ]
@@ -484,13 +497,73 @@ class ApiServerHttpTest(unittest.TestCase):
             api_server.parse_products, api_server.fetch_from_primat = original_parse_products, original_fetch_from_primat
             api_server.PRICE_CACHE.clear()
 
+    def test_products_forwards_a_pinned_store_key_to_primat(self):
+        """Clicking a specific branch in the store comparison list (e.g.
+        "Coop Tullhuset") sends its Primat key as butiksnyckel - this must
+        reach fetch_from_primat so the search is actually scoped to that
+        door, not the zip's default. Returns a real match (not []) so the
+        request is satisfied by Primat and never falls through to a real
+        scrape, which would hang this test waiting on a live browser."""
+        original_fetch_from_primat = api_server.fetch_from_primat
+        seen = []
+        def _fake(chain, query, zip_code, store_key=None):
+            seen.append(store_key)
+            return [{"kedja": chain, "produktnamn": "Citron", "marke_och_storlek": "", "bild": "", "pris_kr": 7,
+                     "storlek": "", "lager": True, "url": "", "sokning": query, "kampanj": None, "gtin": "1", "kalla": "primat"}]
+        api_server.fetch_from_primat = _fake
+        try:
+            self.get("/api/products?butik=Coop&q=citron&butiksnyckel=coop:206414")
+            self.assertEqual(seen, ["coop:206414"])
+        finally:
+            api_server.fetch_from_primat = original_fetch_from_primat
+            api_server.PRICE_CACHE.clear()
+
+    def test_products_ignores_a_malformed_store_key(self):
+        """A store key must look like Primat's own "chain:store_id" shape -
+        anything else (garbage, an injection attempt) is dropped rather than
+        passed through to the cache key or the outbound Primat call."""
+        original_fetch_from_primat = api_server.fetch_from_primat
+        seen = []
+        def _fake(chain, query, zip_code, store_key=None):
+            seen.append(store_key)
+            return [{"kedja": chain, "produktnamn": "Citron", "marke_och_storlek": "", "bild": "", "pris_kr": 7,
+                     "storlek": "", "lager": True, "url": "", "sokning": query, "kampanj": None, "gtin": "1", "kalla": "primat"}]
+        api_server.fetch_from_primat = _fake
+        try:
+            self.get("/api/products?butik=Coop&q=citron&butiksnyckel=<script>alert(1)</script>")
+            self.assertEqual(seen, [None])
+        finally:
+            api_server.fetch_from_primat = original_fetch_from_primat
+            api_server.PRICE_CACHE.clear()
+
+    def test_products_caches_a_pinned_store_separately_from_the_default(self):
+        """Two Coop locations can genuinely have different prices - a pinned
+        branch's result must never be served back for a plain (unpinned)
+        request for the same chain/zip/query, or vice versa."""
+        original_fetch_from_primat = api_server.fetch_from_primat
+        def _fake(chain, query, zip_code, store_key=None):
+            price = 42 if store_key else 10
+            return [{"kedja": chain, "produktnamn": f"Citron ({store_key or 'default'})", "marke_och_storlek": "", "bild": "",
+                     "pris_kr": price, "storlek": "", "lager": True, "url": "", "sokning": query, "kampanj": None, "gtin": "1", "kalla": "primat"}]
+        api_server.fetch_from_primat = _fake
+        try:
+            status_default, payload_default = self.get("/api/products?butik=Coop&q=citron")
+            status_pinned, payload_pinned = self.get("/api/products?butik=Coop&q=citron&butiksnyckel=coop:206414")
+            self.assertEqual(status_default, 200)
+            self.assertEqual(status_pinned, 200)
+            self.assertEqual(payload_default["produkter"][0]["pris_kr"], 10)
+            self.assertEqual(payload_pinned["produkter"][0]["pris_kr"], 42)
+        finally:
+            api_server.fetch_from_primat = original_fetch_from_primat
+            api_server.PRICE_CACHE.clear()
+
     def test_products_falls_back_to_scraping_when_primat_has_nothing(self):
         original_sync_playwright, original_parse_products, original_fetch_from_primat = (
             api_server.sync_playwright, api_server.parse_products, api_server.fetch_from_primat
         )
         api_server.sync_playwright = _fake_sync_playwright
         _reset_shared_browser()
-        api_server.fetch_from_primat = lambda chain, query, zip_code: []
+        api_server.fetch_from_primat = lambda chain, query, zip_code, store_key=None: []
         api_server.parse_products = lambda page, chain, query: [{"produktnamn": "Fräsch scrape", "pris_kr": 1}]
         try:
             status, payload = self.get("/api/products?butik=Willys&q=citron")
@@ -728,7 +801,7 @@ class ApiServerHttpTest(unittest.TestCase):
         original_parse_products, original_fetch_from_primat = api_server.parse_products, api_server.fetch_from_primat
         scrape_calls = []
         api_server.parse_products = lambda page, chain, query: scrape_calls.append(1) or []
-        api_server.fetch_from_primat = lambda chain, query, zip_code: [
+        api_server.fetch_from_primat = lambda chain, query, zip_code, store_key=None: [
             {"kedja": chain, "produktnamn": "Paprika Röd Klass 1", "marke_och_storlek": "", "bild": "", "pris_kr": 19.9,
              "storlek": "", "lager": True, "url": "https://www.willys.se/x", "sokning": query, "kampanj": None, "gtin": "7311042001683", "kalla": "primat"}
         ]
@@ -742,13 +815,28 @@ class ApiServerHttpTest(unittest.TestCase):
             api_server.parse_products, api_server.fetch_from_primat = original_parse_products, original_fetch_from_primat
             api_server.PRICE_CACHE.clear()
 
+    def test_products_batch_forwards_a_pinned_store_key_to_primat(self):
+        original_fetch_from_primat = api_server.fetch_from_primat
+        seen = []
+        def _fake(chain, query, zip_code, store_key=None):
+            seen.append(store_key)
+            return [{"kedja": chain, "produktnamn": "Citron", "marke_och_storlek": "", "bild": "", "pris_kr": 7,
+                     "storlek": "", "lager": True, "url": "", "sokning": query, "kampanj": None, "gtin": "1", "kalla": "primat"}]
+        api_server.fetch_from_primat = _fake
+        try:
+            self.post("/api/products/batch", {"butik": "Coop", "varor": ["Citron"], "butiksnyckel": "coop:206414"})
+            self.assertEqual(seen, ["coop:206414"])
+        finally:
+            api_server.fetch_from_primat = original_fetch_from_primat
+            api_server.PRICE_CACHE.clear()
+
     def test_products_batch_falls_back_to_scraping_when_primat_has_nothing(self):
         original_sync_playwright, original_parse_products, original_fetch_from_primat = (
             api_server.sync_playwright, api_server.parse_products, api_server.fetch_from_primat
         )
         api_server.sync_playwright = _fake_sync_playwright
         _reset_shared_browser()
-        api_server.fetch_from_primat = lambda chain, query, zip_code: []
+        api_server.fetch_from_primat = lambda chain, query, zip_code, store_key=None: []
         api_server.parse_products = lambda page, chain, query: [{"produktnamn": "Fräsch scrape", "pris_kr": 10}]
         try:
             status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Smor"]})

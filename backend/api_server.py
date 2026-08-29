@@ -524,6 +524,30 @@ def parse_products(page, chain, query):
     return products[:20]
 
 
+STORE_KEY_PATTERN = re.compile(r"^[a-z]+:[A-Za-z0-9]+$")
+
+
+def store_key_param(raw):
+    """Validates a client-supplied Primat store key ("chain:store_id", from a
+    branch's primatKey) before it's trusted anywhere - rejects anything that
+    doesn't match the shape Primat itself hands out, rather than passing
+    arbitrary client input straight into a cache key and an outbound API
+    call."""
+    value = clean_text(str(raw or ""))[:40]
+    return value if STORE_KEY_PATTERN.fullmatch(value) else None
+
+
+def cache_scope(zip_code, store_key):
+    """A specific pinned store's prices must never share a cache entry with
+    the chain's default door for this zip - two Coop locations can genuinely
+    have different prices (member deals, local campaigns), and conflating
+    them would let one silently overwrite what "auto" shows for the other.
+    Folded into the existing zip_code-shaped cache key (see PriceCacheStore,
+    which treats it as an opaque string) rather than changing the cache's
+    schema."""
+    return f"{zip_code}#{store_key}" if store_key else zip_code
+
+
 def cached_products(chain, query, zip_code):
     """Returns (products, updated_at) for a persisted cache entry within
     CACHE_MAX_AGE_SECONDS (24h), or (None, None) if there's no usable entry.
@@ -693,7 +717,7 @@ def fill_missing_image(product):
     return product
 
 
-def fetch_from_primat(chain, query, zip_code):
+def fetch_from_primat(chain, query, zip_code, store_key=None):
     """Tries Primat for a single ingredient query before ever touching
     Playwright. A fast, ordinary HTTPS call - no headless browser - so this
     runs directly on the request-handling thread; run_on_scrape_thread's
@@ -703,13 +727,24 @@ def fetch_from_primat(chain, query, zip_code):
     couldn't be reached" both mean the same thing to callers: fall back to
     scraping (see get_shared_browser/parse_products), since Primat is
     explicitly still under active development and this app must never depend
-    on it always answering."""
+    on it always answering.
+
+    store_key ("chain:store_id", from a branch's primatKey - see
+    primat_client.nearby_stores) pins the search to that exact door instead
+    of the zip code's default pick for the chain - this is how a user
+    picking a specific branch in the store comparison list (e.g. "Coop
+    Tullhuset" over the default "Coop Nian") actually changes which real
+    prices come back. Only trusted when its own chain prefix matches the
+    chain being searched, so a stale/mismatched key from switching chains
+    can't silently scope a search to the wrong store."""
     if _primat_circuit_is_open():
         return []
     primat_chain = CHAIN_TO_PRIMAT.get(chain)
     if not primat_chain:
         return []
-    store_scope = primat_store_scope(zip_code).get(primat_chain)
+    if store_key and store_key.split(":", 1)[0] != primat_chain:
+        store_key = None
+    store_scope = store_key or primat_store_scope(zip_code).get(primat_chain)
     if not store_scope:
         return []
     try:
@@ -901,10 +936,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
         chain = params.get("butik", ["Willys"])[0]
         query = clean_text(params.get("q", [""])[0])
         zip_code = clean_text(params.get("zip", [DEFAULT_ZIP])[0]) or DEFAULT_ZIP
+        store_key = store_key_param(params.get("butiksnyckel", [""])[0])
         if chain not in STORE_CONFIG or not 2 <= len(query) <= 100 or not re.fullmatch(r"\d{5}", zip_code):
             self.send_json(400, {"error": "Ange butik Willys/Hemköp och en sökning på minst två tecken"})
             return
-        cached, cached_at = cached_products(chain, query, zip_code)
+        cache_zip = cache_scope(zip_code, store_key)
+        cached, cached_at = cached_products(chain, query, cache_zip)
         if cached is not None:
             # Reused as-is for the full 24h window (see cached_products) -
             # re-scraping on every request is what made this unreliable, not
@@ -913,9 +950,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(200, {"butik": chain, "sokning": query, "produkter": annotate_updated(cached, cached_at)}, cache_seconds=CACHE_TTL_SECONDS)
             return
 
-        primat_products = fetch_from_primat(chain, query, zip_code)
+        primat_products = fetch_from_primat(chain, query, zip_code, store_key=store_key)
         if primat_products:
-            store_products(chain, query, zip_code, primat_products)
+            store_products(chain, query, cache_zip, primat_products)
             self.send_json(200, {"butik": chain, "sokning": query, "produkter": annotate_updated(primat_products, time.time())}, cache_seconds=CACHE_TTL_SECONDS)
             return
 
@@ -929,7 +966,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         try:
             products = run_on_scrape_thread(_scrape)
             if products:
-                store_products(chain, query, zip_code, products)
+                store_products(chain, query, cache_zip, products)
                 products = annotate_updated(products, time.time())
             else:
                 products = []
@@ -1139,6 +1176,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
     def _handle_products_batch(self, payload):
         chain = payload.get("butik")
         zip_code = clean_text(str(payload.get("zip") or DEFAULT_ZIP)) or DEFAULT_ZIP
+        store_key = store_key_param(payload.get("butiksnyckel"))
         items = payload.get("varor")
         if chain not in STORE_CONFIG or not re.fullmatch(r"\d{5}", zip_code) or not isinstance(items, list) or not items:
             self.send_json(400, {"error": "Ange butik, giltigt postnummer och en lista med varor"})
@@ -1154,9 +1192,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(400, {"error": "Inga giltiga varunamn angavs"})
             return
 
+        cache_zip = cache_scope(zip_code, store_key)
         results, to_scrape = {}, []
         for query in queries:
-            cached, cached_at = cached_products(chain, query, zip_code)
+            cached, cached_at = cached_products(chain, query, cache_zip)
             if cached is not None:
                 results[query] = stamp_match(best_match(cached, query), cached_at)
             else:
@@ -1170,9 +1209,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
         # "unreachable" are treated the same way).
         still_to_scrape = []
         for query in to_scrape:
-            primat_products = fetch_from_primat(chain, query, zip_code)
+            primat_products = fetch_from_primat(chain, query, zip_code, store_key=store_key)
             if primat_products:
-                store_products(chain, query, zip_code, primat_products)
+                store_products(chain, query, cache_zip, primat_products)
                 results[query] = stamp_match(best_match(primat_products, query), time.time())
             else:
                 still_to_scrape.append(query)
@@ -1189,7 +1228,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                             logger.exception("Batch scrape failed for %s/%s", chain, query)
                             products = []
                         if products:
-                            store_products(chain, query, zip_code, products)
+                            store_products(chain, query, cache_zip, products)
                             results[query] = stamp_match(best_match(products, query), time.time())
                         else:
                             results[query] = None

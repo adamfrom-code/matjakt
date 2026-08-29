@@ -144,16 +144,16 @@ class NearbyStoresTest(unittest.TestCase):
         should be silently dropped, not raise or produce a garbage entry."""
         mock_urlopen.return_value = _fake_response({
             "stores": [
-                {"chain": "willys", "name": "Willys Gävle Gestrike", "city": "Gävle", "km": 0.9},
-                {"chain": "lidl", "name": "Lidl Gävle Stiglund", "city": "Gävle", "km": 2.1},
-                {"chain": "citygross", "name": "Gävle", "city": "Gävle", "km": 3.6},
-                {"chain": "hemkop", "name": "Hemköp Söder", "city": "Gävle", "km": 1.5},
+                {"chain": "willys", "store_id": "2132", "key": "willys:2132", "name": "Willys Gävle Gestrike", "city": "Gävle", "km": 0.9},
+                {"chain": "lidl", "store_id": "SE0128", "key": "lidl:SE0128", "name": "Lidl Gävle Stiglund", "city": "Gävle", "km": 2.1},
+                {"chain": "citygross", "store_id": "3209", "key": "citygross:3209", "name": "Gävle", "city": "Gävle", "km": 3.6},
+                {"chain": "hemkop", "store_id": "8891", "key": "hemkop:8891", "name": "Hemköp Söder", "city": "Gävle", "km": 1.5},
             ]
         })
         result = primat_client.nearby_stores("80252")
         self.assertEqual(result, [
-            {"kedja": "Willys", "namn": "Willys Gävle Gestrike", "ort": "Gävle", "avstandKm": 0.9},
-            {"kedja": "Hemköp", "namn": "Hemköp Söder", "ort": "Gävle", "avstandKm": 1.5},
+            {"kedja": "Willys", "namn": "Willys Gävle Gestrike", "ort": "Gävle", "avstandKm": 0.9, "primatKey": "willys:2132"},
+            {"kedja": "Hemköp", "namn": "Hemköp Söder", "ort": "Gävle", "avstandKm": 1.5, "primatKey": "hemkop:8891"},
         ])
 
 
@@ -261,6 +261,39 @@ class FetchFromPrimatIntegrationTest(unittest.TestCase):
             self.api_server.primat_resolve_stores, self.api_server.primat_search_products = original_resolve, original_search
         self.assertEqual(result, [])
         self.assertEqual(calls, [])
+
+    def test_explicit_store_key_is_used_directly_without_resolving_the_zip(self):
+        """Pinning a specific branch (e.g. the user clicked "Coop Tullhuset"
+        in the store comparison list) must search that exact door, not
+        whichever store primat_store_scope would have picked as the zip's
+        default - and must skip the resolve call entirely, since the caller
+        already knows exactly which store it wants."""
+        resolve_calls, search_calls = [], []
+        original_resolve, original_search = self.api_server.primat_resolve_stores, self.api_server.primat_search_products
+        self.api_server.primat_resolve_stores = lambda zip_code, api_key=None: resolve_calls.append(1) or {"coop": "coop:206401"}
+        self.api_server.primat_search_products = lambda query, stores=None, api_key=None: search_calls.append(stores) or []
+        try:
+            self.api_server.fetch_from_primat("Coop", "citron", "80252", store_key="coop:206414")
+        finally:
+            self.api_server.primat_resolve_stores, self.api_server.primat_search_products = original_resolve, original_search
+        self.assertEqual(search_calls, ["coop:206414"])
+        self.assertEqual(resolve_calls, [])
+
+    def test_store_key_for_the_wrong_chain_is_ignored(self):
+        """A stale pinned key left over from switching chains (e.g. still
+        holding a Coop key while now searching Willys) must not silently
+        scope the search to the wrong store - it should fall back to the
+        zip's normal default resolution for the chain actually being
+        searched, exactly as if no key had been passed at all."""
+        original_resolve, original_search = self.api_server.primat_resolve_stores, self.api_server.primat_search_products
+        self.api_server.primat_resolve_stores = lambda zip_code, api_key=None: {"willys": "willys:2132"}
+        search_calls = []
+        self.api_server.primat_search_products = lambda query, stores=None, api_key=None: search_calls.append(stores) or []
+        try:
+            self.api_server.fetch_from_primat("Willys", "citron", "80252", store_key="coop:206414")
+        finally:
+            self.api_server.primat_resolve_stores, self.api_server.primat_search_products = original_resolve, original_search
+        self.assertEqual(search_calls, ["willys:2132"])
 
     def test_primat_error_falls_back_to_empty_list(self):
         from services.pricing import PrimatError

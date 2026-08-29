@@ -62,9 +62,9 @@ function wireFeedbackButtons(container, recipeId) {
 
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0 };
+const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null };
 function buildSyncPayload() {
-  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek };
+  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch };
 }
 function applySyncBlob(blob) {
   if (!blob) return;
@@ -88,6 +88,7 @@ function applySyncBlob(blob) {
   if (blob.feedback !== undefined) state.feedback = blob.feedback;
   if (blob.savingsLog !== undefined) state.savingsLog = blob.savingsLog;
   if (blob.swapsThisWeek !== undefined) state.swapsThisWeek = blob.swapsThisWeek;
+  if (blob.pinnedBranch !== undefined) state.pinnedBranch = blob.pinnedBranch;
 }
 let serverSyncTimer = null;
 function scheduleServerSync() {
@@ -378,7 +379,7 @@ async function syncNearbyBranches() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (state.postnummer !== zip) return;
-    state.branches = (data.butiker || []).map(store => ({ kedja: store.kedja, namn: store.namn, lat: store.lat, lon: store.lon, avstandKm: store.avstandKm, prisfaktor: 1 }));
+    state.branches = (data.butiker || []).map(store => ({ kedja: store.kedja, namn: store.namn, lat: store.lat, lon: store.lon, avstandKm: store.avstandKm, prisfaktor: 1, primatKey: store.primatKey || "" }));
     state.liveBranchTotals = {};
     // Only auto-pick a week here when the user doesn't already have one (same
     // guard as the startup call below) - this resolves on every single app
@@ -423,10 +424,22 @@ function cheapestBranch(chain = null) {
   if (!state.user?.premium) return scored.sort((a, b) => a.avstandKm - b.avstandKm)[0];
   return scored.sort((a, b) => a.total - b.total || a.avstandKm - b.avstandKm)[0];
 }
+// A branch the user explicitly picked from the store comparison list (e.g.
+// "Coop Tullhuset" over the auto-picked "Coop Nian") overrides the normal
+// nearest/cheapest logic for as long as it's still relevant - i.e. its own
+// chain still matches the currently selected chain tab. Re-matched against
+// the current nearbyBranches() list (by primatKey, each branch's stable
+// identity) rather than trusted as-is, so distance/pricing stay current;
+// falls back to the stored snapshot itself if that exact branch has since
+// dropped out of range.
+function pinnedBranchMatch() {
+  if (!state.pinnedBranch || state.pinnedBranch.kedja !== state.butik) return null;
+  return nearbyBranches().find(branch => branch.primatKey && branch.primatKey === state.pinnedBranch.primatKey) || state.pinnedBranch;
+}
 let branchCache = { key: null, value: null };
 function selectedBranch() {
-  const key = JSON.stringify([state.budget, state.middagar, state.butik, state.postnummer, state.position, RECEPT.length, state.apiRecipes.length, state.user?.premium, state.naringsmal]);
-  if (branchCache.key !== key) branchCache = { key, value: state.butik === "auto" ? cheapestBranch() : cheapestBranch(state.butik) };
+  const key = JSON.stringify([state.budget, state.middagar, state.butik, state.postnummer, state.position, RECEPT.length, state.apiRecipes.length, state.user?.premium, state.naringsmal, state.pinnedBranch, state.branches.length]);
+  if (branchCache.key !== key) branchCache = { key, value: pinnedBranchMatch() || (state.butik === "auto" ? cheapestBranch() : cheapestBranch(state.butik)) };
   return branchCache.value;
 }
 function cheapestStore() {
@@ -434,7 +447,7 @@ function cheapestStore() {
 }
 
 const chosenStore = () => cheapestStore()?.kedja || state.butik;
-const productApiUrl = (store, query) => configuredProductApiUrl(store, query, state.postnummer);
+const productApiUrl = (store, query) => { const branch = selectedBranch(); return configuredProductApiUrl(store, query, state.postnummer, branch?.kedja === store ? branch.primatKey : ""); };
 function sanitizeApiPayload(payload) {
   if (!Array.isArray(payload?.produkter)) return payload;
   return { ...payload, produkter: payload.produkter.map(product => ({ ...product, produktnamn: escapeHtml(product.produktnamn), marke_och_storlek: escapeHtml(product.marke_och_storlek), bild: product.bild ? safeHttpUrl(product.bild) : "", url: safeHttpUrl(product.url), pris_kr: Number(product.pris_kr) || 0 })) };
@@ -566,8 +579,41 @@ function renderStoreComparison(selected) {
   }
   const cheapest = results[0], priciest = results[results.length - 1];
   const savings = priciest.cost - cheapest.cost;
-  const list = results.length < 2 ? "" : `<div class="store-compare-list">${results.map(r => `<div class="store-compare-row ${r.branch === cheapest.branch ? "cheapest" : ""}"><span>${r.branch.namn}${r.isLive ? '<span class="live-badge">Live</span>' : '<span class="live-badge estimate">Uppskattat</span>'}</span><strong>${money(r.cost)}</strong></div>`).join("")}</div>`;
-  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${cheapest.isLive ? "Lägst pris" : "Lägst uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savings > 1 ? `<small>${cheapest.isLive ? "Skillnad" : "Uppskattad skillnad"} ${money(savings)} mot ${priciest.branch.namn}</small>` : ""}${updatedLabel}</div>${list}</div>`;
+  const pinned = pinnedBranchMatch();
+  // Only a Primat-sourced branch (has a primatKey) can be individually
+  // targeted - a scrape-sourced fallback branch has nothing concrete to pin
+  // a price search to, so those rows render as plain, non-interactive text
+  // instead of a button that would do nothing when pressed.
+  const list = results.length < 2 ? "" : `<div class="store-compare-list">${results.map((r, index) => {
+    const isPinned = pinned && r.branch.primatKey && r.branch.primatKey === pinned.primatKey;
+    const tag = `${r.branch === cheapest.branch ? "cheapest" : ""} ${isPinned ? "pinned" : ""}`.trim();
+    const inner = `<span>${r.branch.namn}${isPinned ? '<span class="live-badge pinned">Vald</span>' : ""}${r.isLive ? '<span class="live-badge">Live</span>' : '<span class="live-badge estimate">Uppskattat</span>'}</span><strong>${money(r.cost)}</strong>`;
+    return r.branch.primatKey
+      ? `<button type="button" class="store-compare-row ${tag}" data-pick-branch="${index}">${inner}</button>`
+      : `<div class="store-compare-row ${tag} not-pickable">${inner}</div>`;
+  }).join("")}</div>`;
+  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${cheapest.isLive ? "Lägst pris" : "Lägst uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savings > 1 ? `<small>${cheapest.isLive ? "Skillnad" : "Uppskattad skillnad"} ${money(savings)} mot ${priciest.branch.namn}</small>` : ""}${updatedLabel}</div>${list}${pinned ? '<button type="button" class="store-compare-unpin" id="storeCompareUnpin">Välj automatiskt istället</button>' : ""}</div>`;
+  document.querySelectorAll("[data-pick-branch]").forEach(button => button.addEventListener("click", () => {
+    const branch = results[Number(button.dataset.pickBranch)].branch;
+    const alreadyPinned = state.pinnedBranch && state.pinnedBranch.primatKey === branch.primatKey;
+    state.pinnedBranch = alreadyPinned ? null : { kedja: branch.kedja, namn: branch.namn, primatKey: branch.primatKey };
+    state.butik = branch.kedja;
+    state.livePriser = {};
+    state.liveBranchTotals = {};
+    saveState();
+    render();
+    renderCampaignSection();
+    syncSettingsInputs();
+  }));
+  $("storeCompareUnpin")?.addEventListener("click", () => {
+    state.pinnedBranch = null;
+    state.livePriser = {};
+    state.liveBranchTotals = {};
+    saveState();
+    render();
+    renderCampaignSection();
+    syncSettingsInputs();
+  });
   syncBranchComparison(shoppingItems, branches);
 }
 
@@ -709,7 +755,7 @@ const VALID_CHAINS = ["ICA", "Willys", "Hemköp", "Coop"];
 // wouldn't help (they'd just queue there instead of here), and sending only
 // one at a time would leave the backend's second worker idle the whole sync.
 const LIVE_PRICE_CONCURRENCY = 2;
-async function fetchProductsBatch(chain, zip, names, onItem) {
+async function fetchProductsBatch(chain, zip, names, onItem, storeKey) {
   const produkter = {};
   let nextIndex = 0;
   async function worker() {
@@ -717,7 +763,7 @@ async function fetchProductsBatch(chain, zip, names, onItem) {
       const name = names[nextIndex++];
       try {
         // 35s timeout to give Coop's slower pages room to finish (matches the backend's own 30s bound on how long it'll wait per item).
-        const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: [name] }), signal: AbortSignal.timeout(35000) });
+        const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: [name], ...(storeKey ? { butiksnyckel: storeKey } : {}) }), signal: AbortSignal.timeout(35000) });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const found = (await response.json()).produkter || {};
         Object.assign(produkter, found);
@@ -734,8 +780,13 @@ function mapLiveProducts(produkter) {
 let livePriceSync = { key: null, loading: false };
 async function syncLivePrices(shoppingItems) {
   const chain = chosenStore();
+  // A pinned branch only applies here once selectedBranch() actually
+  // resolved to it (i.e. its chain matches the chain being shopped) -
+  // otherwise this is a plain chain-level fetch, same as always.
+  const branch = selectedBranch();
+  const storeKey = branch?.kedja === chain ? branch.primatKey : "";
   const names = shoppingItems.map(item => item.namn).sort();
-  const key = `${chain}|${state.postnummer}|${names.join(",")}`;
+  const key = `${chain}|${storeKey}|${state.postnummer}|${names.join(",")}`;
   if (!names.length || !VALID_CHAINS.includes(chain) || livePriceSync.loading || livePriceSync.key === key) return;
   livePriceSync = { key, loading: true };
   updateWeekStoreStatus();
@@ -748,7 +799,7 @@ async function syncLivePrices(shoppingItems) {
       if (chosenStore() !== chain) return;
       const mapped = mapLiveProducts(found);
       if (Object.keys(mapped).length) { Object.assign(state.livePriser, mapped); state.liveUpdatedAt = Date.now(); renderBasket(); }
-    });
+    }, storeKey);
   } catch { /* live-priser är ett tillägg ovanpå uppskattningen - misslyckas det visas bara uppskattningen kvar */ }
   finally { livePriceSync.loading = false; updateWeekStoreStatus(); }
 }
@@ -1176,12 +1227,19 @@ function campaignDealMarkup(deal) {
 async function renderCampaignSection() {
   const premium = Boolean(state.user?.premium);
   $("campaignLocked").hidden = premium;
-  if (!premium) { $("campaignList").innerHTML = ""; return; }
+  if (!premium) { $("campaignList").innerHTML = ""; $("campaignStoreLabel").hidden = true; return; }
   const chain = chosenStore();
   if (!CAMPAIGN_CHAINS.includes(chain)) {
+    $("campaignStoreLabel").hidden = true;
     $("campaignList").innerHTML = `<p class="live-loading">Kampanjer visas för Coop och Hemköp. Byt butik i "Justera veckan" för att se dem.</p>`;
     return;
   }
+  // Every deal in this list comes from the same chain (the fetch itself is
+  // scoped to one) - shown once here instead of repeated on every row, so
+  // it's always clear which store's campaigns these are without cluttering
+  // each item with a label that would just say the same thing every time.
+  $("campaignStoreLabel").textContent = `Hos ${chain}`;
+  $("campaignStoreLabel").hidden = false;
   const key = `${chain}|${state.postnummer}`;
   if (campaignFetchKey === key) return;
   campaignFetchKey = key;

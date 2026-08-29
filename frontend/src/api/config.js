@@ -1,8 +1,9 @@
 const configuredUrl = document.querySelector('meta[name="matjakt-api-url"]')?.content?.trim();
 export const API_BASE_URL = (configuredUrl || "/api").replace(/\/$/, "");
 
-export function productApiUrl(store, query, postcode) {
+export function productApiUrl(store, query, postcode, storeKey) {
   const params = new URLSearchParams({ butik: store, q: query, zip: postcode });
+  if (storeKey) params.set("butiksnyckel", storeKey);
   return `${API_BASE_URL}/products?${params}`;
 }
 
