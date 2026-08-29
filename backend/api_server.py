@@ -6,6 +6,7 @@ shape to the frontend. Keep request volume low and check each store's terms
 before deploying this publicly.
 """
 
+import concurrent.futures
 import json
 import logging
 import math
@@ -117,7 +118,42 @@ CAMPAIGN_CACHE = {}
 GEOCODE_CACHE = {}
 STORE_LIST_CACHE = {}
 COOP_STORE_SEARCH_CACHE = {}
-SCRAPE_SEMAPHORE = threading.Semaphore(MAX_CONCURRENT_SCRAPES)
+_scrape_executor = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_CONCURRENT_SCRAPES, thread_name_prefix="playwright-worker")
+_thread_browser = threading.local()
+
+
+def get_shared_browser():
+    """Launching headless Chromium costs 1-3s on its own, before any navigation -
+    every scrape endpoint used to pay that on EVERY request (launch a fresh
+    browser, use it once, close it), which is why a chain of small batched
+    requests could take longer than a client-side timeout even though each one
+    eventually succeeded. Playwright's sync API binds its greenlet dispatcher to
+    the thread that called sync_playwright().start(), so a browser can only ever
+    be driven from that same OS thread - it can't be launched on one thread and
+    then used from another (ThreadingHTTPServer's per-request threads). So
+    "shared" here means shared across every job that lands on the same
+    _scrape_executor worker thread: each of its fixed pool of threads lazily
+    launches its own Chromium once and keeps it for the life of the server,
+    instead of paying the launch cost on every request. Callers get their own
+    page per job for isolation and just close the page (not the browser) when
+    done. This must only be called from inside a function passed to
+    run_on_scrape_thread, never directly from a request-handling thread. If the
+    thread's browser has died (crash, OOM), it's relaunched on the next call."""
+    if getattr(_thread_browser, "browser", None) is not None and not _thread_browser.browser.is_connected():
+        _thread_browser.browser = None
+    if getattr(_thread_browser, "browser", None) is None:
+        if getattr(_thread_browser, "playwright", None) is None:
+            _thread_browser.playwright = sync_playwright().start()
+        _thread_browser.browser = _thread_browser.playwright.chromium.launch(headless=True)
+    return _thread_browser.browser
+
+
+def run_on_scrape_thread(fn):
+    """Runs fn on one of the dedicated Playwright worker threads and blocks the
+    caller for the result - see get_shared_browser for why Playwright calls can't
+    happen on an arbitrary request-handling thread. Also bounds how many scrapes
+    run at once, since the executor has a fixed-size pool (MATJAKT_MAX_SCRAPES)."""
+    return _scrape_executor.submit(fn).result()
 RECIPE_SERVICE = RecipeService([TheMealDbProvider()])
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 ACCOUNT_STORE = AccountStore(Path(__file__).resolve().parent / "data" / "matjakt.db")
@@ -263,19 +299,21 @@ def nearby_stores(zip_code):
         return []
     lat, lon = place["lat"], place["lon"]
     candidates = [*fetch_axfood_stores("Willys"), *fetch_axfood_stores("Hemköp")]
+    def _scrape():
+        found = []
+        page = get_shared_browser().new_page(locale="sv-SE")
+        try:
+            for store in ica_stores_for_zip(page, zip_code):
+                s_lat, s_lon = store.get("latitude"), store.get("longitude")
+                if s_lat and s_lon:
+                    found.append({"kedja": "ICA", "namn": store.get("name") or "", "lat": s_lat, "lon": s_lon, "ort": (store.get("address") or {}).get("city") or ""})
+            found.extend(search_coop_stores(page, place["ort"]))
+        finally:
+            page.close()
+        return found
+
     try:
-        with SCRAPE_SEMAPHORE:
-            with sync_playwright() as playwright:
-                browser = playwright.chromium.launch(headless=True)
-                try:
-                    page = browser.new_page(locale="sv-SE")
-                    for store in ica_stores_for_zip(page, zip_code):
-                        s_lat, s_lon = store.get("latitude"), store.get("longitude")
-                        if s_lat and s_lon:
-                            candidates.append({"kedja": "ICA", "namn": store.get("name") or "", "lat": s_lat, "lon": s_lon, "ort": (store.get("address") or {}).get("city") or ""})
-                    candidates.extend(search_coop_stores(page, place["ort"]))
-                finally:
-                    browser.close()
+        candidates.extend(run_on_scrape_thread(_scrape))
     except Exception:
         logger.exception("Failed to resolve ICA/Coop stores for zip %s", zip_code)
     for store in candidates:
@@ -610,15 +648,15 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if fresh:
             self.send_json(200, {"butik": chain, "sokning": query, "produkter": cached}, cache_seconds=CACHE_TTL_SECONDS)
             return
+        def _scrape():
+            page = get_shared_browser().new_page(locale="sv-SE")
+            try:
+                return scrape_products(page, chain, query, zip_code)
+            finally:
+                page.close()
+
         try:
-            with SCRAPE_SEMAPHORE:
-                with sync_playwright() as playwright:
-                    browser = playwright.chromium.launch(headless=True)
-                    try:
-                        page = browser.new_page(locale="sv-SE")
-                        products = scrape_products(page, chain, query, zip_code)
-                    finally:
-                        browser.close()
+            products = run_on_scrape_thread(_scrape)
             if products:
                 store_products(chain, query, zip_code, products)
             else:
@@ -793,30 +831,31 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if cached and time.monotonic() - cached[1] < CAMPAIGN_CACHE_TTL_SECONDS:
             self.send_json(200, {"butik": chain, "kampanjer": cached[0]}, cache_seconds=CAMPAIGN_CACHE_TTL_SECONDS)
             return
-        deals = []
+        def _scrape():
+            found = []
+            page = get_shared_browser().new_page(locale="sv-SE")
+            try:
+                for ingredient in CAMPAIGN_SCAN_INGREDIENTS:
+                    cached_ingredient, fresh = cached_products(chain, ingredient, zip_code)
+                    if fresh:
+                        products = cached_ingredient
+                    else:
+                        try:
+                            products = scrape_products(page, chain, ingredient, zip_code)
+                        except Exception:
+                            logger.exception("Campaign scan failed for %s/%s", chain, ingredient)
+                            products = cached_ingredient or []
+                        if products:
+                            store_products(chain, ingredient, zip_code, products)
+                    on_offer = next((product for product in products if product.get("kampanj") and ingredient.lower() in product["produktnamn"].lower()), None)
+                    if on_offer:
+                        found.append({"ingrediens": ingredient, **on_offer})
+            finally:
+                page.close()
+            return found
+
         try:
-            with SCRAPE_SEMAPHORE:
-                with sync_playwright() as playwright:
-                    browser = playwright.chromium.launch(headless=True)
-                    try:
-                        page = browser.new_page(locale="sv-SE")
-                        for ingredient in CAMPAIGN_SCAN_INGREDIENTS:
-                            cached_ingredient, fresh = cached_products(chain, ingredient, zip_code)
-                            if fresh:
-                                products = cached_ingredient
-                            else:
-                                try:
-                                    products = scrape_products(page, chain, ingredient, zip_code)
-                                except Exception:
-                                    logger.exception("Campaign scan failed for %s/%s", chain, ingredient)
-                                    products = cached_ingredient or []
-                                if products:
-                                    store_products(chain, ingredient, zip_code, products)
-                            on_offer = next((product for product in products if product.get("kampanj") and ingredient.lower() in product["produktnamn"].lower()), None)
-                            if on_offer:
-                                deals.append({"ingrediens": ingredient, **on_offer})
-                    finally:
-                        browser.close()
+            deals = run_on_scrape_thread(_scrape)
             CAMPAIGN_CACHE[cache_key] = (deals, time.monotonic())
             self.send_json(200, {"butik": chain, "kampanjer": deals}, cache_seconds=CAMPAIGN_CACHE_TTL_SECONDS)
         except Exception:
@@ -853,25 +892,25 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 to_scrape.append((query, cached))
 
         if to_scrape:
-            try:
-                with SCRAPE_SEMAPHORE:
-                    with sync_playwright() as playwright:
-                        browser = playwright.chromium.launch(headless=True)
+            def _scrape():
+                page = get_shared_browser().new_page(locale="sv-SE")
+                try:
+                    for query, cached in to_scrape:
                         try:
-                            page = browser.new_page(locale="sv-SE")
-                            for query, cached in to_scrape:
-                                try:
-                                    products = scrape_products(page, chain, query, zip_code)
-                                except Exception:
-                                    logger.exception("Batch scrape failed for %s/%s", chain, query)
-                                    products = []
-                                if products:
-                                    store_products(chain, query, zip_code, products)
-                                else:
-                                    products = cached or []
-                                results[query] = best_match(products, query)
-                        finally:
-                            browser.close()
+                            products = scrape_products(page, chain, query, zip_code)
+                        except Exception:
+                            logger.exception("Batch scrape failed for %s/%s", chain, query)
+                            products = []
+                        if products:
+                            store_products(chain, query, zip_code, products)
+                        else:
+                            products = cached or []
+                        results[query] = best_match(products, query)
+                finally:
+                    page.close()
+
+            try:
+                run_on_scrape_thread(_scrape)
             except Exception:
                 logger.exception("Batch scrape session failed for %s", chain)
                 for query, cached in to_scrape:
@@ -880,6 +919,25 @@ class ApiHandler(SimpleHTTPRequestHandler):
         self.send_json(200, {"butik": chain, "produkter": results})
 
 
+def _close_thread_browser():
+    if getattr(_thread_browser, "browser", None) is not None:
+        _thread_browser.browser.close()
+        _thread_browser.browser = None
+    if getattr(_thread_browser, "playwright", None) is not None:
+        _thread_browser.playwright.stop()
+        _thread_browser.playwright = None
+
+
 if __name__ == "__main__":
     print(f"Matjakt API kör på http://{HOST}:{PORT}")
-    ThreadingHTTPServer((HOST, PORT), ApiHandler).serve_forever()
+    # Launch each scrape worker thread's own browser in the background at
+    # startup rather than waiting for the first request on that thread to pay
+    # the 1-3s Chromium cold-start cost.
+    for _ in range(MAX_CONCURRENT_SCRAPES):
+        _scrape_executor.submit(get_shared_browser)
+    try:
+        ThreadingHTTPServer((HOST, PORT), ApiHandler).serve_forever()
+    finally:
+        for _ in range(MAX_CONCURRENT_SCRAPES):
+            _scrape_executor.submit(_close_thread_browser)
+        _scrape_executor.shutdown(wait=True)

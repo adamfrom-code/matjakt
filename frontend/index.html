@@ -141,6 +141,15 @@
 
       <section class="screen week-screen" aria-labelledby="basketHeading">
         <header class="screen-header"><p class="eyebrow">Planerad för dig</p><h1 id="basketHeading">Din vecka</h1></header>
+        <div class="week-store-switch" id="weekStoreSwitch" role="tablist" aria-label="Byt butik för veckan">
+          <button type="button" data-week-store="auto">Auto</button>
+          <button type="button" data-week-store="alla">Alla</button>
+          <button type="button" data-week-store="ICA">ICA</button>
+          <button type="button" data-week-store="Willys">Willys</button>
+          <button type="button" data-week-store="Hemköp">Hemköp</button>
+          <button type="button" data-week-store="Coop">Coop</button>
+        </div>
+        <p class="week-store-status" id="weekStoreStatus"></p>
         <section class="week-summary"><div><strong id="basketTotal">0 kr</strong><span>av <b id="weekBudget">800 kr</b></span></div><div class="remaining" id="basketRemainingRow"><span>Kvar</span><strong id="basketRemaining">0 kr</strong></div><div id="storeCompare"></div></section>
         <div class="meal-count"><h2>Veckans middagar</h2><span id="basketCount">0 middagar</span></div>
         <div class="meal-list" id="basketLines"></div>

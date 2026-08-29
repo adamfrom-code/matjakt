@@ -596,8 +596,31 @@ function renderBasket() {
   $("shoppingProgress").textContent = `${completed} av ${shoppingItems.length} varor${liveCount ? ` · ${liveCount} med livepris${updatedSuffix}` : ""}`; $("shoppingCost").textContent = `${money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
   $("basketTotal").textContent = money(total); $("basketRemaining").textContent = money(Math.abs(remaining)); $("basketRemainingRow").classList.toggle("over-budget", remaining < 0); $("basketRemainingRow").querySelector("span").textContent = remaining < 0 ? "Över budget" : "Kvar";
   renderStoreComparison(selected); renderPantry();
+  document.querySelectorAll("[data-week-store]").forEach(button => button.classList.toggle("active", button.dataset.weekStore === state.butik));
+  updateWeekStoreStatus();
   syncLivePrices(shoppingItems);
 }
+function updateWeekStoreStatus() {
+  const selected = [...RECEPT, ...state.apiRecipes].filter((recipe, index, recipes) => state.valda.has(recipe.id) && recipes.findIndex(item => item.id === recipe.id) === index);
+  if (!selected.length) { $("weekStoreStatus").textContent = ""; return; }
+  const shoppingItems = aggregateShopping(selected);
+  const liveCount = shoppingItems.filter(item => state.livePriser[item.namn]).length;
+  const chain = chosenStore();
+  const fetchingLive = livePriceSync.loading;
+  $("weekStoreStatus").textContent = fetchingLive ? `Hämtar riktiga priser hos ${chain}...` : VALID_CHAINS.includes(chain) ? (liveCount ? `Visar riktiga priser hos ${chain}` : `Uppskattat pris - hämtar riktiga priser hos ${chain}...`) : chain === "alla" ? "Visar uppskattade priser, jämfört mot alla butiker" : "Visar uppskattade priser";
+  $("weekStoreStatus").classList.toggle("loading", fetchingLive);
+}
+function switchWeekStore(chain) {
+  if (state.butik === chain) return;
+  state.butik = chain;
+  state.livePriser = {};
+  state.liveBranchTotals = {};
+  saveState();
+  render();
+  renderCampaignSection();
+  syncSettingsInputs();
+}
+document.querySelectorAll("[data-week-store]").forEach(button => button.addEventListener("click", () => switchWeekStore(button.dataset.weekStore)));
 
 const VALID_CHAINS = ["ICA", "Willys", "Hemköp", "Coop"];
 const LIVE_PRICE_CHUNK_SIZE = 3;
@@ -614,7 +637,7 @@ async function fetchProductsBatch(chain, zip, names) {
   const produkter = {};
   for (const chunk of chunks) {
     try {
-      const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: chunk }), signal: AbortSignal.timeout(20000) });
+      const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: chunk }), signal: AbortSignal.timeout(30000) });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       Object.assign(produkter, (await response.json()).produkter || {});
     } catch { /* den här biten missade - resten av listan hämtas ändå */ }
@@ -628,14 +651,16 @@ async function syncLivePrices(shoppingItems) {
   const key = `${chain}|${state.postnummer}|${names.join(",")}`;
   if (!names.length || !VALID_CHAINS.includes(chain) || livePriceSync.loading || livePriceSync.key === key) return;
   livePriceSync = { key, loading: true };
+  updateWeekStoreStatus();
   try {
     const produkter = await fetchProductsBatch(chain, state.postnummer, names);
     if (chosenStore() !== chain) return;
     state.livePriser = Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url) }]));
     if (Object.keys(state.livePriser).length) state.liveUpdatedAt = Date.now();
+    livePriceSync.loading = false;
     renderBasket();
   } catch { /* live-priser är ett tillägg ovanpå uppskattningen - misslyckas det visas bara uppskattningen kvar */ }
-  finally { livePriceSync.loading = false; }
+  finally { livePriceSync.loading = false; updateWeekStoreStatus(); }
 }
 function aggregateShopping(selected) {
   return aggregateIngredients(selected.filter(recipe => recipe.priceStatus !== "unavailable"), RECIPE_QUANTITIES, PACKAGE_INFO, state.personer);

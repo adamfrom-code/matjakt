@@ -1,3 +1,4 @@
+import concurrent.futures
 import hashlib
 import hmac
 import http.client
@@ -82,12 +83,20 @@ class LoadDotenvTest(unittest.TestCase):
         self.assertNotIn(self._sentinel_key, os.environ)
 
 
+class _FakePage:
+    def close(self):
+        pass
+
+
 class _FakeBrowser:
     def new_page(self, locale=None):
-        return object()
+        return _FakePage()
 
     def close(self):
         pass
+
+    def is_connected(self):
+        return True
 
 
 class _FakeChromium:
@@ -100,15 +109,32 @@ class _FakePlaywright:
 
 
 class _FakeSyncPlaywrightCtx:
-    def __enter__(self):
+    def start(self):
         return _FakePlaywright()
 
-    def __exit__(self, *args):
-        return False
+    def stop(self):
+        pass
 
 
 def _fake_sync_playwright():
     return _FakeSyncPlaywrightCtx()
+
+
+def _reset_shared_browser():
+    """api_server.get_shared_browser() caches a browser/playwright-context in
+    thread-local storage on each of its fixed pool of scrape worker threads (by
+    design - reusing one real browser per worker thread across requests is the
+    whole point in production, and Playwright's sync API only works from the
+    thread that started it). Tests that monkeypatch sync_playwright must clear
+    that cache too, else a later test can reuse a fake browser left over on a
+    worker thread from an earlier test instead of exercising its own mock. Since
+    thread-local storage on another thread can't be reached directly, this
+    replaces the whole executor with a fresh one, which starts with fresh
+    (empty) worker threads."""
+    api_server._scrape_executor.shutdown(wait=True)
+    api_server._scrape_executor = concurrent.futures.ThreadPoolExecutor(
+        max_workers=api_server.MAX_CONCURRENT_SCRAPES, thread_name_prefix="playwright-worker"
+    )
 
 
 class ApiServerHttpTest(unittest.TestCase):
@@ -214,6 +240,7 @@ class ApiServerHttpTest(unittest.TestCase):
         original_sync_playwright, original_parse_products = api_server.sync_playwright, api_server.parse_products
         calls = []
         api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
         api_server.parse_products = lambda page, chain, query: calls.append(1) or [{"produktnamn": "Fräsch scrape"}]
         try:
             key = ("Willys", "kaffe", api_server.DEFAULT_ZIP)
@@ -224,12 +251,14 @@ class ApiServerHttpTest(unittest.TestCase):
             self.assertEqual(len(calls), 0)
         finally:
             api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
+            _reset_shared_browser()
             api_server.CACHE.clear()
 
     def test_products_cache_expires_after_ttl(self):
         original_sync_playwright, original_parse_products = api_server.sync_playwright, api_server.parse_products
         calls = []
         api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
         api_server.parse_products = lambda page, chain, query: calls.append(1) or [{"produktnamn": "Fräsch scrape"}]
         try:
             key = ("Willys", "te", api_server.DEFAULT_ZIP)
@@ -241,6 +270,7 @@ class ApiServerHttpTest(unittest.TestCase):
             self.assertEqual(len(calls), 1)
         finally:
             api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
+            _reset_shared_browser()
             api_server.CACHE.clear()
 
     def test_post_with_malformed_body_encoding_returns_400_not_crash(self):
@@ -318,6 +348,7 @@ class ApiServerHttpTest(unittest.TestCase):
     def test_campaigns_returns_only_ingredients_on_offer(self):
         original_sync_playwright, original_parse_products = api_server.sync_playwright, api_server.parse_products
         api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
         by_query = {
             "kycklingfilé": [{"produktnamn": "Kycklingfilé", "pris_kr": 59, "kampanj": {"text": "2 för 99 kr", "ordinariePris": None}}],
             "biff": [{"produktnamn": "Biff", "pris_kr": 129, "kampanj": None}],
@@ -331,6 +362,7 @@ class ApiServerHttpTest(unittest.TestCase):
             self.assertNotIn("Biff", deal_ingredients)
         finally:
             api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
+            _reset_shared_browser()
             api_server.CACHE.clear()
             api_server.CAMPAIGN_CACHE.clear()
 
@@ -344,6 +376,7 @@ class ApiServerHttpTest(unittest.TestCase):
     def test_products_batch_prefers_a_name_that_starts_with_the_ingredient(self):
         original_sync_playwright, original_parse_products = api_server.sync_playwright, api_server.parse_products
         api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
         by_query = {
             # First result by search relevance is a wrong-department cheap match
             # (mirrors the real "Paprika" -> "Cheese Paprika Sandwich" case) -
@@ -360,11 +393,13 @@ class ApiServerHttpTest(unittest.TestCase):
             self.assertIsNone(payload["produkter"]["Okänd vara"])
         finally:
             api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
+            _reset_shared_browser()
             api_server.CACHE.clear()
 
     def test_products_batch_falls_back_to_first_result_when_no_name_matches(self):
         original_sync_playwright, original_parse_products = api_server.sync_playwright, api_server.parse_products
         api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
         api_server.parse_products = lambda page, chain, query: [{"produktnamn": "Lime Klass 1", "pris_kr": 4.9}, {"produktnamn": "Pressad apelsinjuice", "pris_kr": 15}]
         try:
             status, payload = self.post("/api/products/batch", {"butik": "Willys", "zip": "11122", "varor": ["Citron"]})
@@ -372,12 +407,14 @@ class ApiServerHttpTest(unittest.TestCase):
             self.assertEqual(payload["produkter"]["Citron"]["produktnamn"], "Lime Klass 1")
         finally:
             api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
+            _reset_shared_browser()
             api_server.CACHE.clear()
 
     def test_products_batch_reuses_fresh_cache_without_scraping(self):
         original_sync_playwright, original_parse_products = api_server.sync_playwright, api_server.parse_products
         calls = []
         api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
         api_server.parse_products = lambda page, chain, query: calls.append(1) or [{"produktnamn": "Fräsch scrape", "pris_kr": 10}]
         try:
             api_server.CACHE[("Willys", "smor", api_server.DEFAULT_ZIP)] = ([{"produktnamn": "Cachat smör", "pris_kr": 25}], time.monotonic())
@@ -387,6 +424,7 @@ class ApiServerHttpTest(unittest.TestCase):
             self.assertEqual(len(calls), 0)
         finally:
             api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
+            _reset_shared_browser()
             api_server.CACHE.clear()
 
 
@@ -743,11 +781,13 @@ class NearbyStoresTest(unittest.TestCase):
         api_server.ica_stores_for_zip = lambda page, zip_code: [{"name": "ICA långt bort", "latitude": 65.6, "longitude": 22.15, "address": {"city": "Luleå"}}]
         api_server.search_coop_stores = lambda page, city: [{"kedja": "Coop", "namn": "Coop nära", "lat": 60.69, "lon": 17.16, "ort": "Gävle"}]
         api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
         try:
             stores = api_server.nearby_stores("80252")
         finally:
             for name, fn in originals.items():
                 setattr(api_server, name, fn)
+            _reset_shared_browser()
         chains = {store["kedja"] for store in stores}
         self.assertEqual(chains, {"Willys", "Hemköp", "Coop"})  # ICA store ~400km away is outside the radius cap
         self.assertEqual(stores, sorted(stores, key=lambda store: store["avstandKm"]))
