@@ -403,11 +403,20 @@ function candidateRecipesForUser() {
 function cheapestBranch(chain = null) {
   const branches = nearbyBranches().filter(branch => !chain || branch.kedja === chain);
   const candidates = candidateRecipesForUser();
-  return branches.map(branch => {
+  const scored = branches.map(branch => {
     const recipes = bestMenuCombo(candidates, state.middagar, state.budget, branch);
     const avstandKm = state.position ? distanceKm(state.position.lat, state.position.lon, branch.lat, branch.lon) : branch.avstandKm;
     return { ...branch, avstandKm, recipes, total: shoppingListCost(recipes, branch) };
-  }).filter(result => result.recipes.length).sort((a, b) => a.total - b.total || a.avstandKm - b.avstandKm)[0] || null;
+  }).filter(result => result.recipes.length);
+  if (!scored.length) return null;
+  // Without Premium, every branch shares the same flat price estimate (no real
+  // per-chain data exists until live prices are fetched, which only happens after
+  // a week is chosen) - sorting that by "total" would just be an arbitrary tie,
+  // which is exactly how a wrong "X is cheapest" claim happens. Pick by distance
+  // instead and never claim it's the cheapest; real cross-store comparison lives
+  // in renderStoreComparison() using live data, gated to Premium.
+  if (!state.user?.premium) return scored.sort((a, b) => a.avstandKm - b.avstandKm)[0];
+  return scored.sort((a, b) => a.total - b.total || a.avstandKm - b.avstandKm)[0];
 }
 let branchCache = { key: null, value: null };
 function selectedBranch() {
@@ -444,9 +453,10 @@ function renderRecipes() {
   const dietFilterActive = state.kost.kosttyp !== "" || state.kost.avoidAllergens.size > 0;
   const recipes = filterRecipes(search ? [...localRecipesForUser(), ...(dietFilterActive ? [] : state.apiRecipes)] : availableRecipes(), search).filter(recipe => (state.kategori === "alla" || recipe.typ === state.kategori) && (!state.maxTid || recipe.tid <= state.maxTid) && (!state.baraFavoriter || state.favoriter.has(recipe.id)));
   const branch = selectedBranch();
-  const storeLabel = state.butik === "auto" ? `${branch?.namn || "ingen butik hittades"} (lägst uppskattat)` : state.butik === "alla" ? "alla butiker" : `${branch?.namn || state.butik}`;
+  const premiumStoreAuto = Boolean(state.user?.premium);
+  const storeLabel = state.butik === "auto" ? `${branch?.namn || "ingen butik hittades"}${premiumStoreAuto ? " (lägst uppskattat)" : " (närmast)"}` : state.butik === "alla" ? "alla butiker" : `${branch?.namn || state.butik}`;
   const loading = !state.branches.length && branchesSync.loading;
-  $("locationHint").textContent = branch ? `${nearbyBranches().length} butiksprofiler jämförda${loading ? " (hämtar riktiga butiker nära dig...)" : ""} · ${branch.namn} har lägst uppskattat pris och ligger ${branch.avstandKm.toFixed(1)} km bort.` : `Hittade inga inlästa butiker nära ${state.postnummer} ännu.`;
+  $("locationHint").textContent = branch ? `${nearbyBranches().length} butiksprofiler jämförda${loading ? " (hämtar riktiga butiker nära dig...)" : ""} · ${branch.namn} ${premiumStoreAuto ? "har lägst uppskattat pris" : "ligger närmast"} och ligger ${branch.avstandKm.toFixed(1)} km bort.` : `Hittade inga inlästa butiker nära ${state.postnummer} ännu.`;
   $("menuSummary").textContent = search ? (dietFilterActive ? `${recipes.length} recept hittades. Externa recept visas inte när kost-/allergifilter är aktivt, eftersom de inte har kontrollerade allergiuppgifter.` : `${recipes.length} recept hittades. Externa recept kan vara på engelska och sakna svenska butikspriser.`) : `${plural(Math.min(state.middagar, recipes.length), "middag", "middagar")} för ${plural(state.personer, "person", "personer")} från ${storeLabel}. Priserna är uppskattningar.`;
   $("recipeScroll").innerHTML = recipes.length ? recipes.map(recipe => {
     const selected = state.valda.has(recipe.id), expanded = state.expanded === recipe.id;
@@ -528,16 +538,24 @@ function renderStoreComparison(selected) {
     const live = state.liveBranchTotals[branch.kedja];
     return { branch, cost: live != null ? live : shoppingListCost(selected, branch), isLive: live != null };
   }).sort((a, b) => a.cost - b.cost);
-  const cheapest = results[0], priciest = results[results.length - 1];
-  const savings = priciest.cost - cheapest.cost;
   const premium = Boolean(state.user?.premium);
-  const listOrUpsell = results.length < 2 ? "" : premium
-    ? `<div class="store-compare-list">${results.map(r => `<div class="store-compare-row ${r.branch === cheapest.branch ? "cheapest" : ""}"><span>${r.branch.namn}${r.isLive ? '<span class="live-badge">Live</span>' : '<span class="live-badge estimate">Uppskattat</span>'}</span><strong>${money(r.cost)}</strong></div>`).join("")}</div>`
-    : `<button type="button" class="store-compare-upsell" id="storeCompareUpsell">🔒 Prova Premium gratis i 14 dagar och se hela jämförelsen mellan ${results.length} butiker</button>`;
   const anyLive = results.some(r => r.isLive);
   const updatedLabel = anyLive && state.liveUpdatedAt ? `<small class="store-compare-updated">Uppdaterad ${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}</small>` : "";
-  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${cheapest.isLive ? "Lägst pris" : "Lägst uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savings > 1 ? `<small>${cheapest.isLive ? "Skillnad" : "Uppskattad skillnad"} ${money(savings)} mot ${priciest.branch.namn}</small>` : ""}${updatedLabel}</div>${listOrUpsell}</div>`;
-  $("storeCompareUpsell")?.addEventListener("click", openPremiumPitch);
+  if (!premium) {
+    // Free tier never claims a store is "cheapest" - without live data for every
+    // chain that would just be a guess (see cheapestBranch()'s flat estimate),
+    // and showing it as fact is exactly the kind of mismatch users have reported.
+    // Show only the price at the store actually in use, plainly labeled.
+    const current = results.find(r => r.branch === selectedBranch()) || results[0];
+    container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${current.isLive ? "Pris" : "Uppskattat pris"} hos ${current.branch.namn}</span><strong>ca ${money(current.cost)}</strong>${updatedLabel}</div>${results.length > 1 ? `<button type="button" class="store-compare-upsell" id="storeCompareUpsell">🔒 Prova Premium gratis i 14 dagar och se vilken butik som faktiskt är billigast av ${results.length}</button>` : ""}</div>`;
+    $("storeCompareUpsell")?.addEventListener("click", openPremiumPitch);
+    syncBranchComparison(shoppingItems, branches);
+    return;
+  }
+  const cheapest = results[0], priciest = results[results.length - 1];
+  const savings = priciest.cost - cheapest.cost;
+  const list = results.length < 2 ? "" : `<div class="store-compare-list">${results.map(r => `<div class="store-compare-row ${r.branch === cheapest.branch ? "cheapest" : ""}"><span>${r.branch.namn}${r.isLive ? '<span class="live-badge">Live</span>' : '<span class="live-badge estimate">Uppskattat</span>'}</span><strong>${money(r.cost)}</strong></div>`).join("")}</div>`;
+  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${cheapest.isLive ? "Lägst pris" : "Lägst uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savings > 1 ? `<small>${cheapest.isLive ? "Skillnad" : "Uppskattad skillnad"} ${money(savings)} mot ${priciest.branch.namn}</small>` : ""}${updatedLabel}</div>${list}</div>`;
   syncBranchComparison(shoppingItems, branches);
 }
 
@@ -630,6 +648,8 @@ function syncSettingsInputs() {
   $("budgetInput").value = state.budget; $("peopleValue").textContent = state.personer; $("mealsValue").textContent = state.middagar; $("storeInput").value = state.butik; $("postcodeInput").value = state.postnummer;
   $("kosttypInput").value = state.kost.kosttyp;
   document.querySelectorAll("#allergenChips input").forEach(box => { box.checked = state.kost.avoidAllergens.has(box.value); });
+  const autoOption = document.querySelector('#storeInput option[value="auto"]');
+  if (autoOption) autoOption.textContent = state.user?.premium ? "Billigast automatiskt" : "Närmast automatiskt (Premium: billigast)";
 }
 syncSettingsInputs();
 $("budgetInput").addEventListener("input", e => { state.budget = clampBudget(e.target.value); saveState(); updateSummary(); renderBasket(); });
@@ -755,6 +775,7 @@ function renderAccount() {
   $("accountLoggedIn").hidden = !loggedIn;
   $("profileBtn").textContent = loggedIn ? state.user.email.slice(0, 2).toUpperCase() : "MJ";
   $("profileBtn").classList.toggle("is-premium", Boolean(state.user?.premium));
+  syncSettingsInputs();
   if (loggedIn) {
     $("accountEmail").textContent = state.user.email;
     $("verifyEmailNotice").hidden = state.user.emailVerified;
