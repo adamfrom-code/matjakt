@@ -380,7 +380,12 @@ async function syncNearbyBranches() {
     if (state.postnummer !== zip) return;
     state.branches = (data.butiker || []).map(store => ({ kedja: store.kedja, namn: store.namn, lat: store.lat, lon: store.lon, avstandKm: store.avstandKm, prisfaktor: 1 }));
     state.liveBranchTotals = {};
-    chooseMenu(false);
+    // Only auto-pick a week here when the user doesn't already have one (same
+    // guard as the startup call below) - this resolves on every single app
+    // open once real branch data replaces the FALLBACK_BRANCH estimate, and
+    // unconditionally regenerating would silently discard checked-off items,
+    // cached prices, and even reshuffle an already-chosen week on every visit.
+    if (!state.valda.size) chooseMenu(false); else render();
   } catch { /* nätverket svarade inte - den uppskattade fallback-butiken visas kvar tills det går att försöka igen */ }
   finally { branchesSync.loading = false; }
 }
@@ -1154,7 +1159,12 @@ async function refreshUser() {
     state.user = null;
   }
   renderAccount();
-  if (state.user?.premium && hasActiveNutritionGoals(currentNutritionGoals())) chooseMenu(false);
+  // Editing a goal already regenerates the week directly (see
+  // onNutritionGoalsChanged) - doing it again here unconditionally on every
+  // login/session refresh would silently wipe checked-off items and cached
+  // prices on every app open for premium users with goals set, for no reason
+  // (nothing about their existing week actually changed).
+  if (state.user?.premium && hasActiveNutritionGoals(currentNutritionGoals()) && !state.valda.size) chooseMenu(false);
   renderCampaignSection();
 }
 const CAMPAIGN_CHAINS = ["Coop", "Hemköp"];
