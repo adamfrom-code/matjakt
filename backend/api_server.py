@@ -56,6 +56,7 @@ ALLOWED_ORIGIN = os.environ.get("MATJAKT_FRONTEND_ORIGIN", "http://localhost:550
 # (.../matjakt/), not the origin root.
 APP_URL = os.environ.get("MATJAKT_APP_URL", ALLOWED_ORIGIN).rstrip("/")
 CACHE_TTL_SECONDS = 900
+CACHE_MAX_AGE_SECONDS = 86400
 ICA_STORE_FAILURE_TTL_SECONDS = 300
 ICA_STORE_SUCCESS_TTL_SECONDS = 3600
 CACHE_MAX_ENTRIES = 200
@@ -120,6 +121,7 @@ STORE_LIST_CACHE = {}
 COOP_STORE_SEARCH_CACHE = {}
 _scrape_executor = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_CONCURRENT_SCRAPES, thread_name_prefix="playwright-worker")
 _thread_browser = threading.local()
+BROWSER_MAX_REQUESTS = 10
 
 
 def get_shared_browser():
@@ -138,13 +140,30 @@ def get_shared_browser():
     page per job for isolation and just close the page (not the browser) when
     done. This must only be called from inside a function passed to
     run_on_scrape_thread, never directly from a request-handling thread. If the
-    thread's browser has died (crash, OOM), it's relaunched on the next call."""
-    if getattr(_thread_browser, "browser", None) is not None and not _thread_browser.browser.is_connected():
+    thread's browser has died (crash, OOM), it's relaunched on the next call.
+
+    Also force-relaunches after BROWSER_MAX_REQUESTS regardless of health -
+    measured directly against production: a long run of consecutive real page
+    loads on the same browser process visibly slows down and starts failing
+    more (a 10-item week went from consistently succeeding on isolated
+    single-item requests to only 2-4/10 succeeding back to back), on a host
+    with just 512MB of RAM to work with. Periodically starting clean is cheap
+    (the 1-3s relaunch cost this function exists to avoid paying per-request)
+    compared to the alternative of degrading for the rest of the process's
+    life."""
+    browser = getattr(_thread_browser, "browser", None)
+    if browser is not None and (not browser.is_connected() or _thread_browser.request_count >= BROWSER_MAX_REQUESTS):
+        try:
+            browser.close()
+        except Exception:
+            pass
         _thread_browser.browser = None
     if getattr(_thread_browser, "browser", None) is None:
         if getattr(_thread_browser, "playwright", None) is None:
             _thread_browser.playwright = sync_playwright().start()
         _thread_browser.browser = _thread_browser.playwright.chromium.launch(headless=True)
+        _thread_browser.request_count = 0
+    _thread_browser.request_count += 1
     return _thread_browser.browser
 
 
@@ -474,11 +493,21 @@ def parse_products(page, chain, query):
 
 
 def cached_products(chain, query, zip_code):
-    """Returns (products, is_fresh) for a cache entry, or (None, False) if absent."""
+    """Returns (products, is_fresh) for a cache entry, or (None, False) if absent
+    or older than CACHE_MAX_AGE_SECONDS. is_fresh (within CACHE_TTL_SECONDS)
+    means it can be served without re-scraping at all; a stale-but-not-expired
+    entry (fresh=False, up to 24h old) still comes back so a failed live
+    scrape can fall back to a real last-known price instead of the generic
+    per-item estimate - grocery prices don't move fast enough for that to be
+    misleading, and callers don't distinguish it from a fresh price in any
+    way (no "last seen" label - by design, not an oversight)."""
     cached = CACHE.get((chain, query.lower(), zip_code))
     if not cached:
         return None, False
-    return cached[0], time.monotonic() - cached[1] < CACHE_TTL_SECONDS
+    age = time.monotonic() - cached[1]
+    if age >= CACHE_MAX_AGE_SECONDS:
+        return None, False
+    return cached[0], age < CACHE_TTL_SECONDS
 
 
 def store_products(chain, query, zip_code, products):

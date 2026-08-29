@@ -54,6 +54,34 @@ class ApiHelpersTest(unittest.TestCase):
         self.assertIsNone(api_server.extract_campaign("Willys", "2 för 129 kr", ""))
         self.assertIsNone(api_server.extract_campaign("ICA", "2 för 129 kr", ""))
 
+    def test_cached_products_serves_stale_but_not_expired_entry_as_fallback(self):
+        """A stale-but-recent price (past the 15min TTL, within 24h) should
+        still come back - it's meant as a last-known-price fallback for when a
+        live re-scrape fails, not just for fast-path fresh hits."""
+        key = ("Willys", "gurka", api_server.DEFAULT_ZIP)
+        stale_timestamp = time.monotonic() - api_server.CACHE_TTL_SECONDS - 1
+        api_server.CACHE[key] = ([{"produktnamn": "Gurka"}], stale_timestamp)
+        try:
+            products, fresh = api_server.cached_products("Willys", "gurka", api_server.DEFAULT_ZIP)
+            self.assertEqual(products, [{"produktnamn": "Gurka"}])
+            self.assertFalse(fresh)
+        finally:
+            api_server.CACHE.clear()
+
+    def test_cached_products_drops_entries_older_than_max_age(self):
+        """Grocery prices from a day-old cache entry are too stale to trust as
+        a fallback - cached_products should treat it as if it were never
+        cached at all rather than silently serving an outdated price."""
+        key = ("Willys", "gurka", api_server.DEFAULT_ZIP)
+        ancient_timestamp = time.monotonic() - api_server.CACHE_MAX_AGE_SECONDS - 1
+        api_server.CACHE[key] = ([{"produktnamn": "Gurka"}], ancient_timestamp)
+        try:
+            products, fresh = api_server.cached_products("Willys", "gurka", api_server.DEFAULT_ZIP)
+            self.assertIsNone(products)
+            self.assertFalse(fresh)
+        finally:
+            api_server.CACHE.clear()
+
 
 class LoadDotenvTest(unittest.TestCase):
     def setUp(self):
@@ -138,6 +166,40 @@ def _reset_shared_browser():
     api_server._scrape_executor = concurrent.futures.ThreadPoolExecutor(
         max_workers=api_server.MAX_CONCURRENT_SCRAPES, thread_name_prefix="playwright-worker"
     )
+
+
+class GetSharedBrowserTest(unittest.TestCase):
+    """get_shared_browser() is written to be called from inside a scrape
+    worker thread, but threading.local() state is inherently per-thread -
+    calling it directly from the test's own thread exercises the exact same
+    logic in complete isolation from _scrape_executor's real worker threads."""
+
+    def setUp(self):
+        self._original_sync_playwright = api_server.sync_playwright
+        api_server.sync_playwright = _fake_sync_playwright
+        api_server._thread_browser.browser = None
+        api_server._thread_browser.playwright = None
+
+    def tearDown(self):
+        api_server.sync_playwright = self._original_sync_playwright
+        api_server._thread_browser.browser = None
+        api_server._thread_browser.playwright = None
+
+    def test_reuses_the_same_browser_across_calls(self):
+        first = api_server.get_shared_browser()
+        second = api_server.get_shared_browser()
+        self.assertIs(first, second)
+
+    def test_relaunches_after_browser_max_requests_to_avoid_degrading_over_a_long_run(self):
+        """Measured directly against production: a long run of consecutive
+        real page loads on the same browser process visibly slowed down and
+        started failing more often. Recycling the browser periodically is the
+        mitigation - this proves it actually happens on schedule."""
+        first = api_server.get_shared_browser()
+        for _ in range(api_server.BROWSER_MAX_REQUESTS - 1):
+            self.assertIs(api_server.get_shared_browser(), first)
+        recycled = api_server.get_shared_browser()
+        self.assertIsNot(recycled, first)
 
 
 class RunOnScrapeThreadTest(unittest.TestCase):
@@ -320,6 +382,51 @@ class ApiServerHttpTest(unittest.TestCase):
             self.assertEqual(status, 200)
             self.assertEqual(payload["produkter"][0]["produktnamn"], "Fräsch scrape")
             self.assertEqual(len(calls), 1)
+        finally:
+            api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
+            _reset_shared_browser()
+            api_server.CACHE.clear()
+
+    def test_products_falls_back_to_stale_cache_when_live_scrape_fails(self):
+        """When a live re-scrape fails (times out, throws), a real price from
+        earlier today is a better answer than a generic estimate - as long as
+        it's not so old it could be wrong (see CACHE_MAX_AGE_SECONDS)."""
+        original_sync_playwright, original_parse_products = api_server.sync_playwright, api_server.parse_products
+        api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
+
+        def _boom(page, chain, query):
+            raise RuntimeError("scrape failed")
+
+        api_server.parse_products = _boom
+        try:
+            key = ("Willys", "smor", api_server.DEFAULT_ZIP)
+            stale_timestamp = time.monotonic() - api_server.CACHE_TTL_SECONDS - 1
+            api_server.CACHE[key] = ([{"produktnamn": "Smör (senast känt pris)"}], stale_timestamp)
+            status, payload = self.get("/api/products?butik=Willys&q=smor")
+            self.assertEqual(status, 200)
+            self.assertEqual(payload["produkter"][0]["produktnamn"], "Smör (senast känt pris)")
+        finally:
+            api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
+            _reset_shared_browser()
+            api_server.CACHE.clear()
+
+    def test_products_gives_up_when_stale_cache_is_too_old_to_trust(self):
+        original_sync_playwright, original_parse_products = api_server.sync_playwright, api_server.parse_products
+        api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
+
+        def _boom(page, chain, query):
+            raise RuntimeError("scrape failed")
+
+        api_server.parse_products = _boom
+        try:
+            key = ("Willys", "smor", api_server.DEFAULT_ZIP)
+            ancient_timestamp = time.monotonic() - api_server.CACHE_MAX_AGE_SECONDS - 1
+            api_server.CACHE[key] = ([{"produktnamn": "Smör (för gammalt)"}], ancient_timestamp)
+            status, payload = self.get("/api/products?butik=Willys&q=smor")
+            self.assertEqual(status, 502)
+            self.assertIn("error", payload)
         finally:
             api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
             _reset_shared_browser()
