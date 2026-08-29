@@ -156,7 +156,7 @@ def new_scrape_page():
     loops over up to 80 product cards), so worst case adds up to minutes rather
     than the ~25s SCRAPE_TASK_TIMEOUT_SECONDS is meant to bound things to."""
     page = get_shared_browser().new_page(locale="sv-SE")
-    page.set_default_timeout(8000)
+    page.set_default_timeout(12000)
     return page
 
 

@@ -647,15 +647,17 @@ function switchWeekStore(chain) {
 document.querySelectorAll("[data-week-store]").forEach(button => button.addEventListener("click", () => switchWeekStore(button.dataset.weekStore)));
 
 const VALID_CHAINS = ["ICA", "Willys", "Hemköp", "Coop"];
-const LIVE_PRICE_CHUNK_SIZE = 3;
+const LIVE_PRICE_CHUNK_SIZE = 1;
 async function fetchProductsBatch(chain, zip, names) {
-  // Small SEQUENTIAL requests instead of one big one - each item takes several
-  // seconds to scrape, and a single request holding ~10 items easily exceeds a
-  // hosting provider's proxy timeout on a cold cache. Sequential (not
-  // Promise.all) on purpose: the backend runs headless Chromium per item, and
-  // a resource-constrained host chokes if several scrape requests land at
-  // once. A chunk that fails just leaves those items unpriced instead of
-  // losing the whole batch.
+  // One item per request, SEQUENTIAL, on purpose - measured directly against
+  // production: a single item's scrape on the free-tier host's throttled CPU
+  // can itself take close to the request timeout, so bundling several items
+  // into one chunk (as this used to do) made the whole chunk fail together
+  // even when most of those items would have succeeded alone. A chunk that
+  // fails now only costs that one item instead of dragging its neighbors down
+  // with it. Sequential (not Promise.all) because the backend runs one
+  // headless-Chromium scrape at a time on that host - parallel requests would
+  // just queue up behind each other anyway.
   const chunks = [];
   for (let i = 0; i < names.length; i += LIVE_PRICE_CHUNK_SIZE) chunks.push(names.slice(i, i + LIVE_PRICE_CHUNK_SIZE));
   const produkter = {};
