@@ -59,6 +59,8 @@ class AccountStore:
             ("subscription_status", "TEXT"), ("subscription_plan", "TEXT"),
             ("subscription_period_end", "TEXT"), ("subscription_cancel_at_period_end", "INTEGER NOT NULL DEFAULT 0"),
             ("synced_state", "TEXT"),
+            ("email_verified", "INTEGER NOT NULL DEFAULT 0"), ("verification_token", "TEXT"),
+            ("reset_token", "TEXT"), ("reset_token_expires_at", "TEXT"),
         ):
             try:
                 self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
@@ -82,6 +84,7 @@ class AccountStore:
             "subscriptionPlan": row["subscription_plan"] if "subscription_plan" in keys else None,
             "subscriptionPeriodEnd": row["subscription_period_end"] if "subscription_period_end" in keys else None,
             "subscriptionCancelAtPeriodEnd": bool(row["subscription_cancel_at_period_end"]) if "subscription_cancel_at_period_end" in keys else False,
+            "emailVerified": bool(row["email_verified"]) if "email_verified" in keys else False,
         }
 
     def register(self, email: str, password: str) -> tuple[str, dict]:
@@ -212,3 +215,82 @@ class AccountStore:
             (subscription_id, status, period_end_iso, int(cancel_at_period_end), plan, customer_id),
         )
         self._connection.commit()
+
+    def _create_verification_token(self, user_id) -> str:
+        token = secrets.token_urlsafe(24)
+        self._connection.execute("UPDATE users SET verification_token = ? WHERE id = ?", (token, user_id))
+        self._connection.commit()
+        return token
+
+    def create_verification_token_for_email(self, email: str) -> str:
+        row = self._connection.execute("SELECT * FROM users WHERE email = ?", ((email or "").strip().lower(),)).fetchone()
+        if not row:
+            raise AccountError("Okänt konto")
+        return self._create_verification_token(row["id"])
+
+    def verify_email(self, token: str) -> dict:
+        if not token:
+            raise AccountError("Ogiltig verifieringslänk")
+        row = self._connection.execute("SELECT * FROM users WHERE verification_token = ?", (token,)).fetchone()
+        if not row:
+            raise AccountError("Ogiltig eller redan använd verifieringslänk")
+        self._connection.execute(
+            "UPDATE users SET email_verified = 1, verification_token = NULL WHERE id = ?", (row["id"],)
+        )
+        self._connection.commit()
+        return self._to_public(self._connection.execute("SELECT * FROM users WHERE id = ?", (row["id"],)).fetchone())
+
+    def resend_verification(self, token: str):
+        """Returns (email, verification_token) for the logged-in user's session token."""
+        row = self._session_user_row(token)
+        if not row:
+            raise AccountError("Du måste vara inloggad")
+        if row["email_verified"]:
+            raise AccountError("E-postadressen är redan verifierad")
+        return row["email"], self._create_verification_token(row["id"])
+
+    def request_password_reset(self, email: str) -> str | None:
+        """Returns a reset token if the email matches an account, else None. Callers
+        must respond identically either way (don't reveal whether the email exists)."""
+        row = self._connection.execute("SELECT * FROM users WHERE email = ?", ((email or "").strip().lower(),)).fetchone()
+        if not row:
+            return None
+        token = secrets.token_urlsafe(24)
+        expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+        self._connection.execute(
+            "UPDATE users SET reset_token = ?, reset_token_expires_at = ? WHERE id = ?", (token, expires_at, row["id"])
+        )
+        self._connection.commit()
+        return token
+
+    def reset_password(self, token: str, new_password: str):
+        if not new_password or len(new_password) < 8:
+            raise AccountError("Lösenordet måste vara minst 8 tecken")
+        if not token:
+            raise AccountError("Länken är ogiltig eller har gått ut")
+        row = self._connection.execute("SELECT * FROM users WHERE reset_token = ?", (token,)).fetchone()
+        now = datetime.now(timezone.utc).isoformat()
+        if not row or not row["reset_token_expires_at"] or row["reset_token_expires_at"] < now:
+            raise AccountError("Länken är ogiltig eller har gått ut")
+        salt = secrets.token_bytes(16)
+        password_hash = _hash_password(new_password, salt)
+        self._connection.execute(
+            "UPDATE users SET password_hash = ?, salt = ?, reset_token = NULL, reset_token_expires_at = NULL WHERE id = ?",
+            (password_hash, salt.hex(), row["id"]),
+        )
+        # A password reset invalidates every existing session on every device -
+        # including whoever might have been using a compromised one.
+        self._connection.execute("DELETE FROM sessions WHERE user_id = ?", (row["id"],))
+        self._connection.commit()
+
+    def delete_account(self, token: str):
+        """Returns (stripe_customer_id, stripe_subscription_id) so the caller can
+        cancel any active Stripe subscription before the account record is gone."""
+        row = self._session_user_row(token)
+        if not row:
+            raise AccountError("Du måste vara inloggad")
+        stripe_customer_id, stripe_subscription_id = row["stripe_customer_id"], row["stripe_subscription_id"]
+        self._connection.execute("DELETE FROM sessions WHERE user_id = ?", (row["id"],))
+        self._connection.execute("DELETE FROM users WHERE id = ?", (row["id"],))
+        self._connection.commit()
+        return stripe_customer_id, stripe_subscription_id

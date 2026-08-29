@@ -22,7 +22,7 @@ class AccountStoreTest(unittest.TestCase):
         self.assertEqual(user, {
             "email": "ada@example.com", "premium": False, "trialEndsAt": None, "trialUsed": False,
             "subscriptionStatus": None, "subscriptionPlan": None, "subscriptionPeriodEnd": None,
-            "subscriptionCancelAtPeriodEnd": False,
+            "subscriptionCancelAtPeriodEnd": False, "emailVerified": False,
         })
         login_token, login_user = self.store.login("ada@example.com", "hemligt123")
         self.assertTrue(login_token)
@@ -104,6 +104,71 @@ class AccountStoreTest(unittest.TestCase):
     def test_start_trial_requires_login(self):
         with self.assertRaises(AccountError):
             self.store.start_trial("okant-token")
+
+    def test_verify_email_marks_account_verified(self):
+        self.store.register("ada@example.com", "hemligt123")
+        token = self.store.create_verification_token_for_email("ada@example.com")
+        user = self.store.verify_email(token)
+        self.assertTrue(user["emailVerified"])
+
+    def test_verify_email_rejects_unknown_token(self):
+        with self.assertRaises(AccountError):
+            self.store.verify_email("okant-token")
+
+    def test_verify_email_token_is_single_use(self):
+        self.store.register("ada@example.com", "hemligt123")
+        token = self.store.create_verification_token_for_email("ada@example.com")
+        self.store.verify_email(token)
+        with self.assertRaises(AccountError):
+            self.store.verify_email(token)
+
+    def test_resend_verification_rejects_already_verified(self):
+        session_token, _ = self.store.register("ada@example.com", "hemligt123")
+        verify_token = self.store.create_verification_token_for_email("ada@example.com")
+        self.store.verify_email(verify_token)
+        with self.assertRaises(AccountError):
+            self.store.resend_verification(session_token)
+
+    def test_password_reset_flow(self):
+        self.store.register("ada@example.com", "hemligt123")
+        reset_token = self.store.request_password_reset("ada@example.com")
+        self.assertIsNotNone(reset_token)
+        self.store.reset_password(reset_token, "nyttlosenord123")
+        with self.assertRaises(AccountError):
+            self.store.login("ada@example.com", "hemligt123")
+        new_token, _ = self.store.login("ada@example.com", "nyttlosenord123")
+        self.assertTrue(new_token)
+
+    def test_password_reset_unknown_email_returns_none_not_error(self):
+        result = self.store.request_password_reset("okand@example.com")
+        self.assertIsNone(result)
+
+    def test_password_reset_invalidates_other_sessions(self):
+        old_session, _ = self.store.register("ada@example.com", "hemligt123")
+        reset_token = self.store.request_password_reset("ada@example.com")
+        self.store.reset_password(reset_token, "nyttlosenord123")
+        self.assertIsNone(self.store.user_for_token(old_session))
+
+    def test_password_reset_rejects_expired_or_unknown_token(self):
+        with self.assertRaises(AccountError):
+            self.store.reset_password("okant-token", "nyttlosenord123")
+
+    def test_password_reset_rejects_short_password(self):
+        self.store.register("ada@example.com", "hemligt123")
+        reset_token = self.store.request_password_reset("ada@example.com")
+        with self.assertRaises(AccountError):
+            self.store.reset_password(reset_token, "kort")
+
+    def test_delete_account_removes_login_and_session(self):
+        token, _ = self.store.register("ada@example.com", "hemligt123")
+        self.store.delete_account(token)
+        self.assertIsNone(self.store.user_for_token(token))
+        with self.assertRaises(AccountError):
+            self.store.login("ada@example.com", "hemligt123")
+
+    def test_delete_account_requires_login(self):
+        with self.assertRaises(AccountError):
+            self.store.delete_account("okant-token")
 
 
 if __name__ == "__main__":

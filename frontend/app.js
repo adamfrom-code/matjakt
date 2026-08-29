@@ -6,7 +6,7 @@ import { expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts
 import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
 import { campaignsApiUrl, geocodeApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
-import { fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, saveAccountState, startCheckout, startTrial, storeToken } from "./src/api/auth.js";
+import { deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, startTrial, storeToken, verifyEmail } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 
 const RECEPT = [
@@ -757,6 +757,7 @@ function renderAccount() {
   $("profileBtn").classList.toggle("is-premium", Boolean(state.user?.premium));
   if (loggedIn) {
     $("accountEmail").textContent = state.user.email;
+    $("verifyEmailNotice").hidden = state.user.emailVerified;
     const daysLeft = state.user.trialEndsAt ? Math.max(1, Math.ceil((new Date(state.user.trialEndsAt) - Date.now()) / 86400000)) : 0;
     const hasSubscription = ["active", "trialing", "past_due", "canceled", "unpaid"].includes(state.user.subscriptionStatus);
     $("accountPremiumStatus").textContent = daysLeft ? `✓ Provperiod aktiv - ${plural(daysLeft, "dag", "dagar")} kvar (ingen betalning krävs)` : state.user.premium ? "✓ Premium aktiverat" : "Inget Premium ännu";
@@ -957,14 +958,57 @@ $("onboardingBack").addEventListener("click", () => { onboardingStep = Math.max(
 $("onboardingSkip").addEventListener("click", () => { state.onboardingComplete = true; saveState(); closeOnboarding(); });
 
 function openAccountModal() { $("accountModal").hidden = false; }
-function closeAccountModal() { $("accountModal").hidden = true; $("loginError").textContent = ""; $("registerError").textContent = ""; $("redeemError").textContent = ""; }
+function closeAccountModal() { $("accountModal").hidden = true; $("loginError").textContent = ""; $("registerError").textContent = ""; $("redeemError").textContent = ""; $("forgotError").textContent = ""; $("resetError").textContent = ""; $("deleteError").textContent = ""; }
 $("profileBtn").addEventListener("click", openAccountModal);
 document.querySelectorAll("[data-account-close]").forEach(button => button.addEventListener("click", closeAccountModal));
-document.querySelectorAll("[data-account-tab]").forEach(tab => tab.addEventListener("click", () => {
-  document.querySelectorAll("[data-account-tab]").forEach(t => t.classList.toggle("active", t === tab));
-  $("accountLoginForm").hidden = tab.dataset.accountTab !== "login";
-  $("accountRegisterForm").hidden = tab.dataset.accountTab !== "register";
-}));
+function showAccountForm(name) {
+  $("accountLoginForm").hidden = name !== "login";
+  $("accountRegisterForm").hidden = name !== "register";
+  $("forgotPasswordForm").hidden = name !== "forgot";
+  $("resetPasswordForm").hidden = name !== "reset";
+  document.querySelectorAll("[data-account-tab]").forEach(t => t.classList.toggle("active", t.dataset.accountTab === name));
+}
+document.querySelectorAll("[data-account-tab]").forEach(tab => tab.addEventListener("click", () => showAccountForm(tab.dataset.accountTab)));
+$("forgotPasswordLink").addEventListener("click", () => showAccountForm("forgot"));
+$("backToLoginLink").addEventListener("click", () => showAccountForm("login"));
+$("forgotPasswordForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  $("forgotError").textContent = ""; $("forgotSuccess").hidden = true;
+  try {
+    await requestPasswordReset($("forgotEmail").value);
+    $("forgotSuccess").hidden = false;
+    event.target.reset();
+  } catch (error) { $("forgotError").textContent = error.message; }
+});
+let pendingResetToken = new URLSearchParams(location.search).get("reset");
+$("resetPasswordForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  $("resetError").textContent = "";
+  try {
+    await resetPassword(pendingResetToken, $("resetPasswordInput").value);
+    pendingResetToken = null;
+    history.replaceState(null, "", location.pathname);
+    showAccountForm("login");
+    $("loginError").textContent = "Lösenordet är ändrat. Logga in med det nya lösenordet.";
+    event.target.reset();
+  } catch (error) { $("resetError").textContent = error.message; }
+});
+$("resendVerificationBtn").addEventListener("click", async () => {
+  $("verifyError").textContent = "";
+  try {
+    await resendVerification(state.authToken);
+    $("verifyError").textContent = "Skickat! Kolla din inkorg.";
+  } catch (error) { $("verifyError").textContent = error.message; }
+});
+$("deleteAccountBtn").addEventListener("click", async () => {
+  $("deleteError").textContent = "";
+  if (!confirm("Radera ditt konto permanent? Det går inte att ångra.")) return;
+  try {
+    await deleteAccount(state.authToken);
+    state.authToken = null; state.user = null; storeToken(null);
+    closeAccountModal(); renderAccount();
+  } catch (error) { $("deleteError").textContent = error.message; }
+});
 async function refreshUser() {
   if (!state.authToken) { renderAccount(); return; }
   try {
@@ -1151,6 +1195,16 @@ const billingResult = new URLSearchParams(location.search).get("billing");
 if (billingResult) {
   history.replaceState(null, "", location.pathname);
   if (billingResult === "success") { refreshUser().then(() => openAccountModal()); chooseMenu(false); }
+}
+if (pendingResetToken) { openAccountModal(); showAccountForm("reset"); }
+const pendingVerifyToken = new URLSearchParams(location.search).get("verify");
+if (pendingVerifyToken) {
+  verifyEmail(pendingVerifyToken).then(({ user }) => {
+    if (state.user) state.user = user;
+    history.replaceState(null, "", location.pathname);
+    renderAccount();
+    openAccountModal();
+  }).catch(() => { history.replaceState(null, "", location.pathname); });
 }
 window.addEventListener("popstate", renderRecipePage);
 if ("serviceWorker" in navigator) {

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Integritetspolicy – Matjakt</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#f6f3ea;--surface:#fff;--primary:#173b2a;--muted:#6e786f;--border:rgba(22,32,25,.1);--accent:#d96a1c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--primary);font:16px/1.65 "DM Sans",system-ui,sans-serif}
+  .wrap{max-width:680px;margin:0 auto;padding:40px 20px 80px}
+  a{color:var(--accent)}
+  h1{font:700 34px/1.15 "Fraunces",serif;letter-spacing:-.02em;margin:0 0 6px}
+  h2{font:700 21px "Fraunces",serif;margin:36px 0 10px}
+  .updated{color:var(--muted);font-size:14px;margin:0 0 30px}
+  .placeholder{background:#fff0df;padding:2px 6px;border-radius:4px}
+  .notice{margin:0 0 30px;padding:16px 18px;border-radius:12px;background:#fff8ea;border:1px solid rgba(184,137,60,.3);font-size:14px}
+  ul{padding-left:22px}
+  li{margin-bottom:6px}
+  .back{display:inline-block;margin-bottom:20px;font-size:14px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Tillbaka till Matjakt</a>
+  <h1>Integritetspolicy</h1>
+  <p class="updated">Senast uppdaterad: <span class="placeholder">[DATUM]</span></p>
+
+  <div class="notice">
+    Detta är ett startutkast, inte färdig juridisk text. Innan sidan används på riktigt bör den läsas igenom av en jurist – särskilt eftersom appen hanterar betalning (via Stripe) och kan ha användare inom EU (GDPR gäller då). Fält märkta <span class="placeholder">så här</span> måste fyllas i.
+  </div>
+
+  <h2>Vem är personuppgiftsansvarig?</h2>
+  <p><span class="placeholder">[FÖRETAGSNAMN / DITT NAMN]</span>, <span class="placeholder">[ORGANISATIONSNUMMER, om tillämpligt]</span>, är personuppgiftsansvarig för behandlingen av personuppgifter i Matjakt. Kontakta oss på <span class="placeholder">[KONTAKT-E-POST]</span> vid frågor om denna policy eller dina uppgifter.</p>
+
+  <h2>Vilka uppgifter samlar vi in?</h2>
+  <ul>
+    <li><strong>Kontouppgifter:</strong> e-postadress och ett lösenord (sparas aldrig i klartext, bara som en säker hash).</li>
+    <li><strong>Matinställningar:</strong> budget, antal personer, kosttyp, allergier, ogillade ingredienser, näringsmål, favoritbutik och postnummer.</li>
+    <li><strong>Användning i appen:</strong> ditt skafferi, valda veckomenyer, betyg och feedback (gillar/ogillar/lagat/hoppat över) – används för att förbättra dina förslag.</li>
+    <li><strong>Platsinformation:</strong> postnummer eller, om du väljer att dela det, din enhets ungefärliga plats, för att hitta butiker nära dig.</li>
+    <li><strong>Betalningsuppgifter:</strong> vi lagrar aldrig kortuppgifter själva. Betalning hanteras av Stripe, som är egen personuppgiftsansvarig för de uppgifter du lämnar där.</li>
+    <li><strong>Teknisk information:</strong> vanlig serverloggning (IP-adress, tidsstämpel) för drift och felsökning.</li>
+  </ul>
+
+  <h2>Varför behandlar vi dina uppgifter?</h2>
+  <ul>
+    <li>För att skapa och sköta ditt konto och driva appens grundfunktioner (avtal – fullgörande av avtalet med dig).</li>
+    <li>För att beräkna prisförslag och matcha recept mot dina preferenser (avtal / berättigat intresse).</li>
+    <li>För att hantera betald prenumeration via Stripe (avtal).</li>
+    <li>För att skicka kontorelaterade e-postmeddelanden, t.ex. verifiering och lösenordsåterställning (berättigat intresse).</li>
+  </ul>
+
+  <h2>Vem delar vi uppgifter med?</h2>
+  <ul>
+    <li><strong>Stripe</strong> – betalningshantering.</li>
+    <li><strong>Render</strong> – driftplattform för Matjakts server.</li>
+    <li><strong>Livsmedelsverket</strong> – öppen näringsdata (inga personuppgifter skickas dit).</li>
+    <li>De butikswebbplatser vars priser visas i appen kontaktas inte med dina personuppgifter – prishämtningen sker anonymt.</li>
+  </ul>
+  <p>Vi säljer aldrig dina uppgifter till tredje part.</p>
+
+  <h2>Hur länge sparar vi uppgifterna?</h2>
+  <p>Så länge du har ett konto. Raderar du ditt konto i appen (Konto → Radera konto) tas dina kontouppgifter och sparade data bort permanent, och en eventuell aktiv prenumeration avslutas samtidigt.</p>
+
+  <h2>Dina rättigheter</h2>
+  <ul>
+    <li><strong>Radera konto</strong> – gör det själv när som helst i appen under Konto.</li>
+    <li><strong>Rätta uppgifter</strong> – dina matinställningar kan du ändra direkt i appen.</li>
+    <li><strong>Begära utdrag</strong> – kontakta oss på <span class="placeholder">[KONTAKT-E-POST]</span> för en kopia av dina uppgifter.</li>
+    <li><strong>Klaga</strong> – du har rätt att vända dig till Integritetsskyddsmyndigheten (IMY) om du anser att vi hanterar dina uppgifter fel.</li>
+  </ul>
+
+  <h2>Cookies och lokal lagring</h2>
+  <p>Matjakt sparar inställningar i din webbläsares lokala lagring (localStorage), inte via spårningscookies. Är du inloggad synkas samma data till ditt konto på servern så att den följer med mellan enheter.</p>
+</div>
+</body>
+</html>

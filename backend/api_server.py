@@ -21,7 +21,8 @@ from urllib.request import Request, urlopen
 
 from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
-from services.billing import StripeError, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature
+from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature
+from services.email import MailError, send_email
 from services.recipe_providers import RecipeService, TheMealDbProvider
 
 logging.basicConfig(level=logging.INFO)
@@ -69,6 +70,13 @@ STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICE_MONTHLY = os.environ.get("STRIPE_PRICE_MONTHLY", "")
 STRIPE_PRICE_YEARLY = os.environ.get("STRIPE_PRICE_YEARLY", "")
+MAIL_CONFIG = {
+    "host": os.environ.get("SMTP_HOST", ""),
+    "port": os.environ.get("SMTP_PORT", "587"),
+    "user": os.environ.get("SMTP_USER", ""),
+    "password": os.environ.get("SMTP_PASSWORD", ""),
+    "from_email": os.environ.get("SMTP_FROM_EMAIL", ""),
+}
 AXFOOD_STORE_LIST_URL = {"Willys": "https://www.willys.se/axfood/rest/v1/store", "Hemköp": "https://www.hemkop.se/axfood/rest/v1/store"}
 STORE_LIST_CACHE_TTL_SECONDS = 86400
 ICA_STORE_LIST_TTL_SECONDS = 3600
@@ -637,6 +645,14 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/auth/register":
             try:
                 token, user = ACCOUNT_STORE.register(payload.get("email"), payload.get("password"))
+                try:
+                    verify_token = ACCOUNT_STORE.create_verification_token_for_email(user["email"])
+                    send_email(
+                        MAIL_CONFIG, user["email"], "Verifiera din e-postadress - Matjakt",
+                        f"Välkommen till Matjakt!\n\nKlicka här för att verifiera din e-postadress:\n{APP_URL}/?verify={verify_token}\n\nOm du inte skapade det här kontot kan du ignorera mejlet.",
+                    )
+                except (AccountError, MailError):
+                    logger.info("Could not send verification email for %s (email not configured or send failed)", user["email"])
                 self.send_json(201, {"token": token, "user": user})
             except AccountError as error:
                 self.send_json(400, {"error": str(error)})
@@ -665,6 +681,59 @@ class ApiHandler(SimpleHTTPRequestHandler):
             try:
                 user = ACCOUNT_STORE.start_trial(self._bearer_token())
                 self.send_json(200, {"user": user})
+            except AccountError as error:
+                self.send_json(400, {"error": str(error)})
+            return
+        if parsed.path == "/api/auth/request-password-reset":
+            reset_token = ACCOUNT_STORE.request_password_reset(payload.get("email"))
+            if reset_token:
+                try:
+                    send_email(
+                        MAIL_CONFIG, (payload.get("email") or "").strip().lower(), "Återställ ditt Matjakt-lösenord",
+                        f"Klicka här för att välja ett nytt lösenord:\n{APP_URL}/?reset={reset_token}\n\nLänken slutar gälla om en timme. Om du inte bad om detta kan du ignorera mejlet.",
+                    )
+                except MailError:
+                    logger.exception("Failed to send password reset email")
+            # Always respond the same way whether or not the email matched an account -
+            # otherwise this endpoint could be used to check which emails have accounts.
+            self.send_json(200, {"ok": True})
+            return
+        if parsed.path == "/api/auth/reset-password":
+            try:
+                ACCOUNT_STORE.reset_password(payload.get("token"), payload.get("password"))
+                self.send_json(200, {"ok": True})
+            except AccountError as error:
+                self.send_json(400, {"error": str(error)})
+            return
+        if parsed.path == "/api/auth/verify-email":
+            try:
+                user = ACCOUNT_STORE.verify_email(payload.get("token"))
+                self.send_json(200, {"user": user})
+            except AccountError as error:
+                self.send_json(400, {"error": str(error)})
+            return
+        if parsed.path == "/api/auth/resend-verification":
+            try:
+                email, verify_token = ACCOUNT_STORE.resend_verification(self._bearer_token())
+                send_email(
+                    MAIL_CONFIG, email, "Verifiera din e-postadress - Matjakt",
+                    f"Klicka här för att verifiera din e-postadress:\n{APP_URL}/?verify={verify_token}",
+                )
+                self.send_json(200, {"ok": True})
+            except AccountError as error:
+                self.send_json(400, {"error": str(error)})
+            except MailError as error:
+                self.send_json(503, {"error": str(error)})
+            return
+        if parsed.path == "/api/auth/delete-account":
+            try:
+                stripe_customer_id, stripe_subscription_id = ACCOUNT_STORE.delete_account(self._bearer_token())
+                if stripe_subscription_id and STRIPE_SECRET_KEY:
+                    try:
+                        cancel_subscription(STRIPE_SECRET_KEY, stripe_subscription_id)
+                    except StripeError:
+                        logger.exception("Failed to cancel Stripe subscription %s during account deletion", stripe_subscription_id)
+                self.send_json(200, {"ok": True})
             except AccountError as error:
                 self.send_json(400, {"error": str(error)})
             return

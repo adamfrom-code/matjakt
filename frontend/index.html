@@ -203,6 +203,7 @@
           <input id="loginPassword" type="password" required autocomplete="current-password">
           <p class="account-error" id="loginError"></p>
           <button class="btn btn-primary" type="submit"><span>Logga in</span></button>
+          <button type="button" class="account-link-btn" id="forgotPasswordLink">Glömt lösenord?</button>
         </form>
         <form id="accountRegisterForm" class="account-form" hidden>
           <label for="registerEmail">E-post</label>
@@ -212,12 +213,33 @@
           <p class="account-error" id="registerError"></p>
           <button class="btn btn-primary" type="submit"><span>Skapa konto</span></button>
         </form>
+        <form id="forgotPasswordForm" class="account-form" hidden>
+          <label for="forgotEmail">E-post</label>
+          <input id="forgotEmail" type="email" required autocomplete="email">
+          <p class="account-error" id="forgotError"></p>
+          <p class="account-success" id="forgotSuccess" hidden>Om adressen finns hos oss har vi skickat en återställningslänk dit.</p>
+          <button class="btn btn-primary" type="submit"><span>Skicka återställningslänk</span></button>
+          <button type="button" class="account-link-btn" id="backToLoginLink">Tillbaka till inloggning</button>
+        </form>
+        <form id="resetPasswordForm" class="account-form" hidden>
+          <label for="resetPasswordInput">Nytt lösenord (minst 8 tecken)</label>
+          <input id="resetPasswordInput" type="password" required minlength="8" autocomplete="new-password">
+          <p class="account-error" id="resetError"></p>
+          <button class="btn btn-primary" type="submit"><span>Spara nytt lösenord</span></button>
+        </form>
+        <p class="account-legal-links"><a href="integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
       </div>
 
       <div id="accountLoggedIn" hidden>
         <h2>Ditt konto</h2>
         <p class="account-email" id="accountEmail"></p>
         <p class="account-premium-status" id="accountPremiumStatus"></p>
+
+        <div class="verify-email-notice" id="verifyEmailNotice" hidden>
+          <p>Din e-postadress är inte verifierad än.</p>
+          <button class="btn btn-ghost account-redeem-btn" type="button" id="resendVerificationBtn">Skicka verifieringsmejl igen</button>
+          <p class="account-error" id="verifyError"></p>
+        </div>
 
         <div class="subscription-panel" id="subscriptionPanel" hidden>
           <p class="subscription-panel-line" id="subscriptionPanelLine"></p>
@@ -256,6 +278,9 @@
         </div>
 
         <button class="account-logout-btn" id="logoutBtn" type="button">Logga ut</button>
+        <button class="account-delete-btn" id="deleteAccountBtn" type="button">Radera konto</button>
+        <p class="account-error" id="deleteError"></p>
+        <p class="account-legal-links"><a href="integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
       </div>
     </div>
   </div>

@@ -456,7 +456,7 @@ class AuthHttpTest(unittest.TestCase):
         self.assertEqual(payload["user"], {
             "email": email, "premium": False, "trialEndsAt": None, "trialUsed": False,
             "subscriptionStatus": None, "subscriptionPlan": None, "subscriptionPeriodEnd": None,
-            "subscriptionCancelAtPeriodEnd": False,
+            "subscriptionCancelAtPeriodEnd": False, "emailVerified": False,
         })
         status, payload = self.get("/api/auth/me", token=token)
         self.assertEqual(status, 200)
@@ -530,6 +530,53 @@ class AuthHttpTest(unittest.TestCase):
         response.read()
         conn.close()
         self.assertEqual(status, 400)
+
+    def test_request_password_reset_returns_ok_for_known_and_unknown_email(self):
+        email = self._email()
+        self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        status, payload = self.post("/api/auth/request-password-reset", {"email": email})
+        self.assertEqual(status, 200)
+        status, payload = self.post("/api/auth/request-password-reset", {"email": "nobody-" + email})
+        self.assertEqual(status, 200)
+
+    def test_reset_password_via_http_then_login_with_new_password(self):
+        email = self._email()
+        self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        reset_token = api_server.ACCOUNT_STORE.request_password_reset(email)
+        status, payload = self.post("/api/auth/reset-password", {"token": reset_token, "password": "nyttlosenord123"})
+        self.assertEqual(status, 200)
+        status, payload = self.post("/api/auth/login", {"email": email, "password": "hemligt123"})
+        self.assertEqual(status, 401)
+        status, payload = self.post("/api/auth/login", {"email": email, "password": "nyttlosenord123"})
+        self.assertEqual(status, 200)
+
+    def test_reset_password_rejects_bad_token(self):
+        status, payload = self.post("/api/auth/reset-password", {"token": "okant", "password": "nyttlosenord123"})
+        self.assertEqual(status, 400)
+        self.assertIn("error", payload)
+
+    def test_verify_email_via_http(self):
+        email = self._email()
+        self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        verify_token = api_server.ACCOUNT_STORE.create_verification_token_for_email(email)
+        status, payload = self.post("/api/auth/verify-email", {"token": verify_token})
+        self.assertEqual(status, 200)
+        self.assertTrue(payload["user"]["emailVerified"])
+
+    def test_resend_verification_requires_login(self):
+        status, payload = self.post("/api/auth/resend-verification", {})
+        self.assertEqual(status, 400)
+
+    def test_delete_account_via_http(self):
+        email = self._email()
+        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        token = payload["token"]
+        status, payload = self.post("/api/auth/delete-account", {}, token=token)
+        self.assertEqual(status, 200)
+        status, payload = self.get("/api/auth/me", token=token)
+        self.assertEqual(status, 401)
+        status, payload = self.post("/api/auth/login", {"email": email, "password": "hemligt123"})
+        self.assertEqual(status, 401)
 
     def test_checkout_rejects_when_stripe_not_configured(self):
         email = self._email()

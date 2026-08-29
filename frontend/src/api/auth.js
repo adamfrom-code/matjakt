@@ -82,6 +82,44 @@ export function openBillingPortal(token) {
   }).then(parseJsonResponse);
 }
 
+export function requestPasswordReset(email) {
+  return fetch(`${API_BASE_URL}/auth/request-password-reset`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  }).then(parseJsonResponse);
+}
+
+export function resetPassword(token, password) {
+  return fetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password }),
+  }).then(parseJsonResponse);
+}
+
+export function verifyEmail(token) {
+  return fetch(`${API_BASE_URL}/auth/verify-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  }).then(parseJsonResponse);
+}
+
+export function resendVerification(token) {
+  return fetch(`${API_BASE_URL}/auth/resend-verification`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parseJsonResponse);
+}
+
+export function deleteAccount(token) {
+  return fetch(`${API_BASE_URL}/auth/delete-account`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parseJsonResponse);
+}
+
 export function fetchAccountState(token) {
   return fetch(`${API_BASE_URL}/account/state`, {
     headers: { Authorization: `Bearer ${token}` },

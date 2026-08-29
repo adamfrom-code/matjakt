@@ -61,6 +61,12 @@ def create_checkout_session(secret_key, customer_id, price_id, success_url, canc
     return result["url"]
 
 
+def cancel_subscription(secret_key, subscription_id):
+    if not subscription_id:
+        return
+    _request(secret_key, "DELETE", f"/subscriptions/{subscription_id}")
+
+
 def create_portal_session(secret_key, customer_id, return_url):
     result = _request(secret_key, "POST", "/billing_portal/sessions", {
         "customer": customer_id,
