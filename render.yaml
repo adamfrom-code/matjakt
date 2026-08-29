@@ -14,7 +14,7 @@ services:
       - key: MATJAKT_PREMIUM_CODE
         sync: false
       - key: MATJAKT_MAX_SCRAPES
-        value: "1"
+        value: "2"
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET

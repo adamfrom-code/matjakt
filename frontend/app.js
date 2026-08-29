@@ -647,30 +647,38 @@ function switchWeekStore(chain) {
 document.querySelectorAll("[data-week-store]").forEach(button => button.addEventListener("click", () => switchWeekStore(button.dataset.weekStore)));
 
 const VALID_CHAINS = ["ICA", "Willys", "Hemköp", "Coop"];
-const LIVE_PRICE_CHUNK_SIZE = 1;
-async function fetchProductsBatch(chain, zip, names) {
-  // One item per request, SEQUENTIAL, on purpose - measured directly against
-  // production: a single item's scrape can itself take close to the request
-  // timeout (Coop in particular runs 18-25s even with nothing else competing
-  // for the backend's CPU), so bundling several items into one chunk (as this
-  // used to do) made the whole chunk fail together even when most of those
-  // items would have succeeded alone. A chunk that fails now only costs that
-  // one item instead of dragging its neighbors down with it. Sequential (not
-  // Promise.all) because the backend only runs one headless-Chromium scrape
-  // at a time - parallel requests would just queue up behind each other
-  // anyway. 35s timeout to give Coop's slower pages room to finish (matches
-  // the backend's own 30s bound on how long it'll wait per item).
-  const chunks = [];
-  for (let i = 0; i < names.length; i += LIVE_PRICE_CHUNK_SIZE) chunks.push(names.slice(i, i + LIVE_PRICE_CHUNK_SIZE));
+// Matches the backend's MATJAKT_MAX_SCRAPES (production runs 2) - one item
+// per request, up to this many in flight at once via a small worker pool
+// below. One item per request (not several bundled into one) because a
+// single item's scrape can itself take close to the request timeout (Coop in
+// particular runs 18-25s even with nothing else competing for the backend's
+// CPU) - bundling several into one request used to make the whole request
+// fail together even when most of those items would have succeeded alone.
+// Sending more in flight than the backend can actually run concurrently
+// wouldn't help (they'd just queue there instead of here), and sending only
+// one at a time would leave the backend's second worker idle the whole sync.
+const LIVE_PRICE_CONCURRENCY = 2;
+async function fetchProductsBatch(chain, zip, names, onItem) {
   const produkter = {};
-  for (const chunk of chunks) {
-    try {
-      const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: chunk }), signal: AbortSignal.timeout(35000) });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      Object.assign(produkter, (await response.json()).produkter || {});
-    } catch { /* den här biten missade - resten av listan hämtas ändå */ }
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < names.length) {
+      const name = names[nextIndex++];
+      try {
+        // 35s timeout to give Coop's slower pages room to finish (matches the backend's own 30s bound on how long it'll wait per item).
+        const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: [name] }), signal: AbortSignal.timeout(35000) });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const found = (await response.json()).produkter || {};
+        Object.assign(produkter, found);
+        onItem?.(found);
+      } catch { /* den här varan missade - resten av listan hämtas ändå */ }
+    }
   }
+  await Promise.all(Array.from({ length: Math.min(LIVE_PRICE_CONCURRENCY, names.length) }, worker));
   return produkter;
+}
+function mapLiveProducts(produkter) {
+  return Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "" }]));
 }
 let livePriceSync = { key: null, loading: false };
 async function syncLivePrices(shoppingItems) {
@@ -681,12 +689,15 @@ async function syncLivePrices(shoppingItems) {
   livePriceSync = { key, loading: true };
   updateWeekStoreStatus();
   try {
-    const produkter = await fetchProductsBatch(chain, state.postnummer, names);
-    if (chosenStore() !== chain) return;
-    state.livePriser = Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "" }]));
-    if (Object.keys(state.livePriser).length) state.liveUpdatedAt = Date.now();
-    livePriceSync.loading = false;
-    renderBasket();
+    // Applied per item as it arrives (not once at the end) - a full week can
+    // take over a minute even when every item eventually succeeds, and
+    // showing prices land one by one is a much better wait than a blank
+    // "Hämtar..." the whole time.
+    await fetchProductsBatch(chain, state.postnummer, names, found => {
+      if (chosenStore() !== chain) return;
+      const mapped = mapLiveProducts(found);
+      if (Object.keys(mapped).length) { Object.assign(state.livePriser, mapped); state.liveUpdatedAt = Date.now(); renderBasket(); }
+    });
   } catch { /* live-priser är ett tillägg ovanpå uppskattningen - misslyckas det visas bara uppskattningen kvar */ }
   finally { livePriceSync.loading = false; updateWeekStoreStatus(); }
 }
