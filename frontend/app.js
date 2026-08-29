@@ -650,20 +650,22 @@ const VALID_CHAINS = ["ICA", "Willys", "Hemköp", "Coop"];
 const LIVE_PRICE_CHUNK_SIZE = 1;
 async function fetchProductsBatch(chain, zip, names) {
   // One item per request, SEQUENTIAL, on purpose - measured directly against
-  // production: a single item's scrape on the free-tier host's throttled CPU
-  // can itself take close to the request timeout, so bundling several items
-  // into one chunk (as this used to do) made the whole chunk fail together
-  // even when most of those items would have succeeded alone. A chunk that
-  // fails now only costs that one item instead of dragging its neighbors down
-  // with it. Sequential (not Promise.all) because the backend runs one
-  // headless-Chromium scrape at a time on that host - parallel requests would
-  // just queue up behind each other anyway.
+  // production: a single item's scrape can itself take close to the request
+  // timeout (Coop in particular runs 18-25s even with nothing else competing
+  // for the backend's CPU), so bundling several items into one chunk (as this
+  // used to do) made the whole chunk fail together even when most of those
+  // items would have succeeded alone. A chunk that fails now only costs that
+  // one item instead of dragging its neighbors down with it. Sequential (not
+  // Promise.all) because the backend only runs one headless-Chromium scrape
+  // at a time - parallel requests would just queue up behind each other
+  // anyway. 35s timeout to give Coop's slower pages room to finish (matches
+  // the backend's own 30s bound on how long it'll wait per item).
   const chunks = [];
   for (let i = 0; i < names.length; i += LIVE_PRICE_CHUNK_SIZE) chunks.push(names.slice(i, i + LIVE_PRICE_CHUNK_SIZE));
   const produkter = {};
   for (const chunk of chunks) {
     try {
-      const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: chunk }), signal: AbortSignal.timeout(30000) });
+      const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: chunk }), signal: AbortSignal.timeout(35000) });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       Object.assign(produkter, (await response.json()).produkter || {});
     } catch { /* den här biten missade - resten av listan hämtas ändå */ }

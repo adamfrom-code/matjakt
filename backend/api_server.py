@@ -160,7 +160,7 @@ def new_scrape_page():
     return page
 
 
-SCRAPE_TASK_TIMEOUT_SECONDS = 25
+SCRAPE_TASK_TIMEOUT_SECONDS = 30
 
 
 def run_on_scrape_thread(fn):
@@ -179,9 +179,13 @@ def run_on_scrape_thread(fn):
     a call that runs past the timeout replaces the whole executor with a fresh
     one - the wedged thread is abandoned (it keeps running in the background,
     but nothing waits on it anymore) and every request after this one gets a
-    brand new worker instead of queuing behind a dead one. 25s (just under the
-    frontend's 30s per-chunk fetch timeout) so the server gives up at roughly
-    the same point the client already would have."""
+    brand new worker instead of queuing behind a dead one. 30s (just under the
+    frontend's 35s per-item fetch timeout) so the server gives up at roughly
+    the same point the client already would have - measured against the real
+    production host: Willys scrapes in ~9-10s, but Coop alone can take
+    18-25s even with nothing else competing for the CPU, so anything much
+    tighter than this cuts off Coop specifically before it has a real chance
+    to finish."""
     global _scrape_executor
     future = _scrape_executor.submit(fn)
     try:
