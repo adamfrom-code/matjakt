@@ -575,7 +575,13 @@ function shoppingItemMarkup(item) {
   const packages = item.package ? Math.ceil(needed / item.package.amount) : Math.ceil(needed);
   const amount = packages ? `${packages} × ${item.package?.amount || 1} ${item.package?.unit || item.unit}` : "Finns hemma";
   const live = state.livePriser[item.namn];
-  const priceLabel = live ? `${money(live.pris_kr * (packages || 1))}${priceFreshnessBadge(live.uppdaterad)}` : product.pris ? money(product.pris * packages) : "";
+  // A real captured price (whether scraped this second or served from the
+  // backend's 24h cache - see cached_products) is shown as a plain, confident
+  // price with no "Live"/"Uppdaterad" badge - users don't need to know which
+  // internal path it came from, only that it's real. The one distinction that
+  // actually matters for trust is real vs. estimated (see "Uppskattat" in
+  // detail below), which is the only case the app is ever actually guessing.
+  const priceLabel = live ? money(live.pris_kr * (packages || 1)) : product.pris ? money(product.pris * packages) : "";
   // PRODUCT_CATALOG uses "ICA" as a generic placeholder brand for estimated
   // prices, not a claim that the item comes from ICA specifically - showing it
   // next to a Willys/Coop list read as a store mismatch, so it's only shown
@@ -678,26 +684,7 @@ async function fetchProductsBatch(chain, zip, names, onItem) {
   return produkter;
 }
 function mapLiveProducts(produkter) {
-  // uppdaterad comes from the backend in seconds (Python time.time()) - JS
-  // timestamps are milliseconds, hence the *1000. Falls back to "now" only
-  // if a caller somehow omits it (defensive, shouldn't happen - the backend
-  // always stamps it, see annotate_updated/stamp_match).
-  return Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "", uppdaterad: product.uppdaterad ? Number(product.uppdaterad) * 1000 : Date.now() }]));
-}
-const LIVE_LABEL_WINDOW_MS = 10 * 60 * 1000;
-function priceFreshnessBadge(uppdaterad) {
-  // Anything just scraped this session reads "Live"; anything served from
-  // the backend's persistent cache (up to 24h old - see cached_products on
-  // the backend) reads "Uppdaterad" with the actual time on hover/tap, so a
-  // same-day cached price never gets presented as if it were fetched this
-  // second. The app never has stale-beyond-24h data to show at all - the
-  // backend already refuses to serve anything older than that.
-  if (!uppdaterad) return "";
-  if (Date.now() - uppdaterad < LIVE_LABEL_WINDOW_MS) return '<span class="live-badge">Live</span>';
-  const date = new Date(uppdaterad);
-  const sameDay = date.toDateString() === new Date().toDateString();
-  const when = sameDay ? date.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" }) : date.toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
-  return `<span class="live-badge stale" title="Senast uppdaterat ${escapeHtml(when)}">Uppdaterad</span>`;
+  return Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "" }]));
 }
 let livePriceSync = { key: null, loading: false };
 async function syncLivePrices(shoppingItems) {
