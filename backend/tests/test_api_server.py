@@ -84,6 +84,9 @@ class LoadDotenvTest(unittest.TestCase):
 
 
 class _FakePage:
+    def set_default_timeout(self, timeout_ms):
+        pass
+
     def close(self):
         pass
 
@@ -135,6 +138,55 @@ def _reset_shared_browser():
     api_server._scrape_executor = concurrent.futures.ThreadPoolExecutor(
         max_workers=api_server.MAX_CONCURRENT_SCRAPES, thread_name_prefix="playwright-worker"
     )
+
+
+class RunOnScrapeThreadTest(unittest.TestCase):
+    """A production incident: one scrape request hung forever (a stalled
+    navigation on a resource-constrained host), and since MAX_CONCURRENT_SCRAPES=1
+    in production there was only one worker thread - every request after it
+    queued behind the wedged one indefinitely, taking down the whole
+    /api/products* surface until the process was restarted by hand. These tests
+    prove run_on_scrape_thread can't get stuck like that again: a task that runs
+    past the timeout raises instead of hanging the caller, and the worker pool
+    is replaced so the NEXT call gets a fresh thread rather than queuing behind
+    the abandoned one forever."""
+
+    def setUp(self):
+        self._original_timeout = api_server.SCRAPE_TASK_TIMEOUT_SECONDS
+        api_server.SCRAPE_TASK_TIMEOUT_SECONDS = 0.05
+
+    def tearDown(self):
+        # A timed-out call inside the test may already have replaced (and shut
+        # down) _scrape_executor - always leave a fresh, live one behind rather
+        # than trying to "restore" a reference that could itself be dead.
+        api_server.SCRAPE_TASK_TIMEOUT_SECONDS = self._original_timeout
+        api_server._scrape_executor.shutdown(wait=False)
+        api_server._scrape_executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=api_server.MAX_CONCURRENT_SCRAPES, thread_name_prefix="playwright-worker"
+        )
+
+    def test_hung_task_raises_instead_of_blocking_forever(self):
+        release = threading.Event()
+        try:
+            with self.assertRaises(concurrent.futures.TimeoutError):
+                api_server.run_on_scrape_thread(lambda: release.wait(5))
+        finally:
+            release.set()
+
+    def test_executor_is_replaced_after_a_timeout_so_later_calls_are_not_wedged(self):
+        release = threading.Event()
+        original_executor = api_server._scrape_executor
+        try:
+            with self.assertRaises(concurrent.futures.TimeoutError):
+                api_server.run_on_scrape_thread(lambda: release.wait(5))
+        finally:
+            release.set()
+        self.assertIsNot(api_server._scrape_executor, original_executor)
+        self.assertEqual(api_server.run_on_scrape_thread(lambda: 42), 42)
+
+    def test_normal_call_within_timeout_is_unaffected(self):
+        api_server.SCRAPE_TASK_TIMEOUT_SECONDS = self._original_timeout
+        self.assertEqual(api_server.run_on_scrape_thread(lambda: "ok"), "ok")
 
 
 class ApiServerHttpTest(unittest.TestCase):

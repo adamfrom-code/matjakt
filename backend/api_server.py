@@ -148,12 +148,50 @@ def get_shared_browser():
     return _thread_browser.browser
 
 
+def new_scrape_page():
+    """A fresh page from the shared browser, with a short default action
+    timeout. Without this, any Playwright call that waits for an element
+    (inner_text, get_attribute, etc.) falls back to Playwright's own 30s
+    default - and a page can make dozens of such calls per scrape (parse_products
+    loops over up to 80 product cards), so worst case adds up to minutes rather
+    than the ~25s SCRAPE_TASK_TIMEOUT_SECONDS is meant to bound things to."""
+    page = get_shared_browser().new_page(locale="sv-SE")
+    page.set_default_timeout(8000)
+    return page
+
+
+SCRAPE_TASK_TIMEOUT_SECONDS = 25
+
+
 def run_on_scrape_thread(fn):
     """Runs fn on one of the dedicated Playwright worker threads and blocks the
     caller for the result - see get_shared_browser for why Playwright calls can't
     happen on an arbitrary request-handling thread. Also bounds how many scrapes
-    run at once, since the executor has a fixed-size pool (MATJAKT_MAX_SCRAPES)."""
-    return _scrape_executor.submit(fn).result()
+    run at once, since the executor has a fixed-size pool (MATJAKT_MAX_SCRAPES).
+
+    A worker thread that hangs inside a blocking Playwright/OS call (a stalled
+    navigation, a browser process that died mid-call) can't be interrupted -
+    Python threads can't be killed from outside. Without a bound here, a single
+    such hang permanently wedges every future scrape behind it forever, since
+    with MATJAKT_MAX_SCRAPES=1 (the production setting) there's no other worker
+    to pick up new requests - this happened for real: one stuck request took
+    down the entire /api/products* surface until the process was restarted. So
+    a call that runs past the timeout replaces the whole executor with a fresh
+    one - the wedged thread is abandoned (it keeps running in the background,
+    but nothing waits on it anymore) and every request after this one gets a
+    brand new worker instead of queuing behind a dead one. 25s (just under the
+    frontend's 30s per-chunk fetch timeout) so the server gives up at roughly
+    the same point the client already would have."""
+    global _scrape_executor
+    future = _scrape_executor.submit(fn)
+    try:
+        return future.result(timeout=SCRAPE_TASK_TIMEOUT_SECONDS)
+    except concurrent.futures.TimeoutError:
+        logger.error("Scrape task exceeded %ss - replacing the worker pool so future requests aren't wedged behind it", SCRAPE_TASK_TIMEOUT_SECONDS)
+        stale_executor = _scrape_executor
+        _scrape_executor = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_CONCURRENT_SCRAPES, thread_name_prefix="playwright-worker")
+        stale_executor.shutdown(wait=False)
+        raise
 RECIPE_SERVICE = RecipeService([TheMealDbProvider()])
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 ACCOUNT_STORE = AccountStore(Path(__file__).resolve().parent / "data" / "matjakt.db")
@@ -301,7 +339,7 @@ def nearby_stores(zip_code):
     candidates = [*fetch_axfood_stores("Willys"), *fetch_axfood_stores("Hemköp")]
     def _scrape():
         found = []
-        page = get_shared_browser().new_page(locale="sv-SE")
+        page = new_scrape_page()
         try:
             for store in ica_stores_for_zip(page, zip_code):
                 s_lat, s_lon = store.get("latitude"), store.get("longitude")
@@ -649,7 +687,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(200, {"butik": chain, "sokning": query, "produkter": cached}, cache_seconds=CACHE_TTL_SECONDS)
             return
         def _scrape():
-            page = get_shared_browser().new_page(locale="sv-SE")
+            page = new_scrape_page()
             try:
                 return scrape_products(page, chain, query, zip_code)
             finally:
@@ -833,7 +871,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return
         def _scrape():
             found = []
-            page = get_shared_browser().new_page(locale="sv-SE")
+            page = new_scrape_page()
             try:
                 for ingredient in CAMPAIGN_SCAN_INGREDIENTS:
                     cached_ingredient, fresh = cached_products(chain, ingredient, zip_code)
@@ -893,7 +931,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
 
         if to_scrape:
             def _scrape():
-                page = get_shared_browser().new_page(locale="sv-SE")
+                page = new_scrape_page()
                 try:
                     for query, cached in to_scrape:
                         try:
