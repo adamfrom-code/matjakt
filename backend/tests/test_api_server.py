@@ -54,6 +54,102 @@ class ApiHelpersTest(unittest.TestCase):
         self.assertIsNone(api_server.extract_campaign("Willys", "2 för 129 kr", ""))
         self.assertIsNone(api_server.extract_campaign("ICA", "2 för 129 kr", ""))
 
+    def test_best_match_rejects_swedish_compound_words_that_merely_start_with_the_query(self):
+        """Found directly against real Primat data: "Majs" (corn) picked
+        "Majskakor Ost" (corn CAKES, a snack) because the string "majskakor"
+        starts with "majs" as a character sequence, even though they're
+        completely different products. Swedish forms compounds this way
+        constantly, so a raw substring check silently recommends the wrong
+        product; matching whole leading words instead must reject these."""
+        products = [
+            {"produktnamn": "Majskakor Ost", "pris_kr": 16},
+            {"produktnamn": "Majs på kolv", "pris_kr": 20},
+        ]
+        self.assertEqual(api_server.best_match(products, "Majs")["produktnamn"], "Majs på kolv")
+
+    def test_best_match_rejects_riskakor_for_ris(self):
+        products = [{"produktnamn": "Riskakor Ost", "pris_kr": 15}, {"produktnamn": "Ris Långkornigt", "pris_kr": 30}]
+        self.assertEqual(api_server.best_match(products, "Ris")["produktnamn"], "Ris Långkornigt")
+
+    def test_best_match_rejects_paprikapulver_for_paprika(self):
+        products = [{"produktnamn": "Paprikapulver Tetra", "pris_kr": 62}, {"produktnamn": "Paprika Röd Klass 1", "pris_kr": 20}]
+        self.assertEqual(api_server.best_match(products, "Paprika")["produktnamn"], "Paprika Röd Klass 1")
+
+    def test_best_match_handles_multi_word_queries_by_matching_all_leading_words(self):
+        products = [{"produktnamn": "Svartaste Bönorna Special", "pris_kr": 5}, {"produktnamn": "Svarta Bönor Naturella", "pris_kr": 10}]
+        self.assertEqual(api_server.best_match(products, "Svarta bönor")["produktnamn"], "Svarta Bönor Naturella")
+
+    def test_best_match_falls_back_to_first_result_when_nothing_matches_by_word(self):
+        """No candidate has the query as leading words at all - matches the
+        pre-existing fallback behavior (whatever ranked first), just now
+        reached through the stricter word check instead of a substring one."""
+        products = [{"produktnamn": "Lime Klass 1", "pris_kr": 5}, {"produktnamn": "Apelsinjuice", "pris_kr": 15}]
+        self.assertEqual(api_server.best_match(products, "Citron")["produktnamn"], "Lime Klass 1")
+
+    def test_fill_missing_image_leaves_products_without_a_gtin_untouched(self):
+        """Scraped products never have a "gtin" key at all - this must be a
+        pure no-op for them, not attempt a lookup with gtin=None."""
+        product = {"produktnamn": "Citron", "bild": ""}
+        self.assertEqual(api_server.fill_missing_image(product), product)
+
+    def test_fill_missing_image_leaves_products_that_already_have_an_image_untouched(self):
+        original = api_server.image_url_for_gtin
+        calls = []
+        api_server.image_url_for_gtin = lambda gtin: calls.append(1) or "https://example.com/should-not-be-used.jpg"
+        try:
+            product = {"produktnamn": "Citron", "bild": "https://real-store-image.jpg", "gtin": "123"}
+            result = api_server.fill_missing_image(product)
+        finally:
+            api_server.image_url_for_gtin = original
+        self.assertEqual(result["bild"], "https://real-store-image.jpg")
+        self.assertEqual(calls, [])
+
+    def test_fill_missing_image_fills_in_a_found_image(self):
+        original = api_server.image_url_for_gtin
+        api_server.image_url_for_gtin = lambda gtin: "https://images.openfoodfacts.org/x.jpg"
+        try:
+            product = {"produktnamn": "Sprite", "bild": "", "gtin": "5000112642667"}
+            result = api_server.fill_missing_image(product)
+        finally:
+            api_server.image_url_for_gtin = original
+        self.assertEqual(result["bild"], "https://images.openfoodfacts.org/x.jpg")
+
+    def test_fill_missing_image_handles_product_not_found_gracefully(self):
+        """Common, expected case for Swedish private-label groceries - Open
+        Food Facts just doesn't have them. Must not raise or crash."""
+        original = api_server.image_url_for_gtin
+        api_server.image_url_for_gtin = lambda gtin: None
+        try:
+            product = {"produktnamn": "Willys Eget Märke", "bild": "", "gtin": "7311042001683"}
+            result = api_server.fill_missing_image(product)
+        finally:
+            api_server.image_url_for_gtin = original
+        self.assertEqual(result["bild"], "")
+
+    def test_fill_missing_image_handles_open_food_facts_errors_gracefully(self):
+        from services.pricing import OpenFoodFactsError
+        original = api_server.image_url_for_gtin
+        api_server.image_url_for_gtin = lambda gtin: (_ for _ in ()).throw(OpenFoodFactsError("timeout"))
+        try:
+            product = {"produktnamn": "Citron", "bild": "", "gtin": "123"}
+            result = api_server.fill_missing_image(product)
+        finally:
+            api_server.image_url_for_gtin = original
+        self.assertEqual(result["bild"], "")
+
+    def test_fill_missing_image_caches_by_gtin(self):
+        original = api_server.image_url_for_gtin
+        calls = []
+        api_server.image_url_for_gtin = lambda gtin: calls.append(gtin) or "https://images.openfoodfacts.org/x.jpg"
+        api_server.OFF_IMAGE_CACHE.clear()
+        try:
+            api_server.fill_missing_image({"produktnamn": "Sprite", "bild": "", "gtin": "5000112642667"})
+            api_server.fill_missing_image({"produktnamn": "Sprite igen", "bild": "", "gtin": "5000112642667"})
+        finally:
+            api_server.image_url_for_gtin = original
+            api_server.OFF_IMAGE_CACHE.clear()
+        self.assertEqual(calls, ["5000112642667"])
+
     def test_cached_products_serves_entries_within_24h_without_rescraping(self):
         """A price from earlier today (well past the old 15min TTL) should
         still come back as usable - re-scraping on every request is what made
@@ -271,9 +367,25 @@ class ApiServerHttpTest(unittest.TestCase):
     def setUp(self):
         self._original_code = api_server.PREMIUM_CODE
         api_server.PREMIUM_CODE = "hemlig-kod"
+        # Primat is a real third-party service - tests must never depend on
+        # a live network call to it (slow, flaky, and .env may have a real
+        # PRIMAT_API_KEY set for local dev). Default every test to "Primat
+        # has nothing" so scraping fakes are what actually get exercised;
+        # tests that specifically cover the Primat path replace this
+        # themselves within their own try/finally, same pattern as
+        # sync_playwright/parse_products elsewhere in this file.
+        self._original_fetch_from_primat = api_server.fetch_from_primat
+        api_server.fetch_from_primat = lambda chain, query, zip_code: []
+        # Same reasoning as fetch_from_primat above, for the Open Food Facts
+        # image lookup stamp_match() runs on every product - default to
+        # "nothing found" so no test depends on a live network call.
+        self._original_image_url_for_gtin = api_server.image_url_for_gtin
+        api_server.image_url_for_gtin = lambda gtin: None
 
     def tearDown(self):
         api_server.PREMIUM_CODE = self._original_code
+        api_server.fetch_from_primat = self._original_fetch_from_primat
+        api_server.image_url_for_gtin = self._original_image_url_for_gtin
 
     def get(self, path, token=None):
         conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
@@ -349,6 +461,47 @@ class ApiServerHttpTest(unittest.TestCase):
         status, payload = self.get("/api/does-not-exist")
         self.assertEqual(status, 404)
         self.assertIn("error", payload)
+
+    def test_products_uses_primat_and_skips_scraping_when_it_has_results(self):
+        """Primat is tried before Playwright ever gets involved (see
+        fetch_from_primat's docstring) - when it has an answer, scraping
+        should never run at all."""
+        original_parse_products, original_fetch_from_primat = api_server.parse_products, api_server.fetch_from_primat
+        scrape_calls = []
+        api_server.parse_products = lambda page, chain, query: scrape_calls.append(1) or [{"produktnamn": "Fräsch scrape", "pris_kr": 1}]
+        api_server.fetch_from_primat = lambda chain, query, zip_code: [
+            {"kedja": chain, "produktnamn": "Citron Klass 1 (Primat)", "marke_och_storlek": "", "bild": "", "pris_kr": 6.9,
+             "storlek": "", "lager": True, "url": "https://www.willys.se/x", "sokning": query, "kampanj": None, "gtin": "123", "kalla": "primat"}
+        ]
+        try:
+            status, payload = self.get("/api/products?butik=Willys&q=citron")
+            self.assertEqual(status, 200)
+            self.assertEqual(payload["produkter"][0]["produktnamn"], "Citron Klass 1 (Primat)")
+            self.assertEqual(payload["produkter"][0]["kalla"], "primat")
+            self.assertIn("uppdaterad", payload["produkter"][0])
+            self.assertEqual(len(scrape_calls), 0)
+        finally:
+            api_server.parse_products, api_server.fetch_from_primat = original_parse_products, original_fetch_from_primat
+            api_server.PRICE_CACHE.clear()
+
+    def test_products_falls_back_to_scraping_when_primat_has_nothing(self):
+        original_sync_playwright, original_parse_products, original_fetch_from_primat = (
+            api_server.sync_playwright, api_server.parse_products, api_server.fetch_from_primat
+        )
+        api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
+        api_server.fetch_from_primat = lambda chain, query, zip_code: []
+        api_server.parse_products = lambda page, chain, query: [{"produktnamn": "Fräsch scrape", "pris_kr": 1}]
+        try:
+            status, payload = self.get("/api/products?butik=Willys&q=citron")
+            self.assertEqual(status, 200)
+            self.assertEqual(payload["produkter"][0]["produktnamn"], "Fräsch scrape")
+        finally:
+            api_server.sync_playwright, api_server.parse_products, api_server.fetch_from_primat = (
+                original_sync_playwright, original_parse_products, original_fetch_from_primat
+            )
+            _reset_shared_browser()
+            api_server.PRICE_CACHE.clear()
 
     def test_products_cache_hit_skips_scraping(self):
         """A cache entry from an hour ago (well past the old 15min TTL) should
@@ -565,6 +718,46 @@ class ApiServerHttpTest(unittest.TestCase):
             self.assertEqual(len(calls), 0)
         finally:
             api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
+            _reset_shared_browser()
+            api_server.PRICE_CACHE.clear()
+
+    def test_products_batch_uses_primat_before_scraping(self):
+        """The shopping list's own endpoint - this is the path that actually
+        matters for Handla. A query Primat can answer should never reach
+        Playwright at all."""
+        original_parse_products, original_fetch_from_primat = api_server.parse_products, api_server.fetch_from_primat
+        scrape_calls = []
+        api_server.parse_products = lambda page, chain, query: scrape_calls.append(1) or []
+        api_server.fetch_from_primat = lambda chain, query, zip_code: [
+            {"kedja": chain, "produktnamn": "Paprika Röd Klass 1", "marke_och_storlek": "", "bild": "", "pris_kr": 19.9,
+             "storlek": "", "lager": True, "url": "https://www.willys.se/x", "sokning": query, "kampanj": None, "gtin": "7311042001683", "kalla": "primat"}
+        ]
+        try:
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Paprika"]})
+            self.assertEqual(status, 200)
+            self.assertEqual(payload["produkter"]["Paprika"]["produktnamn"], "Paprika Röd Klass 1")
+            self.assertEqual(payload["produkter"]["Paprika"]["kalla"], "primat")
+            self.assertEqual(len(scrape_calls), 0)
+        finally:
+            api_server.parse_products, api_server.fetch_from_primat = original_parse_products, original_fetch_from_primat
+            api_server.PRICE_CACHE.clear()
+
+    def test_products_batch_falls_back_to_scraping_when_primat_has_nothing(self):
+        original_sync_playwright, original_parse_products, original_fetch_from_primat = (
+            api_server.sync_playwright, api_server.parse_products, api_server.fetch_from_primat
+        )
+        api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
+        api_server.fetch_from_primat = lambda chain, query, zip_code: []
+        api_server.parse_products = lambda page, chain, query: [{"produktnamn": "Fräsch scrape", "pris_kr": 10}]
+        try:
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Smor"]})
+            self.assertEqual(status, 200)
+            self.assertEqual(payload["produkter"]["Smor"]["produktnamn"], "Fräsch scrape")
+        finally:
+            api_server.sync_playwright, api_server.parse_products, api_server.fetch_from_primat = (
+                original_sync_playwright, original_parse_products, original_fetch_from_primat
+            )
             _reset_shared_browser()
             api_server.PRICE_CACHE.clear()
 
@@ -915,8 +1108,15 @@ class NearbyStoresTest(unittest.TestCase):
     def test_nearby_stores_combines_all_chains_sorts_by_distance_and_caps_radius(self):
         originals = {
             name: getattr(api_server, name)
-            for name in ["geocode_postcode", "fetch_axfood_stores", "ica_stores_for_zip", "search_coop_stores", "sync_playwright"]
+            for name in ["geocode_postcode", "fetch_axfood_stores", "ica_stores_for_zip", "search_coop_stores", "sync_playwright", "primat_nearby_stores"]
         }
+        # Primat is tried first in nearby_stores() - forcing it to report
+        # "nothing" here is what actually exercises the scraping fallback
+        # this test is about. Without this, the test depends on a real
+        # network call to a third-party service (slow, flaky, and would
+        # silently stop testing the fallback path entirely if Primat ever
+        # succeeds for this zip).
+        api_server.primat_nearby_stores = lambda zip_code, api_key=None: []
         api_server.geocode_postcode = lambda zip_code: {"ort": "Gävle", "lat": 60.67, "lon": 17.14}
         api_server.fetch_axfood_stores = lambda chain: [{"kedja": chain, "namn": f"{chain} nära", "lat": 60.68, "lon": 17.15, "ort": "Gävle"}]
         api_server.ica_stores_for_zip = lambda page, zip_code: [{"name": "ICA långt bort", "latitude": 65.6, "longitude": 22.15, "address": {"city": "Luleå"}}]
@@ -931,4 +1131,17 @@ class NearbyStoresTest(unittest.TestCase):
             _reset_shared_browser()
         chains = {store["kedja"] for store in stores}
         self.assertEqual(chains, {"Willys", "Hemköp", "Coop"})  # ICA store ~400km away is outside the radius cap
+        self.assertEqual(stores, sorted(stores, key=lambda store: store["avstandKm"]))
+
+    def test_nearby_stores_uses_primat_when_it_has_results(self):
+        original = api_server.primat_nearby_stores
+        api_server.primat_nearby_stores = lambda zip_code, api_key=None: [
+            {"kedja": "Willys", "namn": "Willys Gävle Gestrike", "ort": "Gävle", "avstandKm": 0.9},
+            {"kedja": "ICA", "namn": "Maxi ICA Stormarknad Brynäs", "ort": "Gävle", "avstandKm": 2.2},
+        ]
+        try:
+            stores = api_server.nearby_stores("80252")
+        finally:
+            api_server.primat_nearby_stores = original
+        self.assertEqual({store["kedja"] for store in stores}, {"Willys", "ICA"})
         self.assertEqual(stores, sorted(stores, key=lambda store: store["avstandKm"]))

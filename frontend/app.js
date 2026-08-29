@@ -568,6 +568,18 @@ function renderStoreComparison(selected) {
 
 const CATEGORY_MAP = { "Frukt & grönt": ["Purjolök", "Morötter", "Lök", "Paprika", "Citron", "Dill", "Basilika", "Lök & vitlök", "Zucchini", "Vitlök", "Timjan", "Sparris", "Rödkål"], Mejeri: ["Grädde", "Riven ost", "Yoghurt", "Mjölk", "Crème fraiche", "Ägg", "Halloumi", "Feta"], "Kött & fisk": ["Kycklinglårfilé", "Kycklingfilé", "Falukorv", "Fryst torsk", "Laxfilé", "Köttfärs", "Fläskfilé", "Biff", "Kalvschnitzel"], Torrvaror: ["Pasta", "Ris", "Matvete", "Äggnudlar", "Vetemjöl", "Röda linser", "Kidneybönor", "Svarta bönor", "Majs", "Krossade tomater", "Tomatpuré", "Salsa", "Soja", "Lasagneplattor", "Kikärtor", "Lingonsylt", "Vegofärs", "Tofu", "Äppelmos", "Kapris"], Frys: ["Wokgrönsaker", "Bär", "Räkor"] };
 function itemCategory(name) { return Object.entries(CATEGORY_MAP).find(([, names]) => names.includes(name))?.[0] || "Övrigt"; }
+function renderAttribution(shoppingItems) {
+  // Both Primat and Open Food Facts require visible attribution wherever
+  // their data/images actually appear, not unconditionally - shown only for
+  // whichever source(s) are actually behind something currently on screen.
+  const usesPrimat = shoppingItems.some(item => state.livePriser[item.namn]?.kalla === "primat");
+  const usesOff = shoppingItems.some(item => state.livePriser[item.namn]?.bildKalla === "openfoodfacts");
+  const parts = [];
+  if (usesPrimat) parts.push('Prisdata från <a href="https://primat.nu" target="_blank" rel="noopener">primat.nu</a>');
+  if (usesOff) parts.push('Bilddata från <a href="https://openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (CC BY-SA)');
+  $("primatAttribution").innerHTML = parts.join(" · ");
+  $("primatAttribution").hidden = !parts.length;
+}
 function shoppingItemMarkup(item) {
   const product = PRODUCT_CATALOG[item.namn] || { namn: item.namn, marke: "", pris: 0 };
   const pantry = state.pantry[item.namn]?.amount || 0;
@@ -624,6 +636,7 @@ function renderBasket() {
   const updatedSuffix = liveCount && state.liveUpdatedAt ? ` (${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })})` : "";
   $("shoppingProgress").textContent = `${completed} av ${shoppingItems.length} varor${liveCount ? ` · ${liveCount} med livepris${updatedSuffix}` : ""}`; $("shoppingCost").textContent = `${money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
   $("shoppingComplete").hidden = !(shoppingItems.length && completed === shoppingItems.length);
+  renderAttribution(shoppingItems);
   $("basketTotal").textContent = money(total); $("basketRemaining").textContent = money(Math.abs(remaining)); $("basketRemainingRow").classList.toggle("over-budget", remaining < 0); $("basketRemainingRow").querySelector("span").textContent = remaining < 0 ? "Över budget" : "Kvar";
   renderStoreComparison(selected); renderPantry();
   document.querySelectorAll("[data-week-store]").forEach(button => button.classList.toggle("active", button.dataset.weekStore === state.butik));
@@ -684,7 +697,7 @@ async function fetchProductsBatch(chain, zip, names, onItem) {
   return produkter;
 }
 function mapLiveProducts(produkter) {
-  return Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "" }]));
+  return Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "", kalla: product.kalla || "", bildKalla: product.bild_kalla || "" }]));
 }
 let livePriceSync = { key: null, loading: false };
 async function syncLivePrices(shoppingItems) {

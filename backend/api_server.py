@@ -24,7 +24,7 @@ from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature
 from services.email import MailError, send_email
-from services.pricing import PriceCacheStore
+from services.pricing import CHAIN_TO_PRIMAT, OpenFoodFactsError, PRIMAT_ATTRIBUTION, PriceCacheStore, PrimatError, image_url_for_gtin, nearby_stores as primat_nearby_stores, resolve_stores as primat_resolve_stores, search_products as primat_search_products, to_matjakt_product as primat_to_matjakt_product
 from services.recipe_providers import RecipeService, TheMealDbProvider
 
 logging.basicConfig(level=logging.INFO)
@@ -68,6 +68,10 @@ CAMPAIGN_CAPABLE_CHAINS = ("Coop", "Hemköp")
 CAMPAIGN_SCAN_INGREDIENTS = ["Kycklingfilé", "Kycklinglårfilé", "Köttfärs", "Biff", "Fläskfilé", "Laxfilé", "Fryst torsk", "Räkor", "Kalvschnitzel", "Falukorv", "Halloumi"]
 GEOCODE_CACHE_TTL_SECONDS = 86400
 PREMIUM_CODE = os.environ.get("MATJAKT_PREMIUM_CODE", "")
+PRIMAT_API_KEY = os.environ.get("PRIMAT_API_KEY", "")
+PRIMAT_STORE_CACHE_TTL_SECONDS = 86400
+PRIMAT_CIRCUIT_COOLDOWN_SECONDS = 60
+OFF_IMAGE_CACHE_TTL_SECONDS = 7 * 86400
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICE_MONTHLY = os.environ.get("STRIPE_PRICE_MONTHLY", "")
@@ -113,6 +117,10 @@ STORE_CONFIG = {
 }
 DEFAULT_ZIP = "11122"
 ICA_STORE_CACHE = {}
+PRIMAT_STORE_CACHE = {}
+OFF_IMAGE_CACHE = {}
+_primat_store_scope_lock = threading.Lock()
+_primat_circuit_open_until = 0.0
 PANTRY_RECIPE_CACHE = {}
 CAMPAIGN_CACHE = {}
 GEOCODE_CACHE = {}
@@ -359,6 +367,26 @@ def search_coop_stores(page, city):
 
 
 def nearby_stores(zip_code):
+    # Primat's own store resolver first - a fast, ordinary HTTPS call that
+    # already covers Willys/Coop/Hemköp/ICA (notably ICA, which scraping
+    # can't reach reliably - see ica_stores_for_zip, blocked by a CAPTCHA
+    # this app has never attempted to bypass) with real distances, no
+    # geocoding or scraping needed at all. Falls through to the existing
+    # scrape-based approach only if Primat has nothing. Shares the same
+    # circuit breaker as primat_store_scope/fetch_from_primat - see
+    # _trip_primat_circuit for why a failure here shouldn't be retried
+    # immediately either.
+    primat_results = []
+    if not _primat_circuit_is_open():
+        try:
+            primat_results = primat_nearby_stores(zip_code, api_key=PRIMAT_API_KEY or None)
+        except PrimatError:
+            logger.exception("Primat nearby-stores failed for zip %s", zip_code)
+            _trip_primat_circuit()
+    if primat_results:
+        nearby = sorted((s for s in primat_results if s["avstandKm"] is not None and s["avstandKm"] <= NEARBY_STORE_RADIUS_KM), key=lambda s: s["avstandKm"])
+        return nearby[:NEARBY_STORE_LIMIT]
+
     place = geocode_postcode(zip_code)
     if not place:
         return []
@@ -535,19 +563,162 @@ def annotate_updated(products, updated_at):
 
 
 def stamp_match(product, updated_at):
-    return {**product, "uppdaterad": updated_at} if product else None
+    if not product:
+        return None
+    return {**fill_missing_image(product), "uppdaterad": updated_at}
 
 
 def best_match(products, query):
     """Search results are sorted by relevance, not name accuracy, so a plain
     "first result" can be a wrong department entirely (e.g. "Paprika" matching
     a paprika-flavoured cracker). Prefer a result whose name actually starts
-    with the ingredient before falling back to whatever ranked first."""
+    with the ingredient before falling back to whatever ranked first.
+
+    Matched by whole leading WORDS, not a raw string prefix - found directly
+    against real Primat data: "Majs" (corn) matching "Majskakor" (corn cakes,
+    a snack) because the string "majskakor" happens to start with "majs" as a
+    character sequence. Swedish compounds words this way constantly ("Ris"/
+    "Riskakor", "Paprika"/"Paprikapulver"), so a substring check quietly
+    recommends the wrong department just as easily as no filter at all -
+    comparing whole words closes exactly that gap while still matching
+    "Kidneybönor" against "Kidneybönor Naturella".
+
+    Among equally-good name matches, prefer one with a real GTIN attached
+    (Primat results carry this; scraped results never have a "gtin" key at
+    all, so .get() just returns None for them and this tiebreaker is a no-op
+    there - a GTIN doesn't make a WRONG name match right, it only breaks ties
+    between otherwise-equal candidates)."""
     if not products:
         return None
-    query_lower = query.strip().lower()
-    starts_with = [product for product in products if product["produktnamn"].lower().startswith(query_lower)]
-    return (starts_with or products)[0]
+    query_words = query.strip().lower().split()
+    starts_with = [
+        product for product in products
+        if product["produktnamn"].lower().split()[:len(query_words)] == query_words
+    ]
+    candidates = starts_with or products
+    with_gtin = [product for product in candidates if product.get("gtin")]
+    return (with_gtin or candidates)[0]
+
+
+def _primat_circuit_is_open():
+    """True while Primat is in a post-failure cooldown - see
+    _trip_primat_circuit for why this exists."""
+    return time.monotonic() < _primat_circuit_open_until
+
+
+def _trip_primat_circuit():
+    """Opens the circuit for PRIMAT_CIRCUIT_COOLDOWN_SECONDS after ANY Primat
+    failure (resolve or search). Measured directly while building this: a
+    single bad response (a transient block, a brief outage) meant every
+    subsequent lookup - one per ingredient, times however many are in flight -
+    retried immediately, which is itself the kind of request burst that gets
+    a shared API key rate-limited or blocked by the provider's own abuse
+    protection (confirmed: a burst of retries here produced a 403 from
+    Primat's own Cloudflare layer, while a single clean request right after
+    succeeded normally). A short global cooldown after any failure turns
+    "keep hammering a service that just said no" into "back off briefly,
+    let scraping cover this round, try Primat again soon" - the difference
+    between being a well-behaved client and being the reason a key gets
+    throttled."""
+    global _primat_circuit_open_until
+    _primat_circuit_open_until = time.monotonic() + PRIMAT_CIRCUIT_COOLDOWN_SECONDS
+
+
+def primat_store_scope(zip_code):
+    """{primat_chain: "chain:store_id"} for a zip code, cached for a day
+    (store locations don't change often, and this saves a network round trip
+    on every single search). Returns {} - not an exception - if Primat's own
+    resolver is unreachable or the circuit is open, so callers just fall back
+    to searching without a store scope (or, if that's not sensible, skip
+    Primat and go straight to scraping) rather than failing the request.
+
+    Serialized with a lock - measured directly while building this: a
+    shopping list's items are looked up with a few concurrent workers (see
+    LIVE_PRICE_CONCURRENCY in app.js), and on a cold cache every one of them
+    would race to resolve the same zip code at once. That thundering herd of
+    simultaneous requests is a very different, worse pattern than a few
+    requests spread out over time, and it's what actually triggered a 403
+    from Primat's own abuse protection during testing - a single request
+    right after succeeded normally. The lock means only the first caller
+    for an uncached zip actually hits the network; everyone else just reads
+    the cache it fills in."""
+    cached = PRIMAT_STORE_CACHE.get(zip_code)
+    if cached and time.monotonic() - cached[1] < PRIMAT_STORE_CACHE_TTL_SECONDS:
+        return cached[0]
+    with _primat_store_scope_lock:
+        # Re-check inside the lock - another thread may have just resolved
+        # (or failed to resolve) this exact zip while we were waiting.
+        cached = PRIMAT_STORE_CACHE.get(zip_code)
+        if cached and time.monotonic() - cached[1] < PRIMAT_STORE_CACHE_TTL_SECONDS:
+            return cached[0]
+        if _primat_circuit_is_open():
+            return {}
+        try:
+            stores = primat_resolve_stores(zip_code, api_key=PRIMAT_API_KEY or None)
+        except PrimatError:
+            logger.exception("Primat store resolve failed for zip %s", zip_code)
+            _trip_primat_circuit()
+            return {}
+        PRIMAT_STORE_CACHE[zip_code] = (stores, time.monotonic())
+        return stores
+
+
+def fill_missing_image(product):
+    """Primat never returns product images at all (see
+    primat_client.to_matjakt_product) - this fills one in from Open Food
+    Facts via the product's GTIN when possible. Cached for a week (an image
+    URL essentially never changes) since this is a real extra network call
+    per product. Swedish private-label groceries are frequently NOT in Open
+    Food Facts at all - that's an expected, common outcome (see
+    open_food_facts_client's docstring), not something to log as an error;
+    the item just keeps the placeholder icon, same as before this existed."""
+    gtin = product.get("gtin")
+    if product.get("bild") or not gtin:
+        return product
+    cached = OFF_IMAGE_CACHE.get(gtin)
+    if cached and time.monotonic() - cached[1] < OFF_IMAGE_CACHE_TTL_SECONDS:
+        image_url = cached[0]
+    else:
+        try:
+            image_url = image_url_for_gtin(gtin)
+        except OpenFoodFactsError:
+            logger.exception("Open Food Facts image lookup failed for GTIN %s", gtin)
+            image_url = None
+        OFF_IMAGE_CACHE[gtin] = (image_url, time.monotonic())
+    if image_url:
+        # bild_kalla lets the frontend show Open Food Facts' own required
+        # attribution specifically when one of their images is actually on
+        # screen, same idea as "kalla" for Primat's price attribution.
+        product = {**product, "bild": image_url, "bild_kalla": "openfoodfacts"}
+    return product
+
+
+def fetch_from_primat(chain, query, zip_code):
+    """Tries Primat for a single ingredient query before ever touching
+    Playwright. A fast, ordinary HTTPS call - no headless browser - so this
+    runs directly on the request-handling thread; run_on_scrape_thread's
+    dedicated worker pool exists specifically to manage Playwright's
+    cost/slowness, which doesn't apply here. Always returns a list (possibly
+    empty) rather than raising - "Primat has nothing for this" and "Primat
+    couldn't be reached" both mean the same thing to callers: fall back to
+    scraping (see get_shared_browser/parse_products), since Primat is
+    explicitly still under active development and this app must never depend
+    on it always answering."""
+    if _primat_circuit_is_open():
+        return []
+    primat_chain = CHAIN_TO_PRIMAT.get(chain)
+    if not primat_chain:
+        return []
+    store_scope = primat_store_scope(zip_code).get(primat_chain)
+    if not store_scope:
+        return []
+    try:
+        results = primat_search_products(query, stores=store_scope, api_key=PRIMAT_API_KEY or None)
+    except PrimatError:
+        logger.exception("Primat product search failed for %s/%s", chain, query)
+        _trip_primat_circuit()
+        return []
+    return [primat_to_matjakt_product(product, chain, query) for product in results]
 
 
 class ApiHandler(SimpleHTTPRequestHandler):
@@ -741,6 +912,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # uppdaterat X" instead of implying this is this-second-live.
             self.send_json(200, {"butik": chain, "sokning": query, "produkter": annotate_updated(cached, cached_at)}, cache_seconds=CACHE_TTL_SECONDS)
             return
+
+        primat_products = fetch_from_primat(chain, query, zip_code)
+        if primat_products:
+            store_products(chain, query, zip_code, primat_products)
+            self.send_json(200, {"butik": chain, "sokning": query, "produkter": annotate_updated(primat_products, time.time())}, cache_seconds=CACHE_TTL_SECONDS)
+            return
+
         def _scrape():
             page = new_scrape_page()
             try:
@@ -931,11 +1109,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     if cached_ingredient is not None:
                         products = cached_ingredient
                     else:
-                        try:
-                            products = scrape_products(page, chain, ingredient, zip_code)
-                        except Exception:
-                            logger.exception("Campaign scan failed for %s/%s", chain, ingredient)
-                            products = cached_ingredient or []
+                        products = fetch_from_primat(chain, ingredient, zip_code)
+                        if not products:
+                            try:
+                                products = scrape_products(page, chain, ingredient, zip_code)
+                            except Exception:
+                                logger.exception("Campaign scan failed for %s/%s", chain, ingredient)
+                                products = []
                         if products:
                             store_products(chain, ingredient, zip_code, products)
                     on_offer = next((product for product in products if product.get("kampanj") and ingredient.lower() in product["produktnamn"].lower()), None)
@@ -981,6 +1161,22 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 results[query] = stamp_match(best_match(cached, query), cached_at)
             else:
                 to_scrape.append(query)
+
+        # Primat first for anything not already cached - a fast, ordinary
+        # HTTPS call (no headless browser), so it runs inline here rather
+        # than through run_on_scrape_thread's Playwright-oriented worker
+        # pool. Only queries Primat couldn't answer fall through to scraping
+        # (see fetch_from_primat's docstring for why "nothing" and
+        # "unreachable" are treated the same way).
+        still_to_scrape = []
+        for query in to_scrape:
+            primat_products = fetch_from_primat(chain, query, zip_code)
+            if primat_products:
+                store_products(chain, query, zip_code, primat_products)
+                results[query] = stamp_match(best_match(primat_products, query), time.time())
+            else:
+                still_to_scrape.append(query)
+        to_scrape = still_to_scrape
 
         if to_scrape:
             def _scrape():
