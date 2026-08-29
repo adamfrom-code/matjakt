@@ -24,6 +24,7 @@ from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature
 from services.email import MailError, send_email
+from services.pricing import PriceCacheStore
 from services.recipe_providers import RecipeService, TheMealDbProvider
 
 logging.basicConfig(level=logging.INFO)
@@ -59,7 +60,6 @@ CACHE_TTL_SECONDS = 900
 CACHE_MAX_AGE_SECONDS = 86400
 ICA_STORE_FAILURE_TTL_SECONDS = 300
 ICA_STORE_SUCCESS_TTL_SECONDS = 3600
-CACHE_MAX_ENTRIES = 200
 MAX_CONCURRENT_SCRAPES = int(os.environ.get("MATJAKT_MAX_SCRAPES", "3"))
 MAX_BATCH_ITEMS = 20
 PANTRY_RECIPE_CACHE_TTL_SECONDS = 1800
@@ -113,7 +113,6 @@ STORE_CONFIG = {
 }
 DEFAULT_ZIP = "11122"
 ICA_STORE_CACHE = {}
-CACHE = {}
 PANTRY_RECIPE_CACHE = {}
 CAMPAIGN_CACHE = {}
 GEOCODE_CACHE = {}
@@ -222,6 +221,7 @@ def run_on_scrape_thread(fn):
 RECIPE_SERVICE = RecipeService([TheMealDbProvider()])
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 ACCOUNT_STORE = AccountStore(Path(__file__).resolve().parent / "data" / "matjakt.db")
+PRICE_CACHE = PriceCacheStore(Path(__file__).resolve().parent / "data" / "prices.db")
 
 
 def clean_text(value):
@@ -497,31 +497,45 @@ def parse_products(page, chain, query):
 
 
 def cached_products(chain, query, zip_code):
-    """Returns (products, is_fresh) for a cache entry, or (None, False) if absent
-    or older than CACHE_MAX_AGE_SECONDS. is_fresh (within CACHE_TTL_SECONDS)
-    means it can be served without re-scraping at all; a stale-but-not-expired
-    entry (fresh=False, up to 24h old) still comes back so a failed live
-    scrape can fall back to a real last-known price instead of the generic
-    per-item estimate - grocery prices don't move fast enough for that to be
-    misleading, and callers don't distinguish it from a fresh price in any
-    way (no "last seen" label - by design, not an oversight)."""
-    cached = CACHE.get((chain, query.lower(), zip_code))
-    if not cached:
-        return None, False
-    age = time.monotonic() - cached[1]
-    if age >= CACHE_MAX_AGE_SECONDS:
-        return None, False
-    return cached[0], age < CACHE_TTL_SECONDS
+    """Returns (products, updated_at) for a persisted cache entry within
+    CACHE_MAX_AGE_SECONDS (24h), or (None, None) if there's no usable entry.
+    updated_at is a real time.time() timestamp (not time.monotonic() - this
+    has to stay meaningful across restarts, since the whole point of
+    PRICE_CACHE is surviving them) so callers can label a served price
+    "Senast uppdaterat <tid>" instead of quietly passing off a day-old number
+    as current. Deliberately reused for the full 24h rather than just a few
+    minutes: re-scraping on every request is exactly what made this
+    unreliable in practice (see get_shared_browser's docstring) - a
+    same-day price is close enough to correct that re-fetching it is waste,
+    not accuracy."""
+    products, updated_at = PRICE_CACHE.get(chain, query.lower(), zip_code)
+    if products is None:
+        return None, None
+    if time.time() - updated_at >= CACHE_MAX_AGE_SECONDS:
+        return None, None
+    return products, updated_at
 
 
 def store_products(chain, query, zip_code, products):
-    CACHE[(chain, query.lower(), zip_code)] = (products, time.monotonic())
-    if len(CACHE) > CACHE_MAX_ENTRIES:
-        del CACHE[min(CACHE, key=lambda key: CACHE[key][1])]
+    PRICE_CACHE.set(chain, query.lower(), zip_code, products)
 
 
 def scrape_products(page, chain, query, zip_code):
     return parse_ica_products(page, query, zip_code) if chain == "ICA" else parse_products(page, chain, query)
+
+
+def annotate_updated(products, updated_at):
+    """Stamps each product with when this price was actually captured (a real
+    time.time() timestamp) so the frontend can tell a just-scraped price from
+    one served out of the 24h cache and label it honestly - "Live" only for
+    the former, "Senast uppdaterat <tid>" for the latter. Never omitted: a
+    price with no indication of its age is exactly the kind of claim the app
+    has deliberately avoided making all along."""
+    return [{**product, "uppdaterad": updated_at} for product in products]
+
+
+def stamp_match(product, updated_at):
+    return {**product, "uppdaterad": updated_at} if product else None
 
 
 def best_match(products, query):
@@ -719,9 +733,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if chain not in STORE_CONFIG or not 2 <= len(query) <= 100 or not re.fullmatch(r"\d{5}", zip_code):
             self.send_json(400, {"error": "Ange butik Willys/Hemköp och en sökning på minst två tecken"})
             return
-        cached, fresh = cached_products(chain, query, zip_code)
-        if fresh:
-            self.send_json(200, {"butik": chain, "sokning": query, "produkter": cached}, cache_seconds=CACHE_TTL_SECONDS)
+        cached, cached_at = cached_products(chain, query, zip_code)
+        if cached is not None:
+            # Reused as-is for the full 24h window (see cached_products) -
+            # re-scraping on every request is what made this unreliable, not
+            # what made it accurate. uppdaterad lets the frontend say "Senast
+            # uppdaterat X" instead of implying this is this-second-live.
+            self.send_json(200, {"butik": chain, "sokning": query, "produkter": annotate_updated(cached, cached_at)}, cache_seconds=CACHE_TTL_SECONDS)
             return
         def _scrape():
             page = new_scrape_page()
@@ -734,15 +752,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
             products = run_on_scrape_thread(_scrape)
             if products:
                 store_products(chain, query, zip_code, products)
+                products = annotate_updated(products, time.time())
             else:
-                products = cached or []
+                products = []
             self.send_json(200, {"butik": chain, "sokning": query, "produkter": products}, cache_seconds=CACHE_TTL_SECONDS)
         except Exception:
             logger.exception("Product scrape failed for %s/%s", chain, query)
-            if cached:
-                self.send_json(200, {"butik": chain, "sokning": query, "produkter": cached}, cache_seconds=CACHE_TTL_SECONDS)
-            else:
-                self.send_json(502, {"error": "Butikens webbsida kunde inte läsas"})
+            self.send_json(502, {"error": "Butikens webbsida kunde inte läsas"})
 
     def do_POST(self):
         self._json_response = False
@@ -911,8 +927,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             page = new_scrape_page()
             try:
                 for ingredient in CAMPAIGN_SCAN_INGREDIENTS:
-                    cached_ingredient, fresh = cached_products(chain, ingredient, zip_code)
-                    if fresh:
+                    cached_ingredient, cached_ingredient_at = cached_products(chain, ingredient, zip_code)
+                    if cached_ingredient is not None:
                         products = cached_ingredient
                     else:
                         try:
@@ -960,17 +976,17 @@ class ApiHandler(SimpleHTTPRequestHandler):
 
         results, to_scrape = {}, []
         for query in queries:
-            cached, fresh = cached_products(chain, query, zip_code)
-            if fresh:
-                results[query] = best_match(cached, query)
+            cached, cached_at = cached_products(chain, query, zip_code)
+            if cached is not None:
+                results[query] = stamp_match(best_match(cached, query), cached_at)
             else:
-                to_scrape.append((query, cached))
+                to_scrape.append(query)
 
         if to_scrape:
             def _scrape():
                 page = new_scrape_page()
                 try:
-                    for query, cached in to_scrape:
+                    for query in to_scrape:
                         try:
                             products = scrape_products(page, chain, query, zip_code)
                         except Exception:
@@ -978,9 +994,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
                             products = []
                         if products:
                             store_products(chain, query, zip_code, products)
+                            results[query] = stamp_match(best_match(products, query), time.time())
                         else:
-                            products = cached or []
-                        results[query] = best_match(products, query)
+                            results[query] = None
                 finally:
                     page.close()
 
@@ -988,8 +1004,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 run_on_scrape_thread(_scrape)
             except Exception:
                 logger.exception("Batch scrape session failed for %s", chain)
-                for query, cached in to_scrape:
-                    results.setdefault(query, best_match(cached, query) if cached else None)
+                for query in to_scrape:
+                    results.setdefault(query, None)
 
         self.send_json(200, {"butik": chain, "produkter": results})
 

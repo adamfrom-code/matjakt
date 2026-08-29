@@ -575,14 +575,14 @@ function shoppingItemMarkup(item) {
   const packages = item.package ? Math.ceil(needed / item.package.amount) : Math.ceil(needed);
   const amount = packages ? `${packages} × ${item.package?.amount || 1} ${item.package?.unit || item.unit}` : "Finns hemma";
   const live = state.livePriser[item.namn];
-  const priceLabel = live ? `${money(live.pris_kr * (packages || 1))}<span class="live-badge">Live</span>` : product.pris ? money(product.pris * packages) : "";
+  const priceLabel = live ? `${money(live.pris_kr * (packages || 1))}${priceFreshnessBadge(live.uppdaterad)}` : product.pris ? money(product.pris * packages) : "";
   // PRODUCT_CATALOG uses "ICA" as a generic placeholder brand for estimated
   // prices, not a claim that the item comes from ICA specifically - showing it
   // next to a Willys/Coop list read as a store mismatch, so it's only shown
   // when it names a real distinguishing brand.
   const brand = product.marke && product.marke !== "ICA" ? `${product.marke} · ` : "";
   const detail = live ? escapeHtml(live.produktnamn) : packages ? `${brand}Uppskattat · ${amount}` : amount;
-  const photo = live?.bild ? `<img class="shopping-product-image has-image" src="${live.bild}" alt="" loading="lazy">` : `<span class="shopping-product-image" aria-hidden="true">${escapeHtml(item.namn.slice(0, 1))}</span>`;
+  const photo = live?.bild ? `<img class="shopping-product-image has-image" src="${live.bild}" alt="" loading="lazy">` : `<span class="shopping-product-image placeholder" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 8h12l-1 12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8ZM9 8V6a3 3 0 0 1 6 0v2"/></svg></span>`;
   return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}>${photo}<span class="product-info"><strong>${item.namn}</strong><small>${detail}</small></span><strong>${priceLabel}</strong></label>`;
 }
 function pantryStep(name) { return (PACKAGE_INFO[name]?.unit || "st") === "st" ? 1 : 50; }
@@ -678,7 +678,26 @@ async function fetchProductsBatch(chain, zip, names, onItem) {
   return produkter;
 }
 function mapLiveProducts(produkter) {
-  return Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "" }]));
+  // uppdaterad comes from the backend in seconds (Python time.time()) - JS
+  // timestamps are milliseconds, hence the *1000. Falls back to "now" only
+  // if a caller somehow omits it (defensive, shouldn't happen - the backend
+  // always stamps it, see annotate_updated/stamp_match).
+  return Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "", uppdaterad: product.uppdaterad ? Number(product.uppdaterad) * 1000 : Date.now() }]));
+}
+const LIVE_LABEL_WINDOW_MS = 10 * 60 * 1000;
+function priceFreshnessBadge(uppdaterad) {
+  // Anything just scraped this session reads "Live"; anything served from
+  // the backend's persistent cache (up to 24h old - see cached_products on
+  // the backend) reads "Uppdaterad" with the actual time on hover/tap, so a
+  // same-day cached price never gets presented as if it were fetched this
+  // second. The app never has stale-beyond-24h data to show at all - the
+  // backend already refuses to serve anything older than that.
+  if (!uppdaterad) return "";
+  if (Date.now() - uppdaterad < LIVE_LABEL_WINDOW_MS) return '<span class="live-badge">Live</span>';
+  const date = new Date(uppdaterad);
+  const sameDay = date.toDateString() === new Date().toDateString();
+  const when = sameDay ? date.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" }) : date.toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
+  return `<span class="live-badge stale" title="Senast uppdaterat ${escapeHtml(when)}">Uppdaterad</span>`;
 }
 let livePriceSync = { key: null, loading: false };
 async function syncLivePrices(shoppingItems) {

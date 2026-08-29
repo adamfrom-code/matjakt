@@ -6,6 +6,10 @@ services:
     dockerContext: .
     plan: starter
     healthCheckPath: /api/health
+    disk:
+      name: matjakt-data
+      mountPath: /app/backend/data
+      sizeGB: 1
     envVars:
       - key: MATJAKT_FRONTEND_ORIGIN
         value: https://adamfrom-code.github.io
