@@ -121,7 +121,7 @@ STORE_LIST_CACHE = {}
 COOP_STORE_SEARCH_CACHE = {}
 _scrape_executor = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_CONCURRENT_SCRAPES, thread_name_prefix="playwright-worker")
 _thread_browser = threading.local()
-BROWSER_MAX_REQUESTS = 10
+BROWSER_MAX_REQUESTS = 4
 
 
 def get_shared_browser():
@@ -146,11 +146,15 @@ def get_shared_browser():
     measured directly against production: a long run of consecutive real page
     loads on the same browser process visibly slows down and starts failing
     more (a 10-item week went from consistently succeeding on isolated
-    single-item requests to only 2-4/10 succeeding back to back), on a host
-    with just 512MB of RAM to work with. Periodically starting clean is cheap
-    (the 1-3s relaunch cost this function exists to avoid paying per-request)
-    compared to the alternative of degrading for the rest of the process's
-    life."""
+    single-item requests to only 2/10 succeeding back to back), on a host
+    with just 512MB of RAM to work with. Deliberately low (4, not 10 or more):
+    a typical shopping week is itself ~10 items, and the whole point is for a
+    week-sized run to actually get recycled partway through instead of aging
+    on one browser the entire time - a threshold at or above a typical batch
+    size would never trigger during the run it's meant to help. Periodically
+    starting clean is cheap (the 1-3s relaunch cost this function exists to
+    avoid paying per-request) compared to the alternative of degrading for the
+    rest of the process's life."""
     browser = getattr(_thread_browser, "browser", None)
     if browser is not None and (not browser.is_connected() or _thread_browser.request_count >= BROWSER_MAX_REQUESTS):
         try:
