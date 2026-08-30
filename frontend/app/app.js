@@ -596,44 +596,48 @@ async function renderRecipePage() {
 function branchLiveTotal(shoppingItems, chainProducts) {
   return calculateLiveShoppingTotal(shoppingItems, chainProducts, pantryAmounts(state.pantry));
 }
-let branchComparisonSync = { key: null, chains: new Set() };
+// A branch's stable identity for state.liveBranchTotals - primatKey, not
+// chain name, since two branches of the same chain can genuinely have
+// different prices (member deals, local campaigns - see cache_scope's
+// docstring server-side). A branch with no primatKey (pure scrape fallback,
+// nothing concrete to target) has no branch-specific live price to key -
+// callers must check for that and leave it out rather than fetch it.
+function branchLiveKey(branch) { return branch.primatKey ? `${branch.kedja}#${branch.primatKey}` : null; }
+let branchComparisonSync = { key: null, branches: new Set() };
 async function syncBranchComparison(shoppingItems, branches) {
   const names = shoppingItems.map(item => item.namn).sort();
   const key = `${state.postnummer}|${names.join(",")}`;
-  if (branchComparisonSync.key !== key) { branchComparisonSync = { key, chains: new Set() }; state.liveBranchTotals = {}; }
-  // Must resolve the SAME store_key syncLivePrices uses for a pinned branch
-  // (see its own "branch?.kedja === chain ? branch.primatKey : ''" logic) -
-  // otherwise this fetches the chain's default door while the per-item rows
-  // (state.livePriser, driven by syncLivePrices) show a specific pinned
-  // door's prices, and the header total silently disagrees with what's
-  // listed below it. Tracked per (chain, storeKey) pair, not just chain, so
-  // pinning/unpinning a branch is treated as a fetch worth redoing even when
-  // this exact chain was already fetched under the old key this session.
-  const pinned = pinnedBranchMatch();
-  const chains = [...new Set(branches.map(branch => branch.kedja))]
-    .filter(chain => VALID_CHAINS.includes(chain))
-    .map(chain => ({ chain, storeKey: pinned && pinned.kedja === chain ? pinned.primatKey : "" }))
-    .filter(({ chain, storeKey }) => !branchComparisonSync.chains.has(`${chain}#${storeKey}`));
+  if (branchComparisonSync.key !== key) { branchComparisonSync = { key, branches: new Set() }; state.liveBranchTotals = {}; }
   if (!names.length) return;
-  chains.forEach(({ chain, storeKey }) => branchComparisonSync.chains.add(`${chain}#${storeKey}`));
-  // Each chain is fetched independently and in parallel - a slow/timed-out chain (e.g.
-  // Coop) must not delay the others from starting or completing.
-  await Promise.allSettled(chains.map(async ({ chain, storeKey }) => {
+  // Every nearby branch gets its own live fetch, keyed by its own primatKey -
+  // this used to fetch once per CHAIN and let every branch of that chain
+  // show that single result as if it were each branch's own live price
+  // (found live 2026-08-30: four different Coop branches all showing an
+  // identical "20 kr LIVE"). primatOnly:true because a scrape genuinely
+  // can't answer "this specific branch" any differently from another branch
+  // of the same chain (only Primat's store_key can) - with up to a dozen
+  // nearby branches, this keeps every one of these calls on the fast
+  // Primat/cache path and never triggers Playwright.
+  const targets = branches.filter(branch => branch.primatKey && !branchComparisonSync.branches.has(branchLiveKey(branch)));
+  targets.forEach(branch => branchComparisonSync.branches.add(branchLiveKey(branch)));
+  // Each branch is fetched independently and in parallel - a slow/timed-out
+  // one must not delay the others from starting or completing.
+  await Promise.allSettled(targets.map(async branch => {
     if (branchComparisonSync.key !== key) return;
     try {
-      const produkter = await fetchProductsBatch(chain, state.postnummer, names, undefined, storeKey);
+      const produkter = await fetchProductsBatch(branch.kedja, state.postnummer, names, undefined, branch.primatKey, true);
       if (branchComparisonSync.key !== key) return;
       const matched = Object.values(produkter).filter(Boolean);
-      if (matched.length) { state.liveBranchTotals[chain] = branchLiveTotal(shoppingItems, produkter); state.liveUpdatedAt = Date.now(); renderBasket(); }
-    } catch { /* den här kedjan visar kvar den statiska uppskattningen om livehämtningen misslyckas */ }
+      if (matched.length) { state.liveBranchTotals[branchLiveKey(branch)] = branchLiveTotal(shoppingItems, produkter); state.liveUpdatedAt = Date.now(); renderBasket(); }
+    } catch { /* den här filialen visar kvar den statiska uppskattningen om livehämtningen misslyckas */ }
   }));
 }
 // Shared by the compact widget (renderStoreComparison) and the full
 // Butiksjämförelse page - one computation of "what does this shopping list
-// cost at each chain", never two that could quietly disagree.
+// cost at each branch", never two that could quietly disagree.
 function computeStoreResults(selected, branches, shoppingItems) {
   return branches.map(branch => {
-    const live = state.liveBranchTotals[branch.kedja];
+    const live = state.liveBranchTotals[branchLiveKey(branch)];
     return { branch, cost: live ? live.cost : shoppingListCost(selected, branch), isLive: live != null, matched: live?.matched ?? null, certain: live?.certain ?? null, totalItems: shoppingItems.length };
   }).sort((a, b) => a.cost - b.cost);
 }
@@ -728,12 +732,13 @@ function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
 function renderStoreComparisonPage(selected) {
   const branches = nearbyBranches();
   const shoppingItems = aggregateShopping(selected);
-  // computeStoreResults returns one row per physical branch (several Coop
-  // locations can each appear) - that's exactly what the compact widget's
-  // pin-a-specific-branch feature needs, but this page compares chains, not
-  // addresses, and pricing is already chain-level here (see
-  // state.liveBranchTotals being keyed by kedja) - so same-chain branches
-  // would otherwise show up as identical-priced duplicate rows.
+  // computeStoreResults returns one row per physical branch, each with its
+  // own genuinely distinct price (see branchLiveKey) - that's exactly what
+  // the compact widget's pin-a-specific-branch feature needs, but this page
+  // compares chains, not addresses. computeStoreResults already sorts by
+  // cost, so keeping only the first occurrence per chain here means "each
+  // chain's cheapest nearby branch" - a real comparison now, not a
+  // coincidence of every branch sharing one fake chain-wide price.
   const seenChains = new Set();
   const results = computeStoreResults(selected, branches, shoppingItems).filter(r => {
     if (seenChains.has(r.branch.kedja)) return false;
@@ -1047,7 +1052,7 @@ const VALID_CHAINS = ["ICA", "Willys", "Hemköp", "Coop"];
 // wouldn't help (they'd just queue there instead of here), and sending only
 // one at a time would leave the backend's second worker idle the whole sync.
 const LIVE_PRICE_CONCURRENCY = 2;
-async function fetchProductsBatch(chain, zip, names, onItem, storeKey) {
+async function fetchProductsBatch(chain, zip, names, onItem, storeKey, primatOnly) {
   const produkter = {};
   let nextIndex = 0;
   async function worker() {
@@ -1055,7 +1060,10 @@ async function fetchProductsBatch(chain, zip, names, onItem, storeKey) {
       const name = names[nextIndex++];
       try {
         // 35s timeout to give Coop's slower pages room to finish (matches the backend's own 30s bound on how long it'll wait per item).
-        const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: [name], ...(storeKey ? { butiksnyckel: storeKey } : {}) }), signal: AbortSignal.timeout(35000) });
+        // primatOnly-fetches never scrape server-side (see the backend's own
+        // docstring for why), so they're always fast regardless of this
+        // timeout - it's sized for the non-primatOnly case.
+        const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: [name], ...(storeKey ? { butiksnyckel: storeKey } : {}), ...(primatOnly ? { primatOnly: true } : {}) }), signal: AbortSignal.timeout(35000) });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const found = (await response.json()).produkter || {};
         Object.assign(produkter, found);

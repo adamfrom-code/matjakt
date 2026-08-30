@@ -18,7 +18,7 @@ services:
       - key: MATJAKT_PREMIUM_CODE
         sync: false
       - key: MATJAKT_MAX_SCRAPES
-        value: "2"
+        value: "1"
       - key: PRIMAT_API_KEY
         sync: false
       - key: MATJAKT_ADMIN_TOKEN

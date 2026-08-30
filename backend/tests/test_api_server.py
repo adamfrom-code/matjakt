@@ -1384,18 +1384,36 @@ class AuthHttpTest(unittest.TestCase):
         self.assertEqual(status, 401)
 
 
+class FakeUrlResponse:
+    """Minimal stand-in for what urlopen(...) returns, as a context manager -
+    ica_stores_for_zip is now plain HTTP (no Playwright), so its tests mock
+    the transport instead of a fake browser page."""
+    def __init__(self, payload):
+        self._payload = json.dumps(payload).encode("utf-8")
+
+    def read(self):
+        return self._payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
 class IcaStoreCacheTest(unittest.TestCase):
+    def setUp(self):
+        self._original_urlopen = api_server.urlopen
+
     def tearDown(self):
         api_server.KV_CACHE.clear()
+        api_server.urlopen = self._original_urlopen
 
     def test_fresh_cache_entry_skips_network_lookup(self):
         api_server.KV_CACHE.set("ica_stores", "11122", {"stores": [{"accountId": "abc"}]})
+        api_server.urlopen = lambda request, timeout=None: (_ for _ in ()).throw(AssertionError("should not hit the network for a fresh cache entry"))
 
-        class ExplodingPage:
-            def goto(self, *args, **kwargs):
-                raise AssertionError("should not hit the network for a fresh cache entry")
-
-        store = api_server.resolve_ica_store(ExplodingPage(), "11122")
+        store = api_server.resolve_ica_store("11122")
         self.assertEqual(store, {"accountId": "abc"})
 
     def test_failed_lookup_expires_and_is_retried(self):
@@ -1403,29 +1421,23 @@ class IcaStoreCacheTest(unittest.TestCase):
         # (300s), not the long success TTL - backdating past that (not just
         # past 0) is what actually exercises the retry path.
         api_server.KV_CACHE.set("ica_stores", "11122", {"stores": []}, updated_at=time.time() - api_server.ICA_STORE_FAILURE_TTL_SECONDS - 1)
+        api_server.urlopen = lambda request, timeout=None: FakeUrlResponse({"forPickupDelivery": [{"accountId": "xyz"}]})
 
-        class FakeLocator:
-            def inner_text(self):
-                return json.dumps({"forPickupDelivery": [{"accountId": "xyz"}]})
-
-        class FakePage:
-            def goto(self, *args, **kwargs):
-                pass
-
-            def locator(self, selector):
-                return FakeLocator()
-
-        store = api_server.resolve_ica_store(FakePage(), "11122")
+        store = api_server.resolve_ica_store("11122")
         self.assertEqual(store, {"accountId": "xyz"})
 
 
 class NearbyStoresTest(unittest.TestCase):
+    def tearDown(self):
+        api_server.KV_CACHE.clear()
+
     def test_haversine_km_known_distance(self):
         # Stockholm to Gothenburg is roughly 400 km as the crow flies.
         distance = api_server.haversine_km(59.3293, 18.0686, 57.7089, 11.9746)
         self.assertTrue(390 <= distance <= 410, distance)
 
     def test_nearby_stores_combines_all_chains_sorts_by_distance_and_caps_radius(self):
+        api_server.KV_CACHE.clear()
         originals = {
             name: getattr(api_server, name)
             for name in ["geocode_postcode", "fetch_axfood_stores", "ica_stores_for_zip", "search_coop_stores", "sync_playwright", "primat_nearby_stores"]
@@ -1439,7 +1451,7 @@ class NearbyStoresTest(unittest.TestCase):
         api_server.primat_nearby_stores = lambda zip_code, api_key=None: []
         api_server.geocode_postcode = lambda zip_code: {"ort": "Gävle", "lat": 60.67, "lon": 17.14}
         api_server.fetch_axfood_stores = lambda chain: [{"kedja": chain, "namn": f"{chain} nära", "lat": 60.68, "lon": 17.15, "ort": "Gävle"}]
-        api_server.ica_stores_for_zip = lambda page, zip_code: [{"name": "ICA långt bort", "latitude": 65.6, "longitude": 22.15, "address": {"city": "Luleå"}}]
+        api_server.ica_stores_for_zip = lambda zip_code: [{"name": "ICA långt bort", "latitude": 65.6, "longitude": 22.15, "address": {"city": "Luleå"}}]
         api_server.search_coop_stores = lambda page, city: [{"kedja": "Coop", "namn": "Coop nära", "lat": 60.69, "lon": 17.16, "ort": "Gävle"}]
         api_server.sync_playwright = _fake_sync_playwright
         _reset_shared_browser()
@@ -1465,3 +1477,29 @@ class NearbyStoresTest(unittest.TestCase):
             api_server.primat_nearby_stores = original
         self.assertEqual({store["kedja"] for store in stores}, {"Willys", "ICA"})
         self.assertEqual(stores, sorted(stores, key=lambda store: store["avstandKm"]))
+
+    def test_nearby_stores_result_is_cached_and_skips_recomputation(self):
+        # The whole point of this cache (added after a real OOM kill caused
+        # by repeated scraping - see nearby_stores' docstring): a second call
+        # for the same zip must not touch Primat, geocoding, or scraping at
+        # all, however they'd fail if called.
+        original = api_server.primat_nearby_stores
+        api_server.primat_nearby_stores = lambda zip_code, api_key=None: [
+            {"kedja": "Willys", "namn": "Willys Gävle Gestrike", "ort": "Gävle", "avstandKm": 0.9},
+        ]
+        try:
+            first = api_server.nearby_stores("80252")
+        finally:
+            api_server.primat_nearby_stores = original
+
+        def _boom(*args, **kwargs):
+            raise AssertionError("should not be called for a cached zip")
+        original_geocode = api_server.geocode_postcode
+        api_server.primat_nearby_stores = _boom
+        api_server.geocode_postcode = _boom
+        try:
+            second = api_server.nearby_stores("80252")
+        finally:
+            api_server.primat_nearby_stores = original
+            api_server.geocode_postcode = original_geocode
+        self.assertEqual(first, second)

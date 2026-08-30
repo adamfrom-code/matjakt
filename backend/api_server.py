@@ -76,7 +76,14 @@ CACHE_TTL_SECONDS = 900
 CACHE_MAX_AGE_SECONDS = 6 * 3600
 ICA_STORE_FAILURE_TTL_SECONDS = 300
 ICA_STORE_SUCCESS_TTL_SECONDS = 24 * 3600
-MAX_CONCURRENT_SCRAPES = int(os.environ.get("MATJAKT_MAX_SCRAPES", "3"))
+# Each worker thread keeps its own persistent Chromium process alive (see
+# get_shared_browser) - this is therefore also the hard ceiling on how many
+# Chromium processes can ever run at once. Defaults to 1 (not 3) because the
+# production host has just 512MB-2GB of RAM; a second concurrent browser is
+# exactly what caused a real OOM kill (Render Events: "Ran out of memory
+# (used over 512MB)") on 2026-08-30. Only raise this on a host with RAM to
+# spare for genuinely concurrent scraping.
+MAX_CONCURRENT_SCRAPES = int(os.environ.get("MATJAKT_MAX_SCRAPES", "1"))
 MAX_BATCH_ITEMS = 20
 PANTRY_RECIPE_CACHE_TTL_SECONDS = 1800
 CAMPAIGN_CACHE_TTL_SECONDS = 3600
@@ -117,6 +124,12 @@ ICA_STORE_LIST_TTL_SECONDS = 3600
 COOP_STORE_SEARCH_TTL_SECONDS = 86400
 NEARBY_STORE_LIMIT = 12
 NEARBY_STORE_RADIUS_KM = 60
+# Whole-result cache for nearby_stores() itself (see its docstring) - a
+# successful list is cached as long as a store list normally would be;
+# an empty result gets a much shorter TTL so a transient Primat/geocode
+# hiccup doesn't lock a postcode out of any stores for a full day.
+NEARBY_STORES_TTL_SECONDS = STORE_LIST_CACHE_TTL_SECONDS
+NEARBY_STORES_EMPTY_TTL_SECONDS = 300
 
 STORE_CONFIG = {
     "Willys": {
@@ -265,6 +278,19 @@ def run_on_scrape_thread(fn):
         logger.error("Scrape task exceeded %ss - replacing the worker pool so future requests aren't wedged behind it", SCRAPE_TASK_TIMEOUT_SECONDS)
         stale_executor = _scrape_executor
         _scrape_executor = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_CONCURRENT_SCRAPES, thread_name_prefix="playwright-worker")
+        # The wedged thread's browser can only ever be closed from that same
+        # thread (Playwright's sync API isn't safe to touch cross-thread -
+        # see get_shared_browser). Queuing the close behind the stuck job is
+        # a best-effort, not a guarantee (a truly-forever-hung call means
+        # this never runs), but without it every timeout permanently leaked
+        # one more live Chromium process for the rest of the server's
+        # lifetime - on a memory-constrained host that quietly defeats
+        # MAX_CONCURRENT_SCRAPES over time even though it's meant to be a
+        # hard ceiling.
+        try:
+            stale_executor.submit(_close_thread_browser)
+        except RuntimeError:
+            pass
         stale_executor.shutdown(wait=False)
         raise
 RECIPE_SERVICE = RecipeService([TheMealDbProvider()])
@@ -298,13 +324,27 @@ def geocode_postcode(zip_code):
     so postcode-based distance works outside the Gävle demo data. Cached
     forever, persisted to disk since postal geography doesn't change day to
     day and this must survive restarts/deploys, not just this process's
-    lifetime."""
+    lifetime.
+
+    Returns None on any failure (unknown postcode, network error, timeout) -
+    never lets urlopen's exception escape. Found live: an invalid postcode
+    makes zippopotam.us answer with a genuine HTTP 404, which urlopen raises
+    as an uncaught HTTPError - that propagated all the way up through
+    nearby_stores() to /api/stores's generic handler, which turned it into a
+    502. A 502 is exactly what this app must never return for "we couldn't
+    resolve this", per the same reasoning as stale_products - an honest
+    empty/not-found result, not a server error, is what a bad or unlucky
+    input should produce."""
     cached, updated_at = KV_CACHE.get("geocode", zip_code)
-    if cached and time.time() - updated_at < GEOCODE_CACHE_TTL_SECONDS:
+    if cached is not None and time.time() - updated_at < GEOCODE_CACHE_TTL_SECONDS:
         return cached
     request = Request(f"http://api.zippopotam.us/SE/{zip_code}", headers={"User-Agent": "Matjakt/1.0"})
-    with urlopen(request, timeout=8) as response:
-        data = json.load(response)
+    try:
+        with urlopen(request, timeout=8) as response:
+            data = json.load(response)
+    except Exception:
+        logger.exception("Geocode lookup failed for zip %s", zip_code)
+        return None
     place = (data.get("places") or [None])[0]
     if not place:
         return None
@@ -313,20 +353,29 @@ def geocode_postcode(zip_code):
     return result
 
 
-def ica_stores_for_zip(page, zip_code):
+def ica_stores_for_zip(zip_code):
     """ICA has no search results at all until a pickup/delivery store is chosen
     for a postnummer. Found via live network inspection: this JSON endpoint
     backs their own "Välj butik" widget, so it's the same data they use. Returns
     every store ICA offers for the zip (used both to pick one for product
-    scraping and to list real nearby branches)."""
+    scraping and to list real nearby branches).
+
+    Plain HTTP, no Playwright - verified live (2026-08-30) that this endpoint
+    serves ordinary JSON with no browser/session/CAPTCHA requirement (unlike
+    ICA's product SEARCH, which is genuinely blocked - see the "Kända
+    begränsningar" note in README.md). Driving a whole Chromium instance just
+    to fetch a JSON document was wasted memory on a host where that's scarce;
+    this is the same urlopen pattern already used successfully for
+    geocode_postcode/fetch_axfood_stores."""
     cached, updated_at = KV_CACHE.get("ica_stores", zip_code)
     if cached is not None:
         ttl = ICA_STORE_SUCCESS_TTL_SECONDS if cached["stores"] else ICA_STORE_FAILURE_TTL_SECONDS
         if time.time() - updated_at < ttl:
             return cached["stores"]
-    page.goto(f"https://handla.ica.se/api/store/v1?zip={quote(zip_code)}&customerType=B2C", wait_until="domcontentloaded", timeout=15000)
+    request = Request(f"https://handla.ica.se/api/store/v1?zip={quote(zip_code)}&customerType=B2C", headers={"User-Agent": "Matjakt/1.0"})
     try:
-        data = json.loads(page.locator("pre").inner_text())
+        with urlopen(request, timeout=10) as response:
+            data = json.load(response)
     except Exception:
         logger.exception("Failed to parse ICA store lookup response for zip %s", zip_code)
         data = {}
@@ -335,8 +384,8 @@ def ica_stores_for_zip(page, zip_code):
     return stores
 
 
-def resolve_ica_store(page, zip_code):
-    stores = ica_stores_for_zip(page, zip_code)
+def resolve_ica_store(zip_code):
+    stores = ica_stores_for_zip(zip_code)
     return stores[0] if stores else None
 
 
@@ -354,7 +403,7 @@ def fetch_axfood_stores(chain):
     to disk, survives restarts) since store locations essentially never
     change."""
     cached, updated_at = KV_CACHE.get("store_list", chain)
-    if cached and time.time() - updated_at < STORE_LIST_CACHE_TTL_SECONDS:
+    if cached is not None and time.time() - updated_at < STORE_LIST_CACHE_TTL_SECONDS:
         return cached
     request = Request(AXFOOD_STORE_LIST_URL[chain], headers={"User-Agent": "Matjakt/1.0"})
     with urlopen(request, timeout=15) as response:
@@ -377,7 +426,7 @@ def search_coop_stores(page, city):
     JS), so - like ICA - this drives their real "Butiker" search and reads the
     same response their page renders from, instead of replicating the request."""
     cached, updated_at = KV_CACHE.get("coop_store_search", city)
-    if cached and time.time() - updated_at < COOP_STORE_SEARCH_TTL_SECONDS:
+    if cached is not None and time.time() - updated_at < COOP_STORE_SEARCH_TTL_SECONDS:
         return cached
     captured = {}
 
@@ -418,10 +467,32 @@ def search_coop_stores(page, city):
 
 
 def nearby_stores(zip_code):
+    """Cached, single-flight wrapper around _compute_nearby_stores - see that
+    function for the actual Primat/geocode/scrape logic. Added because
+    /api/stores previously called the real computation on every single
+    request with no result cache of its own (only its sub-lookups were
+    individually cached) - with Primat's quota exhausted, that meant every
+    request fell through to a real Coop scrape, which is exactly the kind of
+    repeated Chromium usage that caused a real OOM kill on the production
+    host (Render Events: "Ran out of memory (used over 512MB)", 2026-08-30).
+    The per-zip lock (same _lock_for_product_key used for products) ensures
+    concurrent requests for the same postcode share one fetch instead of each
+    starting their own."""
+    cached, updated_at = KV_CACHE.get("nearby_stores", zip_code)
+    if cached is not None and time.time() - updated_at < (NEARBY_STORES_TTL_SECONDS if cached else NEARBY_STORES_EMPTY_TTL_SECONDS):
+        return cached
+    with _lock_for_product_key(("nearby_stores", zip_code)):
+        cached, updated_at = KV_CACHE.get("nearby_stores", zip_code)
+        if cached is not None and time.time() - updated_at < (NEARBY_STORES_TTL_SECONDS if cached else NEARBY_STORES_EMPTY_TTL_SECONDS):
+            return cached
+        result = _compute_nearby_stores(zip_code)
+        KV_CACHE.set("nearby_stores", zip_code, result)
+        return result
+
+
+def _compute_nearby_stores(zip_code):
     # Primat's own store resolver first - a fast, ordinary HTTPS call that
-    # already covers Willys/Coop/Hemköp/ICA (notably ICA, which scraping
-    # can't reach reliably - see ica_stores_for_zip, blocked by a CAPTCHA
-    # this app has never attempted to bypass) with real distances, no
+    # already covers Willys/Coop/Hemköp/ICA with real distances, no
     # geocoding or scraping needed at all. Falls through to the existing
     # scrape-based approach only if Primat has nothing. Shares the same
     # circuit breaker as primat_store_scope/fetch_from_primat - see
@@ -442,24 +513,32 @@ def nearby_stores(zip_code):
     if not place:
         return []
     lat, lon = place["lat"], place["lon"]
+    # Willys/Hemköp (plain HTTP, cached) and ICA (plain HTTP, cached - see
+    # ica_stores_for_zip) never need a browser at all. Only Coop's store
+    # search genuinely does (its API sits behind a key only its own frontend
+    # JS attaches - see search_coop_stores), so a Chromium page is only
+    # opened when Coop's own cache is actually cold, not on every lookup.
     candidates = [*fetch_axfood_stores("Willys"), *fetch_axfood_stores("Hemköp")]
-    def _scrape():
-        found = []
-        page = new_scrape_page()
-        try:
-            for store in ica_stores_for_zip(page, zip_code):
-                s_lat, s_lon = store.get("latitude"), store.get("longitude")
-                if s_lat and s_lon:
-                    found.append({"kedja": "ICA", "namn": store.get("name") or "", "lat": s_lat, "lon": s_lon, "ort": (store.get("address") or {}).get("city") or ""})
-            found.extend(search_coop_stores(page, place["ort"]))
-        finally:
-            page.close()
-        return found
+    for store in ica_stores_for_zip(zip_code):
+        s_lat, s_lon = store.get("latitude"), store.get("longitude")
+        if s_lat and s_lon:
+            candidates.append({"kedja": "ICA", "namn": store.get("name") or "", "lat": s_lat, "lon": s_lon, "ort": (store.get("address") or {}).get("city") or ""})
 
-    try:
-        candidates.extend(run_on_scrape_thread(_scrape))
-    except Exception:
-        logger.exception("Failed to resolve ICA/Coop stores for zip %s", zip_code)
+    coop_cached, coop_updated_at = KV_CACHE.get("coop_store_search", place["ort"])
+    if coop_cached is not None and time.time() - coop_updated_at < COOP_STORE_SEARCH_TTL_SECONDS:
+        candidates.extend(coop_cached)
+    else:
+        def _scrape_coop():
+            page = new_scrape_page()
+            try:
+                return search_coop_stores(page, place["ort"])
+            finally:
+                page.close()
+        try:
+            candidates.extend(run_on_scrape_thread(_scrape_coop))
+        except Exception:
+            logger.exception("Failed to resolve Coop stores for %s", place["ort"])
+
     for store in candidates:
         store["avstandKm"] = round(haversine_km(lat, lon, store["lat"], store["lon"]), 1)
     nearby = sorted((s for s in candidates if s["avstandKm"] <= NEARBY_STORE_RADIUS_KM), key=lambda s: s["avstandKm"])
@@ -467,7 +546,7 @@ def nearby_stores(zip_code):
 
 
 def parse_ica_products(page, query, zip_code):
-    store = resolve_ica_store(page, zip_code)
+    store = resolve_ica_store(zip_code)
     if not store:
         return []
     account_id = store["accountId"]
@@ -875,13 +954,13 @@ def primat_store_scope(zip_code):
     the cache it fills in. Persisted to disk (not just this process's
     memory) so a restart doesn't throw away a day's worth of resolved zips."""
     cached, updated_at = KV_CACHE.get("primat_store_scope", zip_code)
-    if cached and time.time() - updated_at < PRIMAT_STORE_CACHE_TTL_SECONDS:
+    if cached is not None and time.time() - updated_at < PRIMAT_STORE_CACHE_TTL_SECONDS:
         return cached
     with _primat_store_scope_lock:
         # Re-check inside the lock - another thread may have just resolved
         # (or failed to resolve) this exact zip while we were waiting.
         cached, updated_at = KV_CACHE.get("primat_store_scope", zip_code)
-        if cached and time.time() - updated_at < PRIMAT_STORE_CACHE_TTL_SECONDS:
+        if cached is not None and time.time() - updated_at < PRIMAT_STORE_CACHE_TTL_SECONDS:
             return cached
         if _primat_circuit_is_open():
             return {}
@@ -1449,6 +1528,20 @@ class ApiHandler(SimpleHTTPRequestHandler):
         chain = payload.get("butik")
         zip_code = clean_text(str(payload.get("zip") or DEFAULT_ZIP)) or DEFAULT_ZIP
         store_key = store_key_param(payload.get("butiksnyckel"))
+        # Used by the store-comparison list, which fetches every nearby
+        # branch's own price (not just the chain's generic door - see
+        # syncBranchComparison) - with a dozen branches that's a dozen calls,
+        # and unlike a single pinned branch's list, scraping can't actually
+        # answer any of them differently from each other (a scrape has no
+        # concept of "this specific store", only Primat's store_key does -
+        # see cache_scope's docstring). Falling through to a real Chromium
+        # scrape per branch would be pure waste (identical, non-branch-
+        # specific results, N times over) and exactly the kind of repeated
+        # heavy-scrape load that caused the OOM this endpoint is guarded
+        # against elsewhere - so this flag stops at Primat/cache and skips
+        # scraping entirely, leaving unanswered branches to their honest
+        # static estimate instead.
+        primat_only = bool(payload.get("primatOnly"))
         items = payload.get("varor")
         if chain not in STORE_CONFIG or not re.fullmatch(r"\d{5}", zip_code) or not isinstance(items, list) or not items:
             self.send_json(400, {"error": "Ange butik, giltigt postnummer och en lista med varor"})
@@ -1496,6 +1589,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 else:
                     still_to_scrape.append(query)
         to_scrape = still_to_scrape
+
+        if to_scrape and primat_only:
+            for query in to_scrape:
+                results[query] = None
+            to_scrape = []
 
         if to_scrape:
             def _scrape():
