@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#24563e"/>
+      <stop offset="65%" stop-color="#173b2a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <text x="90" y="300" font-family="Georgia, serif" font-size="88" font-weight="700" fill="#ffffff">Matjakt<tspan fill="#f28c28">.</tspan></text>
+  <text x="90" y="370" font-family="Arial, sans-serif" font-size="30" fill="#e7efe9">Planera veckans middagar efter din budget</text>
+  <text x="90" y="420" font-family="Arial, sans-serif" font-size="24" fill="#b9c7bd">Riktiga priser hos ICA, Coop, Willys och Hemköp</text>
+</svg>

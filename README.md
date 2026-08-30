@@ -84,6 +84,15 @@ tests/                           frontendens enhetstester
 
 `frontend/app.js` är fortfarande UI-kompositören, men domänlogik flyttas stegvis till `src/`. En full React/React Native-migrering ingår inte i Fas 1.
 
+## Landningssida, domän och statistik
+
+`frontend/site/` är en fristående marknadssida (ingen appkod, ingen inloggning) publicerad på `/site/` bredvid appen - appens egen plats/routing är oförändrad. `frontend/CNAME` (innehåller `matjakt.store`) kopplar GitHub Pages till den domänen; filen läses automatiskt av `actions/deploy-pages` vid varje deploy, ingen manuell inställning i GitHub-gränssnittet behövs. Appens ursprungliga `github.io`-adress fortsätter fungera parallellt.
+
+**Anonym statistik** (landningssidan, `frontend/site/index.html`):
+- **Sidvisningar** via [Cloudflare Web Analytics](https://www.cloudflare.com/web-analytics/) (gratis, kakfri, ingen fingeravtrycksspårning). Aktivera: skapa ett gratis Cloudflare-konto → Web Analytics → lägg till webbplatsen `matjakt.store` → klistra in det genererade site-token i `<meta name="cf-beacon-token" content="...">` i `frontend/site/index.html`. Detta token är inte hemligt (det är en publik sididentifierare inbäddad i HTML, samma kategori som ett Google Analytics-ID) och är säkert att committa. Tomt värde = ingen analytics-kod laddas alls.
+- **Egna produkthändelser** (klick på "Testa gratis", "Logga in", "Se hur det fungerar", samt visning av prissektionen) skickas till `POST /api/analytics/event` med enbart `{"event": "<namn>"}` - ingen cookie, inget konto-id, ingen plats. Backend räknar bara upp en daglig siffra per händelsenamn (`ANALYTICS_ALLOWED_EVENTS` i `backend/api_server.py`); allt annat avvisas. Anropet är "fire and forget" (`fetch(...).catch(() => {})`) och kan aldrig hindra en knapp från att fungera, även om anropet blockeras av en annonsblockerare eller CORS ännu inte tillåter den nya domänen.
+- Ingen hemlig nyckel krävs för själva händelseräknaren - den är öppen och validerar bara mot en fast lista av tillåtna händelsenamn.
+
 ## Kända begränsningar
 
 - Butikernas DOM och villkor kan ändras; selektorer och rätt till storskalig datainsamling måste verifieras före produktion.

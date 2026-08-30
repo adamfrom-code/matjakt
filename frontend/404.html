@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f6f3ea">
+  <meta name="robots" content="noindex">
+  <title>Sidan hittades inte – Matjakt</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet">
+  <style>
+    body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#f6f3ea;color:#162019;font-family:"DM Sans",system-ui,sans-serif;text-align:center;padding:24px}
+    h1{font-family:"Fraunces",serif;font-size:28px;margin:0}
+    p{color:#6e786f;margin:0;max-width:320px}
+    a{display:inline-flex;min-height:44px;align-items:center;padding:0 22px;border-radius:99px;background:#f28c28;color:#2b1a08;font-weight:700;text-decoration:none;margin-top:8px}
+  </style>
+  <script>
+    /* This 404 page is served by GitHub Pages for any unmatched path, on both
+       the project URL (adamfrom-code.github.io/matjakt/...) and the custom
+       domain (matjakt.store/...) - those two put the app root at different
+       paths, so the "back to the app" link and the favicon (which a relative
+       href would resolve wrong for a 404 several levels deep) are set from
+       the actual hostname instead of being hardcoded to either one. */
+    var base = location.hostname === "matjakt.store" ? "/" : "/matjakt/";
+    document.write('<link rel="icon" href="' + base + 'assets/icons/icon-192.png">');
+    document.write('<link rel="canonical" href="' + location.origin + base + '">');
+  </script>
+</head>
+<body>
+  <span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:#173b2a">Matjakt<span style="color:#f28c28">.</span></span>
+  <h1>Sidan hittades inte</h1>
+  <p>Länken kan ha ändrats eller inte längre finnas. Prova att gå tillbaka till appen eller startsidan.</p>
+  <a id="home-link" href="/matjakt/">Till Matjakt →</a>
+  <script>document.getElementById("home-link").href = base;</script>
+</body>
+</html>

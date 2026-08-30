@@ -69,6 +69,12 @@ MAX_CONCURRENT_SCRAPES = int(os.environ.get("MATJAKT_MAX_SCRAPES", "3"))
 MAX_BATCH_ITEMS = 20
 PANTRY_RECIPE_CACHE_TTL_SECONDS = 1800
 CAMPAIGN_CACHE_TTL_SECONDS = 3600
+# Anonymous, aggregate-only counters for the landing page (see
+# _handle_analytics_event) - a fixed allowlist, not free-text, so this can
+# never become a place to smuggle arbitrary or identifying data through. No
+# IP, user id, or timestamp finer than "today" is ever stored alongside a
+# count.
+ANALYTICS_ALLOWED_EVENTS = frozenset({"cta_testa_gratis", "cta_logga_in", "cta_se_hur_det_fungerar", "view_premium"})
 CAMPAIGN_CAPABLE_CHAINS = ("Coop", "Hemköp")
 CAMPAIGN_SCAN_INGREDIENTS = ["Kycklingfilé", "Kycklinglårfilé", "Köttfärs", "Biff", "Fläskfilé", "Laxfilé", "Fryst torsk", "Räkor", "Kalvschnitzel", "Falukorv", "Halloumi"]
 GEOCODE_CACHE_TTL_SECONDS = 86400
@@ -1334,7 +1340,28 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/products/batch":
             self._handle_products_batch(payload)
             return
+        if parsed.path == "/api/analytics/event":
+            self._handle_analytics_event(payload)
+            return
         self.send_json(404, {"error": "Okänd endpoint"})
+
+    def _handle_analytics_event(self, payload):
+        """Anonymous product-event counter for the landing page - a click on
+        a specific CTA increments a per-day counter, nothing else. No account,
+        no cookie, no IP address is recorded here (the OS/Render's own
+        infrastructure logs may still see the request like any other, but
+        this handler adds nothing identifying on top of that). Never allowed
+        to affect page functionality - the frontend always fires this as a
+        best-effort, catch-and-ignore call."""
+        event = payload.get("event") if isinstance(payload, dict) else None
+        if event not in ANALYTICS_ALLOWED_EVENTS:
+            self.send_json(400, {"error": "Okänt event"})
+            return
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        key = f"{event}:{today}"
+        count, _ = KV_CACHE.get("analytics", key)
+        KV_CACHE.set("analytics", key, (count or 0) + 1)
+        self.send_json(200, {"ok": True})
 
     def _handle_campaigns(self, params):
         user = ACCOUNT_STORE.user_for_token(self._bearer_token())

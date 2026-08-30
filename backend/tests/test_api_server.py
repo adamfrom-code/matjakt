@@ -11,6 +11,7 @@ import time
 import unittest
 import urllib.parse
 import uuid
+from datetime import datetime, timezone
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
@@ -551,6 +552,30 @@ class ApiServerHttpTest(unittest.TestCase):
         finally:
             api_server.ADMIN_TOKEN, api_server.PRIMAT_API_KEY = original_admin_token, original_primat_key
             api_server.primat_account_status = original_account_status
+
+    def test_analytics_event_rejects_unknown_event_names(self):
+        """A fixed allowlist, not free text - this is what stops the endpoint
+        from becoming a place to smuggle arbitrary data through."""
+        status, payload = self.post("/api/analytics/event", {"event": "not_a_real_event"})
+        self.assertEqual(status, 400)
+
+    def test_analytics_event_accepts_an_allowed_event_and_never_requires_login(self):
+        status, payload = self.post("/api/analytics/event", {"event": "cta_testa_gratis"})
+        self.assertEqual(status, 200)
+        self.assertTrue(payload["ok"])
+
+    def test_analytics_event_counts_are_aggregated_per_day_not_per_click(self):
+        api_server.KV_CACHE.clear()
+        try:
+            self.post("/api/analytics/event", {"event": "view_premium"})
+            self.post("/api/analytics/event", {"event": "view_premium"})
+            self.post("/api/analytics/event", {"event": "view_premium"})
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            count, updated_at = api_server.KV_CACHE.get("analytics", f"view_premium:{today}")
+            self.assertEqual(count, 3)
+            self.assertIsNotNone(updated_at)
+        finally:
+            api_server.KV_CACHE.clear()
 
     def test_static_files_are_never_heuristically_cached(self):
         # Same connection reused for both requests (HTTP/1.1 keep-alive) so this
