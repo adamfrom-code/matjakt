@@ -32,12 +32,64 @@ ett GTIN dyker upp).
 
 | Kedja | Status | Återkommande import verifierad? |
 |---|---|---|
-| **ICA** | `working_but_rate_limited` | ❌ Nej — se nedan |
-| Coop | ej byggd | – |
-| Willys | ej byggd | – |
+| **Willys** | `working` (nationell prissättning) | ✅ **Ja** |
+| **ICA** | `working_but_rate_limited` | ❌ Nej — AWS WAF |
+| **Coop** | `blocked_requires_vendor_credential` | ❌ Nej — API kräver Coops egen nyckel |
 | Hemköp | ej byggd | – |
 | City Gross | ej byggd | – |
 | Lidl | ej byggd | – |
+
+### Willys ⭐ (mest stabil hittills)
+
+**Verifierad import (2026-08-30)** — Willys Gävle Gestrike, storeId `2132`.
+Två fulla körningar i rad, ingen blockering:
+
+| | Körning 1 | Körning 2 |
+|---|---|---|
+| Produkter hittade | 2054 | 2054 |
+| Sparade (`--limit 100`) | 100 | 100 |
+| Nya / uppdaterade | 100 / 0 | **0 / 100** |
+| Med GTIN/EAN | 100 | 100 |
+| Med bild | 100 | 100 |
+| Med ordinarie pris | 100 | 100 |
+| Med jämförpris | 100 | 100 |
+| Med kampanjpris | 1 | 1 |
+| Med multibuy | 1 | 1 |
+| Fel | 0 | 0 |
+
+```bash
+python -m backend.services.grocery.collectors.willys --store 2132 --limit 100
+```
+
+**GTIN härleds från bild-URL:en** — Willys har inget `gtin`-fält, men bilderna
+är nycklade på GTIN-14 (`.../07310865005168_C1L1_s01`). Provider sätter bara
+`gtin` när GS1-checksiffran validerar (12/12 giltiga i stickprov); en kod som
+inte validerar behandlas som "ingen GTIN" i stället för att gissas, eftersom
+fel GTIN skulle slå ihop två olika produkter i tier 1-matchningen.
+
+**Kampanj vs multibuy hålls isär.** `potentialPromotions[].conditionLabelFormatted`:
+tom sträng = rakt kampanjpris (145 → 129 kr); `"2 för"` / `"3 för"` = multibuy
+(styckpriset när man köper N). Att lagra multibuy som kampanjpris skulle
+överdriva rabatten för den som köper en vara.
+
+**Begränsning — priserna är NATIONELLA, inte per butik.** Verifierat: samma
+sökning med `storeId=2132` och `storeId=2223` ger byte-identiska svar
+(35593 B båda) med identiska priser. Endpointen accepterar men *ignorerar*
+`storeId`. Det är konsekvent med att Willys är en centralstyrd lågpriskedja,
+men ett Willys-pris får inte presenteras som verifierat för just den adressen.
+
+### Coop
+
+**Kan inte byggas utan Coops egen API-nyckel.** All produkt-/prisdata ligger
+bakom `external.api.coop.se`, som kräver en Azure APIM-nyckel
+(`Ocp-Apim-Subscription-Key`) inbäddad i Coops frontend. Verifierat: utan
+nyckel → **HTTP 401**, med ogiltig nyckel → **HTTP 401**. Sökresultatsidans
+HTML innehåller noll produktdata (allt renderas klientsidan), det finns inga
+serverrenderade produktsidor, och `robots.txt` förbjuder uttryckligen
+`/handla/sok/*` och `/handla/search*`.
+
+Att plocka ut Coops nyckel ur deras frontend och använda den i vår collector
+vore att autentisera oss med någon annans credential. Det gör vi inte.
 
 ### ICA
 
