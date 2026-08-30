@@ -34,10 +34,10 @@ ett GTIN dyker upp).
 |---|---|---|
 | **Willys** | `working` (nationell prissättning) | ✅ **Ja** |
 | **Hemköp** | `working` (nationell prissättning) | ✅ **Ja** |
+| **City Gross** | `working_but_unreliable` | ✅ Ja (men se nedan) |
 | **ICA** | `working_but_rate_limited` | ❌ Nej — AWS WAF |
 | **Coop** | `blocked_requires_vendor_credential` | ❌ Nej — API kräver Coops egen nyckel |
-| City Gross | ej byggd | – |
-| Lidl | ej byggd | – |
+| **Lidl** | `not_available_no_public_prices` | ❌ Nej — publicerar inga priser alls |
 
 ### Gemensamt Axfood-lager
 
@@ -202,3 +202,63 @@ delvis import som normalt, inte som ett fel.
 4. Använd vanlig HTTP/JSON om det fungerar — Playwright bara om det är
    bevisat nödvändigt.
 5. En misslyckad körning får **aldrig** radera befintliga priser.
+
+
+### City Gross
+
+**Verifierad import (2026-08-30)** — City Gross Gävle, `storeNumber` **3209**.
+Notera: söknings-endpointen accepterar bara `storeNumber`, inte butikens `id`
+(3136) eller `siteId` (35) — verifierat genom att de senare ger tomma
+träfflistor.
+
+| | Körning 1 | Körning 2 |
+|---|---|---|
+| Produkter hittade | 1705 | 229 ⚠️ |
+| Sparade | 100 | 100 |
+| Nya / uppdaterade | 100 / 0 | **0 / 100** |
+| Med GTIN | 100 | 100 |
+| Med bild | 100 | 100 |
+| Med ordinarie pris | 100 | 100 |
+| Med jämförpris | 100 | 100 |
+| Fel | 0 | 0 |
+
+```bash
+python -m backend.services.grocery.collectors.citygross --store 3209 --limit 100
+```
+
+**Rikast data av alla kedjor:** explicit `gtin`-fält (inte härlett), explicit
+`ordinaryPrice`/`currentPrice`/`memberPrice`/`promotions`, `lowestPriceLast30Days`
+och riktiga kategorinamn (`bfCategory`).
+
+**GTIN normaliseras till 14 siffror.** City Gross returnerar EAN-13
+(`7340083443893`) medan Axfood-kedjorna ger GTIN-14 (`07340083443893`) för
+samma vara. Utan nollutfyllnad hade cross-chain-matchningen tyst misslyckats.
+
+**`campaign_price` sätts bara när `currentPrice` faktiskt är lägre än
+`ordinaryPrice`** — annars hade ordinarie pris speglats som en rabatt som inte
+finns.
+
+⚠️ **Mindre pålitlig än Axfood-kedjorna.** City Gross stryper genom att *släppa
+anslutningar*, inte genom HTTP 429. Vid 1 s mellan anrop misslyckades 13/14
+sökord med `URLError` (därav 229 mot 1705 i körning 2); ett kontrollerat
+omtest vid 3 s lyckades på varje anrop. Fördröjningen är därför 3 s. En
+körning bör förvänta sig att vissa sökord faller bort och behandla en delvis
+import som normalt.
+
+### Lidl — inte möjlig
+
+**Lidl Sverige publicerar inga produktpriser online.** Detta är en strukturell
+egenskap hos deras affärsmodell, inte ett blockerings- eller
+credential-problem, och går därför inte att lösa tekniskt.
+
+Verifierat:
+- `lidl.se` är en marknadsförings-/reklambladssajt utan e-handel.
+- Produktsidor **finns** (505 st via `product_sitemap.xml.gz`) och har
+  JSON-LD `Product`-markup med `sku`, `name`, `image` och `brand`.
+- Men `offers`-blocket innehåller **inget `price`-fält** — bara
+  `priceCurrency: "SEK"` och `availability: "InStoreOnly"`.
+- Ingen prissträng (`XX,XX kr`) förekommer någonstans i sidans HTML.
+- `matriket.lidl.se` är också en varumärkessida, inte en butik.
+
+Veckoerbjudanden finns bara som digitalt reklamblad, inte som strukturerad
+per-produkt-prisdata.
