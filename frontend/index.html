@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=33">
+  <link rel="stylesheet" href="styles.css?v=36">
 </head>
 <body>
   <div class="phone-shell">
@@ -31,12 +31,20 @@
 
     <main class="app view-home" id="top">
       <section class="screen home-screen" aria-labelledby="homeTitle">
-        <div class="home-hero"><p class="welcome">God morgon</p><h1 id="homeTitle">Vad ska vi äta<br>i veckan?</h1><p>En godare matvecka, optimerad efter din budget.</p></div>
+        <div class="home-hero"><h1 id="homeGreeting">God morgon <span aria-hidden="true">👋</span></h1><p id="homeSubtitle">Redo för en god och prisvärd vecka.</p></div>
+
+        <button type="button" class="budget-card" id="budgetCardBtn">
+          <span class="budget-card-head"><span>Veckobudget</span></span>
+          <span class="budget-card-row"><strong id="summaryBudgetRemaining">800 kr</strong><small>kvar av <span id="summaryBudgetTotal">800 kr</span></small><b id="summaryBudgetPercent">0%</b></span>
+          <span class="progress-track"><i id="summaryBudgetBar"></i></span>
+        </button>
 
         <section class="week-card" aria-labelledby="settingsHeading">
-          <div class="week-card-label"><span>Din matvecka</span><span class="status-dot">Redo</span></div>
-          <div class="week-overview"><strong id="summaryBudget">800 kr</strong><small>Veckobudget</small><p><b id="summaryPeople">2 personer</b><i></i><b id="summaryMeals">4 middagar</b></p></div>
-          <details class="advanced-settings">
+          <div class="week-card-label"><span>Din matvecka</span><span class="status-dot" id="weekCardStatus">Redo</span></div>
+          <div class="week-overview">
+            <p><b id="summaryPeople">2 personer</b><i></i><b id="summaryMeals">4 middagar</b></p>
+          </div>
+          <details class="advanced-settings" id="advancedSettings">
             <summary id="settingsHeading">Justera veckan</summary>
             <div class="settings-content">
               <label for="budgetInput">Veckobudget</label><div class="budget-row"><input type="number" id="budgetInput" value="800" min="0" step="50" inputmode="numeric"><span>kr</span></div>
@@ -123,38 +131,63 @@
           <button class="btn btn-primary" id="generateBtn"><span>Skapa min vecka</span><span aria-hidden="true">→</span></button>
         </section>
 
-        <button class="savings-card" type="button" id="openStatsBtn"><span class="savings-icon" aria-hidden="true">↗</span><p>Dina besparingar<strong id="savingsCardValue">Skapa din första vecka</strong><small>Se sparande, favoritbutik och matsvinn</small></p></button>
+        <button class="savings-card" type="button" id="openStatsBtn">
+          <span class="savings-card-body"><span class="savings-card-label">Du sparar</span><strong id="savingsCardValue">–</strong><small id="savingsCardSubtitle">Skapa din första vecka för att se detta</small></span>
+          <span class="savings-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg></span>
+        </button>
 
-        <section class="campaign-section" id="campaignSection" aria-labelledby="campaignHeading">
-          <div class="section-heading"><div><p class="eyebrow">Premium</p><h2 id="campaignHeading">🏷️ Kampanjer just nu</h2></div></div>
-          <p class="nutrition-locked" id="campaignLocked">Logga in och lös in Premium för att se aktuella butikskampanjer hos Coop och Hemköp, med receptförslag.</p>
-          <p class="campaign-store-label" id="campaignStoreLabel" hidden></p>
-          <div id="campaignList"></div>
+        <section class="next-meal-section" aria-label="Nästa middag">
+          <div class="section-heading"><h2>Nästa middag</h2></div>
+          <div id="nextMealCard"></div>
         </section>
 
-        <section class="recipes-section" aria-labelledby="recipesHeading">
-          <div class="section-heading"><div><p class="eyebrow">Utvalt för dig</p><h2 id="recipesHeading">Recept att gilla</h2></div><button class="btn-ghost" id="refreshBtn">Byt förslag</button></div>
-          <div class="recipe-search"><label class="sr-only" for="recipeSearch">Sök recept</label><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="recipeSearch" type="search" placeholder="Sök recept eller ingrediens" autocomplete="off"></div>
-          <div class="recipe-filters"><select id="categoryFilter" aria-label="Kategori"><option value="alla">Alla kategorier</option><option value="Vegetarisk">Vegetariskt</option><option value="Fisk">Fisk</option><option value="Familjefavorit">Familjefavorit</option><option value="Snabbt & enkelt">Snabbt & enkelt</option></select><select id="timeFilter" aria-label="Tid"><option value="0">Alla tider</option><option value="30">Max 30 min</option><option value="20">Max 20 min</option></select><label class="favorite-filter"><input id="favoriteFilter" type="checkbox"> Favoriter</label></div>
-          <div class="live-products" id="liveProducts"></div><p class="section-help" id="menuSummary"></p><div class="recipe-scroll" id="recipeScroll"></div>
+        <section class="campaign-section" id="campaignSection" aria-labelledby="campaignHeading">
+          <div class="section-heading"><div><h2 id="campaignHeading">Kampanjer nära dig</h2></div><button type="button" class="btn-ghost" id="campaignShowAllBtn">Visa alla</button></div>
+          <p class="nutrition-locked" id="campaignLocked">Logga in och lös in Premium för att se aktuella butikskampanjer hos Coop och Hemköp, med receptförslag.</p>
+          <p class="campaign-store-label" id="campaignStoreLabel" hidden></p>
+          <div class="campaign-scroll" id="campaignList"></div>
+          <p class="primat-attribution" id="campaignAttribution" hidden></p>
+        </section>
+
+        <section class="hem-recipes-section" aria-labelledby="hemRecipesHeading">
+          <div class="section-heading"><div><p class="eyebrow">Utvalt för dig</p><h2 id="hemRecipesHeading">Recept att gilla</h2></div><div class="hem-recipes-actions"><button type="button" class="btn-ghost" id="refreshBtn">Byt förslag</button><button type="button" class="btn-ghost" id="hemShowAllRecipesBtn">Visa alla</button></div></div>
+          <div class="hem-recipe-scroll" id="hemRecipePreview"></div>
         </section>
       </section>
 
-      <section class="screen week-screen" aria-labelledby="basketHeading">
-        <header class="screen-header"><p class="eyebrow">Planerad för dig</p><h1 id="basketHeading">Din vecka</h1></header>
-        <div class="week-store-switch" id="weekStoreSwitch" role="tablist" aria-label="Byt butik för veckan">
-          <button type="button" data-week-store="auto">Auto</button>
-          <button type="button" data-week-store="alla">Alla</button>
-          <button type="button" data-week-store="ICA">ICA</button>
-          <button type="button" data-week-store="Willys">Willys</button>
-          <button type="button" data-week-store="Hemköp">Hemköp</button>
-          <button type="button" data-week-store="Coop">Coop</button>
-        </div>
-        <p class="week-store-status" id="weekStoreStatus"></p>
-        <section class="week-summary"><div><strong id="basketTotal">0 kr</strong><span>av <b id="weekBudget">800 kr</b></span></div><div class="remaining" id="basketRemainingRow"><span>Kvar</span><strong id="basketRemaining">0 kr</strong></div><div id="storeCompare"></div></section>
-        <div class="meal-count"><h2>Veckans middagar</h2><span id="basketCount">0 middagar</span></div>
-        <div class="meal-list" id="basketLines"></div>
-        <div class="store-summary" id="storeSummary"></div>
+      <section class="screen week-screen" aria-labelledby="weekOverviewHeading">
+        <section class="week-overview" id="weekOverview" aria-label="Min matvecka">
+          <header class="screen-header week-overview-header"><h1 id="weekOverviewHeading">Min matvecka</h1></header>
+          <div class="week-store-switch" id="weekStoreSwitch" role="tablist" aria-label="Byt butik för veckan">
+            <button type="button" data-week-store="auto">Auto</button>
+            <button type="button" data-week-store="alla">Alla</button>
+            <button type="button" data-week-store="ICA">ICA</button>
+            <button type="button" data-week-store="Willys">Willys</button>
+            <button type="button" data-week-store="Hemköp">Hemköp</button>
+            <button type="button" data-week-store="Coop">Coop</button>
+          </div>
+          <p class="week-store-status" id="weekStoreStatus"></p>
+          <div id="storeCompare"></div>
+          <div class="week-day-tabs" id="weekDayTabs" role="tablist" aria-label="Välj dag"></div>
+          <div id="weekTodayCard"></div>
+          <div class="week-overview-section">
+            <div class="section-heading"><h2>Veckans plan</h2></div>
+            <div class="week-plan-list" id="weekPlanList"></div>
+            <button type="button" class="btn-ghost week-overview-toggle" id="weekPlanToggle" hidden></button>
+          </div>
+          <div class="week-overview-section">
+            <div class="section-heading"><h2>Handla-listan</h2><span id="weekShoppingSummary"></span></div>
+            <div class="week-shopping-preview" id="weekShoppingPreview"></div>
+            <button type="button" class="btn btn-ghost week-overview-open" id="weekShoppingOpenBtn"><span>Öppna hela inköpslistan</span><span aria-hidden="true">→</span></button>
+          </div>
+        </section>
+      </section>
+
+      <section class="screen recipes-library-screen" aria-labelledby="recipesHeading">
+        <header class="screen-header"><h1 id="recipesHeading">Recept</h1></header>
+        <div class="recipe-search"><label class="sr-only" for="recipeSearch">Sök recept</label><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="recipeSearch" type="search" placeholder="Sök recept eller ingrediens" autocomplete="off"></div>
+        <div class="recipe-filters"><select id="categoryFilter" aria-label="Kategori"><option value="alla">Alla kategorier</option><option value="Vegetarisk">Vegetariskt</option><option value="Fisk">Fisk</option><option value="Familjefavorit">Familjefavorit</option><option value="Snabbt & enkelt">Snabbt & enkelt</option></select><select id="timeFilter" aria-label="Tid"><option value="0">Alla tider</option><option value="30">Max 30 min</option><option value="20">Max 20 min</option></select><label class="favorite-filter"><input id="favoriteFilter" type="checkbox"> Favoriter</label></div>
+        <div class="live-products" id="liveProducts"></div><p class="section-help" id="menuSummary"></p><div class="recipe-scroll" id="recipeScroll"></div>
       </section>
 
       <section class="screen shopping-screen" aria-labelledby="shoppingTitle">
@@ -186,11 +219,26 @@
         <div class="stats-waste"><span>Minskat matsvinn</span><strong id="statWasteReduced">Skapa en vecka för att se detta</strong></div>
         <p class="stats-note">Baserat på de veckor du skapat och valt i Matjakt. Uppskattade priser tills du bekräftar i kassan.</p>
       </section>
+
+      <section class="screen comparison-screen" aria-labelledby="comparisonTitle">
+        <header class="screen-header"><button class="back-link" type="button" data-view="week">← Vecka</button><h1 id="comparisonTitle">Butiksjämförelse</h1></header>
+        <div class="comparison-summary-card">
+          <div><span>Din lista</span><strong id="comparisonItemCount">0 varor</strong></div>
+          <span class="comparison-check-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg></span>
+        </div>
+        <div class="comparison-store-list" id="comparisonStoreList"></div>
+        <div class="comparison-campaign-card" id="comparisonCampaignCard" hidden>
+          <span class="comparison-campaign-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 12 12.5 4.5a2 2 0 0 0-1.4-.5H5a1 1 0 0 0-1 1v6.1a2 2 0 0 0 .6 1.4L12 20"/><circle cx="8" cy="8" r="1.3"/></svg></span>
+          <div><strong>Kampanjer och rabatter</strong><small id="comparisonCampaignText"></small></div>
+        </div>
+        <p class="comparison-updated" id="comparisonUpdated"></p>
+      </section>
     </main>
 
     <nav class="bottom-nav" aria-label="Huvudmeny">
       <button class="bottom-nav-item active" type="button" data-view="home"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 22V12h6v10"/></svg><small>Hem</small></button>
       <button class="bottom-nav-item" type="button" data-view="week"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 2v4m8-4v4M4 9h16m-12 4h3m2 0h3m-8 4h3"/></svg><small>Vecka</small></button>
+      <button class="bottom-nav-item" type="button" data-view="recipes"><svg viewBox="0 0 24 24"><path d="M6 3h9a3 3 0 0 1 3 3v15H9a3 3 0 0 1-3-3V3Z"/><path d="M6 17h12M9 7h6m-6 4h4"/></svg><small>Recept</small></button>
       <button class="bottom-nav-item" type="button" data-view="basket"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 13H5L6 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg><small>Handla</small></button>
       <button class="bottom-nav-item" type="button" data-view="pantry"><svg viewBox="0 0 24 24"><path d="M4 7h16v14H4z"/><path d="M8 7V4h8v3M8 11h8M8 15h5"/></svg><small>Skafferi</small></button>
     </nav>
@@ -361,9 +409,12 @@
       <h2 id="swapModalTitle">Byt rätt</h2>
       <p class="plan-modal-hint" id="swapModalHint">Tre förslag som fortfarande passar din budget, butik, allergier och näringsmål.</p>
       <div id="swapOptions"></div>
+      <button type="button" class="btn-ghost swap-show-more" id="swapShowMoreBtn" hidden>Visa fler alternativ</button>
+      <button type="button" class="btn btn-primary swap-confirm-btn" id="swapConfirmBtn" hidden><span>Byt till denna rätt</span></button>
+      <button type="button" class="btn btn-ghost swap-cancel-btn" data-swap-close>Avbryt</button>
     </div>
   </div>
 
-  <script type="module" src="app.js?v=58"></script>
+  <script type="module" src="app.js?v=61"></script>
 </body>
 </html>

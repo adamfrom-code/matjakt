@@ -1156,6 +1156,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
                         if products:
                             store_products(chain, ingredient, zip_code, products)
                     on_offer = next((product for product in products if product.get("kampanj") and ingredient.lower() in product["produktnamn"].lower()), None)
+                    # Same Primat-first/OFF-fallback/local-icon priority as every
+                    # other product image in the app - campaign cards were the one
+                    # place this wasn't applied, so a Primat-sourced deal (no image
+                    # from Primat itself) would silently render with no picture at
+                    # all instead of falling through to Open Food Facts.
+                    if on_offer:
+                        on_offer = fill_missing_image(on_offer)
                     if on_offer:
                         found.append({"ingrediens": ingredient, **on_offer})
             finally:

@@ -61,10 +61,33 @@ function wireFeedbackButtons(container, recipeId) {
 }
 
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
+// The single source of truth for "this week's recipes, in day order" - every
+// render site reads this instead of re-deriving order from state.valda
+// (a Set has no day-position semantics) or from RECEPT's own fixed array
+// order (which is unrelated to when a recipe was picked).
+function selectedRecipes() {
+  const allRecipes = [...RECEPT, ...state.apiRecipes];
+  return state.weekPlan.map(id => allRecipes.find(recipe => recipe.id === id)).filter(Boolean);
+}
+function setWeekPlan(ids) { state.weekPlan = [...ids]; state.valda = new Set(ids); }
+function addToWeekPlan(id) { if (!state.weekPlan.includes(id)) state.weekPlan.push(id); state.valda.add(id); }
+function removeFromWeekPlan(id) { state.weekPlan = state.weekPlan.filter(existing => existing !== id); state.valda.delete(id); }
+// Replaces exactly the recipe at this day's position - every other day's
+// recipe keeps its own position untouched, which is the whole point of
+// swapping "this day" rather than clearing and re-picking the week.
+function swapWeekPlanDay(dayIndex, newId) { state.weekPlan = state.weekPlan.map((id, index) => index === dayIndex ? newId : id); state.valda = new Set(state.weekPlan); }
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null };
+const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
+  // The week's recipe ids in day order (index 0 = Måndag) - the actual
+  // source of truth for "which day has which recipe", now that a day swap
+  // has to replace exactly one day's recipe in place. state.valda (a Set)
+  // stays around alongside it purely as an O(1) "is this recipe anywhere in
+  // my week" membership check for recipe-card UI - every place that needs
+  // day order or a specific day's recipe reads weekPlan / selectedRecipes(),
+  // never valda's own iteration order (a Set has none tied to day position).
+  weekPlan: Array.isArray(savedState.weekPlan) ? savedState.weekPlan : [...(savedState.valda || [])] };
 function buildSyncPayload() {
-  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch };
+  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan };
 }
 function applySyncBlob(blob) {
   if (!blob) return;
@@ -89,6 +112,7 @@ function applySyncBlob(blob) {
   if (blob.savingsLog !== undefined) state.savingsLog = blob.savingsLog;
   if (blob.swapsThisWeek !== undefined) state.swapsThisWeek = blob.swapsThisWeek;
   if (blob.pinnedBranch !== undefined) state.pinnedBranch = blob.pinnedBranch;
+  if (blob.weekPlan !== undefined) state.weekPlan = blob.weekPlan;
 }
 let serverSyncTimer = null;
 function scheduleServerSync() {
@@ -457,8 +481,7 @@ const availableRecipes = () => candidateRecipesForUser();
 function chooseMenu(shouldScroll = true) {
   const branch = selectedBranch();
   const combo = bestMenuCombo(availableRecipes(), state.middagar, state.budget, branch);
-  state.valda.clear();
-  combo.forEach(r => state.valda.add(r.id));
+  setWeekPlan(combo.map(r => r.id));
   // A new set of meals makes any checked-off shopping items and cached live
   // prices from the previous week meaningless - without this, starting a new
   // week could show ingredients as "already bought" just because an item with
@@ -481,7 +504,11 @@ function renderRecipes() {
   const premiumStoreAuto = Boolean(state.user?.premium);
   const storeLabel = state.butik === "auto" ? `${branch?.namn || "ingen butik hittades"}${premiumStoreAuto ? " (lägst uppskattat)" : " (närmast)"}` : state.butik === "alla" ? "alla butiker" : `${branch?.namn || state.butik}`;
   const loading = !state.branches.length && branchesSync.loading;
-  $("locationHint").textContent = branch ? `${nearbyBranches().length} butiksprofiler jämförda${loading ? " (hämtar riktiga butiker nära dig...)" : ""} · ${branch.namn} ${premiumStoreAuto ? "har lägst uppskattat pris" : "ligger närmast"} och ligger ${branch.avstandKm.toFixed(1)} km bort.` : `Hittade inga inlästa butiker nära ${state.postnummer} ännu.`;
+  // avstandKm can be null (e.g. a branch source that doesn't report distance,
+  // or no state.position yet to measure from) - .toFixed() on that used to
+  // throw and silently abort the rest of this render pass.
+  const distanceText = Number.isFinite(branch?.avstandKm) ? ` och ligger ${branch.avstandKm.toFixed(1)} km bort` : "";
+  $("locationHint").textContent = branch ? `${nearbyBranches().length} butiksprofiler jämförda${loading ? " (hämtar riktiga butiker nära dig...)" : ""} · ${branch.namn} ${premiumStoreAuto ? "har lägst uppskattat pris" : "ligger närmast"}${distanceText}.` : `Hittade inga inlästa butiker nära ${state.postnummer} ännu.`;
   $("menuSummary").textContent = search ? (dietFilterActive ? `${recipes.length} recept hittades. Externa recept visas inte när kost-/allergifilter är aktivt, eftersom de inte har kontrollerade allergiuppgifter.` : `${recipes.length} recept hittades. Externa recept kan vara på engelska och sakna svenska butikspriser.`) : `${plural(Math.min(state.middagar, recipes.length), "middag", "middagar")} för ${plural(state.personer, "person", "personer")} från ${storeLabel}. Priserna är uppskattningar.`;
   $("recipeScroll").innerHTML = recipes.length ? recipes.map(recipe => {
     const selected = state.valda.has(recipe.id), expanded = state.expanded === recipe.id;
@@ -498,11 +525,30 @@ function renderRecipes() {
     </article>`;
   }).join("") : `<p class="empty-state">Inga recept matchar din sökning eller butik ännu.</p>`;
   document.querySelectorAll("[data-details]").forEach(btn => btn.addEventListener("click", () => openRecipeTab(btn.dataset.details)));
-  document.querySelectorAll("[data-add]").forEach(btn => btn.addEventListener("click", () => { const id = btn.dataset.add; state.valda.has(id) ? state.valda.delete(id) : state.valda.add(id); saveState(); render(); }));
+  document.querySelectorAll("[data-add]").forEach(btn => btn.addEventListener("click", () => { const id = btn.dataset.add; state.valda.has(id) ? removeFromWeekPlan(id) : addToWeekPlan(id); saveState(); render(); }));
   document.querySelectorAll("[data-favorite]").forEach(btn => btn.addEventListener("click", () => { const id = btn.dataset.favorite; state.favoriter.has(id) ? state.favoriter.delete(id) : state.favoriter.add(id); saveState(); renderRecipes(); }));
 }
 
 function openRecipeTab(id) { history.pushState({ recept: id }, "", `${location.pathname}?recept=${encodeURIComponent(id)}`); renderRecipePage(); }
+const FAVORITE_ICON = '<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.5-9C.7 8.2 2.4 5 5.7 5c2 0 3.4 1.1 4.3 2.4C11 6.1 12.4 5 14.4 5c3.3 0 5 3.2 3.2 7-2.5 4.4-9.5 9-9.5 9Z"/></svg>';
+const PRICE_TAG_ICON = '<svg viewBox="0 0 24 24"><path d="M20 12 12.5 4.5a2 2 0 0 0-1.4-.5H5a1 1 0 0 0-1 1v6.1a2 2 0 0 0 .6 1.4L12 20"/><circle cx="8" cy="8" r="1.3"/></svg>';
+function recipeNutritionMarkup(recipe) {
+  if (!recipe.kcal) return "";
+  const items = [[recipe.kcal, "kcal"], [recipe.protein, "protein"], [recipe.kolhydrater, "kolhydrater"], [recipe.fett, "fett"]];
+  return `<div class="recipe-nutrition"><p class="recipe-nutrition-label">Näring per portion</p><div class="recipe-nutrition-row">${items.map(([value, label]) => `<div class="recipe-nutrition-item"><strong>${value}${label === "kcal" ? "" : " g"}</strong><span>${label}</span></div>`).join("")}</div></div>`;
+}
+function recipeIngredientListMarkup(recipe) {
+  const factor = portionFactor(state.personer);
+  const quantities = RECIPE_QUANTITIES[recipe.id] || {};
+  return recipe.ingredienser.map(name => {
+    const quantity = quantities[name];
+    const amountText = quantity ? `${Math.round(quantity[0] * factor)} ${quantity[1]}` : "";
+    // Diskret, not hidden - a pantry match is useful context ("you already
+    // have this"), not a reason to remove the line from the list.
+    const inPantry = (state.pantry[name]?.amount || 0) > 0;
+    return `<li class="recipe-ingredient ${inPantry ? "in-pantry" : ""}"><svg class="recipe-ingredient-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12.5 2.5 2.5 5-5.5"/></svg><span class="recipe-ingredient-name">${escapeHtml(name)}${inPantry ? '<small>Finns i skafferiet</small>' : ""}</span><span class="recipe-ingredient-amount">${escapeHtml(amountText)}</span></li>`;
+  }).join("");
+}
 async function renderRecipePage() {
   const id = new URLSearchParams(location.search).get("recept");
   if (!id) { $("top").hidden = false; document.querySelector(".bottom-nav").hidden = false; $("recipePage").hidden = true; window.scrollTo(0, 0); return; }
@@ -516,7 +562,7 @@ async function renderRecipePage() {
   $("top").hidden = true; document.querySelector(".bottom-nav").hidden = true; $("recipePage").hidden = false;
   $("recipePage").innerHTML = `<button class="back-link recipe-back" type="button">← Alla recept</button><article class="full-recipe">${recipe.bild ? `<img src="${recipe.bild}" alt="${recipe.namn}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${recipe.typ}</p><h1>${recipe.namn}</h1><div class="recipe-detail-meta"><span>${recipe.tid ? recipe.tid + " min" : "Tid saknas"}</span><span>${recipe.servings || state.personer} portioner</span><span>${recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? money(recipe.portionspris) + "/portion" : "Uppskattat butikspris"}</span></div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${details.beskrivning || "En god svensk vardagsrätt."}</p><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${recipe.id}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button>${recipeRatingMarkup(recipe.id)}${feedbackMarkup(recipe.id)}<h2>Ingredienser</h2><ul>${recipe.ingredienser.map(item => `<li>${item}</li>`).join("")}</ul><h2>Gör så här</h2><ol>${(details.steg || []).map(step => `<li>${step}</li>`).join("")}</ol>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${details.tips}</p>` : ""}</article>`;
   $("recipePage").querySelector(".recipe-back").addEventListener("click", () => history.back());
-  $("recipePage").querySelector("[data-recipe-add]").addEventListener("click", event => { state.valda.has(recipe.id) ? state.valda.delete(recipe.id) : state.valda.add(recipe.id); saveState(); render(); event.currentTarget.querySelector("span").textContent = state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"; });
+  $("recipePage").querySelector("[data-recipe-add]").addEventListener("click", event => { state.valda.has(recipe.id) ? removeFromWeekPlan(recipe.id) : addToWeekPlan(recipe.id); saveState(); render(); event.currentTarget.querySelector("span").textContent = state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"; });
   wireRatingStars($("recipePage"), recipe.id);
   wireFeedbackButtons($("recipePage"), recipe.id);
   requestAnimationFrame(() => window.scrollTo(0, 0));
@@ -524,14 +570,20 @@ async function renderRecipePage() {
 }
 
 function branchLiveTotal(shoppingItems, chainProducts) {
-  return shoppingItems.reduce((sum, item) => {
+  // matched is tracked alongside cost so a store missing several items never
+  // silently looks cheap just because its total only reflects what it did
+  // match - see renderStoreComparisonPage's coverage note.
+  let cost = 0, matched = 0;
+  for (const item of shoppingItems) {
     const product = chainProducts[item.namn];
-    if (!product) return sum;
+    if (!product) continue;
+    matched++;
     const pantry = state.pantry[item.namn]?.amount || 0;
     const needed = Math.max(0, item.total - pantry);
     const packages = item.package ? Math.ceil(needed / item.package.amount) : Math.ceil(needed);
-    return sum + Number(product.pris_kr) * packages;
-  }, 0);
+    cost += Number(product.pris_kr) * packages;
+  }
+  return { cost, matched };
 }
 let branchComparisonSync = { key: null, chains: new Set() };
 async function syncBranchComparison(shoppingItems, branches) {
@@ -553,16 +605,22 @@ async function syncBranchComparison(shoppingItems, branches) {
     } catch { /* den här kedjan visar kvar den statiska uppskattningen om livehämtningen misslyckas */ }
   }));
 }
+// Shared by the compact widget (renderStoreComparison) and the full
+// Butiksjämförelse page - one computation of "what does this shopping list
+// cost at each chain", never two that could quietly disagree.
+function computeStoreResults(selected, branches, shoppingItems) {
+  return branches.map(branch => {
+    const live = state.liveBranchTotals[branch.kedja];
+    return { branch, cost: live ? live.cost : shoppingListCost(selected, branch), isLive: live != null, matched: live?.matched ?? null, totalItems: shoppingItems.length };
+  }).sort((a, b) => a.cost - b.cost);
+}
 function renderStoreComparison(selected) {
   const container = $("storeCompare");
   if (!container) return;
   const branches = nearbyBranches();
   if (!selected.length || !branches.length) { container.innerHTML = ""; return; }
   const shoppingItems = aggregateShopping(selected);
-  const results = branches.map(branch => {
-    const live = state.liveBranchTotals[branch.kedja];
-    return { branch, cost: live != null ? live : shoppingListCost(selected, branch), isLive: live != null };
-  }).sort((a, b) => a.cost - b.cost);
+  const results = computeStoreResults(selected, branches, shoppingItems);
   const premium = Boolean(state.user?.premium);
   const anyLive = results.some(r => r.isLive);
   const updatedLabel = anyLive && state.liveUpdatedAt ? `<small class="store-compare-updated">Uppdaterad ${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}</small>` : "";
@@ -592,7 +650,8 @@ function renderStoreComparison(selected) {
       ? `<button type="button" class="store-compare-row ${tag}" data-pick-branch="${index}">${inner}</button>`
       : `<div class="store-compare-row ${tag} not-pickable">${inner}</div>`;
   }).join("")}</div>`;
-  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${cheapest.isLive ? "Lägst pris" : "Lägst uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savings > 1 ? `<small>${cheapest.isLive ? "Skillnad" : "Uppskattad skillnad"} ${money(savings)} mot ${priciest.branch.namn}</small>` : ""}${updatedLabel}</div>${list}${pinned ? '<button type="button" class="store-compare-unpin" id="storeCompareUnpin">Välj automatiskt istället</button>' : ""}</div>`;
+  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${cheapest.isLive ? "Lägst pris" : "Lägst uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savings > 1 ? `<small>${cheapest.isLive ? "Skillnad" : "Uppskattad skillnad"} ${money(savings)} mot ${priciest.branch.namn}</small>` : ""}${updatedLabel}</div>${list}${pinned ? '<button type="button" class="store-compare-unpin" id="storeCompareUnpin">Välj automatiskt istället</button>' : ""}${results.length > 1 ? '<button type="button" class="store-compare-open" id="storeCompareOpenBtn">Jämför butiker →</button>' : ""}</div>`;
+  $("storeCompareOpenBtn")?.addEventListener("click", () => { renderStoreComparisonPage(selected); setView("comparison"); });
   document.querySelectorAll("[data-pick-branch]").forEach(button => button.addEventListener("click", () => {
     const branch = results[Number(button.dataset.pickBranch)].branch;
     const alreadyPinned = state.pinnedBranch && state.pinnedBranch.primatKey === branch.primatKey;
@@ -616,6 +675,57 @@ function renderStoreComparison(selected) {
   });
   syncBranchComparison(shoppingItems, branches);
 }
+// Real, approximate brand colors for chain-name text - no logo assets exist
+// in this project and Primat's API doesn't supply any (checked directly
+// against its response fields before building this), so a real logo would
+// have to come from scraping/hotlinking the chains' own sites, which this
+// app deliberately never does. Styled text in the chain's own color is the
+// honest stand-in.
+const CHAIN_COLORS = { ICA: "#E2231A", Willys: "#171717", Coop: "#00953B", Hemköp: "#E4032E" };
+function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
+  const savings = priciestCost - result.cost;
+  const color = CHAIN_COLORS[result.branch.kedja] || "var(--primary)";
+  // A store whose live match rate is too thin to trust isn't allowed to
+  // just show a partial sum as if it were the real total - see
+  // branchLiveTotal's matched count. An estimate (matched === null) always
+  // covers every item by construction, so it's never held to this bar.
+  const coverageOk = result.matched == null || result.matched / result.totalItems >= 0.5;
+  const coverageNote = result.matched != null ? `${result.matched} av ${result.totalItems} varor` : "Uppskattat";
+  return `<div class="comparison-store-card ${isCheapest && coverageOk ? "cheapest" : ""}"><div class="comparison-store-main"><span class="comparison-store-name" style="color:${color}">${escapeHtml(result.branch.kedja)}</span><small class="comparison-store-coverage">${coverageNote}</small></div><div class="comparison-store-price">${isCheapest && coverageOk ? '<span class="comparison-billigast">Billigast</span>' : ""}${coverageOk ? `<strong>${money(result.cost)}</strong>${savings > 1 ? `<small class="comparison-savings">Du sparar ${money(savings)}</small>` : ""}` : '<small class="comparison-savings">För få varor hittades</small>'}</div><span class="comparison-store-arrow" aria-hidden="true">›</span></div>`;
+}
+function renderStoreComparisonPage(selected) {
+  const branches = nearbyBranches();
+  const shoppingItems = aggregateShopping(selected);
+  // computeStoreResults returns one row per physical branch (several Coop
+  // locations can each appear) - that's exactly what the compact widget's
+  // pin-a-specific-branch feature needs, but this page compares chains, not
+  // addresses, and pricing is already chain-level here (see
+  // state.liveBranchTotals being keyed by kedja) - so same-chain branches
+  // would otherwise show up as identical-priced duplicate rows.
+  const seenChains = new Set();
+  const results = computeStoreResults(selected, branches, shoppingItems).filter(r => {
+    if (seenChains.has(r.branch.kedja)) return false;
+    seenChains.add(r.branch.kedja);
+    return true;
+  });
+  if (!results.length) { $("comparisonStoreList").innerHTML = `<p class="live-loading">Ingen data att jämföra ännu.</p>`; $("comparisonItemCount").textContent = "0 varor"; $("comparisonCampaignCard").hidden = true; $("comparisonUpdated").textContent = ""; return; }
+  const validResults = results.filter(r => r.matched == null || r.matched / r.totalItems >= 0.5);
+  const cheapest = (validResults.length ? validResults : results)[0];
+  const priciest = results[results.length - 1];
+  const bestCoverage = Math.max(0, ...results.map(r => r.matched ?? 0));
+  $("comparisonItemCount").textContent = bestCoverage ? `${bestCoverage} av ${shoppingItems.length} varor` : `${shoppingItems.length} varor`;
+  $("comparisonStoreList").innerHTML = results.map(r => comparisonStoreRowMarkup(r, r === cheapest, priciest.cost)).join("");
+  // "vald butik" - the chain actually in use right now, not necessarily the
+  // cheapest one shown above, so this reflects what the user would really
+  // save with the choice they've already made.
+  const activeResult = results.find(r => r.branch.kedja === chosenStore()) || cheapest;
+  const activeSavings = priciest.cost - activeResult.cost;
+  $("comparisonCampaignCard").hidden = !(activeSavings > 1);
+  $("comparisonCampaignText").textContent = `Du sparar ${money(activeSavings)} med ${activeResult.branch.kedja}`;
+  $("comparisonUpdated").textContent = state.liveUpdatedAt
+    ? `Priserna uppdaterades ${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}`
+    : "Uppskattade priser - riktiga priser hämtas när du öppnar Handla.";
+}
 
 const CATEGORY_MAP = { "Frukt & grönt": ["Purjolök", "Morötter", "Lök", "Paprika", "Citron", "Dill", "Basilika", "Lök & vitlök", "Zucchini", "Vitlök", "Timjan", "Sparris", "Rödkål"], Mejeri: ["Grädde", "Riven ost", "Yoghurt", "Mjölk", "Crème fraiche", "Ägg", "Halloumi", "Feta"], "Kött & fisk": ["Kycklinglårfilé", "Kycklingfilé", "Falukorv", "Fryst torsk", "Laxfilé", "Köttfärs", "Fläskfilé", "Biff", "Kalvschnitzel"], Torrvaror: ["Pasta", "Ris", "Matvete", "Äggnudlar", "Vetemjöl", "Röda linser", "Kidneybönor", "Svarta bönor", "Majs", "Krossade tomater", "Tomatpuré", "Salsa", "Soja", "Lasagneplattor", "Kikärtor", "Lingonsylt", "Vegofärs", "Tofu", "Äppelmos", "Kapris"], Frys: ["Wokgrönsaker", "Bär", "Räkor"] };
 function itemCategory(name) { return Object.entries(CATEGORY_MAP).find(([, names]) => names.includes(name))?.[0] || "Övrigt"; }
@@ -635,17 +745,20 @@ const CATEGORY_ICONS = {
 function categoryIconMarkup(category) {
   return `<span class="shopping-item-image placeholder" aria-hidden="true"><svg viewBox="0 0 24 24">${CATEGORY_ICONS[category] || CATEGORY_ICONS["Övrigt"]}</svg></span>`;
 }
+function attributionMarkup(usesPrimat, usesOff) {
+  const parts = [];
+  if (usesPrimat) parts.push('Prisdata från <a href="https://primat.nu" target="_blank" rel="noopener">primat.nu</a>');
+  if (usesOff) parts.push('Bilddata från <a href="https://openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (CC BY-SA)');
+  return parts.join(" · ");
+}
 function renderAttribution(shoppingItems) {
   // Both Primat and Open Food Facts require visible attribution wherever
   // their data/images actually appear, not unconditionally - shown only for
   // whichever source(s) are actually behind something currently on screen.
   const usesPrimat = shoppingItems.some(item => state.livePriser[item.namn]?.kalla === "primat");
   const usesOff = shoppingItems.some(item => state.livePriser[item.namn]?.bildKalla === "openfoodfacts");
-  const parts = [];
-  if (usesPrimat) parts.push('Prisdata från <a href="https://primat.nu" target="_blank" rel="noopener">primat.nu</a>');
-  if (usesOff) parts.push('Bilddata från <a href="https://openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (CC BY-SA)');
-  $("primatAttribution").innerHTML = parts.join(" · ");
-  $("primatAttribution").hidden = !parts.length;
+  $("primatAttribution").innerHTML = attributionMarkup(usesPrimat, usesOff);
+  $("primatAttribution").hidden = !(usesPrimat || usesOff);
 }
 function shoppingItemMarkup(item) {
   const product = PRODUCT_CATALOG[item.namn] || { namn: item.namn, marke: "", pris: 0 };
@@ -695,18 +808,147 @@ function renderPantry() {
   document.querySelectorAll("[data-pantry-increment]").forEach(button => button.addEventListener("click", () => { const name = button.dataset.pantryIncrement; state.pantry[name].amount += pantryStep(name); saveState(); render(); }));
   document.querySelectorAll("[data-pantry-decrement]").forEach(button => button.addEventListener("click", () => { const name = button.dataset.pantryDecrement; const next = state.pantry[name].amount - pantryStep(name); if (next <= 0) delete state.pantry[name]; else state.pantry[name].amount = next; saveState(); render(); }));
 }
+// Which day tab is showing in the "Min matvecka" overview - defaults to
+// today (Mon=0..Sun=6, converting from JS's native Sun=0..Sat=6), since
+// "Dagens middag" only makes sense pointed at the actual current day.
+// Recipes aren't stored per-weekday anywhere in the data model - a recipe's
+// "day" has always just been its position in the selected list (see DAYS
+// use in renderBasket) - so this only ever indexes into that same array,
+// never a separate day-assignment concept.
+let weekOverviewDay = (new Date().getDay() + 6) % 7;
+let weekPlanExpanded = false;
+const WEEK_PLAN_PREVIEW_COUNT = 4;
+const WEEK_SHOPPING_PREVIEW_COUNT = 4;
+// Small line icons reused everywhere a "time" or "portions" fact is shown
+// next to a recipe (Vecka's Dagens middag, the full recipe page) - one
+// definition so they stay visually identical instead of drifting.
+const CLOCK_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
+const PORTIONS_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>';
+function metaIconItem(icon, text) { return `<span class="meta-icon-item">${icon}${escapeHtml(text)}</span>`; }
+function weekTodayCardMarkup(recipe) {
+  const fb = recipeFeedback(recipe.id);
+  const badge = recipe.typ && recipe.typ !== "Provider-recept" ? `<span class="week-today-badge">${escapeHtml(recipe.typ)}</span>` : "";
+  const meta = [recipe.tid ? metaIconItem(CLOCK_ICON, `${recipe.tid} min`) : "", metaIconItem(PORTIONS_ICON, `${state.personer} port`)].filter(Boolean).join("");
+  return `<button type="button" class="week-today-card" data-week-details="${escapeHtml(recipe.id)}"><span class="week-today-photo">${recipePhoto(recipe)}</span><span class="week-today-info"><strong>${escapeHtml(recipe.namn)}</strong>${badge}<span class="week-today-meta">${meta}</span></span><span class="week-today-arrow" aria-hidden="true">›</span>${fb.cooked ? '<span class="week-today-flag" title="Lagade den här">✓</span>' : ""}</button>`;
+}
+function weekEmptyDayMarkup() {
+  // data-week-add-meal, not an id - this markup can end up on screen twice at
+  // once (the Vecka day card and the Hem "Nästa middag" card can both be
+  // showing an empty day simultaneously), and two elements sharing one id
+  // would leave the second's button silently unwired.
+  return `<div class="week-today-empty"><p>Ingen middag inplanerad den här dagen ännu.</p><button type="button" class="btn btn-ghost" data-week-add-meal>+ Lägg till middag</button></div>`;
+}
+function todayIndex() { return (new Date().getDay() + 6) % 7; }
+function nextMealCardMarkup(recipe) {
+  const badge = recipe.typ && recipe.typ !== "Provider-recept" ? `<span class="next-meal-badge">${escapeHtml(recipe.typ)}</span>` : "";
+  return `<button type="button" class="next-meal-card" data-week-details="${escapeHtml(recipe.id)}"><span class="next-meal-photo">${recipePhoto(recipe)}</span><span class="next-meal-info"><small>Idag</small><strong>${escapeHtml(recipe.namn)}</strong>${badge}</span><span class="next-meal-arrow" aria-hidden="true">›</span></button>`;
+}
+function nextMealEmptyMarkup() {
+  return `<div class="next-meal-empty"><p>Ingen middag planerad för idag ännu.</p><button type="button" class="btn btn-ghost" data-week-browse-recipes>Bläddra recept</button></div>`;
+}
+function weekPlanRowMarkup(recipe, index) {
+  const price = recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? money(recipe.portionspris) : "–";
+  const fb = recipeFeedback(recipe.id);
+  // Not a nested button-in-button: opening the recipe, swapping the day, and
+  // the cooked/skipped menu are three separate interactive siblings inside a
+  // plain container, not one control nested inside another.
+  return `<div class="week-plan-row ${index === weekOverviewDay ? "active" : ""}">
+    <button type="button" class="week-plan-row-main" data-week-details="${escapeHtml(recipe.id)}">
+      <span class="week-plan-day">${DAYS[index] || `Dag ${index + 1}`}</span>
+      <span class="week-plan-photo">${recipePhoto(recipe)}</span>
+      <span class="week-plan-name">${escapeHtml(recipe.namn)}</span>
+      <strong class="week-plan-price">${price}</strong>
+    </button>
+    <button type="button" class="week-plan-swap-btn" data-week-swap="${escapeHtml(recipe.id)}">Byt</button>
+    <details class="week-plan-menu">
+      <summary aria-label="Fler val">⋯</summary>
+      <div class="week-plan-menu-options">
+        <button type="button" class="${fb.cooked ? "marked" : ""}" data-cooked="${escapeHtml(recipe.id)}">✓ Lagad</button>
+        <button type="button" class="${fb.skipped ? "marked" : ""}" data-skipped="${escapeHtml(recipe.id)}">✗ Hoppade över</button>
+      </div>
+    </details>
+  </div>`;
+}
+function weekShoppingRowMarkup(item) {
+  const live = state.livePriser[item.namn];
+  const price = live ? money(live.pris_kr) : PRODUCT_CATALOG[item.namn]?.pris ? money(PRODUCT_CATALOG[item.namn].pris) : "";
+  const campaign = live?.kampanj?.text ? `<small class="week-shopping-campaign">🏷️ ${escapeHtml(live.kampanj.text)}</small>` : "";
+  const photo = live?.bild ? `<img class="shopping-item-image has-image" src="${live.bild}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(item.namn));
+  return `<label class="week-shopping-row"><input type="checkbox" data-week-shopping="${escapeHtml(item.namn)}">${photo}<span class="week-shopping-info"><strong>${escapeHtml(item.namn)}</strong>${campaign}</span><strong class="week-shopping-price">${price}</strong></label>`;
+}
+function renderWeekOverview(selected, shoppingItems, total) {
+  $("weekDayTabs").innerHTML = DAYS.map((day, index) => `<button type="button" class="week-day-tab ${index === weekOverviewDay ? "active" : ""} ${selected[index] ? "" : "empty"}" data-week-day="${index}" role="tab" aria-selected="${index === weekOverviewDay}">${day}</button>`).join("");
+
+  const todayRecipe = selected[weekOverviewDay];
+  $("weekTodayCard").innerHTML = todayRecipe ? weekTodayCardMarkup(todayRecipe) : weekEmptyDayMarkup();
+
+  const planVisibleCount = weekPlanExpanded ? selected.length : Math.min(selected.length, WEEK_PLAN_PREVIEW_COUNT);
+  $("weekPlanList").innerHTML = selected.slice(0, planVisibleCount).map(weekPlanRowMarkup).join("");
+  $("weekPlanToggle").hidden = selected.length <= WEEK_PLAN_PREVIEW_COUNT;
+  $("weekPlanToggle").textContent = weekPlanExpanded ? "Visa färre" : "Visa hela veckan";
+  $("weekPlanToggle").onclick = () => { weekPlanExpanded = !weekPlanExpanded; renderWeekOverview(selected, shoppingItems, total); };
+
+  const remainingItems = shoppingItems.filter(item => !state.avklarade.has(item.namn));
+  $("weekShoppingSummary").textContent = shoppingItems.length ? `${plural(remainingItems.length, "vara kvar", "varor kvar")} · ${money(total)}` : "";
+  $("weekShoppingPreview").innerHTML = shoppingItems.length
+    ? (remainingItems.length ? remainingItems.slice(0, WEEK_SHOPPING_PREVIEW_COUNT).map(weekShoppingRowMarkup).join("") : `<p class="week-shopping-done">🎉 Allt handlat!</p>`)
+    : `<p class="week-shopping-done">Skapa en vecka så samlar vi din inköpslista här.</p>`;
+  $("weekShoppingOpenBtn").onclick = () => setView("basket");
+
+  // Hem's "Nästa middag" - always literally today, independent of whichever
+  // day tab the user has clicked above (that's a browsing choice on the
+  // Vecka page, not a change to what "next" means on Hem). Same recipePhoto
+  // call as the Vecka card above, so it's the same image, not a new fetch.
+  const heroRecipe = selected[todayIndex()];
+  $("nextMealCard").innerHTML = heroRecipe ? nextMealCardMarkup(heroRecipe) : nextMealEmptyMarkup();
+
+  // Hem's budget-progress card - fed the same total this function already
+  // received from renderBasket(), never recomputed separately.
+  const heroRemaining = budgetRemaining(state.budget, total);
+  const percentUsed = state.budget ? Math.min(100, Math.round(total / state.budget * 100)) : 0;
+  $("summaryBudgetRemaining").textContent = money(Math.max(0, heroRemaining));
+  $("summaryBudgetTotal").textContent = money(state.budget);
+  $("summaryBudgetPercent").textContent = `${percentUsed}%`;
+  $("summaryBudgetBar").style.width = `${percentUsed}%`;
+  $("summaryBudgetBar").classList.toggle("over-budget", heroRemaining < 0);
+
+  // All wired together at the end, once every section above has its final
+  // DOM in place - wiring data-week-details right after only the today-card
+  // was rendered would miss the plan list's own rows, which don't exist yet
+  // at that point.
+  document.querySelectorAll("[data-week-day]").forEach(button => button.addEventListener("click", () => { weekOverviewDay = Number(button.dataset.weekDay); renderWeekOverview(selected, shoppingItems, total); }));
+  document.querySelectorAll("[data-week-details]").forEach(button => button.addEventListener("click", () => openRecipeTab(button.dataset.weekDetails)));
+  document.querySelectorAll("[data-week-add-meal]").forEach(button => button.addEventListener("click", () => setView("home")));
+  document.querySelectorAll("[data-week-browse-recipes]").forEach(button => button.addEventListener("click", () => $("recipeScroll")?.scrollIntoView({ behavior: "smooth" })));
+  document.querySelectorAll("[data-week-shopping]").forEach(input => {
+    input.checked = state.avklarade.has(input.dataset.weekShopping);
+    input.addEventListener("change", () => { input.checked ? state.avklarade.add(input.dataset.weekShopping) : state.avklarade.delete(input.dataset.weekShopping); saveState(); renderBasket(); });
+  });
+  document.querySelectorAll("[data-week-swap]").forEach(button => button.addEventListener("click", () => openSwapModal(button.dataset.weekSwap)));
+  document.querySelectorAll("[data-cooked]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.cooked; const fb = state.feedback[id] || {}; state.feedback[id] = { ...fb, cooked: (fb.cooked || 0) + 1 }; saveState(); renderBasket(); }));
+  document.querySelectorAll("[data-skipped]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.skipped; const fb = state.feedback[id] || {}; state.feedback[id] = { ...fb, skipped: (fb.skipped || 0) + 1 }; saveState(); renderBasket(); }));
+}
+function renderGreeting() {
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 10 ? "God morgon" : hour < 17 ? "God dag" : "God kväll";
+  // Only a real, stored identifier - the account system has no display-name
+  // field, so the email's local part is the only honest "name" available,
+  // and only when actually logged in. Never a placeholder like "Adam".
+  // Skipped when it doesn't actually read as a name (auto-generated/test
+  // addresses are long id-looking strings, e.g. "user-b9db1998cdbd4f47...")
+  // - showing that verbatim overflowed the header instead of greeting
+  // anyone. A short, mostly-letters local part is kept; anything longer or
+  // digit-heavy just falls back to the plain time greeting.
+  const rawName = state.user?.email?.split("@")[0] || "";
+  const name = rawName.length <= 18 && !/\d{4,}/.test(rawName) ? rawName : "";
+  $("homeGreeting").innerHTML = `${escapeHtml(name ? `${timeGreeting}, ${name}!` : `${timeGreeting}!`)} <span aria-hidden="true">👋</span>`;
+}
 function renderBasket() {
-  const selected = [...RECEPT, ...state.apiRecipes].filter((recipe, index, recipes) => state.valda.has(recipe.id) && recipes.findIndex(item => item.id === recipe.id) === index);
-  const total = shoppingListCost(selected, selectedBranch()), remaining = budgetRemaining(state.budget, total), shoppingItems = aggregateShopping(selected);
-  $("basketCount").textContent = plural(selected.length, "middag", "middagar"); $("weekBudget").textContent = money(state.budget);
-  $("basketLines").innerHTML = selected.length ? selected.map((recipe, index) => { const fb = recipeFeedback(recipe.id); return `<article class="basket-line"><div class="basket-line-photo">${recipePhoto(recipe)}</div><span><small>${DAYS[index] || `Dag ${index + 1}`}</small>${recipe.namn}<em>${recipe.tid ? `${recipe.tid} min` : "Tid saknas"}</em></span><strong>${recipe.priceStatus === "unavailable" ? "Pris saknas" : money(scaledPurchasePrice(recipe))}</strong><div class="basket-line-actions"><button type="button" data-details="${recipe.id}">Visa recept</button><button type="button" data-swap="${recipe.id}">Byt rätt</button><button type="button" class="basket-feedback-btn ${fb.cooked ? "marked" : ""}" data-cooked="${recipe.id}" aria-label="Lagade den här" title="Lagade den här">✓</button><button type="button" class="basket-feedback-btn ${fb.skipped ? "marked" : ""}" data-skipped="${recipe.id}" aria-label="Hoppade över" title="Hoppade över">✗</button></div></article>`; }).join("") : `<div class="basket-empty"><strong>Ingen vecka ännu</strong><p>Gå till Hem och skapa din första matvecka.</p></div>`;
+  const selected = selectedRecipes();
+  const total = shoppingListCost(selected, selectedBranch()), shoppingItems = aggregateShopping(selected);
   const groups = shoppingItems.reduce((result, item) => { const category = itemCategory(item.namn); (result[category] ||= []).push(item); return result; }, {});
   $("shoppingList").innerHTML = shoppingItems.length ? Object.entries(groups).map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingItemMarkup).join("")}</section>`).join("") : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
   document.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => { input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping); saveState(); renderBasket(); }));
-  document.querySelectorAll("[data-details]").forEach(button => button.addEventListener("click", () => openRecipeTab(button.dataset.details)));
-  document.querySelectorAll("[data-swap]").forEach(button => button.addEventListener("click", () => openSwapModal(button.dataset.swap)));
-  document.querySelectorAll("[data-cooked]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.cooked; const fb = state.feedback[id] || {}; state.feedback[id] = { ...fb, cooked: (fb.cooked || 0) + 1 }; saveState(); renderBasket(); }));
-  document.querySelectorAll("[data-skipped]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.skipped; const fb = state.feedback[id] || {}; state.feedback[id] = { ...fb, skipped: (fb.skipped || 0) + 1 }; saveState(); renderBasket(); }));
   const completed = shoppingItems.filter(item => state.avklarade.has(item.namn)).length, itemsLeft = shoppingItems.length - completed, progress = shoppingItems.length ? completed / shoppingItems.length * 100 : 0;
   // No mention of how many items happen to have a live-fetched price, and no
   // fetch timestamp - that's internal plumbing, not something a shopper needs
@@ -715,14 +957,17 @@ function renderBasket() {
   $("shoppingCost").textContent = `${money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
   $("shoppingComplete").hidden = !(shoppingItems.length && completed === shoppingItems.length);
   renderAttribution(shoppingItems);
-  $("basketTotal").textContent = money(total); $("basketRemaining").textContent = money(Math.abs(remaining)); $("basketRemainingRow").classList.toggle("over-budget", remaining < 0); $("basketRemainingRow").querySelector("span").textContent = remaining < 0 ? "Över budget" : "Kvar";
   renderStoreComparison(selected); renderPantry();
   document.querySelectorAll("[data-week-store]").forEach(button => button.classList.toggle("active", button.dataset.weekStore === state.butik));
   updateWeekStoreStatus();
+  // Fed the exact same selected/shoppingItems/total this function just
+  // computed - the overview and the full page below it are two views onto
+  // one render pass, never two separate computations that could drift.
+  renderWeekOverview(selected, shoppingItems, total);
   syncLivePrices(shoppingItems);
 }
 function updateWeekStoreStatus() {
-  const selected = [...RECEPT, ...state.apiRecipes].filter((recipe, index, recipes) => state.valda.has(recipe.id) && recipes.findIndex(item => item.id === recipe.id) === index);
+  const selected = selectedRecipes();
   if (!selected.length) { $("weekStoreStatus").textContent = ""; return; }
   const shoppingItems = aggregateShopping(selected);
   const liveCount = shoppingItems.filter(item => state.livePriser[item.namn]).length;
@@ -807,8 +1052,23 @@ function aggregateShopping(selected) {
   return aggregateIngredients(selected.filter(recipe => recipe.priceStatus !== "unavailable"), RECIPE_QUANTITIES, PACKAGE_INFO, state.personer);
 }
 
-function updateSummary() { $("summaryBudget").textContent = money(state.budget); $("summaryPeople").textContent = plural(state.personer, "person", "personer"); $("summaryMeals").textContent = plural(state.middagar, "middag", "middagar"); }
-function render() { renderRecipes(); renderBasket(); updateSummary(); renderStats(); }
+function updateSummary() { $("summaryPeople").textContent = plural(state.personer, "person", "personer"); $("summaryMeals").textContent = plural(state.middagar, "middag", "middagar"); }
+function hemRecipePreviewMarkup(recipe) {
+  const badge = recipe.typ && recipe.typ !== "Provider-recept" ? `<span class="hem-recipe-badge">${escapeHtml(recipe.typ)}</span>` : "";
+  const price = recipe.portionspris ? `${money(recipe.portionspris)}/portion` : "";
+  // Distinct data-hem-* attributes, not data-details/data-add/data-favorite -
+  // the full library on the Recept tab wires those same names document-wide
+  // (see renderRecipes), and this preview sits in the DOM at the same time
+  // it does (both screens always exist, just toggled by CSS) - reusing the
+  // names would double-bind every click.
+  return `<button type="button" class="hem-recipe-card" data-hem-details="${escapeHtml(recipe.id)}"><span class="hem-recipe-photo">${recipePhoto(recipe)}</span><span class="hem-recipe-info"><strong>${escapeHtml(recipe.namn)}</strong>${badge}<small>${escapeHtml([recipe.tid ? `${recipe.tid} min` : "", price].filter(Boolean).join(" · "))}</small></span></button>`;
+}
+function renderHemRecipePreview() {
+  const recipes = availableRecipes().slice(0, 8);
+  $("hemRecipePreview").innerHTML = recipes.length ? recipes.map(hemRecipePreviewMarkup).join("") : `<p class="empty-state">Inga recept matchar din butik ännu.</p>`;
+  document.querySelectorAll("[data-hem-details]").forEach(btn => btn.addEventListener("click", () => openRecipeTab(btn.dataset.hemDetails)));
+}
+function render() { renderGreeting(); renderRecipes(); renderHemRecipePreview(); renderBasket(); updateSummary(); renderStats(); }
 function step(key, delta, min, max) { state[key] = Math.min(max, Math.max(min, state[key] + delta)); $(`${key === "personer" ? "people" : "meals"}Value`).textContent = state[key]; saveState(); render(); }
 function syncSettingsInputs() {
   $("budgetInput").value = state.budget; $("peopleValue").textContent = state.personer; $("mealsValue").textContent = state.middagar; $("storeInput").value = state.butik; $("postcodeInput").value = state.postnummer;
@@ -835,6 +1095,7 @@ $("postcodeInput").addEventListener("input", e => {
 });
 $("locateBtn").addEventListener("click", () => { if (!navigator.geolocation) return; $("locateBtn").textContent = "Hämtar..."; navigator.geolocation.getCurrentPosition(({ coords }) => { state.position = { lat: coords.latitude, lon: coords.longitude }; $("locateBtn").textContent = "Hittad"; chooseMenu(false); }, () => { $("locateBtn").textContent = "Försök igen"; }); });
 $("storeInput").addEventListener("change", e => { state.butik = e.target.value; saveState(); chooseMenu(); renderCampaignSection(); });
+$("budgetCardBtn").addEventListener("click", () => { $("advancedSettings").open = true; $("advancedSettings").scrollIntoView({ behavior: "smooth", block: "center" }); });
 
 const GOAL_PRESETS = {
   hogprotein: { kcalGoal: "", proteinGoal: "40" },
@@ -966,10 +1227,17 @@ function renderAccount() {
   $("nutritionFields").hidden = !premium;
 }
 let swapContext = null;
-function swapOptionMarkup(option, baseTotal) {
-  const delta = option.total - baseTotal;
-  const deltaLabel = Math.round(delta) === 0 ? "Samma pris för veckan" : `${delta > 0 ? "+" : "−"}${money(Math.abs(delta))} för veckan`;
-  return `<button type="button" class="swap-option" data-choose-swap="${escapeHtml(option.candidate.id)}"><div class="basket-line-photo">${recipePhoto(option.candidate)}</div><span><strong>${escapeHtml(option.candidate.namn)}</strong><small>${deltaLabel}</small></span></button>`;
+const SWAP_OPTIONS_BATCH = 3;
+function swapOptionMarkup(option, isSelected) {
+  const recipe = option.candidate;
+  const badge = recipe.typ && recipe.typ !== "Provider-recept" ? `<span class="swap-option-badge">${escapeHtml(recipe.typ)}</span>` : "";
+  const price = recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? `${money(recipe.portionspris)}/portion` : "";
+  // Only a genuine, already-fetched campaign on one of this recipe's own
+  // ingredients - never guessed or shown for a recipe just because some
+  // other product happens to be on offer right now.
+  const campaignIngredient = recipe.ingredienser.find(name => state.livePriser[name]?.kampanj?.text);
+  const campaignNote = campaignIngredient ? `<small class="swap-option-campaign">🏷️ Kampanj på ${escapeHtml(campaignIngredient)}</small>` : "";
+  return `<button type="button" class="swap-option ${isSelected ? "selected" : ""}" data-choose-swap="${escapeHtml(recipe.id)}"><span class="swap-option-photo">${recipePhoto(recipe)}</span><span class="swap-option-info"><strong>${escapeHtml(recipe.namn)}</strong>${badge}<small class="swap-option-meta">${[recipe.tid ? `${recipe.tid} min` : "", price].filter(Boolean).join(" · ")}</small>${campaignNote}</span>${isSelected ? '<span class="swap-option-check" aria-hidden="true">✓</span>' : ""}</button>`;
 }
 const FREE_SWAP_LIMIT = 3;
 function openSwapModal(currentId) {
@@ -977,26 +1245,41 @@ function openSwapModal(currentId) {
     $("swapModalHint").textContent = "";
     $("swapOptions").innerHTML = `<button type="button" class="store-compare-upsell" id="swapUpsell">🔒 Du har använt dina ${FREE_SWAP_LIMIT} gratis byten den här veckan. Prova Premium gratis i 14 dagar för obegränsade byten.</button>`;
     $("swapUpsell").addEventListener("click", () => { closeSwapModal(); openPremiumPitch(); });
+    $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true;
     $("swapModal").hidden = false;
     return;
   }
-  const selected = [...RECEPT, ...state.apiRecipes].filter((recipe, index, recipes) => state.valda.has(recipe.id) && recipes.findIndex(item => item.id === recipe.id) === index);
+  const selected = selectedRecipes();
+  const dayIndex = state.weekPlan.indexOf(currentId);
   const branch = selectedBranch();
-  const baseTotal = shoppingListCost(selected, branch);
   const candidates = candidateRecipesForUser().filter(recipe => !state.valda.has(recipe.id));
-  const options = candidates.map(candidate => ({ candidate, total: shoppingListCost(selected.map(recipe => recipe.id === currentId ? candidate : recipe), branch) })).sort((a, b) => a.total - b.total).slice(0, 3);
-  if (!options.length) { $("swapOptions").innerHTML = `<p class="live-loading">Inga alternativ hittades som passar budget, butik och dina filter just nu.</p>`; $("swapModal").hidden = false; return; }
-  swapContext = { currentId };
-  $("swapModalHint").textContent = "Tre förslag som fortfarande passar din budget, butik, allergier och näringsmål.";
-  $("swapOptions").innerHTML = options.map(option => swapOptionMarkup(option, baseTotal)).join("");
-  document.querySelectorAll("[data-choose-swap]").forEach(button => button.addEventListener("click", () => {
-    state.valda.delete(swapContext.currentId);
-    state.valda.add(button.dataset.chooseSwap);
-    if (!state.user?.premium) state.swapsThisWeek++;
-    saveState(); render(); closeSwapModal();
-  }));
+  const allOptions = candidates.map(candidate => ({ candidate, total: shoppingListCost(selected.map(recipe => recipe.id === currentId ? candidate : recipe), branch) })).sort((a, b) => a.total - b.total);
+  if (!allOptions.length) { $("swapModalHint").textContent = ""; $("swapOptions").innerHTML = `<p class="live-loading">Inga alternativ hittades som passar budget, butik och dina filter just nu.</p>`; $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true; $("swapModal").hidden = false; return; }
+  swapContext = { currentId, dayIndex, allOptions, visibleCount: SWAP_OPTIONS_BATCH, selectedId: null };
+  renderSwapModal();
   $("swapModal").hidden = false;
 }
+function renderSwapModal() {
+  if (!swapContext) return;
+  const { currentId, dayIndex, allOptions, visibleCount, selectedId } = swapContext;
+  const currentRecipe = selectedRecipes().find(r => r.id === currentId);
+  const dayLabel = DAYS[dayIndex] || `Dag ${dayIndex + 1}`;
+  $("swapModalHint").innerHTML = `${dayLabel}s middag${currentRecipe ? ` · nuvarande: ${escapeHtml(currentRecipe.namn)}` : ""}`;
+  $("swapOptions").innerHTML = allOptions.slice(0, visibleCount).map(option => swapOptionMarkup(option, option.candidate.id === selectedId)).join("");
+  document.querySelectorAll("[data-choose-swap]").forEach(button => button.addEventListener("click", () => {
+    swapContext.selectedId = swapContext.selectedId === button.dataset.chooseSwap ? null : button.dataset.chooseSwap;
+    renderSwapModal();
+  }));
+  $("swapShowMoreBtn").hidden = visibleCount >= allOptions.length;
+  $("swapConfirmBtn").hidden = !selectedId;
+}
+$("swapShowMoreBtn").addEventListener("click", () => { if (swapContext) { swapContext.visibleCount += SWAP_OPTIONS_BATCH; renderSwapModal(); } });
+$("swapConfirmBtn").addEventListener("click", () => {
+  if (!swapContext?.selectedId) return;
+  swapWeekPlanDay(swapContext.dayIndex, swapContext.selectedId);
+  if (!state.user?.premium) state.swapsThisWeek++;
+  saveState(); render(); closeSwapModal();
+});
 function closeSwapModal() { $("swapModal").hidden = true; swapContext = null; }
 document.querySelectorAll("[data-swap-close]").forEach(button => button.addEventListener("click", closeSwapModal));
 
@@ -1027,8 +1310,7 @@ function openPlanComparison() {
     state.savingsLog.push({ date: new Date().toISOString().slice(0, 10), savings: Math.max(0, (priciest?.cost || plan.cost) - plan.cost), branch: branch?.namn || "", portionCost: plan.cost / (plan.combo.length * state.personer) });
     state.savingsLog = state.savingsLog.slice(-60);
     state.swapsThisWeek = 0;
-    state.valda.clear();
-    plan.combo.forEach(recipe => state.valda.add(recipe.id));
+    setWeekPlan(plan.combo.map(recipe => recipe.id));
     state.avklarade.clear();
     state.livePriser = {};
     state.liveBranchTotals = {};
@@ -1044,7 +1326,7 @@ function logEntriesSince(daysAgo) {
   return state.savingsLog.filter(entry => new Date(entry.date).getTime() >= cutoff);
 }
 function reusedIngredientCount() {
-  const selected = [...RECEPT, ...state.apiRecipes].filter((recipe, index, recipes) => state.valda.has(recipe.id) && recipes.findIndex(item => item.id === recipe.id) === index);
+  const selected = selectedRecipes();
   if (!selected.length) return 0;
   const shoppingItems = aggregateShopping(selected);
   return shoppingItems.filter(item => selected.filter(recipe => recipe.ingredienser.includes(item.namn)).length > 1).length;
@@ -1062,7 +1344,8 @@ function renderStats() {
   $("statCheapestStore").textContent = cheapestName;
   $("statAvgPortion").textContent = state.savingsLog.length ? money(avgPortion) : "-";
   $("statWasteReduced").textContent = reused ? `${plural(reused, "ingrediens", "ingredienser")} återanvänds i flera rätter denna vecka` : "Skapa en vecka för att se detta";
-  $("savingsCardValue").textContent = state.savingsLog.length ? `${money(savedWeek)} sparat denna vecka` : "Skapa din första vecka";
+  $("savingsCardValue").textContent = state.savingsLog.length ? money(savedWeek) : "–";
+  $("savingsCardSubtitle").textContent = state.savingsLog.length ? "denna vecka, jämfört med dyraste alternativet" : "Skapa din första vecka för att se detta";
 }
 $("openStatsBtn").addEventListener("click", () => { renderStats(); setView("stats"); });
 
@@ -1222,7 +1505,25 @@ const CAMPAIGN_CHAINS = ["Coop", "Hemköp"];
 let campaignFetchKey = null;
 function campaignDealMarkup(deal) {
   const recipe = RECEPT.find(item => item.ingredienser.includes(deal.ingrediens));
-  return `<div class="campaign-deal">${deal.bild ? `<img src="${escapeHtml(deal.bild)}" alt="">` : `<span class="campaign-deal-fallback">🏷️</span>`}<span class="campaign-deal-info"><strong>${escapeHtml(deal.produktnamn)}</strong><small>${escapeHtml(deal.kampanj.text)}${deal.kampanj.ordinariePris ? ` · ord. ${money(deal.kampanj.ordinariePris)}` : ""}</small>${recipe ? `<a class="campaign-deal-recipe" href="#" data-cook-open="${escapeHtml(recipe.id)}">Laga ${escapeHtml(recipe.namn)} med den här →</a>` : ""}</span></div>`;
+  // Real photo (Primat first, Open Food Facts by GTIN otherwise - see
+  // fill_missing_image on the backend) or a category icon, never a bare
+  // emoji standing in for a product - same guaranteed-image rule as the
+  // shopping list.
+  const photo = deal.bild ? `<img src="${escapeHtml(deal.bild)}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(deal.ingrediens));
+  const discount = deal.kampanj.ordinariePris && deal.pris_kr ? Math.round((1 - deal.pris_kr / deal.kampanj.ordinariePris) * 100) : null;
+  const badge = discount && discount > 0 ? `<span class="campaign-deal-badge">−${discount}%</span>` : "";
+  const brandSize = deal.marke_och_storlek ? `<small class="campaign-deal-brand">${escapeHtml(deal.marke_och_storlek)}</small>` : "";
+  // slutdatum comes straight from Primat's own offer.valid_until - never
+  // computed or guessed here, and simply omitted when Primat doesn't have one.
+  const endDate = deal.kampanj.slutdatum ? `<small class="campaign-deal-enddate">T.o.m. ${new Date(deal.kampanj.slutdatum).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}</small>` : "";
+  const storeColor = CHAIN_COLORS[deal.kedja] || "var(--primary)";
+  const inner = `<span class="campaign-deal-image">${photo}${badge}</span><span class="campaign-deal-info"><strong>${escapeHtml(deal.produktnamn)}</strong>${brandSize}<span class="campaign-deal-price-row"><strong class="campaign-deal-price">${money(deal.pris_kr)}</strong>${deal.kampanj.ordinariePris ? `<s>${money(deal.kampanj.ordinariePris)}</s>` : ""}</span><span class="campaign-deal-condition">${escapeHtml(deal.kampanj.text)}</span><span class="campaign-deal-store" style="color:${storeColor}">${escapeHtml(deal.kedja || "")}</span>${endDate}</span>`;
+  // The whole card opens the matched recipe when there is one (real,
+  // existing navigation) rather than a small text link easy to miss or
+  // overflow - a card with nothing to open stays a plain, non-interactive div.
+  return recipe
+    ? `<button type="button" class="campaign-deal" data-cook-open="${escapeHtml(recipe.id)}">${inner}</button>`
+    : `<div class="campaign-deal">${inner}</div>`;
 }
 async function renderCampaignSection() {
   const premium = Boolean(state.user?.premium);
@@ -1252,11 +1553,21 @@ async function renderCampaignSection() {
     const deals = data.kampanjer || [];
     $("campaignList").innerHTML = deals.length ? deals.map(campaignDealMarkup).join("") : `<p class="live-loading">Inga kampanjer hittades just nu.</p>`;
     document.querySelectorAll("[data-cook-open]").forEach(link => link.addEventListener("click", event => { event.preventDefault(); openRecipeTab(link.dataset.cookOpen); }));
+    const usesPrimat = deals.some(deal => deal.kalla === "primat"), usesOff = deals.some(deal => deal.bild_kalla === "openfoodfacts");
+    $("campaignAttribution").innerHTML = attributionMarkup(usesPrimat, usesOff);
+    $("campaignAttribution").hidden = !(usesPrimat || usesOff);
   } catch {
     campaignFetchKey = null;
     $("campaignList").innerHTML = `<p class="live-loading">Kunde inte hämta kampanjer just nu.</p>`;
+    $("campaignAttribution").hidden = true;
   }
 }
+// Every found deal is already rendered (the backend doesn't paginate this
+// scan) - "Visa alla" scrolls the row to its end rather than opening a
+// separate "all campaigns" page that doesn't exist, so it's a real action
+// and not a dead link.
+$("campaignShowAllBtn").addEventListener("click", () => $("campaignList").scrollTo({ left: $("campaignList").scrollWidth, behavior: "smooth" }));
+$("hemShowAllRecipesBtn").addEventListener("click", () => setView("recipes"));
 $("accountLoginForm").addEventListener("submit", async event => {
   event.preventDefault();
   $("loginError").textContent = "";

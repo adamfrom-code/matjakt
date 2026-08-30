@@ -164,7 +164,7 @@ def to_matjakt_product(primat_product, chain, query):
         "lager": bool(primat_product.get("available", True)),
         "url": (primat_product.get("urls") or {}).get("source") or (primat_product.get("urls") or {}).get("primat") or "",
         "sokning": query,
-        "kampanj": {"text": offer["label"], "ordinariePris": prices.get("regular")} if offer else None,
+        "kampanj": {"text": offer["label"], "ordinariePris": prices.get("regular"), "slutdatum": offer.get("valid_until")} if offer else None,
         "gtin": primat_product.get("gtin"),
         "kalla": "primat",
     }

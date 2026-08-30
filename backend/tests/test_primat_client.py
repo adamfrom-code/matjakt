@@ -166,12 +166,12 @@ class ToMatjaktProductTest(unittest.TestCase):
         primat_product = {
             "name": "Citronjuice Från koncentrat", "brand": "ICA", "package": "200 ml",
             "gtin": "7318690164555", "available": True,
-            "prices": {"regular": 10.3, "member": None, "offer": {"price": 7.0, "label": "2 för 14kr"}, "effective": 7.0},
+            "prices": {"regular": 10.3, "member": None, "offer": {"price": 7.0, "label": "2 för 14kr", "valid_until": "2026-08-30T21:59:59Z"}, "effective": 7.0},
             "urls": {"source": "https://handlaprivatkund.ica.se/stores/1004519/products/2021874"},
         }
         result = primat_client.to_matjakt_product(primat_product, "ICA", "Citronjuice")
         self.assertEqual(result["pris_kr"], 7.0)
-        self.assertEqual(result["kampanj"], {"text": "2 för 14kr", "ordinariePris": 10.3})
+        self.assertEqual(result["kampanj"], {"text": "2 för 14kr", "ordinariePris": 10.3, "slutdatum": "2026-08-30T21:59:59Z"})
         self.assertEqual(result["gtin"], "7318690164555")
         self.assertEqual(result["kalla"], "primat")
         self.assertEqual(result["kedja"], "ICA")
