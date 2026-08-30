@@ -1361,7 +1361,7 @@ function openPlanComparison() {
   document.querySelectorAll("[data-choose-plan]").forEach(button => button.addEventListener("click", () => {
     const plan = plans.find(candidate => candidate.key === button.dataset.choosePlan);
     const priciest = priciestBranchFor(plan.combo);
-    state.savingsLog.push({ date: new Date().toISOString().slice(0, 10), savings: Math.max(0, (priciest?.cost || plan.cost) - plan.cost), branch: branch?.namn || "", portionCost: plan.cost / (plan.combo.length * state.personer) });
+    state.savingsLog.push({ date: new Date().toISOString().slice(0, 10), savings: Math.max(0, (priciest?.cost || plan.cost) - plan.cost), hasComparison: nearbyBranches().length > 1, branch: branch?.namn || "", portionCost: plan.cost / (plan.combo.length * state.personer) });
     state.savingsLog = state.savingsLog.slice(-60);
     state.swapsThisWeek = 0;
     setWeekPlan(plan.combo.map(recipe => recipe.id));
@@ -1386,20 +1386,22 @@ function reusedIngredientCount() {
   return shoppingItems.filter(item => selected.filter(recipe => recipe.ingredienser.includes(item.namn)).length > 1).length;
 }
 function renderStats() {
-  const savedWeek = logEntriesSince(7).reduce((sum, entry) => sum + entry.savings, 0);
-  const savedMonth = logEntriesSince(30).reduce((sum, entry) => sum + entry.savings, 0);
+  const weekEntries = logEntriesSince(7).filter(entry => entry.hasComparison);
+  const monthEntries = logEntriesSince(30).filter(entry => entry.hasComparison);
+  const savedWeek = weekEntries.reduce((sum, entry) => sum + entry.savings, 0);
+  const savedMonth = monthEntries.reduce((sum, entry) => sum + entry.savings, 0);
   const branchCounts = {};
   state.savingsLog.forEach(entry => { if (entry.branch) branchCounts[entry.branch] = (branchCounts[entry.branch] || 0) + 1; });
   const cheapestName = Object.entries(branchCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || selectedBranch()?.namn || "-";
   const avgPortion = state.savingsLog.length ? state.savingsLog.reduce((sum, entry) => sum + entry.portionCost, 0) / state.savingsLog.length : 0;
   const reused = reusedIngredientCount();
-  $("statSavedWeek").textContent = money(savedWeek);
-  $("statSavedMonth").textContent = money(savedMonth);
+  $("statSavedWeek").textContent = weekEntries.length ? money(savedWeek) : "Underlag saknas";
+  $("statSavedMonth").textContent = monthEntries.length ? money(savedMonth) : "Underlag saknas";
   $("statCheapestStore").textContent = cheapestName;
   $("statAvgPortion").textContent = state.savingsLog.length ? money(avgPortion) : "-";
   $("statWasteReduced").textContent = reused ? `${plural(reused, "ingrediens", "ingredienser")} återanvänds i flera rätter denna vecka` : "Skapa en vecka för att se detta";
-  $("savingsCardValue").textContent = state.savingsLog.length ? money(savedWeek) : "–";
-  $("savingsCardSubtitle").textContent = state.savingsLog.length ? "denna vecka, jämfört med dyraste alternativet" : "Skapa din första vecka för att se detta";
+  $("savingsCardValue").textContent = weekEntries.length ? money(savedWeek) : "–";
+  $("savingsCardSubtitle").textContent = !state.savingsLog.length ? "Skapa din första vecka för att se detta" : weekEntries.length ? "denna vecka, jämfört med dyraste alternativet" : "Underlag saknas - fler butiker behövs för en jämförelse";
 }
 $("openStatsBtn").addEventListener("click", () => { renderStats(); setView("stats"); });
 

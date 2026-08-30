@@ -51,7 +51,18 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 HOST = os.environ.get("MATJAKT_HOST", "127.0.0.1")
 PORT = int(os.environ.get("MATJAKT_PORT", os.environ.get("PORT", "8000")))
-ALLOWED_ORIGIN = os.environ.get("MATJAKT_FRONTEND_ORIGIN", "http://localhost:5500")
+def _parse_allowed_origins(raw):
+    """MATJAKT_FRONTEND_ORIGIN may hold one origin or several comma-separated
+    ones (used during the matjakt.store domain migration, so both the new
+    domain and the old GitHub Pages origin stay allowed at once)."""
+    origins = [o.strip().rstrip("/") for o in raw.split(",")]
+    return tuple(o for o in origins if o)
+
+
+ALLOWED_ORIGINS = _parse_allowed_origins(os.environ.get("MATJAKT_FRONTEND_ORIGIN", "http://localhost:5500"))
+# Back-compat single-value name, kept as the default/fallback CORS origin
+# (e.g. for non-browser requests with no Origin header).
+ALLOWED_ORIGIN = ALLOWED_ORIGINS[0]
 # Where Stripe should redirect the browser back to after checkout/the billing portal.
 # Distinct from ALLOWED_ORIGIN (used for the CORS header, which must be a bare origin
 # with no path) because GitHub Pages serves this app from a project subpath
@@ -708,7 +719,7 @@ def stamp_match(product, updated_at):
 # leading-word check is used - see best_match()'s docstring for the general
 # mechanism. Kept as a small, explicit table (not a generic classifier)
 # because the app's ingredient vocabulary is itself small and fixed (see
-# RECIPE_QUANTITIES/PRODUCT_CATALOG in frontend/app.js) - every entry here
+# RECIPE_QUANTITIES/PRODUCT_CATALOG in frontend/app/app.js) - every entry here
 # should be backed by a real reproduction, not a guess.
 #
 # "category_top" checks Primat's own top-level department (the first segment
@@ -961,12 +972,19 @@ class ApiHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(FRONTEND_DIR), **kwargs)
 
+    def _cors_origin(self):
+        request_origin = self.headers.get("Origin", "")
+        if request_origin.rstrip("/") in ALLOWED_ORIGINS:
+            return request_origin
+        return ALLOWED_ORIGIN
+
     def send_json(self, status, payload, cache_seconds=None):
         self._json_response = True
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+        self.send_header("Access-Control-Allow-Origin", self._cors_origin())
+        self.send_header("Vary", "Origin")
         self.send_header("Cache-Control", f"public, max-age={cache_seconds}" if cache_seconds else "no-store")
         self.end_headers()
         self.wfile.write(body)
@@ -988,7 +1006,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+        self.send_header("Access-Control-Allow-Origin", self._cors_origin())
+        self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.send_header("Access-Control-Max-Age", "600")

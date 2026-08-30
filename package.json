@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "node --test && python -m unittest discover -s backend/tests",
-    "check": "node --check frontend/app.js && python -m compileall -q backend",
+    "check": "node --check frontend/app/app.js && python -m compileall -q backend",
     "frontend": "python -m http.server 5500 --directory frontend",
     "backend": "python backend/api_server.py"
   },

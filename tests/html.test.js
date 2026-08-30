@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 // safeHttpUrl resolves against window.location.href, so give Node's ESM (no
 // DOM) a minimal stand-in before importing the module under test.
 globalThis.window = { location: { href: "https://example.se/" } };
-const { escapeHtml, safeHttpUrl } = await import("../frontend/src/utils/html.js");
+const { escapeHtml, safeHttpUrl } = await import("../frontend/app/src/utils/html.js");
 
 test("escapeHtml neutraliserar taggar och attributbrott", () => {
   assert.equal(escapeHtml(`<b>test</b>`), "&lt;b&gt;test&lt;/b&gt;");

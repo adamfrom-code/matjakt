@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, portionFactor } from "../frontend/src/services/calculations.js";
+import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, portionFactor } from "../frontend/app/src/services/calculations.js";
 
 const recipes = [{ id: "pasta", ingredienser: ["Pasta", "Tomat"] }, { id: "soppa", ingredienser: ["Tomat"] }];
 const quantities = { pasta: { Pasta: [250, "g"], Tomat: [1, "st"] }, soppa: { Tomat: [2, "st"] } };

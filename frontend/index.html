@@ -2,421 +2,269 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <!-- Old GitHub Pages bookmarks/installed PWAs point straight at this file, which
+       used to be the app. Now that the root is the landing page, send visitors on
+       that one specific old hostname straight into the app instead of silently
+       showing them marketing copy. Checking for that exact hostname (not just
+       "!== matjakt.store") is deliberate - a blanket check would also redirect
+       local dev/preview environments (localhost, Render, etc.), making the
+       landing page impossible to test anywhere but production. Runs before
+       anything else loads to avoid a content flash. -->
+  <script>if (location.hostname === "adamfrom-code.github.io") location.replace("app/");</script>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f6f3ea">
-  <meta name="description" content="Matjakt hjälper dig planera billigare middagar efter din budget.">
-  <!-- Sätt content till en driftsatt backend-URL (t.ex. https://matjakt-backend.onrender.com/api) för GitHub Pages
-       och innan Android-appen byggs/synkas - utan detta anropar sidan sin egen origin istället för en riktig
-       server, vilket inte finns när frontend och backend körs på olika adresser. Lämna tomt bara när frontend
-       körs same-origin med backend (t.ex. lokalt via `npm run backend`). -->
-  <meta name="matjakt-api-url" content="">
-  <title>Matjakt – din smarta matvecka</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="assets/icons/icon-192.png">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Matjakt">
+  <!-- Cloudflare Web Analytics site token (not a secret - it's a public,
+       page-embedded identifier, same category as a Google Analytics
+       measurement id). Empty = no analytics beacon loads at all. See
+       README.md "Statistik" for how to get one and fill this in. -->
+  <meta name="cf-beacon-token" content="">
+  <title>Matjakt – planera veckans middagar efter din budget</title>
+  <meta name="description" content="Matjakt planerar veckans middagar efter din budget, ditt hushåll och din kost, och jämför tillgängliga butikspriser hos ICA, Coop, Willys och Hemköp.">
+  <link rel="canonical" href="https://matjakt.store/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Matjakt">
+  <meta property="og:title" content="Matjakt – planera veckans middagar efter din budget">
+  <meta property="og:description" content="Matjakt planerar veckans middagar efter din budget, ditt hushåll och din kost, och jämför tillgängliga butikspriser hos ICA, Coop, Willys och Hemköp.">
+  <meta property="og:url" content="https://matjakt.store/">
+  <meta property="og:image" content="https://matjakt.store/og-image.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Matjakt – planera veckans middagar efter din budget">
+  <meta name="twitter:description" content="Matjakt planerar veckans middagar efter din budget och jämför tillgängliga butikspriser.">
+  <meta name="twitter:image" content="https://matjakt.store/og-image.svg">
+  <link rel="icon" href="app/assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="app/assets/icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=37">
+  <link rel="stylesheet" href="styles.css?v=1">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Matjakt",
+    "applicationCategory": "LifestyleApplication",
+    "operatingSystem": "Web",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "SEK" },
+    "description": "Matjakt planerar veckans middagar efter din budget, ditt hushåll och din kost, och jämför tillgängliga butikspriser hos ICA, Coop, Willys och Hemköp."
+  }
+  </script>
 </head>
 <body>
-  <div class="phone-shell">
-    <header class="topbar">
-      <a class="wordmark" href="#" aria-label="Matjakt startsida">Matjakt<span>.</span></a>
-      <button class="profile-btn" type="button" id="profileBtn" aria-label="Öppna profil och inställningar">MJ</button>
-    </header>
-
-    <main class="app view-home" id="top">
-      <section class="screen home-screen" aria-labelledby="homeTitle">
-        <div class="home-hero"><h1 id="homeGreeting">God morgon <span aria-hidden="true">👋</span></h1><p id="homeSubtitle">Redo för en god och prisvärd vecka.</p></div>
-
-        <button type="button" class="budget-card" id="budgetCardBtn">
-          <span class="budget-card-head"><span>Veckobudget</span></span>
-          <span class="budget-card-row"><strong id="summaryBudgetRemaining">800 kr</strong><small>kvar av <span id="summaryBudgetTotal">800 kr</span></small><b id="summaryBudgetPercent">0%</b></span>
-          <span class="progress-track"><i id="summaryBudgetBar"></i></span>
-        </button>
-
-        <section class="week-card" aria-labelledby="settingsHeading">
-          <div class="week-card-label"><span>Din matvecka</span><span class="status-dot" id="weekCardStatus">Redo</span></div>
-          <div class="week-overview">
-            <p><b id="summaryPeople">2 personer</b><i></i><b id="summaryMeals">4 middagar</b></p>
-          </div>
-          <details class="advanced-settings" id="advancedSettings">
-            <summary id="settingsHeading">Justera veckan</summary>
-            <div class="settings-content">
-              <label for="budgetInput">Veckobudget</label><div class="budget-row"><input type="number" id="budgetInput" value="800" min="0" step="50" inputmode="numeric"><span>kr</span></div>
-              <div class="settings-grid"><div><label>Personer</label><div class="stepper"><button id="peopleMinus" aria-label="Färre personer">−</button><span id="peopleValue">2</span><button id="peoplePlus" aria-label="Fler personer">+</button></div></div><div><label>Middagar</label><div class="stepper"><button id="mealsMinus" aria-label="Färre middagar">−</button><span id="mealsValue">4</span><button id="mealsPlus" aria-label="Fler middagar">+</button></div></div></div>
-              <label for="postcodeInput">Postnummer</label><div class="location-row"><input id="postcodeInput" value="80252" inputmode="numeric" maxlength="5"><button id="locateBtn" type="button">Hitta mig</button></div><p id="locationHint" class="location-hint">Vi jämför butiker nära dig.</p>
-              <label for="storeInput">Butik</label><select id="storeInput"><option value="auto">Billigast automatiskt</option><option value="alla">Alla butiker</option><option value="ICA">ICA</option><option value="Willys">Willys</option><option value="Hemköp">Hemköp</option><option value="Coop">Coop</option></select>
-
-              <div class="nutrition-goals">
-                <div class="nutrition-goals-label"><span>Kost &amp; allergier</span></div>
-                <label for="kosttypInput">Kosttyp</label>
-                <select id="kosttypInput">
-                  <option value="">Alla recept</option>
-                  <option value="vegetariskt">Vegetariskt</option>
-                  <option value="veganskt">Veganskt</option>
-                </select>
-                <label>Undvik allergener</label>
-                <div class="protein-source-chips" id="allergenChips">
-                  <label><input type="checkbox" value="gluten"> Gluten</label>
-                  <label><input type="checkbox" value="laktos"> Laktos</label>
-                  <label><input type="checkbox" value="nötter"> Nötter</label>
-                  <label><input type="checkbox" value="skaldjur"> Skaldjur</label>
-                  <label><input type="checkbox" value="fisk"> Fisk</label>
-                  <label><input type="checkbox" value="ägg"> Ägg</label>
-                  <label><input type="checkbox" value="soja"> Soja</label>
-                </div>
-              </div>
-
-              <div class="nutrition-goals">
-                <div class="nutrition-goals-label"><span>Näringsmål</span><span class="premium-badge">Premium</span></div>
-                <p class="nutrition-locked" id="nutritionLocked">Logga in och lös in Premium för att styra veckan efter kalorier, protein och proteinkälla per måltid.</p>
-                <div class="nutrition-fields" id="nutritionFields" hidden>
-                  <label for="goalPreset">Mål</label>
-                  <select id="goalPreset">
-                    <option value="">Anpassat</option>
-                    <option value="hogprotein">Högprotein</option>
-                    <option value="lagkalori">Lågkalori</option>
-                    <option value="bulk">Bulk</option>
-                    <option value="cut">Cut</option>
-                    <option value="underhall">Underhåll</option>
-                  </select>
-                  <label for="kcalGoal">Kalorier per måltid</label>
-                  <select id="kcalGoal">
-                    <option value="">Ingen gräns</option>
-                    <option value="0-400">Under 400 kcal</option>
-                    <option value="400-500">400–500 kcal</option>
-                    <option value="500-600">500–600 kcal</option>
-                    <option value="600-700">600–700 kcal</option>
-                    <option value="700-900">700–900 kcal</option>
-                  </select>
-                  <label for="proteinGoal">Protein per måltid</label>
-                  <select id="proteinGoal">
-                    <option value="">Ingen gräns</option>
-                    <option value="20">Minst 20 g</option>
-                    <option value="30">Minst 30 g</option>
-                    <option value="40">Minst 40 g</option>
-                    <option value="50">Minst 50 g</option>
-                    <option value="60">Minst 60 g</option>
-                  </select>
-                  <label for="carbsGoal">Kolhydrater</label>
-                  <select id="carbsGoal">
-                    <option value="">Normala</option>
-                    <option value="0-30">Låga</option>
-                    <option value="60-999">Höga</option>
-                  </select>
-                  <label for="fatGoal">Fett</label>
-                  <select id="fatGoal">
-                    <option value="">Normalt</option>
-                    <option value="0-15">Lågt</option>
-                  </select>
-                  <label>Proteinkälla</label>
-                  <div class="protein-source-chips" id="proteinSourceChips">
-                    <label><input type="checkbox" value="kyckling"> Kyckling</label>
-                    <label><input type="checkbox" value="notkott"> Nötkött</label>
-                    <label><input type="checkbox" value="flask"> Fläsk</label>
-                    <label><input type="checkbox" value="fisk"> Fisk</label>
-                    <label><input type="checkbox" value="skaldjur"> Skaldjur</label>
-                    <label><input type="checkbox" value="vegetariskt"> Vegetariskt</label>
-                    <label><input type="checkbox" value="veganskt"> Veganskt</label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </details>
-          <p class="nutrition-warning" id="nutritionWarning" hidden></p>
-          <button class="btn btn-primary" id="generateBtn"><span>Skapa min vecka</span><span aria-hidden="true">→</span></button>
-        </section>
-
-        <button class="savings-card" type="button" id="openStatsBtn">
-          <span class="savings-card-body"><span class="savings-card-label">Du sparar</span><strong id="savingsCardValue">–</strong><small id="savingsCardSubtitle">Skapa din första vecka för att se detta</small></span>
-          <span class="savings-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg></span>
-        </button>
-
-        <section class="next-meal-section" aria-label="Nästa middag">
-          <div class="section-heading"><h2>Nästa middag</h2></div>
-          <div id="nextMealCard"></div>
-        </section>
-
-        <section class="campaign-section" id="campaignSection" aria-labelledby="campaignHeading">
-          <div class="section-heading"><div><h2 id="campaignHeading">Kampanjer nära dig</h2></div><button type="button" class="btn-ghost" id="campaignShowAllBtn">Visa alla</button></div>
-          <p class="nutrition-locked" id="campaignLocked">Logga in och lös in Premium för att se aktuella butikskampanjer hos Coop och Hemköp, med receptförslag.</p>
-          <p class="campaign-store-label" id="campaignStoreLabel" hidden></p>
-          <div class="campaign-scroll" id="campaignList"></div>
-          <p class="primat-attribution" id="campaignAttribution" hidden></p>
-        </section>
-
-        <section class="hem-recipes-section" aria-labelledby="hemRecipesHeading">
-          <div class="section-heading"><div><p class="eyebrow">Utvalt för dig</p><h2 id="hemRecipesHeading">Recept att gilla</h2></div><div class="hem-recipes-actions"><button type="button" class="btn-ghost" id="refreshBtn">Byt förslag</button><button type="button" class="btn-ghost" id="hemShowAllRecipesBtn">Visa alla</button></div></div>
-          <div class="hem-recipe-scroll" id="hemRecipePreview"></div>
-        </section>
-      </section>
-
-      <section class="screen week-screen" aria-labelledby="weekOverviewHeading">
-        <section class="week-overview" id="weekOverview" aria-label="Min matvecka">
-          <header class="screen-header week-overview-header"><h1 id="weekOverviewHeading">Min matvecka</h1></header>
-          <div class="week-store-switch" id="weekStoreSwitch" role="tablist" aria-label="Byt butik för veckan">
-            <button type="button" data-week-store="auto">Auto</button>
-            <button type="button" data-week-store="alla">Alla</button>
-            <button type="button" data-week-store="ICA">ICA</button>
-            <button type="button" data-week-store="Willys">Willys</button>
-            <button type="button" data-week-store="Hemköp">Hemköp</button>
-            <button type="button" data-week-store="Coop">Coop</button>
-          </div>
-          <p class="week-store-status" id="weekStoreStatus"></p>
-          <div id="storeCompare"></div>
-          <div class="week-day-tabs" id="weekDayTabs" role="tablist" aria-label="Välj dag"></div>
-          <div id="weekTodayCard"></div>
-          <div class="week-overview-section">
-            <div class="section-heading"><h2>Veckans plan</h2></div>
-            <div class="week-plan-list" id="weekPlanList"></div>
-            <button type="button" class="btn-ghost week-overview-toggle" id="weekPlanToggle" hidden></button>
-          </div>
-          <div class="week-overview-section">
-            <div class="section-heading"><h2>Handla-listan</h2><span id="weekShoppingSummary"></span></div>
-            <div class="week-shopping-preview" id="weekShoppingPreview"></div>
-            <button type="button" class="btn btn-ghost week-overview-open" id="weekShoppingOpenBtn"><span>Öppna hela inköpslistan</span><span aria-hidden="true">→</span></button>
-          </div>
-        </section>
-      </section>
-
-      <section class="screen recipes-library-screen" aria-labelledby="recipesHeading">
-        <header class="screen-header"><h1 id="recipesHeading">Recept</h1></header>
-        <div class="recipe-search"><label class="sr-only" for="recipeSearch">Sök recept</label><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="recipeSearch" type="search" placeholder="Sök recept eller ingrediens" autocomplete="off"></div>
-        <div class="recipe-filters"><select id="categoryFilter" aria-label="Kategori"><option value="alla">Alla kategorier</option><option value="Vegetarisk">Vegetariskt</option><option value="Fisk">Fisk</option><option value="Familjefavorit">Familjefavorit</option><option value="Snabbt & enkelt">Snabbt & enkelt</option></select><select id="timeFilter" aria-label="Tid"><option value="0">Alla tider</option><option value="30">Max 30 min</option><option value="20">Max 20 min</option></select><label class="favorite-filter"><input id="favoriteFilter" type="checkbox"> Favoriter</label></div>
-        <div class="live-products" id="liveProducts"></div><p class="section-help" id="menuSummary"></p><div class="recipe-scroll" id="recipeScroll"></div>
-      </section>
-
-      <section class="screen shopping-screen" aria-labelledby="shoppingTitle">
-        <header class="screen-header"><p class="eyebrow">Din lista</p><h1 id="shoppingTitle">Handla</h1></header>
-        <div id="basketStoreCompare"></div>
-        <section class="shopping-progress"><div><strong id="shoppingProgress">0 varor kvar</strong><span id="shoppingCost">0 / 0 kr</span></div><div class="progress-track"><i id="shoppingProgressBar"></i></div></section>
-        <div class="shopping-complete" id="shoppingComplete" hidden><strong>🎉 Allt handlat!</strong><p>Redo att planera nästa veckas meny?</p><button type="button" class="btn btn-primary" id="startNewWeekBtn"><span>Skapa nästa vecka</span><span aria-hidden="true">→</span></button></div>
-        <div class="shopping-list" id="shoppingList"></div>
-        <p class="primat-attribution" id="primatAttribution" hidden></p>
-        <p class="cost-note">Priserna avser hela förpackningar. Det du har hemma räknas bort.</p>
-      </section>
-
-      <section class="screen pantry-screen" aria-labelledby="pantryTitle">
-        <header class="screen-header"><p class="eyebrow">Hemma hos dig</p><h1 id="pantryTitle">Skafferi</h1></header>
-        <section class="pantry-hero"><span>Varor hemma</span><strong id="pantryCount">0</strong><p>Matjakt räknar bort det du redan har.</p></section>
-        <div class="segmented" role="tablist" id="pantryTabs"><button class="active" type="button" data-pantry-tab="skafferi">Skafferi</button><button type="button" data-pantry-tab="kyl">Kyl</button><button type="button" data-pantry-tab="frys">Frys</button></div>
-        <button class="add-pantry-btn" id="addPantryBtn" type="button"><span>＋</span> Lägg till vara</button>
-        <button class="btn btn-primary cook-from-pantry-btn" id="cookFromPantryBtn" type="button"><span>🍳 Laga med det jag har</span></button>
-        <div class="pantry-list" id="pantryList"></div>
-      </section>
-
-      <section class="screen stats-screen" aria-labelledby="statsTitle">
-        <header class="screen-header"><button class="back-link" type="button" data-view="home">← Hem</button><p class="eyebrow">Din historik</p><h1 id="statsTitle">Sparanderesultat</h1></header>
-        <div class="stats-grid">
-          <div class="stats-card highlight"><span>Uppskattat sparat denna vecka</span><strong id="statSavedWeek">0 kr</strong></div>
-          <div class="stats-card highlight"><span>Uppskattat sparat denna månad</span><strong id="statSavedMonth">0 kr</strong></div>
-          <div class="stats-card"><span>Billigaste butiken för dig</span><strong id="statCheapestStore">-</strong></div>
-          <div class="stats-card"><span>Snittkostnad per portion</span><strong id="statAvgPortion">-</strong></div>
-        </div>
-        <div class="stats-waste"><span>Minskat matsvinn</span><strong id="statWasteReduced">Skapa en vecka för att se detta</strong></div>
-        <p class="stats-note">Baserat på de veckor du skapat och valt i Matjakt. Uppskattade priser tills du bekräftar i kassan.</p>
-      </section>
-
-      <section class="screen comparison-screen" aria-labelledby="comparisonTitle">
-        <header class="screen-header"><button class="back-link" type="button" data-view="week">← Vecka</button><h1 id="comparisonTitle">Butiksjämförelse</h1></header>
-        <div class="comparison-summary-card">
-          <div><span>Din lista</span><strong id="comparisonItemCount">0 varor</strong></div>
-          <span class="comparison-check-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg></span>
-        </div>
-        <div class="comparison-store-list" id="comparisonStoreList"></div>
-        <div class="comparison-campaign-card" id="comparisonCampaignCard" hidden>
-          <span class="comparison-campaign-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 12 12.5 4.5a2 2 0 0 0-1.4-.5H5a1 1 0 0 0-1 1v6.1a2 2 0 0 0 .6 1.4L12 20"/><circle cx="8" cy="8" r="1.3"/></svg></span>
-          <div><strong>Kampanjer och rabatter</strong><small id="comparisonCampaignText"></small></div>
-        </div>
-        <p class="comparison-updated" id="comparisonUpdated"></p>
-      </section>
-    </main>
-
-    <nav class="bottom-nav" aria-label="Huvudmeny">
-      <button class="bottom-nav-item active" type="button" data-view="home"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 22V12h6v10"/></svg><small>Hem</small></button>
-      <button class="bottom-nav-item" type="button" data-view="week"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 2v4m8-4v4M4 9h16m-12 4h3m2 0h3m-8 4h3"/></svg><small>Vecka</small></button>
-      <button class="bottom-nav-item" type="button" data-view="recipes"><svg viewBox="0 0 24 24"><path d="M6 3h9a3 3 0 0 1 3 3v15H9a3 3 0 0 1-3-3V3Z"/><path d="M6 17h12M9 7h6m-6 4h4"/></svg><small>Recept</small></button>
-      <button class="bottom-nav-item" type="button" data-view="basket"><svg viewBox="0 0 24 24"><path d="M6 8h12l1 13H5L6 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg><small>Handla</small></button>
-      <button class="bottom-nav-item" type="button" data-view="pantry"><svg viewBox="0 0 24 24"><path d="M4 7h16v14H4z"/><path d="M8 7V4h8v3M8 11h8M8 15h5"/></svg><small>Skafferi</small></button>
+  <header class="site-topbar">
+    <a class="site-wordmark" href="#top">Matjakt<span>.</span></a>
+    <nav class="site-nav" aria-label="Huvudmeny">
+      <a href="#sa-fungerar-det">Så fungerar det</a>
+      <a href="#funktioner">Funktioner</a>
+      <a href="#premium">Premium</a>
+      <a href="#faq">Vanliga frågor</a>
     </nav>
-  </div>
-  <section class="recipe-page" id="recipePage" hidden></section>
+    <div class="site-topbar-actions">
+      <a class="site-btn site-btn-ghost" href="app/" data-track="cta_logga_in">Logga in</a>
+      <a class="site-btn site-btn-primary" href="app/" data-track="cta_testa_gratis">Testa gratis</a>
+    </div>
+  </header>
 
-  <div class="account-modal" id="accountModal" hidden>
-    <button class="account-modal-backdrop" type="button" data-account-close aria-label="Stäng"></button>
-    <div class="account-modal-card" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
-      <button class="account-modal-close" type="button" data-account-close aria-label="Stäng">×</button>
-
-      <div id="accountLoggedOut">
-        <h2 id="accountModalTitle">Konto</h2>
-        <div class="account-tabs" role="tablist">
-          <button type="button" class="account-tab active" data-account-tab="login">Logga in</button>
-          <button type="button" class="account-tab" data-account-tab="register">Skapa konto</button>
-        </div>
-        <form id="accountLoginForm" class="account-form">
-          <label for="loginEmail">E-post</label>
-          <input id="loginEmail" type="email" required autocomplete="email">
-          <label for="loginPassword">Lösenord</label>
-          <input id="loginPassword" type="password" required autocomplete="current-password">
-          <p class="account-error" id="loginError"></p>
-          <button class="btn btn-primary" type="submit"><span>Logga in</span></button>
-          <button type="button" class="account-link-btn" id="forgotPasswordLink">Glömt lösenord?</button>
-        </form>
-        <form id="accountRegisterForm" class="account-form" hidden>
-          <label for="registerEmail">E-post</label>
-          <input id="registerEmail" type="email" required autocomplete="email">
-          <label for="registerPassword">Lösenord (minst 8 tecken)</label>
-          <input id="registerPassword" type="password" required minlength="8" autocomplete="new-password">
-          <p class="account-error" id="registerError"></p>
-          <button class="btn btn-primary" type="submit"><span>Skapa konto</span></button>
-        </form>
-        <form id="forgotPasswordForm" class="account-form" hidden>
-          <label for="forgotEmail">E-post</label>
-          <input id="forgotEmail" type="email" required autocomplete="email">
-          <p class="account-error" id="forgotError"></p>
-          <p class="account-success" id="forgotSuccess" hidden>Om adressen finns hos oss har vi skickat en återställningslänk dit.</p>
-          <button class="btn btn-primary" type="submit"><span>Skicka återställningslänk</span></button>
-          <button type="button" class="account-link-btn" id="backToLoginLink">Tillbaka till inloggning</button>
-        </form>
-        <form id="resetPasswordForm" class="account-form" hidden>
-          <label for="resetPasswordInput">Nytt lösenord (minst 8 tecken)</label>
-          <input id="resetPasswordInput" type="password" required minlength="8" autocomplete="new-password">
-          <p class="account-error" id="resetError"></p>
-          <button class="btn btn-primary" type="submit"><span>Spara nytt lösenord</span></button>
-        </form>
-        <p class="account-legal-links"><a href="mailto:adamfrom@icloud.com">Kontakta support</a> · <a href="integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
+  <main id="top">
+    <section class="site-hero">
+      <p class="site-eyebrow">Matplanering efter din budget</p>
+      <h1>Planera veckans middagar efter din budget, ditt hushåll och din kost</h1>
+      <p class="site-hero-lead">Matjakt planerar veckan efter din budget och jämför tillgängliga butikspriser hos ICA, Coop, Willys och Hemköp. Du ser alltid hur många varor i listan som har ett aktuellt pris.</p>
+      <div class="site-hero-actions">
+        <a class="site-btn site-btn-primary site-btn-lg" href="app/" data-track="cta_testa_gratis">Testa Matjakt gratis →</a>
+        <a class="site-btn site-btn-ghost site-btn-lg" href="#sa-fungerar-det" data-track="cta_se_hur_det_fungerar">Se hur det fungerar</a>
       </div>
-
-      <div id="accountLoggedIn" hidden>
-        <h2>Ditt konto</h2>
-        <p class="account-email" id="accountEmail"></p>
-        <p class="account-premium-status" id="accountPremiumStatus"></p>
-
-        <div class="verify-email-notice" id="verifyEmailNotice" hidden>
-          <p>Din e-postadress är inte verifierad än.</p>
-          <button class="btn btn-ghost account-redeem-btn" type="button" id="resendVerificationBtn">Skicka verifieringsmejl igen</button>
-          <p class="account-error" id="verifyError"></p>
+      <p class="site-hero-note">Inget betalkort krävs för att komma igång.</p>
+      <div class="site-hero-visual" aria-hidden="true">
+        <div class="site-mock-card">
+          <div class="site-mock-row"><span>Veckobudget</span><strong>629 kr kvar av 800 kr</strong></div>
+          <div class="site-mock-bar"><i style="width:21%"></i></div>
         </div>
-
-        <div class="subscription-panel" id="subscriptionPanel" hidden>
-          <p class="subscription-panel-line" id="subscriptionPanelLine"></p>
-          <button class="btn btn-ghost account-redeem-btn" type="button" id="manageBillingBtn">Hantera prenumeration</button>
-          <p class="account-error" id="portalError"></p>
+        <div class="site-mock-card">
+          <div class="site-mock-row"><span>Handla hos</span><strong>Coop Nian · 461 kr</strong></div>
+          <div class="site-mock-tag">Billigast av 4 butiker</div>
         </div>
+      </div>
+      <p class="site-hero-visual-caption">Exempel från appen</p>
+    </section>
 
-        <div class="premium-pitch" id="premiumPitch">
-          <h3>Matjakt Premium</h3>
-          <ul class="premium-feature-list">
-            <li>Aktuella erbjudanden och kampanjer</li>
-            <li>Full jämförelse mellan butiker</li>
-            <li>Automatiskt val av billigaste butik</li>
-            <li>Kalorier, protein, kolhydrater och fett</li>
-            <li>Val av kött och proteinkälla</li>
-            <li>Matsvinnsoptimering</li>
-            <li>Appen lär sig vad du gillar</li>
-            <li>Obegränsade byten av maträtter</li>
-            <li>Sparhistorik</li>
+    <section class="site-savings">
+      <div class="site-savings-inner">
+        <p class="site-savings-tag">Illustration, inte en garanti</p>
+        <h2>Så kan du spara pengar</h2>
+        <p>Matjakt jämför din faktiska veckolista mot flera butiker samtidigt och visar vilken som är billigast just för dig. Ett hushåll som handlar hos den butik Matjakt pekar ut kan spara pengar jämfört med att handla på måfå – hur mycket beror på ditt hushåll, din ort, vad du redan har hemma och hur många priser som går att hämta just den veckan.</p>
+      </div>
+    </section>
+
+    <section class="site-features" id="funktioner">
+      <h2>Allt du behöver för matveckan</h2>
+      <div class="site-feature-grid">
+        <article class="site-feature-card">
+          <span class="site-feature-icon" aria-hidden="true">📅</span>
+          <h3>Vecka</h3>
+          <p>Se hela veckans middagar på ett ställe. Byt en enskild rätt utan att rubba resten av planen.</p>
+        </article>
+        <article class="site-feature-card">
+          <span class="site-feature-icon" aria-hidden="true">📖</span>
+          <h3>Recept</h3>
+          <p>Sök och filtrera bland recept efter tid, pris, kost och näringsvärde.</p>
+        </article>
+        <article class="site-feature-card">
+          <span class="site-feature-icon" aria-hidden="true">🛒</span>
+          <h3>Handla</h3>
+          <p>En inköpslista som uppdateras efter vald butik, med priser och kampanjer när de går att hämta – och en tydlig markering när ett pris saknas.</p>
+        </article>
+        <article class="site-feature-card">
+          <span class="site-feature-icon" aria-hidden="true">🥫</span>
+          <h3>Skafferi</h3>
+          <p>Lägg in det du redan har hemma – Matjakt räknar bort det från listan automatiskt.</p>
+        </article>
+        <article class="site-feature-card">
+          <span class="site-feature-icon" aria-hidden="true">⚖️</span>
+          <h3>Butiksjämförelse</h3>
+          <p>Se totalpriset för din lista hos ICA, Coop, Willys och Hemköp, sida vid sida.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="site-steps" id="sa-fungerar-det">
+      <h2>Så fungerar det</h2>
+      <ol class="site-steps-list">
+        <li>
+          <span class="site-step-number">1</span>
+          <h3>Berätta var du handlar</h3>
+          <p>Ange ort, postnummer eller butik – och hur ditt hushåll ser ut: antal personer, budget och kost.</p>
+        </li>
+        <li>
+          <span class="site-step-number">2</span>
+          <h3>Få en färdig veckoplan</h3>
+          <p>Matjakt sätter ihop en hel veckas middagar som håller budgeten, med tillgängliga priser från din butik.</p>
+        </li>
+        <li>
+          <span class="site-step-number">3</span>
+          <h3>Handla från en smart lista</h3>
+          <p>Inköpslistan vet redan vad du har hemma i skafferiet och räknar bort det åt dig.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="site-premium" id="premium">
+      <h2>Gratis att komma igång, Premium när du vill mer</h2>
+      <div class="site-plan-grid">
+        <article class="site-plan-card">
+          <h3>Gratis</h3>
+          <p class="site-plan-price">0 kr</p>
+          <ul>
+            <li>Skapa veckoplaner efter budget och hushåll</li>
+            <li>Uppskattade priser och en inköpslista som fungerar</li>
+            <li>Skafferi och receptbibliotek</li>
+            <li>Byt recept upp till 3 gånger i veckan</li>
           </ul>
-          <div class="premium-pricing" role="tablist">
-            <button type="button" class="premium-price-tab active" data-price-tab="month" data-plan="monthly"><span>Månad</span><strong>59 kr</strong><small>/mån</small></button>
-            <button type="button" class="premium-price-tab" data-price-tab="year" data-plan="yearly"><span>År · Bäst värde</span><strong>499 kr</strong><small>/år · spara 209 kr</small></button>
-          </div>
-          <button class="btn btn-primary" type="button" id="subscribeBtn"><span>Prenumerera</span></button>
-          <p class="account-error" id="checkoutError"></p>
-          <button class="btn btn-ghost" type="button" id="startTrialBtn"><span>Eller prova gratis i 14 dagar</span></button>
-          <p class="account-error" id="trialError"></p>
-          <p class="premium-pitch-note">Ingen kortuppgift krävs för provperioden - den avslutas automatiskt till gratisversionen om du inte prenumererar. Har du en kod?</p>
-          <form id="accountRedeemForm" class="account-form">
-            <label class="sr-only" for="premiumCode">Premium-kod</label>
-            <input id="premiumCode" type="text" placeholder="Premium-kod" autocomplete="off">
-            <p class="account-error" id="redeemError"></p>
-            <button class="btn btn-ghost account-redeem-btn" type="submit">Lös in kod</button>
-          </form>
-        </div>
-
-        <button class="account-logout-btn" id="logoutBtn" type="button">Logga ut</button>
-        <button class="account-delete-btn" id="deleteAccountBtn" type="button">Radera konto</button>
-        <p class="account-error" id="deleteError"></p>
-        <p class="account-legal-links"><a href="mailto:adamfrom@icloud.com">Kontakta support</a> · <a href="integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
+        </article>
+        <article class="site-plan-card site-plan-featured">
+          <p class="site-plan-badge">14 dagar gratis</p>
+          <h3>Premium</h3>
+          <p class="site-plan-price">59 kr/mån <small>eller 499 kr/år</small></p>
+          <ul>
+            <li>Obegränsade receptbyten</li>
+            <li>Butiksjämförelse mellan ICA, Coop, Willys och Hemköp, med antal varor som har säkert pris</li>
+            <li>Näringsmål per måltid – kalorier, protein, kolhydrater och fett</li>
+            <li>Välj och spara en specifik favoritbutik</li>
+          </ul>
+          <a class="site-btn site-btn-primary" href="app/" data-track="cta_testa_gratis">Testa Premium gratis →</a>
+        </article>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <div class="account-modal" id="pantryModal" hidden>
-    <button class="account-modal-backdrop" type="button" data-pantry-close aria-label="Stäng"></button>
-    <div class="account-modal-card pantry-modal-card" role="dialog" aria-modal="true" aria-labelledby="pantryModalTitle">
-      <button class="account-modal-close" type="button" data-pantry-close aria-label="Stäng">×</button>
-      <h2 id="pantryModalTitle">Lägg till i skafferiet</h2>
-      <label class="sr-only" for="pantrySearch">Sök vara</label>
-      <input id="pantrySearch" type="search" placeholder="Sök t.ex. pasta, ris, ost..." autocomplete="off">
-      <div class="pantry-picker-list" id="pantryPickerList"></div>
-      <div class="pantry-picker-live" id="pantryLiveResults"></div>
-      <div class="pantry-add-confirm" id="pantryAddConfirm" hidden>
-        <h3 id="pantryAddConfirmName"></h3>
-        <label>Var förvarar du den?</label>
-        <div class="segmented" id="pantryAddLocation">
-          <button type="button" class="active" data-location="skafferi">Skafferi</button>
-          <button type="button" data-location="kyl">Kyl</button>
-          <button type="button" data-location="frys">Frys</button>
-        </div>
-        <label for="pantryAddExpiry">Bäst före (valfritt)</label>
-        <input type="date" id="pantryAddExpiry">
-        <button class="btn btn-primary" id="pantryAddConfirmBtn" type="button"><span>Lägg till</span></button>
-      </div>
-    </div>
-  </div>
+    <section class="site-faq" id="faq">
+      <h2>Vanliga frågor</h2>
+      <details>
+        <summary>Hur aktuella är priserna?</summary>
+        <p>Matjakt hämtar priser direkt från butikerna när det går, i stället för att gissa. Ibland saknas ett pris, eller så visas det senast kända priset med tidpunkt – då syns det tydligt i appen, och antalet varor med säkert pris räknas alltid upp öppet. ICA:s priser kan vara mindre tillförlitliga än de andra butikernas.</p>
+      </details>
+      <details>
+        <summary>Kostar Matjakt något?</summary>
+        <p>Grundfunktionerna är gratis: veckoplanering, inköpslista och skafferi. Premium kostar 59 kr/mån eller 499 kr/år och går att prova gratis i 14 dagar utan betalkort.</p>
+      </details>
+      <details>
+        <summary>Vilka butiker jämför ni?</summary>
+        <p>ICA, Coop, Willys och Hemköp. Täckningen kan variera beroende på var du bor och vilka varor som finns i din lista.</p>
+      </details>
+      <details>
+        <summary>Finns Matjakt som app?</summary>
+        <p>Matjakt fungerar som en webbapp som går att lägga till på hemskärmen och använda precis som en vanlig app. En version i App Store planeras längre fram.</p>
+      </details>
+      <details>
+        <summary>Vad händer med mina uppgifter?</summary>
+        <p>Läs vår <a href="integritetspolicy.html">integritetspolicy</a> för hela detaljerna kring vilka uppgifter som sparas och varför.</p>
+      </details>
+    </section>
 
-  <div class="account-modal" id="cookModal" hidden>
-    <button class="account-modal-backdrop" type="button" data-cook-close aria-label="Stäng"></button>
-    <div class="account-modal-card" role="dialog" aria-modal="true" aria-labelledby="cookModalTitle">
-      <button class="account-modal-close" type="button" data-cook-close aria-label="Stäng">×</button>
-      <h2 id="cookModalTitle">Laga med det du har hemma</h2>
-      <div id="cookResults"></div>
-    </div>
-  </div>
+    <section class="site-cta">
+      <h2>Redo att sluta gissa på matbudgeten?</h2>
+      <a class="site-btn site-btn-primary site-btn-lg" href="app/" data-track="cta_testa_gratis">Testa Matjakt gratis →</a>
+    </section>
+  </main>
 
-  <div class="account-modal onboarding-modal" id="onboardingModal" hidden>
-    <div class="account-modal-card onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
-      <div class="onboarding-dots" id="onboardingDots"></div>
-      <p class="eyebrow">Din matvecka</p>
-      <h2 id="onboardingTitle"></h2>
-      <div id="onboardingBody"></div>
-      <div class="onboarding-nav">
-        <button class="btn-ghost" type="button" id="onboardingBack" hidden>Tillbaka</button>
-        <button class="btn btn-primary" type="button" id="onboardingNext"><span>Nästa</span></button>
-      </div>
-      <button class="onboarding-skip" type="button" id="onboardingSkip">Hoppa över, jag ställer in senare</button>
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <span>Matjakt<span class="site-footer-dot">.</span></span>
+      <nav aria-label="Sidfot">
+        <a href="mailto:adamfrom@icloud.com">Kontakta support</a>
+        <a href="integritetspolicy.html">Integritetspolicy</a>
+        <a href="anvandarvillkor.html">Användarvillkor</a>
+      </nav>
     </div>
-  </div>
+  </footer>
 
-  <div class="account-modal plan-modal" id="planModal" hidden>
-    <button class="account-modal-backdrop" type="button" data-plan-close aria-label="Stäng"></button>
-    <div class="account-modal-card plan-modal-card" role="dialog" aria-modal="true" aria-labelledby="planModalTitle">
-      <button class="account-modal-close" type="button" data-plan-close aria-label="Stäng">×</button>
-      <h2 id="planModalTitle">Välj din vecka</h2>
-      <p class="plan-modal-hint">Samma budget och butik - tre olika sätt att lägga upp veckan.</p>
-      <div id="planCards"></div>
-    </div>
-  </div>
+  <script>
+    (function () {
+      // Anonymous, best-effort product-event counter (see
+      // backend/api_server.py's ANALYTICS_ALLOWED_EVENTS) - never blocks a
+      // click, never throws, never delays navigation. If this request is
+      // blocked (ad blocker, offline, CORS not yet configured for this
+      // origin) the button still works exactly the same; the count just
+      // isn't recorded.
+      var ANALYTICS_URL = "https://matjakt.onrender.com/api/analytics/event";
+      function trackEvent(name) {
+        try {
+          fetch(ANALYTICS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ event: name }),
+            keepalive: true,
+          }).catch(function () {});
+        } catch (err) { /* analytics must never break the page */ }
+      }
+      document.querySelectorAll("[data-track]").forEach(function (el) {
+        el.addEventListener("click", function () { trackEvent(el.getAttribute("data-track")); });
+      });
+      // "Visning av prissidan" - fires once, the first time the Premium
+      // section actually scrolls into view, not just on page load.
+      var premiumSection = document.getElementById("premium");
+      if (premiumSection && "IntersectionObserver" in window) {
+        var firedViewPremium = false;
+        var observer = new IntersectionObserver(function (entries) {
+          if (!firedViewPremium && entries[0].isIntersecting) {
+            firedViewPremium = true;
+            trackEvent("view_premium");
+            observer.disconnect();
+          }
+        }, { threshold: 0.3 });
+        observer.observe(premiumSection);
+      }
 
-  <div class="account-modal" id="swapModal" hidden>
-    <button class="account-modal-backdrop" type="button" data-swap-close aria-label="Stäng"></button>
-    <div class="account-modal-card" role="dialog" aria-modal="true" aria-labelledby="swapModalTitle">
-      <button class="account-modal-close" type="button" data-swap-close aria-label="Stäng">×</button>
-      <h2 id="swapModalTitle">Byt rätt</h2>
-      <p class="plan-modal-hint" id="swapModalHint">Tre förslag som fortfarande passar din budget, butik, allergier och näringsmål.</p>
-      <div id="swapOptions"></div>
-      <button type="button" class="btn-ghost swap-show-more" id="swapShowMoreBtn" hidden>Visa fler alternativ</button>
-      <button type="button" class="btn btn-primary swap-confirm-btn" id="swapConfirmBtn" hidden><span>Byt till denna rätt</span></button>
-      <button type="button" class="btn btn-ghost swap-cancel-btn" data-swap-close>Avbryt</button>
-    </div>
-  </div>
-
-  <script type="module" src="app.js?v=62"></script>
+      // Cloudflare Web Analytics - pure pageview/performance beacon, only
+      // loads if a real token has been filled in below. No cookies, no
+      // fingerprinting, nothing that identifies an individual visitor.
+      var cfToken = document.querySelector('meta[name="cf-beacon-token"]')?.content?.trim();
+      if (cfToken) {
+        var beacon = document.createElement("script");
+        beacon.src = "https://static.cloudflareinsights.com/beacon.min.js";
+        beacon.setAttribute("data-cf-beacon", JSON.stringify({ token: cfToken }));
+        beacon.defer = true;
+        document.head.appendChild(beacon);
+      }
+    })();
+  </script>
 </body>
 </html>

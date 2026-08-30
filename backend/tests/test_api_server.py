@@ -508,6 +508,43 @@ class ApiServerHttpTest(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertIn("Willys", payload["stores"])
 
+    def test_cors_echoes_matching_origin_from_allowlist(self):
+        original = api_server.ALLOWED_ORIGINS
+        original_default = api_server.ALLOWED_ORIGIN
+        api_server.ALLOWED_ORIGINS = ("https://matjakt.store", "https://adamfrom-code.github.io")
+        api_server.ALLOWED_ORIGIN = api_server.ALLOWED_ORIGINS[0]
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            try:
+                conn.request("GET", "/api/health", headers={"Origin": "https://adamfrom-code.github.io"})
+                response = conn.getresponse()
+                response.read()
+                self.assertEqual(response.getheader("Access-Control-Allow-Origin"), "https://adamfrom-code.github.io")
+                self.assertEqual(response.getheader("Vary"), "Origin")
+            finally:
+                conn.close()
+        finally:
+            api_server.ALLOWED_ORIGINS = original
+            api_server.ALLOWED_ORIGIN = original_default
+
+    def test_cors_falls_back_to_default_for_unlisted_origin(self):
+        original = api_server.ALLOWED_ORIGINS
+        original_default = api_server.ALLOWED_ORIGIN
+        api_server.ALLOWED_ORIGINS = ("https://matjakt.store", "https://adamfrom-code.github.io")
+        api_server.ALLOWED_ORIGIN = api_server.ALLOWED_ORIGINS[0]
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            try:
+                conn.request("GET", "/api/health", headers={"Origin": "https://evil.example"})
+                response = conn.getresponse()
+                response.read()
+                self.assertEqual(response.getheader("Access-Control-Allow-Origin"), "https://matjakt.store")
+            finally:
+                conn.close()
+        finally:
+            api_server.ALLOWED_ORIGINS = original
+            api_server.ALLOWED_ORIGIN = original_default
+
     def test_admin_primat_status_refuses_unset_admin_token(self):
         """No MATJAKT_ADMIN_TOKEN configured (the default) must refuse every
         request to this endpoint, not fall open."""
@@ -588,7 +625,7 @@ class ApiServerHttpTest(unittest.TestCase):
             first = conn.getresponse()
             self.assertEqual(json.loads(first.read())["ok"], True)
 
-            conn.request("GET", "/src/api/config.js")
+            conn.request("GET", "/app/src/api/config.js")
             second = conn.getresponse()
             second.read()
             self.assertEqual(second.status, 200)

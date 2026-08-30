@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { filterByNutritionGoals, hasActiveNutritionGoals } from "../frontend/src/services/nutrition.js";
+import { filterByNutritionGoals, hasActiveNutritionGoals } from "../frontend/app/src/services/nutrition.js";
 
 const recipes = [
   { id: "a", kcal: 638, protein: 48, kolhydrater: 67, fett: 18, proteinkalla: "kyckling" },

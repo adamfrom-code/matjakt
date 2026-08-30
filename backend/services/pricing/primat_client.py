@@ -9,7 +9,7 @@ Verified directly against the real API before building this (2026-08-29):
 commercial use is explicitly permitted in Primat's terms, data/images may be
 cached, and the free/demo tier requires visible "Prisdata fran primat.nu"
 attribution with a link wherever the data is shown (see ATTRIBUTION below and
-frontend/app.js's use of it). Reselling the data itself as a dataset/mirror
+frontend/app/app.js's use of it). Reselling the data itself as a dataset/mirror
 API is not permitted - Matjakt only ever uses it to price its own shopping
 list, never re-exposes Primat's data as a standalone feed.
 

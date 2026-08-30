@@ -12,9 +12,9 @@ services:
       sizeGB: 1
     envVars:
       - key: MATJAKT_FRONTEND_ORIGIN
-        value: https://adamfrom-code.github.io
+        value: https://matjakt.store,https://www.matjakt.store,https://adamfrom-code.github.io
       - key: MATJAKT_APP_URL
-        value: https://adamfrom-code.github.io/matjakt
+        value: https://matjakt.store/app
       - key: MATJAKT_PREMIUM_CODE
         sync: false
       - key: MATJAKT_MAX_SCRAPES

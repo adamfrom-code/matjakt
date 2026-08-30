@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { filterByDiet } from "../frontend/src/services/diet.js";
+import { filterByDiet } from "../frontend/app/src/services/diet.js";
 
 const recipes = [
   { id: "a", proteinkalla: "kyckling", allergener: ["gluten"] },

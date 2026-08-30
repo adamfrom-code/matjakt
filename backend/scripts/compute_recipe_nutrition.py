@@ -1,11 +1,11 @@
 """One-off data-prep script: compute kcal/protein/kolhydrater/fett per portion for
-every recipe in frontend/app.js's RECEPT, from Livsmedelsverkets open food
+every recipe in frontend/app/app.js's RECEPT, from Livsmedelsverkets open food
 composition API (CC BY 4.0, https://dataportal.livsmedelsverket.se).
 
 This is NOT wired into the running server - it's run by hand once (and again
 whenever recipes/ingredients change), and its output is pasted into RECEPT in
-frontend/app.js as kcal/protein/kolhydrater/fett fields. Ingredient quantities
-below are a hand-kept mirror of RECIPE_QUANTITIES/PACKAGE_INFO in frontend/app.js -
+frontend/app/app.js as kcal/protein/kolhydrater/fett fields. Ingredient quantities
+below are a hand-kept mirror of RECIPE_QUANTITIES/PACKAGE_INFO in frontend/app/app.js -
 keep them in sync when recipes change.
 
 Usage:
@@ -52,7 +52,7 @@ GRAM_PER_ST = {
     "Basilika": 20, "Ägg": 58, "Zucchini": 250, "Vitlök": 40, "Timjan": 15,
 }
 
-# Mirror of frontend/app.js RECIPE_QUANTITIES (base 4 portions).
+# Mirror of frontend/app/app.js RECIPE_QUANTITIES (base 4 portions).
 RECIPE_QUANTITIES = {
     "pastagratang": {"Pasta": (250, "g"), "Purjolök": (0.5, "st"), "Grädde": (200, "ml"), "Riven ost": (100, "g")},
     "fiskpasta": {"Fryst torsk": (450, "g"), "Pasta": (250, "g"), "Crème fraiche": (200, "g"), "Citron": (1, "st")},

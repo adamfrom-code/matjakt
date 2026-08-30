@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { comboProtein, comboVariety, inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "../frontend/src/services/planning.js";
+import { comboProtein, comboVariety, inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "../frontend/app/src/services/planning.js";
 
 const cheapVeg = { id: "cheapveg", proteinkalla: "vegetariskt", protein: 10, inkopspris: 50 };
 const cheapVeg2 = { id: "cheapveg2", proteinkalla: "vegetariskt", protein: 12, inkopspris: 55 };

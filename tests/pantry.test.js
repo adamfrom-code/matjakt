@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { expiryStatus, matchLocalRecipesToPantry, normalizePantry, normalizePantryEntry, pantryAmounts } from "../frontend/src/services/pantry.js";
+import { expiryStatus, matchLocalRecipesToPantry, normalizePantry, normalizePantryEntry, pantryAmounts } from "../frontend/app/src/services/pantry.js";
 
 test("normalizePantryEntry migrerar gamla platta nummer till skafferi utan datum", () => {
   assert.deepEqual(normalizePantryEntry(5), { amount: 5, location: "skafferi", expiry: null });
