@@ -33,11 +33,51 @@ ett GTIN dyker upp).
 | Kedja | Status | Återkommande import verifierad? |
 |---|---|---|
 | **Willys** | `working` (nationell prissättning) | ✅ **Ja** |
+| **Hemköp** | `working` (nationell prissättning) | ✅ **Ja** |
 | **ICA** | `working_but_rate_limited` | ❌ Nej — AWS WAF |
 | **Coop** | `blocked_requires_vendor_credential` | ❌ Nej — API kräver Coops egen nyckel |
-| Hemköp | ej byggd | – |
 | City Gross | ej byggd | – |
 | Lidl | ej byggd | – |
+
+### Gemensamt Axfood-lager
+
+Willys och Hemköp kör samma Axfood-plattform. Det **verifierades** (inte antogs)
+genom att jämföra fullständiga svar från båda värdarna: identiska toppnycklar
+och identiska produktfält. All request-/parse-/normaliseringslogik ligger
+därför en gång i `providers/axfood.py`; `willys.py` och `hemkop.py` är tunna
+subklasser som bara sätter värd och metadata. Samma sak för collectorn
+(`collectors/axfood.py`).
+
+**Kampanj / medlemspris / multibuy hålls isär** — de tre är genuint olika och
+skulle felrapportera pris om de slogs ihop:
+
+| Signal | Betydelse | Fält |
+|---|---|---|
+| `campaignType == "LOYALTY"` | Bara medlemmar betalar detta | `member_price` |
+| `qualifyingCount > 1` | Styckpris vid köp av N ("2 för 40 kr" → 20,00/st) | `multibuy_price` |
+| annars | Rakt kampanjpris alla får | `campaign_price` |
+
+En tidigare version använde `conditionLabelFormatted` för att hitta multibuy.
+**Det var fel över kedjegränsen:** Hemköp lämnar det fältet tomt på riktiga
+multibuys (t.ex. Bryggkaffe: ordinarie 66,20, `qualifyingCount` 2,
+`rewardLabel` "129 kr", styckpris 64,50) medan Willys fyller i "2 för".
+`qualifyingCount` sätts korrekt av båda och är därför det koden litar på.
+
+### Cross-chain-matchning fungerar ⭐
+
+Eftersom både Willys och Hemköp nycklar sina produktbilder på GTIN-14 kan
+samma fysiska produkt matchas över kedjorna. Efter import av 100 produkter
+per kedja: **300 externa produkt-ID mappade till 231 unika produkter — 69
+matchade över kedjegränsen**, med riktiga prisskillnader:
+
+| Produkt | GTIN | Willys | Hemköp |
+|---|---|---|---|
+| Ayran Turkisk Yoghurtdryck | 07350056796000 | 15,90 | 17,93 |
+| Blåbär Filmjölk 3,5% | 07310861012504 | 23,50 | 26,80 |
+| Cappuccino Iskaffe | 05710326016788 | 21,67 | 25,50 |
+| Currysoppa Kokosmjölk | 05711953212802 | 24,90 | 27,89 |
+
+ICA matchar inte in i detta, eftersom ICA inte exponerar något GTIN alls.
 
 ### Willys ⭐ (mest stabil hittills)
 
@@ -77,6 +117,38 @@ sökning med `storeId=2132` och `storeId=2223` ger byte-identiska svar
 (35593 B båda) med identiska priser. Endpointen accepterar men *ignorerar*
 `storeId`. Det är konsekvent med att Willys är en centralstyrd lågpriskedja,
 men ett Willys-pris får inte presenteras som verifierat för just den adressen.
+
+### Hemköp
+
+**Verifierad import (2026-08-30)** — Hemköp Uppsala Svava C, storeId `4256`.
+Det finns ingen Hemköp-butik i Gävle; 4256 är närmaste onlinebutik (~95 km).
+205 butiker totalt, 66 online.
+
+| | Körning 1 | Körning 2 |
+|---|---|---|
+| Produkter hittade | 2217 | 2216 |
+| Sparade (`--limit 100`) | 100 | 100 |
+| Nya / uppdaterade | 100 / 0 | **0 / 100** |
+| Med GTIN/EAN | 100 | 100 |
+| Med bild | 100 | 100 |
+| Med ordinarie pris | 100 | 100 |
+| Med jämförpris | 100 | 100 |
+| Med kampanjpris | 3 | 3 |
+| **Med medlemspris** | **5** | **5** |
+| Med multibuy | 3 | 3 |
+| Fel | 0 | 0 |
+
+```bash
+python -m backend.services.grocery.collectors.hemkop --store 4256 --limit 100
+```
+
+Ingen blockering. Bilder stickprovsverifierade (riktiga JPEG/PNG, HTTP 200).
+Hemköp är den enda kedjan hittills där **medlemspriser** faktiskt förekommer
+i datan — de lagras som `member_price`, aldrig som `campaign_price`.
+
+Prissättningen är **nationell**, verifierat på samma sätt som Willys:
+`storeId=4256` (Uppsala Svava) och `storeId=4203` (Falun C) ger byte-identiska
+svar (27221 B båda) med identiska priser.
 
 ### Coop
 
