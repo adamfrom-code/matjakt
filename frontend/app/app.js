@@ -61,6 +61,10 @@ function wireFeedbackButtons(container, recipeId) {
 }
 
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
+// One dinner per weekday is the real ceiling - derived from DAYS so the
+// stepper, the onboarding stepper and the week view can never disagree
+// about how many meals a week can hold (they previously all hardcoded 6).
+const MAX_MEALS = DAYS.length;
 // The single source of truth for "this week's recipes, in day order" - every
 // render site reads this instead of re-deriving order from state.valda
 // (a Set has no day-position semantics) or from RECEPT's own fixed array
@@ -373,8 +377,16 @@ function recipeAffinity(recipe) {
   return (fb.liked ? 3 : 0) + Math.min(fb.cooked || 0, 3) * 1.5 - Math.min(fb.skipped || 0, 3);
 }
 const comboAffinity = combo => combo.reduce((sum, recipe) => sum + recipeAffinity(recipe), 0);
+// combinations() is C(pool, count), so a fixed pool size makes the search
+// blow up as the week gets longer: with the previous fixed pool of 24 a
+// 7-dinner week evaluated 346,104 combos against 10,626 for 4 - measured at
+// ~440ms just to build them, before any cost maths. Shrinking the pool for
+// longer weeks keeps every week length in the same ballpark (~30-40k combos)
+// while still leaving far more candidates than dinners to choose between.
+const CANDIDATE_POOL_FOR_COUNT = { 5: 22, 6: 20, 7: 18 };
 function evaluateCombos(recipes, count, branch) {
-  return combinations(limitCandidatePool(recipes), count).map(combo => ({ combo, cost: shoppingListCost(combo, branch) }));
+  const pool = limitCandidatePool(recipes, 6, CANDIDATE_POOL_FOR_COUNT[count] || 24);
+  return combinations(pool, count).map(combo => ({ combo, cost: shoppingListCost(combo, branch) }));
 }
 function bestMenuCombo(recipes, count, budget, branch, objective = "cheapest") {
   if (!recipes.length) return [];
@@ -1369,7 +1381,14 @@ function openPlanComparison() {
   document.querySelectorAll("[data-choose-plan]").forEach(button => button.addEventListener("click", () => {
     const plan = plans.find(candidate => candidate.key === button.dataset.choosePlan);
     const priciest = priciestBranchFor(plan.combo);
-    state.savingsLog.push({ date: new Date().toISOString().slice(0, 10), savings: Math.max(0, (priciest?.cost || plan.cost) - plan.cost), hasComparison: nearbyBranches().length > 1, branch: branch?.namn || "", portionCost: plan.cost / (plan.combo.length * state.personer) });
+    // A genuine price difference, not just "more than one branch nearby" -
+    // every branch's static estimate uses the same prisfaktor:1 (see
+    // shoppingListCost), so priciest.cost === plan.cost whenever no live
+    // price data was actually used, regardless of how many branches exist.
+    // Without this, "Du sparar" showed a literal "0 kr" for that structurally
+    // guaranteed-zero case instead of the honest "underlag saknas" state.
+    const hasRealComparison = (priciest?.cost || plan.cost) > plan.cost;
+    state.savingsLog.push({ date: new Date().toISOString().slice(0, 10), savings: Math.max(0, (priciest?.cost || plan.cost) - plan.cost), hasComparison: hasRealComparison, branch: branch?.namn || "", portionCost: plan.cost / (plan.combo.length * state.personer) });
     state.savingsLog = state.savingsLog.slice(-60);
     state.swapsThisWeek = 0;
     setWeekPlan(plan.combo.map(recipe => recipe.id));
@@ -1457,7 +1476,7 @@ function wireOnboardingStep() {
   }));
   $("obBudget")?.addEventListener("input", e => { state.budget = clampBudget(e.target.value); saveState(); });
   document.querySelectorAll("[data-ob-meals]").forEach(button => button.addEventListener("click", () => {
-    state.middagar = Math.min(6, Math.max(1, state.middagar + Number(button.dataset.obMeals)));
+    state.middagar = Math.min(MAX_MEALS, Math.max(1, state.middagar + Number(button.dataset.obMeals)));
     saveState(); renderOnboardingStep();
   }));
   $("obKosttyp")?.addEventListener("change", e => { state.kost.kosttyp = e.target.value; saveState(); });
@@ -1692,7 +1711,7 @@ $("logoutBtn").addEventListener("click", async () => {
   renderAccount(); closeAccountModal();
 });
 $("peopleMinus").addEventListener("click", () => step("personer", -1, 1, 12)); $("peoplePlus").addEventListener("click", () => step("personer", 1, 1, 12));
-$("mealsMinus").addEventListener("click", () => step("middagar", -1, 1, 6)); $("mealsPlus").addEventListener("click", () => step("middagar", 1, 1, 6));
+$("mealsMinus").addEventListener("click", () => step("middagar", -1, 1, MAX_MEALS)); $("mealsPlus").addEventListener("click", () => step("middagar", 1, 1, MAX_MEALS));
 $("generateBtn").addEventListener("click", () => openPlanComparison()); $("refreshBtn").addEventListener("click", () => { RECEPT.push(RECEPT.shift()); chooseMenu(); });
 $("startNewWeekBtn").addEventListener("click", () => openPlanComparison());
 let pantryPickLocation = "skafferi";

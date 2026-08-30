@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from services.grocery import GroceryStore  # noqa: E402
-from services.grocery.providers.axfood import AxfoodBlockedError  # noqa: E402
+from services.grocery.errors import ProviderBlockedError  # noqa: E402
 
 DB_PATH = Path(__file__).resolve().parents[4] / "backend" / "data" / "grocery.db"
 
@@ -46,7 +46,7 @@ def run(provider, store_id: str, limit: int) -> dict:
 
         try:
             raw_products = provider.get_products(store_id)
-        except AxfoodBlockedError as blocked:
+        except ProviderBlockedError as blocked:
             blocked_message = str(blocked)
             raw_products = blocked.partial_products
             print(f"\n!! {provider.name} blockerade körningen: {blocked_message}", file=sys.stderr)

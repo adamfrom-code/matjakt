@@ -46,6 +46,7 @@ import urllib.request
 from urllib.parse import quote
 
 from ..base import GroceryProvider
+from ..errors import ProviderBlockedError, ProviderRequestError
 from ..models import RawProduct, Store
 
 logger = logging.getLogger("matjakt.grocery.axfood")
@@ -67,12 +68,12 @@ DEFAULT_SEARCH_TERMS = [
 ]
 
 
-class AxfoodRequestError(Exception):
+class AxfoodRequestError(ProviderRequestError):
     """A request that failed after its retries, or returned something that
     isn't the JSON shape this provider expects."""
 
 
-class AxfoodBlockedError(AxfoodRequestError):
+class AxfoodBlockedError(AxfoodRequestError, ProviderBlockedError):
     """The chain actively refused us (403/429, or an empty body). Terminal,
     not transient - a collector must stop and report rather than retrying its
     way through a refusal.
@@ -81,10 +82,6 @@ class AxfoodBlockedError(AxfoodRequestError):
     every plain server-side request), but implemented up front so that if
     Axfood adds bot protection this degrades the same safe way ICA's provider
     already does."""
-
-    def __init__(self, message, partial_products=None):
-        super().__init__(message)
-        self.partial_products = partial_products or []
 
 
 def _to_float(value) -> float | None:
