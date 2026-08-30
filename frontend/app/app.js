@@ -684,6 +684,25 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
   }
   const cheapest = results[0], priciest = results[results.length - 1];
   const savings = priciest.cost - cheapest.cost;
+  // A "Billigast" badge is a factual claim, so it needs a comparison that
+  // actually holds up. Three things can each make it meaningless:
+  //  - the cheapest row is only an estimate (isLive false), so its number
+  //    isn't a real price at all;
+  //  - every row costs the same, which is what happens when they're all the
+  //    same flat estimate - crowning one of several identical numbers is
+  //    exactly the "Coop 351 / Willys 351 / ICA 351, one marked cheapest"
+  //    problem;
+  //  - the cheapest row's live prices cover too little of the list to be
+  //    comparable with the row it's being compared against.
+  // When any of those hold we show the prices without a badge and without a
+  // savings figure, rather than asserting something we can't back up.
+  const MIN_COVERAGE_FOR_CLAIM = 0.6;
+  const coverageOf = r => (r.certain == null || !r.totalItems) ? 0 : r.certain / r.totalItems;
+  const pricesDiffer = results.some(r => Math.abs(r.cost - cheapest.cost) > 0.5);
+  const comparisonIsReal = cheapest.isLive && pricesDiffer
+    && coverageOf(cheapest) >= MIN_COVERAGE_FOR_CLAIM;
+  const savingsAreReal = comparisonIsReal && priciest.isLive
+    && coverageOf(priciest) >= MIN_COVERAGE_FOR_CLAIM && savings > 1;
   const pinned = pinnedBranchMatch();
   // Only a Primat-sourced branch (has a primatKey) can be individually
   // targeted - a scrape-sourced fallback branch has nothing concrete to pin
@@ -691,14 +710,14 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
   // instead of a button that would do nothing when pressed.
   const list = results.length < 2 ? "" : `<div class="store-compare-list">${results.map((r, index) => {
     const isPinned = pinned && r.branch.primatKey && r.branch.primatKey === pinned.primatKey;
-    const isCheapest = r.branch === cheapest.branch;
+    const isCheapest = comparisonIsReal && r.branch === cheapest.branch;
     const tag = `${isCheapest ? "cheapest" : ""} ${isPinned ? "pinned" : ""}`.trim();
     const inner = `<span>${r.branch.namn}${isCheapest ? '<span class="live-badge cheapest-badge">Billigast</span>' : ""}${isPinned ? '<span class="live-badge pinned">Vald</span>' : ""}${r.isLive ? '<span class="live-badge">Live</span>' : '<span class="live-badge estimate">Uppskattat</span>'}</span><strong>${money(r.cost)}</strong>`;
     return r.branch.primatKey
       ? `<button type="button" class="store-compare-row ${tag}" data-pick-branch="${index}">${inner}</button>`
       : `<div class="store-compare-row ${tag} not-pickable">${inner}</div>`;
   }).join("")}</div>`;
-  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${cheapest.isLive ? "Lägst pris" : "Lägst uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savings > 1 ? `<small>${cheapest.isLive ? "Skillnad" : "Uppskattad skillnad"} ${money(savings)} mot ${priciest.branch.namn}</small>` : ""}${coverageLabel(cheapest)}${updatedLabel}</div>${list}${pinned ? `<button type="button" class="store-compare-unpin" id="storeCompareUnpin-${containerId}">Välj automatiskt istället</button>` : ""}${results.length > 1 ? `<button type="button" class="store-compare-open" id="storeCompareOpenBtn-${containerId}">Jämför butiker →</button>` : ""}</div>`;
+  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${comparisonIsReal ? "Lägst pris" : cheapest.isLive ? "Pris hos" : "Uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savingsAreReal ? `<small>Skillnad ${money(savings)} mot ${priciest.branch.namn}</small>` : !comparisonIsReal && results.length > 1 ? `<small>Riktiga butiksspecifika priser saknas för en jämförelse</small>` : ""}${coverageLabel(cheapest)}${updatedLabel}</div>${list}${pinned ? `<button type="button" class="store-compare-unpin" id="storeCompareUnpin-${containerId}">Välj automatiskt istället</button>` : ""}${results.length > 1 ? `<button type="button" class="store-compare-open" id="storeCompareOpenBtn-${containerId}">Jämför butiker →</button>` : ""}</div>`;
   $(`storeCompareOpenBtn-${containerId}`)?.addEventListener("click", () => { renderStoreComparisonPage(selected); setView("comparison"); });
   container.querySelectorAll("[data-pick-branch]").forEach(button => button.addEventListener("click", () => {
     const branch = results[Number(button.dataset.pickBranch)].branch;
