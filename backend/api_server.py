@@ -7,6 +7,7 @@ before deploying this publicly.
 """
 
 import concurrent.futures
+import hmac
 import json
 import logging
 import math
@@ -24,7 +25,7 @@ from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature
 from services.email import MailError, send_email
-from services.pricing import CHAIN_TO_PRIMAT, OpenFoodFactsError, PRIMAT_ATTRIBUTION, PriceCacheStore, PrimatError, image_url_for_gtin, nearby_stores as primat_nearby_stores, resolve_stores as primat_resolve_stores, search_products as primat_search_products, to_matjakt_product as primat_to_matjakt_product
+from services.pricing import CHAIN_TO_PRIMAT, KeyValueCacheStore, OpenFoodFactsError, PRIMAT_ATTRIBUTION, PriceCacheStore, PrimatError, image_url_for_gtin, nearby_stores as primat_nearby_stores, primat_account_status, resolve_stores as primat_resolve_stores, search_products as primat_search_products, to_matjakt_product as primat_to_matjakt_product
 from services.recipe_providers import RecipeService, TheMealDbProvider
 
 logging.basicConfig(level=logging.INFO)
@@ -56,10 +57,14 @@ ALLOWED_ORIGIN = os.environ.get("MATJAKT_FRONTEND_ORIGIN", "http://localhost:550
 # with no path) because GitHub Pages serves this app from a project subpath
 # (.../matjakt/), not the origin root.
 APP_URL = os.environ.get("MATJAKT_APP_URL", ALLOWED_ORIGIN).rstrip("/")
+# Ordinary product prices: fresh for 6h, matching how often a Swedish
+# grocery chain actually changes shelf prices (campaigns are handled
+# separately below, at a much shorter TTL, since those genuinely can start
+# or end within hours).
 CACHE_TTL_SECONDS = 900
-CACHE_MAX_AGE_SECONDS = 86400
+CACHE_MAX_AGE_SECONDS = 6 * 3600
 ICA_STORE_FAILURE_TTL_SECONDS = 300
-ICA_STORE_SUCCESS_TTL_SECONDS = 3600
+ICA_STORE_SUCCESS_TTL_SECONDS = 24 * 3600
 MAX_CONCURRENT_SCRAPES = int(os.environ.get("MATJAKT_MAX_SCRAPES", "3"))
 MAX_BATCH_ITEMS = 20
 PANTRY_RECIPE_CACHE_TTL_SECONDS = 1800
@@ -68,6 +73,12 @@ CAMPAIGN_CAPABLE_CHAINS = ("Coop", "Hemköp")
 CAMPAIGN_SCAN_INGREDIENTS = ["Kycklingfilé", "Kycklinglårfilé", "Köttfärs", "Biff", "Fläskfilé", "Laxfilé", "Fryst torsk", "Räkor", "Kalvschnitzel", "Falukorv", "Halloumi"]
 GEOCODE_CACHE_TTL_SECONDS = 86400
 PREMIUM_CODE = os.environ.get("MATJAKT_PREMIUM_CODE", "")
+# Gates GET /api/admin/primat-status (current Primat quota usage) - a
+# separate, unset-by-default secret, not tied to any user account (this app
+# has no admin-role concept on accounts, and building one just for this one
+# read-only diagnostic would be more machinery than the need warrants). When
+# unset, the endpoint refuses every request rather than falling open.
+ADMIN_TOKEN = os.environ.get("MATJAKT_ADMIN_TOKEN", "")
 PRIMAT_API_KEY = os.environ.get("PRIMAT_API_KEY", "")
 PRIMAT_STORE_CACHE_TTL_SECONDS = 86400
 PRIMAT_CIRCUIT_COOLDOWN_SECONDS = 60
@@ -116,16 +127,29 @@ STORE_CONFIG = {
     },
 }
 DEFAULT_ZIP = "11122"
-ICA_STORE_CACHE = {}
-PRIMAT_STORE_CACHE = {}
-OFF_IMAGE_CACHE = {}
 _primat_store_scope_lock = threading.Lock()
 _primat_circuit_open_until = 0.0
 PANTRY_RECIPE_CACHE = {}
-CAMPAIGN_CACHE = {}
-GEOCODE_CACHE = {}
-STORE_LIST_CACHE = {}
-COOP_STORE_SEARCH_CACHE = {}
+# One lock per (chain, query, cache_zip) so two concurrent requests for the
+# SAME uncached item (two different users searching "Kycklingfilé" for the
+# same chain/zip at the same moment, or one user's own several devices)
+# never both hit Primat/scrape it at once - the second just waits, then
+# reads what the first one cached, exactly the "flera samtidiga anrok får
+# inte hämta samma uppgift parallellt" requirement. Same double-checked-
+# locking shape as _primat_store_scope_lock below, generalized to a lock per
+# key instead of one global lock, since product queries are far higher
+# cardinality than zip codes.
+_product_fetch_locks = {}
+_product_fetch_locks_guard = threading.Lock()
+
+
+def _lock_for_product_key(key):
+    with _product_fetch_locks_guard:
+        lock = _product_fetch_locks.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _product_fetch_locks[key] = lock
+        return lock
 _scrape_executor = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_CONCURRENT_SCRAPES, thread_name_prefix="playwright-worker")
 _thread_browser = threading.local()
 BROWSER_MAX_REQUESTS = 4
@@ -230,6 +254,12 @@ RECIPE_SERVICE = RecipeService([TheMealDbProvider()])
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 ACCOUNT_STORE = AccountStore(Path(__file__).resolve().parent / "data" / "matjakt.db")
 PRICE_CACHE = PriceCacheStore(Path(__file__).resolve().parent / "data" / "prices.db")
+# Same SQLite file/connection as PRICE_CACHE (see KeyValueCacheStore's
+# docstring) - campaigns, geocoding, store lists and Primat/OFF lookups used
+# to live only in plain process-memory dicts, which reset to empty on every
+# deploy/restart. Persisting them here is what actually makes "senast
+# uppdaterad" survive a deploy.
+KV_CACHE = KeyValueCacheStore(PRICE_CACHE.connection)
 
 
 def clean_text(value):
@@ -249,10 +279,12 @@ def parse_willys_price(text):
 def geocode_postcode(zip_code):
     """Free, keyless Swedish postcode -> town/lat/lon lookup via zippopotam.us,
     so postcode-based distance works outside the Gävle demo data. Cached
-    forever in-process since postal geography doesn't change day to day."""
-    cached = GEOCODE_CACHE.get(zip_code)
-    if cached and time.monotonic() - cached[1] < GEOCODE_CACHE_TTL_SECONDS:
-        return cached[0]
+    forever, persisted to disk since postal geography doesn't change day to
+    day and this must survive restarts/deploys, not just this process's
+    lifetime."""
+    cached, updated_at = KV_CACHE.get("geocode", zip_code)
+    if cached and time.time() - updated_at < GEOCODE_CACHE_TTL_SECONDS:
+        return cached
     request = Request(f"http://api.zippopotam.us/SE/{zip_code}", headers={"User-Agent": "Matjakt/1.0"})
     with urlopen(request, timeout=8) as response:
         data = json.load(response)
@@ -260,7 +292,7 @@ def geocode_postcode(zip_code):
     if not place:
         return None
     result = {"ort": place.get("place name", ""), "lat": float(place["latitude"]), "lon": float(place["longitude"])}
-    GEOCODE_CACHE[zip_code] = (result, time.monotonic())
+    KV_CACHE.set("geocode", zip_code, result)
     return result
 
 
@@ -270,9 +302,11 @@ def ica_stores_for_zip(page, zip_code):
     backs their own "Välj butik" widget, so it's the same data they use. Returns
     every store ICA offers for the zip (used both to pick one for product
     scraping and to list real nearby branches)."""
-    cached = ICA_STORE_CACHE.get(zip_code)
-    if cached is not None and time.monotonic() < cached[1]:
-        return cached[0]
+    cached, updated_at = KV_CACHE.get("ica_stores", zip_code)
+    if cached is not None:
+        ttl = ICA_STORE_SUCCESS_TTL_SECONDS if cached["stores"] else ICA_STORE_FAILURE_TTL_SECONDS
+        if time.time() - updated_at < ttl:
+            return cached["stores"]
     page.goto(f"https://handla.ica.se/api/store/v1?zip={quote(zip_code)}&customerType=B2C", wait_until="domcontentloaded", timeout=15000)
     try:
         data = json.loads(page.locator("pre").inner_text())
@@ -280,8 +314,7 @@ def ica_stores_for_zip(page, zip_code):
         logger.exception("Failed to parse ICA store lookup response for zip %s", zip_code)
         data = {}
     stores = data.get("forPickupDelivery") or data.get("forHomeDelivery") or []
-    ttl = ICA_STORE_SUCCESS_TTL_SECONDS if stores else ICA_STORE_FAILURE_TTL_SECONDS
-    ICA_STORE_CACHE[zip_code] = (stores, time.monotonic() + ttl)
+    KV_CACHE.set("ica_stores", zip_code, {"stores": stores})
     return stores
 
 
@@ -300,11 +333,12 @@ def haversine_km(lat1, lon1, lat2, lon2):
 def fetch_axfood_stores(chain):
     """Willys and Hemköp (both Axfood brands) expose their full national store
     list at this undocumented-but-public, unauthenticated REST endpoint - found
-    via live network inspection of "Hitta butik". Cached for a day since store
-    locations essentially never change."""
-    cached = STORE_LIST_CACHE.get(chain)
-    if cached and time.monotonic() - cached[1] < STORE_LIST_CACHE_TTL_SECONDS:
-        return cached[0]
+    via live network inspection of "Hitta butik". Cached for a day (persisted
+    to disk, survives restarts) since store locations essentially never
+    change."""
+    cached, updated_at = KV_CACHE.get("store_list", chain)
+    if cached and time.time() - updated_at < STORE_LIST_CACHE_TTL_SECONDS:
+        return cached
     request = Request(AXFOOD_STORE_LIST_URL[chain], headers={"User-Agent": "Matjakt/1.0"})
     with urlopen(request, timeout=15) as response:
         raw = json.load(response)
@@ -316,7 +350,7 @@ def fetch_axfood_stores(chain):
         if not name or not lat or not lon:
             continue
         stores.append({"kedja": chain, "namn": name, "lat": lat, "lon": lon, "ort": (item.get("address") or {}).get("town") or ""})
-    STORE_LIST_CACHE[chain] = (stores, time.monotonic())
+    KV_CACHE.set("store_list", chain, stores)
     return stores
 
 
@@ -325,9 +359,9 @@ def search_coop_stores(page, city):
     an Azure APIM subscription key that's only attached by their own frontend
     JS), so - like ICA - this drives their real "Butiker" search and reads the
     same response their page renders from, instead of replicating the request."""
-    cached = COOP_STORE_SEARCH_CACHE.get(city)
-    if cached and time.monotonic() - cached[1] < COOP_STORE_SEARCH_TTL_SECONDS:
-        return cached[0]
+    cached, updated_at = KV_CACHE.get("coop_store_search", city)
+    if cached and time.time() - updated_at < COOP_STORE_SEARCH_TTL_SECONDS:
+        return cached
     captured = {}
 
     def on_response(response):
@@ -362,7 +396,7 @@ def search_coop_stores(page, city):
         if not lat or not lon:
             continue
         stores.append({"kedja": "Coop", "namn": item.get("name") or "", "lat": lat, "lon": lon, "ort": item.get("city") or ""})
-    COOP_STORE_SEARCH_CACHE[city] = (stores, time.monotonic())
+    KV_CACHE.set("coop_store_search", city, stores)
     return stores
 
 
@@ -421,7 +455,67 @@ def parse_ica_products(page, query, zip_code):
         return []
     account_id = store["accountId"]
     base_url = f"https://handlaprivatkund.ica.se/stores/{account_id}"
-    page.goto(f"{base_url}/search?q={quote(query)}", wait_until="domcontentloaded", timeout=30000)
+    # A fresh page.goto() straight to "{base_url}/search?q=..." is silently
+    # redirected away to the bare handlaprivatkund.ica.se domain (verified
+    # live 2026-08-30, before and after this fix - reproduced with several
+    # different queries and store ids) - this SPA doesn't support deep-
+    # linking directly into /search on a cold load, even though that exact
+    # URL works fine once reached by an in-app route change. The fix is to
+    # load the store's base page first (that navigation is unaffected) and
+    # then drive the real search box, matching what a user's browser
+    # actually does - not a second goto(). The result page's own markup
+    # (.product-card-container, [data-test="fop-price"] etc. below) is
+    # completely unchanged from before; only how you reach it changed.
+    page.goto(base_url, wait_until="domcontentloaded", timeout=30000)
+    try:
+        # A fresh session (no stored consent) shows a OneTrust cookie banner
+        # that sits on top of the page and blocks every later click as
+        # "intercepts pointer events" until dismissed - verified live
+        # 2026-08-30 that this is what actually broke the submit-button click
+        # below, not the click itself. #onetrust-accept-btn-handler is
+        # OneTrust's own stable button id (not page-specific/guessed markup),
+        # unlike a text match, which matched two different elements on this
+        # page and clicked the wrong one. A session that already has consent
+        # just skips this (button never appears).
+        page.click("#onetrust-accept-btn-handler", timeout=4000)
+        # The banner's own fade-out transition still intercepts clicks for a
+        # moment after the accept click resolves - waiting for it to actually
+        # leave the DOM (not just for the click itself) is what made this
+        # reliable in testing, vs. clicks landing on the still-fading overlay.
+        page.wait_for_selector("#onetrust-banner-sdk", state="hidden", timeout=5000)
+    except Exception:
+        pass
+    search_input = page.locator("#search")
+    try:
+        search_input.wait_for(state="visible", timeout=3000)
+    except Exception:
+        # Mobile-width layouts collapse the search box behind a "hoppa till
+        # sökning" skip-link that must be opened first (verified live
+        # 2026-08-30) - desktop-width layouts show #search immediately and
+        # never need this.
+        skip_link = page.locator('a[href="#search"]').first
+        if skip_link.count():
+            skip_link.click()
+        search_input.wait_for(state="visible", timeout=10000)
+    search_input.fill(query)
+    # Clicking the form's real submit button, not pressing Enter - verified
+    # live (2026-08-30) that Enter alone changes the URL but never actually
+    # triggers the results fetch (only the autocomplete "suggestions"
+    # endpoints fire), while the submit button reliably loads real, priced
+    # results. Falls back to Enter only if the button isn't found at all, so
+    # a future markup change degrades instead of hard-failing.
+    submit_button = search_input.locator("xpath=ancestor::form").locator('button[type="submit"]')
+    if submit_button.count():
+        submit_button.first.click()
+    else:
+        search_input.press("Enter")
+    try:
+        page.locator(".product-card-container").first.wait_for(state="visible", timeout=10000)
+    except Exception:
+        # No results ever rendered - handled the same as any other "nothing
+        # found" case by the loop's own retry/empty-return below, not a
+        # special error path.
+        pass
     products = []
     for attempt in range(3):
         page.wait_for_timeout(1800)
@@ -550,22 +644,33 @@ def cache_scope(zip_code, store_key):
 
 def cached_products(chain, query, zip_code):
     """Returns (products, updated_at) for a persisted cache entry within
-    CACHE_MAX_AGE_SECONDS (24h), or (None, None) if there's no usable entry.
+    CACHE_MAX_AGE_SECONDS (6h), or (None, None) if there's no usable entry.
     updated_at is a real time.time() timestamp (not time.monotonic() - this
     has to stay meaningful across restarts, since the whole point of
     PRICE_CACHE is surviving them) so callers can label a served price
-    "Senast uppdaterat <tid>" instead of quietly passing off a day-old number
-    as current. Deliberately reused for the full 24h rather than just a few
+    "Senast uppdaterat <tid>" instead of quietly passing off an old number
+    as current. Deliberately reused for the full 6h rather than just a few
     minutes: re-scraping on every request is exactly what made this
-    unreliable in practice (see get_shared_browser's docstring) - a
-    same-day price is close enough to correct that re-fetching it is waste,
-    not accuracy."""
+    unreliable in practice (see get_shared_browser's docstring) - a same-day
+    price is close enough to correct that re-fetching it is waste, not
+    accuracy. See stale_products() for the fallback used when a fresh
+    re-fetch is attempted (this returned None/expired) and then fails."""
     products, updated_at = PRICE_CACHE.get(chain, query.lower(), zip_code)
     if products is None:
         return None, None
     if time.time() - updated_at >= CACHE_MAX_AGE_SECONDS:
         return None, None
     return products, updated_at
+
+
+def stale_products(chain, query, zip_code):
+    """Returns (products, updated_at) regardless of age (up to
+    PriceCacheStore's own 7-day prune horizon), or (None, None) if nothing
+    was ever cached at all. Used only as a last resort when both the fresh
+    cache (cached_products) missed AND a live re-fetch (Primat + scraping)
+    just failed - a real price from earlier, honestly labeled "Senast känt
+    pris <tid>", beats an empty shopping list row."""
+    return PRICE_CACHE.get_stale(chain, query.lower(), zip_code)
 
 
 def store_products(chain, query, zip_code, products):
@@ -592,36 +697,121 @@ def stamp_match(product, updated_at):
     return {**fill_missing_image(product), "uppdaterad": updated_at}
 
 
+# Verified live against real Primat data (2026-08-30) for the ingredient
+# names known to collide with a wrong grocery department when only a
+# leading-word check is used - see best_match()'s docstring for the general
+# mechanism. Kept as a small, explicit table (not a generic classifier)
+# because the app's ingredient vocabulary is itself small and fixed (see
+# RECIPE_QUANTITIES/PRODUCT_CATALOG in frontend/app.js) - every entry here
+# should be backed by a real reproduction, not a guess.
+#
+# "category_top" checks Primat's own top-level department (the first segment
+# of "kategori", e.g. "Frukt & Grönsaker > Grönsaker > Paprika" -> "Frukt &
+# Grönsaker") - only applied when a candidate actually has a category
+# (Primat-sourced only; scraped rows have "kategori": ""). "exclude_words" is
+# a substring check on the product name, applied regardless of source, for
+# cases where the category alone doesn't distinguish the right product from
+# a wrong one in the *same* department (risotto rice shares "Skafferi > Ris,
+# Mos & Gryner > Ris" with everyday rice).
+INGREDIENT_MATCH_RULES = {
+    "citron": {
+        # Live reproduction: Coop's top "Citron" relevance hits included
+        # "Citronsoda Sockerfri" and "Sprite" (category "Dryck > Läsk >
+        # Citron- & limesmak") - a citron-*flavoured* drink starts with the
+        # literal word "Citron" just as validly as a real lemon does, so the
+        # word-boundary check alone lets it through.
+        "category_top": "frukt & grönsaker",
+        "exclude_words": ["zero", "soda", "sprite", "läsk", "juice", "saft", "syra", "peppar"],
+    },
+    "paprika": {
+        "category_top": "frukt & grönsaker",
+        "exclude_words": ["pulver", "krydda", "kryddor", "chips", "sås"],
+    },
+    "ris": {
+        # Category alone doesn't help here - "Risottoris"/"Avorioris" share
+        # the exact same "Skafferi > Ris, Mos & Gryner > Ris" category as
+        # everyday jasmine/basmati rice. Live reproduction: Willys/"Ris"
+        # picked "Avorio Risottoris" (specialty risotto rice) once no plain
+        # "Ris ..." leading-word match existed in that store's current stock.
+        "category_top": "skafferi",
+        "exclude_words": ["risotto", "arborio", "avorio", "risifrutti", "gröt", "pudding", "nudlar", "kaka", "kakor", "snacks"],
+    },
+    "majs": {
+        # Already covered by the word-boundary check for "Majskakor" (one
+        # compound word), but category adds a second, independent layer -
+        # "Majssnacks" is itself a separate two-word product name that could
+        # otherwise slip through if Primat ever lists it split differently.
+        "category_top": "frukt & grönsaker",
+        "exclude_words": ["kaka", "kakor", "snacks", "chips", "popcorn"],
+    },
+}
+
+# Words that never belong to a legitimate match for ANY ingredient this app
+# searches for - none of RECIPE_QUANTITIES' ~90 ingredient names are
+# themselves a soft drink, candy, or snack, so excluding these everywhere is
+# safe (unlike a per-ingredient list, this needs no per-query justification).
+UNIVERSAL_EXCLUDE_WORDS = ["zero", "läsk", "cola", "fanta", "sprite", "loka", "ramlösa", "zingo", "saft", "chips", "godis", "glass", "karamell", "tuggummi", "kex", "muffin", "bulle", "wienerbröd"]
+
+
+def _passes_ingredient_rules(product, query_key):
+    name = product["produktnamn"].lower()
+    rule = INGREDIENT_MATCH_RULES.get(query_key)
+    exclude_words = UNIVERSAL_EXCLUDE_WORDS + (rule["exclude_words"] if rule else [])
+    if any(word in name for word in exclude_words):
+        return False
+    if rule and rule.get("category_top"):
+        category = (product.get("kategori") or "").strip()
+        if category and category.split(">")[0].strip().lower() != rule["category_top"]:
+            return False
+    return True
+
+
 def best_match(products, query):
     """Search results are sorted by relevance, not name accuracy, so a plain
     "first result" can be a wrong department entirely (e.g. "Paprika" matching
-    a paprika-flavoured cracker). Prefer a result whose name actually starts
-    with the ingredient before falling back to whatever ranked first.
+    a paprika-flavoured cracker). Only a result that passes ALL THREE checks
+    below is trusted; if none do, this returns None and the caller must show
+    "Pris saknas" rather than guess - a wrong product silently priced is
+    worse than an honest gap.
 
-    Matched by whole leading WORDS, not a raw string prefix - found directly
-    against real Primat data: "Majs" (corn) matching "Majskakor" (corn cakes,
-    a snack) because the string "majskakor" happens to start with "majs" as a
-    character sequence. Swedish compounds words this way constantly ("Ris"/
-    "Riskakor", "Paprika"/"Paprikapulver"), so a substring check quietly
-    recommends the wrong department just as easily as no filter at all -
-    comparing whole words closes exactly that gap while still matching
-    "Kidneybönor" against "Kidneybönor Naturella".
+    1. Whole leading WORDS, not a raw string prefix - found directly against
+       real Primat data: "Majs" (corn) matching "Majskakor" (corn cakes, a
+       snack) because the string "majskakor" happens to start with "majs" as
+       a character sequence. Swedish compounds words this way constantly
+       ("Ris"/"Riskakor", "Paprika"/"Paprikapulver"), so a substring check
+       quietly recommends the wrong department just as easily as no filter
+       at all - comparing whole words closes exactly that gap while still
+       matching "Kidneybönor" against "Kidneybönor Naturella".
+    2. Category (see INGREDIENT_MATCH_RULES) - Primat's own department path,
+       when available, for the handful of ingredient names verified to need
+       it.
+    3. Negative keywords (also INGREDIENT_MATCH_RULES, plus
+       UNIVERSAL_EXCLUDE_WORDS) - catches wrong-but-same-department products
+       category alone can't separate (risotto rice vs. everyday rice).
 
-    Among equally-good name matches, prefer one with a real GTIN attached
-    (Primat results carry this; scraped results never have a "gtin" key at
-    all, so .get() just returns None for them and this tiebreaker is a no-op
-    there - a GTIN doesn't make a WRONG name match right, it only breaks ties
-    between otherwise-equal candidates)."""
+    There used to be a fourth step here: fall back to whatever Primat ranked
+    first if nothing passed the word check. That's exactly how "Ris" turned
+    into "Avorio Risottoris" and "Paprika" into paprika-flavoured chips in
+    production - removed on purpose, not simplified away by accident.
+
+    Among equally-good matches, prefer one with a real GTIN attached (Primat
+    results carry this; scraped results never have a "gtin" key at all, so
+    .get() just returns None for them and this tiebreaker is a no-op there -
+    a GTIN doesn't make a wrong name match right, it only breaks ties between
+    otherwise-safe candidates)."""
     if not products:
         return None
-    query_words = query.strip().lower().split()
+    query_key = query.strip().lower()
+    query_words = query_key.split()
     starts_with = [
         product for product in products
         if product["produktnamn"].lower().split()[:len(query_words)] == query_words
     ]
-    candidates = starts_with or products
-    with_gtin = [product for product in candidates if product.get("gtin")]
-    return (with_gtin or candidates)[0]
+    safe = [product for product in starts_with if _passes_ingredient_rules(product, query_key)]
+    if not safe:
+        return None
+    with_gtin = [product for product in safe if product.get("gtin")]
+    return (with_gtin or safe)[0]
 
 
 def _primat_circuit_is_open():
@@ -665,16 +855,17 @@ def primat_store_scope(zip_code):
     from Primat's own abuse protection during testing - a single request
     right after succeeded normally. The lock means only the first caller
     for an uncached zip actually hits the network; everyone else just reads
-    the cache it fills in."""
-    cached = PRIMAT_STORE_CACHE.get(zip_code)
-    if cached and time.monotonic() - cached[1] < PRIMAT_STORE_CACHE_TTL_SECONDS:
-        return cached[0]
+    the cache it fills in. Persisted to disk (not just this process's
+    memory) so a restart doesn't throw away a day's worth of resolved zips."""
+    cached, updated_at = KV_CACHE.get("primat_store_scope", zip_code)
+    if cached and time.time() - updated_at < PRIMAT_STORE_CACHE_TTL_SECONDS:
+        return cached
     with _primat_store_scope_lock:
         # Re-check inside the lock - another thread may have just resolved
         # (or failed to resolve) this exact zip while we were waiting.
-        cached = PRIMAT_STORE_CACHE.get(zip_code)
-        if cached and time.monotonic() - cached[1] < PRIMAT_STORE_CACHE_TTL_SECONDS:
-            return cached[0]
+        cached, updated_at = KV_CACHE.get("primat_store_scope", zip_code)
+        if cached and time.time() - updated_at < PRIMAT_STORE_CACHE_TTL_SECONDS:
+            return cached
         if _primat_circuit_is_open():
             return {}
         try:
@@ -683,7 +874,7 @@ def primat_store_scope(zip_code):
             logger.exception("Primat store resolve failed for zip %s", zip_code)
             _trip_primat_circuit()
             return {}
-        PRIMAT_STORE_CACHE[zip_code] = (stores, time.monotonic())
+        KV_CACHE.set("primat_store_scope", zip_code, stores)
         return stores
 
 
@@ -699,16 +890,20 @@ def fill_missing_image(product):
     gtin = product.get("gtin")
     if product.get("bild") or not gtin:
         return product
-    cached = OFF_IMAGE_CACHE.get(gtin)
-    if cached and time.monotonic() - cached[1] < OFF_IMAGE_CACHE_TTL_SECONDS:
-        image_url = cached[0]
+    # "no image found" is itself a real, worth-caching result (a GTIN that's
+    # simply not in Open Food Facts, common for Swedish private-label
+    # groceries) - cached_image is None in that case, so freshness is judged
+    # by updated_at being present, not by truthiness of the value itself.
+    cached_image, updated_at = KV_CACHE.get("off_image", gtin)
+    if updated_at is not None and time.time() - updated_at < OFF_IMAGE_CACHE_TTL_SECONDS:
+        image_url = cached_image
     else:
         try:
             image_url = image_url_for_gtin(gtin)
         except OpenFoodFactsError:
             logger.exception("Open Food Facts image lookup failed for GTIN %s", gtin)
             image_url = None
-        OFF_IMAGE_CACHE[gtin] = (image_url, time.monotonic())
+        KV_CACHE.set("off_image", gtin, image_url)
     if image_url:
         # bild_kalla lets the frontend show Open Food Facts' own required
         # attribution specifically when one of their images is actually on
@@ -837,6 +1032,25 @@ class ApiHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/api/health":
             self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG), "recipeProviders": sorted(RECIPE_SERVICE.providers)}, cache_seconds=900)
+            return
+        if parsed.path == "/api/admin/primat-status":
+            # Never a regular user's endpoint - gated by a separate admin
+            # secret (see ADMIN_TOKEN), not account premium status. Refuses
+            # everything if the secret was never configured, rather than
+            # falling open. The Primat API key itself is never included in
+            # the response - only Primat's own usage numbers are.
+            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
+                self.send_json(404, {"error": "Okänd endpoint"})
+                return
+            if not PRIMAT_API_KEY:
+                self.send_json(200, {"configured": False})
+                return
+            try:
+                status = primat_account_status(PRIMAT_API_KEY)
+            except PrimatError as error:
+                self.send_json(502, {"configured": True, "error": str(error)})
+                return
+            self.send_json(200, {"configured": True, "status": status})
             return
         if parsed.path == "/api/auth/me":
             user = ACCOUNT_STORE.user_for_token(self._bearer_token())
@@ -1132,10 +1346,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if chain not in CAMPAIGN_CAPABLE_CHAINS or not re.fullmatch(r"\d{5}", zip_code):
             self.send_json(400, {"error": "Kampanjer stöds just nu bara för Coop och Hemköp"})
             return
-        cache_key = (chain, zip_code)
-        cached = CAMPAIGN_CACHE.get(cache_key)
-        if cached and time.monotonic() - cached[1] < CAMPAIGN_CACHE_TTL_SECONDS:
-            self.send_json(200, {"butik": chain, "kampanjer": cached[0]}, cache_seconds=CAMPAIGN_CACHE_TTL_SECONDS)
+        cache_key = f"{chain}:{zip_code}"
+        cached, cached_at = KV_CACHE.get("campaigns", cache_key)
+        if cached is not None and time.time() - cached_at < CAMPAIGN_CACHE_TTL_SECONDS:
+            self.send_json(200, {"butik": chain, "kampanjer": cached}, cache_seconds=CAMPAIGN_CACHE_TTL_SECONDS)
             return
         def _scrape():
             found = []
@@ -1171,12 +1385,17 @@ class ApiHandler(SimpleHTTPRequestHandler):
 
         try:
             deals = run_on_scrape_thread(_scrape)
-            CAMPAIGN_CACHE[cache_key] = (deals, time.monotonic())
+            KV_CACHE.set("campaigns", cache_key, deals)
             self.send_json(200, {"butik": chain, "kampanjer": deals}, cache_seconds=CAMPAIGN_CACHE_TTL_SECONDS)
         except Exception:
             logger.exception("Campaign scan session failed for %s", chain)
-            if cached:
-                self.send_json(200, {"butik": chain, "kampanjer": cached[0]}, cache_seconds=CAMPAIGN_CACHE_TTL_SECONDS)
+            # A stale cached list (of any age, not just within the normal 1h
+            # freshness window - see KV_CACHE.get) is a more honest answer
+            # than an outright error when a fresh scan just failed: real
+            # deals from earlier today, clearly timestamped, beat nothing.
+            stale, stale_at = KV_CACHE.get("campaigns", cache_key)
+            if stale is not None:
+                self.send_json(200, {"butik": chain, "kampanjer": stale, "senastKantPris": True, "uppdaterad": stale_at}, cache_seconds=0)
             else:
                 self.send_json(502, {"error": "Butikens webbsida kunde inte läsas"})
 
@@ -1213,15 +1432,23 @@ class ApiHandler(SimpleHTTPRequestHandler):
         # than through run_on_scrape_thread's Playwright-oriented worker
         # pool. Only queries Primat couldn't answer fall through to scraping
         # (see fetch_from_primat's docstring for why "nothing" and
-        # "unreachable" are treated the same way).
+        # "unreachable" are treated the same way). Each query is guarded by
+        # its own lock (see _lock_for_product_key) so a second concurrent
+        # request for the same (chain, query, cache_zip) waits and reuses
+        # this result instead of re-fetching it too.
         still_to_scrape = []
         for query in to_scrape:
-            primat_products = fetch_from_primat(chain, query, zip_code, store_key=store_key)
-            if primat_products:
-                store_products(chain, query, cache_zip, primat_products)
-                results[query] = stamp_match(best_match(primat_products, query), time.time())
-            else:
-                still_to_scrape.append(query)
+            with _lock_for_product_key((chain, query.lower(), cache_zip)):
+                cached, cached_at = cached_products(chain, query, cache_zip)
+                if cached is not None:
+                    results[query] = stamp_match(best_match(cached, query), cached_at)
+                    continue
+                primat_products = fetch_from_primat(chain, query, zip_code, store_key=store_key)
+                if primat_products:
+                    store_products(chain, query, cache_zip, primat_products)
+                    results[query] = stamp_match(best_match(primat_products, query), time.time())
+                else:
+                    still_to_scrape.append(query)
         to_scrape = still_to_scrape
 
         if to_scrape:
@@ -1229,16 +1456,24 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 page = new_scrape_page()
                 try:
                     for query in to_scrape:
-                        try:
-                            products = scrape_products(page, chain, query, zip_code)
-                        except Exception:
-                            logger.exception("Batch scrape failed for %s/%s", chain, query)
-                            products = []
-                        if products:
-                            store_products(chain, query, cache_zip, products)
-                            results[query] = stamp_match(best_match(products, query), time.time())
-                        else:
-                            results[query] = None
+                        with _lock_for_product_key((chain, query.lower(), cache_zip)):
+                            # Re-check cache - another request may have
+                            # scraped (or Primat-fetched) this exact item
+                            # while this one waited for the lock.
+                            cached, cached_at = cached_products(chain, query, cache_zip)
+                            if cached is not None:
+                                results[query] = stamp_match(best_match(cached, query), cached_at)
+                                continue
+                            try:
+                                products = scrape_products(page, chain, query, zip_code)
+                            except Exception:
+                                logger.exception("Batch scrape failed for %s/%s", chain, query)
+                                products = []
+                            if products:
+                                store_products(chain, query, cache_zip, products)
+                                results[query] = stamp_match(best_match(products, query), time.time())
+                            else:
+                                results[query] = None
                 finally:
                     page.close()
 
@@ -1248,6 +1483,20 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 logger.exception("Batch scrape session failed for %s", chain)
                 for query in to_scrape:
                     results.setdefault(query, None)
+
+        # A query that still has no answer (no confident match, or the fetch
+        # itself failed) falls back to whatever was last known for it -
+        # of any age, not just within the normal freshness window - labeled
+        # "senastKantPris" so the frontend shows "Senast känt pris <tid>"
+        # rather than silently passing an old number off as current. Real,
+        # honestly-aged data beats an empty "Pris saknas" row when one exists.
+        for query, result in results.items():
+            if result is None:
+                stale, stale_at = stale_products(chain, query, cache_zip)
+                if stale is not None:
+                    matched = best_match(stale, query)
+                    if matched:
+                        results[query] = {**stamp_match(matched, stale_at), "senastKantPris": True}
 
         self.send_json(200, {"butik": chain, "produkter": results})
 

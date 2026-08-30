@@ -21,6 +21,8 @@ services:
         value: "2"
       - key: PRIMAT_API_KEY
         sync: false
+      - key: MATJAKT_ADMIN_TOKEN
+        sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET

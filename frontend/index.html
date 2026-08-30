@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=36">
+  <link rel="stylesheet" href="styles.css?v=37">
 </head>
 <body>
   <div class="phone-shell">
@@ -128,6 +128,7 @@
               </div>
             </div>
           </details>
+          <p class="nutrition-warning" id="nutritionWarning" hidden></p>
           <button class="btn btn-primary" id="generateBtn"><span>Skapa min vecka</span><span aria-hidden="true">→</span></button>
         </section>
 
@@ -192,6 +193,7 @@
 
       <section class="screen shopping-screen" aria-labelledby="shoppingTitle">
         <header class="screen-header"><p class="eyebrow">Din lista</p><h1 id="shoppingTitle">Handla</h1></header>
+        <div id="basketStoreCompare"></div>
         <section class="shopping-progress"><div><strong id="shoppingProgress">0 varor kvar</strong><span id="shoppingCost">0 / 0 kr</span></div><div class="progress-track"><i id="shoppingProgressBar"></i></div></section>
         <div class="shopping-complete" id="shoppingComplete" hidden><strong>🎉 Allt handlat!</strong><p>Redo att planera nästa veckas meny?</p><button type="button" class="btn btn-primary" id="startNewWeekBtn"><span>Skapa nästa vecka</span><span aria-hidden="true">→</span></button></div>
         <div class="shopping-list" id="shoppingList"></div>
@@ -415,6 +417,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=61"></script>
+  <script type="module" src="app.js?v=62"></script>
 </body>
 </html>

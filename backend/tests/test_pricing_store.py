@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from services.pricing import PriceCacheStore  # noqa: E402
+from services.pricing import KeyValueCacheStore, PriceCacheStore  # noqa: E402
 
 
 class PriceCacheStoreTest(unittest.TestCase):
@@ -92,6 +92,88 @@ class PriceCacheStoreTest(unittest.TestCase):
             self.assertIsNotNone(updated_at)
         finally:
             reopened.close()
+
+    def test_get_stale_returns_the_same_entry_regardless_of_age(self):
+        """get_stale() is what powers "Senast känt pris" - it must still
+        return an entry a normal freshness check (compared against
+        CACHE_MAX_AGE_SECONDS by the caller) would already treat as expired,
+        since it exists precisely for the fallback path after a live
+        re-fetch failed."""
+        old_timestamp = time.time() - 30 * 3600
+        self.store.set("Willys", "citron", "80252", [{"produktnamn": "Citron Klass 1", "pris_kr": 6.9}], updated_at=old_timestamp)
+        products, updated_at = self.store.get_stale("Willys", "citron", "80252")
+        self.assertEqual(products[0]["produktnamn"], "Citron Klass 1")
+        self.assertEqual(updated_at, old_timestamp)
+
+    def test_get_stale_on_empty_store_returns_none(self):
+        self.assertEqual(self.store.get_stale("Willys", "citron", "80252"), (None, None))
+
+
+class KeyValueCacheStoreTest(unittest.TestCase):
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._price_store = PriceCacheStore(Path(self._tmpdir.name) / "prices.db")
+        # Real usage always shares PRICE_CACHE's own connection (see
+        # api_server.KV_CACHE) so there's only ever one database file to
+        # deploy/back up - tested against that same sharing here, not a
+        # separate connection, so a regression that broke the sharing itself
+        # would show up as a test failure.
+        self.store = KeyValueCacheStore(self._price_store.connection)
+
+    def tearDown(self):
+        self._price_store.close()
+        self._tmpdir.cleanup()
+
+    def test_get_on_empty_store_returns_none_none(self):
+        self.assertEqual(self.store.get("geocode", "80252"), (None, None))
+
+    def test_set_then_get_round_trip(self):
+        self.store.set("geocode", "80252", {"ort": "Gävle", "lat": 60.67, "lon": 17.14})
+        value, updated_at = self.store.get("geocode", "80252")
+        self.assertEqual(value, {"ort": "Gävle", "lat": 60.67, "lon": 17.14})
+        self.assertAlmostEqual(updated_at, time.time(), delta=5)
+
+    def test_none_is_a_real_cacheable_value_distinct_from_no_entry(self):
+        """fill_missing_image relies on this - "no Open Food Facts image
+        found for this GTIN" (value None) must be distinguishable from
+        "never looked up" (no entry at all), or it would re-query on every
+        single call instead of caching the negative result."""
+        self.store.set("off_image", "7300156462428", None)
+        value, updated_at = self.store.get("off_image", "7300156462428")
+        self.assertIsNone(value)
+        self.assertIsNotNone(updated_at)
+
+    def test_different_namespaces_with_the_same_key_are_separate_entries(self):
+        self.store.set("geocode", "80252", {"kind": "geocode"})
+        self.store.set("store_list", "80252", {"kind": "store_list"})
+        self.assertEqual(self.store.get("geocode", "80252")[0], {"kind": "geocode"})
+        self.assertEqual(self.store.get("store_list", "80252")[0], {"kind": "store_list"})
+
+    def test_setting_the_same_key_twice_overwrites_not_duplicates(self):
+        self.store.set("campaigns", "Coop:80252", [{"ingrediens": "Gammal"}])
+        self.store.set("campaigns", "Coop:80252", [{"ingrediens": "Ny"}])
+        value, _ = self.store.get("campaigns", "Coop:80252")
+        self.assertEqual(len(value), 1)
+        self.assertEqual(value[0]["ingrediens"], "Ny")
+
+    def test_clear_removes_every_namespace(self):
+        self.store.set("geocode", "80252", {"a": 1})
+        self.store.set("campaigns", "Coop:80252", [{"b": 2}])
+        self.store.clear()
+        self.assertEqual(self.store.get("geocode", "80252"), (None, None))
+        self.assertEqual(self.store.get("campaigns", "Coop:80252"), (None, None))
+
+    def test_survives_a_simulated_restart(self):
+        self.store.set("primat_store_scope", "80252", {"coop": "coop:206414"})
+        self._price_store.close()
+
+        # tearDown closes self._price_store again after this - harmless,
+        # sqlite3 connections are safe to close twice.
+        self._price_store = PriceCacheStore(Path(self._tmpdir.name) / "prices.db")
+        reopened = KeyValueCacheStore(self._price_store.connection)
+        value, updated_at = reopened.get("primat_store_scope", "80252")
+        self.assertEqual(value, {"coop": "coop:206414"})
+        self.assertIsNotNone(updated_at)
 
 
 if __name__ == "__main__":

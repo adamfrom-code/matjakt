@@ -1,5 +1,5 @@
 import { readStoredState, writeStoredState } from "./src/state/storage.js";
-import { aggregateIngredients, budgetRemaining, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
+import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
 import { createDebouncedSearch, filterRecipes, mergeRecipeResults } from "./src/services/recipe-search.js";
 import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/nutrition.js";
 import { expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts } from "./src/services/pantry.js";
@@ -430,6 +430,24 @@ function nutritionFilteredRecipes() {
 function candidateRecipesForUser() {
   return nutritionFilteredRecipes().filter(recipe => !state.feedback[recipe.id]?.disliked);
 }
+// candidateRecipesForUser() alone can silently return too few (or zero) recipes
+// when the user's näringsmål are stricter than what the recipe catalog can ever
+// match - bestMenuCombo() then quietly builds an empty week with no explanation.
+// This is the single choke point both chooseMenu() and openPlanComparison() go
+// through to generate a week, so falling back to the diet-only pool (and
+// surfacing #nutritionWarning) here fixes it everywhere a week gets (re)built.
+function weekPlanCandidates() {
+  const dietOnly = localRecipesForUser().filter(recipe => !state.feedback[recipe.id]?.disliked);
+  const goalsActive = Boolean(state.user?.premium) && hasActiveNutritionGoals(currentNutritionGoals());
+  if (!goalsActive) return { candidates: dietOnly, nutritionShortfall: false };
+  const nutritionCandidates = candidateRecipesForUser();
+  if (nutritionCandidates.length < state.middagar) return { candidates: dietOnly, nutritionShortfall: true };
+  return { candidates: nutritionCandidates, nutritionShortfall: false };
+}
+function updateNutritionWarning(nutritionShortfall) {
+  $("nutritionWarning").hidden = !nutritionShortfall;
+  if (nutritionShortfall) $("nutritionWarning").textContent = "Dina näringsmål matchade för få recept den här veckan, så vi visar de närmaste alternativen istället. Testa att justera målen om du vill ha en bättre träff.";
+}
 function cheapestBranch(chain = null) {
   const branches = nearbyBranches().filter(branch => !chain || branch.kedja === chain);
   const candidates = candidateRecipesForUser();
@@ -474,13 +492,19 @@ const chosenStore = () => cheapestStore()?.kedja || state.butik;
 const productApiUrl = (store, query) => { const branch = selectedBranch(); return configuredProductApiUrl(store, query, state.postnummer, branch?.kedja === store ? branch.primatKey : ""); };
 function sanitizeApiPayload(payload) {
   if (!Array.isArray(payload?.produkter)) return payload;
-  return { ...payload, produkter: payload.produkter.map(product => ({ ...product, produktnamn: escapeHtml(product.produktnamn), marke_och_storlek: escapeHtml(product.marke_och_storlek), bild: product.bild ? safeHttpUrl(product.bild) : "", url: safeHttpUrl(product.url), pris_kr: Number(product.pris_kr) || 0 })) };
+  // pris_kr must stay null when the source has no price for this product -
+  // "Number(x) || 0" used to turn that into a real, spendable-looking 0 kr
+  // (and let it silently count as free in any total that summed it), which
+  // is exactly the "0 kr" bug this was rewritten to fix.
+  return { ...payload, produkter: payload.produkter.map(product => ({ ...product, produktnamn: escapeHtml(product.produktnamn), marke_och_storlek: escapeHtml(product.marke_och_storlek), bild: product.bild ? safeHttpUrl(product.bild) : "", url: safeHttpUrl(product.url), pris_kr: product.pris_kr == null ? null : Number(product.pris_kr) })) };
 }
 const availableRecipes = () => candidateRecipesForUser();
 
 function chooseMenu(shouldScroll = true) {
   const branch = selectedBranch();
-  const combo = bestMenuCombo(availableRecipes(), state.middagar, state.budget, branch);
+  const { candidates, nutritionShortfall } = weekPlanCandidates();
+  updateNutritionWarning(nutritionShortfall);
+  const combo = bestMenuCombo(candidates, state.middagar, state.budget, branch);
   setWeekPlan(combo.map(r => r.id));
   // A new set of meals makes any checked-off shopping items and cached live
   // prices from the previous week meaningless - without this, starting a new
@@ -570,35 +594,34 @@ async function renderRecipePage() {
 }
 
 function branchLiveTotal(shoppingItems, chainProducts) {
-  // matched is tracked alongside cost so a store missing several items never
-  // silently looks cheap just because its total only reflects what it did
-  // match - see renderStoreComparisonPage's coverage note.
-  let cost = 0, matched = 0;
-  for (const item of shoppingItems) {
-    const product = chainProducts[item.namn];
-    if (!product) continue;
-    matched++;
-    const pantry = state.pantry[item.namn]?.amount || 0;
-    const needed = Math.max(0, item.total - pantry);
-    const packages = item.package ? Math.ceil(needed / item.package.amount) : Math.ceil(needed);
-    cost += Number(product.pris_kr) * packages;
-  }
-  return { cost, matched };
+  return calculateLiveShoppingTotal(shoppingItems, chainProducts, pantryAmounts(state.pantry));
 }
 let branchComparisonSync = { key: null, chains: new Set() };
 async function syncBranchComparison(shoppingItems, branches) {
   const names = shoppingItems.map(item => item.namn).sort();
   const key = `${state.postnummer}|${names.join(",")}`;
   if (branchComparisonSync.key !== key) { branchComparisonSync = { key, chains: new Set() }; state.liveBranchTotals = {}; }
-  const chains = [...new Set(branches.map(branch => branch.kedja))].filter(chain => VALID_CHAINS.includes(chain) && !branchComparisonSync.chains.has(chain));
+  // Must resolve the SAME store_key syncLivePrices uses for a pinned branch
+  // (see its own "branch?.kedja === chain ? branch.primatKey : ''" logic) -
+  // otherwise this fetches the chain's default door while the per-item rows
+  // (state.livePriser, driven by syncLivePrices) show a specific pinned
+  // door's prices, and the header total silently disagrees with what's
+  // listed below it. Tracked per (chain, storeKey) pair, not just chain, so
+  // pinning/unpinning a branch is treated as a fetch worth redoing even when
+  // this exact chain was already fetched under the old key this session.
+  const pinned = pinnedBranchMatch();
+  const chains = [...new Set(branches.map(branch => branch.kedja))]
+    .filter(chain => VALID_CHAINS.includes(chain))
+    .map(chain => ({ chain, storeKey: pinned && pinned.kedja === chain ? pinned.primatKey : "" }))
+    .filter(({ chain, storeKey }) => !branchComparisonSync.chains.has(`${chain}#${storeKey}`));
   if (!names.length) return;
-  chains.forEach(chain => branchComparisonSync.chains.add(chain));
+  chains.forEach(({ chain, storeKey }) => branchComparisonSync.chains.add(`${chain}#${storeKey}`));
   // Each chain is fetched independently and in parallel - a slow/timed-out chain (e.g.
   // Coop) must not delay the others from starting or completing.
-  await Promise.allSettled(chains.map(async chain => {
+  await Promise.allSettled(chains.map(async ({ chain, storeKey }) => {
     if (branchComparisonSync.key !== key) return;
     try {
-      const produkter = await fetchProductsBatch(chain, state.postnummer, names);
+      const produkter = await fetchProductsBatch(chain, state.postnummer, names, undefined, storeKey);
       if (branchComparisonSync.key !== key) return;
       const matched = Object.values(produkter).filter(Boolean);
       if (matched.length) { state.liveBranchTotals[chain] = branchLiveTotal(shoppingItems, produkter); state.liveUpdatedAt = Date.now(); renderBasket(); }
@@ -611,11 +634,19 @@ async function syncBranchComparison(shoppingItems, branches) {
 function computeStoreResults(selected, branches, shoppingItems) {
   return branches.map(branch => {
     const live = state.liveBranchTotals[branch.kedja];
-    return { branch, cost: live ? live.cost : shoppingListCost(selected, branch), isLive: live != null, matched: live?.matched ?? null, totalItems: shoppingItems.length };
+    return { branch, cost: live ? live.cost : shoppingListCost(selected, branch), isLive: live != null, matched: live?.matched ?? null, certain: live?.certain ?? null, totalItems: shoppingItems.length };
   }).sort((a, b) => a.cost - b.cost);
 }
-function renderStoreComparison(selected) {
-  const container = $("storeCompare");
+function coverageLabel(result) {
+  // "certain" (a confident match AND a real price) is the number that
+  // actually contributed to result.cost - "matched" alone would overstate
+  // coverage now that a confidently-matched product can still have no price
+  // (see best_match/calculateLiveShoppingTotal).
+  if (result.certain == null) return "";
+  return `<small class="store-compare-coverage">${result.certain} av ${result.totalItems} varor har säkert pris${result.certain < result.totalItems ? ` · ${result.totalItems - result.certain} utan pris` : ""}</small>`;
+}
+function renderStoreComparison(selected, containerId = "storeCompare") {
+  const container = $(containerId);
   if (!container) return;
   const branches = nearbyBranches();
   if (!selected.length || !branches.length) { container.innerHTML = ""; return; }
@@ -630,8 +661,8 @@ function renderStoreComparison(selected) {
     // and showing it as fact is exactly the kind of mismatch users have reported.
     // Show only the price at the store actually in use, plainly labeled.
     const current = results.find(r => r.branch === selectedBranch()) || results[0];
-    container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${current.isLive ? "Pris" : "Uppskattat pris"} hos ${current.branch.namn}</span><strong>ca ${money(current.cost)}</strong>${updatedLabel}</div>${results.length > 1 ? `<button type="button" class="store-compare-upsell" id="storeCompareUpsell">🔒 Prova Premium gratis i 14 dagar och se vilken butik som faktiskt är billigast av ${results.length}</button>` : ""}</div>`;
-    $("storeCompareUpsell")?.addEventListener("click", openPremiumPitch);
+    container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${current.isLive ? "Pris" : "Uppskattat pris"} hos ${current.branch.namn}</span><strong>ca ${money(current.cost)}</strong>${coverageLabel(current)}${updatedLabel}</div>${results.length > 1 ? `<button type="button" class="store-compare-upsell" id="storeCompareUpsell-${containerId}">🔒 Prova Premium gratis i 14 dagar och se vilken butik som faktiskt är billigast av ${results.length}</button>` : ""}</div>`;
+    $(`storeCompareUpsell-${containerId}`)?.addEventListener("click", openPremiumPitch);
     syncBranchComparison(shoppingItems, branches);
     return;
   }
@@ -644,15 +675,16 @@ function renderStoreComparison(selected) {
   // instead of a button that would do nothing when pressed.
   const list = results.length < 2 ? "" : `<div class="store-compare-list">${results.map((r, index) => {
     const isPinned = pinned && r.branch.primatKey && r.branch.primatKey === pinned.primatKey;
-    const tag = `${r.branch === cheapest.branch ? "cheapest" : ""} ${isPinned ? "pinned" : ""}`.trim();
-    const inner = `<span>${r.branch.namn}${isPinned ? '<span class="live-badge pinned">Vald</span>' : ""}${r.isLive ? '<span class="live-badge">Live</span>' : '<span class="live-badge estimate">Uppskattat</span>'}</span><strong>${money(r.cost)}</strong>`;
+    const isCheapest = r.branch === cheapest.branch;
+    const tag = `${isCheapest ? "cheapest" : ""} ${isPinned ? "pinned" : ""}`.trim();
+    const inner = `<span>${r.branch.namn}${isCheapest ? '<span class="live-badge cheapest-badge">Billigast</span>' : ""}${isPinned ? '<span class="live-badge pinned">Vald</span>' : ""}${r.isLive ? '<span class="live-badge">Live</span>' : '<span class="live-badge estimate">Uppskattat</span>'}</span><strong>${money(r.cost)}</strong>`;
     return r.branch.primatKey
       ? `<button type="button" class="store-compare-row ${tag}" data-pick-branch="${index}">${inner}</button>`
       : `<div class="store-compare-row ${tag} not-pickable">${inner}</div>`;
   }).join("")}</div>`;
-  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${cheapest.isLive ? "Lägst pris" : "Lägst uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savings > 1 ? `<small>${cheapest.isLive ? "Skillnad" : "Uppskattad skillnad"} ${money(savings)} mot ${priciest.branch.namn}</small>` : ""}${updatedLabel}</div>${list}${pinned ? '<button type="button" class="store-compare-unpin" id="storeCompareUnpin">Välj automatiskt istället</button>' : ""}${results.length > 1 ? '<button type="button" class="store-compare-open" id="storeCompareOpenBtn">Jämför butiker →</button>' : ""}</div>`;
-  $("storeCompareOpenBtn")?.addEventListener("click", () => { renderStoreComparisonPage(selected); setView("comparison"); });
-  document.querySelectorAll("[data-pick-branch]").forEach(button => button.addEventListener("click", () => {
+  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${cheapest.isLive ? "Lägst pris" : "Lägst uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savings > 1 ? `<small>${cheapest.isLive ? "Skillnad" : "Uppskattad skillnad"} ${money(savings)} mot ${priciest.branch.namn}</small>` : ""}${coverageLabel(cheapest)}${updatedLabel}</div>${list}${pinned ? `<button type="button" class="store-compare-unpin" id="storeCompareUnpin-${containerId}">Välj automatiskt istället</button>` : ""}${results.length > 1 ? `<button type="button" class="store-compare-open" id="storeCompareOpenBtn-${containerId}">Jämför butiker →</button>` : ""}</div>`;
+  $(`storeCompareOpenBtn-${containerId}`)?.addEventListener("click", () => { renderStoreComparisonPage(selected); setView("comparison"); });
+  container.querySelectorAll("[data-pick-branch]").forEach(button => button.addEventListener("click", () => {
     const branch = results[Number(button.dataset.pickBranch)].branch;
     const alreadyPinned = state.pinnedBranch && state.pinnedBranch.primatKey === branch.primatKey;
     state.pinnedBranch = alreadyPinned ? null : { kedja: branch.kedja, namn: branch.namn, primatKey: branch.primatKey };
@@ -664,7 +696,7 @@ function renderStoreComparison(selected) {
     renderCampaignSection();
     syncSettingsInputs();
   }));
-  $("storeCompareUnpin")?.addEventListener("click", () => {
+  $(`storeCompareUnpin-${containerId}`)?.addEventListener("click", () => {
     state.pinnedBranch = null;
     state.livePriser = {};
     state.liveBranchTotals = {};
@@ -771,9 +803,15 @@ function shoppingItemMarkup(item) {
   // specific item is genuinely still in flight, or the price shown is a
   // static guess rather than a real captured one. A settled real price gets
   // no badge at all - see the "no Live/Uppdaterad" reasoning this replaced.
+  // live can exist with pris_kr === null (a confidently matched product, or
+  // no confident match at all - either way, the backend has already decided
+  // and this is not "still fetching" or "just an estimate") - that must show
+  // "Pris saknas", never 0 kr, and must never enter a total (see
+  // shoppingListCost/branchLiveTotal).
+  const priceMissing = live && live.pris_kr == null;
   const stillFetching = packages > 0 && !live && livePriceSync.loading && VALID_CHAINS.includes(chain);
   const isEstimated = packages > 0 && !live && !stillFetching;
-  const priceLabel = live ? money(live.pris_kr * (packages || 1)) : product.pris ? money(product.pris * packages) : "";
+  const priceLabel = priceMissing ? "Pris saknas" : live ? money(live.pris_kr * (packages || 1)) : product.pris ? money(product.pris * packages) : "";
   const displayName = live ? escapeHtml(live.produktnamn) : escapeHtml(item.namn);
   // PRODUCT_CATALOG uses "ICA" as a generic placeholder brand for estimated
   // prices, not a claim that the item comes from ICA specifically - showing it
@@ -790,7 +828,7 @@ function shoppingItemMarkup(item) {
   const campaign = live?.kampanj?.text ? `<small class="shopping-item-campaign">🏷️ ${escapeHtml(live.kampanj.text)}</small>` : "";
   const status = stillFetching ? '<small class="item-status loading">Hämtar…</small>' : isEstimated ? '<small class="item-status estimated">Uppskattat</small>' : "";
   const photo = live?.bild ? `<img class="shopping-item-image has-image" src="${live.bild}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(item.namn));
-  return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${displayName}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong>${priceLabel}</strong>${status}</span></label>`;
+  return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${displayName}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong class="${priceMissing ? "price-missing" : ""}">${priceLabel}</strong>${status}</span></label>`;
 }
 function pantryStep(name) { return (PACKAGE_INFO[name]?.unit || "st") === "st" ? 1 : 50; }
 const PANTRY_TAB_LABELS = { skafferi: "Skafferi", kyl: "Kyl", frys: "Frys" };
@@ -871,10 +909,11 @@ function weekPlanRowMarkup(recipe, index) {
 }
 function weekShoppingRowMarkup(item) {
   const live = state.livePriser[item.namn];
-  const price = live ? money(live.pris_kr) : PRODUCT_CATALOG[item.namn]?.pris ? money(PRODUCT_CATALOG[item.namn].pris) : "";
+  const priceMissing = live && live.pris_kr == null;
+  const price = priceMissing ? "Pris saknas" : live ? money(live.pris_kr) : PRODUCT_CATALOG[item.namn]?.pris ? money(PRODUCT_CATALOG[item.namn].pris) : "";
   const campaign = live?.kampanj?.text ? `<small class="week-shopping-campaign">🏷️ ${escapeHtml(live.kampanj.text)}</small>` : "";
   const photo = live?.bild ? `<img class="shopping-item-image has-image" src="${live.bild}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(item.namn));
-  return `<label class="week-shopping-row"><input type="checkbox" data-week-shopping="${escapeHtml(item.namn)}">${photo}<span class="week-shopping-info"><strong>${escapeHtml(item.namn)}</strong>${campaign}</span><strong class="week-shopping-price">${price}</strong></label>`;
+  return `<label class="week-shopping-row"><input type="checkbox" data-week-shopping="${escapeHtml(item.namn)}">${photo}<span class="week-shopping-info"><strong>${escapeHtml(item.namn)}</strong>${campaign}</span><strong class="week-shopping-price ${priceMissing ? "price-missing" : ""}">${price}</strong></label>`;
 }
 function renderWeekOverview(selected, shoppingItems, total) {
   $("weekDayTabs").innerHTML = DAYS.map((day, index) => `<button type="button" class="week-day-tab ${index === weekOverviewDay ? "active" : ""} ${selected[index] ? "" : "empty"}" data-week-day="${index}" role="tab" aria-selected="${index === weekOverviewDay}">${day}</button>`).join("");
@@ -945,7 +984,15 @@ function renderGreeting() {
 }
 function renderBasket() {
   const selected = selectedRecipes();
-  const total = shoppingListCost(selected, selectedBranch()), shoppingItems = aggregateShopping(selected);
+  const shoppingItems = aggregateShopping(selected);
+  // The header total must be the SAME number the store-comparison widget
+  // shows for the currently selected/pinned branch - a live total when one
+  // has been fetched, the static per-package estimate otherwise - never a
+  // second, independently-computed figure that could quietly disagree with
+  // what's shown right below it.
+  const branches = nearbyBranches();
+  const currentResult = branches.length ? computeStoreResults(selected, branches, shoppingItems).find(r => r.branch === selectedBranch()) : null;
+  const total = currentResult ? currentResult.cost : shoppingListCost(selected, selectedBranch());
   const groups = shoppingItems.reduce((result, item) => { const category = itemCategory(item.namn); (result[category] ||= []).push(item); return result; }, {});
   $("shoppingList").innerHTML = shoppingItems.length ? Object.entries(groups).map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingItemMarkup).join("")}</section>`).join("") : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
   document.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => { input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping); saveState(); renderBasket(); }));
@@ -957,7 +1004,7 @@ function renderBasket() {
   $("shoppingCost").textContent = `${money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
   $("shoppingComplete").hidden = !(shoppingItems.length && completed === shoppingItems.length);
   renderAttribution(shoppingItems);
-  renderStoreComparison(selected); renderPantry();
+  renderStoreComparison(selected); renderStoreComparison(selected, "basketStoreCompare"); renderPantry();
   document.querySelectorAll("[data-week-store]").forEach(button => button.classList.toggle("active", button.dataset.weekStore === state.butik));
   updateWeekStoreStatus();
   // Fed the exact same selected/shoppingItems/total this function just
@@ -1020,7 +1067,13 @@ async function fetchProductsBatch(chain, zip, names, onItem, storeKey) {
   return produkter;
 }
 function mapLiveProducts(produkter) {
-  return Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: Number(product.pris_kr) || 0, produktnamn: String(product.produktnamn || namn), markeOchStorlek: String(product.marke_och_storlek || ""), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "", kalla: product.kalla || "", bildKalla: product.bild_kalla || "", kampanj: product.kampanj?.text ? { text: String(product.kampanj.text) } : null }]));
+  // pris_kr stays null when the backend genuinely has no confident price for
+  // a matched product (Primat has the item but no current price, or -
+  // filtered([, product]) => product) below keeps this - the entry is
+  // entirely absent (null) rather than a wrongly-forced 0. Every downstream
+  // reader (shoppingItemMarkup, weekShoppingRowMarkup, branchLiveTotal) must
+  // treat pris_kr === null as "Pris saknas", never as a spendable price.
+  return Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: product.pris_kr == null ? null : Number(product.pris_kr), produktnamn: String(product.produktnamn || namn), markeOchStorlek: String(product.marke_och_storlek || ""), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "", kalla: product.kalla || "", bildKalla: product.bild_kalla || "", kampanj: product.kampanj?.text ? { text: String(product.kampanj.text) } : null }]));
 }
 let livePriceSync = { key: null, loading: false };
 async function syncLivePrices(shoppingItems) {
@@ -1177,7 +1230,7 @@ $("recipeSearch").addEventListener("input", e => {
   debouncedLiveSearch(query).then(payload => {
     const data = sanitizeApiPayload(payload);
     state.liveProdukter = data.produkter || [];
-    $("liveProducts").innerHTML = state.liveProdukter.length ? `<div class="live-products-head"><span>LIVE FRÅN BUTIKEN</span><strong>${state.liveProdukter.length} produkter</strong></div><div class="live-product-grid">${state.liveProdukter.map(product => `<a class="live-product" href="${product.url}" target="_blank" rel="noopener"><span class="live-product-name">${product.produktnamn}</span><small>${product.marke_och_storlek || "Storlek visas hos butiken"}</small><strong>${product.pris_kr.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} kr</strong></a>`).join("")}</div>` : `<p class="live-loading">Inga liveprodukter hittades.</p>`;
+    $("liveProducts").innerHTML = state.liveProdukter.length ? `<div class="live-products-head"><span>LIVE FRÅN BUTIKEN</span><strong>${state.liveProdukter.length} produkter</strong></div><div class="live-product-grid">${state.liveProdukter.map(product => `<a class="live-product" href="${product.url}" target="_blank" rel="noopener"><span class="live-product-name">${product.produktnamn}</span><small>${product.marke_och_storlek || "Storlek visas hos butiken"}</small><strong>${product.pris_kr == null ? "Pris saknas" : `${product.pris_kr.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} kr`}</strong></a>`).join("")}</div>` : `<p class="live-loading">Inga liveprodukter hittades.</p>`;
     renderBasket();
   }).catch(error => {
     if (error?.name === "AbortError") return;
@@ -1299,7 +1352,8 @@ function planCardMarkup(plan, branch) {
 }
 function openPlanComparison() {
   const branch = selectedBranch();
-  const candidates = candidateRecipesForUser();
+  const { candidates, nutritionShortfall } = weekPlanCandidates();
+  updateNutritionWarning(nutritionShortfall);
   if (!candidates.length) { chooseMenu(); return; }
   const plans = PLAN_TYPES.map(type => { const combo = bestMenuCombo(candidates, state.middagar, state.budget, branch, type.key); return { ...type, combo, cost: shoppingListCost(combo, branch) }; }).filter(plan => plan.combo.length);
   if (plans.length < 2) { chooseMenu(); return; }
@@ -1648,7 +1702,7 @@ function renderPantryLiveSearch(query) {
   debouncedPantrySearch(search).then(payload => {
     const data = sanitizeApiPayload(payload);
     pantryLiveResults = (data.produkter || []).slice(0, 12);
-    $("pantryLiveResults").innerHTML = pantryLiveResults.length ? `<p class="pantry-picker-section-label">Från ${chain}</p>${pantryLiveResults.map((product, index) => `<button type="button" class="pantry-pick" data-pantry-pick-live="${index}">${product.bild ? `<img class="pantry-pick-photo" src="${product.bild}" alt="" loading="lazy">` : `<span class="pantry-pick-photo placeholder" aria-hidden="true">${escapeHtml(product.produktnamn.slice(0, 1))}</span>`}<span class="pantry-pick-info"><strong>${product.produktnamn}</strong><small>${product.marke_och_storlek || `${product.pris_kr.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} kr`}</small></span><span class="pantry-pick-add">+ Lägg till</span></button>`).join("")}` : `<p class="pantry-picker-empty">Inga produkter hos ${chain} matchar "${escapeHtml(search)}".</p>`;
+    $("pantryLiveResults").innerHTML = pantryLiveResults.length ? `<p class="pantry-picker-section-label">Från ${chain}</p>${pantryLiveResults.map((product, index) => `<button type="button" class="pantry-pick" data-pantry-pick-live="${index}">${product.bild ? `<img class="pantry-pick-photo" src="${product.bild}" alt="" loading="lazy">` : `<span class="pantry-pick-photo placeholder" aria-hidden="true">${escapeHtml(product.produktnamn.slice(0, 1))}</span>`}<span class="pantry-pick-info"><strong>${product.produktnamn}</strong><small>${product.marke_och_storlek || (product.pris_kr == null ? "Pris saknas" : `${product.pris_kr.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} kr`)}</small></span><span class="pantry-pick-add">+ Lägg till</span></button>`).join("")}` : `<p class="pantry-picker-empty">Inga produkter hos ${chain} matchar "${escapeHtml(search)}".</p>`;
     document.querySelectorAll("[data-pantry-pick-live]").forEach(button => button.addEventListener("click", () => {
       const product = pantryLiveResults[Number(button.dataset.pantryPickLive)];
       if (product) openPantryAddConfirm(product.produktnamn, { namn: product.produktnamn, marke: product.marke_och_storlek || "", storlek: "" });

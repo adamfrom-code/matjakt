@@ -225,8 +225,7 @@ class FetchFromPrimatIntegrationTest(unittest.TestCase):
     def setUp(self):
         import api_server
         self.api_server = api_server
-        self._original_cache = dict(api_server.PRIMAT_STORE_CACHE)
-        api_server.PRIMAT_STORE_CACHE.clear()
+        api_server.KV_CACHE.clear()
         # The circuit breaker is module-level global state (see
         # _trip_primat_circuit) - without resetting it, a test that trips it
         # would leak a cooldown into whichever test runs next.
@@ -234,8 +233,7 @@ class FetchFromPrimatIntegrationTest(unittest.TestCase):
         api_server._primat_circuit_open_until = 0.0
 
     def tearDown(self):
-        self.api_server.PRIMAT_STORE_CACHE.clear()
-        self.api_server.PRIMAT_STORE_CACHE.update(self._original_cache)
+        self.api_server.KV_CACHE.clear()
         self.api_server._primat_circuit_open_until = self._original_circuit
 
     def test_unsupported_chain_skips_primat_without_calling_it(self):

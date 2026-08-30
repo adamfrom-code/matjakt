@@ -121,6 +121,16 @@ def nearby_stores(zip_code, api_key=None):
     return stores
 
 
+def account_status(api_key):
+    """Primat's own account-usage endpoint (GET /me) - plan, daily row
+    budget, rows used so far today, when it resets. Requires a real key (no
+    demo-tier equivalent exists for this), and is for internal/admin
+    visibility only - see api_server's admin-gated endpoint that calls this;
+    the key itself must never be included in what that endpoint returns to
+    a client."""
+    return _request("GET", "/me", api_key=api_key)
+
+
 def search_products(query, stores=None, api_key=None):
     """stores: comma-separated "chain:store_id" list (e.g. from
     resolve_stores) to scope results to specific stores; without it, Primat
@@ -149,7 +159,13 @@ def to_matjakt_product(primat_product, chain, query):
     Primat's own "confirmed_at" (when THEY last verified this price, not when
     Matjakt happened to ask) is preserved as "uppdaterad" so store_products'
     persisted timestamp reflects the price's real-world age, consistent with
-    cached_products' 24h reuse window."""
+    cached_products' cache window.
+
+    "kategori" is Primat's own breadcrumb-style department path (e.g. "Frukt
+    & Grönsaker > Grönsaker > Paprika") - scraped products never have this
+    (Willys/Coop/Hemköp/ICA's own pages don't expose it), so it's "" for
+    those, not missing - best_match() only applies its category check when
+    this is non-empty."""
     prices = primat_product.get("prices") or {}
     offer = prices.get("offer")
     brand = primat_product.get("brand") or ""
@@ -160,6 +176,7 @@ def to_matjakt_product(primat_product, chain, query):
         "marke_och_storlek": " ".join(part for part in (brand, package) if part),
         "bild": "",  # Primat doesn't provide product images - see Open Food Facts fallback
         "pris_kr": prices.get("effective"),
+        "kategori": primat_product.get("category") or "",
         "storlek": package,
         "lager": bool(primat_product.get("available", True)),
         "url": (primat_product.get("urls") or {}).get("source") or (primat_product.get("urls") or {}).get("primat") or "",

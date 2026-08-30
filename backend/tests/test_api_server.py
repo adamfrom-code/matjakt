@@ -92,12 +92,80 @@ class ApiHelpersTest(unittest.TestCase):
         products = [{"produktnamn": "Svartaste Bönorna Special", "pris_kr": 5}, {"produktnamn": "Svarta Bönor Naturella", "pris_kr": 10}]
         self.assertEqual(api_server.best_match(products, "Svarta bönor")["produktnamn"], "Svarta Bönor Naturella")
 
-    def test_best_match_falls_back_to_first_result_when_nothing_matches_by_word(self):
-        """No candidate has the query as leading words at all - matches the
-        pre-existing fallback behavior (whatever ranked first), just now
-        reached through the stricter word check instead of a substring one."""
+    def test_best_match_returns_none_when_nothing_matches_by_word(self):
+        """No candidate has the query as leading words at all. There used to
+        be a fallback here (whatever Primat ranked first) - that's exactly
+        the mechanism that put "Avorio Risottoris" on a shopping list for
+        "Ris" in production, so a caller must get None (-> "Pris saknas"),
+        never a guess."""
         products = [{"produktnamn": "Lime Klass 1", "pris_kr": 5}, {"produktnamn": "Apelsinjuice", "pris_kr": 15}]
-        self.assertEqual(api_server.best_match(products, "Citron")["produktnamn"], "Lime Klass 1")
+        self.assertIsNone(api_server.best_match(products, "Citron"))
+
+    def test_best_match_rejects_citron_flavoured_soda_by_category(self):
+        """Live reproduction (2026-08-30): Coop's "Citron" search surfaced
+        "Citronsoda Sockerfri" and "Sprite", both starting with the literal
+        word "Citron" (a flavour name) and both passing the word-boundary
+        check. Primat's own category ("Dryck > Läsk > ...") is what actually
+        distinguishes a soda from real lemons."""
+        products = [
+            {"produktnamn": "Citronsoda Sockerfri", "pris_kr": 12, "kategori": "Dryck > Läsk > Citron- & limesmak"},
+            {"produktnamn": "Citron Eko", "pris_kr": 33, "kategori": "Frukt & Grönsaker > Frukt > Citrusfrukt"},
+        ]
+        self.assertEqual(api_server.best_match(products, "Citron")["produktnamn"], "Citron Eko")
+
+    def test_best_match_rejects_citron_juice_by_exclude_word(self):
+        """"Citronjuice" also starts with the word "Citron" and sits in a
+        third category (Kryddor & Smaksättare > Såser & dressing) that isn't
+        covered by the soda case above - the per-ingredient exclude list
+        catches it regardless of category."""
+        products = [
+            {"produktnamn": "Citronjuice", "pris_kr": 9, "kategori": "Kryddor & Smaksättare > Såser & dressing > Pressad citron & Lime"},
+            {"produktnamn": "Citron Klass 1", "pris_kr": 7, "kategori": "Frukt & Grönsaker > Frukt > Citrusfrukt"},
+        ]
+        self.assertEqual(api_server.best_match(products, "Citron")["produktnamn"], "Citron Klass 1")
+
+    def test_best_match_rejects_risotto_rice_for_plain_ris(self):
+        """Live reproduction (2026-08-30, Willys): with no plain "Ris ..."
+        product in stock, the old fallback picked "Avorio Risottoris" -
+        specialty risotto rice, sharing the exact same Primat category as
+        everyday rice ("Skafferi > Ris, Mos & Gryner > Ris"), so category
+        alone can't reject it - only the name-based exclude list can."""
+        products = [{"produktnamn": "Avorio Risottoris", "pris_kr": 30, "kategori": "Skafferi > Ris, Mos & Gryner > Ris"}]
+        self.assertIsNone(api_server.best_match(products, "Ris"))
+
+    def test_best_match_accepts_plain_ris_alongside_rejected_risotto_rice(self):
+        products = [
+            {"produktnamn": "Avorio Risottoris", "pris_kr": 30, "kategori": "Skafferi > Ris, Mos & Gryner > Ris"},
+            {"produktnamn": "Ris Långkornigt", "pris_kr": 28, "kategori": "Skafferi > Ris, Mos & Gryner > Ris"},
+        ]
+        self.assertEqual(api_server.best_match(products, "Ris")["produktnamn"], "Ris Långkornigt")
+
+    def test_best_match_rejects_risifrutti_for_ris(self):
+        """"Risifrutti" is one compound word ("risifrutti" != "ris" split by
+        word) so the word-boundary check alone already rejects it - this
+        guards against that regressing."""
+        products = [{"produktnamn": "Risifrutti Jordgubb", "pris_kr": 14, "kategori": "Kylvaror > Fil & Yoghurt > Barnmellanmål"}]
+        self.assertIsNone(api_server.best_match(products, "Ris"))
+
+    def test_best_match_rejects_paprikakrydda_by_category(self):
+        """Same mechanism as the existing riskakor/paprikapulver word-boundary
+        tests, but for a category-only collision: "Paprikakrydda" written as
+        one word never passes the word check anyway, so this specifically
+        covers a two-word spice name ("Paprika Krydda") that WOULD pass the
+        word-boundary check and needs the category/exclude-word layer."""
+        products = [
+            {"produktnamn": "Paprika Krydda Stark", "pris_kr": 29, "kategori": "Kryddor & Smaksättare > Kryddor > Kryddor K - P"},
+            {"produktnamn": "Paprika Röd", "pris_kr": 20, "kategori": "Frukt & Grönsaker > Grönsaker > Paprika"},
+        ]
+        self.assertEqual(api_server.best_match(products, "Paprika")["produktnamn"], "Paprika Röd")
+
+    def test_best_match_ignores_category_for_scraped_products_without_one(self):
+        """Scraped rows (Willys/Coop/Hemköp/ICA's own pages) never carry a
+        "kategori" field - the category check must be skipped for them
+        (word-boundary + exclude-words still apply), not treated as an
+        automatic rejection just because the field is absent."""
+        products = [{"produktnamn": "Paprika Röd Klass 1", "pris_kr": 24}]
+        self.assertEqual(api_server.best_match(products, "Paprika")["produktnamn"], "Paprika Röd Klass 1")
 
     def test_fill_missing_image_leaves_products_without_a_gtin_untouched(self):
         """Scraped products never have a "gtin" key at all - this must be a
@@ -154,13 +222,13 @@ class ApiHelpersTest(unittest.TestCase):
         original = api_server.image_url_for_gtin
         calls = []
         api_server.image_url_for_gtin = lambda gtin: calls.append(gtin) or "https://images.openfoodfacts.org/x.jpg"
-        api_server.OFF_IMAGE_CACHE.clear()
+        api_server.KV_CACHE.clear()
         try:
             api_server.fill_missing_image({"produktnamn": "Sprite", "bild": "", "gtin": "5000112642667"})
             api_server.fill_missing_image({"produktnamn": "Sprite igen", "bild": "", "gtin": "5000112642667"})
         finally:
             api_server.image_url_for_gtin = original
-            api_server.OFF_IMAGE_CACHE.clear()
+            api_server.KV_CACHE.clear()
         self.assertEqual(calls, ["5000112642667"])
 
     def test_cached_products_serves_entries_within_24h_without_rescraping(self):
@@ -400,11 +468,12 @@ class ApiServerHttpTest(unittest.TestCase):
         api_server.fetch_from_primat = self._original_fetch_from_primat
         api_server.image_url_for_gtin = self._original_image_url_for_gtin
 
-    def get(self, path, token=None):
+    def get(self, path, token=None, headers=None):
         conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         try:
-            headers = {"Authorization": f"Bearer {token}"} if token else {}
-            conn.request("GET", path, headers=headers)
+            request_headers = {"Authorization": f"Bearer {token}"} if token else {}
+            request_headers.update(headers or {})
+            conn.request("GET", path, headers=request_headers)
             response = conn.getresponse()
             body = response.read()
             return response.status, json.loads(body) if body else None
@@ -437,6 +506,51 @@ class ApiServerHttpTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertTrue(payload["ok"])
         self.assertIn("Willys", payload["stores"])
+
+    def test_admin_primat_status_refuses_unset_admin_token(self):
+        """No MATJAKT_ADMIN_TOKEN configured (the default) must refuse every
+        request to this endpoint, not fall open."""
+        original_admin_token = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = ""
+        try:
+            status, payload = self.get("/api/admin/primat-status", headers={"X-Admin-Token": "anything"})
+            self.assertEqual(status, 404)
+        finally:
+            api_server.ADMIN_TOKEN = original_admin_token
+
+    def test_admin_primat_status_refuses_a_wrong_token(self):
+        original_admin_token = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "ratt-hemlighet"
+        try:
+            status, payload = self.get("/api/admin/primat-status", headers={"X-Admin-Token": "fel-hemlighet"})
+            self.assertEqual(status, 404)
+        finally:
+            api_server.ADMIN_TOKEN = original_admin_token
+
+    def test_admin_primat_status_reports_unconfigured_when_no_primat_key(self):
+        original_admin_token, original_primat_key = api_server.ADMIN_TOKEN, api_server.PRIMAT_API_KEY
+        api_server.ADMIN_TOKEN, api_server.PRIMAT_API_KEY = "ratt-hemlighet", ""
+        try:
+            status, payload = self.get("/api/admin/primat-status", headers={"X-Admin-Token": "ratt-hemlighet"})
+            self.assertEqual(status, 200)
+            self.assertFalse(payload["configured"])
+        finally:
+            api_server.ADMIN_TOKEN, api_server.PRIMAT_API_KEY = original_admin_token, original_primat_key
+
+    def test_admin_primat_status_returns_quota_with_a_valid_token_and_never_the_key_itself(self):
+        original_admin_token, original_primat_key = api_server.ADMIN_TOKEN, api_server.PRIMAT_API_KEY
+        original_account_status = api_server.primat_account_status
+        api_server.ADMIN_TOKEN, api_server.PRIMAT_API_KEY = "ratt-hemlighet", "hemlig-primat-nyckel"
+        api_server.primat_account_status = lambda api_key: {"plan": "free", "rows_used_today": 4200, "row_budget": 20000, "resets_at": "2026-08-31T00:00:00Z"}
+        try:
+            status, payload = self.get("/api/admin/primat-status", headers={"X-Admin-Token": "ratt-hemlighet"})
+            self.assertEqual(status, 200)
+            self.assertTrue(payload["configured"])
+            self.assertEqual(payload["status"]["rows_used_today"], 4200)
+            self.assertNotIn("hemlig-primat-nyckel", json.dumps(payload))
+        finally:
+            api_server.ADMIN_TOKEN, api_server.PRIMAT_API_KEY = original_admin_token, original_primat_key
+            api_server.primat_account_status = original_account_status
 
     def test_static_files_are_never_heuristically_cached(self):
         # Same connection reused for both requests (HTTP/1.1 keep-alive) so this
@@ -731,7 +845,7 @@ class ApiServerHttpTest(unittest.TestCase):
             api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
             _reset_shared_browser()
             api_server.PRICE_CACHE.clear()
-            api_server.CAMPAIGN_CACHE.clear()
+            api_server.KV_CACHE.clear()
 
     def test_products_batch_rejects_invalid_input(self):
         status, payload = self.post("/api/products/batch", {"butik": "Willys", "zip": "11122"})
@@ -749,21 +863,24 @@ class ApiServerHttpTest(unittest.TestCase):
             # (mirrors the real "Paprika" -> "Cheese Paprika Sandwich" case) -
             # the actual "Paprika ..." product should still win.
             "paprika": [{"produktnamn": "Cheese Paprika Sandwich 2-pack", "pris_kr": 7.9}, {"produktnamn": "Paprika Röd Klass 1", "pris_kr": 19.9}],
-            "lok": [{"produktnamn": "Lök Gul Klass 1", "pris_kr": 5}],
+            "lök": [{"produktnamn": "Lök Gul Klass 1", "pris_kr": 5}],
         }
         api_server.parse_products = lambda page, chain, query: by_query.get(query.lower(), [])
         try:
-            status, payload = self.post("/api/products/batch", {"butik": "Willys", "zip": "11122", "varor": ["Paprika", "Lok", "Okänd vara"]})
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "zip": "11122", "varor": ["Paprika", "Lök", "Okänd vara"]})
             self.assertEqual(status, 200)
             self.assertEqual(payload["produkter"]["Paprika"]["produktnamn"], "Paprika Röd Klass 1")
-            self.assertEqual(payload["produkter"]["Lok"]["produktnamn"], "Lök Gul Klass 1")
+            self.assertEqual(payload["produkter"]["Lök"]["produktnamn"], "Lök Gul Klass 1")
             self.assertIsNone(payload["produkter"]["Okänd vara"])
         finally:
             api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
             _reset_shared_browser()
             api_server.PRICE_CACHE.clear()
 
-    def test_products_batch_falls_back_to_first_result_when_no_name_matches(self):
+    def test_products_batch_returns_none_when_no_name_matches(self):
+        """No candidate starts with "Citron" at all - must come back as
+        "Pris saknas" (None), never a guess (see best_match's docstring for
+        why the old fallback-to-first-result was removed)."""
         original_sync_playwright, original_parse_products = api_server.sync_playwright, api_server.parse_products
         api_server.sync_playwright = _fake_sync_playwright
         _reset_shared_browser()
@@ -771,7 +888,7 @@ class ApiServerHttpTest(unittest.TestCase):
         try:
             status, payload = self.post("/api/products/batch", {"butik": "Willys", "zip": "11122", "varor": ["Citron"]})
             self.assertEqual(status, 200)
-            self.assertEqual(payload["produkter"]["Citron"]["produktnamn"], "Lime Klass 1")
+            self.assertIsNone(payload["produkter"]["Citron"])
         finally:
             api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
             _reset_shared_browser()
@@ -782,12 +899,12 @@ class ApiServerHttpTest(unittest.TestCase):
         calls = []
         api_server.sync_playwright = _fake_sync_playwright
         _reset_shared_browser()
-        api_server.parse_products = lambda page, chain, query: calls.append(1) or [{"produktnamn": "Fräsch scrape", "pris_kr": 10}]
+        api_server.parse_products = lambda page, chain, query: calls.append(1) or [{"produktnamn": "Smör Bregott Färskt 500g", "pris_kr": 10}]
         try:
-            api_server.PRICE_CACHE.set("Willys", "smor", api_server.DEFAULT_ZIP, [{"produktnamn": "Cachat smör", "pris_kr": 25}])
-            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Smor"]})
+            api_server.PRICE_CACHE.set("Willys", "smör", api_server.DEFAULT_ZIP, [{"produktnamn": "Smör Bregott Cachad 500g", "pris_kr": 25}])
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Smör"]})
             self.assertEqual(status, 200)
-            self.assertEqual(payload["produkter"]["Smor"]["produktnamn"], "Cachat smör")
+            self.assertEqual(payload["produkter"]["Smör"]["produktnamn"], "Smör Bregott Cachad 500g")
             self.assertEqual(len(calls), 0)
         finally:
             api_server.sync_playwright, api_server.parse_products = original_sync_playwright, original_parse_products
@@ -837,11 +954,61 @@ class ApiServerHttpTest(unittest.TestCase):
         api_server.sync_playwright = _fake_sync_playwright
         _reset_shared_browser()
         api_server.fetch_from_primat = lambda chain, query, zip_code, store_key=None: []
-        api_server.parse_products = lambda page, chain, query: [{"produktnamn": "Fräsch scrape", "pris_kr": 10}]
+        api_server.parse_products = lambda page, chain, query: [{"produktnamn": "Smör Bregott Färskt 500g", "pris_kr": 10}]
         try:
-            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Smor"]})
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Smör"]})
             self.assertEqual(status, 200)
-            self.assertEqual(payload["produkter"]["Smor"]["produktnamn"], "Fräsch scrape")
+            self.assertEqual(payload["produkter"]["Smör"]["produktnamn"], "Smör Bregott Färskt 500g")
+        finally:
+            api_server.sync_playwright, api_server.parse_products, api_server.fetch_from_primat = (
+                original_sync_playwright, original_parse_products, original_fetch_from_primat
+            )
+            _reset_shared_browser()
+            api_server.PRICE_CACHE.clear()
+
+    def test_products_batch_falls_back_to_stale_price_when_a_live_refetch_fails(self):
+        """An entry too old for cached_products' normal freshness window,
+        combined with Primat AND scraping both failing on this request,
+        should still surface as "senast känt pris" instead of a bare "Pris
+        saknas" - a real, honestly-aged price beats no information at all."""
+        original_sync_playwright, original_parse_products, original_fetch_from_primat = (
+            api_server.sync_playwright, api_server.parse_products, api_server.fetch_from_primat
+        )
+        api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
+        old_timestamp = time.time() - api_server.CACHE_MAX_AGE_SECONDS - 3600
+        api_server.PRICE_CACHE.set("Willys", "ris", api_server.DEFAULT_ZIP, [{"produktnamn": "Ris Långkornigt", "pris_kr": 28}], updated_at=old_timestamp)
+        api_server.fetch_from_primat = lambda chain, query, zip_code, store_key=None: []
+        api_server.parse_products = lambda page, chain, query: []
+        try:
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Ris"]})
+            self.assertEqual(status, 200)
+            result = payload["produkter"]["Ris"]
+            self.assertIsNotNone(result, "ett gammalt men riktigt pris ska visas, inte ingenting")
+            self.assertEqual(result["produktnamn"], "Ris Långkornigt")
+            self.assertTrue(result["senastKantPris"])
+            self.assertAlmostEqual(result["uppdaterad"], old_timestamp, delta=1)
+        finally:
+            api_server.sync_playwright, api_server.parse_products, api_server.fetch_from_primat = (
+                original_sync_playwright, original_parse_products, original_fetch_from_primat
+            )
+            _reset_shared_browser()
+            api_server.PRICE_CACHE.clear()
+
+    def test_products_batch_shows_pris_saknas_when_nothing_was_ever_cached(self):
+        """No stale fallback exists when there's truly nothing to fall back
+        to - must stay None ("Pris saknas"), not invent a price."""
+        original_sync_playwright, original_parse_products, original_fetch_from_primat = (
+            api_server.sync_playwright, api_server.parse_products, api_server.fetch_from_primat
+        )
+        api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
+        api_server.fetch_from_primat = lambda chain, query, zip_code, store_key=None: []
+        api_server.parse_products = lambda page, chain, query: []
+        try:
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Saffran"]})
+            self.assertEqual(status, 200)
+            self.assertIsNone(payload["produkter"]["Saffran"])
         finally:
             api_server.sync_playwright, api_server.parse_products, api_server.fetch_from_primat = (
                 original_sync_playwright, original_parse_products, original_fetch_from_primat
@@ -1157,10 +1324,10 @@ class AuthHttpTest(unittest.TestCase):
 
 class IcaStoreCacheTest(unittest.TestCase):
     def tearDown(self):
-        api_server.ICA_STORE_CACHE.clear()
+        api_server.KV_CACHE.clear()
 
     def test_fresh_cache_entry_skips_network_lookup(self):
-        api_server.ICA_STORE_CACHE["11122"] = ([{"accountId": "abc"}], time.monotonic() + 60)
+        api_server.KV_CACHE.set("ica_stores", "11122", {"stores": [{"accountId": "abc"}]})
 
         class ExplodingPage:
             def goto(self, *args, **kwargs):
@@ -1170,7 +1337,10 @@ class IcaStoreCacheTest(unittest.TestCase):
         self.assertEqual(store, {"accountId": "abc"})
 
     def test_failed_lookup_expires_and_is_retried(self):
-        api_server.ICA_STORE_CACHE["11122"] = ([], time.monotonic() - 1)
+        # An empty-stores entry uses the short ICA_STORE_FAILURE_TTL_SECONDS
+        # (300s), not the long success TTL - backdating past that (not just
+        # past 0) is what actually exercises the retry path.
+        api_server.KV_CACHE.set("ica_stores", "11122", {"stores": []}, updated_at=time.time() - api_server.ICA_STORE_FAILURE_TTL_SECONDS - 1)
 
         class FakeLocator:
             def inner_text(self):
