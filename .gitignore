@@ -1,6 +1,13 @@
 backend/venv/
 backend/__pycache__/
-backend/data/
+# Databaserna byggs av collectorer och importskript - de hör inte i git.
+backend/data/*.db
+backend/data/*.db-wal
+backend/data/*.db-shm
+# Receptkällorna är däremot KÄLLKOD. De ligger under backend/data/ av
+# praktiska skäl, men en receptbank som inte versionshanteras är en
+# receptbank som går förlorad vid nästa rensning.
+!backend/data/recipes/
 *.pyc
 .env
 .DS_Store
