@@ -3,6 +3,16 @@
 Kept deliberately small: stdlib only (sqlite3, hashlib, secrets), no ORM. Password
 hashes use PBKDF2-HMAC-SHA256 with a per-user random salt, which needs no extra
 dependency beyond what ships with Python.
+
+Session tokens are stored as SHA-256 hashes, never raw - see _session_key.
+The raw token exists in exactly two places: the client that holds it, and the
+single response that handed it over.
+
+NOT YET HASHED: the password-reset and e-mail-verification tokens on the
+users table. They are single-use and short-lived (the reset token carries an
+explicit expiry), so a leak of them is a much smaller window than a leak of
+30-day session tokens - but they are still bearer credentials sitting in
+plain text, and hashing them the same way is the obvious next step.
 """
 
 import hashlib
@@ -23,6 +33,23 @@ class AccountError(Exception):
 
 def _hash_password(password: str, salt: bytes) -> str:
     return hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, PBKDF2_ITERATIONS).hex()
+
+
+def _session_key(token: str) -> str:
+    """What we store for a session: SHA-256 of the token the client holds.
+
+    The raw token is a bearer credential - anyone holding it IS the user
+    until it expires. Storing it verbatim meant a database leak (a backup, a
+    stray copy of the Render disk, an SQL injection anywhere) handed over
+    every live session, not just password hashes an attacker still has to
+    crack. Hashing makes the stored value useless on its own.
+
+    Plain SHA-256 rather than PBKDF2, deliberately: a session token is 32
+    bytes of output from secrets.token_urlsafe, so there is no dictionary to
+    attack and nothing for a slow KDF to buy. It is also checked on every
+    single request, where PBKDF2's cost would be paid by us, not the
+    attacker."""
+    return hashlib.sha256((token or "").encode("utf-8")).hexdigest()
 
 
 class AccountStore:
@@ -66,7 +93,28 @@ class AccountStore:
                 self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
             except sqlite3.OperationalError:
                 pass
+        self._migrate_session_tokens_to_hashes()
         self._connection.commit()
+
+    def _migrate_session_tokens_to_hashes(self):
+        """Rewrites any session row still holding a RAW token as its hash.
+
+        This keeps everyone logged in: the client presents the same raw token
+        it always did, and it now hashes to the value stored here. Deleting
+        the rows instead would have signed out every user on the deploy that
+        shipped this, for no security benefit.
+
+        Migrated rows are told apart by length: a SHA-256 hex digest is 64
+        characters, while secrets.token_urlsafe(32) is always 43. Running
+        this twice is therefore a no-op rather than a double-hash that would
+        lock everybody out."""
+        rows = self._connection.execute(
+            "SELECT token FROM sessions WHERE length(token) != 64").fetchall()
+        for row in rows:
+            self._connection.execute(
+                "UPDATE sessions SET token = ? WHERE token = ?",
+                (_session_key(row["token"]), row["token"]),
+            )
 
     @staticmethod
     def _to_public(row) -> dict:
@@ -118,10 +166,13 @@ class AccountStore:
         return self._create_session(row["id"]), self._to_public(row)
 
     def _create_session(self, user_id: int) -> str:
+        """Returns the RAW token - the only moment it exists outside the
+        client. Only its hash is written down."""
         token = secrets.token_urlsafe(32)
         expires_at = (datetime.now(timezone.utc) + timedelta(days=SESSION_TTL_DAYS)).isoformat()
         self._connection.execute(
-            "INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)", (token, user_id, expires_at)
+            "INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)",
+            (_session_key(token), user_id, expires_at),
         )
         self._connection.commit()
         return token
@@ -130,7 +181,7 @@ class AccountStore:
         self._connection.close()
 
     def logout(self, token: str):
-        self._connection.execute("DELETE FROM sessions WHERE token = ?", (token,))
+        self._connection.execute("DELETE FROM sessions WHERE token = ?", (_session_key(token),))
         self._connection.commit()
 
     def _session_user_row(self, token: str):
@@ -142,7 +193,7 @@ class AccountStore:
             JOIN users ON users.id = sessions.user_id
             WHERE sessions.token = ? AND sessions.expires_at > ?
             """,
-            (token, datetime.now(timezone.utc).isoformat()),
+            (_session_key(token), datetime.now(timezone.utc).isoformat()),
         ).fetchone()
 
     def user_for_token(self, token: str) -> dict | None:
@@ -311,7 +362,8 @@ class AccountStore:
             (_hash_password(new_password, salt), salt.hex(), row["id"]),
         )
         self._connection.execute(
-            "DELETE FROM sessions WHERE user_id = ? AND token != ?", (row["id"], token))
+            "DELETE FROM sessions WHERE user_id = ? AND token != ?",
+            (row["id"], _session_key(token)))
         self._connection.commit()
         return self._to_public(self._session_user_row(token))
 

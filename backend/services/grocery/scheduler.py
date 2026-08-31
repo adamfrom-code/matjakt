@@ -64,6 +64,11 @@ SCHEDULABLE_CHAINS = frozenset(DEFAULT_SCHEDULE)
 
 CHECK_INTERVAL_SECONDS = 60
 
+# Which chain fills an empty database first. Willys: the largest verified
+# catalogue (10 842 products, 100 % with category), plain HTTP with no
+# browser, and the chain most likely to be near any given user.
+BOOTSTRAP_CHAIN = "Willys"
+
 
 def parse_schedule(raw: str | None) -> dict:
     """Reads MATJAKT_GROCERY_SCHEDULE, e.g. "Willys=02:00,Hemköp=03:30".
@@ -126,6 +131,39 @@ class GroceryScheduler:
         # same minute if the loop wakes up more than once in it.
         self._last_fired = {}
 
+    def bootstrap_if_empty(self):
+        """Runs the first import immediately when the price database is empty.
+
+        A Render deploy comes up on a persistent disk that is empty on first
+        boot - backend/data/ is gitignored, so no database ships in the image.
+        Without this the app sat there with zero products until the first
+        nightly job happened to run, and every price on matjakt.store was the
+        flat estimate. Verified in production: /api/grocery/status reported
+        totalProducts 0 on a fully deployed backend.
+
+        Guards, all three necessary:
+          - only when the scheduler is enabled, so a local dev run never
+            starts fetching from three chains on its own;
+          - only when the database holds NOTHING, so an ordinary deploy does
+            not re-import a catalogue that is already there;
+          - one chain only. The others follow on their normal nightly slots.
+            Importing three at once on a 512 MB instance, right as it boots
+            and while Chromium is warming up, is how the last OOM happened.
+        """
+        if not self.enabled:
+            return False
+        try:
+            from . import api as grocery_api
+            if grocery_api.database_summary()["totalProducts"] > 0:
+                return False
+        except Exception:
+            logger.exception("Kunde inte läsa prisdatabasens storlek - hoppar över bootstrap")
+            return False
+
+        chain = BOOTSTRAP_CHAIN
+        logger.warning("Prisdatabasen är tom - startar en första import av %s", chain)
+        return bool(importer.start(chain).get("started"))
+
     def start(self):
         if not self.enabled:
             logger.info("Nattjobb för prisimport är avstängt "
@@ -136,6 +174,11 @@ class GroceryScheduler:
         self._thread = threading.Thread(target=self._loop, name="grocery-scheduler", daemon=True)
         self._thread.start()
         logger.info("Nattjobb startat: %s (Europe/Stockholm)", self.schedule)
+        # In its own thread: the import takes tens of minutes and must not
+        # hold up the server binding its port (Render would call that a
+        # failed deploy).
+        threading.Thread(target=self.bootstrap_if_empty, name="grocery-bootstrap",
+                         daemon=True).start()
         return True
 
     def stop(self):

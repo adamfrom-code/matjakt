@@ -122,5 +122,65 @@ class TickTest(unittest.TestCase):
         self.assertFalse(GroceryScheduler({}).start())
 
 
+
+class BootstrapTest(unittest.TestCase):
+    """A deploy onto an empty persistent disk must fill itself.
+
+    Verified in production before this existed: /api/grocery/status reported
+    totalProducts 0 on a fully deployed backend, so every price on
+    matjakt.store was the flat estimate.
+    """
+
+    def setUp(self):
+        self.started = []
+        self._real_start = scheduler_module.importer.start
+        scheduler_module.importer.start = lambda chain, **kwargs: (
+            self.started.append(chain) or {"started": True, "chain": chain})
+        self.addCleanup(lambda: setattr(scheduler_module.importer, "start", self._real_start))
+        self.scheduler = GroceryScheduler({"Willys": "02:00"})
+        self.scheduler.enabled = True
+
+    def _summary(self, total):
+        from services.grocery import api as grocery_api
+        real = grocery_api.database_summary
+        grocery_api.database_summary = lambda: {"totalProducts": total, "chains": []}
+        self.addCleanup(lambda: setattr(grocery_api, "database_summary", real))
+
+    def test_imports_when_the_database_is_empty(self):
+        self._summary(0)
+        self.assertTrue(self.scheduler.bootstrap_if_empty())
+        self.assertEqual(self.started, ["Willys"])
+
+    def test_does_nothing_when_the_database_already_has_products(self):
+        """An ordinary deploy must not re-import a catalogue that is there."""
+        self._summary(10842)
+        self.assertFalse(self.scheduler.bootstrap_if_empty())
+        self.assertEqual(self.started, [])
+
+    def test_does_nothing_when_the_scheduler_is_disabled(self):
+        """A local dev run must not start fetching from a chain on its own."""
+        self._summary(0)
+        self.scheduler.enabled = False
+        self.assertFalse(self.scheduler.bootstrap_if_empty())
+        self.assertEqual(self.started, [])
+
+    def test_only_one_chain_is_imported(self):
+        """Three category walks at once, on a 512 MB instance, right as it
+        boots, is how the last OOM happened."""
+        self._summary(0)
+        self.scheduler.bootstrap_if_empty()
+        self.assertEqual(len(self.started), 1)
+
+    def test_a_failure_to_read_the_database_is_not_fatal(self):
+        from services.grocery import api as grocery_api
+        real = grocery_api.database_summary
+        def boom():
+            raise OSError("disken svarar inte")
+        grocery_api.database_summary = boom
+        self.addCleanup(lambda: setattr(grocery_api, "database_summary", real))
+        self.assertFalse(self.scheduler.bootstrap_if_empty())
+        self.assertEqual(self.started, [])
+
+
 if __name__ == "__main__":
     unittest.main()

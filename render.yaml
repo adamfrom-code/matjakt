@@ -23,6 +23,11 @@ services:
       # bucket - ten failed logins anywhere would lock out everyone.
       - key: MATJAKT_TRUST_PROXY
         value: "1"
+      # Nightly price imports, Europe/Stockholm. Also fills the database on
+      # the first boot after a deploy onto an empty disk - without this the
+      # app served flat estimates because nothing ever populated it.
+      - key: MATJAKT_GROCERY_SCHEDULE_ENABLED
+        value: "1"
       - key: MATJAKT_MAX_SCRAPES
         value: "1"
       - key: PRIMAT_API_KEY
