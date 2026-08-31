@@ -69,12 +69,54 @@ NOT_A_DISH_PHOTO = [
     "logo", "sign", "menu", "poster", "diagram", "map", "chart", "label",
     "packaging", "package", "box", "tin", "can ", "advert", "banner",
     "portrait", "chef", "cook", "restaurant", "kitchen", "market", "shop",
-    "raw ", "ingredient", "uncooked", "illustration", "drawing", "painting",
-    "cartoon", "icon", "stamp", "coin", "book", "cover",
+    "illustration", "drawing", "painting", "cartoon", "icon", "stamp",
+    "coin", "book", "cover",
+    # RAW INGREDIENTS. A recipe card wants the finished dish; "Frozen cod
+    # fillet" is a photograph of a raw piece of fish in a freezer bag and was
+    # picked for an oven-baked cod recipe.
+    "raw ", "uncooked", "frozen", "fresh ", "ingredient", "fillets on",
+    "in packaging", "defrost", "thawed",
+    # SUBSTITUTE DISHES. These are different dishes that borrow the name of
+    # the one we want: "Courgetti Spaghetti" is courgette noodles, and it was
+    # picked for spaghetti with meat sauce. The word after the substitute is
+    # ours, which is exactly why title matching alone accepts it.
+    "courgetti", "zoodles", "zucchini noodle", "cauliflower rice",
+    "konjac", "shirataki", "low carb", "keto ", "gluten-free ", "protein ",
 ]
 
 MIN_WIDTH = 640
 MIN_SCORE = 2.0
+
+# Ingredient words that are ALSO the name of an animal or plant. Wikimedia
+# Commons is full of species photography, so "Pacific cod - cropped" was
+# picked for an oven-baked cod recipe - a photograph of a fish, not a meal.
+#
+# A blocklist cannot win this: there is no end to the ways a species photo can
+# be titled. So for these dishes the requirement is POSITIVE - the title must
+# say something was DONE to the food.
+AMBIGUOUS_WITH_SPECIES = {
+    "torsk", "lax", "cod", "salmon", "fisk", "fish", "kyckling", "chicken",
+    "rakor", "shrimp", "prawn", "biff", "beef", "flask", "pork", "lamm", "lamb",
+}
+
+PREPARATION_WORDS = [
+    "baked", "fried", "grilled", "roast", "stew", "soup", "gratin", "casserole",
+    "curry", "sauce", "served", "plate", "dish", "dinner", "meal", "recipe",
+    "cooked", "smoked", "poached", "steamed", "burger", "sandwich", "salad",
+    "pasta", "rice", "potato", "with ", "and ",
+    "gratang", "gryta", "soppa", "sas", "stekt", "ugnsbakad", "kokt", "grillad",
+    "med ", "och ", "pa tallrik", "middag",
+]
+
+
+def needs_preparation_word(dish: str) -> bool:
+    """True when a bare photo of this food would be a species picture."""
+    return any(word in AMBIGUOUS_WITH_SPECIES for word in re.findall(r"[a-z0-9]+", _fold(dish)))
+
+
+def has_preparation_word(title: str) -> bool:
+    folded = _fold(title)
+    return any(word in folded for word in PREPARATION_WORDS)
 
 
 def _fold(text: str) -> str:
@@ -177,6 +219,11 @@ def score_candidate(title: str, recipe: dict) -> float:
     if not name_words:
         return 0.0
     dish = re.split(r"\s+med\s+|\s+och\s+|,", recipe.get("name", ""), maxsplit=1)[0].strip()
+
+    # For food that shares its name with an animal or plant, the title has to
+    # say something was DONE to it. Otherwise we are looking at the species.
+    if needs_preparation_word(recipe.get("name", "")) and not has_preparation_word(title):
+        return 0.0
 
     # A short, generic dish word is not evidence of anything. "Fisk" is four
     # letters and also a surname - it matched "Fisk, Joel H - 1st Cavalry",

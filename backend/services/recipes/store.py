@@ -90,9 +90,16 @@ class RecipeStore:
                 -- state is a licence we do not have.
                 image TEXT,
                 image_source TEXT,
+                -- The page the file came from, so an attribution can link
+                -- back to it and a licence claim can be checked later.
+                image_source_url TEXT,
                 image_credit TEXT,
                 image_license TEXT,
                 image_alt TEXT,
+                -- "ok" or "needs_image". Without persisting this, a recipe
+                -- that failed to get a picture looked identical to one that
+                -- was never asked - and the gaps could not be found.
+                image_status TEXT,
                 created_at REAL NOT NULL,
                 updated_at REAL NOT NULL
             );
@@ -147,6 +154,13 @@ class RecipeStore:
             CREATE INDEX IF NOT EXISTS idx_recipes_protein ON recipes(protein);
             """
         )
+        # Added after the first release - sqlite has no "ADD COLUMN IF NOT
+        # EXISTS", and this file has no migration runner.
+        for column in ("image_source_url TEXT", "image_status TEXT"):
+            try:
+                self._connection.execute(f"ALTER TABLE recipes ADD COLUMN {column}")
+            except sqlite3.OperationalError:
+                pass
         self._connection.commit()
 
     # ---- writing ---------------------------------------------------------
@@ -167,12 +181,12 @@ class RecipeStore:
                 """
                 INSERT INTO recipes (id, slug, name, description, servings, prep_time,
                     cook_time, total_time, difficulty, kcal, protein, carbs, fat, fiber,
-                    image, image_source, image_credit, image_license, image_alt,
-                    created_at, updated_at)
+                    image, image_source, image_source_url, image_credit, image_license,
+                    image_alt, image_status, created_at, updated_at)
                 VALUES (:id, :slug, :name, :description, :servings, :prep_time,
                     :cook_time, :total_time, :difficulty, :kcal, :protein, :carbs, :fat,
-                    :fiber, :image, :image_source, :image_credit, :image_license,
-                    :image_alt, :created_at, :updated_at)
+                    :fiber, :image, :image_source, :image_source_url, :image_credit,
+                    :image_license, :image_alt, :image_status, :created_at, :updated_at)
                 ON CONFLICT(id) DO UPDATE SET
                     slug=excluded.slug, name=excluded.name, description=excluded.description,
                     servings=excluded.servings, prep_time=excluded.prep_time,
@@ -180,9 +194,11 @@ class RecipeStore:
                     difficulty=excluded.difficulty, kcal=excluded.kcal,
                     protein=excluded.protein, carbs=excluded.carbs, fat=excluded.fat,
                     fiber=excluded.fiber, image=excluded.image,
-                    image_source=excluded.image_source, image_credit=excluded.image_credit,
+                    image_source=excluded.image_source,
+                    image_source_url=excluded.image_source_url,
+                    image_credit=excluded.image_credit,
                     image_license=excluded.image_license, image_alt=excluded.image_alt,
-                    updated_at=excluded.updated_at
+                    image_status=excluded.image_status, updated_at=excluded.updated_at
                 """,
                 {
                     "id": recipe_id,
@@ -199,9 +215,11 @@ class RecipeStore:
                     "fiber": recipe.get("fiber"),
                     "image": recipe.get("image"),
                     "image_source": recipe.get("imageSource"),
+                    "image_source_url": recipe.get("imageSourceUrl"),
                     "image_credit": recipe.get("imageCredit"),
                     "image_license": recipe.get("imageLicense"),
                     "image_alt": recipe.get("imageAlt"),
+                    "image_status": recipe.get("imageStatus") or ("ok" if recipe.get("image") else "needs_image"),
                     "created_at": existing["created_at"] if existing else now,
                     "updated_at": now,
                 },
@@ -263,12 +281,25 @@ class RecipeStore:
             "nutrition": {"kcal": row["kcal"], "protein": row["protein"],
                           "carbs": row["carbs"], "fat": row["fat"], "fiber": row["fiber"]},
             "image": row["image"], "imageSource": row["image_source"],
+            "imageSourceUrl": row["image_source_url"],
             "imageCredit": row["image_credit"], "imageLicense": row["image_license"],
-            "imageAlt": row["image_alt"],
+            "imageAlt": row["image_alt"], "imageStatus": row["image_status"],
             "ingredients": ingredients, "instructions": steps,
             "createdAt": row["created_at"], "updatedAt": row["updated_at"],
             **self._labels(recipe_id),
         }
+
+    def delete(self, recipe_id: str) -> bool:
+        """Removes a recipe and everything hanging off it."""
+        with self._connection:
+            cursor = self._connection.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
+            for table in ("recipe_ingredients", "recipe_steps", "recipe_labels"):
+                self._connection.execute(f"DELETE FROM {table} WHERE recipe_id = ?", (recipe_id,))
+        return cursor.rowcount > 0
+
+    def id_for_slug(self, slug: str) -> str | None:
+        row = self._connection.execute("SELECT id FROM recipes WHERE slug = ?", (slug,)).fetchone()
+        return row["id"] if row else None
 
     def get(self, recipe_id: str) -> dict | None:
         row = self._connection.execute("SELECT * FROM recipes WHERE id = ? OR slug = ?",
@@ -323,6 +354,8 @@ class RecipeStore:
         licensed = self._connection.execute(
             """SELECT COUNT(*) FROM recipes WHERE image IS NOT NULL AND image != ''
                AND image_license IS NOT NULL AND image_license != ''""").fetchone()[0]
-        return {"total": total, "byLabel": by_label,
+        needs_image = self._connection.execute(
+            "SELECT COUNT(*) FROM recipes WHERE image_status = 'needs_image'").fetchone()[0]
+        return {"total": total, "byLabel": by_label, "needsImage": needs_image,
                 "completeNutrition": complete_nutrition,
                 "withImage": with_image, "withLicensedImage": licensed}
