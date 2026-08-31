@@ -32,7 +32,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=39">
+  <link rel="stylesheet" href="styles.css?v=40">
 </head>
 <body>
   <div class="phone-shell">
@@ -207,10 +207,21 @@
 
       <section class="screen shopping-screen" aria-labelledby="shoppingTitle">
         <header class="screen-header"><p class="eyebrow">Din lista</p><h1 id="shoppingTitle">Handla</h1></header>
-        <div id="basketStoreCompare"></div>
+        <div class="store-cards" id="storeCards"></div>
+        <p class="store-spread-teaser" id="storeSpreadTeaser" hidden></p>
+        <div id="basketStoreCompare" hidden></div>
         <section class="shopping-progress"><div><strong id="shoppingProgress">0 varor kvar</strong><span id="shoppingCost">0 / 0 kr</span></div><div class="progress-track"><i id="shoppingProgressBar"></i></div></section>
         <div class="shopping-complete" id="shoppingComplete" hidden><strong>🎉 Allt handlat!</strong><p>Redo att planera nästa veckas meny?</p><button type="button" class="btn btn-primary" id="startNewWeekBtn"><span>Skapa nästa vecka</span><span aria-hidden="true">→</span></button></div>
+        <h3 class="shopping-section-title" id="weekListTitle" hidden>Din matvecka</h3>
         <div class="shopping-list" id="shoppingList"></div>
+        <section class="extra-items" id="extraItemsSection" hidden>
+          <h3 class="shopping-section-title">Extra du lagt till</h3>
+          <div id="extraItemsList"></div>
+        </section>
+        <div class="manual-add-row">
+          <input type="text" id="manualItemInput" placeholder="Lägg till vara, t.ex. kaffe eller toalettpapper" maxlength="60">
+          <button type="button" class="btn btn-ghost" id="manualItemAdd">+ Lägg till vara</button>
+        </div>
         <p class="primat-attribution" id="primatAttribution" hidden></p>
         <p class="cost-note">Priserna avser hela förpackningar. Det du har hemma räknas bort.</p>
       </section>
@@ -356,11 +367,11 @@
           </ul>
           <div class="premium-pricing" role="tablist">
             <button type="button" class="premium-price-tab active" data-price-tab="month" data-plan="monthly"><span>Månad</span><strong>59 kr</strong><small>/mån</small></button>
-            <button type="button" class="premium-price-tab" data-price-tab="year" data-plan="yearly"><span>År · Bäst värde</span><strong>499 kr</strong><small>/år · spara 209 kr</small></button>
+            <button type="button" class="premium-price-tab" data-price-tab="year" data-plan="yearly"><span>År · Bäst värde</span><strong>399 kr</strong><small>/år · ≈ 33 kr/mån · spara 309 kr</small></button>
           </div>
           <button class="btn btn-primary" type="button" id="subscribeBtn"><span>Prenumerera</span></button>
           <p class="account-error" id="checkoutError"></p>
-          <button class="btn btn-ghost" type="button" id="startTrialBtn"><span>Eller prova gratis i 14 dagar</span></button>
+          <button class="btn btn-ghost" type="button" id="startTrialBtn" hidden><span></span></button>
           <p class="account-error" id="trialError"></p>
           <p class="premium-pitch-note">Ingen kortuppgift krävs för provperioden - den avslutas automatiskt till gratisversionen om du inte prenumererar. Har du en kod?</p>
           <form id="accountRedeemForm" class="account-form">
@@ -449,6 +460,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=69"></script>
+  <script type="module" src="app.js?v=70"></script>
 </body>
 </html>

@@ -1152,7 +1152,7 @@ class AuthHttpTest(unittest.TestCase):
         self.assertEqual(status, 201)
         token = payload["token"]
         self.assertEqual(payload["user"], {
-            "email": email, "premium": False, "trialEndsAt": None, "trialUsed": False,
+            "email": email, "premium": False, "plan": "free", "trialEndsAt": None, "trialUsed": False,
             "subscriptionStatus": None, "subscriptionPlan": None, "subscriptionPeriodEnd": None,
             "subscriptionCancelAtPeriodEnd": False, "emailVerified": False,
         })
@@ -1177,23 +1177,18 @@ class AuthHttpTest(unittest.TestCase):
         status, _ = self.get("/api/auth/me")
         self.assertEqual(status, 401)
 
-    def test_start_trial_grants_temporary_premium(self):
+    def test_the_trial_is_gone_and_says_so(self):
+        """Business model 2026-08-31: free forever / 59 kr / 399 kr, NO
+        automatic trial. An old client that still calls the endpoint gets a
+        clear 410 - and, crucially, no Premium."""
         email = self._email()
-        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        status, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
         token = payload["token"]
         status, payload = self.post("/api/auth/start-trial", {}, token=token)
-        self.assertEqual(status, 200)
-        self.assertTrue(payload["user"]["premium"])
-        self.assertIsNotNone(payload["user"]["trialEndsAt"])
-
-    def test_start_trial_rejects_second_trial(self):
-        email = self._email()
-        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
-        token = payload["token"]
-        self.post("/api/auth/start-trial", {}, token=token)
-        status, payload = self.post("/api/auth/start-trial", {}, token=token)
-        self.assertEqual(status, 400)
-        self.assertIn("error", payload)
+        self.assertEqual(status, 410)
+        status, payload = self.get("/api/auth/me", token=token)
+        self.assertFalse(payload["user"]["premium"])
+        self.assertEqual(payload["user"]["plan"], "free")
 
     def test_account_state_round_trip(self):
         email = self._email()

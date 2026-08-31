@@ -28,7 +28,8 @@ from services.email import MailError, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.grocery import api as grocery_api  # noqa: E402
 from services.recipes import api as recipes_api
-from services.recipes import prices as recipe_prices  # noqa: E402
+from services.recipes import prices as recipe_prices
+from services.accounts import features as plan_features  # noqa: E402
 from services.grocery import importer as grocery_importer  # noqa: E402
 from services.grocery.scheduler import SCHEDULER as GROCERY_SCHEDULER  # noqa: E402
 from services.pricing import CHAIN_TO_PRIMAT, KeyValueCacheStore, OpenFoodFactsError, PRIMAT_ATTRIBUTION, PriceCacheStore, PrimatError, image_url_for_gtin, nearby_stores as primat_nearby_stores, primat_account_status, resolve_stores as primat_resolve_stores, search_products as primat_search_products, to_matjakt_product as primat_to_matjakt_product
@@ -319,6 +320,65 @@ FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 # directory it would throw away real cached state on every CI run.
 DATA_DIR = Path(os.environ.get("MATJAKT_DATA_DIR") or (Path(__file__).resolve().parent / "data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+def _free_chain_for(week_result: dict) -> str | None:
+    """The one chain Free sees in full: the cheapest QUALIFIED one.
+
+    The comparison's own verdict when it has one; otherwise the comparable
+    chain with the lowest real total; otherwise the best-covered chain. All
+    decided from real computed results - never invented."""
+    comparison = week_result.get("comparison") or {}
+    if comparison.get("cheapestChain"):
+        return comparison["cheapestChain"]
+    results = week_result.get("results") or []
+    comparable = [r for r in results if r.get("comparable") and r.get("realPriceItems")]
+    pool = comparable or [r for r in results if r.get("realPriceItems")]
+    if not pool:
+        return None
+    return min(pool, key=lambda r: r["totalCheckoutCost"])["chain"]
+
+
+def mask_pricing_for_free(week_result: dict) -> dict:
+    """Free's view of the week pricing: full truth for the cheapest
+    qualified chain, honest silhouettes of the rest.
+
+    Locked chains keep their name and whether they qualified, lose their
+    numbers and items. The comparison keeps the REAL price spread as a
+    single figure ("prices differ by up to X kr") so Free learns the value
+    of Premium without the per-chain totals - computed, never invented."""
+    free_chain = _free_chain_for(week_result)
+    results = week_result.get("results") or []
+    priced = [r for r in results if r.get("realPriceItems")]
+    spread = None
+    comparable = [r for r in priced if r.get("comparable")]
+    if len(comparable) >= 2:
+        totals = [r["totalCheckoutCost"] for r in comparable]
+        spread = round(max(totals) - min(totals), 2)
+
+    masked_results = []
+    for r in results:
+        if r["chain"] == free_chain:
+            entry = dict(r)
+            entry["free"] = True
+            masked_results.append(entry)
+        else:
+            masked_results.append({
+                "chain": r["chain"],
+                "locked": True,
+                "comparable": r.get("comparable", False),
+                "hasData": bool(r.get("realPriceItems")),
+            })
+    comparison = dict(week_result.get("comparison") or {})
+    # Free ser ATT det skiljer, inte VAD varje butik kostar.
+    masked_comparison = {
+        "cheapestChain": comparison.get("cheapestChain"),
+        "reason": comparison.get("reason"),
+        "locked": True,
+        "priceSpread": spread,
+    }
+    return {"results": masked_results, "comparison": masked_comparison,
+            "freeChain": free_chain}
+
 
 def storage_info(detail: bool = False) -> dict:
     """Whether DATA_DIR is actually on a mounted disk - PROVEN, not assumed.
@@ -1397,6 +1457,15 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 "storage": storage_info(detail=True),
             })
             return
+        if parsed.path == "/api/entitlements":
+            # The whole Free/Premium contract in one answer: plan, feature
+            # flags, dinner cap and the central pricing copy. Anonymous =
+            # free. The frontend renders locks from THIS, never from its own
+            # idea of what Premium means.
+            user = ACCOUNT_STORE.user_for_token(self._bearer_token())
+            plan = plan_features.plan_for_user(user)
+            self.send_json(200, plan_features.entitlements(plan))
+            return
         if parsed.path == "/api/auth/me":
             user = ACCOUNT_STORE.user_for_token(self._bearer_token())
             if not user:
@@ -1656,11 +1725,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/auth/start-trial":
-            try:
-                user = ACCOUNT_STORE.start_trial(self._bearer_token())
-                self.send_json(200, {"user": user})
-            except AccountError as error:
-                self.send_json(400, {"error": str(error)})
+            # The automatic/self-serve trial is OUT of the business model
+            # (decided 2026-08-31: free forever / 59 kr / 399 kr, no trial).
+            # 410 rather than removing the route: an old client that still
+            # calls it gets a clear answer instead of a confusing 404.
+            self.send_json(410, {"error": "Provperioden finns inte längre - Matjakt är gratis att använda, och Premium kostar 59 kr/mån eller 399 kr/år"})
             return
         if parsed.path == "/api/auth/request-password-reset":
             if self._rate_limit("password_reset", str(payload.get("email") or "").strip().lower()):
@@ -1897,7 +1966,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
         chains = [clean_text(str(c)) for c in chains if str(c).strip()] if isinstance(chains, list) else None
         pantry = payload.get("pantry") if isinstance(payload.get("pantry"), dict) else None
         try:
-            self.send_json(200, grocery_api.price_week(items, chains, pantry))
+            result = grocery_api.price_week(items, chains, pantry)
+            user = ACCOUNT_STORE.user_for_token(self._bearer_token())
+            plan = plan_features.plan_for_user(user)
+            if not plan_features.allowed(plan, "all_store_prices"):
+                result = mask_pricing_for_free(result)
+            self.send_json(200, result)
         except Exception:
             logger.exception("Prissättning av veckan misslyckades")
             self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})
@@ -1914,6 +1988,20 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(400, {"error": "chain saknas"})
             return
         pantry = payload.get("pantry") if isinstance(payload.get("pantry"), dict) else None
+        user = ACCOUNT_STORE.user_for_token(self._bearer_token())
+        plan = plan_features.plan_for_user(user)
+        if not plan_features.allowed(plan, "all_store_baskets"):
+            # Which chain is Free allowed? The cheapest qualified one for
+            # THIS list - decided by the same real comparison, server-side.
+            # Anything else answers with a lock, not with data: a paywall
+            # that only hides pixels is not a paywall.
+            week = grocery_api.price_week(items, None, pantry)
+            allowed_chain = _free_chain_for(week)
+            if chain != allowed_chain:
+                self.send_json(403, {"locked": True, "feature": "all_store_baskets",
+                                     "error": "Den här butikens lista ingår i Premium",
+                                     "freeChain": allowed_chain})
+                return
         try:
             self.send_json(200, grocery_api.shopping_list(items, chain, pantry))
         except Exception:

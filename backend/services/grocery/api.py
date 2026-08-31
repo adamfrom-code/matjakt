@@ -109,7 +109,8 @@ def campaign_deals(per_chain: int = 10) -> dict:
             for chain in priceable_chains():
                 rows = store.connection.execute(
                     """
-                    SELECT p.name, p.brand, p.size, p.image_url,
+                    SELECT p.id AS product_id, p.gtin, p.name, p.brand,
+                           p.size, p.image_url,
                            cp.campaign_price, cp.regular_price
                     FROM grocery_current_prices cp
                     JOIN grocery_products p ON p.id = cp.product_id
@@ -140,6 +141,10 @@ def campaign_deals(per_chain: int = 10) -> dict:
                         continue
                     chain_deals.append({
                         "chain": chain, "name": row["name"], "brand": row["brand"],
+                        "productId": row["product_id"], "gtin": row["gtin"],
+                        # Kampanjens giltighetstid samlas inte in av någon
+                        # kedja idag - null, aldrig en gissad slutdag.
+                        "validUntil": None,
                         "size": row["size"], "imageUrl": row["image_url"],
                         "campaignPrice": row["campaign_price"],
                         "regularPrice": row["regular_price"],

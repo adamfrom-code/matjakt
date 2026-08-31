@@ -123,9 +123,15 @@ class AccountStore:
         trial_active = bool(trial_ends_at) and trial_ends_at > datetime.now(timezone.utc).isoformat()
         sub_status = row["subscription_status"] if "subscription_status" in keys else None
         subscription_active = sub_status in ("active", "trialing")
+        premium_active = bool(row["premium"]) or trial_active or subscription_active
+        plan_raw = row["subscription_plan"] if "subscription_plan" in keys else None
         return {
             "email": row["email"],
-            "premium": bool(row["premium"]) or trial_active or subscription_active,
+            "premium": premium_active,
+            # The plan name the feature system keys on. Derived here so every
+            # consumer (auth/me, entitlements, tests) agrees on one answer.
+            "plan": ("premium_yearly" if premium_active and plan_raw and "year" in str(plan_raw).lower()
+                     else "premium_monthly" if premium_active else "free"),
             "trialEndsAt": trial_ends_at if trial_active else None,
             "trialUsed": bool(row["trial_used"]) if "trial_used" in keys else False,
             "subscriptionStatus": sub_status,

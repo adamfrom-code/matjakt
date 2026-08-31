@@ -256,3 +256,42 @@ button.campaign-deal{cursor:pointer;font:inherit}
 .recipe-shelf-card small { font-size: .75rem; padding: 0 .6rem; color: var(--text-muted, #5b6470); }
 .recipe-shelf-photo, .recipe-shelf-photo img { display: block; width: 100%; height: 100px; object-fit: cover; }
 @media (min-width: 900px) { .recipe-shelf-card { flex-basis: 190px; } .recipe-shelf-photo, .recipe-shelf-photo img { height: 128px; } }
+
+/* ---- Butikskorten i Handla ---------------------------------------------- */
+.store-cards{display:flex;gap:10px;overflow-x:auto;padding:2px 0 10px;-webkit-overflow-scrolling:touch}
+.store-card{flex:0 0 auto;min-width:104px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:var(--surface);border:2px solid transparent;border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);font:inherit;cursor:pointer;position:relative}
+.store-card strong{font-size:14px;color:var(--primary)}
+.store-card span{font-size:16px;font-weight:700}
+.store-card.active{border-color:var(--accent)}
+.store-card .store-card-badge{position:absolute;top:-8px;right:8px;background:var(--accent);color:#2b1a08;font-size:10px;font-weight:700;font-style:normal;padding:2px 8px;border-radius:99px}
+.store-card.locked span{font-size:12px;font-weight:600;color:var(--muted)}
+.store-card.unavailable{opacity:.65;cursor:default}
+.store-card.unavailable span{font-size:12px;color:var(--muted)}
+.store-spread-teaser{margin:0 0 10px;font-size:13px;color:var(--accent-3);font-weight:600}
+
+/* ---- Extra du lagt till -------------------------------------------------- */
+.shopping-section-title{margin:18px 0 8px;font-size:15px}
+.extra-item{position:relative;padding-right:34px}
+.extra-qty{display:flex;align-items:center;gap:6px;margin:0 8px}
+.extra-qty button{width:26px;height:26px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-size:15px;cursor:pointer}
+.extra-qty b{min-width:16px;text-align:center}
+.extra-remove{position:absolute;top:6px;right:6px;width:24px;height:24px;border:none;background:none;color:var(--muted);font-size:16px;cursor:pointer}
+.manual-add-row{display:flex;gap:8px;margin:14px 0}
+.manual-add-row input{flex:1;border:1px solid var(--border);border-radius:12px;padding:10px 12px;font:inherit}
+.campaign-deal-add{margin-top:6px;border:none;border-radius:99px;background:var(--primary);color:#fff;font-size:12px;font-weight:700;padding:6px 12px;cursor:pointer}
+.campaign-deal-add.added{background:var(--primary-soft);color:var(--primary)}
+
+/* ---- Paywall -------------------------------------------------------------- */
+.paywall-modal{position:fixed;inset:0;background:rgba(12,26,19,.55);display:flex;align-items:flex-end;justify-content:center;z-index:60}
+.paywall-modal[hidden]{display:none}
+.paywall-card{background:var(--surface);border-radius:24px 24px 0 0;padding:26px 22px 30px;max-width:440px;width:100%;position:relative;max-height:88vh;overflow-y:auto}
+.paywall-card h2{margin:4px 0 8px}
+.paywall-lead{color:var(--muted);font-size:14px;margin:0 0 12px}
+.paywall-points{margin:0 0 16px;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.paywall-points li::before{content:"✓ ";color:var(--primary-2);font-weight:700}
+.paywall-yearly{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;margin-bottom:10px;position:relative}
+.paywall-yearly small{font-weight:400;opacity:.85}
+.paywall-plan-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.paywall-monthly{width:100%;margin-bottom:6px}
+.paywall-continue{width:100%;background:none;border:none;color:var(--muted);font:inherit;font-size:13px;padding:10px;cursor:pointer;text-decoration:underline}
+.plan-card-locked{opacity:.92}

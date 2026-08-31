@@ -3,9 +3,10 @@ import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calc
 import { createDebouncedSearch, filterRecipes, mergeRecipeResults } from "./src/services/recipe-search.js";
 import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/nutrition.js";
 import { expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts } from "./src/services/pantry.js";
+import { extraLineTotal, extraUnitPrice, extrasTotal, newExtraItem, removeExtra, setQty } from "./src/services/extras.js";
 import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
-import { API_BASE_URL, campaignsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
+import { API_BASE_URL, campaignsApiUrl, entitlementsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
 import { changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, startTrial, storeToken, verifyEmail } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
@@ -92,7 +93,7 @@ function removeFromWeekPlan(id) { state.weekPlan = state.weekPlan.filter(existin
 // swapping "this day" rather than clearing and re-picking the week.
 function swapWeekPlanDay(dayIndex, newId) { state.weekPlan = state.weekPlan.map((id, index) => index === dayIndex ? newId : id); state.valda = new Set(state.weekPlan); }
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
+const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, dbLockedChains: [], extraItems: savedState.extraItems || [], extraMatches: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
   // The week's recipe ids in day order (index 0 = Måndag) - the actual
   // source of truth for "which day has which recipe", now that a day swap
   // has to replace exactly one day's recipe in place. state.valda (a Set)
@@ -102,7 +103,7 @@ const state = { budget: savedState.budget || 800, personer: savedState.personer 
   // never valda's own iteration order (a Set has none tied to day position).
   weekPlan: Array.isArray(savedState.weekPlan) ? savedState.weekPlan : [...(savedState.valda || [])] };
 function buildSyncPayload() {
-  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan,
+  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan, extraItems: state.extraItems,
     // The last real pricing snapshot. Painted immediately on next visit with
     // its own timestamp while a fresh fetch runs - the difference between
     // "pris hämtas…" for seconds on every open and prices that are simply
@@ -122,6 +123,7 @@ function applySyncBlob(blob) {
   if (blob.valda !== undefined) state.valda = new Set(blob.valda);
   if (blob.avklarade !== undefined) state.avklarade = new Set(blob.avklarade);
   if (blob.apiRecipes !== undefined) state.apiRecipes = blob.apiRecipes;
+  if (blob.extraItems !== undefined) state.extraItems = blob.extraItems;
   if (blob.dbChainTotals) { state.dbChainTotals = blob.dbChainTotals; state.dbComparison = blob.dbComparison || null; state.dbPricedAt = blob.dbPricedAt || null; }
   if (blob.naringsmal !== undefined) state.naringsmal = blob.naringsmal;
   if (blob.betyg !== undefined) state.betyg = blob.betyg;
@@ -407,6 +409,64 @@ function distanceKm(lat1, lon1, lat2, lon2) {
   return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 // =============================================================================
+// ENTITLEMENTS - the Free/Premium contract, fetched from the backend
+// =============================================================================
+// The backend is the source of truth (see services/accounts/features.py).
+// The frontend never decides what Premium means: it asks, caches the answer,
+// and renders locks from it. Until the answer arrives we assume FREE - a
+// paywall that flashes open is annoying, Premium data leaking to Free is a
+// broken business model.
+const FREE_ENTITLEMENTS = { plan: "free", isPremium: false, maxDinners: 4, features: {}, pricing: null };
+let entitlements = FREE_ENTITLEMENTS;
+// Starts as "free" (the boot assumption), so a premium user's first fetch
+// counts as a plan CHANGE and clears any persisted free-masked snapshot.
+let lastEntitlementPlan = "free";
+async function fetchEntitlements() {
+  try {
+    const token = getStoredToken();
+    const response = await fetch(entitlementsApiUrl(), {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    entitlements = await response.json();
+  } catch {
+    // Nätet nere: behåll det vi har. Free är alltid ett säkert antagande.
+  }
+  // A plan change makes every cached pricing answer stale: the masked
+  // Free response must not survive into Premium (locked cards after an
+  // upgrade), and a Premium snapshot must not leak into Free. Throw the
+  // whole price picture away and fetch it again under the new plan.
+  if (lastEntitlementPlan !== entitlements.plan) {
+    databasePricingSync = { key: null, pending: false };
+    state.dbChainTotals = {}; state.dbLockedChains = []; state.dbComparison = null;
+    state.dbPricedAt = null; state.extraMatches = {}; extraMatchSync = {};
+  }
+  lastEntitlementPlan = entitlements.plan;
+  // A saved dinner count above the plan's cap quietly clamps for the NEXT
+  // generated week. The already-chosen week is untouched - a paywall must
+  // never eat food someone already planned.
+  if (!hasPremium() && state.middagar > maxDinners()) {
+    state.middagar = maxDinners();
+    saveState();
+  }
+  render();
+}
+function can(feature) {
+  if (hasPremium()) return true;
+  const features = entitlements.features || {};
+  return feature in features ? Boolean(features[feature]) : true;
+}
+function maxDinners() { return hasPremium() ? 7 : (entitlements.maxDinners || 4); }
+function premiumPricing() {
+  return entitlements.pricing || {
+    monthly: { priceText: "59 kr/mån" },
+    yearly: { priceText: "399 kr/år", perMonthText: "≈ 33 kr/mån",
+              savingsText: "Spara 309 kr jämfört med månadsbetalning", badge: "Bäst värde" },
+  };
+}
+
+// =============================================================================
 // LOCAL DEVELOPMENT ONLY - Premium UI unlock
 // =============================================================================
 // Lets a developer walk the whole Premium flow in a browser without creating
@@ -441,7 +501,13 @@ function devPremiumEnabled() {
 // this, so the dev switch has exactly one entry point rather than being
 // sprinkled through every call site.
 function hasPremium() {
-  return Boolean(state.user?.premium) || devPremiumEnabled();
+  // Server-side entitlement first (fetched from /api/entitlements), the
+  // user payload as backup, the loopback-only dev switch last. Nothing here
+  // GRANTS Premium - the backend masks Premium data regardless, this only
+  // decides which UI state to draw.
+  if (entitlements.isPremium) return true;
+  if (state.user?.premium) return true;
+  return devPremiumEnabled();
 }
 
 function nearbyBranches() { return state.branches.length ? state.branches : FALLBACK_BRANCH; }
@@ -842,6 +908,14 @@ let databasePricingSync = { key: null, pending: false };
 // item list. The server aggregates from its own recipe rows - the same rows
 // the recipe page shows - so the priced list can never drift from the
 // recipes. Legacy/offline recipes without a bank id fall back to item lines.
+function pricingHeaders() {
+  // The pricing endpoints decide Free vs Premium SERVER-SIDE - but only if
+  // they know who is asking. Without the token every user was anonymous,
+  // and a paying customer got the masked Free response.
+  const token = getStoredToken();
+  return { "Content-Type": "application/json",
+           ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+}
 function weekPricingBody(shoppingItems) {
   const selected = selectedRecipes();
   const bankRecipes = selected.filter(recipe => recipe.priceStatus !== "unavailable"
@@ -861,7 +935,7 @@ async function syncDatabasePricing(shoppingItems) {
   try {
     const response = await fetch(pricingWeekApiUrl(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: pricingHeaders(),
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(20000),
     });
@@ -869,7 +943,15 @@ async function syncDatabasePricing(shoppingItems) {
     const data = await response.json();
     if (databasePricingSync.key !== key) return;
     state.dbChainTotals = {};
-    (data.results || []).forEach(result => { state.dbChainTotals[result.chain] = result; });
+    state.dbLockedChains = [];
+    (data.results || []).forEach(result => {
+      // Free's masked view: locked chains carry name + status only. They go
+      // in their own list for the store cards; only full results may ever
+      // enter dbChainTotals, so nothing downstream can mistake a silhouette
+      // for a priced chain.
+      if (result.locked) state.dbLockedChains.push(result);
+      else state.dbChainTotals[result.chain] = result;
+    });
     state.dbComparison = data.comparison || null;
     state.dbPricedAt = Date.now();
     renderBasket();
@@ -913,6 +995,184 @@ function databaseItemFor(name) {
 
 function databaseResultFor(branch) {
   return state.dbChainTotals[branch.kedja] || null;
+}
+
+// =============================================================================
+// EXTRA ITEMS - campaign finds and manual lines on the shopping list
+// =============================================================================
+// Prices per chain resolve through src/services/extras.js: a real match at
+// the current chain, or the item's own campaign price at its own chain,
+// or nothing. state.extraMatches[chain][id] = { unitPrice, productName,
+// imageUrl } - fetched from the same pricing API as everything else.
+let extraMatchSync = {};
+async function syncExtraMatches(chain) {
+  const extras = state.extraItems;
+  if (!extras.length || !chain || chain === "alla") return;
+  const key = `${chain}|${extras.map(e => e.id + ":" + e.name).sort().join(",")}`;
+  if (extraMatchSync[chain] === key) return;
+  extraMatchSync[chain] = key;
+  try {
+    const response = await fetch(pricingListApiUrl(), {
+      method: "POST",
+      headers: pricingHeaders(),
+      body: JSON.stringify({ chain, items: extras.map(e => ({ name: e.name, amount: 1, unit: "st" })) }),
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    const byName = {};
+    (data.items || []).forEach(item => {
+      if (item.priceStatus !== "missing" && item.totalCost != null) byName[item.ingredient] = item;
+    });
+    state.extraMatches[chain] = {};
+    extras.forEach(extra => {
+      const hit = byName[extra.name];
+      if (hit) state.extraMatches[chain][extra.id] = {
+        unitPrice: hit.totalCost, productName: hit.productName, imageUrl: hit.imageUrl,
+        packageSize: hit.packageSize,
+      };
+    });
+    renderBasket();
+  } catch {
+    extraMatchSync[chain] = null; // försök igen nästa render
+  }
+}
+
+function currentPricedChain() {
+  const chain = chosenStore();
+  if (state.dbChainTotals[chain]) return chain;
+  return selectedBranch()?.kedja && state.dbChainTotals[selectedBranch().kedja]
+    ? selectedBranch().kedja
+    : Object.keys(state.dbChainTotals)[0] || chain;
+}
+
+function extrasTotalForChain(chain) {
+  return extrasTotal(state.extraItems, chain, state.extraMatches[chain] || {});
+}
+
+function addExtraItem(fields) {
+  const extra = newExtraItem(fields);
+  state.extraItems = [...state.extraItems, extra];
+  state.extraMatches = {}; extraMatchSync = {};
+  saveState(); renderBasket();
+  return extra;
+}
+
+function extraRowMarkup(extra, chain) {
+  const match = (state.extraMatches[chain] || {})[extra.id];
+  const line = extraLineTotal(extra, chain, match);
+  const unit = extraUnitPrice(extra, chain, match);
+  const fromOtherChain = extra.chain && extra.chain !== chain;
+  const photo = (match?.imageUrl || extra.imageUrl)
+    ? `<img class="shopping-item-image has-image" src="${escapeHtml(safeHttpUrl(match?.imageUrl || extra.imageUrl) || "")}" alt="" loading="lazy">`
+    : categoryIconMarkup("Övrigt");
+  const displayName = match?.productName || extra.name;
+  const metaBits = [];
+  if (match?.packageSize || extra.packageSize) metaBits.push(match?.packageSize || extra.packageSize);
+  if (extra.source === "campaign") metaBits.push(`🏷️ Kampanj hos ${extra.chain}`);
+  if (fromOtherChain && !match) metaBits.push(`Ingen matchande produkt hos ${chain}`);
+  if (!extra.chain && !match) metaBits.push("Ingen säker prismatch – egen rad");
+  const priceText = line != null ? money(line)
+    : '<span class="price-missing">–</span>';
+  const unitNote = extra.qty > 1 && unit != null ? `<small>${extra.qty} × ${money(unit)}</small>` : "";
+  return `<div class="shopping-item extra-item ${extra.checked ? "checked" : ""}">
+    <input type="checkbox" data-extra-check="${extra.id}" ${extra.checked ? "checked" : ""}>
+    ${photo}
+    <span class="shopping-item-info"><strong>${escapeHtml(displayName)}</strong>
+      <small class="shopping-item-meta">${escapeHtml(metaBits.join(" · "))}</small></span>
+    <span class="extra-qty"><button type="button" data-extra-minus="${extra.id}">−</button><b>${extra.qty}</b><button type="button" data-extra-plus="${extra.id}">+</button></span>
+    <span class="shopping-item-price"><strong>${priceText}</strong>${unitNote}</span>
+    <button type="button" class="extra-remove" data-extra-remove="${extra.id}" aria-label="Ta bort">×</button>
+  </div>`;
+}
+
+function renderExtraItems(chain) {
+  const section = $("extraItemsSection");
+  if (!section) return;
+  section.hidden = !state.extraItems.length;
+  $("weekListTitle").hidden = !state.extraItems.length;
+  if (!state.extraItems.length) return;
+  $("extraItemsList").innerHTML = state.extraItems.map(extra => extraRowMarkup(extra, chain)).join("");
+  section.querySelectorAll("[data-extra-check]").forEach(el => el.addEventListener("change", () => {
+    state.extraItems = state.extraItems.map(e => e.id === el.dataset.extraCheck ? { ...e, checked: el.checked } : e);
+    saveState();
+  }));
+  section.querySelectorAll("[data-extra-plus]").forEach(el => el.addEventListener("click", () => {
+    const current = state.extraItems.find(e => e.id === el.dataset.extraPlus);
+    state.extraItems = setQty(state.extraItems, el.dataset.extraPlus, (current?.qty || 1) + 1);
+    saveState(); renderBasket();
+  }));
+  section.querySelectorAll("[data-extra-minus]").forEach(el => el.addEventListener("click", () => {
+    const current = state.extraItems.find(e => e.id === el.dataset.extraMinus);
+    state.extraItems = setQty(state.extraItems, el.dataset.extraMinus, (current?.qty || 1) - 1);
+    saveState(); renderBasket();
+  }));
+  section.querySelectorAll("[data-extra-remove]").forEach(el => el.addEventListener("click", () => {
+    state.extraItems = removeExtra(state.extraItems, el.dataset.extraRemove);
+    saveState(); renderBasket();
+  }));
+  syncExtraMatches(chain);
+}
+
+// ---- Butikskorten överst i Handla -------------------------------------------
+function storeCardMarkup(entry) {
+  const { chain, total, locked, cheapest, active, unavailable } = entry;
+  if (locked) {
+    return `<button type="button" class="store-card locked" data-store-card-paywall="${escapeHtml(chain)}">
+      <strong>${escapeHtml(chain)}</strong><span>🔒 Se pris med Premium</span></button>`;
+  }
+  if (unavailable) {
+    return `<div class="store-card unavailable"><strong>${escapeHtml(chain)}</strong><span>Pris ej tillgängligt – för få varor prissatta</span></div>`;
+  }
+  return `<button type="button" class="store-card ${active ? "active" : ""}" data-store-card="${escapeHtml(chain)}">
+    <strong>${escapeHtml(chain)}</strong><span>${money(total)}</span>${cheapest ? '<em class="store-card-badge">Billigast</em>' : ""}</button>`;
+}
+
+function renderStoreCards() {
+  const container = $("storeCards");
+  if (!container) return;
+  const chain = currentPricedChain();
+  const priced = Object.values(state.dbChainTotals);
+  if (!priced.length && !state.dbLockedChains.length) { container.innerHTML = ""; $("storeSpreadTeaser").hidden = true; return; }
+  const cheapestChain = state.dbComparison?.cheapestChain;
+  // Only QUALIFIED chains get a total on their card. ICA pricing 3 of 26
+  // items produces a "25 kr" that would sort to the top and read as the
+  // cheapest shop in town - a number that is true and a message that is
+  // false. Unqualified chains keep their card, marked honestly.
+  const qualified = priced.filter(result => result.comparable !== false);
+  const unqualified = priced.filter(result => result.comparable === false);
+  const entries = qualified
+    .map(result => ({
+      chain: result.chain,
+      total: result.totalCheckoutCost + extrasTotalForChain(result.chain),
+      cheapest: result.chain === cheapestChain,
+      active: result.chain === chain,
+    }))
+    .sort((a, b) => a.total - b.total);
+  unqualified.forEach(result => entries.push({ chain: result.chain, unavailable: true }));
+  state.dbLockedChains.forEach(lockedEntry => entries.push(
+    // A lock is a promise that Premium shows a price. A chain that is not
+    // comparable has no price to show anyone - its card says so instead of
+    // selling a padlock with nothing behind it.
+    lockedEntry.hasData && lockedEntry.comparable
+      ? { chain: lockedEntry.chain, locked: true }
+      : { chain: lockedEntry.chain, unavailable: true }));
+  container.innerHTML = entries.map(storeCardMarkup).join("");
+  container.querySelectorAll("[data-store-card]").forEach(card => card.addEventListener("click", () => {
+    if (card.dataset.storeCard === chosenStore()) return;
+    state.butik = card.dataset.storeCard;
+    saveState(); renderBasket();
+  }));
+  container.querySelectorAll("[data-store-card-paywall]").forEach(card =>
+    card.addEventListener("click", () => openPaywall("all_store_baskets")));
+  // Free får veta ATT priserna skiljer sig - beloppet är riktig aritmetik
+  // från servern, aldrig påhittat (mask_pricing_for_free).
+  const spread = state.dbComparison?.priceSpread;
+  const teaser = $("storeSpreadTeaser");
+  if (!hasPremium() && spread != null && spread > 1) {
+    teaser.textContent = `Priserna skiljer sig med upp till ${money(spread)} mellan butikerna den här veckan.`;
+    teaser.hidden = false;
+  } else teaser.hidden = true;
 }
 
 // Shared by the compact widget (renderStoreComparison) and the full
@@ -1032,7 +1292,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
         : `<strong class="price-missing">Pris saknas</strong>`;
     const currentHeading = !hasUsablePrice(current) && current.source !== "estimate"
       ? "Inga priser hittades hos" : "Pris hos";
-    container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${currentHeading} ${current.branch.namn}</span>${currentPriceText}${coverageLabel(current)}${updatedLabel}</div>${results.length > 1 ? `<button type="button" class="store-compare-upsell" id="storeCompareUpsell-${containerId}">🔒 Prova Premium gratis i 14 dagar och se vilken butik som faktiskt är billigast av ${results.length}</button>` : ""}</div>`;
+    container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${currentHeading} ${current.branch.namn}</span>${currentPriceText}${coverageLabel(current)}${updatedLabel}</div>${results.length > 1 ? `<button type="button" class="store-compare-upsell" id="storeCompareUpsell-${containerId}">🔒 Se vilken butik som faktiskt är billigast av ${results.length} – med Premium</button>` : ""}</div>`;
     $(`storeCompareUpsell-${containerId}`)?.addEventListener("click", openPremiumPitch);
     syncDatabasePricing(shoppingItems);
     syncBranchComparison(shoppingItems, branches);
@@ -1232,7 +1492,7 @@ async function openChainShoppingList(chain, branch = null) {
   try {
     const response = await fetch(pricingListApiUrl(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: pricingHeaders(),
       body: JSON.stringify({ chain, ...weekPricingBody(shoppingItems) }),
       signal: AbortSignal.timeout(20000),
     });
@@ -1363,8 +1623,14 @@ function renderStoreComparisonPage(selected) {
   const cheapest = (validResults.length ? validResults : results)[0];
   // Priciest is the dearest COMPARABLE shop, never an estimate.
   const priciest = validResults.length ? validResults[validResults.length - 1] : null;
-  const bestCoverage = Math.max(0, ...results.map(r => r.matched ?? 0));
-  $("comparisonItemCount").textContent = bestCoverage ? `${bestCoverage} av ${shoppingItems.length} varor` : `${shoppingItems.length} varor`;
+  // Counted against the RESULT'S own totalItems, never against the client
+  // aggregate: the server splits a mixed-unit line in two, so its item count
+  // can differ from ours - which printed the impossible "21 av 20 varor".
+  const bestResult = results.reduce((best, r) =>
+    (r.matched ?? 0) > (best?.matched ?? -1) ? r : best, null);
+  $("comparisonItemCount").textContent = bestResult?.matched
+    ? `${bestResult.matched} av ${bestResult.totalItems} varor`
+    : `${shoppingItems.length} varor`;
   // A saving is only shown when there are at least two comparable shops -
   // one shop cannot be cheaper than itself.
   const priciestCost = validResults.length > 1 ? priciest.cost : null;
@@ -1695,7 +1961,16 @@ function renderBasket() {
   // Null when no REAL price exists yet - never the static estimate. This
   // value also feeds renderWeekOverview, so one fabricated figure here would
   // show up as fact in two places.
-  const total = currentResult && currentResult.source !== "estimate" ? currentResult.cost : null;
+  const activeChain = currentPricedChain();
+  const extrasCost = extrasTotalForChain(activeChain);
+  // The header total is the PRICED chain's database result - the same
+  // number its store card shows. Falling back to the branch-keyed result
+  // left Free showing "pris hämtas…" forever whenever the nearest branch
+  // was a chain the server had masked.
+  const activeDb = state.dbChainTotals[activeChain];
+  const total = activeDb ? activeDb.totalCheckoutCost + extrasCost
+    : currentResult && currentResult.source !== "estimate"
+      ? currentResult.cost + extrasCost : null;
   const groups = shoppingItems.reduce((result, item) => { const category = itemCategory(item.namn); (result[category] ||= []).push(item); return result; }, {});
   $("shoppingList").innerHTML = shoppingItems.length ? Object.entries(groups).map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingItemMarkup).join("")}</section>`).join("") : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
   document.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => { input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping); saveState(); renderBasket(); }));
@@ -1707,7 +1982,7 @@ function renderBasket() {
   $("shoppingCost").textContent = `${total == null ? "pris hämtas…" : money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
   $("shoppingComplete").hidden = !(shoppingItems.length && completed === shoppingItems.length);
   renderAttribution(shoppingItems);
-  renderStoreComparison(selected); renderStoreComparison(selected, "basketStoreCompare"); renderPantry();
+  renderStoreComparison(selected); renderStoreCards(); renderExtraItems(activeChain); renderPantry();
   renderWeekStoreTabs();
   updateWeekStoreStatus();
   // Fed the exact same selected/shoppingItems/total this function just
@@ -2063,11 +2338,11 @@ function renderAccount() {
     const hasSubscription = ["active", "trialing", "past_due", "canceled", "unpaid"].includes(state.user.subscriptionStatus);
     $("accountPremiumStatus").textContent = daysLeft ? `✓ Provperiod aktiv - ${plural(daysLeft, "dag", "dagar")} kvar (ingen betalning krävs)` : state.user.premium ? "✓ Premium aktiverat" : "Inget Premium ännu";
     $("premiumPitch").hidden = state.user.premium;
-    $("startTrialBtn").hidden = state.user.trialUsed;
+    $("startTrialBtn").hidden = true; // trialen finns inte i affärsmodellen
     $("subscriptionPanel").hidden = !hasSubscription;
     if (hasSubscription) {
       const periodEnd = state.user.subscriptionPeriodEnd ? new Date(state.user.subscriptionPeriodEnd).toLocaleDateString("sv-SE") : "okänt datum";
-      const planLabel = state.user.subscriptionPlan === "yearly" ? "499 kr/år" : "59 kr/mån";
+      const planLabel = state.user.subscriptionPlan === "yearly" ? "399 kr/år" : "59 kr/mån";
       let line;
       if (state.user.subscriptionStatus === "active" && state.user.subscriptionCancelAtPeriodEnd) line = `Din prenumeration (${planLabel}) är uppsagd och gäller till ${periodEnd}, sedan återgår kontot till gratisversionen.`;
       else if (state.user.subscriptionStatus === "active") line = `Din prenumeration (${planLabel}) förnyas automatiskt ${periodEnd}.`;
@@ -2097,7 +2372,7 @@ const FREE_SWAP_LIMIT = 3;
 function openSwapModal(currentId) {
   if (!hasPremium() && state.swapsThisWeek >= FREE_SWAP_LIMIT) {
     $("swapModalHint").textContent = "";
-    $("swapOptions").innerHTML = `<button type="button" class="store-compare-upsell" id="swapUpsell">🔒 Du har använt dina ${FREE_SWAP_LIMIT} gratis byten den här veckan. Prova Premium gratis i 14 dagar för obegränsade byten.</button>`;
+    $("swapOptions").innerHTML = `<button type="button" class="store-compare-upsell" id="swapUpsell">🔒 Du har använt dina ${FREE_SWAP_LIMIT} gratis byten den här veckan. Med Premium byter du hur mycket du vill.</button>`;
     $("swapUpsell").addEventListener("click", () => { closeSwapModal(); openPremiumPitch(); });
     $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true;
     $("swapModal").hidden = false;
@@ -2154,13 +2429,21 @@ document.querySelectorAll("[data-swap-close]").forEach(button => button.addEvent
 // all, rather than shown and then quietly filled with something else.
 const PLAN_TYPES = [
   {
-    key: "familj", label: "Familjevecka", objective: "balanced",
+    // FREE. The one week type everyone can build: the same planner, the
+    // same real prices, no themed filter.
+    key: "standard", label: "Standardvecka", objective: "balanced",
+    hint: "En vanlig, varierad matvecka som håller din budget.",
+    feature: "standard_week",
+    filter: () => true,
+  },
+  {
+    key: "familj", label: "Familjevecka", objective: "balanced", feature: "family_week",
     hint: "Rätter hela familjen äter, utan krångel.",
     filter: recipe => hasTag(recipe, "barn") || recipe.typ === "Familjefavorit",
     highlight: combo => `${combo.filter(r => hasTag(r, "barn")).length} av ${combo.length} är barnfavoriter`,
   },
   {
-    key: "budget", label: "Budgetvecka", objective: "cheapest",
+    key: "budget", feature: "budget_week", label: "Budgetvecka", objective: "cheapest",
     hint: "Lägsta kassakostnaden för veckan.",
     filter: () => true,
     // No highlight: the per-portion price on this card comes from the real
@@ -2168,13 +2451,13 @@ const PLAN_TYPES = [
     // contradict it.
   },
   {
-    key: "traning", label: "Träningsvecka", objective: "protein",
+    key: "traning", feature: "training_week", label: "Träningsvecka", objective: "protein",
     hint: "Mycket protein per portion, jämnt över veckan.",
     filter: recipe => recipe.protein >= 25,
     highlight: combo => `${Math.round(combo.reduce((sum, r) => sum + r.protein, 0) / combo.length)} g protein per portion i snitt`,
   },
   {
-    key: "bulk", label: "Bulkvecka", objective: "protein",
+    key: "bulk", feature: "bulk_week", label: "Bulkvecka", objective: "protein",
     hint: "Kalorier och protein för den som bygger.",
     // 500 kcal and 25 g protein - the real bulk rule. It was temporarily
     // 450 when the bank held 58 recipes and only 7 qualified; the bank now
@@ -2183,19 +2466,19 @@ const PLAN_TYPES = [
     highlight: combo => `${Math.round(combo.reduce((sum, r) => sum + r.kcal, 0) / combo.length)} kcal per portion i snitt`,
   },
   {
-    key: "snabb", label: "Snabb vecka", objective: "balanced",
+    key: "snabb", feature: "quick_week", label: "Snabb vecka", objective: "balanced",
     hint: "Allt på bordet inom 25 minuter.",
     filter: recipe => recipe.tid <= 25,
     highlight: combo => `längst ${Math.max(...combo.map(r => r.tid))} min per middag`,
   },
   {
-    key: "vegetarisk", label: "Vegetarisk vecka", objective: "balanced",
+    key: "vegetarisk", feature: "vegetarian_week", label: "Vegetarisk vecka", objective: "balanced",
     hint: "Helt utan kött och fisk.",
     filter: recipe => hasTag(recipe, "vegetariskt"),
     highlight: combo => `${combo.filter(r => hasTag(r, "veganskt")).length} av ${combo.length} är dessutom veganska`,
   },
   {
-    key: "balanserad", label: "Balanserad vecka", objective: "balanced",
+    key: "balanserad", feature: "balanced_week", label: "Balanserad vecka", objective: "balanced",
     hint: "Variation mellan kött, fisk och vegetariskt.",
     filter: () => true,
     highlight: combo => `${new Set(combo.map(r => r.proteinkalla)).size} olika proteinkällor`,
@@ -2216,7 +2499,11 @@ function planCardMarkup(plan, branch) {
   // which recipes fit the budget - that is planning, not a price claim - but
   // it is never printed: "637 kr hos Willys" computed from a hardcoded
   // catalogue is exactly the fabricated store total this app must not show.
-  return `<div class="plan-card"><div class="plan-card-head"><strong>${plan.label}</strong><span>${plan.hint}</span></div><div class="plan-card-price" data-plan-price="${plan.key}"><b>pris beräknas…</b><small>mot riktiga butikspriser</small></div>${plan.highlight ? `<p class="plan-card-highlight">${escapeHtml(String(plan.highlight(plan.combo, plan.cost, portions)))}</p>` : ""}<ul class="plan-card-meals">${plan.combo.map(recipe => `<li>${escapeHtml(recipe.namn)}</li>`).join("")}</ul><button class="btn btn-primary" type="button" data-choose-plan="${plan.key}"><span>Välj den här</span></button></div>`;
+  const locked = plan.feature ? !can(plan.feature) : false;
+  const chooseButton = locked
+    ? `<button class="btn btn-primary plan-locked-btn" type="button" data-plan-paywall="${plan.key}"><span>🔒 Lås upp med Premium</span></button>`
+    : `<button class="btn btn-primary" type="button" data-choose-plan="${plan.key}"><span>Välj den här</span></button>`;
+  return `<div class="plan-card ${locked ? "plan-card-locked" : ""}"><div class="plan-card-head"><strong>${locked ? "🔒 " : ""}${plan.label}</strong><span>${plan.hint}</span></div><div class="plan-card-price" data-plan-price="${plan.key}"><b>pris beräknas…</b><small>mot riktiga butikspriser</small></div>${plan.highlight ? `<p class="plan-card-highlight">${escapeHtml(String(plan.highlight(plan.combo, plan.cost, portions)))}</p>` : ""}<ul class="plan-card-meals">${plan.combo.map(recipe => `<li>${escapeHtml(recipe.namn)}</li>`).join("")}</ul>${chooseButton}</div>`;
 }
 
 // Prices every plan card against Matjakt's own price database - the same
@@ -2232,7 +2519,7 @@ async function syncPlanPricing(plans) {
     try {
       const response = await fetch(pricingWeekApiUrl(), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: pricingHeaders(),
         body: JSON.stringify({ recipeIds, people: state.personer, pantry: pantryAmounts(state.pantry || {}) }),
         signal: AbortSignal.timeout(20000),
       });
@@ -2271,6 +2558,8 @@ function openPlanComparison() {
   }).filter(Boolean);
   if (plans.length < 2) { chooseMenu(); return; }
   $("planCards").innerHTML = plans.map(plan => planCardMarkup(plan, branch)).join("");
+  document.querySelectorAll("[data-plan-paywall]").forEach(button =>
+    button.addEventListener("click", () => { closePlanModal(); openPaywall(); }));
   syncPlanPricing(plans);
   document.querySelectorAll("[data-choose-plan]").forEach(button => button.addEventListener("click", () => {
     const plan = plans.find(candidate => candidate.key === button.dataset.choosePlan);
@@ -2370,7 +2659,7 @@ function wireOnboardingStep() {
   }));
   $("obBudget")?.addEventListener("input", e => { state.budget = clampBudget(e.target.value); saveState(); });
   document.querySelectorAll("[data-ob-meals]").forEach(button => button.addEventListener("click", () => {
-    state.middagar = Math.min(MAX_MEALS, Math.max(1, state.middagar + Number(button.dataset.obMeals)));
+    state.middagar = Math.min(Math.min(MAX_MEALS, maxDinners()), Math.max(1, state.middagar + Number(button.dataset.obMeals)));
     saveState(); renderOnboardingStep();
   }));
   $("obKosttyp")?.addEventListener("change", e => { state.kost.kosttyp = e.target.value; saveState(); });
@@ -2465,6 +2754,7 @@ $("deleteAccountBtn").addEventListener("click", async () => {
   } catch (error) { $("deleteError").textContent = error.message; }
 });
 async function refreshUser() {
+  fetchEntitlements();
   if (!state.authToken) { renderAccount(); return; }
   try {
     const { user } = await fetchCurrentUser(state.authToken);
@@ -2515,6 +2805,7 @@ function campaignDealMarkup(deal) {
 // The old per-chain scrape below remains only as the Premium extra for
 // Coop, which we cannot collect.
 let ownCampaignFetchKey = null;
+let ownCampaignDeals = [];
 async function renderOwnCampaigns() {
   if (ownCampaignFetchKey === "done") return;
   ownCampaignFetchKey = "done";
@@ -2528,8 +2819,24 @@ async function renderOwnCampaigns() {
     $("campaignList").innerHTML = all.slice(0, 18).map(deal => {
       const photo = deal.imageUrl ? `<img src="${escapeHtml(safeHttpUrl(deal.imageUrl) || "")}" alt="" loading="lazy">` : categoryIconMarkup("Övrigt");
       const storeColor = CHAIN_COLORS[deal.chain] || "var(--primary)";
-      return `<div class="campaign-deal"><span class="campaign-deal-image">${photo}<span class="campaign-deal-badge">−${deal.discountPercent}%</span></span><span class="campaign-deal-info"><strong>${escapeHtml(deal.name)}</strong>${deal.brand || deal.size ? `<small class="campaign-deal-brand">${escapeHtml([deal.brand, deal.size].filter(Boolean).join(" · "))}</small>` : ""}<span class="campaign-deal-price-row"><strong class="campaign-deal-price">${money(deal.campaignPrice)}</strong><s>${money(deal.regularPrice)}</s></span><span class="campaign-deal-store" style="color:${storeColor}">${escapeHtml(deal.chain)}</span></span></div>`;
+      const added = state.extraItems.some(e => e.source === "campaign" && e.productId === deal.productId);
+      const addButton = added
+        ? `<button type="button" class="campaign-deal-add added" disabled>✓ Tillagd</button>`
+        : `<button type="button" class="campaign-deal-add" data-deal-add="${escapeHtml(String(deal.productId))}">+ Lägg i inköpslistan</button>`;
+      return `<div class="campaign-deal"><span class="campaign-deal-image">${photo}<span class="campaign-deal-badge">−${deal.discountPercent}%</span></span><span class="campaign-deal-info"><strong>${escapeHtml(deal.name)}</strong>${deal.brand || deal.size ? `<small class="campaign-deal-brand">${escapeHtml([deal.brand, deal.size].filter(Boolean).join(" · "))}</small>` : ""}<span class="campaign-deal-price-row"><strong class="campaign-deal-price">${money(deal.campaignPrice)}</strong><s>${money(deal.regularPrice)}</s></span><span class="campaign-deal-store" style="color:${storeColor}">${escapeHtml(deal.chain)}</span>${addButton}</span></div>`;
     }).join("");
+    ownCampaignDeals = all;
+    document.querySelectorAll("[data-deal-add]").forEach(button => button.addEventListener("click", () => {
+      const deal = ownCampaignDeals.find(d => String(d.productId) === button.dataset.dealAdd);
+      if (!deal) return;
+      addExtraItem({
+        name: deal.name, source: "campaign", chain: deal.chain,
+        productId: deal.productId, gtin: deal.gtin, imageUrl: deal.imageUrl,
+        packageSize: deal.size, campaignPrice: deal.campaignPrice,
+        regularPrice: deal.regularPrice, validUntil: deal.validUntil,
+      });
+      button.textContent = "✓ Tillagd"; button.disabled = true; button.classList.add("added");
+    }));
   } catch {
     ownCampaignFetchKey = null;
     $("campaignList").innerHTML = `<p class="live-loading">Kunde inte hämta kampanjer just nu.</p>`;
@@ -2610,15 +2917,64 @@ $("accountRedeemForm").addEventListener("submit", async event => {
     state.user = user; renderAccount(); event.target.reset(); chooseMenu(false); renderCampaignSection();
   } catch (error) { $("redeemError").textContent = error.message; }
 });
-function openPremiumPitch() { openAccountModal(); }
-$("startTrialBtn").addEventListener("click", async () => {
-  $("trialError").textContent = "";
-  if (!state.authToken) { $("trialError").textContent = "Skapa ett konto eller logga in först - provperioden kopplas till ditt konto."; return; }
+// The paywall sells VALUE, never just says "Premium krävs". Opened from
+// every locked control; prices come from the central config via
+// /api/entitlements, so 59/399 exist in exactly one place (the backend).
+function openPaywall(triggerFeature = "") {
+  const pricing = premiumPricing();
+  const yearly = pricing.yearly || {};
+  const monthly = pricing.monthly || {};
+  let modal = document.getElementById("paywallModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "paywallModal";
+    modal.className = "modal paywall-modal";
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `<div class="modal-card paywall-card">
+    <button type="button" class="modal-close" data-paywall-close aria-label="Stäng">×</button>
+    <p class="eyebrow">Matjakt Premium</p>
+    <h2>Lås upp hela matveckan</h2>
+    <p class="paywall-lead">Planera veckan efter familj, budget eller träning. Jämför riktiga matpriser hos alla kvalificerade butiker och få exakt inköpslista för varje butik.</p>
+    <ul class="paywall-points">
+      <li>Alla 7 veckotyper och 1–7 middagar</li>
+      <li>Alla butikers riktiga priser och butikskorgar</li>
+      <li>Näringsmål, kcal- och proteinfilter</li>
+      <li>Fullt skafferi och "Laga med det jag har"</li>
+    </ul>
+    <button type="button" class="btn btn-primary paywall-yearly" data-paywall-plan="yearly">
+      <span class="paywall-plan-label">${escapeHtml(yearly.badge || "Bäst värde")}</span>
+      <strong>${escapeHtml(yearly.priceText || "399 kr/år")}</strong>
+      <small>${escapeHtml(yearly.perMonthText || "≈ 33 kr/mån")} · ${escapeHtml(yearly.savingsText || "Spara 309 kr jämfört med månadsbetalning")}</small>
+    </button>
+    <button type="button" class="btn btn-ghost paywall-monthly" data-paywall-plan="monthly">
+      <strong>${escapeHtml(monthly.priceText || "59 kr/mån")}</strong>
+    </button>
+    <button type="button" class="paywall-continue" data-paywall-close>Fortsätt gratis</button>
+  </div>`;
+  modal.hidden = false;
+  modal.querySelectorAll("[data-paywall-close]").forEach(el =>
+    el.addEventListener("click", () => { modal.hidden = true; }));
+  modal.querySelectorAll("[data-paywall-plan]").forEach(el =>
+    el.addEventListener("click", () => beginCheckout(el.dataset.paywallPlan)));
+}
+
+async function beginCheckout(plan) {
+  if (!state.user) {
+    document.getElementById("paywallModal").hidden = true;
+    openAccountModal?.();
+    return;
+  }
   try {
-    const { user } = await startTrial(state.authToken);
-    state.user = user; renderAccount(); chooseMenu(false); renderCampaignSection();
-  } catch (error) { $("trialError").textContent = error.message; }
-});
+    const { url } = await startCheckout(getStoredToken(), plan);
+    if (url) location.href = url;
+  } catch (error) {
+    alert(error?.message || "Kunde inte starta betalningen just nu.");
+  }
+}
+
+function openPremiumPitch() { openPaywall(); }
+$("startTrialBtn").addEventListener("click", () => openPaywall());
 let selectedPlan = "monthly";
 document.querySelectorAll("[data-price-tab]").forEach(tab => tab.addEventListener("click", () => { selectedPlan = tab.dataset.plan; document.querySelectorAll("[data-price-tab]").forEach(t => t.classList.toggle("active", t === tab)); }));
 $("subscribeBtn").addEventListener("click", async () => {
@@ -2642,14 +2998,20 @@ $("logoutBtn").addEventListener("click", async () => {
   renderAccount(); closeAccountModal();
 });
 $("peopleMinus").addEventListener("click", () => step("personer", -1, 1, 12)); $("peoplePlus").addEventListener("click", () => step("personer", 1, 1, 12));
-$("mealsMinus").addEventListener("click", () => step("middagar", -1, 1, MAX_MEALS)); $("mealsPlus").addEventListener("click", () => step("middagar", 1, 1, MAX_MEALS));
+$("mealsMinus").addEventListener("click", () => step("middagar", -1, 1, MAX_MEALS));
+$("mealsPlus").addEventListener("click", () => {
+  // Free plans up to the server-decided cap; the fifth dinner is the
+  // paywall's job to sell, not a dead button's job to refuse.
+  if (state.middagar >= maxDinners() && !hasPremium()) { openPaywall("seven_dinners"); return; }
+  step("middagar", 1, 1, Math.min(MAX_MEALS, maxDinners()));
+});
 $("generateBtn").addEventListener("click", () => openPlanComparison()); $("refreshBtn").addEventListener("click", () => { RECEPT.push(RECEPT.shift()); chooseMenu(); });
 $("startNewWeekBtn").addEventListener("click", () => openPlanComparison());
 let pantryPickLocation = "skafferi";
 function renderPantryPicker(query) {
   const search = query.trim().toLowerCase();
   const matches = Object.entries(PRODUCT_CATALOG).filter(([key, product]) => !search || key.toLowerCase().includes(search) || product.namn.toLowerCase().includes(search) || product.marke.toLowerCase().includes(search)).slice(0, 30);
-  $("pantryPickerList").innerHTML = matches.length ? matches.map(([key, product]) => `<button type="button" class="pantry-pick" data-pantry-pick="${escapeHtml(key)}"><span class="pantry-pick-info"><strong>${escapeHtml(product.namn)}</strong><small>${escapeHtml(product.marke)} · ${escapeHtml(product.storlek)}</small></span><span class="pantry-pick-add">+ Lägg till</span></button>`).join("") : !search ? "" : `<p class="pantry-picker-empty">Inga vanliga varor matchar "${escapeHtml(query)}".</p>`;
+  $("pantryPickerList").innerHTML = matches.length ? matches.map(([key, product]) => `<button type="button" class="pantry-pick" data-pantry-pick="${escapeHtml(key)}"><span class="pantry-pick-info"><strong>${escapeHtml(product.namn)}</strong><small>${escapeHtml([product.marke && product.marke !== "ICA" ? product.marke : "", product.storlek].filter(Boolean).join(" · "))}</small></span><span class="pantry-pick-add">+ Lägg till</span></button>`).join("") : !search ? "" : `<p class="pantry-picker-empty">Inga vanliga varor matchar "${escapeHtml(query)}".</p>`;
   document.querySelectorAll("[data-pantry-pick]").forEach(button => button.addEventListener("click", () => openPantryAddConfirm(button.dataset.pantryPick, PRODUCT_CATALOG[button.dataset.pantryPick])));
 }
 let pantryLiveResults = [];
@@ -2755,12 +3117,24 @@ if (pendingVerifyToken) {
 // Fill the recipe bank, then draw. Everything that reads RECEPT runs after
 // this resolves; an empty bank (network gone, file missing) leaves the app
 // working with whatever the account already had rather than throwing.
+fetchEntitlements();
 loadRecipes().then(recipes => {
   RECEPT.push(...recipes);
   if (!RECEPT.length) return;
   if (!state.valda.size && state.onboardingComplete) chooseMenu(false);
   else render();
   renderRecipes();
+});
+
+$("manualItemAdd")?.addEventListener("click", () => {
+  const input = $("manualItemInput");
+  const name = (input.value || "").trim();
+  if (!name) return;
+  addExtraItem({ name, source: "manual" });
+  input.value = "";
+});
+$("manualItemInput")?.addEventListener("keydown", event => {
+  if (event.key === "Enter") { event.preventDefault(); $("manualItemAdd").click(); }
 });
 
 window.addEventListener("popstate", renderRecipePage);

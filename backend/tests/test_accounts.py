@@ -20,7 +20,7 @@ class AccountStoreTest(unittest.TestCase):
         token, user = self.store.register("Ada@Example.com", "hemligt123")
         self.assertTrue(token)
         self.assertEqual(user, {
-            "email": "ada@example.com", "premium": False, "trialEndsAt": None, "trialUsed": False,
+            "email": "ada@example.com", "premium": False, "plan": "free", "trialEndsAt": None, "trialUsed": False,
             "subscriptionStatus": None, "subscriptionPlan": None, "subscriptionPeriodEnd": None,
             "subscriptionCancelAtPeriodEnd": False, "emailVerified": False,
         })

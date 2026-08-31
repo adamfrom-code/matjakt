@@ -19,6 +19,10 @@ export function pricingListApiUrl() {
   return `${API_BASE_URL}/pricing/list`;
 }
 
+export function entitlementsApiUrl() {
+  return `${API_BASE_URL}/entitlements`;
+}
+
 export function groceryStatusApiUrl() {
   return `${API_BASE_URL}/grocery/status`;
 }
