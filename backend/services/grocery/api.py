@@ -33,10 +33,20 @@ logger = logging.getLogger("matjakt.grocery.api")
 
 DB_PATH = Path(__file__).resolve().parents[2] / "data" / "grocery.db"
 
-# A chain must price at least this share of the list before its total is
-# allowed to be compared with another chain's. Below it the two numbers are
-# answering different questions - see the module docstring.
-MIN_COVERAGE_FOR_COMPARISON = 60
+# THE central coverage rule. A chain must price at least this share of the
+# list before its total may be compared with another chain's, be crowned
+# cheapest, or headline a screen. Below it the two numbers are answering
+# different questions - see the module docstring.
+#
+# Raised from 60 to 85 after watching it live: at 60 a chain with 1 of 21
+# items priced was excluded (good), but chains around two thirds still slid
+# into a comparison where their total was low mostly because items were
+# missing. 85 is the point where "this basket is priced" is true enough to
+# put a kronor figure next to another shop's.
+#
+# Every consumer reads `comparable` off the response rather than re-deriving
+# this, so there is exactly one threshold in the system.
+MIN_COVERAGE_FOR_COMPARISON = 85
 
 # A price this old is still shown (with its age), but a chain whose data is
 # this stale must not be crowned cheapest against a freshly imported one.

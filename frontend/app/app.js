@@ -439,7 +439,7 @@ function devPremiumEnabled() {
 // this, so the dev switch has exactly one entry point rather than being
 // sprinkled through every call site.
 function hasPremium() {
-  return hasPremium() || devPremiumEnabled();
+  return Boolean(state.user?.premium) || devPremiumEnabled();
 }
 
 function nearbyBranches() { return state.branches.length ? state.branches : FALLBACK_BRANCH; }
@@ -476,7 +476,12 @@ async function syncNearbyBranches() {
   clearLocationDerivedState();
   render();
   try {
-    const response = await fetch(storesApiUrl(zip), { signal: AbortSignal.timeout(20000) });
+    // Always revalidate. A store list served from the browser's own cache is
+    // how a user ends up looking at shops that are no longer near them (and
+    // how a chain we just started carrying stays invisible). The server's own
+    // cache still absorbs the cost - this only stops the CLIENT from holding
+    // a stale copy.
+    const response = await fetch(storesApiUrl(zip), { cache: "no-cache", signal: AbortSignal.timeout(20000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (state.postnummer !== zip) return;
@@ -837,10 +842,17 @@ function sameBranch(a, b) {
   return a.kedja === b.kedja && a.namn === b.namn;
 }
 
+// A shopper does not need to know WHERE a price came from - "Live",
+// "Riktigt pris", "Uppskattat" are our plumbing, and they were also
+// contradicting each other on screen (an ICA row read "Riktigt pris" and
+// "Pris saknas" at once). What a shopper needs is how much of their list a
+// shop could actually price, which every row now states outright. The
+// technical provenance lives in the admin panel.
+//
+// The one thing still worth flagging is a shop we could NOT price, because
+// its number is not a total at all.
 function priceSourceBadge(result) {
-  if (result.source === "database") return '<span class="live-badge">Riktigt pris</span>';
-  if (result.isLive) return '<span class="live-badge">Live</span>';
-  return '<span class="live-badge estimate">Uppskattat</span>';
+  return hasUsablePrice(result) ? "" : '<span class="live-badge estimate">Inget pris</span>';
 }
 
 function coverageLabel(result) {
@@ -855,7 +867,8 @@ function coverageLabel(result) {
     // three, and whether the total is missing something expensive.
     const names = (result.missingNames || []).filter(Boolean);
     const detail = names.length ? ` · saknar ${escapeHtml(names.slice(0, 3).join(", "))}${names.length > 3 ? ` +${names.length - 3}` : ""}` : "";
-    return `<small class="store-compare-coverage">${result.certain} av ${result.totalItems} varor prissatta mot riktiga produkter${missing > 0 ? detail : ""}</small>`;
+      const percent = result.totalItems ? Math.round(100 * result.certain / result.totalItems) : 0;
+    return `<small class="store-compare-coverage">${result.certain} av ${result.totalItems} varor prissatta · ${percent} % täckning${missing > 0 ? detail : ""}</small>`;
   }
   return `<small class="store-compare-coverage">${result.certain} av ${result.totalItems} varor har säkert pris${missing > 0 ? ` · ${missing} utan pris` : ""}</small>`;
 }
@@ -886,13 +899,34 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
     syncBranchComparison(shoppingItems, branches);
     return;
   }
-  // Sorted by cost, so a row that priced nothing (0 kr) would come first and
-  // be crowned cheapest. Those are excluded from the running before anything
-  // is compared, rather than being caught later by the badge guards.
+  // Sorted by cost, so the lowest number wins the top of this widget - and a
+  // chain that priced almost nothing produces the lowest number. Seen live:
+  // ICA headlined at "ca 29 kr" with 1 of 17 items priced (6 % coverage),
+  // sitting above Willys at 237 kr with 15 of 17. The number was real; the
+  // impression that ICA is the cheap shop was not.
+  //
+  // So a row only counts as a candidate for the headline or the badge when
+  // it has a usable price AND enough coverage to mean something. "comparable"
+  // is the server's own judgement (see compare_chains), not a second opinion
+  // computed here.
   const priceable = results.filter(hasUsablePrice);
-  const cheapest = (priceable.length ? priceable : results)[0];
-  const priciest = (priceable.length ? priceable : results)[priceable.length ? priceable.length - 1 : results.length - 1];
-  const savings = priciest.cost - cheapest.cost;
+  const comparableRows = priceable.filter(r => r.comparable);
+  // The headline is the user's own branch when they have one - that is the
+  // shop they are actually going to. Otherwise the cheapest row that can
+  // carry the claim, and only as a last resort the best-covered row.
+  const byCoverage = [...results].sort((a, b) =>
+    (b.certain ?? 0) / (b.totalItems || 1) - (a.certain ?? 0) / (a.totalItems || 1));
+  // The user's own branch headlines only when it actually has a real price.
+  // Seen live: "Uppskattat pris Coop Nian - ca 578 kr" sitting above Willys
+  // with 18 of 21 items priced against real products. An estimate must never
+  // outrank a real price, whichever branch happens to be selected.
+  const selectedRow = results.find(r => sameBranch(r.branch, selectedBranch()));
+  const cheapest = (selectedRow && selectedRow.source === "database" && hasUsablePrice(selectedRow) ? selectedRow : null)
+    || comparableRows[0] || byCoverage.find(r => r.source === "database" && hasUsablePrice(r))
+    || selectedRow || byCoverage[0] || results[0];
+  const priciest = comparableRows.length
+    ? comparableRows[comparableRows.length - 1]
+    : (priceable.length ? priceable[priceable.length - 1] : results[results.length - 1]);
   // A "Billigast" badge is a factual claim, so it needs a comparison that
   // actually holds up. Three things can each make it meaningless:
   //  - the cheapest row is only an estimate (isLive false), so its number
@@ -905,9 +939,18 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
   //    comparable with the row it's being compared against.
   // When any of those hold we show the prices without a badge and without a
   // savings figure, rather than asserting something we can't back up.
+  // "Riktiga butiksspecifika priser saknas" was shown even when the cheapest
+  // row had 15 of 16 items priced against real products - the prices were
+  // not what was missing, a SECOND comparable chain was. The server already
+  // knows which of the four blocks applied, so its reason is used rather
+  // than a single catch-all sentence that is wrong more often than right.
+  const COMPARISON_REASONS = {
+    too_few_comparable_chains: "Bara en butik har tillräckligt med aktuella priser för en jämförelse",
+    all_totals_identical: "Butikerna landar på samma summa - ingen är billigast",
+  };
   const MIN_COVERAGE_FOR_CLAIM = 0.6;
   const coverageOf = r => (r.certain == null || !r.totalItems) ? 0 : r.certain / r.totalItems;
-  const pricesDiffer = priceable.some(r => Math.abs(r.cost - cheapest.cost) > 0.5);
+  const pricesDiffer = comparableRows.some(r => Math.abs(r.cost - cheapest.cost) > 0.5);
   // When the cheapest row came from Matjakt's own price database, the SERVER
   // already decided whether a cheapest chain may be named - it applies the
   // same guards plus two this side can't see (a chain with zero real matches
@@ -915,30 +958,66 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
   // independent verdicts on the same question would eventually disagree, and
   // the disagreement would show up as a badge the totals don't support, so
   // there is one authority: the server's.
+  // The row that headlines and the row that is CHEAPEST are different
+  // questions. The headline is the shop the user is going to; the badge
+  // belongs on whichever shop actually won. Tying the badge to the headline
+  // row meant that when the user's own branch was not the cheapest, the
+  // comparison vanished entirely and the screen claimed "riktiga
+  // butiksspecifika priser saknas" - with two shops on it at 94 % coverage.
+  const winner = state.dbComparison?.cheapestChain
+    ? comparableRows.find(r => r.branch.kedja === state.dbComparison.cheapestChain)
+    : null;
   const comparisonIsReal = cheapest.source === "database"
-    ? state.dbComparison?.cheapestChain === cheapest.branch.kedja && pricesDiffer
+    ? Boolean(winner) && pricesDiffer
     : cheapest.isLive && pricesDiffer && coverageOf(cheapest) >= MIN_COVERAGE_FOR_CLAIM;
-  const savingsAreReal = comparisonIsReal && priciest.isLive
-    && (cheapest.source === "database" || coverageOf(priciest) >= MIN_COVERAGE_FOR_CLAIM)
-    && savings > 1;
+  const savings = winner ? (state.dbComparison?.savings ?? 0) : priciest.cost - cheapest.cost;
+  const savingsAreReal = comparisonIsReal && savings > 1;
   const pinned = pinnedBranchMatch();
   // Only a Primat-sourced branch (has a primatKey) can be individually
   // targeted - a scrape-sourced fallback branch has nothing concrete to pin
   // a price search to, so those rows render as plain, non-interactive text
   // instead of a button that would do nothing when pressed.
-  const list = results.length < 2 ? "" : `<div class="store-compare-list">${results.map((r, index) => {
+  // Shops that cannot price enough of the list do not belong in the
+  // comparison: their totals are small because items are MISSING, and side
+  // by side with a real total that reads as "cheaper". They are still shown,
+  // below and plainly labelled, so a user can see we know the shop exists
+  // and simply do not have its prices yet.
+  const inComparison = results.filter(r => r.comparable && hasUsablePrice(r));
+  const outOfComparison = results.filter(r => !inComparison.includes(r));
+  const shown = inComparison.length ? inComparison : results;
+  const list = shown.length < 2 && !outOfComparison.length ? "" : `<div class="store-compare-list">${shown.map((r, index) => {
     const isPinned = pinned && r.branch.primatKey && r.branch.primatKey === pinned.primatKey;
-    const isCheapest = comparisonIsReal && r.branch === cheapest.branch;
+    const isCheapest = comparisonIsReal && winner
+      && r.branch.kedja === winner.branch.kedja && r.cost === winner.cost;
     const tag = `${isCheapest ? "cheapest" : ""} ${isPinned ? "pinned" : ""}`.trim();
-    const inner = `<span>${r.branch.namn}${isCheapest ? '<span class="live-badge cheapest-badge">Billigast</span>' : ""}${isPinned ? '<span class="live-badge pinned">Vald</span>' : ""}${priceSourceBadge(r)}</span><strong${hasUsablePrice(r) ? "" : ' class="price-missing"'}>${hasUsablePrice(r) ? money(r.cost) : "Pris saknas"}</strong>`;
+    // Coverage on every row: without it "29 kr" and "237 kr" look like two
+    // prices for the same basket, when one of them is a basket with one item
+    // in it.
+    const rowCoverage = r.certain != null && r.totalItems
+      ? `<small class="store-compare-row-coverage">${r.certain}/${r.totalItems} varor</small>` : "";
+    const inner = `<span>${r.branch.namn}${isCheapest ? '<span class="live-badge cheapest-badge">Billigast</span>' : ""}${isPinned ? '<span class="live-badge pinned">Vald</span>' : ""}${priceSourceBadge(r)}${rowCoverage}</span><strong${hasUsablePrice(r) ? "" : ' class="price-missing"'}>${hasUsablePrice(r) ? money(r.cost) : "Pris saknas"}</strong>`;
     return r.branch.primatKey
       ? `<button type="button" class="store-compare-row ${tag}" data-pick-branch="${index}">${inner}</button>`
       : `<div class="store-compare-row ${tag} not-pickable">${inner}</div>`;
-  }).join("")}</div>`;
-  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${comparisonIsReal ? "Lägst pris" : cheapest.isLive ? "Pris hos" : "Uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savingsAreReal ? `<small>Skillnad ${money(savings)} mot ${priciest.branch.namn}</small>` : !comparisonIsReal && results.length > 1 ? `<small>Riktiga butiksspecifika priser saknas för en jämförelse</small>` : ""}${coverageLabel(cheapest)}${updatedLabel}</div>${list}${pinned ? `<button type="button" class="store-compare-unpin" id="storeCompareUnpin-${containerId}">Välj automatiskt istället</button>` : ""}${results.length > 1 ? `<button type="button" class="store-compare-open" id="storeCompareOpenBtn-${containerId}">Jämför butiker →</button>` : ""}</div>`;
+  }).join("")}${outOfComparison.length ? `<div class="store-compare-excluded"><small>Utan tillräckligt med aktuella priser för en jämförelse</small>${outOfComparison.map(r => {
+    // Three genuinely different situations, and "inga priser" was being
+    // shown for all of them - including Coop, which does have an estimate,
+    // just not real per-store prices.
+    const note = r.certain != null && r.totalItems ? `${r.certain}/${r.totalItems} varor prissatta`
+      : r.source === "estimate" ? `uppskattat ${money(r.cost)}`
+      : "inga priser";
+    return `<div class="store-compare-row not-pickable muted"><span>${escapeHtml(r.branch.namn)}</span><small>${note}</small></div>`;
+  }).join("")}</div>` : ""}</div>`;
+  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${comparisonIsReal && winner && winner.branch.kedja === cheapest.branch.kedja ? "Lägst pris" : cheapest.isLive ? "Pris hos" : "Uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savingsAreReal ? (winner && winner.branch.kedja !== cheapest.branch.kedja
+      ? `<small>Billigast: ${escapeHtml(winner.branch.namn)} ${money(winner.cost)} · du sparar ${money(savings)}</small>`
+      : `<small>Du sparar ${money(savings)}${state.dbComparison?.priciestTotal ? ` · ${Math.round(100 * savings / state.dbComparison.priciestTotal)} % billigare än dyraste jämförbara butik` : ""}</small>`)
+    : !comparisonIsReal && results.length > 1 ? `<small>${escapeHtml(cheapest.source === "database" && state.dbComparison?.reason ? (COMPARISON_REASONS[state.dbComparison.reason] || "Underlaget räcker inte för en jämförelse") : "Riktiga butiksspecifika priser saknas för en jämförelse")}</small>` : ""}${coverageLabel(cheapest)}${updatedLabel}</div>${list}${pinned ? `<button type="button" class="store-compare-unpin" id="storeCompareUnpin-${containerId}">Välj automatiskt istället</button>` : ""}${results.length > 1 ? `<button type="button" class="store-compare-open" id="storeCompareOpenBtn-${containerId}">Jämför butiker →</button>` : ""}</div>`;
   $(`storeCompareOpenBtn-${containerId}`)?.addEventListener("click", () => { renderStoreComparisonPage(selected); setView("comparison"); });
   container.querySelectorAll("[data-pick-branch]").forEach(button => button.addEventListener("click", () => {
-    const branch = results[Number(button.dataset.pickBranch)].branch;
+    // Indexes `shown`, not `results` - they differ whenever a shop was left
+    // out of the comparison, and indexing the wrong array pins a different
+    // store than the one tapped.
+    const branch = shown[Number(button.dataset.pickBranch)].branch;
     const alreadyPinned = state.pinnedBranch && state.pinnedBranch.primatKey === branch.primatKey;
     state.pinnedBranch = alreadyPinned ? null : { kedja: branch.kedja, namn: branch.namn, primatKey: branch.primatKey };
     state.butik = branch.kedja;
@@ -967,7 +1046,10 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
 // have to come from scraping/hotlinking the chains' own sites, which this
 // app deliberately never does. Styled text in the chain's own color is the
 // honest stand-in.
-const CHAIN_COLORS = { ICA: "#E2231A", Willys: "#171717", Coop: "#00953B", Hemköp: "#E4032E" };
+// Known brand colours. A chain that is not listed is not excluded from
+// anything - it just draws in the app's own accent colour. The store
+// comparison is driven by the DATA, never by this map.
+const CHAIN_COLORS = { ICA: "#E2231A", Willys: "#171717", Coop: "#00953B", "Hemköp": "#E4032E", "City Gross": "#C8102E" };
 function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
   const savings = priciestCost - result.cost;
   const color = CHAIN_COLORS[result.branch.kedja] || "var(--primary)";
@@ -997,7 +1079,7 @@ function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
 // pricing API for that chain rather than reused from the week view's cached
 // per-chain totals, so the list can never show products that belong to a
 // different total than the one in its own header.
-async function openChainShoppingList(chain) {
+async function openChainShoppingList(chain, branch = null) {
   const selected = selectedRecipes();
   const shoppingItems = aggregateShopping(selected);
   const body = $("chainListBody");
@@ -1016,7 +1098,7 @@ async function openChainShoppingList(chain) {
       signal: AbortSignal.timeout(20000),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    body.innerHTML = chainShoppingListMarkup(await response.json());
+    body.innerHTML = chainShoppingListMarkup(await response.json(), branch);
     body.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => {
       input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping);
       saveState();
@@ -1032,7 +1114,7 @@ function priceStatusLabel(status) {
   return '<span class="price-status missing">Pris saknas</span>';
 }
 
-function chainShoppingListMarkup(data) {
+function chainShoppingListMarkup(data, branch = null) {
   if (data.error === "no_data_for_chain") {
     return `<p class="live-loading">Matjakt har ingen prisdata för ${escapeHtml(data.chain || "den här kedjan")} ännu.</p>`;
   }
@@ -1053,7 +1135,13 @@ function chainShoppingListMarkup(data) {
     .filter(item => item.priceStatus !== "missing")
     .reduce((sum, item) => sum + (Number(item.totalCost) || 0), 0);
   const coverage = data.totalItems ? Math.round(100 * data.realPriceItems / data.totalItems) : 0;
-  const head = `<div class="chain-list-head"><h2>${escapeHtml(data.store?.name || data.chain || "")}</h2><small>${escapeHtml([data.store?.city, data.chain].filter(Boolean).join(" · "))}</small><div class="chain-list-total"><span>Total kassakostnad</span><strong>${money(total)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor prissatta · ${coverage} % täckning</span>${data.estimatedItems ? `<span>${data.estimatedItems} med uppskattat antal</span>` : ""}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span>${savings}</div>${warning}</div>`;
+  // Which shop this is has to survive scrolling: on a phone the list is far
+  // longer than the screen, and a shopper standing in one shop reading
+  // another shop's prices is the worst outcome this screen can produce.
+  const distance = branch?.avstandKm != null ? `${branch.avstandKm} km bort` : "";
+  const storeName = branch?.namn || data.store?.name || data.chain || "";
+  const sticky = `<div class="chain-list-sticky"><strong>${escapeHtml(storeName)}</strong><span>${money(total)} · ${data.realPriceItems}/${data.totalItems} varor</span></div>`;
+  const head = sticky + `<div class="chain-list-head"><h2>${escapeHtml(storeName)}</h2><small>${escapeHtml([data.chain, branch?.kedja && branch.kedja !== data.chain ? "" : "", data.store?.city, distance].filter(Boolean).join(" · "))}</small><div class="chain-list-total"><span>Total kassakostnad</span><strong>${money(total)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor prissatta · ${coverage} % täckning</span>${data.estimatedItems ? `<span>${data.estimatedItems} med uppskattat antal</span>` : ""}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span>${savings}</div>${warning}</div>`;
 
   const rows = (data.items || []).map(item => {
     const checked = state.avklarade.has(item.ingredient);
@@ -1125,7 +1213,10 @@ function renderStoreComparisonPage(selected) {
   $("comparisonItemCount").textContent = bestCoverage ? `${bestCoverage} av ${shoppingItems.length} varor` : `${shoppingItems.length} varor`;
   $("comparisonStoreList").innerHTML = results.map(r => comparisonStoreRowMarkup(r, r === cheapest, priciest.cost)).join("");
   document.querySelectorAll("[data-open-chain]").forEach(card =>
-    card.addEventListener("click", () => openChainShoppingList(card.dataset.openChain)));
+    card.addEventListener("click", () => {
+      const row = results.find(r => r.branch.kedja === card.dataset.openChain);
+      openChainShoppingList(card.dataset.openChain, row?.branch || null);
+    }));
   // "vald butik" - the chain actually in use right now, not necessarily the
   // cheapest one shown above, so this reflects what the user would really
   // save with the choice they've already made.
@@ -1420,7 +1511,7 @@ function renderBasket() {
   $("shoppingComplete").hidden = !(shoppingItems.length && completed === shoppingItems.length);
   renderAttribution(shoppingItems);
   renderStoreComparison(selected); renderStoreComparison(selected, "basketStoreCompare"); renderPantry();
-  document.querySelectorAll("[data-week-store]").forEach(button => button.classList.toggle("active", button.dataset.weekStore === state.butik));
+  renderWeekStoreTabs();
   updateWeekStoreStatus();
   // Fed the exact same selected/shoppingItems/total this function just
   // computed - the overview and the full page below it are two views onto
@@ -1448,9 +1539,39 @@ function switchWeekStore(chain) {
   renderCampaignSection();
   syncSettingsInputs();
 }
-document.querySelectorAll("[data-week-store]").forEach(button => button.addEventListener("click", () => switchWeekStore(button.dataset.weekStore)));
 
-const VALID_CHAINS = ["ICA", "Willys", "Hemköp", "Coop"];
+// Every chain we actually have a nearby store for, in a stable order. Built
+// from the store lookup rather than hardcoded: City Gross was invisible in
+// the week view for exactly as long as this was a fixed list, even once we
+// held four thousand of its prices. A chain added to the backend now appears
+// here on its own.
+function availableChains() {
+  const fromStores = [...new Set(nearbyBranches().map(branch => branch.kedja))].filter(Boolean);
+  return fromStores.sort((a, b) => a.localeCompare(b, "sv"));
+}
+
+// Kept for the few places that ask "is this a real chain name" rather than
+// "which chains are nearby" - now derived, so it can never drift from the
+// store data.
+const VALID_CHAINS = ["ICA", "Willys", "Hemköp", "Coop", "City Gross"];
+
+function renderWeekStoreTabs() {
+  const tabs = document.querySelector('[aria-label="Byt butik för veckan"]');
+  if (!tabs) return;
+  const fixed = ["auto", "alla"];
+  const chains = availableChains();
+  const wanted = [...fixed, ...chains];
+  const current = [...tabs.querySelectorAll("[data-week-store]")].map(b => b.dataset.weekStore);
+  if (current.join("|") !== wanted.join("|")) {
+    tabs.innerHTML = wanted.map(value =>
+      `<button type="button" data-week-store="${escapeHtml(value)}">${escapeHtml(value === "auto" ? "Auto" : value === "alla" ? "Alla" : value)}</button>`
+    ).join("");
+    tabs.querySelectorAll("[data-week-store]").forEach(button =>
+      button.addEventListener("click", () => switchWeekStore(button.dataset.weekStore)));
+  }
+  tabs.querySelectorAll("[data-week-store]").forEach(button =>
+    button.classList.toggle("active", button.dataset.weekStore === state.butik));
+}
 // Matches the backend's MATJAKT_MAX_SCRAPES (production runs 2) - one item
 // per request, up to this many in flight at once via a small worker pool
 // below. One item per request (not several bundled into one) because a

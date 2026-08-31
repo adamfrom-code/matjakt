@@ -125,6 +125,11 @@ AXFOOD_STORE_LIST_URL = {"Willys": "https://www.willys.se/axfood/rest/v1/store",
 STORE_LIST_CACHE_TTL_SECONDS = 86400
 ICA_STORE_LIST_TTL_SECONDS = 3600
 COOP_STORE_SEARCH_TTL_SECONDS = 86400
+# How long a CLIENT may reuse a store list. Deliberately short and unrelated
+# to the server-side cache above it: the payload is tiny, and a stale list is
+# a user standing outside a shop that is not there.
+STORE_LIST_RESPONSE_CACHE_SECONDS = 900
+
 NEARBY_STORE_LIMIT = 12
 NEARBY_STORE_RADIUS_KM = 60
 # Whole-result cache for nearby_stores() itself (see its docstring) - a
@@ -501,6 +506,30 @@ def fetch_citygross_stores():
     return stores
 
 
+def _limit_keeping_every_chain(stores, limit=None):
+    """Caps the store list without letting one dense chain crowd out another.
+
+    A plain distance sort truncated to 12 dropped City Gross entirely for
+    Gävle: five Coop branches inside 2 km pushed out the only City Gross
+    store at ~3 km - a chain Matjakt holds over ten thousand real prices for.
+    Five branches of the same chain are not more useful to a shopper than one
+    branch of a chain they could actually compare against.
+
+    So: every chain gets its nearest branch first, then the remaining slots
+    are filled by distance as before. Input must already be distance-sorted."""
+    limit = NEARBY_STORE_LIMIT if limit is None else limit
+    first_per_chain, rest, seen = [], [], set()
+    for store in stores:
+        chain = store.get("kedja")
+        if chain in seen:
+            rest.append(store)
+        else:
+            seen.add(chain)
+            first_per_chain.append(store)
+    kept = first_per_chain[:limit] + rest[:max(0, limit - len(first_per_chain))]
+    return sorted(kept, key=lambda store: store["avstandKm"])
+
+
 def _citygross_stores_or_empty():
     """One chain's store lookup must never be able to take down the others.
 
@@ -567,7 +596,7 @@ def _compute_nearby_stores(zip_code):
                 distance = round(haversine_km(place["lat"], place["lon"], store["lat"], store["lon"]), 1)
                 if distance <= NEARBY_STORE_RADIUS_KM:
                     nearby.append({**store, "avstandKm": distance, "primatKey": ""})
-        return sorted(nearby, key=lambda s: s["avstandKm"])[:NEARBY_STORE_LIMIT]
+        return _limit_keeping_every_chain(sorted(nearby, key=lambda s: s["avstandKm"]))
 
     if not place:
         return []
@@ -602,7 +631,7 @@ def _compute_nearby_stores(zip_code):
     for store in candidates:
         store["avstandKm"] = round(haversine_km(lat, lon, store["lat"], store["lon"]), 1)
     nearby = sorted((s for s in candidates if s["avstandKm"] <= NEARBY_STORE_RADIUS_KM), key=lambda s: s["avstandKm"])
-    return nearby[:NEARBY_STORE_LIMIT]
+    return _limit_keeping_every_chain(nearby)
 
 
 def parse_ica_products(page, query, zip_code):
@@ -1318,7 +1347,14 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": "Ange ett giltigt postnummer (5 siffror)"})
                 return
             try:
-                self.send_json(200, {"butiker": nearby_stores(zip_code)}, cache_seconds=STORE_LIST_CACHE_TTL_SECONDS)
+                # The SERVER keeps its day-long cache - that is where the
+                # expensive geocoding and store lookups are. The RESPONSE
+                # must not, though: a 24h Cache-Control meant a browser kept
+                # serving a day-old store list, so a chain we started
+                # carrying (City Gross) stayed invisible for a day and a user
+                # who moved kept seeing the old town's shops.
+                self.send_json(200, {"butiker": nearby_stores(zip_code)},
+                               cache_seconds=STORE_LIST_RESPONSE_CACHE_SECONDS)
             except Exception:
                 logger.exception("Failed to compute nearby stores for zip %s", zip_code)
                 self.send_json(502, {"error": "Kunde inte hitta butiker just nu"})

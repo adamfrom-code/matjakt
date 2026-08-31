@@ -207,3 +207,19 @@ button.campaign-deal{cursor:pointer;font:inherit}
 .chain-item-campaign { color: #b91c1c; font-weight: 600; font-size: .78rem; }
 .chain-item-was { text-decoration: line-through; color: var(--text-muted, #5b6470); font-size: .74rem; }
 .chain-item-compare { color: var(--text-muted, #5b6470); font-size: .72rem; }
+
+.store-compare-row-coverage { margin-left: .4rem; color: var(--text-muted, #5b6470); font-size: .72rem; font-variant-numeric: tabular-nums; }
+
+.store-compare-excluded { margin-top: .5rem; padding-top: .5rem; border-top: 1px solid rgba(255,255,255,.15); }
+.store-compare-excluded > small { display: block; margin-bottom: .3rem; opacity: .7; font-size: .74rem; }
+.store-compare-row.muted { opacity: .6; }
+
+/* The shop name must stay visible while scrolling a long list - a shopper
+   standing in one shop reading another shop's prices is this screen's worst
+   possible outcome. */
+.chain-list-sticky { position: sticky; top: 0; z-index: 5; display: flex; align-items: baseline;
+  justify-content: space-between; gap: .75rem; padding: .55rem .8rem; margin: 0 0 .6rem;
+  border-radius: 0 0 12px 12px; background: var(--primary, #14532d); color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+.chain-list-sticky strong { font-size: .95rem; }
+.chain-list-sticky span { font-size: .8rem; opacity: .9; font-variant-numeric: tabular-nums; white-space: nowrap; }
