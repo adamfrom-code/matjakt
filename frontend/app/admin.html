@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Matjakt · Prisdatabas</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f6f7f9; --surface:#fff; --text:#14181f; --muted:#5b6470; --line:#e3e6ea; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14181f; --surface:#1d222b; --text:#eef1f5; --muted:#98a2b3; --line:#2c333e; } }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:1.5rem 1rem 4rem; background:var(--bg); color:var(--text);
+         font:15px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size:1.3rem; margin:0 0 .3rem; }
+  .sub { color:var(--muted); margin:0 0 1.4rem; font-size:.88rem; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:1rem; margin-bottom:1rem; }
+  label { display:block; font-weight:600; font-size:.82rem; margin-bottom:.3rem; }
+  input[type=password] { width:100%; max-width:380px; padding:.55rem .7rem; border:1px solid var(--line);
+        border-radius:9px; background:var(--bg); color:var(--text); font:inherit; }
+  button { font:inherit; font-weight:600; padding:.5rem .9rem; border-radius:9px; border:1px solid var(--line);
+           background:var(--surface); color:var(--text); cursor:pointer; }
+  button.primary { background:#15803d; border-color:#15803d; color:#fff; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .row { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
+  table { width:100%; border-collapse:collapse; font-size:.85rem; }
+  th, td { text-align:left; padding:.5rem .55rem; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--muted); font-size:.76rem; text-transform:uppercase; letter-spacing:.03em; }
+  td.wrap { white-space:normal; min-width:15rem; color:var(--muted); font-size:.8rem; }
+  .scroll { overflow-x:auto; }
+  .pill { display:inline-block; padding:.12rem .5rem; border-radius:999px; font-size:.74rem; font-weight:600; }
+  .ok { background:#dcfce7; color:#166534; } .warn { background:#fef3c7; color:#854d0e; }
+  .bad { background:#fee2e2; color:#991b1b; } .off { background:#e5e7eb; color:#374151; }
+  @media (prefers-color-scheme: dark) {
+    .ok{background:#14532d;color:#bbf7d0}.warn{background:#713f12;color:#fde68a}
+    .bad{background:#7f1d1d;color:#fecaca}.off{background:#374151;color:#d1d5db}
+  }
+  .note { color:var(--muted); font-size:.8rem; margin:.5rem 0 0; }
+  progress { width:100%; height:.55rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Matjakt · Prisdatabas</h1>
+  <p class="sub">Providerstatus, import och nattjobb. Kräver admin-token.</p>
+
+  <div class="card" id="authCard">
+    <label for="token">Admin-token</label>
+    <div class="row">
+      <input type="password" id="token" autocomplete="off" placeholder="MATJAKT_ADMIN_TOKEN">
+      <button class="primary" id="connect">Anslut</button>
+    </div>
+    <p class="note">
+      Token hålls bara i minnet i den här fliken. Den sparas aldrig i localStorage
+      och följer inte med en omladdning &mdash; en admin-nyckel som ligger kvar på
+      disken i en webbläsare är en nyckel som läcker.
+    </p>
+    <p class="note" id="authError" style="color:#b91c1c"></p>
+  </div>
+
+  <div id="panel" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <strong>Pågående import</strong>
+        <button id="refresh">Uppdatera</button>
+      </div>
+      <div id="importStatus" class="note">—</div>
+      <progress id="importProgress" hidden max="100" value="0"></progress>
+    </div>
+
+    <div class="card scroll">
+      <strong>Kedjor</strong>
+      <table id="chains">
+        <thead><tr>
+          <th>Kedja</th><th>Status</th><th>Produkter</th><th>Priser</th>
+          <th>GTIN</th><th>Bild</th><th>Kategori</th>
+          <th>Senaste lyckade</th><th>Senaste försök</th><th>Nästa nattkörning</th><th>Åtgärd</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="chainNotes"></div>
+    </div>
+
+    <div class="card">
+      <strong>Nattjobb</strong>
+      <div id="scheduler" class="note">—</div>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+const API = document.querySelector('meta[name="matjakt-api-url"]')?.content?.trim() || "/api";
+// In memory only, deliberately - see the note in the markup.
+let token = "";
+let timer = null;
+
+const $ = id => document.getElementById(id);
+const esc = value => String(value ?? "").replace(/[&<>"']/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function ago(seconds) {
+  if (seconds == null) return "—";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min sedan`;
+  const hours = Math.round(minutes / 60);
+  return hours < 48 ? `${hours} h sedan` : `${Math.round(hours / 24)} dygn sedan`;
+}
+
+function when(value) {
+  return value ? new Date(value * 1000).toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" }) : "—";
+}
+
+// Status is a claim about whether we can collect, not about whether the data
+// is good - a blocked chain can still be serving a perfectly good import from
+// two days ago, so the two are shown side by side rather than merged.
+const STATUS_CLASS = {
+  working: "ok",
+  working_but_unreliable: "warn",
+  working_but_rate_limited: "warn",
+  blocked_requires_vendor_credential: "bad",
+  not_available_no_public_prices: "off",
+};
+
+async function call(path, options = {}) {
+  const response = await fetch(`${API}${path}`, {
+    ...options,
+    headers: { "X-Admin-Token": token, "Content-Type": "application/json", ...(options.headers || {}) },
+  });
+  if (response.status === 403) throw new Error("Fel admin-token");
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+async function refresh() {
+  const data = await call("/admin/grocery-import");
+  renderImport(data.import);
+  renderChains(data.providers, data.scheduler);
+  renderScheduler(data.scheduler);
+}
+
+function renderImport(state) {
+  const busy = state.running;
+  if (busy) {
+    const done = state.categoriesDone, total = state.categoriesTotal;
+    $("importProgress").hidden = !total;
+    $("importProgress").max = total || 100;
+    $("importProgress").value = done || 0;
+    $("importStatus").innerHTML =
+      `<strong>${esc(state.chain)}</strong> kör &mdash; ${done}/${total || "?"} kategorier, ` +
+      `${state.productsSaved} produkter sparade, ${Math.round(state.elapsedSeconds || 0)} s.<br>` +
+      `<span style="color:var(--muted)">${esc(state.currentCategory || "")}</span>`;
+  } else {
+    $("importProgress").hidden = true;
+    $("importStatus").textContent = state.status === "idle"
+      ? "Ingen import kör."
+      : `Senaste: ${state.chain} — ${state.status}, ${state.productsSaved} produkter` +
+        (state.message ? ` (${state.message})` : "");
+  }
+  document.querySelectorAll("[data-import]").forEach(button => { button.disabled = busy; });
+}
+
+function renderChains(providers, scheduler) {
+  const next = Object.fromEntries((scheduler.schedule || []).map(entry => [entry.chain, entry]));
+  $("chains").querySelector("tbody").innerHTML = providers.map(provider => {
+    const nightly = next[provider.chain];
+    const blocked = scheduler.notScheduled?.[provider.chain];
+    const action = provider.collectable || provider.chain === "ICA"
+      ? `<button data-import="${esc(provider.chain)}">${provider.chain === "ICA" ? "Uppdatera manuellt" : "Starta import"}</button>`
+      : "—";
+    const last = provider.lastRun, success = provider.lastSuccessfulRun;
+    return `<tr>
+      <td><strong>${esc(provider.chain)}</strong></td>
+      <td><span class="pill ${STATUS_CLASS[provider.status] || "off"}">${esc(provider.status)}</span></td>
+      <td>${provider.products}</td>
+      <td>${provider.prices}</td>
+      <td>${provider.gtinPercent}%</td>
+      <td>${provider.imagePercent}%</td>
+      <td>${provider.categoryPercent}%</td>
+      <td>${success ? when(success.finishedAt) : "—"}</td>
+      <td>${last ? `${esc(last.status)} · ${when(last.finishedAt || last.startedAt)}` : "—"}</td>
+      <td>${nightly ? esc(nightly.time) : `<span style="color:var(--muted)">ingen</span>`}</td>
+      <td>${action}</td>
+    </tr>${last?.errorMessage ? `<tr><td colspan="11" class="wrap">⚠ ${esc(last.errorMessage)}</td></tr>` : ""}
+    ${blocked ? `<tr><td colspan="11" class="wrap">Ingen nattkörning: ${esc(blocked)}</td></tr>` : ""}`;
+  }).join("");
+
+  $("chainNotes").innerHTML = providers
+    .map(provider => `<p class="note"><strong>${esc(provider.chain)}:</strong> ${esc(provider.note)}</p>`)
+    .join("");
+
+  document.querySelectorAll("[data-import]").forEach(button =>
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        const result = await call("/admin/grocery-import", {
+          method: "POST", body: JSON.stringify({ chain: button.dataset.import }),
+        });
+        // "already_running" is not an error - one import at a time is the
+        // design, so say so plainly instead of showing a failure.
+        if (!result.started) alert(result.reason === "already_running"
+          ? "En import kör redan. Bara en åt gången."
+          : `Kunde inte starta: ${result.reason}`);
+        await refresh();
+      } catch (error) {
+        alert(error.message);
+        button.disabled = false;
+      }
+    }));
+}
+
+function renderScheduler(scheduler) {
+  const rows = (scheduler.schedule || [])
+    .map(entry => `${esc(entry.chain)} kl. ${esc(entry.time)} (nästa ${when(Date.parse(entry.nextRunAt) / 1000)})`)
+    .join("<br>");
+  $("scheduler").innerHTML =
+    `<span class="pill ${scheduler.enabled ? "ok" : "off"}">${scheduler.enabled ? "på" : "av"}</span> ` +
+    `Tidszon ${esc(scheduler.timezone)}.<br>${rows || "Inget schema."}` +
+    `<p class="note">Slås på med <code>MATJAKT_GROCERY_SCHEDULE_ENABLED=1</code>, ` +
+    `tider via <code>MATJAKT_GROCERY_SCHEDULE</code>.</p>`;
+}
+
+$("connect").addEventListener("click", async () => {
+  token = $("token").value.trim();
+  $("authError").textContent = "";
+  try {
+    await refresh();
+    $("authCard").hidden = true;
+    $("panel").hidden = false;
+    // Poll while an import is running so progress is actually visible.
+    timer = setInterval(() => refresh().catch(() => {}), 5000);
+  } catch (error) {
+    token = "";
+    $("authError").textContent = error.message;
+  }
+});
+$("token").addEventListener("keydown", event => { if (event.key === "Enter") $("connect").click(); });
+$("refresh").addEventListener("click", () => refresh().catch(error => alert(error.message)));
+window.addEventListener("beforeunload", () => clearInterval(timer));
+</script>
+</body>
+</html>

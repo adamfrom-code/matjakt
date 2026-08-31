@@ -39,6 +39,18 @@ DEFAULT_STORES = {
     "City Gross": "3209",  # City Gross Gävle (storeNumber, not id/siteId)
 }
 
+# ICA can be imported, but ONLY when a person asks for it. Repeated automatic
+# fetching trips an AWS WAF challenge, which we do not attempt to solve or
+# evade, so ICA is deliberately absent from DEFAULT_STORES (and therefore
+# from anything the scheduler can reach) and lives here instead. A run is
+# expected to be challenged partway through; the partial import is kept, and
+# the previous prices are never deleted.
+MANUAL_ONLY_STORES = {
+    "ICA": "1003987",      # Maxi ICA Stormarknad Gävle
+}
+
+ALL_STORES = {**DEFAULT_STORES, **MANUAL_ONLY_STORES}
+
 _state = {
     "running": False,
     "chain": None,
@@ -69,6 +81,9 @@ def _set(**fields):
 
 
 def _provider_for(chain: str):
+    if chain == "ICA":
+        from .providers.ica import IcaProvider
+        return IcaProvider()
     if chain == "Willys":
         from .providers.willys import WillysProvider
         return WillysProvider()
@@ -85,6 +100,10 @@ def start(chain: str, store_id: str | None = None, limit_per_category: int | Non
     """Starts an import. Returns immediately; poll status() for progress."""
     with _lock:
         if _state["running"]:
+            # One import at a time across ALL chains, not one per chain. Two
+            # concurrent walks would write to the same SQLite file and would
+            # also double our outbound request rate; the jobs are minutes
+            # apart by design, so queuing is not a real cost.
             return {"started": False, "reason": "already_running", "state": dict(_state)}
         _state.update(running=True, chain=chain, startedAt=time.time(), finishedAt=None,
                       categoriesDone=0, categoriesTotal=0, currentCategory=None,
@@ -99,7 +118,7 @@ def start(chain: str, store_id: str | None = None, limit_per_category: int | Non
 def _run(chain: str, store_id: str | None, limit_per_category: int | None):
     try:
         provider = _provider_for(chain)
-        store_id = store_id or DEFAULT_STORES.get(chain)
+        store_id = store_id or ALL_STORES.get(chain)
         if not store_id:
             raise ValueError(f"Ingen butik angiven för {chain!r}")
 

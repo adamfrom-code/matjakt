@@ -1471,9 +1471,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(403, {"error": "Admin-token krävs"})
                 return
             chain = (payload or {}).get("chain")
-            if chain not in grocery_importer.DEFAULT_STORES:
+            # ALL_STORES, not DEFAULT_STORES: an admin may refresh ICA by
+            # hand. The scheduler still cannot reach it (see importer's
+            # MANUAL_ONLY_STORES), which is the distinction that matters.
+            if chain not in grocery_importer.ALL_STORES:
                 self.send_json(400, {"error": f"Okänd kedja. Välj en av "
-                                              f"{sorted(grocery_importer.DEFAULT_STORES)}"})
+                                              f"{sorted(grocery_importer.ALL_STORES)}"})
                 return
             self.send_json(200, grocery_importer.start(
                 chain, store_id=(payload or {}).get("store"),
@@ -1774,6 +1777,9 @@ if __name__ == "__main__":
     # the 1-3s Chromium cold-start cost.
     for _ in range(MAX_CONCURRENT_SCRAPES):
         _scrape_executor.submit(get_shared_browser)
+    # Off unless MATJAKT_GROCERY_SCHEDULE_ENABLED is set, so a local dev run
+    # never starts fetching from three chains on its own.
+    GROCERY_SCHEDULER.start()
     try:
         ThreadingHTTPServer((HOST, PORT), ApiHandler).serve_forever()
     finally:
