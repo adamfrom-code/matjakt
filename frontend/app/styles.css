@@ -232,3 +232,27 @@ button.campaign-deal{cursor:pointer;font:inherit}
    person actually chooses on. */
 .plan-card-highlight { margin: .35rem 0 0; font-size: .82rem; font-weight: 600; color: var(--primary, #14532d); }
 @media (prefers-color-scheme: dark) { .plan-card-highlight { color: #86efac; } }
+
+/* --- Recipe page: filter row and shelves -------------------------------- */
+.recipe-tag-filters { display: flex; gap: .4rem; overflow-x: auto; padding: 0 0 .5rem;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.recipe-tag-filters::-webkit-scrollbar { display: none; }
+.recipe-tag { flex: 0 0 auto; padding: .4rem .8rem; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line, #e3e6ea); background: var(--surface, #fff);
+  color: var(--text, #14181f); font: inherit; font-size: .82rem; white-space: nowrap; }
+.recipe-tag.active { background: var(--primary, #14532d); border-color: var(--primary, #14532d); color: #fff; }
+
+.recipe-shelf { margin: 0 0 1.4rem; }
+.recipe-shelf h2 { font-size: 1.02rem; margin: 0 0 .55rem; }
+/* Horizontal shelves: a phone shows three or four cards and the rest is a
+   swipe away, which is how a person browses food. */
+.recipe-shelf-row { display: flex; gap: .6rem; overflow-x: auto; padding-bottom: .3rem;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.recipe-shelf-row::-webkit-scrollbar { display: none; }
+.recipe-shelf-card { flex: 0 0 148px; display: flex; flex-direction: column; gap: .3rem;
+  padding: 0 0 .6rem; border: none; background: var(--surface, #fff); border-radius: 14px;
+  overflow: hidden; text-align: left; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+.recipe-shelf-card strong { font-size: .86rem; padding: 0 .6rem; line-height: 1.25; }
+.recipe-shelf-card small { font-size: .75rem; padding: 0 .6rem; color: var(--text-muted, #5b6470); }
+.recipe-shelf-photo, .recipe-shelf-photo img { display: block; width: 100%; height: 100px; object-fit: cover; }
+@media (min-width: 900px) { .recipe-shelf-card { flex-basis: 190px; } .recipe-shelf-photo, .recipe-shelf-photo img { height: 128px; } }

@@ -32,7 +32,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=38">
+  <link rel="stylesheet" href="styles.css?v=39">
 </head>
 <body>
   <div class="phone-shell">
@@ -195,8 +195,14 @@
       <section class="screen recipes-library-screen" aria-labelledby="recipesHeading">
         <header class="screen-header"><h1 id="recipesHeading">Recept</h1></header>
         <div class="recipe-search"><label class="sr-only" for="recipeSearch">Sök recept</label><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="recipeSearch" type="search" placeholder="Sök recept eller ingrediens" autocomplete="off"></div>
-        <div class="recipe-filters"><select id="categoryFilter" aria-label="Kategori"><option value="alla">Alla kategorier</option><option value="Vegetarisk">Vegetariskt</option><option value="Fisk">Fisk</option><option value="Familjefavorit">Familjefavorit</option><option value="Snabbt & enkelt">Snabbt & enkelt</option></select><select id="timeFilter" aria-label="Tid"><option value="0">Alla tider</option><option value="30">Max 30 min</option><option value="20">Max 20 min</option></select><label class="favorite-filter"><input id="favoriteFilter" type="checkbox"> Favoriter</label></div>
-        <div class="live-products" id="liveProducts"></div><p class="section-help" id="menuSummary"></p><div class="recipe-scroll" id="recipeScroll"></div>
+        <div class="recipe-tag-filters" id="recipeTagFilters" role="group" aria-label="Filtrera recept"></div>
+        <div class="recipe-filters"><select id="timeFilter" aria-label="Tid"><option value="0">Alla tider</option><option value="30">Max 30 min</option><option value="20">Max 20 min</option></select><select id="proteinFilter" aria-label="Protein"><option value="0">Allt protein</option><option value="25">Minst 25 g</option><option value="35">Minst 35 g</option></select><select id="kcalFilter" aria-label="Kalorier"><option value="0">Alla kalorier</option><option value="500">Max 500 kcal</option><option value="700">Max 700 kcal</option></select><label class="favorite-filter"><input id="favoriteFilter" type="checkbox"> Favoriter</label></div>
+        <div class="live-products" id="liveProducts"></div><p class="section-help" id="menuSummary"></p>
+        <!-- Shelves when nothing is filtered, a flat result list when
+             something is. Browsing and searching are different activities and
+             the page should not pretend otherwise. -->
+        <div class="recipe-shelves" id="recipeShelves"></div>
+        <div class="recipe-scroll" id="recipeScroll"></div>
       </section>
 
       <section class="screen shopping-screen" aria-labelledby="shoppingTitle">
@@ -443,6 +449,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=63"></script>
+  <script type="module" src="app.js?v=64"></script>
 </body>
 </html>

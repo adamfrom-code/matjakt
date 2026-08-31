@@ -8,7 +8,7 @@ import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProte
 import { campaignsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
 import { changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, startTrial, storeToken, verifyEmail } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
-import { RECIPE_SHELVES, TAG_LABELS, hasTag, loadRecipes, matchesAllTags } from "./src/data/recipes.js";
+import { TAG_LABELS, hasTag, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
 
 // The recipe bank is DATA, loaded from data/recipes.json - see
 // src/data/recipes.js. It used to be two hardcoded arrays right here, which
@@ -79,7 +79,7 @@ function removeFromWeekPlan(id) { state.weekPlan = state.weekPlan.filter(existin
 // swapping "this day" rather than clearing and re-picking the week.
 function swapWeekPlanDay(dayIndex, newId) { state.weekPlan = state.weekPlan.map((id, index) => index === dayIndex ? newId : id); state.valda = new Set(state.weekPlan); }
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, dbChainTotals: {}, dbComparison: null, dbPricedAt: null, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
+const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
   // The week's recipe ids in day order (index 0 = Måndag) - the actual
   // source of truth for "which day has which recipe", now that a day swap
   // has to replace exactly one day's recipe in place. state.valda (a Set)
@@ -557,10 +557,75 @@ function chooseMenu(shouldScroll = true) {
   }
 }
 
+// The filter row. Order matters: the ones people reach for most (Barn,
+// snabbt, billigt) sit first, so the useful filters are not behind a scroll
+// on a phone.
+const RECIPE_FILTER_TAGS = ["barn", "snabbt", "billigt", "proteinrikt",
+                            "vegetariskt", "fisk", "kyckling", "kott", "mealprep"];
+
+function renderRecipeTagFilters() {
+  const container = $("recipeTagFilters");
+  if (!container) return;
+  container.innerHTML = RECIPE_FILTER_TAGS.map(tag => {
+    const active = state.receptTaggar.has(tag);
+    return `<button type="button" class="recipe-tag ${active ? "active" : ""}" data-recipe-tag="${tag}" aria-pressed="${active}">${escapeHtml(TAG_LABELS[tag] || tag)}</button>`;
+  }).join("");
+  container.querySelectorAll("[data-recipe-tag]").forEach(button =>
+    button.addEventListener("click", () => {
+      const tag = button.dataset.recipeTag;
+      state.receptTaggar.has(tag) ? state.receptTaggar.delete(tag) : state.receptTaggar.add(tag);
+      renderRecipes();
+    }));
+}
+
+// True when the user is browsing rather than looking for something specific.
+// Shelves answer "what should we eat this week"; a flat list answers "show me
+// the quick vegetarian ones". Showing both at once would be noise.
+function recipeBrowsingMode() {
+  return !state.sokning.trim() && !state.receptTaggar.size && !state.maxTid
+    && !state.minProtein && !state.maxKcal && !state.baraFavoriter
+    && state.kategori === "alla";
+}
+
+async function syncRecipeShelves() {
+  if (state.hyllor.length) return;
+  state.hyllor = await loadShelves(12);
+  if (state.hyllor.length) renderRecipes();
+}
+
+function renderRecipeShelves() {
+  const container = $("recipeShelves");
+  if (!container) return;
+  if (!recipeBrowsingMode()) { container.innerHTML = ""; return; }
+  syncRecipeShelves();
+  container.innerHTML = state.hyllor.map(shelf => `
+    <section class="recipe-shelf">
+      <h2>${escapeHtml(shelf.title)}</h2>
+      <div class="recipe-shelf-row">${shelf.recipes.map(recipeShelfCard).join("")}</div>
+    </section>`).join("");
+  container.querySelectorAll("[data-shelf-recipe]").forEach(card =>
+    card.addEventListener("click", () => openRecipeTab(card.dataset.shelfRecipe)));
+}
+
+function recipeShelfCard(recipe) {
+  const time = recipe.tid ? `${recipe.tid} min` : "";
+  const kcal = recipe.kcal ? `${Math.round(recipe.kcal)} kcal` : "";
+  return `<button type="button" class="recipe-shelf-card" data-shelf-recipe="${escapeHtml(recipe.id)}">
+    <span class="recipe-shelf-photo">${recipePhoto(recipe)}</span>
+    <strong>${escapeHtml(recipe.namn)}</strong>
+    <small>${escapeHtml([time, kcal].filter(Boolean).join(" · "))}</small>
+  </button>`;
+}
+
 function renderRecipes() {
   const search = state.sokning.trim();
   const dietFilterActive = state.kost.kosttyp !== "" || state.kost.avoidAllergens.size > 0;
-  const recipes = filterRecipes(search ? [...localRecipesForUser(), ...(dietFilterActive ? [] : state.apiRecipes)] : availableRecipes(), search).filter(recipe => (state.kategori === "alla" || recipe.typ === state.kategori) && (!state.maxTid || recipe.tid <= state.maxTid) && (!state.baraFavoriter || state.favoriter.has(recipe.id)));
+  const recipes = filterRecipes(search ? [...localRecipesForUser(), ...(dietFilterActive ? [] : state.apiRecipes)] : availableRecipes(), search).filter(recipe => (state.kategori === "alla" || recipe.typ === state.kategori)
+      && (!state.maxTid || recipe.tid <= state.maxTid)
+      && (!state.minProtein || (recipe.protein || 0) >= state.minProtein)
+      && (!state.maxKcal || (recipe.kcal || 0) <= state.maxKcal)
+      && matchesAllTags(recipe, [...state.receptTaggar])
+      && (!state.baraFavoriter || state.favoriter.has(recipe.id)));
   const branch = selectedBranch();
   const premiumStoreAuto = hasPremium();
   const storeLabel = state.butik === "auto" ? `${branch?.namn || "ingen butik hittades"}${premiumStoreAuto ? " (lägst uppskattat)" : " (närmast)"}` : state.butik === "alla" ? "alla butiker" : `${branch?.namn || state.butik}`;
@@ -571,6 +636,12 @@ function renderRecipes() {
   const distanceText = Number.isFinite(branch?.avstandKm) ? ` och ligger ${branch.avstandKm.toFixed(1)} km bort` : "";
   $("locationHint").textContent = branch ? `${nearbyBranches().length} butiksprofiler jämförda${loading ? " (hämtar riktiga butiker nära dig...)" : ""} · ${branch.namn} ${premiumStoreAuto ? "har lägst uppskattat pris" : "ligger närmast"}${distanceText}.` : `Hittade inga inlästa butiker nära ${state.postnummer} ännu.`;
   $("menuSummary").textContent = search ? (dietFilterActive ? `${recipes.length} recept hittades. Externa recept visas inte när kost-/allergifilter är aktivt, eftersom de inte har kontrollerade allergiuppgifter.` : `${recipes.length} recept hittades. Externa recept kan vara på engelska och sakna svenska butikspriser.`) : `${plural(Math.min(state.middagar, recipes.length), "middag", "middagar")} för ${plural(state.personer, "person", "personer")} från ${storeLabel}. Priserna är uppskattningar.`;
+  renderRecipeTagFilters();
+  renderRecipeShelves();
+  // The flat list is hidden while browsing - the shelves ARE the list then.
+  const browsing = recipeBrowsingMode();
+  $("recipeScroll").hidden = browsing;
+  if (browsing) { $("menuSummary").textContent = ""; return; }
   $("recipeScroll").innerHTML = recipes.length ? recipes.map(recipe => {
     const selected = state.valda.has(recipe.id), expanded = state.expanded === recipe.id;
     const details = RECIPE_DETAILS[recipe.id] || recipe;
@@ -1791,8 +1862,12 @@ $("recipeSearch").addEventListener("input", e => {
     $("liveProducts").innerHTML = `<p class="live-loading">Livebutiken svarar inte just nu.</p>`;
   });
 });
-$("categoryFilter").addEventListener("change", e => { state.kategori = e.target.value; renderRecipes(); });
+// The category dropdown was replaced by the tag filter row - the tags are
+// the recipe bank's own vocabulary, so they cannot drift from what the
+// backend can actually filter on.
 $("timeFilter").addEventListener("change", e => { state.maxTid = Number(e.target.value); renderRecipes(); });
+$("proteinFilter").addEventListener("change", e => { state.minProtein = Number(e.target.value); renderRecipes(); });
+$("kcalFilter").addEventListener("change", e => { state.maxKcal = Number(e.target.value); renderRecipes(); });
 $("favoriteFilter").addEventListener("change", e => { state.baraFavoriter = e.target.checked; renderRecipes(); });
 function setView(view) { $("top").className = `app view-${view}`; document.querySelectorAll(".bottom-nav-item").forEach(item => item.classList.toggle("active", item.dataset.view === view)); window.scrollTo({ top: 0, behavior: "smooth" }); }
 document.querySelectorAll("[data-view]").forEach(item => item.addEventListener("click", () => setView(item.dataset.view)));

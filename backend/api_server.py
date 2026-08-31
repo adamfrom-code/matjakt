@@ -27,6 +27,7 @@ from services.billing import StripeError, cancel_subscription, create_checkout_s
 from services.email import MailError, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.grocery import api as grocery_api  # noqa: E402
+from services.recipes import api as recipes_api  # noqa: E402
 from services.grocery import importer as grocery_importer  # noqa: E402
 from services.grocery.scheduler import SCHEDULER as GROCERY_SCHEDULER  # noqa: E402
 from services.pricing import CHAIN_TO_PRIMAT, KeyValueCacheStore, OpenFoodFactsError, PRIMAT_ATTRIBUTION, PriceCacheStore, PrimatError, image_url_for_gtin, nearby_stores as primat_nearby_stores, primat_account_status, resolve_stores as primat_resolve_stores, search_products as primat_search_products, to_matjakt_product as primat_to_matjakt_product
@@ -1404,6 +1405,47 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(200, {"state": json.loads(stored) if stored else None})
             except AccountError as error:
                 self.send_json(401, {"error": str(error)})
+            return
+        if parsed.path == "/api/recipes/shelves":
+            # Every shelf the recipe page draws, in ONE request. Nine
+            # requests on a phone is nine chances to be slow, and the page
+            # shows them together anyway.
+            try:
+                per_shelf = min(max(int(parse_qs(parsed.query).get("perShelf", ["12"])[0]), 1), 40)
+            except ValueError:
+                per_shelf = 12
+            self.send_json(200, recipes_api.shelves(per_shelf), cache_seconds=120)
+            return
+        if parsed.path == "/api/recipes":
+            params = parse_qs(parsed.query)
+
+            def number(name):
+                raw = params.get(name, [""])[0]
+                try:
+                    return int(raw) if raw else None
+                except ValueError:
+                    return None
+
+            # Tags come as a repeated or comma-separated parameter and are
+            # ANDed - "barn" plus "snabbt" means both, which is what a filter
+            # row of toggles means to a person using it.
+            tags = [tag for value in params.get("tag", []) for tag in value.split(",") if tag]
+            self.send_json(200, recipes_api.search(
+                tags=tags or None,
+                max_time=number("maxTime"), min_protein=number("minProtein"),
+                max_kcal=number("maxKcal"),
+                query=clean_text(params.get("q", [""])[0]) or None,
+                limit=number("limit") or 60, offset=number("offset") or 0,
+            ), cache_seconds=120)
+            return
+        recipes_prefix = "/api/recipes/"
+        if parsed.path.startswith(recipes_prefix):
+            recipe_id = clean_text(unquote(parsed.path[len(recipes_prefix):]))
+            recipe = recipes_api.get(recipe_id) if recipe_id else None
+            if not recipe:
+                self.send_json(404, {"error": "Receptet finns inte"})
+                return
+            self.send_json(200, {"recipe": recipe}, cache_seconds=300)
             return
         if parsed.path == "/api/v1/recipes/search":
             query = clean_text(parse_qs(parsed.query).get("q", [""])[0])
