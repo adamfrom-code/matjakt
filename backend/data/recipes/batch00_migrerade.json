@@ -68,13 +68,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/flaskfilerotmos.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Svinem%C3%B8rbrad_med_bacon_og_rodfrugter_(5018776216).jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "cyclonebill from Copenhagen, Denmark",
-  "imageLicense": "CC BY-SA 2.0",
-  "imageAlt": "Baconlindad fläskfilé med rotsaker serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/11001292/pexels-photo-11001292.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/food-menu-restaurant-dinner-11001292/",
+  "imageCredit": "Sylwester Ficek",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Baconlindad fläskfilé med rotsaker upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "biffmedlok",
@@ -147,13 +147,8 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/biffmedlok.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Beef_medallion_topped_with_fried_onions.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Armineaghayan",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Biff med lökröra och potatismos serverad på tallrik",
-  "imageStatus": null
+  "imageAlt": "Biff med lökröra och potatismos",
+  "imageStatus": "needs_image"
  },
  {
   "id": "biffmatvetesallad",
@@ -226,13 +221,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/biffmatvetesallad.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Marinated_beef_steak_with_potato_vegetable_salad.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Len Rizzi (Photographer)",
-  "imageLicense": "Public domain",
-  "imageAlt": "Biffsallad med matvete och vitlök serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/15832878/pexels-photo-15832878.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/mixed-salad-on-a-tray-15832878/",
+  "imageCredit": "Dextar Studio ™",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Biffsallad med matvete och vitlök upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "biffwok",
@@ -306,13 +301,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/biffwok.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:2016-08-20_Stir_fried_beef_slices_with_celery_in_a_Beijing_Restaurant_anagoria.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Anagoria",
-  "imageLicense": "CC BY 3.0",
-  "imageAlt": "Biffwok med wokgrönsaker serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/27588091/pexels-photo-27588091.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/a-black-dish-with-meat-and-vegetables-on-top-27588091/",
+  "imageCredit": "Collab Media",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Biffwok med wokgrönsaker upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "butterchicken",
@@ -391,13 +386,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/butterchicken.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Butter_chicken_curry_of_Lawson.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "毒島みるく",
-  "imageLicense": "CC0",
-  "imageAlt": "Butter chicken med jasminris serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/10615283/pexels-photo-10615283.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/cooked-food-on-white-ceramic-plate-10615283/",
+  "imageCredit": "Alberta Studios",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Butter chicken med jasminris upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "bonbowlmatvete",
@@ -473,13 +468,13 @@
   "dietFlags": [
    "vegansk"
   ],
-  "image": "assets/recipes/bonbowlmatvete.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Mexican_Bean_%26_Cheese_Salad.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Siddharthagandhi26",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Bönbowl med matvete och salsa serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/8108069/pexels-photo-8108069.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+  "imageCredit": "MART  PRODUCTION",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Bönbowl med matvete och salsa upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "citronkyckling",
@@ -550,13 +545,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/citronkyckling.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Lemon_Brined_Roasted_Chicken.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Prayitno",
-  "imageLicense": "CC BY 2.0",
-  "imageAlt": "Citronkyckling med rostad potatis serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/10692533/pexels-photo-10692533.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/soup-with-lemon-10692533/",
+  "imageCredit": "Yang Hao",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Citronkyckling med rostad potatis upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "citronflaskfile",
@@ -629,13 +624,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/citronflaskfile.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Roast_pork_loin,_potatoes_(2585116058).jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Sara Goldsmith",
-  "imageLicense": "CC BY 2.0",
-  "imageAlt": "Citronmarinerad fläskfilé med matvete serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/11001292/pexels-photo-11001292.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/food-menu-restaurant-dinner-11001292/",
+  "imageCredit": "Sylwester Ficek",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Citronmarinerad fläskfilé med matvete upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "currykottfarsgryta",
@@ -706,13 +701,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/currykottfarsgryta.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Beef_curry_rice_001.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Ocdp",
-  "imageLicense": "CC0",
-  "imageAlt": "Currykryddad köttfärsgryta serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/29075345/pexels-photo-29075345.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/rustic-vegetable-stew-in-ceramic-bowl-29075345/",
+  "imageCredit": "Harry Tucker",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Currykryddad köttfärsgryta upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "fetagryta",
@@ -791,13 +786,13 @@
   "dietFlags": [
    "vegetarisk"
   ],
-  "image": "assets/recipes/fetagryta.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Shiro_wet.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Yonihahasis",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Fetagryta med kikärtor serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/33755318/pexels-photo-33755318.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/delicious-vegetable-stew-in-black-skillet-33755318/",
+  "imageCredit": "Anthony Rahayel",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Fetagryta med kikärtor upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "fiskgratang",
@@ -880,13 +875,13 @@
   "dietFlags": [
    "pescetarisk"
   ],
-  "image": "assets/recipes/fiskgratang.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Shrimp_gratin_(4782471125).jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "pelican from Tokyo, Japan",
-  "imageLicense": "CC BY-SA 2.0",
-  "imageAlt": "Fiskgratäng med räkor och dill serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/2337842/pexels-photo-2337842.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/baked-lasagna-2337842/",
+  "imageCredit": "Vidal Balielo Jr.",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Fiskgratäng med räkor och dill upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "flaskcurrygryta",
@@ -953,13 +948,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/flaskcurrygryta.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Green_Curry_with_Crispy_Pulled_Pork_-_Eem.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "TurquoiseGoose",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Fläskcurrygryta med kokos serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/8024112/pexels-photo-8024112.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/a-stew-dish-in-macro-shot-photography-8024112/",
+  "imageCredit": "Mateusz Feliksik",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Fläskcurrygryta med kokos upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "flasktomatpasta",
@@ -1038,13 +1033,8 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/flasktomatpasta.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:04666_Polish_spaghetti_pasta_with_sauce_made_of_pork_meat,_tomatoes,_garlic_and_olive.JPG",
-  "imageSourceUrl": null,
-  "imageCredit": "Silar",
-  "imageLicense": "CC BY-SA 3.0",
-  "imageAlt": "Fläskfilé i tomatsås med pasta serverad på tallrik",
-  "imageStatus": null
+  "imageAlt": "Fläskfilé i tomatsås med pasta",
+  "imageStatus": "needs_image"
  },
  {
   "id": "flaskkarre",
@@ -1121,13 +1111,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/flaskkarre.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Roasted_Loin_of_Pork_(2287948470).jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Alpha from Melbourne, Australia",
-  "imageLicense": "CC BY-SA 2.0",
-  "imageAlt": "Fläskkarré med äppelmos och rödkål serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/7333166/pexels-photo-7333166.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/roasted-meat-over-a-wooden-tray-7333166/",
+  "imageCredit": "Evgeniy Alekseyev",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Fläskkarré med äppelmos och rödkål upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "halloumibowl",
@@ -1196,13 +1186,13 @@
   "dietFlags": [
    "vegetarisk"
   ],
-  "image": "assets/recipes/halloumibowl.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Grilled_Halloumi.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Hmioannou",
-  "imageLicense": "CC BY 3.0",
-  "imageAlt": "Halloumibowl med rostade grönsaker serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/8108069/pexels-photo-8108069.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+  "imageCredit": "MART  PRODUCTION",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Halloumibowl med rostade grönsaker upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "halloumicurry",
@@ -1271,13 +1261,13 @@
   "dietFlags": [
    "vegetarisk"
   ],
-  "image": "assets/recipes/halloumicurry.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Halloumi_Fries_-_The_Real_Pizza_Company_2026-03-30.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Andy Li",
-  "imageLicense": "CC0",
-  "imageAlt": "Halloumicurry med ris serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/10464100/pexels-photo-10464100.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/curry-rice-dish-in-a-plate-10464100/",
+  "imageCredit": "Robert Borges",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Halloumicurry med ris upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "halloumipasta",
@@ -1356,13 +1346,13 @@
   "dietFlags": [
    "vegetarisk"
   ],
-  "image": "assets/recipes/halloumipasta.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Fruit_Salad_with_Grilled_Halloumi_Cheese.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "روتانا",
-  "imageLicense": "CC BY 4.0",
-  "imageAlt": "Halloumipasta med tomat och basilika serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/15289961/pexels-photo-15289961.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/pasta-with-herbs-on-a-white-plate-15289961/",
+  "imageCredit": "komedia agentur",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Halloumipasta med tomat och basilika upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "biffgraddtimjan",
@@ -1435,13 +1425,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/biffgraddtimjan.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Roast_beef_with_gravy,_mashed_potato,_and_vegetables_-_Massachusetts.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Daderot",
-  "imageLicense": "CC0",
-  "imageAlt": "Helstekt biff med gräddsås och timjanpotatis serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/15307371/pexels-photo-15307371.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/a-person-holding-a-plated-dish-15307371/",
+  "imageCredit": "Nadin Sh",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Helstekt biff med gräddsås och timjanpotatis upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kalvschnitzel",
@@ -1521,13 +1511,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/kalvschnitzel.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Wiener_Schnitzel_at_Hotel_Dermuth.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "JIP",
-  "imageLicense": "CC BY-SA 3.0",
-  "imageAlt": "Kalvschnitzel med citron och kapris serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/33865567/pexels-photo-33865567.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/crispy-schnitzel-with-caramelized-onions-33865567/",
+  "imageCredit": "Zhang Thomas",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kalvschnitzel med citron och kapris upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kalvschnitzelmatvete",
@@ -1607,13 +1597,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/kalvschnitzelmatvete.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Food_Wiener_schnitzel.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Jan Helebrant",
-  "imageLicense": "CC0",
-  "imageAlt": "Kalvschnitzel med matvetesallad serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/33865567/pexels-photo-33865567.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/crispy-schnitzel-with-caramelized-onions-33865567/",
+  "imageCredit": "Zhang Thomas",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kalvschnitzel med matvetesallad upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kikartscurry",
@@ -1681,13 +1671,13 @@
   "dietFlags": [
    "vegansk"
   ],
-  "image": "assets/recipes/kikartscurry.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Curried_cauliflower_and_chickpea_stew.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Jim Reynolds from Cleveland, USA",
-  "imageLicense": "CC BY 2.0",
-  "imageAlt": "Kikärtscurry med ris serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/7364662/pexels-photo-7364662.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/cooked-food-on-the-table-7364662/",
+  "imageCredit": "Pranjall Kumar",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kikärtscurry med ris upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kikartssallad",
@@ -1767,13 +1757,13 @@
   "dietFlags": [
    "vegansk"
   ],
-  "image": "assets/recipes/kikartssallad.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:%D7%97%D7%95%D7%9E%D7%95%D7%A1_%D7%A2%D7%9D_%D7%A1%D7%9C%D7%98_%D7%99%D7%A9%D7%A8%D7%90%D7%9C%D7%99.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Vikingit",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Kikärtssallad med matvete serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/30488354/pexels-photo-30488354.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/mediterranean-chickpea-and-hummus-salad-dish-30488354/",
+  "imageCredit": "Sylwester Ficek",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kikärtssallad med matvete upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "korvgratang",
@@ -1849,13 +1839,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/korvgratang.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Baked_macaroni_and_cheese_1.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Martin",
-  "imageLicense": "CC BY 2.0",
-  "imageAlt": "Korvgratäng med pasta serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/32039641/pexels-photo-32039641.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/cheesy-vegetable-baked-casserole-in-white-dish-32039641/",
+  "imageCredit": "Sylwester Ficek",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Korvgratäng med pasta upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "korvstroganoff",
@@ -1924,13 +1914,8 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/korvstroganoff.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Beef_stroganoff_with_pasta.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "benketaro",
-  "imageLicense": "CC BY 2.0",
-  "imageAlt": "Korvstroganoff serverad på tallrik",
-  "imageStatus": null
+  "imageAlt": "Korvstroganoff",
+  "imageStatus": "needs_image"
  },
  {
   "id": "tofuwok",
@@ -2003,13 +1988,13 @@
   "dietFlags": [
    "vegansk"
   ],
-  "image": "assets/recipes/tofuwok.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Horka_Litinova_Panev_Tofu_Zlaty_Klas_2025.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Mojmir Churavy",
-  "imageLicense": "CC0",
-  "imageAlt": "Krispig tofuwok med sesam och soja serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/5848480/pexels-photo-5848480.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-photo-of-a-tofu-dish-5848480/",
+  "imageCredit": "Polina Tankilevitch",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Krispig tofuwok med sesam och soja upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kycklingmatvete",
@@ -2084,13 +2069,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/kycklingmatvete.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Roasted_chicken_with_cauliflower_broccoli_potatoes_rice_and_salad.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "HaJunkiyada",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Kryddig kycklingbowl med matvete serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/8108069/pexels-photo-8108069.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+  "imageCredit": "MART  PRODUCTION",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kryddig kycklingbowl med matvete upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "fiskpasta",
@@ -2160,13 +2145,13 @@
   "dietFlags": [
    "pescetarisk"
   ],
-  "image": "assets/recipes/fiskpasta.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Tilapia_with_cream_based_pasta,_vegetables,_and_mushrooms.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "HaJunkiyada",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Krämig fiskpasta serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/19287916/pexels-photo-19287916.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/delicious-dinner-with-fish-19287916/",
+  "imageCredit": "Filipp Romanovski",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Krämig fiskpasta upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "tomatsoppa",
@@ -2236,13 +2221,13 @@
   "dietFlags": [
    "vegetarisk"
   ],
-  "image": "assets/recipes/tomatsoppa.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Cream_of_Tomato_Soup.JPG",
-  "imageSourceUrl": null,
-  "imageCredit": "Miansari66",
-  "imageLicense": "CC0",
-  "imageAlt": "Krämig tomatsoppa serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/2421593/pexels-photo-2421593.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/white-ceramic-mug-with-soup-beside-spoon-2421593/",
+  "imageCredit": "Danijela Pantic Conic",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Krämig tomatsoppa upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kycklinggryta",
@@ -2311,13 +2296,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/kycklinggryta.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Creamy_Chicken_Curry.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Shrabee",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Kycklinggryta med ris serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/29075345/pexels-photo-29075345.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/rustic-vegetable-stew-in-ceramic-bowl-29075345/",
+  "imageCredit": "Harry Tucker",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kycklinggryta med ris upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kottfarssas",
@@ -2402,13 +2387,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/kottfarssas.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Spaghetti_Bolognese_Lokal_K.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Superbass",
-  "imageLicense": "CC BY-SA 3.0",
-  "imageAlt": "Köttfärssås med pasta serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/34822477/pexels-photo-34822477.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/delicious-pasta-with-bolognese-and-bell-peppers-34822477/",
+  "imageCredit": "SAMY PHOTOGRAPHY",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Köttfärssås med pasta upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "laxsallad",
@@ -2482,13 +2467,13 @@
   "dietFlags": [
    "pescetarisk"
   ],
-  "image": "assets/recipes/laxsallad.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:DZ6_1891_Seared_salmon_in_a_rich_brown_sauce_with_grilled_potatoes_fresh_greens_and_toasted_bread_garnished_with_dill.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "PattayaPatrol",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Laxsallad med matvete och dill serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/5633332/pexels-photo-5633332.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-shot-of-a-bowl-of-vegetable-salad-5633332/",
+  "imageCredit": "Ocko Geserick",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Laxsallad med matvete och dill upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "morotscurry",
@@ -2555,13 +2540,13 @@
   "dietFlags": [
    "vegansk"
   ],
-  "image": "assets/recipes/morotscurry.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Carrot_curry_and_rice_(8479175466).jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "pelican from Tokyo, Japan",
-  "imageLicense": "CC BY-SA 2.0",
-  "imageAlt": "Morotscurry med kikärtor serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/7111393/pexels-photo-7111393.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/yellow-and-green-vegetables-on-white-ceramic-plate-7111393/",
+  "imageCredit": "Piotr Arnoldes",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Morotscurry med kikärtor upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "pastagratang",
@@ -2632,13 +2617,13 @@
   "dietFlags": [
    "vegetarisk"
   ],
-  "image": "assets/recipes/pastagratang.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Baked_macaroni_and_cheese_close-up.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Scott Veg",
-  "imageLicense": "CC BY 2.0",
-  "imageAlt": "Pastagratäng med purjolök serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/31846718/pexels-photo-31846718.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/delicious-baked-penne-pasta-with-cheese-and-vegetables-31846718/",
+  "imageCredit": "PEEP THIS PHOTO",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Pastagratäng med purjolök upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "rotfruktsgratang",
@@ -2717,13 +2702,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/rotfruktsgratang.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Potatoes_au_gratin_by_sa.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "sa",
-  "imageLicense": "CC BY-SA 2.0",
-  "imageAlt": "Rotfruktsgratäng med rökt falukorv serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/2337842/pexels-photo-2337842.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/baked-lasagna-2337842/",
+  "imageCredit": "Vidal Balielo Jr.",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Rotfruktsgratäng med rökt falukorv upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "rakcurry",
@@ -2790,13 +2775,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/rakcurry.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Goa._Homemade_prawn_curry_with_boiled_Rice_and_Kismur..._IMG-20210120-WA0009.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Sharbelle Fernandez",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Räkcurry med kokos och ris serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/15059057/pexels-photo-15059057.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-photo-of-shrimp-curry-with-green-rice-15059057/",
+  "imageCredit": "Shameel mukkath",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Räkcurry med kokos och ris upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "raksallad",
@@ -2870,13 +2855,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/raksallad.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Shrimp_cream_salad_with_lemon_wedge.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "yomi yomi",
-  "imageLicense": "CC BY 2.0",
-  "imageAlt": "Räksallad med matvete serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/16313570/pexels-photo-16313570.png?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/healthy-salads-in-white-bowls-16313570/",
+  "imageCredit": "Sarah",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Räksallad med matvete upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "linssoppa",
@@ -2944,13 +2929,13 @@
   "dietFlags": [
    "vegansk"
   ],
-  "image": "assets/recipes/linssoppa.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Bowl_of_lentil_soup_with_green_and_red_lentils.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Whoisjohngalt",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Röd linssoppa serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/7160694/pexels-photo-7160694.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/a-flatlay-shot-of-a-bowl-of-soup-on-a-rustic-background-7160694/",
+  "imageCredit": "Teja J",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Röd linssoppa upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "scampi",
@@ -3021,13 +3006,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/scampi.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:DFC_4054_Garlic_chili_spaghetti_tossed_with_shrimp_fresh_parsley_and_vibrant_veggies_-_a_simple_savory_seafood_pasta_delight.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "PattayaPatrol",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Scampi pasta med vitlök och citron serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/1438672/pexels-photo-1438672.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/food-photography-of-pasta-1438672/",
+  "imageCredit": "Engin Akyurt",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Scampi pasta med vitlök och citron upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "sparrispastacitron",
@@ -3111,13 +3096,13 @@
   "dietFlags": [
    "vegetarisk"
   ],
-  "image": "assets/recipes/sparrispastacitron.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Pasta_with_tomatoes_and_asparagus_(4880297603).jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Vegan Feast Catering",
-  "imageLicense": "CC BY 2.0",
-  "imageAlt": "Sparrispasta med citron och vitlök serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/15289961/pexels-photo-15289961.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/pasta-with-herbs-on-a-white-plate-15289961/",
+  "imageCredit": "komedia agentur",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Sparrispasta med citron och vitlök upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "svartbonsbowl",
@@ -3192,13 +3177,13 @@
   "dietFlags": [
    "vegansk"
   ],
-  "image": "assets/recipes/svartbonsbowl.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Mexican_Salad_with_toasted_tortilla_strips.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "FranHogan",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Svartbönsbowl med matvete serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/8108069/pexels-photo-8108069.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+  "imageCredit": "MART  PRODUCTION",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Svartbönsbowl med matvete upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "tacobonor",
@@ -3261,13 +3246,13 @@
   "dietFlags": [
    "vegetarisk"
   ],
-  "image": "assets/recipes/tacobonor.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Mexican-Rice-and-Beans-3_(35582784560).jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Meg H",
-  "imageLicense": "CC BY 2.0",
-  "imageAlt": "Tacobowl med svarta bönor serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/8108069/pexels-photo-8108069.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+  "imageCredit": "MART  PRODUCTION",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Tacobowl med svarta bönor upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "tandoorikyckling",
@@ -3340,13 +3325,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/tandoorikyckling.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Chicken_Tandoori_full_(7843249604).jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Joegoaukfishcurry2",
-  "imageLicense": "CC BY-SA 2.0",
-  "imageAlt": "Tandoorikyckling med ris serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/30021858/pexels-photo-30021858.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/delicious-indian-meal-with-chicken-tikka-and-rice-30021858/",
+  "imageCredit": "Miguel González",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Tandoorikyckling med ris upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "teriyakilax",
@@ -3420,13 +3405,8 @@
   "dietFlags": [
    "pescetarisk"
   ],
-  "image": "assets/recipes/teriyakilax.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Grilled_Teriyaki_Salmon_(10900376705).jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Prayitno",
-  "imageLicense": "CC BY 2.0",
-  "imageAlt": "Teriyakilax med wokgrönsaker och ris serverad på tallrik",
-  "imageStatus": null
+  "imageAlt": "Teriyakilax med wokgrönsaker och ris",
+  "imageStatus": "needs_image"
  },
  {
   "id": "teriyakitofu",
@@ -3501,13 +3481,8 @@
   "dietFlags": [
    "vegansk"
   ],
-  "image": "assets/recipes/teriyakitofu.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Tofu_Steaks_-_Taro_2026-02-11.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Andy Li",
-  "imageLicense": "CC0",
-  "imageAlt": "Teriyakitofu med matvetesallad serverad på tallrik",
-  "imageStatus": null
+  "imageAlt": "Teriyakitofu med matvetesallad",
+  "imageStatus": "needs_image"
  },
  {
   "id": "tofucurry",
@@ -3576,13 +3551,13 @@
   "dietFlags": [
    "vegansk"
   ],
-  "image": "assets/recipes/tofucurry.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Tofu_curry_with_rice.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Anna Korcheva",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Tofucurry med kokos och ris serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/9218748/pexels-photo-9218748.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-photo-of-food-on-plate-9218748/",
+  "imageCredit": "Loren Castillo",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Tofucurry med kokos och ris upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "torskitomatsas",
@@ -3659,13 +3634,8 @@
   "dietFlags": [
    "pescetarisk"
   ],
-  "image": "assets/recipes/torskitomatsas.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Cod_in_tomato_sauce_(Oslo).jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "MOs810",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Torsk i tomatsås serverad på tallrik",
-  "imageStatus": null
+  "imageAlt": "Torsk i tomatsås",
+  "imageStatus": "needs_image"
  },
  {
   "id": "fetapasta",
@@ -3739,13 +3709,13 @@
   "dietFlags": [
    "vegetarisk"
   ],
-  "image": "assets/recipes/fetapasta.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Baked_feta_pasta.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Delicious Adventures",
-  "imageLicense": "CC BY 3.0",
-  "imageAlt": "Ugnsbakad fetaost-pasta serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/1438672/pexels-photo-1438672.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/food-photography-of-pasta-1438672/",
+  "imageCredit": "Engin Akyurt",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Ugnsbakad fetaost-pasta upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "lax",
@@ -3813,13 +3783,8 @@
   "dietFlags": [
    "pescetarisk"
   ],
-  "image": "assets/recipes/lax.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Baked_salmon_with_dill_and_lemon.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "MOs810",
-  "imageLicense": "CC BY-SA 3.0",
-  "imageAlt": "Ugnsbakad lax med potatis serverad på tallrik",
-  "imageStatus": null
+  "imageAlt": "Ugnsbakad lax med potatis",
+  "imageStatus": "needs_image"
  },
  {
   "id": "ugnstorsk",
@@ -3892,13 +3857,13 @@
   "dietFlags": [
    "pescetarisk"
   ],
-  "image": "assets/recipes/ugnstorsk.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Dorschfilet_Hafenliebe_Warnem%C3%BCnde.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Benreis",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Ugnsbakad torsk med sparris och citronsmör serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/11044248/pexels-photo-11044248.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/food-restaurant-fish-cooking-11044248/",
+  "imageCredit": "Sylwester Ficek",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Ugnsbakad torsk med sparris och citronsmör upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kycklingcouscous",
@@ -3972,13 +3937,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "image": "assets/recipes/kycklingcouscous.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Grilled_chicken_thighs_with_ptitim_and_Israeli_salad.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "HaJunkiyada",
-  "imageLicense": "CC BY-SA 4.0",
-  "imageAlt": "Ugnskyckling med couscous och paprika serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/6210955/pexels-photo-6210955.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/appetizing-roasted-chicken-with-vegetables-in-baking-dish-6210955/",
+  "imageCredit": "Tim Douglas",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Ugnskyckling med couscous och paprika upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "vegetarisklasagne",
@@ -4048,13 +4013,13 @@
   "dietFlags": [
    "vegetarisk"
   ],
-  "image": "assets/recipes/vegetarisklasagne.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Eggplant_Lasagna_(Vegitarian)_(1_of_6).jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Wheeler Cowperthwaite",
-  "imageLicense": "CC BY 2.0",
-  "imageAlt": "Vegetarisk lasagne serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/33312938/pexels-photo-33312938.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/delicious-homemade-lasagna-with-tomato-sauce-33312938/",
+  "imageCredit": "Büşra Yurt",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Vegetarisk lasagne upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "vegobolognese",
@@ -4124,13 +4089,13 @@
   "dietFlags": [
    "vegansk"
   ],
-  "image": "assets/recipes/vegobolognese.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Spaghetti_bolognese_-_Enzo%27s_2026-04-21.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Andy Li",
-  "imageLicense": "CC0",
-  "imageAlt": "Vegobolognese med spaghetti serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/5807018/pexels-photo-5807018.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/spaghetti-bolognese-on-plate-5807018/",
+  "imageCredit": "sascha Mayer",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Vegobolognese med spaghetti upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "vegofarsgryta",
@@ -4204,13 +4169,13 @@
   "dietFlags": [
    "vegansk"
   ],
-  "image": "assets/recipes/vegofarsgryta.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:NoBeef_mince_in_chipotle_burrito_-_A_Tribe_Called_Veg_2024-04-06.jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Andy Li",
-  "imageLicense": "CC0",
-  "imageAlt": "Vegofärsgryta med ris serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/5863612/pexels-photo-5863612.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+  "imageCredit": "Rachel Claire",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Vegofärsgryta med ris upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "zucchinipastafeta",
@@ -4289,12 +4254,12 @@
   "dietFlags": [
    "vegetarisk"
   ],
-  "image": "assets/recipes/zucchinipastafeta.jpg",
-  "imageSource": "https://commons.wikimedia.org/wiki/File:Pasta_with_tomato_sauce_and_zucchini_(50540732361).jpg",
-  "imageSourceUrl": null,
-  "imageCredit": "Julien Seguinot",
-  "imageLicense": "CC BY-SA 2.0",
-  "imageAlt": "Zucchinipasta med feta serverad på tallrik",
-  "imageStatus": null
+  "image": "https://images.pexels.com/photos/6327594/pexels-photo-6327594.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/pesto-pasta-on-ceramic-bowl-6327594/",
+  "imageCredit": "Tima Miroshnichenko",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Zucchinipasta med feta upplagd på tallrik",
+  "imageStatus": "ok"
  }
 ]

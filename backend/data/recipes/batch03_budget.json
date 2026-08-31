@@ -1,337 +1,1035 @@
 [
-  {
-    "id": "artsoppa-klassisk",
-    "name": "Ärtsoppa med fläsk",
-    "description": "Torsdagens klassiker. Gula ärtor som kokas mjuka med rimmat fläsk, timjan och senap vid sidan.",
-    "servings": 4, "prepTime": 10, "cookTime": 90, "difficulty": "lätt",
-    "nutrition": {"kcal": 470, "protein": 30, "carbs": 58, "fat": 12, "fiber": 20},
-    "ingredients": [
-      {"name": "Gula ärtor", "amount": 400, "unit": "g"},
-      {"name": "Rimmat sidfläsk", "amount": 300, "unit": "g"},
-      {"name": "Gul lök", "amount": 1, "unit": "st"},
-      {"name": "Morötter", "amount": 2, "unit": "st"},
-      {"name": "Timjan", "amount": 10, "unit": "g"},
-      {"name": "Senap", "amount": 40, "unit": "g"},
-      {"name": "Salt", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Blötlägg ärtorna i kallt vatten över natten och häll av vattnet.",
-      "Lägg ärtorna i en stor gryta med 1,5 liter vatten och koka upp. Skumma av ytan.",
-      "Lägg i fläsket i en bit tillsammans med hel lök, morötter och timjan.",
-      "Låt sjuda under lock i 75-90 minuter tills ärtorna faller sönder.",
-      "Lyft upp fläsket, skär det i bitar och lägg tillbaka. Smaka av med salt.",
-      "Servera soppan med senap vid sidan."
-    ],
-    "categories": ["Soppor", "Husmanskost"],
-    "tags": ["billigt", "husmanskost", "mealprep", "proteinrikt"],
-    "allergens": [], "dietFlags": ["blandkost"]
+ {
+  "id": "artsoppa-klassisk",
+  "name": "Ärtsoppa med fläsk",
+  "description": "Torsdagens klassiker. Gula ärtor som kokas mjuka med rimmat fläsk, timjan och senap vid sidan.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 90,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 470,
+   "protein": 30,
+   "carbs": 58,
+   "fat": 12,
+   "fiber": 20
   },
-  {
-    "id": "korvgryta-potatis",
-    "name": "Korvgryta med potatis och paprika",
-    "description": "Enkel gryta som blir bättre dagen efter. Falukorv, potatis och paprika i tomatsås.",
-    "servings": 4, "prepTime": 10, "cookTime": 25, "difficulty": "lätt",
-    "nutrition": {"kcal": 540, "protein": 22, "carbs": 54, "fat": 26, "fiber": 7},
-    "ingredients": [
-      {"name": "Falukorv", "amount": 400, "unit": "g"},
-      {"name": "Potatis", "amount": 700, "unit": "g"},
-      {"name": "Paprika", "amount": 2, "unit": "st"},
-      {"name": "Krossade tomater", "amount": 400, "unit": "g"},
-      {"name": "Gul lök", "amount": 1, "unit": "st"},
-      {"name": "Buljong", "amount": 300, "unit": "ml"},
-      {"name": "Olja", "pantryStaple": true},
-      {"name": "Paprikapulver", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Skala potatisen och skär den i bitar. Strimla paprikan och hacka löken.",
-      "Skär korven i stavar och bryn dem i olja tills de fått färg. Lyft upp.",
-      "Fräs lök och paprika mjuka i samma gryta.",
-      "Tillsätt potatis, krossade tomater, buljong och paprikapulver.",
-      "Låt koka under lock i 20 minuter tills potatisen är mjuk.",
-      "Lägg tillbaka korven och låt allt bli varmt igen."
-    ],
-    "categories": ["Grytor", "Husmanskost"],
-    "tags": ["billigt", "barn", "familj", "mealprep"],
-    "allergens": [], "dietFlags": ["blandkost"]
+  "ingredients": [
+   {
+    "name": "Gula ärtor",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Rimmat sidfläsk",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Morötter",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Timjan",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Senap",
+    "amount": 40,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Blötlägg ärtorna i kallt vatten över natten och häll av vattnet.",
+   "Lägg ärtorna i en stor gryta med 1,5 liter vatten och koka upp. Skumma av ytan.",
+   "Lägg i fläsket i en bit tillsammans med hel lök, morötter och timjan.",
+   "Låt sjuda under lock i 75-90 minuter tills ärtorna faller sönder.",
+   "Lyft upp fläsket, skär det i bitar och lägg tillbaka. Smaka av med salt.",
+   "Servera soppan med senap vid sidan."
+  ],
+  "categories": [
+   "Soppor",
+   "Husmanskost"
+  ],
+  "tags": [
+   "billigt",
+   "husmanskost",
+   "mealprep",
+   "proteinrikt"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/39019921/pexels-photo-39019921.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-homemade-vegetable-soup-in-bowl-39019921/",
+  "imageCredit": "DΛVΞ GΛRCIΛ",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Ärtsoppa med fläsk upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "korvgryta-potatis",
+  "name": "Korvgryta med potatis och paprika",
+  "description": "Enkel gryta som blir bättre dagen efter. Falukorv, potatis och paprika i tomatsås.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 25,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 540,
+   "protein": 22,
+   "carbs": 54,
+   "fat": 26,
+   "fiber": 7
   },
-  {
-    "id": "linssoppa-rod",
-    "name": "Röd linssoppa med kokosmjölk",
-    "description": "Sammetslen soppa på röda linser och kokos. Kokar ihop på tjugo minuter och kostar nästan ingenting.",
-    "servings": 4, "prepTime": 10, "cookTime": 20, "difficulty": "lätt",
-    "nutrition": {"kcal": 430, "protein": 19, "carbs": 48, "fat": 18, "fiber": 14},
-    "ingredients": [
-      {"name": "Röda linser", "amount": 300, "unit": "g"},
-      {"name": "Kokosmjölk", "amount": 400, "unit": "ml"},
-      {"name": "Morötter", "amount": 3, "unit": "st"},
-      {"name": "Gul lök", "amount": 1, "unit": "st"},
-      {"name": "Vitlök", "amount": 3, "unit": "st"},
-      {"name": "Buljong", "amount": 700, "unit": "ml"},
-      {"name": "Olja", "pantryStaple": true},
-      {"name": "Salt", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Hacka lök och vitlök, skiva morötterna.",
-      "Fräs lök, vitlök och morot mjuka i olja, cirka 5 minuter.",
-      "Skölj linserna och tillsätt dem tillsammans med buljongen.",
-      "Låt koka 15 minuter tills linserna helt faller sönder.",
-      "Häll i kokosmjölken och mixa soppan slät med stavmixer.",
-      "Smaka av med salt och servera."
-    ],
-    "categories": ["Soppor", "Vegetariskt"],
-    "tags": ["billigt", "vegetariskt", "veganskt", "snabbt", "mealprep"],
-    "allergens": [], "dietFlags": ["vegansk"]
+  "ingredients": [
+   {
+    "name": "Falukorv",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 700,
+    "unit": "g"
+   },
+   {
+    "name": "Paprika",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Buljong",
+    "amount": 300,
+    "unit": "ml"
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Paprikapulver",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Skala potatisen och skär den i bitar. Strimla paprikan och hacka löken.",
+   "Skär korven i stavar och bryn dem i olja tills de fått färg. Lyft upp.",
+   "Fräs lök och paprika mjuka i samma gryta.",
+   "Tillsätt potatis, krossade tomater, buljong och paprikapulver.",
+   "Låt koka under lock i 20 minuter tills potatisen är mjuk.",
+   "Lägg tillbaka korven och låt allt bli varmt igen."
+  ],
+  "categories": [
+   "Grytor",
+   "Husmanskost"
+  ],
+  "tags": [
+   "billigt",
+   "barn",
+   "familj",
+   "mealprep"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/5863612/pexels-photo-5863612.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+  "imageCredit": "Rachel Claire",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Korvgryta med potatis och paprika upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "linssoppa-rod",
+  "name": "Röd linssoppa med kokosmjölk",
+  "description": "Sammetslen soppa på röda linser och kokos. Kokar ihop på tjugo minuter och kostar nästan ingenting.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 430,
+   "protein": 19,
+   "carbs": 48,
+   "fat": 18,
+   "fiber": 14
   },
-  {
-    "id": "pyttipanna",
-    "name": "Pyttipanna med stekt ägg",
-    "description": "Allt som blivit över, stekt gyllene i en panna. Med rödbetor och ett stekt ägg på toppen.",
-    "servings": 4, "prepTime": 15, "cookTime": 20, "difficulty": "lätt",
-    "nutrition": {"kcal": 560, "protein": 26, "carbs": 48, "fat": 30, "fiber": 6},
-    "ingredients": [
-      {"name": "Potatis", "amount": 800, "unit": "g"},
-      {"name": "Falukorv", "amount": 300, "unit": "g"},
-      {"name": "Gul lök", "amount": 2, "unit": "st"},
-      {"name": "Ägg", "amount": 4, "unit": "st"},
-      {"name": "Rödbetor", "amount": 200, "unit": "g"},
-      {"name": "Smör", "amount": 40, "unit": "g"},
-      {"name": "Salt", "pantryStaple": true},
-      {"name": "Peppar", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Skala och tärna potatisen i centimeterstora bitar. Tärna korv och lök lika stort.",
-      "Stek potatisen i smör i en vid panna tills den är gyllene och mjuk, cirka 12 minuter. Lyft upp.",
-      "Stek korv och lök tills de fått ordentlig färg.",
-      "Blanda tillbaka potatisen, salta och peppra och låt allt bli varmt.",
-      "Stek äggen i en separat panna.",
-      "Servera pyttipannan med ett ägg på varje portion och rödbetor vid sidan."
-    ],
-    "categories": ["Husmanskost"],
-    "tags": ["billigt", "husmanskost", "snabbt", "familj"],
-    "allergens": ["ägg", "laktos"], "dietFlags": ["blandkost"]
+  "ingredients": [
+   {
+    "name": "Röda linser",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Kokosmjölk",
+    "amount": 400,
+    "unit": "ml"
+   },
+   {
+    "name": "Morötter",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Buljong",
+    "amount": 700,
+    "unit": "ml"
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Hacka lök och vitlök, skiva morötterna.",
+   "Fräs lök, vitlök och morot mjuka i olja, cirka 5 minuter.",
+   "Skölj linserna och tillsätt dem tillsammans med buljongen.",
+   "Låt koka 15 minuter tills linserna helt faller sönder.",
+   "Häll i kokosmjölken och mixa soppan slät med stavmixer.",
+   "Smaka av med salt och servera."
+  ],
+  "categories": [
+   "Soppor",
+   "Vegetariskt"
+  ],
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "veganskt",
+   "snabbt",
+   "mealprep"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "https://images.pexels.com/photos/7160694/pexels-photo-7160694.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/a-flatlay-shot-of-a-bowl-of-soup-on-a-rustic-background-7160694/",
+  "imageCredit": "Teja J",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Röd linssoppa med kokosmjölk upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "pyttipanna",
+  "name": "Pyttipanna med stekt ägg",
+  "description": "Allt som blivit över, stekt gyllene i en panna. Med rödbetor och ett stekt ägg på toppen.",
+  "servings": 4,
+  "prepTime": 15,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 560,
+   "protein": 26,
+   "carbs": 48,
+   "fat": 30,
+   "fiber": 6
   },
-  {
-    "id": "pasta-tomatsas-vitlok",
-    "name": "Pasta med tomatsås och vitlök",
-    "description": "Den enklaste goda pastan. Krossade tomater som får koka ihop med mycket vitlök och olivolja.",
-    "servings": 4, "prepTime": 5, "cookTime": 20, "difficulty": "lätt",
-    "nutrition": {"kcal": 480, "protein": 15, "carbs": 84, "fat": 10, "fiber": 8},
-    "ingredients": [
-      {"name": "Pasta", "amount": 400, "unit": "g"},
-      {"name": "Krossade tomater", "amount": 800, "unit": "g"},
-      {"name": "Vitlök", "amount": 4, "unit": "st"},
-      {"name": "Gul lök", "amount": 1, "unit": "st"},
-      {"name": "Olivolja", "amount": 4, "unit": "msk"},
-      {"name": "Basilika", "amount": 15, "unit": "g"},
-      {"name": "Salt", "pantryStaple": true},
-      {"name": "Socker", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Hacka lök och skiva vitlöken tunt.",
-      "Fräs löken mjuk i olivoljan på låg värme, cirka 6 minuter. Lägg i vitlöken sista minuten.",
-      "Häll i krossade tomater, salta och tillsätt en nypa socker.",
-      "Låt såsen puttra utan lock i 15 minuter tills den tjocknat.",
-      "Koka pastan under tiden och spara en skvätt kokvatten.",
-      "Blanda pastan med såsen och lite kokvatten. Toppa med basilika."
-    ],
-    "categories": ["Pasta", "Vegetariskt"],
-    "tags": ["billigt", "vegetariskt", "veganskt", "snabbt", "barn"],
-    "allergens": ["gluten"], "dietFlags": ["vegansk"]
+  "ingredients": [
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Falukorv",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Ägg",
+    "amount": 4,
+    "unit": "st"
+   },
+   {
+    "name": "Rödbetor",
+    "amount": 200,
+    "unit": "g"
+   },
+   {
+    "name": "Smör",
+    "amount": 40,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Skala och tärna potatisen i centimeterstora bitar. Tärna korv och lök lika stort.",
+   "Stek potatisen i smör i en vid panna tills den är gyllene och mjuk, cirka 12 minuter. Lyft upp.",
+   "Stek korv och lök tills de fått ordentlig färg.",
+   "Blanda tillbaka potatisen, salta och peppra och låt allt bli varmt.",
+   "Stek äggen i en separat panna.",
+   "Servera pyttipannan med ett ägg på varje portion och rödbetor vid sidan."
+  ],
+  "categories": [
+   "Husmanskost"
+  ],
+  "tags": [
+   "billigt",
+   "husmanskost",
+   "snabbt",
+   "familj"
+  ],
+  "allergens": [
+   "ägg",
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "imageAlt": "Pyttipanna med stekt ägg",
+  "imageStatus": "needs_image"
+ },
+ {
+  "id": "pasta-tomatsas-vitlok",
+  "name": "Pasta med tomatsås och vitlök",
+  "description": "Den enklaste goda pastan. Krossade tomater som får koka ihop med mycket vitlök och olivolja.",
+  "servings": 4,
+  "prepTime": 5,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 480,
+   "protein": 15,
+   "carbs": 84,
+   "fat": 10,
+   "fiber": 8
   },
-  {
-    "id": "kalpudding",
-    "name": "Kålpudding med lingon",
-    "description": "Husmanskost i sin bästa form. Vitkål som får sötma i pannan och sedan bakas ihop med färs.",
-    "servings": 4, "prepTime": 20, "cookTime": 45, "difficulty": "medel",
-    "nutrition": {"kcal": 520, "protein": 30, "carbs": 40, "fat": 26, "fiber": 8},
-    "ingredients": [
-      {"name": "Blandfärs", "amount": 500, "unit": "g"},
-      {"name": "Vitkål", "amount": 800, "unit": "g"},
-      {"name": "Ris", "amount": 100, "unit": "g"},
-      {"name": "Mjölk", "amount": 150, "unit": "ml"},
-      {"name": "Sirap", "amount": 2, "unit": "msk"},
-      {"name": "Lingonsylt", "amount": 100, "unit": "g"},
-      {"name": "Smör", "amount": 40, "unit": "g"},
-      {"name": "Salt", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Sätt ugnen på 200 grader. Strimla kålen.",
-      "Stek kålen i smör på medelvärme tills den mjuknat och fått färg, cirka 15 minuter. Tillsätt sirapen mot slutet.",
-      "Koka riset mjukt och blanda det med färs, mjölk och salt.",
-      "Varva färsblandning och kål i en ugnsform och avsluta med kål.",
-      "Baka mitt i ugnen i 40-45 minuter tills ytan fått färg.",
-      "Servera med lingonsylt."
-    ],
-    "categories": ["Husmanskost"],
-    "tags": ["billigt", "husmanskost", "familj", "mealprep"],
-    "allergens": ["laktos"], "dietFlags": ["blandkost"]
+  "ingredients": [
+   {
+    "name": "Pasta",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 4,
+    "unit": "st"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Olivolja",
+    "amount": 4,
+    "unit": "msk"
+   },
+   {
+    "name": "Basilika",
+    "amount": 15,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Socker",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Hacka lök och skiva vitlöken tunt.",
+   "Fräs löken mjuk i olivoljan på låg värme, cirka 6 minuter. Lägg i vitlöken sista minuten.",
+   "Häll i krossade tomater, salta och tillsätt en nypa socker.",
+   "Låt såsen puttra utan lock i 15 minuter tills den tjocknat.",
+   "Koka pastan under tiden och spara en skvätt kokvatten.",
+   "Blanda pastan med såsen och lite kokvatten. Toppa med basilika."
+  ],
+  "categories": [
+   "Pasta",
+   "Vegetariskt"
+  ],
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "veganskt",
+   "snabbt",
+   "barn"
+  ],
+  "allergens": [
+   "gluten"
+  ],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "https://images.pexels.com/photos/1438672/pexels-photo-1438672.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/food-photography-of-pasta-1438672/",
+  "imageCredit": "Engin Akyurt",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Pasta med tomatsås och vitlök upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "kalpudding",
+  "name": "Kålpudding med lingon",
+  "description": "Husmanskost i sin bästa form. Vitkål som får sötma i pannan och sedan bakas ihop med färs.",
+  "servings": 4,
+  "prepTime": 20,
+  "cookTime": 45,
+  "difficulty": "medel",
+  "nutrition": {
+   "kcal": 520,
+   "protein": 30,
+   "carbs": 40,
+   "fat": 26,
+   "fiber": 8
   },
-  {
-    "id": "bonsoppa-tomat",
-    "name": "Bönsoppa med tomat och vitlök",
-    "description": "Rejäl soppa på vita bönor som mixas halvslät. Billig, vegansk och full av fibrer.",
-    "servings": 4, "prepTime": 10, "cookTime": 20, "difficulty": "lätt",
-    "nutrition": {"kcal": 390, "protein": 20, "carbs": 56, "fat": 9, "fiber": 18},
-    "ingredients": [
-      {"name": "Vita bönor", "amount": 800, "unit": "g"},
-      {"name": "Krossade tomater", "amount": 400, "unit": "g"},
-      {"name": "Gul lök", "amount": 1, "unit": "st"},
-      {"name": "Vitlök", "amount": 3, "unit": "st"},
-      {"name": "Morötter", "amount": 2, "unit": "st"},
-      {"name": "Buljong", "amount": 600, "unit": "ml"},
-      {"name": "Olivolja", "amount": 2, "unit": "msk"},
-      {"name": "Salt", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Hacka lök och vitlök, tärna morötterna.",
-      "Fräs lök, vitlök och morot mjuka i olivoljan.",
-      "Skölj och häll av bönorna och tillsätt dem med krossade tomater och buljong.",
-      "Låt koka 15 minuter.",
-      "Mixa cirka hälften av soppan slät och rör tillbaka den, så den blir krämig men behåller tuggmotstånd.",
-      "Smaka av med salt och ringla över lite olivolja vid servering."
-    ],
-    "categories": ["Soppor", "Vegetariskt"],
-    "tags": ["billigt", "vegetariskt", "veganskt", "mealprep", "proteinrikt"],
-    "allergens": [], "dietFlags": ["vegansk"]
+  "ingredients": [
+   {
+    "name": "Blandfärs",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Vitkål",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Ris",
+    "amount": 100,
+    "unit": "g"
+   },
+   {
+    "name": "Mjölk",
+    "amount": 150,
+    "unit": "ml"
+   },
+   {
+    "name": "Sirap",
+    "amount": 2,
+    "unit": "msk"
+   },
+   {
+    "name": "Lingonsylt",
+    "amount": 100,
+    "unit": "g"
+   },
+   {
+    "name": "Smör",
+    "amount": 40,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Sätt ugnen på 200 grader. Strimla kålen.",
+   "Stek kålen i smör på medelvärme tills den mjuknat och fått färg, cirka 15 minuter. Tillsätt sirapen mot slutet.",
+   "Koka riset mjukt och blanda det med färs, mjölk och salt.",
+   "Varva färsblandning och kål i en ugnsform och avsluta med kål.",
+   "Baka mitt i ugnen i 40-45 minuter tills ytan fått färg.",
+   "Servera med lingonsylt."
+  ],
+  "categories": [
+   "Husmanskost"
+  ],
+  "tags": [
+   "billigt",
+   "husmanskost",
+   "familj",
+   "mealprep"
+  ],
+  "allergens": [
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "imageAlt": "Kålpudding med lingon",
+  "imageStatus": "needs_image"
+ },
+ {
+  "id": "bonsoppa-tomat",
+  "name": "Bönsoppa med tomat och vitlök",
+  "description": "Rejäl soppa på vita bönor som mixas halvslät. Billig, vegansk och full av fibrer.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 390,
+   "protein": 20,
+   "carbs": 56,
+   "fat": 9,
+   "fiber": 18
   },
-  {
-    "id": "potatisgratang-skinka",
-    "name": "Potatisgratäng med skinka",
-    "description": "Tunt skivad potatis som bakas i grädde tills den är gyllene, med skinka mellan lagren.",
-    "servings": 4, "prepTime": 15, "cookTime": 50, "difficulty": "lätt",
-    "nutrition": {"kcal": 610, "protein": 24, "carbs": 52, "fat": 34, "fiber": 5},
-    "ingredients": [
-      {"name": "Potatis", "amount": 1000, "unit": "g"},
-      {"name": "Skinka", "amount": 200, "unit": "g"},
-      {"name": "Grädde", "amount": 400, "unit": "ml"},
-      {"name": "Riven ost", "amount": 150, "unit": "g"},
-      {"name": "Vitlök", "amount": 2, "unit": "st"},
-      {"name": "Smör", "amount": 20, "unit": "g"},
-      {"name": "Salt", "pantryStaple": true},
-      {"name": "Peppar", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Sätt ugnen på 200 grader och smörj en ugnsform.",
-      "Skala potatisen och skiva den tunt, gärna på mandolin.",
-      "Strimla skinkan och pressa vitlöken.",
-      "Varva potatis och skinka i formen, salta och peppra mellan lagren.",
-      "Blanda grädden med vitlöken och häll den över. Strö osten överst.",
-      "Baka 45-50 minuter tills potatisen är mjuk och ytan gyllene. Låt vila 10 minuter."
-    ],
-    "categories": ["Husmanskost", "Familj"],
-    "tags": ["billigt", "barn", "familj", "mealprep"],
-    "allergens": ["laktos"], "dietFlags": ["blandkost"]
+  "ingredients": [
+   {
+    "name": "Vita bönor",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Morötter",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Buljong",
+    "amount": 600,
+    "unit": "ml"
+   },
+   {
+    "name": "Olivolja",
+    "amount": 2,
+    "unit": "msk"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Hacka lök och vitlök, tärna morötterna.",
+   "Fräs lök, vitlök och morot mjuka i olivoljan.",
+   "Skölj och häll av bönorna och tillsätt dem med krossade tomater och buljong.",
+   "Låt koka 15 minuter.",
+   "Mixa cirka hälften av soppan slät och rör tillbaka den, så den blir krämig men behåller tuggmotstånd.",
+   "Smaka av med salt och ringla över lite olivolja vid servering."
+  ],
+  "categories": [
+   "Soppor",
+   "Vegetariskt"
+  ],
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "veganskt",
+   "mealprep",
+   "proteinrikt"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "https://images.pexels.com/photos/30852890/pexels-photo-30852890.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/traditional-solyanka-soup-with-sliced-bread-and-garnish-30852890/",
+  "imageCredit": "Gundula Vogel",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Bönsoppa med tomat och vitlök upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "potatisgratang-skinka",
+  "name": "Potatisgratäng med skinka",
+  "description": "Tunt skivad potatis som bakas i grädde tills den är gyllene, med skinka mellan lagren.",
+  "servings": 4,
+  "prepTime": 15,
+  "cookTime": 50,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 610,
+   "protein": 24,
+   "carbs": 52,
+   "fat": 34,
+   "fiber": 5
   },
-  {
-    "id": "korv-stroganoff-ris",
-    "name": "Korvstroganoff med ris",
-    "description": "Falukorv i krämig tomatsås som puttrat ihop på en kvart. Vardagsmat som barnen faktiskt äter.",
-    "servings": 4, "prepTime": 5, "cookTime": 20, "difficulty": "lätt",
-    "nutrition": {"kcal": 590, "protein": 22, "carbs": 66, "fat": 27, "fiber": 4},
-    "ingredients": [
-      {"name": "Falukorv", "amount": 500, "unit": "g"},
-      {"name": "Ris", "amount": 300, "unit": "g"},
-      {"name": "Grädde", "amount": 200, "unit": "ml"},
-      {"name": "Tomatpuré", "amount": 3, "unit": "msk"},
-      {"name": "Gul lök", "amount": 1, "unit": "st"},
-      {"name": "Buljong", "amount": 200, "unit": "ml"},
-      {"name": "Smör", "amount": 20, "unit": "g"},
-      {"name": "Salt", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Koka riset enligt anvisningen på paketet.",
-      "Skär korven i stavar och hacka löken.",
-      "Stek korven i smör tills den fått fin färg. Tillsätt löken och fräs den mjuk.",
-      "Rör ner tomatpurén och låt den steka en minut så den mörknar.",
-      "Häll i buljong och grädde och låt puttra 10 minuter tills såsen tjocknat.",
-      "Smaka av med salt och servera med riset."
-    ],
-    "categories": ["Husmanskost", "Ris"],
-    "tags": ["billigt", "barn", "familj", "snabbt", "mealprep"],
-    "allergens": ["laktos"], "dietFlags": ["blandkost"]
+  "ingredients": [
+   {
+    "name": "Potatis",
+    "amount": 1000,
+    "unit": "g"
+   },
+   {
+    "name": "Skinka",
+    "amount": 200,
+    "unit": "g"
+   },
+   {
+    "name": "Grädde",
+    "amount": 400,
+    "unit": "ml"
+   },
+   {
+    "name": "Riven ost",
+    "amount": 150,
+    "unit": "g"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Smör",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Sätt ugnen på 200 grader och smörj en ugnsform.",
+   "Skala potatisen och skiva den tunt, gärna på mandolin.",
+   "Strimla skinkan och pressa vitlöken.",
+   "Varva potatis och skinka i formen, salta och peppra mellan lagren.",
+   "Blanda grädden med vitlöken och häll den över. Strö osten överst.",
+   "Baka 45-50 minuter tills potatisen är mjuk och ytan gyllene. Låt vila 10 minuter."
+  ],
+  "categories": [
+   "Husmanskost",
+   "Familj"
+  ],
+  "tags": [
+   "billigt",
+   "barn",
+   "familj",
+   "mealprep"
+  ],
+  "allergens": [
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/2337842/pexels-photo-2337842.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/baked-lasagna-2337842/",
+  "imageCredit": "Vidal Balielo Jr.",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Potatisgratäng med skinka upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "korv-stroganoff-ris",
+  "name": "Korvstroganoff med ris",
+  "description": "Falukorv i krämig tomatsås som puttrat ihop på en kvart. Vardagsmat som barnen faktiskt äter.",
+  "servings": 4,
+  "prepTime": 5,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 590,
+   "protein": 22,
+   "carbs": 66,
+   "fat": 27,
+   "fiber": 4
   },
-  {
-    "id": "tomatsoppa-grillost",
-    "name": "Tomatsoppa med grillad ostmacka",
-    "description": "Krämig tomatsoppa och en ostmacka som steks knaprig i smör. Tröstmat på tjugo minuter.",
-    "servings": 4, "prepTime": 5, "cookTime": 20, "difficulty": "lätt",
-    "nutrition": {"kcal": 520, "protein": 20, "carbs": 58, "fat": 23, "fiber": 7},
-    "ingredients": [
-      {"name": "Krossade tomater", "amount": 800, "unit": "g"},
-      {"name": "Bröd", "amount": 8, "unit": "st"},
-      {"name": "Riven ost", "amount": 200, "unit": "g"},
-      {"name": "Grädde", "amount": 150, "unit": "ml"},
-      {"name": "Gul lök", "amount": 1, "unit": "st"},
-      {"name": "Buljong", "amount": 400, "unit": "ml"},
-      {"name": "Smör", "amount": 40, "unit": "g"},
-      {"name": "Salt", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Hacka löken och fräs den mjuk i lite smör i en kastrull.",
-      "Häll i krossade tomater och buljong och låt koka 12 minuter.",
-      "Mixa soppan slät och rör ner grädden. Smaka av med salt.",
-      "Lägg ost mellan brödskivorna och stek mackorna gyllene i smör på båda sidor.",
-      "Skär mackorna i halvor och servera till soppan."
-    ],
-    "categories": ["Soppor", "Familj"],
-    "tags": ["billigt", "barn", "familj", "snabbt", "vegetariskt"],
-    "allergens": ["gluten", "laktos"], "dietFlags": ["vegetarisk"]
+  "ingredients": [
+   {
+    "name": "Falukorv",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Ris",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Grädde",
+    "amount": 200,
+    "unit": "ml"
+   },
+   {
+    "name": "Tomatpuré",
+    "amount": 3,
+    "unit": "msk"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Buljong",
+    "amount": 200,
+    "unit": "ml"
+   },
+   {
+    "name": "Smör",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka riset enligt anvisningen på paketet.",
+   "Skär korven i stavar och hacka löken.",
+   "Stek korven i smör tills den fått fin färg. Tillsätt löken och fräs den mjuk.",
+   "Rör ner tomatpurén och låt den steka en minut så den mörknar.",
+   "Häll i buljong och grädde och låt puttra 10 minuter tills såsen tjocknat.",
+   "Smaka av med salt och servera med riset."
+  ],
+  "categories": [
+   "Husmanskost",
+   "Ris"
+  ],
+  "tags": [
+   "billigt",
+   "barn",
+   "familj",
+   "snabbt",
+   "mealprep"
+  ],
+  "allergens": [
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "imageAlt": "Korvstroganoff med ris",
+  "imageStatus": "needs_image"
+ },
+ {
+  "id": "tomatsoppa-grillost",
+  "name": "Tomatsoppa med grillad ostmacka",
+  "description": "Krämig tomatsoppa och en ostmacka som steks knaprig i smör. Tröstmat på tjugo minuter.",
+  "servings": 4,
+  "prepTime": 5,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 520,
+   "protein": 20,
+   "carbs": 58,
+   "fat": 23,
+   "fiber": 7
   },
-  {
-    "id": "raggmunk-flask",
-    "name": "Raggmunk med stekt fläsk",
-    "description": "Frasiga potatisplättar med salt fläsk och lingon. Husmanskost som mättar länge.",
-    "servings": 4, "prepTime": 20, "cookTime": 25, "difficulty": "medel",
-    "nutrition": {"kcal": 640, "protein": 22, "carbs": 54, "fat": 38, "fiber": 5},
-    "ingredients": [
-      {"name": "Potatis", "amount": 900, "unit": "g"},
-      {"name": "Rimmat sidfläsk", "amount": 300, "unit": "g"},
-      {"name": "Mjölk", "amount": 300, "unit": "ml"},
-      {"name": "Vetemjöl", "amount": 100, "unit": "g"},
-      {"name": "Ägg", "amount": 2, "unit": "st"},
-      {"name": "Lingonsylt", "amount": 150, "unit": "g"},
-      {"name": "Smör", "amount": 50, "unit": "g"},
-      {"name": "Salt", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Vispa ihop mjöl och mjölk till en slät smet och rör ner äggen. Salta.",
-      "Skala potatisen och riv den grovt direkt ner i smeten så den inte mörknar.",
-      "Stek fläsket knaprigt i en panna och håll det varmt.",
-      "Stek plättar av smeten i smör, cirka 3 minuter per sida tills de är gyllene och genomstekta.",
-      "Servera raggmunkarna med fläsket och lingonsylt."
-    ],
-    "categories": ["Husmanskost"],
-    "tags": ["billigt", "husmanskost", "familj"],
-    "allergens": ["gluten", "laktos", "ägg"], "dietFlags": ["blandkost"]
+  "ingredients": [
+   {
+    "name": "Krossade tomater",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Bröd",
+    "amount": 8,
+    "unit": "st"
+   },
+   {
+    "name": "Riven ost",
+    "amount": 200,
+    "unit": "g"
+   },
+   {
+    "name": "Grädde",
+    "amount": 150,
+    "unit": "ml"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Buljong",
+    "amount": 400,
+    "unit": "ml"
+   },
+   {
+    "name": "Smör",
+    "amount": 40,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Hacka löken och fräs den mjuk i lite smör i en kastrull.",
+   "Häll i krossade tomater och buljong och låt koka 12 minuter.",
+   "Mixa soppan slät och rör ner grädden. Smaka av med salt.",
+   "Lägg ost mellan brödskivorna och stek mackorna gyllene i smör på båda sidor.",
+   "Skär mackorna i halvor och servera till soppan."
+  ],
+  "categories": [
+   "Soppor",
+   "Familj"
+  ],
+  "tags": [
+   "billigt",
+   "barn",
+   "familj",
+   "snabbt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "gluten",
+   "laktos"
+  ],
+  "dietFlags": [
+   "vegetarisk"
+  ],
+  "image": "https://images.pexels.com/photos/2421593/pexels-photo-2421593.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/white-ceramic-mug-with-soup-beside-spoon-2421593/",
+  "imageCredit": "Danijela Pantic Conic",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Tomatsoppa med grillad ostmacka upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "raggmunk-flask",
+  "name": "Raggmunk med stekt fläsk",
+  "description": "Frasiga potatisplättar med salt fläsk och lingon. Husmanskost som mättar länge.",
+  "servings": 4,
+  "prepTime": 20,
+  "cookTime": 25,
+  "difficulty": "medel",
+  "nutrition": {
+   "kcal": 640,
+   "protein": 22,
+   "carbs": 54,
+   "fat": 38,
+   "fiber": 5
   },
-  {
-    "id": "chili-sin-carne-budget",
-    "name": "Chili sin carne",
-    "description": "Vegansk chili på svarta bönor och majs som får puttra tills smakerna smälter ihop.",
-    "servings": 4, "prepTime": 10, "cookTime": 25, "difficulty": "lätt",
-    "nutrition": {"kcal": 450, "protein": 21, "carbs": 72, "fat": 8, "fiber": 19},
-    "ingredients": [
-      {"name": "Svarta bönor", "amount": 800, "unit": "g"},
-      {"name": "Krossade tomater", "amount": 400, "unit": "g"},
-      {"name": "Majs", "amount": 200, "unit": "g"},
-      {"name": "Ris", "amount": 300, "unit": "g"},
-      {"name": "Paprika", "amount": 2, "unit": "st"},
-      {"name": "Gul lök", "amount": 1, "unit": "st"},
-      {"name": "Tomatpuré", "amount": 2, "unit": "msk"},
-      {"name": "Olja", "pantryStaple": true},
-      {"name": "Chilipulver", "pantryStaple": true},
-      {"name": "Spiskummin", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Koka riset enligt anvisningen på paketet.",
-      "Hacka lök och tärna paprikan. Fräs dem mjuka i olja.",
-      "Rör ner tomatpuré, chilipulver och spiskummin och stek en minut.",
-      "Häll av bönorna och majsen och tillsätt dem med krossade tomater.",
-      "Låt puttra 20 minuter så smakerna går ihop. Smaka av.",
-      "Servera chilin över riset."
-    ],
-    "categories": ["Grytor", "Vegetariskt"],
-    "tags": ["billigt", "vegetariskt", "veganskt", "mealprep", "proteinrikt"],
-    "allergens": [], "dietFlags": ["vegansk"]
-  }
+  "ingredients": [
+   {
+    "name": "Potatis",
+    "amount": 900,
+    "unit": "g"
+   },
+   {
+    "name": "Rimmat sidfläsk",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Mjölk",
+    "amount": 300,
+    "unit": "ml"
+   },
+   {
+    "name": "Vetemjöl",
+    "amount": 100,
+    "unit": "g"
+   },
+   {
+    "name": "Ägg",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Lingonsylt",
+    "amount": 150,
+    "unit": "g"
+   },
+   {
+    "name": "Smör",
+    "amount": 50,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Vispa ihop mjöl och mjölk till en slät smet och rör ner äggen. Salta.",
+   "Skala potatisen och riv den grovt direkt ner i smeten så den inte mörknar.",
+   "Stek fläsket knaprigt i en panna och håll det varmt.",
+   "Stek plättar av smeten i smör, cirka 3 minuter per sida tills de är gyllene och genomstekta.",
+   "Servera raggmunkarna med fläsket och lingonsylt."
+  ],
+  "categories": [
+   "Husmanskost"
+  ],
+  "tags": [
+   "billigt",
+   "husmanskost",
+   "familj"
+  ],
+  "allergens": [
+   "gluten",
+   "laktos",
+   "ägg"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/10895779/pexels-photo-10895779.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/fresh-salmon-on-white-ceramic-plate-10895779/",
+  "imageCredit": "Nadin Sh",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Raggmunk med stekt fläsk upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "chili-sin-carne-budget",
+  "name": "Chili sin carne",
+  "description": "Vegansk chili på svarta bönor och majs som får puttra tills smakerna smälter ihop.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 25,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 450,
+   "protein": 21,
+   "carbs": 72,
+   "fat": 8,
+   "fiber": 19
+  },
+  "ingredients": [
+   {
+    "name": "Svarta bönor",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Majs",
+    "amount": 200,
+    "unit": "g"
+   },
+   {
+    "name": "Ris",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Paprika",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Tomatpuré",
+    "amount": 2,
+    "unit": "msk"
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Chilipulver",
+    "pantryStaple": true
+   },
+   {
+    "name": "Spiskummin",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka riset enligt anvisningen på paketet.",
+   "Hacka lök och tärna paprikan. Fräs dem mjuka i olja.",
+   "Rör ner tomatpuré, chilipulver och spiskummin och stek en minut.",
+   "Häll av bönorna och majsen och tillsätt dem med krossade tomater.",
+   "Låt puttra 20 minuter så smakerna går ihop. Smaka av.",
+   "Servera chilin över riset."
+  ],
+  "categories": [
+   "Grytor",
+   "Vegetariskt"
+  ],
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "veganskt",
+   "mealprep",
+   "proteinrikt"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "https://images.pexels.com/photos/5966140/pexels-photo-5966140.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/tomatoes-and-peppers-on-green-background-5966140/",
+  "imageCredit": "Vanessa Loring",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Chili sin carne upplagd på tallrik",
+  "imageStatus": "ok"
+ }
 ]

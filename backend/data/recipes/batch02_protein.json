@@ -1,281 +1,879 @@
 [
-  {
-    "id": "kyckling-ris-broccoli",
-    "name": "Kyckling med ris och broccoli",
-    "description": "Rak träningsmat: mager kycklingfilé, ris och ångad broccoli. Enkelt att laga i dubbel sats för veckan.",
-    "servings": 4, "prepTime": 10, "cookTime": 20, "difficulty": "lätt",
-    "nutrition": {"kcal": 560, "protein": 48, "carbs": 62, "fat": 11, "fiber": 6},
-    "ingredients": [
-      {"name": "Kycklingfilé", "amount": 700, "unit": "g"},
-      {"name": "Ris", "amount": 300, "unit": "g"},
-      {"name": "Broccoli", "amount": 400, "unit": "g"},
-      {"name": "Vitlök", "amount": 2, "unit": "st"},
-      {"name": "Soja", "amount": 3, "unit": "msk"},
-      {"name": "Olja", "pantryStaple": true},
-      {"name": "Salt", "pantryStaple": true},
-      {"name": "Peppar", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Koka riset enligt anvisningen på paketet.",
-      "Skär kycklingen i strimlor och hacka vitlöken.",
-      "Stek kycklingen i olja på hög värme tills den fått färg och är genomstekt, cirka 8 minuter. Salta och peppra.",
-      "Tillsätt vitlök och soja och vänd runt en halv minut.",
-      "Dela broccolin i buketter och ånga eller koka den 4 minuter så den fortfarande har tuggmotstånd.",
-      "Servera kyckling och broccoli över riset."
-    ],
-    "categories": ["Kyckling", "Ris"],
-    "tags": ["proteinrikt", "kyckling", "mealprep", "familj"],
-    "allergens": ["gluten", "soja"], "dietFlags": ["blandkost"]
+ {
+  "id": "kyckling-ris-broccoli",
+  "name": "Kyckling med ris och broccoli",
+  "description": "Rak träningsmat: mager kycklingfilé, ris och ångad broccoli. Enkelt att laga i dubbel sats för veckan.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 560,
+   "protein": 48,
+   "carbs": 62,
+   "fat": 11,
+   "fiber": 6
   },
-  {
-    "id": "laxfile-quinoa",
-    "name": "Ugnsbakad laxfilé med quinoa",
-    "description": "Fet lax som bakas mör i ugnen, med proteinrik quinoa och citron. Klart på tjugofem minuter.",
-    "servings": 4, "prepTime": 10, "cookTime": 20, "difficulty": "lätt",
-    "nutrition": {"kcal": 610, "protein": 44, "carbs": 46, "fat": 27, "fiber": 6},
-    "ingredients": [
-      {"name": "Laxfilé", "amount": 700, "unit": "g"},
-      {"name": "Quinoa", "amount": 250, "unit": "g"},
-      {"name": "Citron", "amount": 1, "unit": "st"},
-      {"name": "Spenat", "amount": 150, "unit": "g"},
-      {"name": "Crème fraiche", "amount": 150, "unit": "g"},
-      {"name": "Dill", "amount": 20, "unit": "g"},
-      {"name": "Salt", "pantryStaple": true},
-      {"name": "Peppar", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Sätt ugnen på 180 grader. Skölj quinoan och koka den enligt anvisningen på paketet.",
-      "Lägg laxen i en ugnsform, salta och peppra och pressa över halva citronen.",
-      "Baka laxen 15-18 minuter tills den är precis genomgången i mitten.",
-      "Hacka dillen och rör ihop den med crème fraiche och en skvätt citron. Salta.",
-      "Vänd ner spenaten i den varma quinoan så den faller ihop.",
-      "Servera laxen på quinoan med dillcrèmen vid sidan."
-    ],
-    "categories": ["Fisk"],
-    "tags": ["proteinrikt", "fisk", "snabbt", "mealprep"],
-    "allergens": ["fisk", "laktos"], "dietFlags": ["pescetarisk"]
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 700,
+    "unit": "g"
+   },
+   {
+    "name": "Ris",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Broccoli",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Soja",
+    "amount": 3,
+    "unit": "msk"
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka riset enligt anvisningen på paketet.",
+   "Skär kycklingen i strimlor och hacka vitlöken.",
+   "Stek kycklingen i olja på hög värme tills den fått färg och är genomstekt, cirka 8 minuter. Salta och peppra.",
+   "Tillsätt vitlök och soja och vänd runt en halv minut.",
+   "Dela broccolin i buketter och ånga eller koka den 4 minuter så den fortfarande har tuggmotstånd.",
+   "Servera kyckling och broccoli över riset."
+  ],
+  "categories": [
+   "Kyckling",
+   "Ris"
+  ],
+  "tags": [
+   "proteinrikt",
+   "kyckling",
+   "mealprep",
+   "familj"
+  ],
+  "allergens": [
+   "gluten",
+   "soja"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/6210955/pexels-photo-6210955.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/appetizing-roasted-chicken-with-vegetables-in-baking-dish-6210955/",
+  "imageCredit": "Tim Douglas",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kyckling med ris och broccoli upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "laxfile-quinoa",
+  "name": "Ugnsbakad laxfilé med quinoa",
+  "description": "Fet lax som bakas mör i ugnen, med proteinrik quinoa och citron. Klart på tjugofem minuter.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 610,
+   "protein": 44,
+   "carbs": 46,
+   "fat": 27,
+   "fiber": 6
   },
-  {
-    "id": "biff-sotpotatis",
-    "name": "Stekt biff med sötpotatis",
-    "description": "Saftig biff stekt i smör, med sötpotatis ur ugnen och en klick örtsmör som smälter över.",
-    "servings": 4, "prepTime": 10, "cookTime": 30, "difficulty": "medel",
-    "nutrition": {"kcal": 640, "protein": 46, "carbs": 44, "fat": 30, "fiber": 7},
-    "ingredients": [
-      {"name": "Biff", "amount": 600, "unit": "g"},
-      {"name": "Sötpotatis", "amount": 800, "unit": "g"},
-      {"name": "Smör", "amount": 60, "unit": "g"},
-      {"name": "Vitlök", "amount": 2, "unit": "st"},
-      {"name": "Persilja", "amount": 20, "unit": "g"},
-      {"name": "Olja", "pantryStaple": true},
-      {"name": "Salt", "pantryStaple": true},
-      {"name": "Peppar", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Sätt ugnen på 220 grader. Skala och skär sötpotatisen i klyftor.",
-      "Vänd klyftorna i olja och salt och rosta dem 25-30 minuter tills de är mjuka och fått färg.",
-      "Ta fram biffen i god tid så den är rumstempererad. Salta och peppra ordentligt.",
-      "Hacka vitlök och persilja och rör ihop med mjukt smör.",
-      "Stek biffen i het panna 2-3 minuter per sida för rosa mitt. Låt vila 5 minuter under folie.",
-      "Skiva biffen och servera med klyftorna och en klick örtsmör ovanpå."
-    ],
-    "categories": ["Kött", "Helgmiddag"],
-    "tags": ["proteinrikt", "kott", "helgmiddag"],
-    "allergens": ["laktos"], "dietFlags": ["blandkost"]
+  "ingredients": [
+   {
+    "name": "Laxfilé",
+    "amount": 700,
+    "unit": "g"
+   },
+   {
+    "name": "Quinoa",
+    "amount": 250,
+    "unit": "g"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Spenat",
+    "amount": 150,
+    "unit": "g"
+   },
+   {
+    "name": "Crème fraiche",
+    "amount": 150,
+    "unit": "g"
+   },
+   {
+    "name": "Dill",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Sätt ugnen på 180 grader. Skölj quinoan och koka den enligt anvisningen på paketet.",
+   "Lägg laxen i en ugnsform, salta och peppra och pressa över halva citronen.",
+   "Baka laxen 15-18 minuter tills den är precis genomgången i mitten.",
+   "Hacka dillen och rör ihop den med crème fraiche och en skvätt citron. Salta.",
+   "Vänd ner spenaten i den varma quinoan så den faller ihop.",
+   "Servera laxen på quinoan med dillcrèmen vid sidan."
+  ],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "proteinrikt",
+   "fisk",
+   "snabbt",
+   "mealprep"
+  ],
+  "allergens": [
+   "fisk",
+   "laktos"
+  ],
+  "dietFlags": [
+   "pescetarisk"
+  ],
+  "image": "https://images.pexels.com/photos/31146494/pexels-photo-31146494.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/grilled-salmon-fillet-with-seasoned-rice-close-up-31146494/",
+  "imageCredit": "Patrick",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Ugnsbakad laxfilé med quinoa upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "biff-sotpotatis",
+  "name": "Stekt biff med sötpotatis",
+  "description": "Saftig biff stekt i smör, med sötpotatis ur ugnen och en klick örtsmör som smälter över.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 30,
+  "difficulty": "medel",
+  "nutrition": {
+   "kcal": 640,
+   "protein": 46,
+   "carbs": 44,
+   "fat": 30,
+   "fiber": 7
   },
-  {
-    "id": "kvargbowl-kyckling",
-    "name": "Kycklingbowl med kvarg och matvete",
-    "description": "Mättande bowl med kall kvargdressing, varm kyckling och matvete. Nästan sextio gram protein per portion.",
-    "servings": 4, "prepTime": 15, "cookTime": 15, "difficulty": "lätt",
-    "nutrition": {"kcal": 590, "protein": 56, "carbs": 58, "fat": 13, "fiber": 9},
-    "ingredients": [
-      {"name": "Kycklingfilé", "amount": 700, "unit": "g"},
-      {"name": "Matvete", "amount": 250, "unit": "g"},
-      {"name": "Kvarg", "amount": 300, "unit": "g"},
-      {"name": "Gurka", "amount": 1, "unit": "st"},
-      {"name": "Tomat", "amount": 3, "unit": "st"},
-      {"name": "Citron", "amount": 1, "unit": "st"},
-      {"name": "Olja", "pantryStaple": true},
-      {"name": "Salt", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Koka matvetet enligt anvisningen på paketet och låt det svalna något.",
-      "Skär kycklingen i bitar och stek den i olja tills den är genomstekt. Salta.",
-      "Rör ihop kvarg med pressad citron, salt och en skvätt vatten till en dressing.",
-      "Tärna gurka och tomat.",
-      "Lägg upp matvete, kyckling och grönsaker i skålar och ringla över kvargdressingen."
-    ],
-    "categories": ["Kyckling", "Lunch"],
-    "tags": ["proteinrikt", "kyckling", "mealprep", "snabbt"],
-    "allergens": ["gluten", "laktos"], "dietFlags": ["blandkost"]
+  "ingredients": [
+   {
+    "name": "Biff",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Sötpotatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Smör",
+    "amount": 60,
+    "unit": "g"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Persilja",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Sätt ugnen på 220 grader. Skala och skär sötpotatisen i klyftor.",
+   "Vänd klyftorna i olja och salt och rosta dem 25-30 minuter tills de är mjuka och fått färg.",
+   "Ta fram biffen i god tid så den är rumstempererad. Salta och peppra ordentligt.",
+   "Hacka vitlök och persilja och rör ihop med mjukt smör.",
+   "Stek biffen i het panna 2-3 minuter per sida för rosa mitt. Låt vila 5 minuter under folie.",
+   "Skiva biffen och servera med klyftorna och en klick örtsmör ovanpå."
+  ],
+  "categories": [
+   "Kött",
+   "Helgmiddag"
+  ],
+  "tags": [
+   "proteinrikt",
+   "kott",
+   "helgmiddag"
+  ],
+  "allergens": [
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/16444386/pexels-photo-16444386.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/meal-with-beef-on-plate-16444386/",
+  "imageCredit": "Dextar Studio ™",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Stekt biff med sötpotatis upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "kvargbowl-kyckling",
+  "name": "Kycklingbowl med kvarg och matvete",
+  "description": "Mättande bowl med kall kvargdressing, varm kyckling och matvete. Nästan sextio gram protein per portion.",
+  "servings": 4,
+  "prepTime": 15,
+  "cookTime": 15,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 590,
+   "protein": 56,
+   "carbs": 58,
+   "fat": 13,
+   "fiber": 9
   },
-  {
-    "id": "aggrora-bacon-bonor",
-    "name": "Äggröra med bacon och vita bönor",
-    "description": "Snabb proteinbomb i en panna. Krämig äggröra, knaprigt bacon och bönor som gör den mättande på riktigt.",
-    "servings": 4, "prepTime": 5, "cookTime": 12, "difficulty": "lätt",
-    "nutrition": {"kcal": 520, "protein": 38, "carbs": 26, "fat": 30, "fiber": 9},
-    "ingredients": [
-      {"name": "Ägg", "amount": 10, "unit": "st"},
-      {"name": "Bacon", "amount": 200, "unit": "g"},
-      {"name": "Vita bönor", "amount": 400, "unit": "g"},
-      {"name": "Tomat", "amount": 3, "unit": "st"},
-      {"name": "Gräslök", "amount": 15, "unit": "g"},
-      {"name": "Smör", "amount": 20, "unit": "g"},
-      {"name": "Salt", "pantryStaple": true},
-      {"name": "Peppar", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Stek baconet knaprigt och lyft upp det. Spara fettet i pannan.",
-      "Skölj och häll av bönorna, tärna tomaterna och stek dem hastigt i baconfettet.",
-      "Vispa ihop äggen med salt och peppar.",
-      "Sänk värmen, tillsätt smöret och häll i äggen. Rör försiktigt tills röran precis stannat men fortfarande är krämig.",
-      "Toppa med bacon och hackad gräslök."
-    ],
-    "categories": ["Lunch"],
-    "tags": ["proteinrikt", "snabbt", "billigt"],
-    "allergens": ["ägg", "laktos"], "dietFlags": ["blandkost"]
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 700,
+    "unit": "g"
+   },
+   {
+    "name": "Matvete",
+    "amount": 250,
+    "unit": "g"
+   },
+   {
+    "name": "Kvarg",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Gurka",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Tomat",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka matvetet enligt anvisningen på paketet och låt det svalna något.",
+   "Skär kycklingen i bitar och stek den i olja tills den är genomstekt. Salta.",
+   "Rör ihop kvarg med pressad citron, salt och en skvätt vatten till en dressing.",
+   "Tärna gurka och tomat.",
+   "Lägg upp matvete, kyckling och grönsaker i skålar och ringla över kvargdressingen."
+  ],
+  "categories": [
+   "Kyckling",
+   "Lunch"
+  ],
+  "tags": [
+   "proteinrikt",
+   "kyckling",
+   "mealprep",
+   "snabbt"
+  ],
+  "allergens": [
+   "gluten",
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/8108069/pexels-photo-8108069.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+  "imageCredit": "MART  PRODUCTION",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kycklingbowl med kvarg och matvete upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "aggrora-bacon-bonor",
+  "name": "Äggröra med bacon och vita bönor",
+  "description": "Snabb proteinbomb i en panna. Krämig äggröra, knaprigt bacon och bönor som gör den mättande på riktigt.",
+  "servings": 4,
+  "prepTime": 5,
+  "cookTime": 12,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 520,
+   "protein": 38,
+   "carbs": 26,
+   "fat": 30,
+   "fiber": 9
   },
-  {
-    "id": "tonfisksallad-bonor",
-    "name": "Tonfisksallad med vita bönor",
-    "description": "Kall lunch som tar tio minuter och håller hela eftermiddagen. Tonfisk, bönor och rödlök i citrondressing.",
-    "servings": 4, "prepTime": 10, "cookTime": 0, "difficulty": "lätt",
-    "nutrition": {"kcal": 420, "protein": 40, "carbs": 32, "fat": 14, "fiber": 11},
-    "ingredients": [
-      {"name": "Tonfisk", "amount": 400, "unit": "g"},
-      {"name": "Vita bönor", "amount": 400, "unit": "g"},
-      {"name": "Rödlök", "amount": 1, "unit": "st"},
-      {"name": "Tomat", "amount": 3, "unit": "st"},
-      {"name": "Gurka", "amount": 1, "unit": "st"},
-      {"name": "Citron", "amount": 1, "unit": "st"},
-      {"name": "Olivolja", "amount": 3, "unit": "msk"},
-      {"name": "Salt", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Häll av tonfisken och bönorna och skölj bönorna i kallt vatten.",
-      "Skiva rödlöken tunt och lägg den i kallt vatten i fem minuter så den blir mildare.",
-      "Tärna tomat och gurka.",
-      "Vispa ihop olivolja med pressad citron och salt.",
-      "Blanda allt försiktigt så tonfisken inte faller sönder helt, och låt stå tio minuter före servering."
-    ],
-    "categories": ["Fisk", "Lunch"],
-    "tags": ["proteinrikt", "fisk", "snabbt", "billigt", "mealprep"],
-    "allergens": ["fisk"], "dietFlags": ["pescetarisk"]
+  "ingredients": [
+   {
+    "name": "Ägg",
+    "amount": 10,
+    "unit": "st"
+   },
+   {
+    "name": "Bacon",
+    "amount": 200,
+    "unit": "g"
+   },
+   {
+    "name": "Vita bönor",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Tomat",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Gräslök",
+    "amount": 15,
+    "unit": "g"
+   },
+   {
+    "name": "Smör",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Stek baconet knaprigt och lyft upp det. Spara fettet i pannan.",
+   "Skölj och häll av bönorna, tärna tomaterna och stek dem hastigt i baconfettet.",
+   "Vispa ihop äggen med salt och peppar.",
+   "Sänk värmen, tillsätt smöret och häll i äggen. Rör försiktigt tills röran precis stannat men fortfarande är krämig.",
+   "Toppa med bacon och hackad gräslök."
+  ],
+  "categories": [
+   "Lunch"
+  ],
+  "tags": [
+   "proteinrikt",
+   "snabbt",
+   "billigt"
+  ],
+  "allergens": [
+   "ägg",
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/192319/pexels-photo-192319.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/egg-omelet-on-blue-and-white-ceramic-plate-192319/",
+  "imageCredit": "Markus Spiske",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Äggröra med bacon och vita bönor upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "tonfisksallad-bonor",
+  "name": "Tonfisksallad med vita bönor",
+  "description": "Kall lunch som tar tio minuter och håller hela eftermiddagen. Tonfisk, bönor och rödlök i citrondressing.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 0,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 420,
+   "protein": 40,
+   "carbs": 32,
+   "fat": 14,
+   "fiber": 11
   },
-  {
-    "id": "linsbolognese-proteinrik",
-    "name": "Linsbolognese med fullkornspasta",
-    "description": "Vegetarisk bolognese där röda linser ger både protein och fyllighet. Mättande utan att kännas tung.",
-    "servings": 4, "prepTime": 10, "cookTime": 25, "difficulty": "lätt",
-    "nutrition": {"kcal": 540, "protein": 30, "carbs": 84, "fat": 10, "fiber": 18},
-    "ingredients": [
-      {"name": "Röda linser", "amount": 300, "unit": "g"},
-      {"name": "Pasta", "amount": 400, "unit": "g"},
-      {"name": "Krossade tomater", "amount": 400, "unit": "g"},
-      {"name": "Morötter", "amount": 2, "unit": "st"},
-      {"name": "Gul lök", "amount": 1, "unit": "st"},
-      {"name": "Vitlök", "amount": 2, "unit": "st"},
-      {"name": "Tomatpuré", "amount": 2, "unit": "msk"},
-      {"name": "Olja", "pantryStaple": true},
-      {"name": "Salt", "pantryStaple": true},
-      {"name": "Oregano", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Hacka lök och vitlök, riv morötterna.",
-      "Fräs lök och morot mjuka i olja, cirka 5 minuter.",
-      "Rör ner tomatpurén och låt den steka en minut.",
-      "Tillsätt linser, krossade tomater och 3 dl vatten. Krydda med oregano och salt.",
-      "Låt puttra 20 minuter tills linserna är mjuka och såsen tjocknat. Rör om då och då.",
-      "Koka pastan under tiden och servera såsen över den."
-    ],
-    "categories": ["Pasta", "Vegetariskt"],
-    "tags": ["proteinrikt", "vegetariskt", "veganskt", "billigt", "mealprep"],
-    "allergens": ["gluten"], "dietFlags": ["vegansk"]
+  "ingredients": [
+   {
+    "name": "Tonfisk",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Vita bönor",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Rödlök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Tomat",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Gurka",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Olivolja",
+    "amount": 3,
+    "unit": "msk"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Häll av tonfisken och bönorna och skölj bönorna i kallt vatten.",
+   "Skiva rödlöken tunt och lägg den i kallt vatten i fem minuter så den blir mildare.",
+   "Tärna tomat och gurka.",
+   "Vispa ihop olivolja med pressad citron och salt.",
+   "Blanda allt försiktigt så tonfisken inte faller sönder helt, och låt stå tio minuter före servering."
+  ],
+  "categories": [
+   "Fisk",
+   "Lunch"
+  ],
+  "tags": [
+   "proteinrikt",
+   "fisk",
+   "snabbt",
+   "billigt",
+   "mealprep"
+  ],
+  "allergens": [
+   "fisk"
+  ],
+  "dietFlags": [
+   "pescetarisk"
+  ],
+  "image": "https://images.pexels.com/photos/19051901/pexels-photo-19051901.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/a-bowl-of-tuna-salad-with-eggs-19051901/",
+  "imageCredit": "Nadin Sh",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Tonfisksallad med vita bönor upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "linsbolognese-proteinrik",
+  "name": "Linsbolognese med fullkornspasta",
+  "description": "Vegetarisk bolognese där röda linser ger både protein och fyllighet. Mättande utan att kännas tung.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 25,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 540,
+   "protein": 30,
+   "carbs": 84,
+   "fat": 10,
+   "fiber": 18
   },
-  {
-    "id": "flaskfile-rotfrukter",
-    "name": "Fläskfilé med rostade rotfrukter",
-    "description": "Hel fläskfilé som steks och får vila rosa i mitten, med rotfrukter som karamelliserats i ugnen.",
-    "servings": 4, "prepTime": 15, "cookTime": 30, "difficulty": "medel",
-    "nutrition": {"kcal": 520, "protein": 46, "carbs": 40, "fat": 18, "fiber": 8},
-    "ingredients": [
-      {"name": "Fläskfilé", "amount": 700, "unit": "g"},
-      {"name": "Potatis", "amount": 600, "unit": "g"},
-      {"name": "Morötter", "amount": 400, "unit": "g"},
-      {"name": "Rödlök", "amount": 2, "unit": "st"},
-      {"name": "Timjan", "amount": 10, "unit": "g"},
-      {"name": "Olja", "pantryStaple": true},
-      {"name": "Salt", "pantryStaple": true},
-      {"name": "Peppar", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Sätt ugnen på 200 grader. Skär potatis, morötter och lök i grova bitar.",
-      "Vänd rotfrukterna i olja, salt och timjan och rosta dem 30 minuter.",
-      "Putsa fläskfilén, salta och peppra den runt om.",
-      "Bryn filén runt om i het panna, cirka 4 minuter totalt.",
-      "Lägg in filén till rotfrukterna de sista 12-15 minuterna, tills innertemperaturen är 65 grader.",
-      "Låt köttet vila 10 minuter innan du skivar det."
-    ],
-    "categories": ["Kött", "Husmanskost"],
-    "tags": ["proteinrikt", "kott", "helgmiddag", "familj"],
-    "allergens": [], "dietFlags": ["blandkost"]
+  "ingredients": [
+   {
+    "name": "Röda linser",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Pasta",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Morötter",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Tomatpuré",
+    "amount": 2,
+    "unit": "msk"
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Oregano",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Hacka lök och vitlök, riv morötterna.",
+   "Fräs lök och morot mjuka i olja, cirka 5 minuter.",
+   "Rör ner tomatpurén och låt den steka en minut.",
+   "Tillsätt linser, krossade tomater och 3 dl vatten. Krydda med oregano och salt.",
+   "Låt puttra 20 minuter tills linserna är mjuka och såsen tjocknat. Rör om då och då.",
+   "Koka pastan under tiden och servera såsen över den."
+  ],
+  "categories": [
+   "Pasta",
+   "Vegetariskt"
+  ],
+  "tags": [
+   "proteinrikt",
+   "vegetariskt",
+   "veganskt",
+   "billigt",
+   "mealprep"
+  ],
+  "allergens": [
+   "gluten"
+  ],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "https://images.pexels.com/photos/4350120/pexels-photo-4350120.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/crop-young-lady-holding-plate-of-pasta-bolognese-4350120/",
+  "imageCredit": "Ketut Subiyanto",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Linsbolognese med fullkornspasta upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "flaskfile-rotfrukter",
+  "name": "Fläskfilé med rostade rotfrukter",
+  "description": "Hel fläskfilé som steks och får vila rosa i mitten, med rotfrukter som karamelliserats i ugnen.",
+  "servings": 4,
+  "prepTime": 15,
+  "cookTime": 30,
+  "difficulty": "medel",
+  "nutrition": {
+   "kcal": 520,
+   "protein": 46,
+   "carbs": 40,
+   "fat": 18,
+   "fiber": 8
   },
-  {
-    "id": "kikartscurry-protein",
-    "name": "Kikärtscurry med spenat",
-    "description": "Krämig curry på kikärtor och kokosmjölk med massor av spenat. Vegansk, billig och riktigt mättande.",
-    "servings": 4, "prepTime": 10, "cookTime": 20, "difficulty": "lätt",
-    "nutrition": {"kcal": 520, "protein": 22, "carbs": 62, "fat": 21, "fiber": 16},
-    "ingredients": [
-      {"name": "Kikärtor", "amount": 800, "unit": "g"},
-      {"name": "Kokosmjölk", "amount": 400, "unit": "ml"},
-      {"name": "Ris", "amount": 300, "unit": "g"},
-      {"name": "Spenat", "amount": 200, "unit": "g"},
-      {"name": "Gul lök", "amount": 1, "unit": "st"},
-      {"name": "Vitlök", "amount": 3, "unit": "st"},
-      {"name": "Currypasta", "amount": 2, "unit": "msk"},
-      {"name": "Olja", "pantryStaple": true},
-      {"name": "Salt", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Koka riset enligt anvisningen på paketet.",
-      "Hacka lök och vitlök och fräs mjuka i olja.",
-      "Rör ner currypastan och stek en halv minut tills den doftar.",
-      "Häll av kikärtorna och tillsätt dem tillsammans med kokosmjölken.",
-      "Låt puttra 12 minuter så såsen tjocknar.",
-      "Vänd ner spenaten och låt den falla ihop. Smaka av med salt och servera med riset."
-    ],
-    "categories": ["Vegetariskt", "Ris"],
-    "tags": ["vegetariskt", "veganskt", "billigt", "proteinrikt", "mealprep"],
-    "allergens": [], "dietFlags": ["vegansk"]
+  "ingredients": [
+   {
+    "name": "Fläskfilé",
+    "amount": 700,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Morötter",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Rödlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Timjan",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Sätt ugnen på 200 grader. Skär potatis, morötter och lök i grova bitar.",
+   "Vänd rotfrukterna i olja, salt och timjan och rosta dem 30 minuter.",
+   "Putsa fläskfilén, salta och peppra den runt om.",
+   "Bryn filén runt om i het panna, cirka 4 minuter totalt.",
+   "Lägg in filén till rotfrukterna de sista 12-15 minuterna, tills innertemperaturen är 65 grader.",
+   "Låt köttet vila 10 minuter innan du skivar det."
+  ],
+  "categories": [
+   "Kött",
+   "Husmanskost"
+  ],
+  "tags": [
+   "proteinrikt",
+   "kott",
+   "helgmiddag",
+   "familj"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/11001292/pexels-photo-11001292.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/food-menu-restaurant-dinner-11001292/",
+  "imageCredit": "Sylwester Ficek",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Fläskfilé med rostade rotfrukter upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "kikartscurry-protein",
+  "name": "Kikärtscurry med spenat",
+  "description": "Krämig curry på kikärtor och kokosmjölk med massor av spenat. Vegansk, billig och riktigt mättande.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 520,
+   "protein": 22,
+   "carbs": 62,
+   "fat": 21,
+   "fiber": 16
   },
-  {
-    "id": "kycklingwok-nudlar-protein",
-    "name": "Kycklingwok med nudlar",
-    "description": "Snabb wok med kyckling, krispiga grönsaker och nudlar. På bordet på en kvart.",
-    "servings": 4, "prepTime": 10, "cookTime": 12, "difficulty": "lätt",
-    "nutrition": {"kcal": 560, "protein": 42, "carbs": 66, "fat": 13, "fiber": 7},
-    "ingredients": [
-      {"name": "Kycklingfilé", "amount": 600, "unit": "g"},
-      {"name": "Nudlar", "amount": 300, "unit": "g"},
-      {"name": "Wokgrönsaker", "amount": 500, "unit": "g"},
-      {"name": "Soja", "amount": 4, "unit": "msk"},
-      {"name": "Vitlök", "amount": 2, "unit": "st"},
-      {"name": "Ingefära", "amount": 20, "unit": "g"},
-      {"name": "Olja", "pantryStaple": true},
-      {"name": "Salt", "pantryStaple": true}
-    ],
-    "instructions": [
-      "Koka nudlarna enligt anvisningen på paketet och spola dem kalla.",
-      "Strimla kycklingen. Hacka vitlök och riv ingefäran.",
-      "Hetta upp olja i en wok eller stor stekpanna och stek kycklingen på hög värme tills den fått färg.",
-      "Tillsätt vitlök, ingefära och grönsakerna och woka 3-4 minuter så de behåller sitt tuggmotstånd.",
-      "Vänd ner nudlarna och sojan och blanda allt varmt igenom."
-    ],
-    "categories": ["Kyckling"],
-    "tags": ["proteinrikt", "kyckling", "snabbt", "mealprep"],
-    "allergens": ["gluten", "soja"], "dietFlags": ["blandkost"]
-  }
+  "ingredients": [
+   {
+    "name": "Kikärtor",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Kokosmjölk",
+    "amount": 400,
+    "unit": "ml"
+   },
+   {
+    "name": "Ris",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Spenat",
+    "amount": 200,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Currypasta",
+    "amount": 2,
+    "unit": "msk"
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka riset enligt anvisningen på paketet.",
+   "Hacka lök och vitlök och fräs mjuka i olja.",
+   "Rör ner currypastan och stek en halv minut tills den doftar.",
+   "Häll av kikärtorna och tillsätt dem tillsammans med kokosmjölken.",
+   "Låt puttra 12 minuter så såsen tjocknar.",
+   "Vänd ner spenaten och låt den falla ihop. Smaka av med salt och servera med riset."
+  ],
+  "categories": [
+   "Vegetariskt",
+   "Ris"
+  ],
+  "tags": [
+   "vegetariskt",
+   "veganskt",
+   "billigt",
+   "proteinrikt",
+   "mealprep"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "https://images.pexels.com/photos/7364662/pexels-photo-7364662.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/cooked-food-on-the-table-7364662/",
+  "imageCredit": "Pranjall Kumar",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kikärtscurry med spenat upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "kycklingwok-nudlar-protein",
+  "name": "Kycklingwok med nudlar",
+  "description": "Snabb wok med kyckling, krispiga grönsaker och nudlar. På bordet på en kvart.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 12,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 560,
+   "protein": 42,
+   "carbs": 66,
+   "fat": 13,
+   "fiber": 7
+  },
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Nudlar",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Soja",
+    "amount": 4,
+    "unit": "msk"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Ingefära",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka nudlarna enligt anvisningen på paketet och spola dem kalla.",
+   "Strimla kycklingen. Hacka vitlök och riv ingefäran.",
+   "Hetta upp olja i en wok eller stor stekpanna och stek kycklingen på hög värme tills den fått färg.",
+   "Tillsätt vitlök, ingefära och grönsakerna och woka 3-4 minuter så de behåller sitt tuggmotstånd.",
+   "Vänd ner nudlarna och sojan och blanda allt varmt igenom."
+  ],
+  "categories": [
+   "Kyckling"
+  ],
+  "tags": [
+   "proteinrikt",
+   "kyckling",
+   "snabbt",
+   "mealprep"
+  ],
+  "allergens": [
+   "gluten",
+   "soja"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/8995196/pexels-photo-8995196.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/top-view-of-delicious-food-with-broccoli-in-a-white-plate-8995196/",
+  "imageCredit": "I Own My Food Art",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kycklingwok med nudlar upplagd på tallrik",
+  "imageStatus": "ok"
+ }
 ]

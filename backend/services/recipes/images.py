@@ -182,7 +182,7 @@ DISH_TERMS_EN = {
     "kottbullar": "swedish meatballs", "kottfarssas": "bolognese sauce",
     "kottfarslimpa": "meatloaf", "lasagne": "lasagna", "tacos": "tacos",
     "hamburgare": "hamburger", "korvstroganoff": "sausage stroganoff",
-    "pyttipanna": "hash", "raggmunk": "potato pancake",
+    "pyttipanna": "swedish hash", "raggmunk": "potato pancake",
     "fisksoppa": "fish soup", "fiskgratang": "fish gratin",
     "kycklinggryta": "chicken stew", "kycklingwok": "chicken stir fry",
     "kottgryta": "beef stew", "gulaschsoppa": "goulash soup",
@@ -200,6 +200,20 @@ DISH_TERMS_EN = {
     "smorgastarta": "sandwich cake", "paj": "savoury pie",
     "pizza": "pizza", "burrito": "burrito", "wrap": "wrap",
     "couscous": "couscous", "bulgur": "bulgur", "quinoa": "quinoa",
+    # Added after a backfill left 23 recipes without a picture: Swedish
+    # compound dish names that Pexels has plenty of photos of, under an
+    # English word we had not given it.
+    "gratang": "casserole", "pastagratang": "baked pasta",
+    "potatisgratang": "potato gratin", "fiskgratang": "fish casserole",
+    "korvgratang": "sausage casserole", "rotfruktsgratang": "root vegetable gratin",
+    "bolognese": "bolognese", "vegobolognese": "vegetarian bolognese",
+    "linsbolognese": "lentil bolognese", "kottfarslimpa": "meatloaf",
+    "tofuwok": "tofu stir fry", "biffwok": "beef stir fry",
+    "teriyakilax": "teriyaki salmon", "teriyakitofu": "teriyaki tofu",
+    "flaskkarre": "pork roast", "flaskfile": "pork tenderloin",
+    "makaroner": "macaroni", "ugnspannkaka": "baked pancake",
+    "aggrora": "scrambled eggs", "lax": "salmon dish",
+    "torsk": "cod dish", "biff": "beef steak",
 }
 
 
@@ -372,9 +386,18 @@ def search_pexels(query: str, limit: int = 15) -> list[dict]:
 
 
 def search_sources(query: str) -> list[dict]:
-    """Every source, best first. Pexels leads when a key exists because its
-    food photography is simply better suited to a recipe card."""
-    return search_pexels(query) + search_commons(query)
+    """Pexels first, and Commons ONLY when Pexels found nothing.
+
+    They are not comparable sources. Pexels is curated food photography whose
+    alt text describes the food; Commons is an encyclopedia archive whose
+    titles are whatever the uploader typed. Ranking them together let a
+    Commons file outscore a genuinely better Pexels photo - that is how
+    pyttipanna ended up with "War Department. The Adjutant General's Office",
+    a US military archive photograph that matched the English word "hash".
+
+    So Commons is a fallback, not a competitor."""
+    from_pexels = search_pexels(query)
+    return from_pexels if from_pexels else search_commons(query)
 
 
 def find_image(recipe: dict, used_titles: set | None = None) -> dict | None:
