@@ -17,6 +17,107 @@ BUTIKSKÄLLOR → COLLECTORS/PROVIDERS → NORMALISERING → MATJAKT DATABASE �
 | `providers/` | En fil per kedja. All kedjespecifik kod bor här och ingen annanstans. |
 | `collectors/` | CLI-skript som kör en import och skriver rapport |
 
+## Vägen ut till appen
+
+```
+BUTIKSKÄLLOR → PROVIDERS → grocery.db → pricing.py → api.py → /api/pricing/* → matjakt.store/app/
+```
+
+| Endpoint | Ger |
+|---|---|
+| `POST /api/pricing/week` | Veckans lista prissatt mot varje kedja, plus en jämförelse som får förbli oavgjord |
+| `POST /api/pricing/list` | En kedjas butiksspecifika inköpslista med riktiga produkter |
+| `GET /api/grocery/status` | Vad databasen faktiskt innehåller, plus providerstatus |
+| `POST /api/admin/grocery-import` | Startar en import (admin-token, bakgrundstråd) |
+| `GET /api/admin/grocery-import` | Importförlopp, schema och providerstatus |
+
+Båda `pricing`-endpointsen svarar i **samma form**, så ingen vy behöver
+härleda ett tal själv:
+
+```json
+{ "store": {...}, "totalCheckoutCost": 276.0, "coveragePercent": 90,
+  "realPriceItems": 18, "estimatedItems": 6, "missingItems": 2,
+  "missingItemNames": ["Curry & grönsaker", "Kycklinglårfilé"],
+  "savings": null, "updatedAt": 1756..., "comparable": true, "items": [...] }
+```
+
+`items[]` innehåller **både** prissatta och saknade varor. Med separata
+arrayer tvingades varje vy att slå ihop dem själv, och en vy som glömde det
+tappade tyst de oprissatta varorna ur inköpslistan.
+
+Varje rad bär `priceStatus`:
+
+| | Betydelse |
+|---|---|
+| 🟢 `current` | Riktigt pris på en riktig produkt |
+| 🟡 `estimated` | Priset är riktigt, men PAKETANTALET fick gissas (receptets enhet gick inte att räkna om till förpackningens) |
+| ⚪ `missing` | Ingen produkt kunde matchas. Raden bär inget pris alls |
+
+### "Billigast" får bara visas när jämförelsen bär
+
+`compare_chains()` utser en billigaste kedja bara när underlaget håller.
+Fyra saker spärrar var för sig, och var och en har producerat ett felaktigt
+påstående i den här appen förut:
+
+1. Färre än två jämförbara kedjor.
+2. En kedja täcker under 60% av listan — dess total är låg för att varor
+   SAKNAS, inte för att butiken är billig. Det är det värsta felläget,
+   eftersom det får den sämst täckta kedjan att se bäst ut.
+3. Alla totaler identiska ("Coop 351 / Willys 351 / ICA 351, en märkt
+   billigast").
+4. Data för gammal för att ställas mot färsk.
+
+En kedja med noll riktiga träffar totalar 0 kr och spärras av kravet på minst
+en träff. Totalerna visas ändå — de är riktiga — men utan badge och med ett
+skäl. **Frontend härleder inte om detta**: när billigaste raden kommer från
+databasen är serverns dom den enda auktoriteten.
+
+## Nattjobb (Europe/Stockholm)
+
+| Kedja | Tid | Varför |
+|---|---|---|
+| Willys | 02:00 | verifierad återkommande import |
+| Hemköp | 03:00 | verifierad återkommande import |
+| City Gross | 04:00 | verifierad, men konservativt (3 s, delvis körning är normal) |
+| ICA | — | AWS WAF vid upprepad hämtning. Uppdateras **manuellt** via adminpanelen |
+| Coop | — | kräver Coops egen credential |
+| Lidl | — | publicerar inga priser |
+
+Tiderna är spridda: tre parallella kategoripromenader hade tredubblat
+anropstakten mot tre sajter under samma minut. Att tidszonen är
+Europe/Stockholm är poängen — ett "03:00" som i tysthet betyder UTC glider en
+timme två gånger om året mot de hyllpriser det ska spegla.
+
+Avstängt som standard. `MATJAKT_GROCERY_SCHEDULE_ENABLED=1` slår på,
+`MATJAKT_GROCERY_SCHEDULE` sätter tider. Kedjor utanför tabellens tre kan
+**inte** schemaläggas ens av en felskriven variabel.
+
+**En misslyckad körning raderar aldrig något.** Importen gör bara upsert —
+det finns ingen raderingsväg. En blockerad körning behåller det den hann
+samla och skriver varför den stannade.
+
+## Produktionspersistens
+
+Render-disken monteras på `/app/backend/data`, vilket är exakt dit både
+collectorns `DB_PATH` och api_serverns datakatalog löser ut i imagen.
+Verifierat praktiskt mot en tom monterad katalog: schemat skapas automatiskt,
+och produkt, kategori och pris finns kvar efter omstart.
+
+`backend/data/` är gitignorerad, så **ingen databas följer med imagen** — en
+deploy kommer upp med en tom disk och måste fyllas av nattjobbet eller av
+`POST /api/admin/grocery-import`.
+
+## Adminpanel
+
+`/app/admin.html`. Per kedja: status, produkter, priser, GTIN-, bild- och
+kategoritäckning, senaste **lyckade** import, senaste **försök**,
+felmeddelande och nästa nattkörning. De två sista är olika frågor: en kedja
+vars senaste försök blockerades kan fortfarande leverera bra data från en
+lyckad körning två dagar tidigare.
+
+Admin-token hålls bara i minnet i fliken — aldrig i localStorage. En
+admin-nyckel som ligger kvar på disk i en webbläsare är en nyckel som läcker.
+
 ## Kategoridata (insamling per kategori)
 
 Kedjorna samlas i första hand in genom att **gå igenom kategoriträdet**, inte
@@ -106,14 +207,19 @@ ett GTIN dyker upp).
 
 ## Providerstatus
 
-| Kedja | Status | Återkommande import verifierad? |
-|---|---|---|
-| **Willys** | `working` (nationell prissättning) | ✅ **Ja** |
-| **Hemköp** | `working` (nationell prissättning) | ✅ **Ja** |
-| **City Gross** | `working_but_unreliable` | ✅ Ja (men se nedan) |
-| **ICA** | `working_but_rate_limited` | ❌ Nej — AWS WAF |
-| **Coop** | `blocked_requires_vendor_credential` | ❌ Nej — API kräver Coops egen nyckel |
-| **Lidl** | `not_available_no_public_prices` | ❌ Nej — publicerar inga priser alls |
+| Kedja | Status | Återkommande import | Produkter i db | Insamling |
+|---|---|---|---|---|
+| **Willys** | `working` (nationell prissättning) | ✅ **Ja** | **10 842** | kategoripromenad |
+| **Hemköp** | `working` (nationell prissättning) | ✅ **Ja** | **2 982** | kategoripromenad |
+| **City Gross** | `working_but_unreliable` | ✅ Ja (men se nedan) | ~100+ | sökord (54) |
+| **ICA** | `working_but_rate_limited` | ❌ Nej — AWS WAF | 100 | sökord, manuellt |
+| **Coop** | `blocked_requires_vendor_credential` | ❌ Nej — API kräver Coops egen nyckel | 0 | — |
+| **Lidl** | `not_available_no_public_prices` | ❌ Nej — publicerar inga priser alls | 0 | — |
+
+Siffrorna är från fullimporterna 2026-08-31. Willys: 452 lövkategorier,
+10 872 sparade (10 077 nya, 795 uppdaterade), 100% med kategori, bild och
+GTIN, 0 fel. Hemköp: 428 lövkategorier, 2 982 sparade, 100% med kategori,
+bild och GTIN, 70 kampanjpriser, 26 medlemspriser, 0 fel.
 
 ### Gemensamt Axfood-lager
 
