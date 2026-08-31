@@ -1163,7 +1163,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # tell "this chain is expensive" apart from "we have barely any
             # data for this chain", and so must we when a deploy comes up
             # with an empty disk.
-            self.send_json(200, grocery_api.database_summary(), cache_seconds=60)
+            summary = grocery_api.database_summary()
+            summary["providers"] = grocery_api.provider_status()
+            self.send_json(200, summary, cache_seconds=60)
             return
         if parsed.path == "/api/admin/grocery-import":
             if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):

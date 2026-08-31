@@ -132,6 +132,89 @@ def database_summary() -> dict:
         store.close()
 
 
+# Every chain Matjakt knows about, INCLUDING the ones we cannot collect from.
+# Leaving Coop and Lidl out of the panel would quietly turn "we are blocked"
+# into "we forgot", and the reason each is blocked is the useful part - one
+# needs someone else's credential, the other publishes no prices at all.
+PROVIDER_STATUS = {
+    "Willys": {
+        "status": "working", "recurringImportVerified": True, "pricingScope": "national",
+        "collectable": True,
+        "note": "Axfoods öppna REST-API. Ingen nyckel, cookie, session eller browser.",
+    },
+    "Hemköp": {
+        "status": "working", "recurringImportVerified": True, "pricingScope": "national",
+        "collectable": True,
+        "note": "Samma Axfood-plattform som Willys. Enda kedjan med riktiga medlemspriser.",
+    },
+    "City Gross": {
+        "status": "working_but_unreliable", "recurringImportVerified": True,
+        "pricingScope": "store", "collectable": True,
+        "note": "Rikast data, men stryper genom att släppa anslutningar i stället för "
+                "HTTP 429. En delvis import är normalt, inte ett fel.",
+    },
+    "ICA": {
+        "status": "working_but_rate_limited", "recurringImportVerified": False,
+        "pricingScope": "store", "collectable": False,
+        "note": "AWS WAF-challenge vid upprepad hämtning. Vi kringgår den inte. "
+                "ICA visar senast hämtade data tills officiell åtkomst är löst.",
+    },
+    "Coop": {
+        "status": "blocked_requires_vendor_credential", "recurringImportVerified": False,
+        "pricingScope": None, "collectable": False,
+        "note": "All produktdata kräver Coops egen Azure APIM-nyckel. Vi autentiserar "
+                "oss inte med någon annans credential.",
+    },
+    "Lidl": {
+        "status": "not_available_no_public_prices", "recurringImportVerified": False,
+        "pricingScope": None, "collectable": False,
+        "note": "Strukturellt, inte en blockering: Lidl Sverige publicerar inga "
+                "per-produkt-priser alls. Går inte att lösa tekniskt och ska inte fejkas.",
+    },
+}
+
+
+def provider_status() -> list[dict]:
+    """The status panel's data: what each chain's provider can do, and what
+    the database actually holds for it right now.
+
+    The two halves must be read together. A chain can be "working" and still
+    have no data (nothing has imported yet), and it can have data while being
+    uncollectable (ICA's last successful run, kept until official access is
+    sorted). Showing only one half would misrepresent both cases."""
+    holdings = {entry["chain"]: entry for entry in database_summary()["chains"]}
+    store = open_store()
+    try:
+        runs = {}
+        for row in store.connection.execute(
+            """
+            SELECT chain, status, started_at, finished_at, products_found,
+                   prices_updated, error_message
+            FROM grocery_collector_runs
+            WHERE id IN (SELECT MAX(id) FROM grocery_collector_runs GROUP BY chain)
+            """
+        ).fetchall():
+            runs[row["chain"]] = {
+                "status": row["status"], "startedAt": row["started_at"],
+                "finishedAt": row["finished_at"], "productsFound": row["products_found"],
+                "pricesUpdated": row["prices_updated"], "errorMessage": row["error_message"],
+            }
+    finally:
+        store.close()
+
+    panel = []
+    for chain, meta in PROVIDER_STATUS.items():
+        held = holdings.get(chain) or {}
+        panel.append({
+            "chain": chain, **meta,
+            "products": held.get("products", 0),
+            "withCategory": held.get("withCategory", 0),
+            "ageSeconds": held.get("ageSeconds"),
+            "lastRun": runs.get(chain),
+        })
+    return panel
+
+
 def priceable_chains() -> list[str]:
     """Chains that actually have data to price against. A chain with no rows
     must not appear in a comparison at all - an empty chain would otherwise
