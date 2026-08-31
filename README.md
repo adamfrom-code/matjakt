@@ -2,7 +2,7 @@
 
 Matjakt är en mobile-first prototyp för veckoplanering, budgetoptimering och prisjämförelse. Produktlöftet är: **Säg din budget. Matjakt löser resten.**
 
-Fas 1 stabiliserar prototypen. Prisuppgifterna är ännu en blandning av lokal katalogdata och best-effort-sökning på butikernas publika webbplatser, inte en färdig prisdatabas.
+Matjakt är live på [matjakt.store](https://matjakt.store). Priserna kommer ur Matjakts egen prisdatabas, som fylls av nattliga importer från Willys, Hemköp och City Gross — riktiga produkter, riktiga förpackningar, riktiga kassakostnader. Affärsmodellen är Free för alltid / Premium 59 kr/mån eller 399 kr/år (server-side entitlement, central feature-matris i `backend/services/accounts/features.py`). Se CHECKPOINT.md för arkitektur- och driftläget.
 
 ## Krav och installation
 
