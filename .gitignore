@@ -4,10 +4,9 @@ backend/__pycache__/
 backend/data/*.db
 backend/data/*.db-wal
 backend/data/*.db-shm
-# Receptkällorna är däremot KÄLLKOD. De ligger under backend/data/ av
-# praktiska skäl, men en receptbank som inte versionshanteras är en
-# receptbank som går förlorad vid nästa rensning.
-!backend/data/recipes/
+# Receptkällorna låg tidigare under backend/data/ och behövde undantas här.
+# De ligger nu i backend/recipe_sources/ - utanför monteringspunkten, där de
+# både versionshanteras och faktiskt syns när Render monterat disken.
 *.pyc
 .env
 .DS_Store

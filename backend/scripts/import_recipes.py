@@ -26,7 +26,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 from services.recipes import RecipeStore, normalize_ingredient_id  # noqa: E402
 from services.recipes.images import find_image, placeholder  # noqa: E402
 
-RECIPE_DIR = ROOT / "backend" / "data" / "recipes"
+RECIPE_DIR = ROOT / "backend" / "recipe_sources"
 DB_PATH = ROOT / "backend" / "data" / "recipes.db"
 
 # Units the pricing engine can convert between, plus the ones a recipe

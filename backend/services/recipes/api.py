@@ -36,7 +36,12 @@ _LOCK = threading.Lock()
 # production nothing ever ran it, so the database was empty and the app had no
 # recipes at all - the same shape of gap that left the price database empty
 # after every deploy.
-RECIPE_SOURCE_DIR = Path(__file__).resolve().parents[2] / "data" / "recipes"
+# NOT under backend/data/. The Render disk mounts at /app/backend/data and
+# a mount SHADOWS whatever the image had at that path - so the recipe JSON
+# shipped in the image was invisible at runtime, and production served zero
+# recipes from a fully deployed backend. The sources are code; they belong
+# next to the code, not inside the volume.
+RECIPE_SOURCE_DIR = Path(__file__).resolve().parents[2] / "recipe_sources"
 
 
 def bootstrap_if_empty() -> int:
