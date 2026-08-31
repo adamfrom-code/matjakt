@@ -6,7 +6,7 @@ import { expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts
 import { extraLineTotal, extraUnitPrice, extrasTotal, newExtraItem, removeExtra, setQty } from "./src/services/extras.js";
 import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
-import { API_BASE_URL, campaignsApiUrl, entitlementsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
+import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
 import { changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, startTrial, storeToken, verifyEmail } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
@@ -1979,8 +1979,17 @@ function renderBasket() {
   // fetch timestamp - that's internal plumbing, not something a shopper needs
   // to see. Only the plain, calm facts: what's left, and what it costs.
   $("shoppingProgress").textContent = shoppingItems.length ? plural(itemsLeft, "vara kvar", "varor kvar") : "";
-  $("shoppingCost").textContent = `${total == null ? "pris hämtas…" : money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
-  $("shoppingComplete").hidden = !(shoppingItems.length && completed === shoppingItems.length);
+  const nothingPlanned = !shoppingItems.length && !state.extraItems.length;
+  $("shoppingCost").textContent = nothingPlanned
+    ? `– / ${money(state.budget)}`
+    : total == null && !shoppingItems.length && state.extraItems.length
+      ? `${money(extrasCost)} / ${money(state.budget)}`
+      : `${total == null ? "pris hämtas…" : money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
+  // "Allt handlat" celebrates a finished list, never an empty one - and
+  // extras count: a week isn't done while the added coffee is unbought.
+  const extrasDone = state.extraItems.every(extra => extra.checked);
+  $("shoppingComplete").hidden = !((shoppingItems.length || state.extraItems.length)
+    && completed === shoppingItems.length && extrasDone);
   renderAttribution(shoppingItems);
   renderStoreComparison(selected); renderStoreCards(); renderExtraItems(activeChain); renderPantry();
   renderWeekStoreTabs();
@@ -2610,8 +2619,26 @@ function renderStats() {
   $("statCheapestStore").textContent = cheapestName;
   $("statAvgPortion").textContent = state.savingsLog.length ? money(avgPortion) : "-";
   $("statWasteReduced").textContent = reused ? `${plural(reused, "ingrediens", "ingredienser")} återanvänds i flera rätter denna vecka` : "Skapa en vecka för att se detta";
-  $("savingsCardValue").textContent = weekEntries.length ? money(savedWeek) : "–";
-  $("savingsCardSubtitle").textContent = !state.savingsLog.length ? "Skapa din första vecka för att se detta" : weekEntries.length ? "denna vecka, jämfört med dyraste alternativet" : "Underlag saknas - fler butiker behövs för en jämförelse";
+  // The hero savings card only ever shows REAL arithmetic: the server's own
+  // verdict for the CURRENT week (cheapest vs priciest comparable chain).
+  // The old estimate-based log said "Uppskattat sparat" - a number nobody
+  // could pay or verify. When the data cannot carry a claim, the card says
+  // so instead of decorating a guess.
+  const comparison = state.dbComparison;
+  const realSaving = comparison?.cheapestChain && comparison?.savings > 1 && !comparison.locked
+    ? comparison.savings
+    : comparison?.locked && comparison?.priceSpread > 1 ? comparison.priceSpread : null;
+  if (realSaving != null) {
+    $("savingsCardValue").textContent = money(realSaving);
+    $("savingsCardSubtitle").textContent = comparison.locked
+      ? "så mycket skiljer det mellan butikerna den här veckan"
+      : `genom att handla veckan hos ${comparison.cheapestChain}`;
+  } else {
+    $("savingsCardValue").textContent = "–";
+    $("savingsCardSubtitle").textContent = selectedRecipes().length
+      ? "Kan inte beräknas ännu – kräver två jämförbara butiker"
+      : "Skapa din första vecka för att se detta";
+  }
 }
 $("openStatsBtn").addEventListener("click", () => { renderStats(); setView("stats"); });
 
@@ -2774,36 +2801,6 @@ async function refreshUser() {
   if (hasPremium() && hasActiveNutritionGoals(currentNutritionGoals()) && !state.valda.size) chooseMenu(false);
   renderCampaignSection();
 }
-const CAMPAIGN_CHAINS = ["Coop", "Hemköp"];
-let campaignFetchKey = null;
-function campaignDealMarkup(deal) {
-  const recipe = RECEPT.find(item => item.ingredienser.includes(deal.ingrediens));
-  // Real photo (Primat first, Open Food Facts by GTIN otherwise - see
-  // fill_missing_image on the backend) or a category icon, never a bare
-  // emoji standing in for a product - same guaranteed-image rule as the
-  // shopping list.
-  const photo = deal.bild ? `<img src="${escapeHtml(deal.bild)}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(deal.ingrediens));
-  const discount = deal.kampanj.ordinariePris && deal.pris_kr ? Math.round((1 - deal.pris_kr / deal.kampanj.ordinariePris) * 100) : null;
-  const badge = discount && discount > 0 ? `<span class="campaign-deal-badge">−${discount}%</span>` : "";
-  const brandSize = deal.marke_och_storlek ? `<small class="campaign-deal-brand">${escapeHtml(deal.marke_och_storlek)}</small>` : "";
-  // slutdatum comes straight from Primat's own offer.valid_until - never
-  // computed or guessed here, and simply omitted when Primat doesn't have one.
-  const endDate = deal.kampanj.slutdatum ? `<small class="campaign-deal-enddate">T.o.m. ${new Date(deal.kampanj.slutdatum).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}</small>` : "";
-  const storeColor = CHAIN_COLORS[deal.kedja] || "var(--primary)";
-  const inner = `<span class="campaign-deal-image">${photo}${badge}</span><span class="campaign-deal-info"><strong>${escapeHtml(deal.produktnamn)}</strong>${brandSize}<span class="campaign-deal-price-row"><strong class="campaign-deal-price">${money(deal.pris_kr)}</strong>${deal.kampanj.ordinariePris ? `<s>${money(deal.kampanj.ordinariePris)}</s>` : ""}</span><span class="campaign-deal-condition">${escapeHtml(deal.kampanj.text)}</span><span class="campaign-deal-store" style="color:${storeColor}">${escapeHtml(deal.kedja || "")}</span>${endDate}</span>`;
-  // The whole card opens the matched recipe when there is one (real,
-  // existing navigation) rather than a small text link easy to miss or
-  // overflow - a card with nothing to open stays a plain, non-interactive div.
-  return recipe
-    ? `<button type="button" class="campaign-deal" data-cook-open="${escapeHtml(recipe.id)}">${inner}</button>`
-    : `<div class="campaign-deal">${inner}</div>`;
-}
-// The Hem campaign rail runs on MATJAKT'S OWN collected prices: every card
-// is a product whose campaign_price the chain itself published, across all
-// chains we collect. Free for everyone - it is our own data, it costs one
-// cached request, and it is the single best daily reason to open the app.
-// The old per-chain scrape below remains only as the Premium extra for
-// Coop, which we cannot collect.
 let ownCampaignFetchKey = null;
 let ownCampaignDeals = [];
 async function renderOwnCampaigns() {
@@ -2847,44 +2844,9 @@ async function renderCampaignSection() {
   $("campaignLocked").hidden = true;
   $("campaignStoreLabel").hidden = true;
   renderOwnCampaigns();
-  return;
-  /* eslint-disable no-unreachable */
-  const premium = hasPremium();
-  const chain = chosenStore();
-  if (!CAMPAIGN_CHAINS.includes(chain)) {
-    $("campaignStoreLabel").hidden = true;
-    $("campaignList").innerHTML = `<p class="live-loading">Kampanjer visas för Coop och Hemköp. Byt butik i "Justera veckan" för att se dem.</p>`;
-    return;
-  }
-  // Every deal in this list comes from the same chain (the fetch itself is
-  // scoped to one) - shown once here instead of repeated on every row, so
-  // it's always clear which store's campaigns these are without cluttering
-  // each item with a label that would just say the same thing every time.
-  $("campaignStoreLabel").textContent = `Hos ${chain}`;
-  $("campaignStoreLabel").hidden = false;
-  const key = `${chain}|${state.postnummer}`;
-  if (campaignFetchKey === key) return;
-  campaignFetchKey = key;
-  $("campaignList").innerHTML = `<p class="live-loading">Letar efter kampanjer hos ${chain}... kan ta en stund.</p>`;
-  try {
-    const response = await fetch(campaignsApiUrl(chain, state.postnummer), { headers: { Authorization: `Bearer ${getStoredToken()}` }, signal: AbortSignal.timeout(25000) });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    if (chosenStore() !== chain) return;
-    const deals = data.kampanjer || [];
-    $("campaignList").innerHTML = deals.length ? deals.map(campaignDealMarkup).join("") : `<p class="live-loading">Inga kampanjer hittades just nu.</p>`;
-    document.querySelectorAll("[data-cook-open]").forEach(link => link.addEventListener("click", event => { event.preventDefault(); openRecipeTab(link.dataset.cookOpen); }));
-    const usesPrimat = deals.some(deal => deal.kalla === "primat"), usesOff = deals.some(deal => deal.bild_kalla === "openfoodfacts");
-    $("campaignAttribution").innerHTML = attributionMarkup(usesPrimat, usesOff);
-    $("campaignAttribution").hidden = !(usesPrimat || usesOff);
-  } catch {
-    campaignFetchKey = null;
-    $("campaignList").innerHTML = `<p class="live-loading">Kunde inte hämta kampanjer just nu.</p>`;
-    $("campaignAttribution").hidden = true;
-  }
 }
-// Every found deal is already rendered (the backend doesn't paginate this
-// scan) - "Visa alla" scrolls the row to its end rather than opening a
+
+// "Visa alla" scrollar raden till sitt slut i stället för att öppna en
 // separate "all campaigns" page that doesn't exist, so it's a real action
 // and not a dead link.
 $("campaignShowAllBtn").addEventListener("click", () => $("campaignList").scrollTo({ left: $("campaignList").scrollWidth, behavior: "smooth" }));

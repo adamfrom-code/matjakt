@@ -32,7 +32,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=40">
+  <link rel="stylesheet" href="styles.css?v=41">
 </head>
 <body>
   <div class="phone-shell">
@@ -156,7 +156,7 @@
 
         <section class="campaign-section" id="campaignSection" aria-labelledby="campaignHeading">
           <div class="section-heading"><div><h2 id="campaignHeading">Veckans kampanjer i butikerna</h2></div><button type="button" class="btn-ghost" id="campaignShowAllBtn">Visa alla</button></div>
-          <p class="nutrition-locked" id="campaignLocked">Logga in och lös in Premium för att se aktuella butikskampanjer hos Coop och Hemköp, med receptförslag.</p>
+          <p class="nutrition-locked" id="campaignLocked" hidden></p>
           <p class="campaign-store-label" id="campaignStoreLabel" hidden></p>
           <div class="campaign-scroll" id="campaignList"></div>
           <p class="primat-attribution" id="campaignAttribution" hidden></p>
@@ -442,7 +442,7 @@
     <div class="account-modal-card plan-modal-card" role="dialog" aria-modal="true" aria-labelledby="planModalTitle">
       <button class="account-modal-close" type="button" data-plan-close aria-label="Stäng">×</button>
       <h2 id="planModalTitle">Välj din vecka</h2>
-      <p class="plan-modal-hint">Samma budget och butik - tre olika sätt att lägga upp veckan.</p>
+      <p class="plan-modal-hint">Standardveckan är gratis. Premium låser upp alla sju veckotyperna.</p>
       <div id="planCards"></div>
     </div>
   </div>
@@ -460,6 +460,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=70"></script>
+  <script type="module" src="app.js?v=71"></script>
 </body>
 </html>

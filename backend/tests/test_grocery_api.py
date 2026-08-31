@@ -189,3 +189,33 @@ class PriceWeekTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CoverageInvariant(unittest.TestCase):
+    """Täckning kan aldrig överstiga 100 %: en användare såg "21 av 20
+    varor". Räknaren och nämnaren ska komma ur samma resultat, och motorn
+    får aldrig producera fler prissatta rader än rader."""
+
+    def test_real_price_items_never_exceed_total_items(self):
+        from services.grocery.pricing import RecipePricingEngine
+        store = grocery_api.open_store()
+        try:
+            engine = RecipePricingEngine(store)
+            row = grocery_api._store_row_for(store, "Willys")
+            if row is None:
+                self.skipTest("ingen Willys-data lokalt")
+            items = [
+                {"name": "Pasta", "amount": 400, "unit": "g"},
+                {"name": "Köttfärs", "amount": 500, "unit": "g"},
+                {"name": "Grädde", "amount": 2, "unit": "dl"},
+                # samma namn två gånger med olika enhet - serverns delade rader
+                {"name": "Morötter", "amount": 2, "unit": "st"},
+                {"name": "Morötter", "amount": 200, "unit": "g"},
+                {"name": "Påhittad ingrediens utan produkt", "amount": 1, "unit": "st"},
+            ]
+            result = engine.price_list(items, "Willys", row["id"])
+            self.assertLessEqual(result["realPriceItems"], result["totalItems"])
+            self.assertLessEqual(result["coveragePercent"], 100)
+            self.assertEqual(result["totalItems"], len(items))
+        finally:
+            store.close()

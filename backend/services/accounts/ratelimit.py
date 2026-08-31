@@ -41,6 +41,9 @@ LIMITS = {
     "register": (5, 3600),        # 5 new accounts / hour
     "password_reset": (5, 3600),  # 5 reset mails / hour
     "change_password": (10, 3600),
+    # A premium code is a credential; guessing it must cost as much as
+    # guessing a password.
+    "redeem": (10, 3600),
 }
 
 # A single dict of key -> [timestamps]. Pruned as it goes, and hard-capped so

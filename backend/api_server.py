@@ -1718,6 +1718,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(200, {"ok": True})
             return
         if parsed.path == "/api/auth/redeem":
+            # Same brute-force treatment as login: a premium code is a
+            # credential, and an unthrottled endpoint is an invitation to
+            # guess it.
+            if self._rate_limit("redeem", (self._bearer_token() or "")[:16]):
+                return
             try:
                 user = ACCOUNT_STORE.redeem_premium(self._bearer_token(), payload.get("code"), PREMIUM_CODE)
                 self.send_json(200, {"user": user})
