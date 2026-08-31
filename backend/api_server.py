@@ -335,13 +335,17 @@ def storage_info(detail: bool = False) -> dict:
     sensitive and lets an outside check confirm persistence after every
     deploy. Paths, file sizes and mount details stay behind the admin
     token."""
-    info = {"dataDir": str(DATA_DIR)}
+    # The docstring's promise, enforced: the PUBLIC shape is the boolean
+    # alone. The internal path was leaking here despite it - a server's
+    # filesystem layout is reconnaissance data, not status.
+    info = {}
     try:
         info["mounted"] = os.stat(DATA_DIR).st_dev != os.stat(DATA_DIR.parent).st_dev
     except OSError:
         info["mounted"] = False
     if not detail:
         return info
+    info["dataDir"] = str(DATA_DIR)
     databases = {}
     for path in sorted(DATA_DIR.glob("*.db")):
         try:

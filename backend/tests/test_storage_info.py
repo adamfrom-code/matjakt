@@ -29,7 +29,9 @@ class StorageInfoTest(unittest.TestCase):
         self.addCleanup(lambda: setattr(api_server, "DATA_DIR", self._real))
 
     def test_reports_the_directory_it_actually_uses(self):
-        self.assertEqual(api_server.storage_info()["dataDir"], str(self.dir))
+        # dataDir är avsiktligt INTE med i det publika svaret - en servers
+        # filsystemslayout är rekognosering, inte status.
+        self.assertEqual(api_server.storage_info(detail=True)["dataDir"], str(self.dir))
 
     def test_an_ordinary_directory_is_not_a_mount(self):
         """A plain directory inside the container image shares its parent's
@@ -66,7 +68,7 @@ class StorageInfoTest(unittest.TestCase):
         """The boolean is public so persistence can be checked after every
         deploy; sizes and mount points are operational detail."""
         public = api_server.storage_info()
-        self.assertEqual(set(public), {"dataDir", "mounted"})
+        self.assertEqual(set(public), {"mounted"})
 
     def test_detailed_view_lists_the_databases(self):
         (self.dir / "grocery.db").write_bytes(b"x" * 100)
