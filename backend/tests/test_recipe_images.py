@@ -128,8 +128,10 @@ class PexelsSourceTest(unittest.TestCase):
 
     def test_no_key_means_no_pexels_search_not_a_crash(self):
         """A missing key must leave the app importing recipes from Commons,
-        not fail the whole run."""
+        not fail the whole run - and this must be testable on a machine that
+        HAS a key, without touching the network."""
         os.environ["PEXELS_API_KEY"] = ""
+        self.assertEqual(images.pexels_key(), "")
         self.assertEqual(images.search_pexels("lasagna"), [])
 
     def test_the_pexels_licence_is_accepted(self):
@@ -148,7 +150,7 @@ class PexelsSourceTest(unittest.TestCase):
     def test_key_is_read_only_from_the_environment_or_dotenv(self):
         source = (Path(__file__).resolve().parents[1] /
                   "services" / "recipes" / "images.py").read_text(encoding="utf-8")
-        self.assertIn('os.environ.get("PEXELS_API_KEY")', source)
+        self.assertIn('os.environ["PEXELS_API_KEY"]', source)
         # No hardcoded key-shaped literal anywhere.
         self.assertIsNone(re.search(r'["\'][A-Za-z0-9]{40,}["\']', source))
 

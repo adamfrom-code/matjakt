@@ -22,10 +22,15 @@ THREE RULES, IN THIS ORDER
 3. NO REUSE. The same generic picture on eight recipes reads as stock
    filler. A file already used by another recipe is skipped.
 
-WHY WIKIMEDIA COMMONS: it needs no API key. Pexels and Unsplash have better
-food photography but require a secret we do not have, so this is built so the
-source is swappable - each source returns the same candidate shape, and
-adding one is adding a function.
+TWO SOURCES, NOT RANKED TOGETHER. Pexels is curated food photography whose
+alt text describes the food; Wikimedia Commons is an encyclopedia archive
+whose titles are whatever the uploader typed, full of hobby snapshots and
+species pictures. Scoring them against each other let a Commons file beat a
+better Pexels photo, so Commons is a FALLBACK - used only when Pexels finds
+nothing, or when there is no key.
+
+Each source returns the same candidate shape, so adding Unsplash later is
+adding a function.
 """
 
 import json
@@ -41,9 +46,9 @@ USER_AGENT = "Matjakt/1.0 (receptbilder; https://matjakt.store)"
 COMMONS_API = "https://commons.wikimedia.org/w/api.php"
 PEXELS_API = "https://api.pexels.com/v1/search"
 
-# The key is read from the environment and never written anywhere - not to a
-# file, not to a log line, not into the recipe data. Nothing here prints it,
-# and the only thing that leaves this module is the photo metadata.
+# The key is read from the environment or .env and never written anywhere -
+# not to a file, not to a log line, not into the recipe data. Nothing here
+# prints it, and the only thing that leaves this module is photo metadata.
 def pexels_key() -> str:
     """The Pexels key, from the environment or from .env.
 
@@ -51,9 +56,13 @@ def pexels_key() -> str:
     .env - so without this the key would have to be exported by hand every
     time, and the obvious next step would be pasting it into a file that gets
     committed. Reading .env here removes that temptation."""
-    key = (os.environ.get("PEXELS_API_KEY") or "").strip()
-    if key:
-        return key
+    # An env var that is SET, even to empty, is an explicit answer: no key.
+    # Falling through to .env in that case made the test suite reach the live
+    # Pexels API - a unit test that needs the network is not a unit test, and
+    # there would be no way to exercise the no-key path on a machine that has
+    # one.
+    if "PEXELS_API_KEY" in os.environ:
+        return os.environ["PEXELS_API_KEY"].strip()
     env_file = Path(__file__).resolve().parents[3] / ".env"
     try:
         for line in env_file.read_text(encoding="utf-8").splitlines():
