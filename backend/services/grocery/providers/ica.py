@@ -111,6 +111,7 @@ import urllib.request
 from urllib.parse import quote
 
 from ..base import GroceryProvider
+from .axfood import CATEGORY_PATH_SEPARATOR
 from ..models import RawProduct, Store
 
 logger = logging.getLogger("matjakt.grocery.ica")
@@ -371,7 +372,10 @@ class IcaProvider(GroceryProvider):
             size=raw_product.get("packSizeDescription"),
             quantity=quantity,
             unit=unit,
-            category=category_path[-1] if category_path else None,
+            # The whole path, not just the leaf, in the same "broad > narrow"
+            # shape the other chains produce - category-aware matching needs
+            # the department, which only the ancestors carry.
+            category=CATEGORY_PATH_SEPARATOR.join(str(p) for p in category_path if p) or None,
             image_url=image.get("src") or None,
             regular_price=_to_float(price.get("amount")),
             # Unverified field paths - see module docstring's "FIELDS CONFIRMED

@@ -35,6 +35,32 @@ promotions that are really multibuys (qualifyingCount 2, rewardLabel
 "129 kr", per-unit price 64.50 against an ordinary 66.20), while Willys
 fills it in. qualifyingCount is populated correctly by both, so it is what
 this code trusts.
+
+=== CATEGORY BROWSING (preferred over term search) ===
+Verified live on 2026-08-31 against BOTH chains, by observing what the real
+site itself requests rather than by guessing endpoint shapes (several plausible
+guesses - /products/category/{code}, /category/{slug}, ?categoryPath= - return
+404, 500 or an empty item list, so they are not the real route):
+
+  GET /axfood/rest/v1/leftMenu/categorytree
+      -> {"id","category","title","url","valid","children":[...]} recursively.
+  GET /axfood/rest/v1/c/{slug}?page=0&size=30&sort=
+      -> the SAME response shape as /search (results[] + pagination{}), plus a
+         top-level categoryInfo{code,name,url,parentCategoryName}.
+
+Because the payload shape is identical to search, every field mapping in
+normalize_product() applies unchanged; only the URL and the fact that we now
+KNOW the category differ.
+
+Category comes from the REQUEST, not the product. Verified: every product in a
+category response has googleAnalyticsCategory == "" and the response's
+breadcrumbs is [], so there is no per-product category field to read. The
+category is known because we asked for that category - which is honest and
+exact, not inferred from the product name.
+
+Category CODES ARE NOT SHARED between the chains and must never be used as a
+cross-chain key: "Färsk fågel" is N010101 at Willys and N010403 at Hemköp.
+Only the human-readable path is comparable.
 """
 
 import json
@@ -58,10 +84,10 @@ MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = (1, 3, 8)
 PAGE_SIZE = 30
 
-# There is no "whole catalog" endpoint on the search API, so a collector
-# works from a known vocabulary. (Both chains DO expose a category tree at
-# /leftMenu/categorytree - browsing that instead would give a systematic walk
-# and real categories; noted as the better long-term approach, not done yet.)
+# There is no "whole catalog" endpoint on the SEARCH API, so term search
+# works from a known vocabulary. Category browsing (get_products_by_category)
+# does not have this limitation and is the preferred mode - see
+# CATEGORY BROWSING below.
 DEFAULT_SEARCH_TERMS = [
     "mjölk", "smör", "ägg", "bröd", "kyckling", "köttfärs", "lax", "ris",
     "pasta", "tomat", "lök", "potatis", "ost", "yoghurt",
@@ -172,6 +198,43 @@ def split_promotions(promotions) -> tuple[float | None, float | None, float | No
     return campaign, member, multibuy
 
 
+# Categories deep enough to be meaningful. Walking from the root would also
+# pull in non-grocery aisles; a collector picks its own subset by passing
+# category slugs explicitly.
+CATEGORY_PATH_SEPARATOR = " > "
+
+
+def flatten_category_tree(node, _ancestors=(), _is_root=True) -> list[dict]:
+    """Depth-first walk of /leftMenu/categorytree into its LEAF categories.
+
+    Only leaves are returned: a parent's listing is the union of its
+    children's, so walking both levels would fetch every product twice. Each
+    leaf carries the full human-readable path, which is the only part that is
+    comparable across chains (the codes are not - see module docstring).
+    Categories flagged valid=false are skipped rather than requested."""
+    if not isinstance(node, dict) or node.get("valid") is False:
+        return []
+    title = (node.get("title") or "").strip()
+    # The root node is the "Alla varor" container, not a real aisle - it must
+    # not become the first element of every category path.
+    path = _ancestors if _is_root else _ancestors + (title,)
+    children = node.get("children") or []
+    if children:
+        leaves = []
+        for child in children:
+            leaves.extend(flatten_category_tree(child, path, _is_root=False))
+        return leaves
+    slug = str(node.get("url") or "").strip("/")
+    if not slug or _is_root:
+        return []
+    return [{
+        "code": str(node.get("category") or node.get("id") or ""),
+        "title": title,
+        "slug": slug,
+        "path": CATEGORY_PATH_SEPARATOR.join(part for part in path if part),
+    }]
+
+
 class AxfoodProvider(GroceryProvider):
     """Base for Willys/Hemköp. Subclasses set name, base_url and metadata."""
 
@@ -241,6 +304,83 @@ class AxfoodProvider(GroceryProvider):
                 active=bool(store.get("onlineStore")),
             ))
         return stores
+
+    def get_categories(self) -> list[dict]:
+        """Every leaf category of this chain, as {code,title,slug,path}.
+
+        This is the systematic alternative to DEFAULT_SEARCH_TERMS: it covers
+        the whole catalogue rather than whatever a hand-written vocabulary
+        happens to hit, and it is what makes a real category available for
+        each product."""
+        return flatten_category_tree(self._request(f"{self.base_url}/leftMenu/categorytree"))
+
+    def get_products_by_category(self, store_id: str, categories: list[dict] | None = None,
+                                 limit_per_category: int | None = None,
+                                 on_category=None) -> list[RawProduct]:
+        """Walks the category tree and imports every product in every leaf.
+
+        Each product gets the category path of the listing it came from -
+        exact, because it comes from the request rather than being guessed
+        from the product name.
+
+        A single failing category is logged and skipped, not fatal: losing one
+        aisle is a partial import, while aborting would throw away every aisle
+        already collected. An outright block (403/429) is still terminal and
+        carries the partial results, exactly as term search does."""
+        categories = categories if categories is not None else self.get_categories()
+        seen: set[str] = set()
+        products: list[RawProduct] = []
+        for category in categories:
+            slug = category.get("slug")
+            if not slug:
+                continue
+            if on_category:
+                on_category(category)
+            collected_here = 0
+            page = 0
+            while True:
+                time.sleep(REQUEST_DELAY_SECONDS)
+                url = f"{self.base_url}/c/{quote(slug)}?page={page}&size={self.page_size}&sort="
+                try:
+                    data = self._request(url)
+                except AxfoodBlockedError as blocked:
+                    logger.error("%s blocked this run in category %r - stopping after %d product(s)",
+                                 self.name, category.get("path") or slug, len(products))
+                    blocked.partial_products = products
+                    raise
+                except AxfoodRequestError:
+                    logger.exception("%s category listing failed for %r (page %d)", self.name, slug, page)
+                    break
+
+                results = data.get("results") or []
+                # categoryInfo describes what we actually got back. Prefer the
+                # tree's full path (it has the ancestors); fall back to the
+                # response's own name so a product is never stored with a
+                # category we did not verify.
+                info = data.get("categoryInfo") or {}
+                category_path = category.get("path") or info.get("name") or None
+                for raw in results:
+                    code = str(raw.get("code") or "")
+                    if not code or code in seen:
+                        continue
+                    seen.add(code)
+                    try:
+                        products.append(self.normalize_product({
+                            **raw, "_store_id": store_id, "_category": category_path,
+                        }))
+                        collected_here += 1
+                    except Exception:
+                        logger.exception("Failed to normalize %s product %r", self.name, code)
+                    if limit_per_category and collected_here >= limit_per_category:
+                        break
+
+                total_pages = (data.get("pagination") or {}).get("numberOfPages") or 0
+                page += 1
+                if page >= total_pages or not results:
+                    break
+                if limit_per_category and collected_here >= limit_per_category:
+                    break
+        return products
 
     def get_products(self, store_id: str) -> list[RawProduct]:
         """Walks every search term, following pagination within each.
@@ -317,9 +457,12 @@ class AxfoodProvider(GroceryProvider):
             size=raw_product.get("displayVolume") or None,
             quantity=quantity,
             unit=unit,
-            # Search results carry no usable category on either chain
-            # (googleAnalyticsCategory is "" and breadcrumbs is []).
-            category=None,
+            # Neither chain puts a category on the product itself
+            # (googleAnalyticsCategory is "" and breadcrumbs is [] on both),
+            # so this is set only when the product was collected by browsing
+            # a category - see get_products_by_category. Term search leaves it
+            # None rather than guessing one from the name.
+            category=raw_product.get("_category") or None,
             image_url=image_url,
             regular_price=_to_float(raw_product.get("priceValue")),
             campaign_price=campaign_price,

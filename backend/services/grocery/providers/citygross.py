@@ -88,6 +88,7 @@ from urllib.parse import quote
 
 from ..base import GroceryProvider
 from ..errors import ProviderBlockedError, ProviderRequestError
+from .axfood import CATEGORY_PATH_SEPARATOR
 from ..models import RawProduct, Store
 
 logger = logging.getLogger("matjakt.grocery.citygross")
@@ -350,9 +351,19 @@ class CityGrossProvider(GroceryProvider):
         image_name = (images[0] or {}).get("url") if images else None
         image_url = f"{IMAGE_BASE}/{image_name}" if image_name else None
 
-        # bfCategory is the most specific of the three ("Mellanmjölk"),
-        # superCategory the broadest ("Mejeri, ost & ägg").
-        category = raw_product.get("bfCategory") or raw_product.get("category") or raw_product.get("superCategory") or None
+        # City Gross gives three levels: superCategory is the broadest
+        # ("Mejeri, ost & ägg"), then category ("Mjölk & dryck"), then
+        # bfCategory the most specific ("Mellanmjölk"). They are joined into
+        # one path, in the same "broad > narrow" shape the Axfood chains
+        # produce, so category-aware matching sees the same kind of string for
+        # every chain instead of a per-chain format.
+        levels = [raw_product.get("superCategory"), raw_product.get("category"), raw_product.get("bfCategory")]
+        seen_levels = []
+        for level in levels:
+            level = (level or "").strip()
+            if level and level not in seen_levels:
+                seen_levels.append(level)
+        category = CATEGORY_PATH_SEPARATOR.join(seen_levels) or None
 
         path = raw_product.get("url") or ""
         store_id = raw_product.get("_store_id", "")

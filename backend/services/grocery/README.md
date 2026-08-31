@@ -17,6 +17,82 @@ BUTIKSKÄLLOR → COLLECTORS/PROVIDERS → NORMALISERING → MATJAKT DATABASE �
 | `providers/` | En fil per kedja. All kedjespecifik kod bor här och ingen annanstans. |
 | `collectors/` | CLI-skript som kör en import och skriver rapport |
 
+## Kategoridata (insamling per kategori)
+
+Kedjorna samlas i första hand in genom att **gå igenom kategoriträdet**, inte
+genom att söka på en handskriven ordlista. Det ger två saker på en gång: hela
+sortimentet i stället för vad ordlistan råkar träffa, och en **verklig
+kategori** på varje produkt.
+
+Endpointarna är verifierade live 2026-08-31 genom att observera vad sajten
+själv anropar — inte gissade. (Flera rimliga gissningar —
+`/products/category/{code}`, `/category/{slug}`, `?categoryPath=` — svarar
+404, 500 eller med en tom träfflista och är alltså inte den riktiga vägen.)
+
+| Endpoint | Ger |
+|---|---|
+| `GET /axfood/rest/v1/leftMenu/categorytree` | Hela trädet, rekursivt (`id`, `category`, `title`, `url`, `valid`, `children`) |
+| `GET /axfood/rest/v1/c/{slug}?page=0&size=30&sort=` | **Samma svarsform som `/search`** (`results[]` + `pagination{}`) plus `categoryInfo` |
+
+Eftersom svarsformen är identisk med sökningens gäller varje befintlig
+fältmappning oförändrat — bara URL:en och det faktum att vi nu *vet*
+kategorin skiljer.
+
+**Kategorin kommer från anropet, inte från produkten.** Verifierat: varje
+produkt i ett kategorisvar har `googleAnalyticsCategory == ""` och svarets
+`breadcrumbs` är `[]`. Det finns alltså inget kategorifält att läsa på
+produkten. Vi vet kategorin för att vi frågade efter just den kategorin —
+exakt och ärligt, inte härlett ur produktnamnet. Insamling via textsökning
+lämnar därför `category = null` i stället för att gissa.
+
+**Kategorikoder delas INTE mellan kedjorna** och får aldrig användas som
+cross-chain-nyckel: "Färsk fågel" är `N010101` hos Willys och `N010403` hos
+Hemköp. Bara den läsbara sökvägen är jämförbar.
+
+Bara **lövkategorier** hämtas — en förälders lista är unionen av barnens, så
+att gå båda nivåerna hade hämtat varje produkt två gånger. Kategorier med
+`valid: false` hoppas över i stället för att efterfrågas.
+
+```bash
+python -m backend.services.grocery.collectors.willys --store 2132 --categories
+python -m backend.services.grocery.collectors.hemkop --store 4256 --categories
+# Delmängd, för test: --category mejeri --per-category 20
+```
+
+Storlek på träden (verifierat 2026-08-31): **Willys 452 lövkategorier,
+Hemköp 428**.
+
+### Enhetligt kategoriformat över alla kedjor
+
+Alla providers skriver nu hela sökvägen, bredast först, separerad med `" > "`:
+
+| Kedja | Källa | Exempel |
+|---|---|---|
+| Willys / Hemköp | kategoriträdets sökväg | `Mejeri, ost & ägg > Mjölk > Lättmjölk` |
+| City Gross | `superCategory > category > bfCategory` | `Mejeri, ost & ägg > Mjölk & dryck > Mellanmjölk` |
+| ICA | hela `categoryPath` | `Mejeri & Ost > Mjölk > Mellanmjölk > Mellanmjölk, laktos` |
+
+Lövet ensamt räcker inte: matchningen behöver **avdelningen** för att kunna
+avvisa fel hylla, och den bär bara förfäderna. "Mellanmjölk" säger inte
+"mejeri" — det gör "Mejeri, ost & ägg".
+
+### Avdelningsmatchning i pricing-motorn
+
+`grocery/pricing.py` avvisar en produkt vars avdelning inte kan vara
+ingrediensen. Ordningen är:
+
+1. Produkten saknar kategori → **oavgjort**, namnreglerna avgör som förut
+   (ICA har inget användbart träd, och äldre rader är textinsamlade).
+2. Avdelningen är en som ingen matlagningsingrediens kommer från — djurmat,
+   barnmat, godis/snacks, non-food → **avvisas för varje ingrediens**. Det är
+   den enskilt bredaste precisionsvinsten: den fångar hela den klass av fel
+   som namnreglerna tidigare fick bekämpa en i taget.
+3. Ingrediensen har en tillåten avdelningslista → produktens avdelning måste
+   ligga i den.
+
+En ingrediens utan lista begränsas bara av regel 2. Lagret är alltså
+**additivt**: det kan avvisa en felaktig match, aldrig hitta på en riktig.
+
 ## Produktmatchning (prioritetsordning)
 
 1. **GTIN**

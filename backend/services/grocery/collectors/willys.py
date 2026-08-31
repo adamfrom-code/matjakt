@@ -21,7 +21,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Import real Willys products for one store into the grocery database.")
     parser.add_argument("--store", required=True, help="Willys storeId (e.g. 2132 = Willys Gävle Gestrike)")
     parser.add_argument("--limit", type=int, default=100, help="Max products to import (default 100)")
+    parser.add_argument("--categories", action="store_true",
+                        help="Browse the category tree instead of searching fixed terms. "
+                             "Covers the whole catalogue and gives every product a real category.")
+    parser.add_argument("--per-category", type=int, default=None,
+                        help="Max products per category (default: all)")
+    parser.add_argument("--category", default=None,
+                        help="Only categories whose path or slug contains this text")
     args = parser.parse_args()
 
-    result = run(WillysProvider(), store_id=args.store, limit=args.limit)
+    result = run(WillysProvider(), store_id=args.store, limit=args.limit,
+                 by_category=args.categories, limit_per_category=args.per_category,
+                 category_filter=args.category)
     print_report(args.store, result)

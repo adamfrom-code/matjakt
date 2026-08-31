@@ -17,14 +17,16 @@ from services.grocery.errors import ProviderBlockedError  # noqa: E402
 DB_PATH = Path(__file__).resolve().parents[4] / "backend" / "data" / "grocery.db"
 
 
-def run(provider, store_id: str, limit: int) -> dict:
+def run(provider, store_id: str, limit: int, by_category: bool = False,
+        limit_per_category: int | None = None, category_filter: str | None = None) -> dict:
     started = time.time()
     db = GroceryStore(DB_PATH)
     run_record = db.start_collector_run(chain=provider.name)
 
     stats = dict(found=0, saved=0, with_gtin=0, with_image=0, with_regular_price=0,
                  with_campaign_price=0, with_member_price=0, with_multibuy_price=0,
-                 with_unit_price=0, errors=0, created=0, updated=0, price_changes=0)
+                 with_unit_price=0, with_category=0, errors=0, created=0, updated=0,
+                 price_changes=0, categories=0)
     saved_examples = []
     blocked_message = None
     store = None
@@ -45,7 +47,25 @@ def run(provider, store_id: str, limit: int) -> dict:
         )
 
         try:
-            raw_products = provider.get_products(store_id)
+            if by_category:
+                categories = provider.get_categories()
+                if category_filter:
+                    needle = category_filter.casefold()
+                    categories = [c for c in categories
+                                  if needle in (c.get("path") or "").casefold()
+                                  or needle in (c.get("slug") or "").casefold()]
+                stats["categories"] = len(categories)
+                print(f"Kategoripromenad: {len(categories)} lövkategorier", file=sys.stderr)
+
+                def _progress(category, _seen=[0]):
+                    _seen[0] += 1
+                    print(f"  [{_seen[0]}/{len(categories)}] {category.get('path') or category.get('slug')}",
+                          file=sys.stderr)
+
+                raw_products = provider.get_products_by_category(
+                    store_id, categories, limit_per_category=limit_per_category, on_category=_progress)
+            else:
+                raw_products = provider.get_products(store_id)
         except ProviderBlockedError as blocked:
             blocked_message = str(blocked)
             raw_products = blocked.partial_products
@@ -62,6 +82,8 @@ def run(provider, store_id: str, limit: int) -> dict:
                     stats["with_gtin"] += 1
                 if product.image_url:
                     stats["with_image"] += 1
+                if raw.category:
+                    stats["with_category"] += 1
                 for field, key in (("regular_price", "with_regular_price"), ("campaign_price", "with_campaign_price"),
                                    ("member_price", "with_member_price"), ("multibuy_price", "with_multibuy_price"),
                                    ("unit_price", "with_unit_price")):
@@ -122,6 +144,9 @@ def print_report(store_id: str, result: dict):
     print(f"Uppdaterade produkter: {stats['updated']}")
     print(f"Prisändringar (ny historikrad): {stats['price_changes']}")
     print(f"Produkter med bild: {stats['with_image']}")
+    if stats.get("categories"):
+        print(f"Kategorier genomgångna: {stats['categories']}")
+    print(f"Produkter med kategori: {stats['with_category']}")
     print(f"Produkter med GTIN/EAN: {stats['with_gtin']}")
     print(f"Produkter med ordinarie pris: {stats['with_regular_price']}")
     print(f"Produkter med kampanjpris: {stats['with_campaign_price']}")

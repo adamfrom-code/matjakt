@@ -46,6 +46,204 @@ import math
 import re
 import unicodedata
 
+# =============================================================================
+# CATEGORY (DEPARTMENT) MATCHING
+# =============================================================================
+# Name-only matching has a hard precision ceiling (see the module docstring).
+# Real category data raises it, because the aisle a product sits in is a fact
+# the chain asserts - not something inferred from a Swedish compound noun.
+#
+# The department keywords below are taken from the ACTUAL category vocabulary
+# of the live chains (verified 2026-08-31 by walking Willys' 452 and Hemkop's
+# 428 leaf categories, plus City Gross' superCategory/category/bfCategory
+# triplet), not from a guess at what a Swedish grocery tree looks like.
+#
+# Matching is on the WHOLE category path ("Mejeri, ost & agg > Mjolk >
+# Lattmjolk"), because the department only ever appears in the ancestors.
+# Keywords are written folded (accent-stripped, lowercase) because that is
+# what they are compared against.
+DEPARTMENT_KEYWORDS = {
+    "meat": ["kott, chark", "kott, fagel", "chark & fagel", "fagel & chark",
+             "kott & fagel", "kott & kyckling", "kott, burgare"],
+    "fish": ["fisk & skaldjur", "fisk och skaldjur"],
+    "dairy": ["mejeri", "ost & agg", "delikatessen > ost"],
+    "produce": ["frukt & gront", "frukt och gront", "potatis & rotsaker",
+                "kal & rotsaker"],
+    "pantry": ["skafferi"],
+    "bread": ["brod & kakor", "brod och kakor"],
+    "frozen": ["fryst"],
+    "readymeal": ["fardigmat"],
+    "vegetarian": ["vegetariskt"],
+    "deli": ["delikatessen"],
+    "drinks": ["dryck"],
+    # Departments a raw recipe ingredient NEVER comes from. This is the
+    # single broadest precision win: it rejects the whole class of failures
+    # that name rules had to fight one at a time - dog food ("Mini Small
+    # Kyckling Ris Active"), sweets ("Chokladagg"), snacks ("Micropop Smor
+    # Popcorn").
+    "pet": ["djur >", "> hund", "> katt", "smadjur", "djurmat", "djurtillbehor"],
+    "baby": ["barn >", "blojor", "valling & ersattning", "barnmat", "barnsnacks",
+             "barnvard"],
+    "nonfood": ["hem & stad", "hem & hushall", "halsa & skonhet", "apotek",
+                "tobak", "kiosk", "blommor", "gor det sjalv", "media", "klader"],
+    "confectionery": ["godis", "snacks", "chips", "choklad", "tuggummi",
+                      "popcorn", "glass"],
+}
+
+# Departments that never contain a cooking ingredient, whatever the recipe
+# asks for. Applied to every ingredient, so no per-ingredient rule is needed.
+NEVER_INGREDIENT_DEPARTMENTS = {"pet", "baby", "nonfood", "confectionery"}
+
+# Which departments an ingredient may legitimately come from. An ingredient
+# NOT listed here gets no category constraint beyond the universal one - the
+# name rules alone decide, exactly as before. That keeps this additive: it
+# can reject a wrong match, never invent a right one.
+#
+# Frozen is allowed wherever a frozen form is a real product a shopper would
+# buy (frozen fish, frozen berries), and left out where it would let a ready
+# meal in.
+INGREDIENT_DEPARTMENTS = {
+    # --- dairy
+    "smör": {"dairy"},
+    "grädde": {"dairy"},
+    "vispgrädde": {"dairy"},
+    "matlagningsgrädde": {"dairy"},
+    "crème fraiche": {"dairy"},
+    "gräddfil": {"dairy"},
+    "mjölk": {"dairy"},
+    "filmjölk": {"dairy"},
+    "yoghurt": {"dairy"},
+    "kvarg": {"dairy"},
+    "ost": {"dairy", "deli"},
+    "riven ost": {"dairy", "deli"},
+    "fetaost": {"dairy", "deli"},
+    "halloumi": {"dairy", "deli"},
+    "parmesan": {"dairy", "deli"},
+    "mozzarella": {"dairy", "deli"},
+    "ägg": {"dairy"},
+    "margarin": {"dairy"},
+    # --- meat
+    "kycklingfilé": {"meat", "frozen"},
+    "kycklinglårfilé": {"meat", "frozen"},
+    "kyckling": {"meat", "frozen"},
+    "köttfärs": {"meat", "frozen"},
+    "blandfärs": {"meat", "frozen"},
+    "fläskfilé": {"meat", "frozen"},
+    "fläskkarré": {"meat", "frozen"},
+    "bacon": {"meat"},
+    "korv": {"meat", "frozen"},
+    "falukorv": {"meat"},
+    "skinka": {"meat", "deli"},
+    "biff": {"meat", "frozen"},
+    "högrev": {"meat", "frozen"},
+    "lammfärs": {"meat", "frozen"},
+    # --- fish
+    "lax": {"fish", "frozen"},
+    "laxfilé": {"fish", "frozen"},
+    "torsk": {"fish", "frozen"},
+    "torskfilé": {"fish", "frozen"},
+    "räkor": {"fish", "frozen"},
+    "fiskfilé": {"fish", "frozen"},
+    # --- produce
+    "lök": {"produce"},
+    "gul lök": {"produce"},
+    "rödlök": {"produce"},
+    "vitlök": {"produce"},
+    "potatis": {"produce", "frozen"},
+    "morot": {"produce"},
+    "morötter": {"produce"},
+    "paprika": {"produce"},
+    "tomat": {"produce"},
+    "tomater": {"produce"},
+    "gurka": {"produce"},
+    "citron": {"produce"},
+    "lime": {"produce"},
+    "broccoli": {"produce", "frozen"},
+    "blomkål": {"produce", "frozen"},
+    "squash": {"produce"},
+    "zucchini": {"produce"},
+    "champinjoner": {"produce"},
+    "spenat": {"produce", "frozen"},
+    "salladslök": {"produce"},
+    "purjolök": {"produce"},
+    "ingefära": {"produce"},
+    "avokado": {"produce"},
+    "äpple": {"produce"},
+    "banan": {"produce"},
+    "majs": {"produce", "pantry", "frozen"},
+    "ärtor": {"produce", "frozen", "pantry"},
+    # --- pantry
+    "ris": {"pantry"},
+    "pasta": {"pantry"},
+    "spaghetti": {"pantry"},
+    "makaroner": {"pantry"},
+    "nudlar": {"pantry"},
+    "couscous": {"pantry"},
+    "bulgur": {"pantry"},
+    "matvete": {"pantry"},
+    "quinoa": {"pantry"},
+    "linser": {"pantry"},
+    "kikärtor": {"pantry"},
+    "svarta bönor": {"pantry"},
+    "kidneybönor": {"pantry"},
+    "krossade tomater": {"pantry"},
+    "tomatpuré": {"pantry"},
+    "kokosmjölk": {"pantry"},
+    "buljong": {"pantry"},
+    "mjöl": {"pantry"},
+    "vetemjöl": {"pantry"},
+    "socker": {"pantry"},
+    "olja": {"pantry"},
+    "olivolja": {"pantry"},
+    "rapsolja": {"pantry"},
+    "vinäger": {"pantry"},
+    "soja": {"pantry"},
+    "currypasta": {"pantry"},
+    "havregryn": {"pantry"},
+    # --- bread
+    "bröd": {"bread"},
+    "tortilla": {"bread", "pantry"},
+    # --- vegetarian
+    "tofu": {"vegetarian"},
+    "quorn": {"vegetarian", "frozen"},
+}
+
+
+def departments_for_category(category):
+    """Which department(s) a category path belongs to.
+
+    Returns an empty set for a product with no category - which is NOT a
+    rejection, it just means category data cannot help here (ICA exposes no
+    usable tree, and rows collected by term search predate category
+    browsing). Those fall back to name matching alone."""
+    if not category:
+        return set()
+    folded = _fold(category)
+    return {department for department, keywords in DEPARTMENT_KEYWORDS.items()
+            if any(keyword in folded for keyword in keywords)}
+
+
+def category_allows_ingredient(category, ingredient) -> bool:
+    """Whether a product in this category can be this ingredient at all.
+
+    Three outcomes, in order:
+      1. No category on the product -> True (undecidable, defer to the name).
+      2. The category is a department no ingredient comes from (pet food,
+         baby food, sweets, non-food) -> False, for every ingredient.
+      3. The ingredient has an allowed-department list -> the product's
+         departments must intersect it.
+    An ingredient with no list is unconstrained beyond rule 2."""
+    departments = departments_for_category(category)
+    if not departments:
+        return True
+    if departments & NEVER_INGREDIENT_DEPARTMENTS:
+        return False
+    allowed = _FOLDED_INGREDIENT_DEPARTMENTS.get(_fold(ingredient))
+    if not allowed:
+        return True
+    return bool(departments & allowed)
+
+
 # Ingredients whose name legitimately appears inside products that are NOT
 # that ingredient. Verified against real Swedish grocery data - the classic
 # failure is matching a cut of meat against a sausage or a ready meal.
@@ -107,6 +305,9 @@ def _words(text: str) -> set[str]:
 
 
 _FOLDED_RULES = {_fold(key): value for key, value in INGREDIENT_RULES.items()}
+# Same folding reason as _FOLDED_RULES: nearly every key here contains
+# a/a/o, so an unfolded lookup would find almost none of them.
+_FOLDED_INGREDIENT_DEPARTMENTS = {_fold(key): value for key, value in INGREDIENT_DEPARTMENTS.items()}
 
 
 def convert_amount(amount: float | None, from_unit: str | None, to_unit: str | None) -> float | None:
@@ -142,10 +343,19 @@ def packages_needed(required_amount: float, required_unit: str | None,
     return max(1, math.ceil(converted / package_amount - 1e-9))
 
 
-def product_matches_ingredient(product_name: str, ingredient: str, brand: str | None = None) -> bool:
+def product_matches_ingredient(product_name: str, ingredient: str, brand: str | None = None,
+                               category: str | None = None) -> bool:
     """Conservative check - see this module's docstring for why. Requires the
     ingredient's head word as a WHOLE word in the product name, then applies
-    that ingredient's require/exclude rules."""
+    that ingredient's require/exclude rules.
+
+    category is optional and defaults to None so every existing caller keeps
+    working: a product without one is judged on its name exactly as before.
+    When a category IS present it is checked FIRST, because it is the one
+    piece of evidence the chain asserts rather than something we infer."""
+    if not category_allows_ingredient(category, ingredient):
+        return False
+
     haystack = f"{product_name or ''} {brand or ''}"
     product_words = _words(haystack)
     folded_product = _fold(haystack)
@@ -293,7 +503,7 @@ class RecipePricingEngine:
                 continue
             seen.add(row["id"])
             products.append(self.store._row_to_product(row))
-        return [p for p in products if product_matches_ingredient(p.name, ingredient, p.brand)]
+        return [p for p in products if product_matches_ingredient(p.name, ingredient, p.brand, p.category)]
 
     def price_item(self, ingredient: str, amount: float, unit: str, chain: str, store_id: int) -> dict:
         """Picks the cheapest real checkout option for one ingredient at one

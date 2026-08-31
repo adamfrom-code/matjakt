@@ -202,14 +202,19 @@ class NormalizationTest(Base):
         raw = self.provider.normalize_product({**REAL_PRODUCT, "_store_id": "3209"})
         self.assertEqual(raw.gtin, "07340083443893")
 
-    def test_category_prefers_the_most_specific(self):
+    def test_category_is_the_whole_path_broadest_first(self):
+        """City Gross' three levels are joined into one path, in the same
+        shape the Axfood chains produce. The leaf alone is not enough:
+        category-aware matching (see grocery/pricing.py) needs the DEPARTMENT
+        to reject a wrong aisle, and only the ancestors carry it -
+        "Mellanmjölk" does not say "dairy", "Mejeri, ost & ägg" does."""
         raw = self.provider.normalize_product({**REAL_PRODUCT, "_store_id": "3209"})
-        self.assertEqual(raw.category, "Mellanmjölk")
+        self.assertEqual(raw.category, "Mejeri, ost & ägg > Mjölk & dryck > Mellanmjölk")
 
-    def test_category_falls_back_when_specific_one_missing(self):
+    def test_category_path_skips_levels_the_product_lacks(self):
         without = {k: v for k, v in REAL_PRODUCT.items() if k != "bfCategory"}
         raw = self.provider.normalize_product({**without, "_store_id": "3209"})
-        self.assertEqual(raw.category, "Mjölk & dryck")
+        self.assertEqual(raw.category, "Mejeri, ost & ägg > Mjölk & dryck")
 
     def test_image_filename_is_expanded_to_a_full_url(self):
         raw = self.provider.normalize_product({**REAL_PRODUCT, "_store_id": "3209"})

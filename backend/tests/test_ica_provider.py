@@ -144,7 +144,10 @@ class NormalizationTest(IcaProviderTestBase):
         self.assertEqual(raw.size, "1.5L")
         self.assertEqual(raw.quantity, 1.5)
         self.assertEqual(raw.unit, "L")
-        self.assertEqual(raw.category, "Mellanmjölk, laktos")  # most specific breadcrumb
+        # The WHOLE breadcrumb path, not just the leaf: category-aware
+        # matching needs the department, which only the ancestors carry.
+        self.assertEqual(raw.category,
+                         "Mejeri & Ost > Mjölk > Mellanmjölk > Mellanmjölk, laktos")
         self.assertEqual(raw.store_id, "1003987")
         self.assertEqual(raw.currency, "SEK")
         self.assertIsNotNone(raw.fetched_at)
