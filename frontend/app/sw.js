@@ -1,4 +1,11 @@
-const CACHE_NAME = "matjakt-shell-v1";
+// Bumped together with the ?v= query on app.js/styles.css in index.html.
+// All three have to move: the query busts the browser's HTTP cache, and the
+// cache name makes the service worker drop its old copy in activate(). Miss
+// any of them and a returning user keeps running the previous release under
+// the same URL - which is exactly what happened after the recipe-bank and
+// week-type work shipped: the site was updated, phones still showed the old
+// three week types.
+const CACHE_NAME = "matjakt-shell-v2";
 
 self.addEventListener("install", () => self.skipWaiting());
 

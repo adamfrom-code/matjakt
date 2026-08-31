@@ -43,6 +43,11 @@ def _normalized_key(brand: str | None, name: str, size: str | None) -> str:
 class GroceryStore:
     def __init__(self, db_path: Path):
         db_path.parent.mkdir(parents=True, exist_ok=True)
+        # Kept so process-global caches can key on WHICH database they
+        # describe. Without it, two different databases whose contents happen
+        # to fingerprint the same (easy for small test fixtures) would share
+        # one cache entry and answer for each other.
+        self.db_path = str(db_path)
         self._connection = sqlite3.connect(db_path, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
         self._connection.execute("PRAGMA journal_mode=WAL")
@@ -136,6 +141,16 @@ class GroceryStore:
                 unit_price REAL,
                 timestamp REAL NOT NULL
             );
+            -- Every user-facing price lookup goes through these. Without
+            -- them the pricing engine walks a whole chain's products for
+            -- each ingredient, which is fine at a hundred products and not
+            -- at eleven thousand.
+            CREATE INDEX IF NOT EXISTS idx_grocery_external_ids_chain
+                ON grocery_product_external_ids(chain, product_id);
+            CREATE INDEX IF NOT EXISTS idx_grocery_current_prices_store
+                ON grocery_current_prices(store_id, product_id);
+            CREATE INDEX IF NOT EXISTS idx_grocery_products_category
+                ON grocery_products(category);
             CREATE INDEX IF NOT EXISTS idx_grocery_price_history_lookup
                 ON grocery_price_history(product_id, store_id, timestamp DESC);
 
@@ -477,6 +492,24 @@ class GroceryStore:
         )
 
     # ---- Collector runs --------------------------------------------
+
+    def data_version(self) -> str:
+        """A cheap fingerprint of the product/price data.
+
+        Anything derived from this database - matched products, chain totals,
+        a whole priced week - stays valid exactly as long as this string
+        does. It changes when a collector run finishes or any price is
+        written, so a cache keyed on it cannot serve yesterday's prices after
+        an import, and does not have to be cleared by hand either."""
+        row = self._connection.execute(
+            """
+            SELECT (SELECT COUNT(*) FROM grocery_products),
+                   (SELECT COUNT(*) FROM grocery_current_prices),
+                   (SELECT MAX(updated_at) FROM grocery_current_prices),
+                   (SELECT MAX(id) FROM grocery_collector_runs)
+            """
+        ).fetchone()
+        return "-".join(str(value or 0) for value in row)
 
     def start_collector_run(self, *, chain: str, store_id: int | None = None) -> CollectorRun:
         now = time.time()

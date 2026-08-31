@@ -45,6 +45,7 @@ silent wrong prices. Treat coverage as a first-class part of any total.
 import math
 import re
 import unicodedata
+from functools import lru_cache
 
 # =============================================================================
 # CATEGORY (DEPARTMENT) MATCHING
@@ -355,6 +356,7 @@ _MASS = {"g": 1.0, "gram": 1.0, "hg": 100.0, "kg": 1000.0}
 _VOLUME = {"ml": 1.0, "cl": 10.0, "dl": 100.0, "l": 1000.0, "liter": 1000.0, "ltr": 1000.0}
 
 
+@lru_cache(maxsize=65536)
 def _fold(text: str) -> str:
     """Lowercase and strip accents, so 'Kycklingfilé' and 'kycklingfile'
     compare equal without any fuzzy distance measure."""
@@ -364,8 +366,15 @@ def _fold(text: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", lowered) if unicodedata.category(c) != "Mn")
 
 
-def _words(text: str) -> set[str]:
-    return set(re.findall(r"[a-z0-9]+", _fold(text)))
+@lru_cache(maxsize=65536)
+def _words(text: str) -> frozenset:
+    """Cached because the same product name is folded once per ingredient -
+    ~40 candidates x 22 ingredients x 4 chains means the same handful of
+    strings are re-split thousands of times per week.
+
+    A frozenset, not a set: an lru_cache hands the SAME object to every
+    caller, and one of them mutating it would corrupt every later lookup."""
+    return frozenset(re.findall(r"[a-z0-9]+", _fold(text)))
 
 
 _FOLDED_RULES = {_fold(key): value for key, value in INGREDIENT_RULES.items()}
@@ -558,45 +567,135 @@ def effective_price(price) -> float | None:
     return campaign if campaign is not None else regular
 
 
+# Word indexes by data version. Bounded by the pruning in __init__ - an
+# unbounded cache keyed on a changing version is a memory leak with extra
+# steps.
+_INDEX_CACHE: dict = {}
+_PRICE_CACHE: dict = {}
+
+
 class RecipePricingEngine:
     """Prices a shopping list against the real products in grocery.db."""
 
     def __init__(self, store):
         self.store = store
+        # The word index is shared across ENGINES, not just across the
+        # ingredients of one week: a new engine is built for every request,
+        # and rebuilding an 18 000-product index each time was most of what
+        # was left of the cold cost after the per-ingredient scans went away.
+        #
+        # Keyed on the data version, so it cannot outlive the data it
+        # describes: the moment an import writes a price, the version changes
+        # and the next lookup builds a fresh index. No manual invalidation,
+        # and no window where a user is priced against a stale index.
+        try:
+            # The database's own identity is part of the key: the caches are
+            # process-global, the databases are not, and two fixtures with
+            # the same row counts fingerprint identically.
+            self._version = f"{getattr(store, 'db_path', id(store))}#{store.data_version()}"
+        except Exception:
+            # A store without the fingerprint (an old database, a test
+            # double) simply does not share indexes - correctness first.
+            self._version = None
+        self._word_index = _INDEX_CACHE.setdefault(self._version, {}) if self._version else {}
+        self._price_cache = _PRICE_CACHE.setdefault(self._version, {}) if self._version else {}
+        if self._version and len(_INDEX_CACHE) > 3:
+            # Only the newest few versions are worth keeping; the rest
+            # describe data nobody can be reading any more.
+            for stale in list(_INDEX_CACHE)[:-3]:
+                if stale != self._version:
+                    _INDEX_CACHE.pop(stale, None)
+                    _PRICE_CACHE.pop(stale, None)
 
-    def _candidates(self, ingredient: str, chain: str) -> list:
-        """Products of one chain whose name plausibly is this ingredient.
+    def _index_for(self, chain: str) -> dict:
+        """Maps each word in a chain's product names to the products with it.
 
-        The SQL step is only a cheap prefilter; product_matches_ingredient()
-        below is the authority. Two LIKE patterns are used because
-        grocery_products.normalized_key keeps Swedish accents
-        ("kycklingfilé") while the matcher folds them away
-        ("kycklingfile") - searching with only the folded form silently
-        matched nothing at all, and only the unfolded form would miss an
-        ingredient typed without its accents."""
-        raw_head = sorted((w for w in re.findall(r"[^\W\d_]+", str(ingredient).lower()) if len(w) > 2),
-                          key=len, reverse=True)
-        folded_head = sorted((w for w in _words(ingredient) if len(w) > 2), key=len, reverse=True)
-        if not raw_head and not folded_head:
-            return []
-        patterns = {f"%{w}%" for w in (raw_head[:1] + folded_head[:1])}
-        rows = []
-        for pattern in patterns:
-            rows.extend(self.store.connection.execute(
-                """
-                SELECT p.* FROM grocery_products p
-                JOIN grocery_product_external_ids e ON e.product_id = p.id
-                WHERE e.chain = ? AND p.normalized_key LIKE ?
-                """,
-                (chain, pattern),
-            ).fetchall())
-        seen, products = set(), []
+        The engine used to run one SQL query PER INGREDIENT, each walking
+        every product of the chain (a leading-wildcard LIKE cannot use an
+        index) and then running the matcher over all of them in Python. For a
+        22-item week across four chains that is 88 full passes over ~11 000
+        products - measured at 1.6 seconds, nearly all of it repeated work.
+
+        Reading the chain once and indexing by word turns each ingredient
+        into a dict lookup over a few dozen candidates. The index folds words
+        exactly as the matcher does (see _words), so the two can never
+        disagree about what a word is.
+
+        Suffixes are indexed too, because Swedish puts a compound's head
+        last: "jasminris" has to be findable under "ris", which is precisely
+        what product_matches_ingredient accepts."""
+        cached = self._word_index.get(chain)
+        if cached is not None:
+            return cached
+
+        index = {}
+        rows = self.store.connection.execute(
+            """
+            SELECT p.* FROM grocery_products p
+            JOIN grocery_product_external_ids e ON e.product_id = p.id
+            WHERE e.chain = ?
+            """,
+            (chain,),
+        ).fetchall()
+
+        seen = set()
         for row in rows:
             if row["id"] in seen:
                 continue
             seen.add(row["id"])
-            products.append(self.store._row_to_product(row))
-        return [p for p in products if product_matches_ingredient(p.name, ingredient, p.brand, p.category)]
+            product = self.store._row_to_product(row)
+            for word in _words(f"{product.name or ''} {product.brand or ''}"):
+                if len(word) <= 2:
+                    continue
+                index.setdefault(word, []).append(product)
+                for cut in range(1, len(word) - 2):
+                    index.setdefault(word[cut:], []).append(product)
+
+        self._word_index[chain] = index
+        return index
+
+    def _prices_for(self, store_id: int) -> dict:
+        """Every current price in one store, by product id.
+
+        price_item() asked the database for one product's price at a time.
+        With ~40 candidates per ingredient, 22 ingredients and four chains
+        that is thousands of single-row queries per week - each cheap, all of
+        them together not. One query per store answers all of them.
+
+        Shared across engines on the same data version, like the word index,
+        because prices only change when an import writes them."""
+        cached = self._price_cache.get(store_id)
+        if cached is not None:
+            return cached
+        prices = {}
+        for row in self.store.connection.execute(
+                "SELECT * FROM grocery_current_prices WHERE store_id = ?", (store_id,)):
+            prices[row["product_id"]] = self.store._row_to_current_price(row)
+        self._price_cache[store_id] = prices
+        return prices
+
+    def _candidates(self, ingredient: str, chain: str) -> list:
+        """Products of one chain whose name plausibly is this ingredient.
+
+        The word index is only a cheap prefilter; product_matches_ingredient()
+        remains the authority on whether a product IS the ingredient. Both
+        sides fold the same way (see _words), so an accented ingredient and an
+        unaccented product name still meet - which the old two-LIKE approach
+        needed a second query to achieve."""
+        words = sorted((w for w in _words(ingredient) if len(w) > 2), key=len, reverse=True)
+        if not words:
+            return []
+        # Longest word first: it is the most specific, so it yields the
+        # smallest candidate set for the matcher to judge.
+        index = self._index_for(chain)
+        candidates, seen = [], set()
+        for product in index.get(words[0], ()):
+            if product.id in seen:
+                continue
+            seen.add(product.id)
+            candidates.append(product)
+        return [p for p in candidates
+                if product_matches_ingredient(p.name, ingredient, p.brand, p.category)]
 
     def price_item(self, ingredient: str, amount: float, unit: str, chain: str, store_id: int) -> dict:
         """Picks the cheapest real checkout option for one ingredient at one
@@ -605,8 +704,9 @@ class RecipePricingEngine:
         big package can beat three small ones, so the comparison has to be on
         total cost, not unit price."""
         best = None
+        prices = self._prices_for(store_id)
         for product in self._candidates(ingredient, chain):
-            price = self.store.get_current_price(product.id, store_id)
+            price = prices.get(product.id)
             unit_cost = effective_price(price)
             if unit_cost is None:
                 continue
