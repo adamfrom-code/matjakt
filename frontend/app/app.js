@@ -758,7 +758,7 @@ async function renderRecipePage() {
       && !recipeDetailFetches.has(found.id)) {
     recipeDetailFetches.add(found.id);
     loadRecipe(found.id).then(detail => {
-      if (!detail) return;
+      if (!detail) { recipeDetailFetches.delete(found.id); return; }
       Object.assign(found, detail, { steg: detail.instructions || detail.steg || [] });
       renderRecipePage();
     }).catch(() => recipeDetailFetches.delete(found.id));
@@ -1822,7 +1822,10 @@ function ensureWeekRecipeDetails() {
     if (recipeDetailFetches.has(recipe.id)) return;
     recipeDetailFetches.add(recipe.id);
     loadRecipe(recipe.id).then(detail => {
-      if (!detail) return;
+      // loadRecipe swallows network errors and resolves null - a deploy
+      // window's failed fetch must not poison the once-per-id set, or the
+      // shopping list stays empty until a full reload.
+      if (!detail) { recipeDetailFetches.delete(recipe.id); return; }
       // Merge in place: every list, week and favourites reference THIS
       // object, so replacing it would orphan them.
       Object.assign(recipe, detail, { steg: detail.instructions || detail.steg || [] });
