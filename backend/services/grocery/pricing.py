@@ -81,8 +81,11 @@ DEPARTMENT_KEYWORDS = {
     # that name rules had to fight one at a time - dog food ("Mini Small
     # Kyckling Ris Active"), sweets ("Chokladagg"), snacks ("Micropop Smor
     # Popcorn").
-    "pet": ["djur >", "> hund", "> katt", "smadjur", "djurmat", "djurtillbehor"],
-    "baby": ["barn >", "blojor", "valling & ersattning", "barnmat", "barnsnacks",
+    # Matched on WORD BOUNDARIES, not as raw substrings - "djur" as a plain
+    # substring also matches "skaldjur", which classified every shrimp and
+    # shellfish aisle as pet food and took "Räkor" from 13 candidates to 0.
+    "pet": ["djur", "hund", "katt", "smadjur", "djurmat", "djurtillbehor"],
+    "baby": ["barn", "blojor", "valling & ersattning", "barnmat", "barnsnacks",
              "barnvard"],
     "nonfood": ["hem & stad", "hem & hushall", "halsa & skonhet", "apotek",
                 "tobak", "kiosk", "blommor", "gor det sjalv", "media", "klader"],
@@ -209,6 +212,17 @@ INGREDIENT_DEPARTMENTS = {
 }
 
 
+def _keyword_in_path(keyword: str, folded_path: str) -> bool:
+    """Whole-word match of a department keyword inside a folded category path.
+
+    A plain `in` test is not safe here: Swedish compounds put the head last,
+    so "skaldjur" ends with "djur" and "risdryck" ends with "dryck". Matching
+    by substring therefore filed shellfish under pet food and rice drink
+    under beverages. Word boundaries mirror the grammar - "skaldjur" is not
+    "djur", it is its own word."""
+    return re.search(rf"\b{re.escape(keyword)}\b", folded_path) is not None
+
+
 def departments_for_category(category):
     """Which department(s) a category path belongs to.
 
@@ -220,7 +234,7 @@ def departments_for_category(category):
         return set()
     folded = _fold(category)
     return {department for department, keywords in DEPARTMENT_KEYWORDS.items()
-            if any(keyword in folded for keyword in keywords)}
+            if any(_keyword_in_path(keyword, folded) for keyword in keywords)}
 
 
 def category_allows_ingredient(category, ingredient) -> bool:
@@ -343,6 +357,34 @@ def packages_needed(required_amount: float, required_unit: str | None,
     return max(1, math.ceil(converted / package_amount - 1e-9))
 
 
+def _exclusion_hit(text: str, words: set[str], bad: str) -> bool:
+    """Whether an exclusion term actually applies to this product name.
+
+    A raw substring test is WRONG here, and cost real matches: "läsk" folds
+    to "lask", which sits inside "flaskfile" (fläskfilé), so every pork
+    product in the catalogue was universally excluded as a soft drink. The
+    same shape of bug had already been found twice in this codebase (accent
+    folding, and "djur" inside "skaldjur").
+
+    An exclusion must therefore sit at a WORD BOUNDARY: the whole word, the
+    compound head (suffix), or the compound's first element (prefix). Both
+    ends are needed and neither is optional:
+        "kycklingkorv" ends with "korv"      -> a sausage, excluded
+        "vaniljsås"    ends with "sås"       -> a sauce, excluded
+        "messmör"      starts with "mess"    -> whey spread, excluded
+        "chokladägg"   starts with "choklad" -> confectionery, excluded
+        "fläskfilé"    has "läsk" in the MIDDLE only -> NOT a soft drink
+    Multi-word terms ("smaksatt med", " hund") are matched as plain
+    substrings, since they already carry their own boundaries."""
+    folded_bad = _fold(bad)
+    if not folded_bad:
+        return False
+    if " " in folded_bad or "-" in folded_bad:
+        return folded_bad in text
+    return any(word == folded_bad or word.startswith(folded_bad) or word.endswith(folded_bad)
+               for word in words)
+
+
 def product_matches_ingredient(product_name: str, ingredient: str, brand: str | None = None,
                                category: str | None = None) -> bool:
     """Conservative check - see this module's docstring for why. Requires the
@@ -365,7 +407,7 @@ def product_matches_ingredient(product_name: str, ingredient: str, brand: str | 
     # "sås"/"gräs"/"färs"/"månader" against accent-stripped product text meant
     # every rule containing å/ä/ö silently never fired - found when baby-food
     # exclusions had no effect on a real Willys run.
-    if any(_fold(bad) in folded_product for bad in UNIVERSAL_EXCLUDE):
+    if any(_exclusion_hit(folded_product, product_words, bad) for bad in UNIVERSAL_EXCLUDE):
         return False
 
     # The ingredient's own words must appear - all of them for a multi-word
@@ -437,7 +479,7 @@ def product_matches_ingredient(product_name: str, ingredient: str, brand: str | 
     # missed every rule containing å/ä/ö - which is why chokladägg and
     # smörkniv were still being matched despite having exclusions.
     rules = _FOLDED_RULES.get(folded_ingredient, {})
-    if any(_fold(bad) in folded_product for bad in rules.get("exclude", [])):
+    if any(_exclusion_hit(folded_product, product_words, bad) for bad in rules.get("exclude", [])):
         return False
     required = rules.get("require")
     # Same compound-head rule as above, so "jasminris" satisfies require:["ris"].

@@ -98,10 +98,11 @@ def database_summary() -> dict:
             SELECT chain,
                    COUNT(*) AS products,
                    SUM(CASE WHEN category IS NOT NULL THEN 1 ELSE 0 END) AS with_category,
-                   SUM(CASE WHEN gtin IS NOT NULL THEN 1 ELSE 0 END) AS with_gtin
+                   SUM(CASE WHEN gtin IS NOT NULL THEN 1 ELSE 0 END) AS with_gtin,
+                   SUM(CASE WHEN image_url IS NOT NULL THEN 1 ELSE 0 END) AS with_image
             FROM (
                 SELECT DISTINCT e.chain AS chain, p.id AS id,
-                       p.category AS category, p.gtin AS gtin
+                       p.category AS category, p.gtin AS gtin, p.image_url AS image_url
                 FROM grocery_product_external_ids e
                 JOIN grocery_products p ON p.id = e.product_id
             )
@@ -118,11 +119,27 @@ def database_summary() -> dict:
                 """,
                 (row["chain"],),
             ).fetchone()[0]
+            prices = store.connection.execute(
+                """
+                SELECT COUNT(*) FROM grocery_current_prices cp
+                JOIN grocery_product_external_ids e ON e.product_id = cp.product_id
+                WHERE e.chain = ?
+                """,
+                (row["chain"],),
+            ).fetchone()[0]
+            products = row["products"] or 0
             chains.append({
                 "chain": row["chain"],
-                "products": row["products"],
+                "products": products,
+                "prices": prices,
                 "withCategory": row["with_category"] or 0,
                 "withGtin": row["with_gtin"] or 0,
+                "withImage": row["with_image"] or 0,
+                # Percentages are what a panel is actually read for - "812 of
+                # 964" needs mental arithmetic at a glance, "84%" does not.
+                "categoryPercent": round(100 * (row["with_category"] or 0) / products) if products else 0,
+                "gtinPercent": round(100 * (row["with_gtin"] or 0) / products) if products else 0,
+                "imagePercent": round(100 * (row["with_image"] or 0) / products) if products else 0,
                 "lastFetchedAt": fetched,
                 "ageSeconds": (time.time() - fetched) if fetched else None,
             })
@@ -185,20 +202,29 @@ def provider_status() -> list[dict]:
     holdings = {entry["chain"]: entry for entry in database_summary()["chains"]}
     store = open_store()
     try:
-        runs = {}
-        for row in store.connection.execute(
-            """
-            SELECT chain, status, started_at, finished_at, products_found,
-                   prices_updated, error_message
-            FROM grocery_collector_runs
-            WHERE id IN (SELECT MAX(id) FROM grocery_collector_runs GROUP BY chain)
-            """
-        ).fetchall():
-            runs[row["chain"]] = {
-                "status": row["status"], "startedAt": row["started_at"],
-                "finishedAt": row["finished_at"], "productsFound": row["products_found"],
-                "pricesUpdated": row["prices_updated"], "errorMessage": row["error_message"],
-            }
+        def _runs(where: str):
+            found = {}
+            for row in store.connection.execute(
+                f"""
+                SELECT chain, status, started_at, finished_at, products_found,
+                       prices_updated, error_message
+                FROM grocery_collector_runs
+                WHERE id IN (SELECT MAX(id) FROM grocery_collector_runs {where} GROUP BY chain)
+                """
+            ).fetchall():
+                found[row["chain"]] = {
+                    "status": row["status"], "startedAt": row["started_at"],
+                    "finishedAt": row["finished_at"], "productsFound": row["products_found"],
+                    "pricesUpdated": row["prices_updated"], "errorMessage": row["error_message"],
+                }
+            return found
+
+        # Last ATTEMPT and last SUCCESS are different questions and the panel
+        # needs both: a chain whose last attempt was blocked can still be
+        # serving perfectly good data from a successful run two days ago, and
+        # showing only the attempt would read as "this chain is broken".
+        runs = _runs("")
+        successes = _runs("WHERE status = 'success'")
     finally:
         store.close()
 
@@ -209,8 +235,15 @@ def provider_status() -> list[dict]:
             "chain": chain, **meta,
             "products": held.get("products", 0),
             "withCategory": held.get("withCategory", 0),
+            "prices": held.get("prices", 0),
+            "withGtin": held.get("withGtin", 0),
+            "withImage": held.get("withImage", 0),
+            "categoryPercent": held.get("categoryPercent", 0),
+            "gtinPercent": held.get("gtinPercent", 0),
+            "imagePercent": held.get("imagePercent", 0),
             "ageSeconds": held.get("ageSeconds"),
             "lastRun": runs.get(chain),
+            "lastSuccessfulRun": successes.get(chain),
         })
     return panel
 

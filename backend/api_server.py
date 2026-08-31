@@ -27,6 +27,7 @@ from services.billing import StripeError, cancel_subscription, create_checkout_s
 from services.email import MailError, send_email
 from services.grocery import api as grocery_api  # noqa: E402
 from services.grocery import importer as grocery_importer  # noqa: E402
+from services.grocery.scheduler import SCHEDULER as GROCERY_SCHEDULER  # noqa: E402
 from services.pricing import CHAIN_TO_PRIMAT, KeyValueCacheStore, OpenFoodFactsError, PRIMAT_ATTRIBUTION, PriceCacheStore, PrimatError, image_url_for_gtin, nearby_stores as primat_nearby_stores, primat_account_status, resolve_stores as primat_resolve_stores, search_products as primat_search_products, to_matjakt_product as primat_to_matjakt_product
 from services.recipe_providers import RecipeService, TheMealDbProvider
 
@@ -1171,7 +1172,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
                 self.send_json(403, {"error": "Admin-token krävs"})
                 return
-            self.send_json(200, grocery_importer.status())
+            self.send_json(200, {
+                "import": grocery_importer.status(),
+                "scheduler": GROCERY_SCHEDULER.status(),
+                "providers": grocery_api.provider_status(),
+            })
             return
         if parsed.path == "/api/auth/me":
             user = ACCOUNT_STORE.user_for_token(self._bearer_token())

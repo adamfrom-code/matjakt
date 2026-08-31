@@ -221,5 +221,62 @@ class WrongAisleIsRejectedTest(unittest.TestCase):
             category="Kött, chark & fågel > Korv"))
 
 
+class SubstringBoundaryTest(unittest.TestCase):
+    """Both bugs below are the same shape, and both were found by MEASURING
+    against 10 842 real Willys products rather than by reading the code: a
+    Swedish word sitting inside a longer Swedish word, matched as a raw
+    substring. The codebase had already been bitten by this class of bug once
+    (accent folding), which is why each fix here is pinned by a test."""
+
+    def test_skaldjur_is_not_pet_food(self):
+        """"djur" as a plain substring also matches "skaldjur", which filed
+        every shellfish aisle under pet food and took "Räkor" from 13 real
+        candidates to zero."""
+        self.assertEqual(departments_for_category("Fryst > Fisk & skaldjur > Räkor"),
+                         {"fish", "frozen"})
+        self.assertTrue(product_matches_ingredient(
+            "Räkor Skalade Frysta", "räkor", None,
+            category="Fryst > Fisk & skaldjur > Räkor"))
+
+    def test_actual_pet_food_is_still_rejected(self):
+        self.assertEqual(departments_for_category("Djur > Hund > Torrfoder"), {"pet"})
+
+    def test_risdryck_is_not_a_beverage_aisle_word(self):
+        self.assertNotIn("drinks", departments_for_category(
+            "Mejeri, ost & ägg > Havre-, Soja-, Risdryck mm"))
+
+    def test_flaskfile_is_not_a_soft_drink(self):
+        """"läsk" folds to "lask", which sits inside "flaskfile" - so every
+        pork product in the catalogue was universally excluded as a soft
+        drink, and "Fläskfilé" matched nothing at all."""
+        self.assertTrue(product_matches_ingredient(
+            "Fläskfilé Fryst Danmark", "fläskfilé", None,
+            category="Kött, chark & fågel > Kött > Fläsk"))
+        self.assertTrue(product_matches_ingredient(
+            "Fläskkarré Benfri", "fläskkarré", None,
+            category="Kött, chark & fågel > Kött > Fläsk"))
+
+    def test_an_actual_soft_drink_is_still_excluded(self):
+        self.assertFalse(product_matches_ingredient(
+            "Citron Läsk", "citron", None, category="Dryck > Läsk"))
+
+    def test_exclusions_still_catch_the_compound_head(self):
+        """A sausage is still not a fillet, and a sauce is still not cream -
+        the boundary rule must not have loosened the real exclusions."""
+        self.assertFalse(product_matches_ingredient(
+            "Kycklingkorv Grillad", "kycklingfilé", None,
+            category="Kött, chark & fågel > Korv"))
+        self.assertFalse(product_matches_ingredient(
+            "Vaniljsås Grädde & Mjölk", "grädde", None,
+            category="Mejeri, ost & ägg > Matlagning > Grädde"))
+
+    def test_exclusions_still_catch_the_compound_prefix(self):
+        """"messmör" is whey spread, not butter - caught by its first element
+        rather than its head, which is why prefixes must count too."""
+        self.assertFalse(product_matches_ingredient(
+            "Messmör Original", "smör", None,
+            category="Mejeri, ost & ägg > Smör, margarin & jäst > Smör"))
+
+
 if __name__ == "__main__":
     unittest.main()
