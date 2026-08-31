@@ -2166,7 +2166,15 @@ function aggregateShopping(selected) {
   return aggregateIngredients(selected.filter(recipe => recipe.priceStatus !== "unavailable"), RECIPE_QUANTITIES, PACKAGE_INFO, state.personer);
 }
 
-function updateSummary() { $("summaryPeople").textContent = plural(state.personer, "person", "personer"); $("summaryMeals").textContent = plural(state.middagar, "middag", "middagar"); }
+function updateSummary() {
+  $("summaryPeople").textContent = plural(state.personer, "person", "personer");
+  $("summaryMeals").textContent = plural(state.middagar, "middag", "middagar");
+  $("summaryBudgetInline").textContent = money(state.budget);
+  const hasWeek = selectedRecipes().length > 0;
+  $("generateBtnLabel").textContent = hasWeek ? "Öppna veckan" : "Skapa min vecka";
+  $("newWeekBtn").hidden = !hasWeek;
+  $("weekCardStatus").textContent = hasWeek ? "Veckan är klar" : "Redo";
+}
 function hemRecipePreviewMarkup(recipe) {
   const badge = recipe.typ && recipe.typ !== "Provider-recept" ? `<span class="hem-recipe-badge">${escapeHtml(recipe.typ)}</span>` : "";
   const price = recipe.portionspris ? `${money(recipe.portionspris)}/portion` : "";
@@ -2233,7 +2241,15 @@ $("postcodeInput").addEventListener("input", e => {
 });
 $("locateBtn").addEventListener("click", () => { if (!navigator.geolocation) return; $("locateBtn").textContent = "Hämtar..."; navigator.geolocation.getCurrentPosition(({ coords }) => { state.position = { lat: coords.latitude, lon: coords.longitude }; $("locateBtn").textContent = "Hittad"; chooseMenu(false); }, () => { $("locateBtn").textContent = "Försök igen"; }); });
 $("storeInput").addEventListener("change", e => { state.butik = e.target.value; saveState(); chooseMenu(); renderCampaignSection(); });
-$("budgetCardBtn").addEventListener("click", () => { $("advancedSettings").open = true; $("advancedSettings").scrollIntoView({ behavior: "smooth", block: "center" }); });
+function openWeekSheet() { $("weekSheet").hidden = false; document.body.style.overflow = "hidden"; }
+function closeWeekSheet() { $("weekSheet").hidden = true; document.body.style.overflow = ""; }
+$("budgetCardBtn").addEventListener("click", openWeekSheet);
+$("weekSheetOpen").addEventListener("click", openWeekSheet);
+$("weekSheetClose").addEventListener("click", closeWeekSheet);
+$("weekSheetDone").addEventListener("click", closeWeekSheet);
+$("weekSheet").addEventListener("click", event => { if (event.target === $("weekSheet")) closeWeekSheet(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape" && !$("weekSheet").hidden) closeWeekSheet(); });
+$("sheetPlanBtn").addEventListener("click", () => { closeWeekSheet(); openPlanComparison(); });
 
 const GOAL_PRESETS = {
   hogprotein: { kcalGoal: "", proteinGoal: "40" },
@@ -2971,7 +2987,13 @@ $("mealsPlus").addEventListener("click", () => {
   if (state.middagar >= maxDinners() && !hasPremium()) { openPaywall("seven_dinners"); return; }
   step("middagar", 1, 1, Math.min(MAX_MEALS, maxDinners()));
 });
-$("generateBtn").addEventListener("click", () => openPlanComparison()); $("refreshBtn").addEventListener("click", () => { RECEPT.push(RECEPT.shift()); chooseMenu(); });
+// One primary action: create the week when there is none, open it when
+// there is. "Skapa ny vecka" stays as a quiet secondary path.
+$("generateBtn").addEventListener("click", () => {
+  if (selectedRecipes().length) setView("week");
+  else openPlanComparison();
+});
+$("newWeekBtn").addEventListener("click", () => openPlanComparison()); $("refreshBtn").addEventListener("click", () => { RECEPT.push(RECEPT.shift()); chooseMenu(); });
 $("startNewWeekBtn").addEventListener("click", () => openPlanComparison());
 let pantryPickLocation = "skafferi";
 function renderPantryPicker(query) {

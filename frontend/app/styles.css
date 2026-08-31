@@ -295,3 +295,19 @@ button.campaign-deal{cursor:pointer;font:inherit}
 .paywall-monthly{width:100%;margin-bottom:6px}
 .paywall-continue{width:100%;background:none;border:none;color:var(--muted);font:inherit;font-size:13px;padding:10px;cursor:pointer;text-decoration:underline}
 .plan-card-locked{opacity:.92}
+
+
+/* ---- Kompakt Din vecka + bottom sheet ------------------------------------ */
+.week-card.compact{gap:10px}
+.week-summary-row{display:flex;align-items:center;gap:8px;width:100%;background:var(--surface-2,rgba(0,0,0,.03));border:1px solid var(--border);border-radius:14px;padding:12px 14px;font:inherit;cursor:pointer;text-align:left}
+.week-summary-row b{font-weight:600;white-space:nowrap}
+.week-summary-row i{color:var(--muted);font-style:normal}
+.week-sheet-plus{margin-left:auto;width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px}
+.week-secondary{background:none;border:none;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:4px}
+.week-sheet-backdrop{position:fixed;inset:0;background:rgba(12,26,19,.5);z-index:55;display:flex;align-items:flex-end;justify-content:center}
+.week-sheet-backdrop[hidden]{display:none}
+.week-sheet-card{background:var(--surface);border-radius:22px 22px 0 0;width:100%;max-width:480px;max-height:86vh;overflow-y:auto;padding:18px 18px 24px;display:flex;flex-direction:column;gap:12px}
+.sheet-head{display:flex;align-items:center;justify-content:space-between}
+.sheet-head strong{font-size:18px}
+.sheet-plan-btn{width:100%}
+.sheet-done{width:100%}

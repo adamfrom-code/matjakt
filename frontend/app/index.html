@@ -32,7 +32,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=41">
+  <link rel="stylesheet" href="styles.css?v=42">
 </head>
 <body>
   <div class="phone-shell">
@@ -51,13 +51,20 @@
           <span class="progress-track"><i id="summaryBudgetBar"></i></span>
         </button>
 
-        <section class="week-card" aria-labelledby="settingsHeading">
-          <div class="week-card-label"><span>Din matvecka</span><span class="status-dot" id="weekCardStatus">Redo</span></div>
-          <div class="week-overview">
-            <p><b id="summaryPeople">2 personer</b><i></i><b id="summaryMeals">4 middagar</b></p>
-          </div>
-          <details class="advanced-settings" id="advancedSettings">
-            <summary id="settingsHeading">Justera veckan</summary>
+        <section class="week-card compact" aria-labelledby="weekCardTitle">
+          <div class="week-card-label"><span id="weekCardTitle">Din vecka</span><span class="status-dot" id="weekCardStatus">Redo</span></div>
+          <button type="button" class="week-summary-row" id="weekSheetOpen" aria-haspopup="dialog" aria-controls="weekSheet">
+            <b id="summaryPeople">2 personer</b><i aria-hidden="true">·</i><b id="summaryMeals">4 middagar</b><i aria-hidden="true">·</i><b id="summaryBudgetInline">800 kr</b>
+            <span class="week-sheet-plus" aria-hidden="true">＋</span>
+          </button>
+          <p class="nutrition-warning" id="nutritionWarning" hidden></p>
+          <button class="btn btn-primary" id="generateBtn"><span id="generateBtnLabel">Skapa min vecka</span><span aria-hidden="true">→</span></button>
+          <button type="button" class="week-secondary" id="newWeekBtn" hidden>Skapa ny vecka</button>
+        </section>
+
+        <div class="week-sheet-backdrop" id="weekSheet" hidden role="dialog" aria-modal="true" aria-label="Justera veckan">
+          <div class="week-sheet-card">
+            <div class="sheet-head"><strong>Justera veckan</strong><button type="button" class="modal-close" id="weekSheetClose" aria-label="Stäng">×</button></div>
             <div class="settings-content">
               <label for="budgetInput">Veckobudget</label><div class="budget-row"><input type="number" id="budgetInput" value="800" min="0" step="50" inputmode="numeric"><span>kr</span></div>
               <div class="settings-grid"><div><label>Personer</label><div class="stepper"><button id="peopleMinus" aria-label="Färre personer">−</button><span id="peopleValue">2</span><button id="peoplePlus" aria-label="Fler personer">+</button></div></div><div><label>Middagar</label><div class="stepper"><button id="mealsMinus" aria-label="Färre middagar">−</button><span id="mealsValue">4</span><button id="mealsPlus" aria-label="Fler middagar">+</button></div></div></div>
@@ -139,9 +146,17 @@
                 </div>
               </div>
             </div>
-          </details>
-          <p class="nutrition-warning" id="nutritionWarning" hidden></p>
-          <button class="btn btn-primary" id="generateBtn"><span>Skapa min vecka</span><span aria-hidden="true">→</span></button>
+            <button type="button" class="btn btn-ghost sheet-plan-btn" id="sheetPlanBtn">Välj veckotyp →</button>
+            <button class="btn btn-primary sheet-done" id="weekSheetDone">Klart</button>
+          </div>
+        </div>
+
+        <section class="campaign-section" id="campaignSection" aria-labelledby="campaignHeading">
+          <div class="section-heading"><div><h2 id="campaignHeading">Veckans fynd</h2></div><button type="button" class="btn-ghost" id="campaignShowAllBtn">Visa alla</button></div>
+          <p class="nutrition-locked" id="campaignLocked" hidden></p>
+          <p class="campaign-store-label" id="campaignStoreLabel" hidden></p>
+          <div class="campaign-scroll" id="campaignList"></div>
+          <p class="primat-attribution" id="campaignAttribution" hidden></p>
         </section>
 
         <button class="savings-card" type="button" id="openStatsBtn">
@@ -154,13 +169,7 @@
           <div id="nextMealCard"></div>
         </section>
 
-        <section class="campaign-section" id="campaignSection" aria-labelledby="campaignHeading">
-          <div class="section-heading"><div><h2 id="campaignHeading">Veckans kampanjer i butikerna</h2></div><button type="button" class="btn-ghost" id="campaignShowAllBtn">Visa alla</button></div>
-          <p class="nutrition-locked" id="campaignLocked" hidden></p>
-          <p class="campaign-store-label" id="campaignStoreLabel" hidden></p>
-          <div class="campaign-scroll" id="campaignList"></div>
-          <p class="primat-attribution" id="campaignAttribution" hidden></p>
-        </section>
+
 
         <section class="hem-recipes-section" aria-labelledby="hemRecipesHeading">
           <div class="section-heading"><div><p class="eyebrow">Utvalt för dig</p><h2 id="hemRecipesHeading">Recept att gilla</h2></div><div class="hem-recipes-actions"><button type="button" class="btn-ghost" id="refreshBtn">Byt förslag</button><button type="button" class="btn-ghost" id="hemShowAllRecipesBtn">Visa alla</button></div></div>
@@ -460,6 +469,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=72"></script>
+  <script type="module" src="app.js?v=73"></script>
 </body>
 </html>
