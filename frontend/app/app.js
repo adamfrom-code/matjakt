@@ -404,12 +404,77 @@ function distanceKm(lat1, lon1, lat2, lon2) {
   const a = Math.sin(latDelta / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(lonDelta / 2) ** 2;
   return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+// =============================================================================
+// LOCAL DEVELOPMENT ONLY - Premium UI unlock
+// =============================================================================
+// Lets a developer walk the whole Premium flow in a browser without creating
+// an account. It CANNOT be turned on in production, by design and not by
+// convention:
+//
+//   1. It is gated on the page being served from a loopback host. Production
+//      is https://matjakt.store, which is not one, so the switch is dead
+//      there no matter what anyone puts in storage.
+//   2. It only affects what this browser DRAWS. Every Premium capability the
+//      server actually guards - campaigns, billing, account state - is still
+//      checked server-side against a real account, so flipping this unlocks
+//      no data and no paid feature.
+//
+// Turn on from the console:  localStorage.setItem("matjakt-dev-premium","1")
+const DEV_PREMIUM_KEY = "matjakt-dev-premium";
+
+function isLoopbackHost() {
+  return ["localhost", "127.0.0.1", "[::1]", "0.0.0.0"].includes(location.hostname);
+}
+
+function devPremiumEnabled() {
+  if (!isLoopbackHost()) return false;
+  try {
+    return localStorage.getItem(DEV_PREMIUM_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+// The single place the UI asks "is this user Premium". Everything else reads
+// this, so the dev switch has exactly one entry point rather than being
+// sprinkled through every call site.
+function hasPremium() {
+  return hasPremium() || devPremiumEnabled();
+}
+
 function nearbyBranches() { return state.branches.length ? state.branches : FALLBACK_BRANCH; }
+// Everything that describes WHERE the user shops. A new postcode invalidates
+// all of it: keeping Gävle's branches, Gävle's fetched prices or a pinned
+// Gävle store after a move to Stockholm would show the user a shop they
+// cannot walk into and a total they cannot pay.
+function clearLocationDerivedState() {
+  state.branches = [];
+  state.liveBranchTotals = {};
+  state.livePriser = {};
+  state.dbChainTotals = {};
+  state.dbComparison = null;
+  state.dbPricedAt = null;
+  state.liveUpdatedAt = null;
+  // A branch pinned in the old town is not reachable from the new one.
+  state.pinnedBranch = null;
+  // Both sync guards must forget their old key, or the refetch for the new
+  // postcode is skipped as "already done".
+  databasePricingSync = { key: null, pending: false };
+  branchComparisonSync = { key: null, branches: new Set() };
+}
+
 let branchesSync = { key: null, loading: false };
 async function syncNearbyBranches() {
   const zip = state.postnummer;
-  if (!/^\d{5}$/.test(zip) || branchesSync.key === zip || branchesSync.loading) return;
-  branchesSync = { key: zip, loading: true };
+  if (!/^\d{5}$/.test(zip) || branchesSync.key === zip) return;
+  // A fetch already in flight used to make this return outright, so a
+  // postcode typed while the previous one was loading was dropped and never
+  // retried - the old town's stores simply stayed on screen. Remember the
+  // pending postcode instead and pick it up when the current fetch settles.
+  if (branchesSync.loading) { branchesSync.pending = zip; return; }
+  branchesSync = { key: zip, loading: true, pending: null };
+  clearLocationDerivedState();
+  render();
   try {
     const response = await fetch(storesApiUrl(zip), { signal: AbortSignal.timeout(20000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -423,8 +488,18 @@ async function syncNearbyBranches() {
     // unconditionally regenerating would silently discard checked-off items,
     // cached prices, and even reshuffle an already-chosen week on every visit.
     if (!state.valda.size) chooseMenu(false); else render();
-  } catch { /* nätverket svarade inte - den uppskattade fallback-butiken visas kvar tills det går att försöka igen */ }
-  finally { branchesSync.loading = false; }
+  } catch {
+    // The network did not answer. The estimated fallback branch is shown
+    // until this can be retried - but the key is cleared so the next attempt
+    // is not skipped as "already fetched".
+    branchesSync.key = null;
+  }
+  finally {
+    branchesSync.loading = false;
+    const pending = branchesSync.pending;
+    if (pending && pending !== state.postnummer) branchesSync.pending = null;
+    if (pending) { branchesSync.pending = null; syncNearbyBranches(); }
+  }
 }
 function recipeMatchesDislikes(recipe) {
   if (!state.ogillar.size) return false;
@@ -436,7 +511,7 @@ function localRecipesForUser() {
 }
 function nutritionFilteredRecipes() {
   const dietFiltered = localRecipesForUser();
-  if (!state.user?.premium) return dietFiltered;
+  if (!hasPremium()) return dietFiltered;
   return filterByNutritionGoals(dietFiltered, currentNutritionGoals());
 }
 function candidateRecipesForUser() {
@@ -450,7 +525,7 @@ function candidateRecipesForUser() {
 // surfacing #nutritionWarning) here fixes it everywhere a week gets (re)built.
 function weekPlanCandidates() {
   const dietOnly = localRecipesForUser().filter(recipe => !state.feedback[recipe.id]?.disliked);
-  const goalsActive = Boolean(state.user?.premium) && hasActiveNutritionGoals(currentNutritionGoals());
+  const goalsActive = hasPremium() && hasActiveNutritionGoals(currentNutritionGoals());
   if (!goalsActive) return { candidates: dietOnly, nutritionShortfall: false };
   const nutritionCandidates = candidateRecipesForUser();
   if (nutritionCandidates.length < state.middagar) return { candidates: dietOnly, nutritionShortfall: true };
@@ -475,7 +550,7 @@ function cheapestBranch(chain = null) {
   // which is exactly how a wrong "X is cheapest" claim happens. Pick by distance
   // instead and never claim it's the cheapest; real cross-store comparison lives
   // in renderStoreComparison() using live data, gated to Premium.
-  if (!state.user?.premium) return scored.sort((a, b) => a.avstandKm - b.avstandKm)[0];
+  if (!hasPremium()) return scored.sort((a, b) => a.avstandKm - b.avstandKm)[0];
   return scored.sort((a, b) => a.total - b.total || a.avstandKm - b.avstandKm)[0];
 }
 // A branch the user explicitly picked from the store comparison list (e.g.
@@ -492,7 +567,7 @@ function pinnedBranchMatch() {
 }
 let branchCache = { key: null, value: null };
 function selectedBranch() {
-  const key = JSON.stringify([state.budget, state.middagar, state.butik, state.postnummer, state.position, RECEPT.length, state.apiRecipes.length, state.user?.premium, state.naringsmal, state.pinnedBranch, state.branches.length]);
+  const key = JSON.stringify([state.budget, state.middagar, state.butik, state.postnummer, state.position, RECEPT.length, state.apiRecipes.length, hasPremium(), state.naringsmal, state.pinnedBranch, state.branches.length]);
   if (branchCache.key !== key) branchCache = { key, value: pinnedBranchMatch() || (state.butik === "auto" ? cheapestBranch() : cheapestBranch(state.butik)) };
   return branchCache.value;
 }
@@ -537,7 +612,7 @@ function renderRecipes() {
   const dietFilterActive = state.kost.kosttyp !== "" || state.kost.avoidAllergens.size > 0;
   const recipes = filterRecipes(search ? [...localRecipesForUser(), ...(dietFilterActive ? [] : state.apiRecipes)] : availableRecipes(), search).filter(recipe => (state.kategori === "alla" || recipe.typ === state.kategori) && (!state.maxTid || recipe.tid <= state.maxTid) && (!state.baraFavoriter || state.favoriter.has(recipe.id)));
   const branch = selectedBranch();
-  const premiumStoreAuto = Boolean(state.user?.premium);
+  const premiumStoreAuto = hasPremium();
   const storeLabel = state.butik === "auto" ? `${branch?.namn || "ingen butik hittades"}${premiumStoreAuto ? " (lägst uppskattat)" : " (närmast)"}` : state.butik === "alla" ? "alla butiker" : `${branch?.namn || state.butik}`;
   const loading = !state.branches.length && branchesSync.loading;
   // avstandKm can be null (e.g. a branch source that doesn't report distance,
@@ -791,7 +866,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
   if (!selected.length || !branches.length) { container.innerHTML = ""; return; }
   const shoppingItems = aggregateShopping(selected);
   const results = computeStoreResults(selected, branches, shoppingItems);
-  const premium = Boolean(state.user?.premium);
+  const premium = hasPremium();
   const anyLive = results.some(r => r.isLive);
   const updatedLabel = anyLive && state.liveUpdatedAt ? `<small class="store-compare-updated">Uppdaterad ${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}</small>` : "";
   if (!premium) {
@@ -970,7 +1045,15 @@ function chainShoppingListMarkup(data) {
   // looks suspiciously low.
   const warning = !data.comparable
     ? `<p class="chain-list-warning">För få av varorna har aktuellt pris för att den här summan ska gå att jämföra med en annan butik.</p>` : "";
-  const head = `<div class="chain-list-head"><h2>${escapeHtml(data.store?.name || data.chain || "")}</h2><small>${escapeHtml([data.store?.city, data.chain].filter(Boolean).join(" · "))}</small><div class="chain-list-total"><span>Total kassakostnad</span><strong>${money(data.totalCheckoutCost || 0)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor har aktuellt pris</span>${data.estimatedItems ? `<span>${data.estimatedItems} med uppskattat antal</span>` : ""}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span>${savings}</div>${warning}</div>`;
+  // Summed from the rows actually rendered below, not taken from the payload.
+  // The two agree today (the server builds the total the same way), and this
+  // guarantees they keep agreeing: a header that quietly disagreed with its
+  // own list is the exact failure this screen exists to remove.
+  const total = (data.items || [])
+    .filter(item => item.priceStatus !== "missing")
+    .reduce((sum, item) => sum + (Number(item.totalCost) || 0), 0);
+  const coverage = data.totalItems ? Math.round(100 * data.realPriceItems / data.totalItems) : 0;
+  const head = `<div class="chain-list-head"><h2>${escapeHtml(data.store?.name || data.chain || "")}</h2><small>${escapeHtml([data.store?.city, data.chain].filter(Boolean).join(" · "))}</small><div class="chain-list-total"><span>Total kassakostnad</span><strong>${money(total)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor prissatta · ${coverage} % täckning</span>${data.estimatedItems ? `<span>${data.estimatedItems} med uppskattat antal</span>` : ""}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span>${savings}</div>${warning}</div>`;
 
   const rows = (data.items || []).map(item => {
     const checked = state.avklarade.has(item.ingredient);
@@ -978,23 +1061,32 @@ function chainShoppingListMarkup(data) {
     const photo = item.imageUrl
       ? `<img class="chain-item-photo" src="${escapeHtml(safeHttpUrl(item.imageUrl) || "")}" alt="" loading="lazy">`
       : `<span class="chain-item-photo" aria-hidden="true"></span>`;
+    // What the recipe asks for, and what that means at the till: how many
+    // whole packages of THIS product you have to put in the basket.
     const need = item.neededAmount != null
       ? `Behövs ${formatAmount(item.neededAmount)} ${escapeHtml(item.neededUnit || "")}` : "";
     const pack = item.packageSize ? `Förpackning ${escapeHtml(item.packageSize)}` : "";
-    const count = item.packages ? `${item.packages} paket` : "";
+    const count = item.packages ? `${item.packages} ${item.packages === 1 ? "paket" : "paket"}` : "";
     // A campaign price is only a discount when it is genuinely below the
     // ordinary price; otherwise showing both would invent one.
     const onCampaign = item.campaignPrice != null && item.regularPrice != null
       && item.campaignPrice < item.regularPrice;
+    // unitPrice is what one package actually costs today (campaign price when
+    // one is running, otherwise the ordinary price) - it is what totalCost is
+    // built from, so showing it makes the arithmetic checkable: 2 x 12,20 =
+    // 24,40. comparisonPrice is the shelf's kr/kg, a different number
+    // entirely, and labelling either as the other would mislead.
+    const perUnit = item.unitPrice != null && item.packages > 1
+      ? `<small class="chain-item-compare">${item.packages} × ${money(item.unitPrice)}</small>` : "";
     const priceBlock = missing
-      ? `<small class="chain-item-compare">—</small>`
-      : `<strong>${money(item.totalCost)}</strong>${onCampaign
-          ? `<small class="chain-item-campaign">Kampanj ${money(item.campaignPrice)}</small><small class="chain-item-was">Ord. ${money(item.regularPrice)}</small>`
-          : item.regularPrice != null ? `<small class="chain-item-compare">Ord. ${money(item.regularPrice)}/st</small>` : ""}${
+      ? `<small class="chain-item-compare">Pris saknas</small>`
+      : `<strong>${money(item.totalCost)}</strong>${perUnit}${onCampaign
+          ? `<small class="chain-item-campaign">Kampanj ${money(item.campaignPrice)}/st</small><small class="chain-item-was">Ord. ${money(item.regularPrice)}/st</small>`
+          : item.regularPrice != null ? `<small class="chain-item-compare">${money(item.regularPrice)}/st</small>` : ""}${
           item.comparisonPrice != null ? `<small class="chain-item-compare">Jmf ${money(item.comparisonPrice)}</small>` : ""}`;
     const title = missing ? escapeHtml(item.ingredient) : escapeHtml(item.productName || item.ingredient);
     const sub = missing
-      ? `Ingen produkt kunde matchas · ${escapeHtml(item.ingredient)}`
+      ? `Ingen produkt kunde matchas för "${escapeHtml(item.ingredient)}"`
       : escapeHtml([item.brand, pack, count].filter(Boolean).join(" · "));
     return `<label class="chain-item ${missing ? "is-missing" : ""}"><input type="checkbox" data-shopping="${escapeHtml(item.ingredient)}" ${checked ? "checked" : ""}>${photo}<span class="chain-item-info"><strong>${title}</strong><small class="chain-item-need">${need}</small><small>${sub}</small>${priceStatusLabel(item.priceStatus)}</span><span class="chain-item-prices">${priceBlock}</span></label>`;
   }).join("");
@@ -1454,14 +1546,19 @@ function syncSettingsInputs() {
   $("kosttypInput").value = state.kost.kosttyp;
   document.querySelectorAll("#allergenChips input").forEach(box => { box.checked = state.kost.avoidAllergens.has(box.value); });
   const autoOption = document.querySelector('#storeInput option[value="auto"]');
-  if (autoOption) autoOption.textContent = state.user?.premium ? "Billigast automatiskt" : "Närmast automatiskt (Premium: billigast)";
+  if (autoOption) autoOption.textContent = hasPremium() ? "Billigast automatiskt" : "Närmast automatiskt (Premium: billigast)";
 }
 syncSettingsInputs();
 $("budgetInput").addEventListener("input", e => { state.budget = clampBudget(e.target.value); saveState(); updateSummary(); renderBasket(); });
 const debouncedGeocode = createDebouncedSearch((zip, signal) => fetch(geocodeApiUrl(zip), { signal }).then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }), 400);
 $("postcodeInput").addEventListener("input", e => {
+  const previous = state.postnummer;
   state.position = null;
   state.postnummer = e.target.value.replace(/\D/g, "");
+  // Drop the old town's stores and prices the moment the postcode actually
+  // changes, not when the new ones happen to arrive - otherwise the user
+  // sees Gävle stores while typing a Stockholm postcode.
+  if (state.postnummer !== previous) clearLocationDerivedState();
   saveState(); chooseMenu(false);
   if (state.postnummer.length !== 5) return;
   const zip = state.postnummer;
@@ -1579,7 +1676,7 @@ function renderAccount() {
   $("accountLoggedOut").hidden = loggedIn;
   $("accountLoggedIn").hidden = !loggedIn;
   $("profileBtn").textContent = loggedIn ? state.user.email.slice(0, 2).toUpperCase() : "MJ";
-  $("profileBtn").classList.toggle("is-premium", Boolean(state.user?.premium));
+  $("profileBtn").classList.toggle("is-premium", hasPremium());
   syncSettingsInputs();
   if (loggedIn) {
     $("accountEmail").textContent = state.user.email;
@@ -1601,7 +1698,7 @@ function renderAccount() {
       $("subscriptionPanelLine").textContent = line;
     }
   }
-  const premium = Boolean(state.user?.premium);
+  const premium = hasPremium();
   $("nutritionLocked").hidden = premium;
   $("nutritionFields").hidden = !premium;
 }
@@ -1620,7 +1717,7 @@ function swapOptionMarkup(option, isSelected) {
 }
 const FREE_SWAP_LIMIT = 3;
 function openSwapModal(currentId) {
-  if (!state.user?.premium && state.swapsThisWeek >= FREE_SWAP_LIMIT) {
+  if (!hasPremium() && state.swapsThisWeek >= FREE_SWAP_LIMIT) {
     $("swapModalHint").textContent = "";
     $("swapOptions").innerHTML = `<button type="button" class="store-compare-upsell" id="swapUpsell">🔒 Du har använt dina ${FREE_SWAP_LIMIT} gratis byten den här veckan. Prova Premium gratis i 14 dagar för obegränsade byten.</button>`;
     $("swapUpsell").addEventListener("click", () => { closeSwapModal(); openPremiumPitch(); });
@@ -1656,7 +1753,7 @@ $("swapShowMoreBtn").addEventListener("click", () => { if (swapContext) { swapCo
 $("swapConfirmBtn").addEventListener("click", () => {
   if (!swapContext?.selectedId) return;
   swapWeekPlanDay(swapContext.dayIndex, swapContext.selectedId);
-  if (!state.user?.premium) state.swapsThisWeek++;
+  if (!hasPremium()) state.swapsThisWeek++;
   saveState(); render(); closeSwapModal();
 });
 function closeSwapModal() { $("swapModal").hidden = true; swapContext = null; }
@@ -1767,7 +1864,7 @@ function renderObTid() {
   return `<label for="obMaxTid">Hur lång tid vill ni lägga på matlagning?</label><select id="obMaxTid"><option value="0" ${!state.maxTid ? "selected" : ""}>Ingen gräns</option><option value="20" ${state.maxTid === 20 ? "selected" : ""}>Max 20 min</option><option value="30" ${state.maxTid === 30 ? "selected" : ""}>Max 30 min</option><option value="45" ${state.maxTid === 45 ? "selected" : ""}>Max 45 min</option></select>`;
 }
 function renderObNaring() {
-  const premium = Boolean(state.user?.premium);
+  const premium = hasPremium();
   return `<p class="ob-teaser">${premium ? `Du har redan Premium - ställ in exakta mål för kalorier, protein, kolhydrater och fett under "Justera veckan" på Hem.` : `Med Premium kan Matjakt styra veckan efter kalorier, protein, kolhydrater, fett och proteinkälla per måltid - inte bara pris. Du kan sätta det senare under "Justera veckan".`}</p>${premium ? "" : `<div class="ob-premium-badge">59 kr/mån · Premium</div>`}`;
 }
 function renderObButik() {
@@ -1792,7 +1889,13 @@ function wireOnboardingStep() {
   customDislike?.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); const value = customDislike.value.trim(); if (value) { state.ogillar.add(value); saveState(); renderOnboardingStep(); } } });
   document.querySelectorAll("[data-ob-remove-dislike]").forEach(button => button.addEventListener("click", () => { state.ogillar.delete(button.dataset.obRemoveDislike); saveState(); renderOnboardingStep(); }));
   $("obMaxTid")?.addEventListener("change", e => { state.maxTid = Number(e.target.value); saveState(); });
-  $("obPostcode")?.addEventListener("input", e => { state.postnummer = e.target.value.replace(/\D/g, "").slice(0, 5); saveState(); syncNearbyBranches(); });
+  $("obPostcode")?.addEventListener("input", e => {
+    const previous = state.postnummer;
+    state.postnummer = e.target.value.replace(/\D/g, "").slice(0, 5);
+    if (state.postnummer !== previous) clearLocationDerivedState();
+    saveState();
+    syncNearbyBranches();
+  });
   $("obStore")?.addEventListener("change", e => { state.butik = e.target.value; saveState(); });
   $("obLocateBtn")?.addEventListener("click", () => { if (!navigator.geolocation) return; navigator.geolocation.getCurrentPosition(({ coords }) => { state.position = { lat: coords.latitude, lon: coords.longitude }; saveState(); }, () => {}); });
 }
@@ -1887,7 +1990,7 @@ async function refreshUser() {
   // login/session refresh would silently wipe checked-off items and cached
   // prices on every app open for premium users with goals set, for no reason
   // (nothing about their existing week actually changed).
-  if (state.user?.premium && hasActiveNutritionGoals(currentNutritionGoals()) && !state.valda.size) chooseMenu(false);
+  if (hasPremium() && hasActiveNutritionGoals(currentNutritionGoals()) && !state.valda.size) chooseMenu(false);
   renderCampaignSection();
 }
 const CAMPAIGN_CHAINS = ["Coop", "Hemköp"];
@@ -1915,7 +2018,7 @@ function campaignDealMarkup(deal) {
     : `<div class="campaign-deal">${inner}</div>`;
 }
 async function renderCampaignSection() {
-  const premium = Boolean(state.user?.premium);
+  const premium = hasPremium();
   $("campaignLocked").hidden = premium;
   if (!premium) { $("campaignList").innerHTML = ""; $("campaignStoreLabel").hidden = true; return; }
   const chain = chosenStore();

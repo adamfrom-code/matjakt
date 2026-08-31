@@ -469,6 +469,52 @@ def search_coop_stores(page, city):
     return stores
 
 
+def fetch_citygross_stores():
+    """City Gross' own store list, via the provider that already knows how to
+    read it (plain HTTP + coordinates, no browser).
+
+    Added because /api/stores covered Willys, Hemköp, ICA and Coop but not
+    City Gross - so a chain we hold real prices for could never be shown as a
+    nearby store, and its shopping list was unreachable from the comparison.
+    Cached for a day like the Axfood list; store locations barely change."""
+    cached, updated_at = KV_CACHE.get("store_list", "City Gross")
+    if cached is not None and time.time() - updated_at < STORE_LIST_CACHE_TTL_SECONDS:
+        return cached
+    stores = []
+    try:
+        from services.grocery.providers.citygross import CityGrossProvider
+        for store in CityGrossProvider().get_stores():
+            if store.latitude and store.longitude:
+                stores.append({
+                    "kedja": "City Gross",
+                    "namn": store.name,
+                    "lat": store.latitude,
+                    "lon": store.longitude,
+                    "ort": store.city or "",
+                })
+    except Exception:
+        # A chain we cannot reach right now must not break the whole store
+        # lookup - the other chains are still perfectly usable.
+        logger.exception("Kunde inte hämta City Gross butikslista")
+        return cached or []
+    KV_CACHE.set("store_list", "City Gross", stores)
+    return stores
+
+
+def _citygross_stores_or_empty():
+    """One chain's store lookup must never be able to take down the others.
+
+    fetch_citygross_stores() already swallows its own network errors, but the
+    call sites guard it too: a chain being unreachable is a normal Tuesday,
+    and losing Willys, Hemköp, ICA and Coop over it would turn a small outage
+    into a total one."""
+    try:
+        return fetch_citygross_stores()
+    except Exception:
+        logger.exception("City Gross-butiksuppslag misslyckades")
+        return []
+
+
 def nearby_stores(zip_code):
     """Cached, single-flight wrapper around _compute_nearby_stores - see that
     function for the actual Primat/geocode/scrape logic. Added because
@@ -508,11 +554,21 @@ def _compute_nearby_stores(zip_code):
         except PrimatError:
             logger.exception("Primat nearby-stores failed for zip %s", zip_code)
             _trip_primat_circuit()
-    if primat_results:
-        nearby = sorted((s for s in primat_results if s["avstandKm"] is not None and s["avstandKm"] <= NEARBY_STORE_RADIUS_KM), key=lambda s: s["avstandKm"])
-        return nearby[:NEARBY_STORE_LIMIT]
-
     place = geocode_postcode(zip_code)
+
+    if primat_results:
+        nearby = [s for s in primat_results
+                  if s["avstandKm"] is not None and s["avstandKm"] <= NEARBY_STORE_RADIUS_KM]
+        # Primat resolves Willys/Coop/Hemköp/ICA but knows nothing about City
+        # Gross, so returning here without it would permanently hide a chain
+        # we hold real prices for.
+        if place:
+            for store in _citygross_stores_or_empty():
+                distance = round(haversine_km(place["lat"], place["lon"], store["lat"], store["lon"]), 1)
+                if distance <= NEARBY_STORE_RADIUS_KM:
+                    nearby.append({**store, "avstandKm": distance, "primatKey": ""})
+        return sorted(nearby, key=lambda s: s["avstandKm"])[:NEARBY_STORE_LIMIT]
+
     if not place:
         return []
     lat, lon = place["lat"], place["lon"]
@@ -521,7 +577,8 @@ def _compute_nearby_stores(zip_code):
     # search genuinely does (its API sits behind a key only its own frontend
     # JS attaches - see search_coop_stores), so a Chromium page is only
     # opened when Coop's own cache is actually cold, not on every lookup.
-    candidates = [*fetch_axfood_stores("Willys"), *fetch_axfood_stores("Hemköp")]
+    candidates = [*fetch_axfood_stores("Willys"), *fetch_axfood_stores("Hemköp"),
+                  *_citygross_stores_or_empty()]
     for store in ica_stores_for_zip(zip_code):
         s_lat, s_lon = store.get("latitude"), store.get("longitude")
         if s_lat and s_lon:

@@ -9,6 +9,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 import urllib.parse
 import uuid
 from datetime import datetime, timezone
@@ -1440,7 +1441,7 @@ class NearbyStoresTest(unittest.TestCase):
         api_server.KV_CACHE.clear()
         originals = {
             name: getattr(api_server, name)
-            for name in ["geocode_postcode", "fetch_axfood_stores", "ica_stores_for_zip", "search_coop_stores", "sync_playwright", "primat_nearby_stores"]
+            for name in ["geocode_postcode", "fetch_axfood_stores", "fetch_citygross_stores", "ica_stores_for_zip", "search_coop_stores", "sync_playwright", "primat_nearby_stores"]
         }
         # Primat is tried first in nearby_stores() - forcing it to report
         # "nothing" here is what actually exercises the scraping fallback
@@ -1451,6 +1452,7 @@ class NearbyStoresTest(unittest.TestCase):
         api_server.primat_nearby_stores = lambda zip_code, api_key=None: []
         api_server.geocode_postcode = lambda zip_code: {"ort": "Gävle", "lat": 60.67, "lon": 17.14}
         api_server.fetch_axfood_stores = lambda chain: [{"kedja": chain, "namn": f"{chain} nära", "lat": 60.68, "lon": 17.15, "ort": "Gävle"}]
+        api_server.fetch_citygross_stores = lambda: [{"kedja": "City Gross", "namn": "City Gross Gävle", "lat": 60.64, "lon": 17.14, "ort": "Gävle"}]
         api_server.ica_stores_for_zip = lambda zip_code: [{"name": "ICA långt bort", "latitude": 65.6, "longitude": 22.15, "address": {"city": "Luleå"}}]
         api_server.search_coop_stores = lambda page, city: [{"kedja": "Coop", "namn": "Coop nära", "lat": 60.69, "lon": 17.16, "ort": "Gävle"}]
         api_server.sync_playwright = _fake_sync_playwright
@@ -1462,21 +1464,57 @@ class NearbyStoresTest(unittest.TestCase):
                 setattr(api_server, name, fn)
             _reset_shared_browser()
         chains = {store["kedja"] for store in stores}
-        self.assertEqual(chains, {"Willys", "Hemköp", "Coop"})  # ICA store ~400km away is outside the radius cap
+        # City Gross is included too - a chain Matjakt holds real prices for
+        # was previously missing from the store lookup entirely, which made
+        # its shopping list unreachable from the comparison.
+        self.assertEqual(chains, {"Willys", "Hemköp", "Coop", "City Gross"})  # ICA store ~400km away is outside the radius cap
         self.assertEqual(stores, sorted(stores, key=lambda store: store["avstandKm"]))
 
     def test_nearby_stores_uses_primat_when_it_has_results(self):
-        original = api_server.primat_nearby_stores
+        """Primat resolves Willys/Coop/Hemköp/ICA but knows nothing about City
+        Gross, so this path has to add it - returning Primat's list verbatim
+        would permanently hide a chain we hold real prices for."""
+        originals = {name: getattr(api_server, name)
+                     for name in ["primat_nearby_stores", "fetch_citygross_stores", "geocode_postcode"]}
         api_server.primat_nearby_stores = lambda zip_code, api_key=None: [
             {"kedja": "Willys", "namn": "Willys Gävle Gestrike", "ort": "Gävle", "avstandKm": 0.9},
             {"kedja": "ICA", "namn": "Maxi ICA Stormarknad Brynäs", "ort": "Gävle", "avstandKm": 2.2},
         ]
+        api_server.geocode_postcode = lambda zip_code: {"ort": "Gävle", "lat": 60.67, "lon": 17.14}
+        api_server.fetch_citygross_stores = lambda: [
+            {"kedja": "City Gross", "namn": "City Gross Gävle", "lat": 60.64, "lon": 17.14, "ort": "Gävle"}]
         try:
             stores = api_server.nearby_stores("80252")
         finally:
-            api_server.primat_nearby_stores = original
-        self.assertEqual({store["kedja"] for store in stores}, {"Willys", "ICA"})
+            for name, fn in originals.items():
+                setattr(api_server, name, fn)
+        self.assertEqual({store["kedja"] for store in stores}, {"Willys", "ICA", "City Gross"})
         self.assertEqual(stores, sorted(stores, key=lambda store: store["avstandKm"]))
+
+    def test_a_failing_city_gross_lookup_does_not_break_the_others(self):
+        """One unreachable chain must not take down the whole store lookup."""
+        originals = {name: getattr(api_server, name)
+                     for name in ["primat_nearby_stores", "geocode_postcode", "fetch_axfood_stores",
+                                  "ica_stores_for_zip", "search_coop_stores", "sync_playwright"]}
+        api_server.KV_CACHE.clear()
+        api_server.primat_nearby_stores = lambda zip_code, api_key=None: []
+        api_server.geocode_postcode = lambda zip_code: {"ort": "Gävle", "lat": 60.67, "lon": 17.14}
+        api_server.fetch_axfood_stores = lambda chain: [
+            {"kedja": chain, "namn": f"{chain} nära", "lat": 60.68, "lon": 17.15, "ort": "Gävle"}]
+        api_server.ica_stores_for_zip = lambda zip_code: []
+        api_server.search_coop_stores = lambda page, city: []
+        api_server.sync_playwright = _fake_sync_playwright
+        _reset_shared_browser()
+        try:
+            with mock.patch.object(api_server, "fetch_citygross_stores", side_effect=OSError("nere")):
+                stores = api_server.nearby_stores("80252")
+        except OSError:
+            self.fail("En trasig City Gross-uppslagning fick fälla hela butiksuppslaget")
+        finally:
+            for name, fn in originals.items():
+                setattr(api_server, name, fn)
+            _reset_shared_browser()
+        self.assertEqual({store["kedja"] for store in stores}, {"Willys", "Hemköp"})
 
     def test_nearby_stores_result_is_cached_and_skips_recomputation(self):
         # The whole point of this cache (added after a real OOM kill caused
