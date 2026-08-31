@@ -5,7 +5,7 @@ import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/
 import { expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts } from "./src/services/pantry.js";
 import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
-import { campaignsApiUrl, geocodeApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
+import { campaignsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
 import { deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, startTrial, storeToken, verifyEmail } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 
@@ -81,7 +81,7 @@ function removeFromWeekPlan(id) { state.weekPlan = state.weekPlan.filter(existin
 // swapping "this day" rather than clearing and re-picking the week.
 function swapWeekPlanDay(dayIndex, newId) { state.weekPlan = state.weekPlan.map((id, index) => index === dayIndex ? newId : id); state.valda = new Set(state.weekPlan); }
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
+const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, dbChainTotals: {}, dbComparison: null, dbPricedAt: null, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
   // The week's recipe ids in day order (index 0 = Måndag) - the actual
   // source of truth for "which day has which recipe", now that a day swap
   // has to replace exactly one day's recipe in place. state.valda (a Set)
@@ -644,22 +644,105 @@ async function syncBranchComparison(shoppingItems, branches) {
     } catch { /* den här filialen visar kvar den statiska uppskattningen om livehämtningen misslyckas */ }
   }));
 }
+// =============================================================================
+// REAL CHECKOUT PRICES FROM MATJAKT'S OWN PRICE DATABASE
+// =============================================================================
+// This is the good source. Everything else on this screen is either a flat
+// static estimate or a best-effort text search of a store's site; this one
+// prices the week against products actually collected into grocery.db, with
+// real package maths (600 g of a 700 g pack costs a whole pack) and a
+// coverage figure saying how much of the list it could really price.
+//
+// It is keyed by CHAIN, not by branch, because that is what the data
+// honestly supports: Willys and Hemköp prices are verified national (the
+// same query with two different storeIds returns byte-identical responses).
+// Claiming a branch-specific number here would be inventing precision.
+let databasePricingSync = { key: null, pending: false };
+async function syncDatabasePricing(shoppingItems) {
+  const items = shoppingItems.map(item => ({ name: item.namn, amount: item.total, unit: item.unit }));
+  const key = items.map(item => `${item.name}:${item.amount}:${item.unit}`).sort().join("|");
+  if (!items.length || databasePricingSync.key === key || databasePricingSync.pending) return;
+  databasePricingSync = { key, pending: true };
+  try {
+    const response = await fetch(pricingWeekApiUrl(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      // The shared helper, not a second local copy - "what's already at
+      // home" must mean the same thing here as everywhere else.
+      body: JSON.stringify({ items, pantry: pantryAmounts(state.pantry || {}) }),
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (databasePricingSync.key !== key) return;
+    state.dbChainTotals = {};
+    (data.results || []).forEach(result => { state.dbChainTotals[result.chain] = result; });
+    state.dbComparison = data.comparison || null;
+    state.dbPricedAt = Date.now();
+    renderBasket();
+  } catch {
+    // The price database being unreachable or empty must never break the
+    // week view - the existing estimate stays exactly as it was.
+  } finally {
+    databasePricingSync.pending = false;
+  }
+}
+
+function databaseResultFor(branch) {
+  return state.dbChainTotals[branch.kedja] || null;
+}
+
 // Shared by the compact widget (renderStoreComparison) and the full
 // Butiksjämförelse page - one computation of "what does this shopping list
 // cost at each branch", never two that could quietly disagree.
 function computeStoreResults(selected, branches, shoppingItems) {
   return branches.map(branch => {
+    // Priority: Matjakt's own price database first (a real checkout cost
+    // computed from real products and real pack sizes), then a live text
+    // search of the store site, then the flat static estimate. Only the
+    // first two are real prices, and only the first knows how many packages
+    // you actually have to buy.
+    const fromDatabase = databaseResultFor(branch);
+    if (fromDatabase) {
+      return {
+        branch, cost: fromDatabase.totalCheckoutCost, isLive: true, source: "database",
+        matched: fromDatabase.realPriceItems, certain: fromDatabase.realPriceItems,
+        totalItems: fromDatabase.totalItems || shoppingItems.length,
+        missingItems: fromDatabase.missingItems || [],
+      };
+    }
     const live = state.liveBranchTotals[branchLiveKey(branch)];
-    return { branch, cost: live ? live.cost : shoppingListCost(selected, branch), isLive: live != null, matched: live?.matched ?? null, certain: live?.certain ?? null, totalItems: shoppingItems.length };
+    return { branch, cost: live ? live.cost : shoppingListCost(selected, branch), isLive: live != null, source: live ? "live" : "estimate", matched: live?.matched ?? null, certain: live?.certain ?? null, totalItems: shoppingItems.length, missingItems: [] };
   }).sort((a, b) => a.cost - b.cost);
 }
+// Three genuinely different things, and calling them all "Live" would
+// overstate two of them:
+//   database - a real checkout cost from Matjakt's own collected prices,
+//              with real package maths. The best number we have, but it is
+//              as fresh as the last import, not as of this second.
+//   live     - a best-effort text search of the store's site right now.
+//   estimate - the flat static figure. Not a price at all.
+function priceSourceBadge(result) {
+  if (result.source === "database") return '<span class="live-badge">Riktigt pris</span>';
+  if (result.isLive) return '<span class="live-badge">Live</span>';
+  return '<span class="live-badge estimate">Uppskattat</span>';
+}
+
 function coverageLabel(result) {
   // "certain" (a confident match AND a real price) is the number that
   // actually contributed to result.cost - "matched" alone would overstate
   // coverage now that a confidently-matched product can still have no price
   // (see best_match/calculateLiveShoppingTotal).
   if (result.certain == null) return "";
-  return `<small class="store-compare-coverage">${result.certain} av ${result.totalItems} varor har säkert pris${result.certain < result.totalItems ? ` · ${result.totalItems - result.certain} utan pris` : ""}</small>`;
+  const missing = result.totalItems - result.certain;
+  if (result.source === "database") {
+    // Named, not just counted: "3 utan pris" leaves the user guessing which
+    // three, and whether the total is missing something expensive.
+    const names = (result.missingItems || []).map(item => item.name).filter(Boolean);
+    const detail = names.length ? ` · saknar ${escapeHtml(names.slice(0, 3).join(", "))}${names.length > 3 ? ` +${names.length - 3}` : ""}` : "";
+    return `<small class="store-compare-coverage">${result.certain} av ${result.totalItems} varor prissatta mot riktiga produkter${missing > 0 ? detail : ""}</small>`;
+  }
+  return `<small class="store-compare-coverage">${result.certain} av ${result.totalItems} varor har säkert pris${missing > 0 ? ` · ${missing} utan pris` : ""}</small>`;
 }
 function renderStoreComparison(selected, containerId = "storeCompare") {
   const container = $(containerId);
@@ -679,6 +762,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
     const current = results.find(r => r.branch === selectedBranch()) || results[0];
     container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${current.isLive ? "Pris" : "Uppskattat pris"} hos ${current.branch.namn}</span><strong>ca ${money(current.cost)}</strong>${coverageLabel(current)}${updatedLabel}</div>${results.length > 1 ? `<button type="button" class="store-compare-upsell" id="storeCompareUpsell-${containerId}">🔒 Prova Premium gratis i 14 dagar och se vilken butik som faktiskt är billigast av ${results.length}</button>` : ""}</div>`;
     $(`storeCompareUpsell-${containerId}`)?.addEventListener("click", openPremiumPitch);
+    syncDatabasePricing(shoppingItems);
     syncBranchComparison(shoppingItems, branches);
     return;
   }
@@ -699,10 +783,19 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
   const MIN_COVERAGE_FOR_CLAIM = 0.6;
   const coverageOf = r => (r.certain == null || !r.totalItems) ? 0 : r.certain / r.totalItems;
   const pricesDiffer = results.some(r => Math.abs(r.cost - cheapest.cost) > 0.5);
-  const comparisonIsReal = cheapest.isLive && pricesDiffer
-    && coverageOf(cheapest) >= MIN_COVERAGE_FOR_CLAIM;
+  // When the cheapest row came from Matjakt's own price database, the SERVER
+  // already decided whether a cheapest chain may be named - it applies the
+  // same guards plus two this side can't see (a chain with zero real matches
+  // totalling 0 kr, and data too stale to compare against fresh data). Two
+  // independent verdicts on the same question would eventually disagree, and
+  // the disagreement would show up as a badge the totals don't support, so
+  // there is one authority: the server's.
+  const comparisonIsReal = cheapest.source === "database"
+    ? state.dbComparison?.cheapestChain === cheapest.branch.kedja && pricesDiffer
+    : cheapest.isLive && pricesDiffer && coverageOf(cheapest) >= MIN_COVERAGE_FOR_CLAIM;
   const savingsAreReal = comparisonIsReal && priciest.isLive
-    && coverageOf(priciest) >= MIN_COVERAGE_FOR_CLAIM && savings > 1;
+    && (cheapest.source === "database" || coverageOf(priciest) >= MIN_COVERAGE_FOR_CLAIM)
+    && savings > 1;
   const pinned = pinnedBranchMatch();
   // Only a Primat-sourced branch (has a primatKey) can be individually
   // targeted - a scrape-sourced fallback branch has nothing concrete to pin
@@ -712,7 +805,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
     const isPinned = pinned && r.branch.primatKey && r.branch.primatKey === pinned.primatKey;
     const isCheapest = comparisonIsReal && r.branch === cheapest.branch;
     const tag = `${isCheapest ? "cheapest" : ""} ${isPinned ? "pinned" : ""}`.trim();
-    const inner = `<span>${r.branch.namn}${isCheapest ? '<span class="live-badge cheapest-badge">Billigast</span>' : ""}${isPinned ? '<span class="live-badge pinned">Vald</span>' : ""}${r.isLive ? '<span class="live-badge">Live</span>' : '<span class="live-badge estimate">Uppskattat</span>'}</span><strong>${money(r.cost)}</strong>`;
+    const inner = `<span>${r.branch.namn}${isCheapest ? '<span class="live-badge cheapest-badge">Billigast</span>' : ""}${isPinned ? '<span class="live-badge pinned">Vald</span>' : ""}${priceSourceBadge(r)}</span><strong>${money(r.cost)}</strong>`;
     return r.branch.primatKey
       ? `<button type="button" class="store-compare-row ${tag}" data-pick-branch="${index}">${inner}</button>`
       : `<div class="store-compare-row ${tag} not-pickable">${inner}</div>`;
@@ -740,6 +833,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
     renderCampaignSection();
     syncSettingsInputs();
   });
+  syncDatabasePricing(shoppingItems);
   syncBranchComparison(shoppingItems, branches);
 }
 // Real, approximate brand colors for chain-name text - no logo assets exist

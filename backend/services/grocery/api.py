@@ -89,16 +89,24 @@ def database_summary() -> dict:
     store = open_store()
     try:
         chains = []
+        # Counted over DISTINCT products, not over the join: one product can
+        # carry several external ids for the same chain, and summing the
+        # joined rows reported more products "with a category" than there
+        # were products (City Gross: 98 products, 100 with category).
         rows = store.connection.execute(
             """
-            SELECT e.chain AS chain,
-                   COUNT(DISTINCT e.product_id) AS products,
-                   SUM(CASE WHEN p.category IS NOT NULL THEN 1 ELSE 0 END) AS with_category,
-                   SUM(CASE WHEN p.gtin IS NOT NULL THEN 1 ELSE 0 END) AS with_gtin
-            FROM grocery_product_external_ids e
-            JOIN grocery_products p ON p.id = e.product_id
-            GROUP BY e.chain
-            ORDER BY e.chain
+            SELECT chain,
+                   COUNT(*) AS products,
+                   SUM(CASE WHEN category IS NOT NULL THEN 1 ELSE 0 END) AS with_category,
+                   SUM(CASE WHEN gtin IS NOT NULL THEN 1 ELSE 0 END) AS with_gtin
+            FROM (
+                SELECT DISTINCT e.chain AS chain, p.id AS id,
+                       p.category AS category, p.gtin AS gtin
+                FROM grocery_product_external_ids e
+                JOIN grocery_products p ON p.id = e.product_id
+            )
+            GROUP BY chain
+            ORDER BY chain
             """
         ).fetchall()
         for row in rows:

@@ -11,6 +11,18 @@ export function productsBatchApiUrl() {
   return `${API_BASE_URL}/products/batch`;
 }
 
+export function pricingWeekApiUrl() {
+  return `${API_BASE_URL}/pricing/week`;
+}
+
+export function pricingListApiUrl() {
+  return `${API_BASE_URL}/pricing/list`;
+}
+
+export function groceryStatusApiUrl() {
+  return `${API_BASE_URL}/grocery/status`;
+}
+
 export function geocodeApiUrl(zip) {
   return `${API_BASE_URL}/geocode?${new URLSearchParams({ zip })}`;
 }
