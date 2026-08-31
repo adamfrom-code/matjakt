@@ -109,9 +109,32 @@ MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = (1, 3, 8)
 PAGE_SIZE = 20
 
+# City Gross has no category-listing endpoint that has been VERIFIED (the
+# Axfood chains do, so they browse the tree instead - see providers/axfood.py),
+# so collection here is still term-driven. The honest way to widen it is to
+# use the vocabulary the app actually cooks with rather than a longer generic
+# list: these are the ingredients Matjakt's own recipes ask for, plus the
+# staples every week needs. A term that returns nothing costs one request.
+#
+# Ordered roughly by how often a week's list needs them, because City Gross
+# throttles by dropping connections and a run may not finish - the terms most
+# likely to matter should already be in when it stops.
 DEFAULT_SEARCH_TERMS = [
-    "mjölk", "smör", "ägg", "bröd", "kyckling", "köttfärs", "lax", "ris",
-    "pasta", "tomat", "lök", "potatis", "ost", "yoghurt",
+    # protein
+    "kyckling", "kycklingfilé", "köttfärs", "fläskfilé", "lax", "torsk",
+    "räkor", "korv", "falukorv", "bacon", "skinka", "tofu", "halloumi",
+    # dairy and eggs
+    "mjölk", "smör", "ägg", "grädde", "crème fraiche", "yoghurt", "ost",
+    "riven ost", "fetaost",
+    # pantry staples
+    "ris", "pasta", "nudlar", "couscous", "bulgur", "matvete", "linser",
+    "kikärtor", "bönor", "krossade tomater", "tomatpuré", "kokosmjölk",
+    "buljong", "olja", "mjöl", "socker", "soja",
+    # produce
+    "potatis", "lök", "vitlök", "morötter", "paprika", "tomat", "gurka",
+    "citron", "broccoli", "spenat", "purjolök", "champinjoner", "majs",
+    # bread
+    "bröd", "tortilla",
 ]
 
 
