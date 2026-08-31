@@ -1,0 +1,2596 @@
+[
+ {
+  "id": "kycklinggryta",
+  "namn": "Kycklinggryta med ris",
+  "emoji": "🍛",
+  "bild": "assets/recipes/kycklinggryta.jpg",
+  "kcal": 580,
+  "protein": 36,
+  "kolhydrater": 52,
+  "fett": 25,
+  "proteinkalla": "kyckling",
+  "allergener": [],
+  "butik": "Willys",
+  "tid": 30,
+  "typ": "Familjefavorit",
+  "portionspris": 24.5,
+  "inkopspris": 105.3,
+  "sparar": 31,
+  "ingredienser": [
+   "Kycklinglårfilé",
+   "Ris",
+   "Kokosmjölk",
+   "Curry & grönsaker"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt"
+  ],
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "billigt",
+   "proteinrikt",
+   "kyckling",
+   "barn",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "pastagratang",
+  "namn": "Pastagratäng med purjolök",
+  "emoji": "🍝",
+  "bild": "assets/recipes/pastagratang.jpg",
+  "kcal": 404,
+  "protein": 16,
+  "kolhydrater": 49,
+  "fett": 15,
+  "proteinkalla": "vegetariskt",
+  "allergener": [
+   "gluten",
+   "laktos"
+  ],
+  "butik": "ICA",
+  "tid": 35,
+  "typ": "Vegetarisk",
+  "portionspris": 18,
+  "inkopspris": 72.6,
+  "sparar": 22,
+  "ingredienser": [
+   "Pasta",
+   "Purjolök",
+   "Grädde",
+   "Riven ost"
+  ],
+  "hemma": [
+   "Salt",
+   "Peppar"
+  ],
+  "portioner": 4,
+  "kosttyp": "vegetarisk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "barn",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "linssoppa",
+  "namn": "Röd linssoppa",
+  "emoji": "🥣",
+  "bild": "assets/recipes/linssoppa.jpg",
+  "kcal": 405,
+  "protein": 19,
+  "kolhydrater": 30,
+  "fett": 19,
+  "proteinkalla": "veganskt",
+  "allergener": [],
+  "butik": "Willys",
+  "tid": 25,
+  "typ": "Vegetarisk",
+  "portionspris": 12,
+  "inkopspris": 48.2,
+  "sparar": 18,
+  "ingredienser": [
+   "Röda linser",
+   "Kokosmjölk",
+   "Morötter",
+   "Lök & vitlök"
+  ],
+  "hemma": [
+   "Buljong",
+   "Olja"
+  ],
+  "portioner": 4,
+  "kosttyp": "vegansk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "veganskt",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "korvstroganoff",
+  "namn": "Korvstroganoff",
+  "emoji": "🍲",
+  "bild": "assets/recipes/korvstroganoff.jpg",
+  "kcal": 571,
+  "protein": 20,
+  "kolhydrater": 61,
+  "fett": 27,
+  "proteinkalla": "flask",
+  "allergener": [
+   "laktos"
+  ],
+  "butik": "Coop",
+  "tid": 25,
+  "typ": "Snabbt & enkelt",
+  "portionspris": 15.5,
+  "inkopspris": 70.2,
+  "sparar": 16,
+  "ingredienser": [
+   "Falukorv",
+   "Grädde",
+   "Tomatpuré",
+   "Ris"
+  ],
+  "hemma": [
+   "Salt",
+   "Peppar"
+  ],
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "billigt",
+   "kott",
+   "barn"
+  ]
+ },
+ {
+  "id": "tacobonor",
+  "namn": "Tacobowl med svarta bönor",
+  "emoji": "🌮",
+  "bild": "assets/recipes/tacobonor.jpg",
+  "kcal": 371,
+  "protein": 14,
+  "kolhydrater": 68,
+  "fett": 2,
+  "proteinkalla": "vegetariskt",
+  "allergener": [],
+  "butik": "ICA",
+  "tid": 20,
+  "typ": "Vegetarisk",
+  "portionspris": 16.5,
+  "inkopspris": 66.4,
+  "sparar": 25,
+  "ingredienser": [
+   "Svarta bönor",
+   "Ris",
+   "Majs",
+   "Salsa"
+  ],
+  "hemma": [
+   "Kryddor"
+  ],
+  "portioner": 4,
+  "kosttyp": "vegetarisk",
+  "tags": [
+   "snabbt",
+   "billigt",
+   "vegetariskt",
+   "barn"
+  ]
+ },
+ {
+  "id": "fiskpasta",
+  "namn": "Krämig fiskpasta",
+  "emoji": "🐟",
+  "bild": "assets/recipes/fiskpasta.jpg",
+  "kcal": 486,
+  "protein": 29,
+  "kolhydrater": 48,
+  "fett": 19,
+  "proteinkalla": "fisk",
+  "allergener": [
+   "gluten",
+   "laktos",
+   "fisk"
+  ],
+  "butik": "Coop",
+  "tid": 30,
+  "typ": "Fisk",
+  "portionspris": 27,
+  "inkopspris": 109.5,
+  "sparar": 20,
+  "ingredienser": [
+   "Fryst torsk",
+   "Pasta",
+   "Crème fraiche",
+   "Citron"
+  ],
+  "hemma": [
+   "Salt",
+   "Peppar"
+  ],
+  "portioner": 4,
+  "kosttyp": "pescetarisk",
+  "tags": [
+   "fisk",
+   "barn"
+  ]
+ },
+ {
+  "id": "lax",
+  "namn": "Ugnsbakad lax med potatis",
+  "emoji": "🐟",
+  "bild": "assets/recipes/lax.jpg",
+  "kcal": 488,
+  "protein": 34,
+  "kolhydrater": 36,
+  "fett": 22,
+  "proteinkalla": "fisk",
+  "allergener": [
+   "fisk"
+  ],
+  "butik": "ICA",
+  "tid": 35,
+  "typ": "Fisk",
+  "portionspris": 29,
+  "inkopspris": 116,
+  "sparar": 24,
+  "ingredienser": [
+   "Laxfilé",
+   "Potatis",
+   "Citron",
+   "Dill"
+  ],
+  "hemma": [
+   "Salt",
+   "Olja"
+  ],
+  "beskrivning": "En enkel ugnsmiddag med citron och dill.",
+  "steg": [
+   "Sätt ugnen på 200°C.",
+   "Lägg lax och potatis i en form.",
+   "Toppa med citron och dill och baka tills laxen är klar."
+  ],
+  "portioner": 4,
+  "kosttyp": "pescetarisk",
+  "tags": [
+   "proteinrikt",
+   "fisk"
+  ]
+ },
+ {
+  "id": "halloumibowl",
+  "namn": "Halloumibowl med rostade grönsaker",
+  "emoji": "🥗",
+  "bild": "assets/recipes/halloumibowl.jpg",
+  "kcal": 445,
+  "protein": 21,
+  "kolhydrater": 51,
+  "fett": 15,
+  "proteinkalla": "vegetariskt",
+  "allergener": [
+   "gluten",
+   "laktos"
+  ],
+  "butik": "Willys",
+  "tid": 30,
+  "typ": "Vegetarisk",
+  "portionspris": 23,
+  "inkopspris": 92,
+  "sparar": 19,
+  "ingredienser": [
+   "Halloumi",
+   "Matvete",
+   "Paprika",
+   "Yoghurt"
+  ],
+  "hemma": [
+   "Olja",
+   "Kryddor"
+  ],
+  "beskrivning": "Färgstark bowl med krispig halloumi.",
+  "steg": [
+   "Koka matvetet enligt förpackningen.",
+   "Rosta grönsakerna i ugnen.",
+   "Stek halloumin och servera med yoghurt."
+  ],
+  "portioner": 4,
+  "kosttyp": "vegetarisk",
+  "tags": [
+   "billigt",
+   "vegetariskt"
+  ]
+ },
+ {
+  "id": "chili",
+  "namn": "Chili sin carne",
+  "emoji": "🌶️",
+  "bild": "assets/recipes/chili.jpg",
+  "kcal": 179,
+  "protein": 11,
+  "kolhydrater": 24,
+  "fett": 2,
+  "proteinkalla": "veganskt",
+  "allergener": [],
+  "butik": "Willys",
+  "tid": 35,
+  "typ": "Vegetarisk",
+  "portionspris": 17,
+  "inkopspris": 68,
+  "sparar": 21,
+  "ingredienser": [
+   "Kidneybönor",
+   "Krossade tomater",
+   "Majs",
+   "Paprika"
+  ],
+  "hemma": [
+   "Ris",
+   "Chili"
+  ],
+  "beskrivning": "Mustig vegetarisk chili som blir ännu godare dagen efter.",
+  "steg": [
+   "Fräs paprika och lök.",
+   "Tillsätt tomater, bönor och majs.",
+   "Låt sjuda i 20 minuter och servera med ris."
+  ],
+  "portioner": 4,
+  "kosttyp": "vegansk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "veganskt",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "kycklingwok",
+  "namn": "Kycklingwok med nudlar",
+  "emoji": "🍜",
+  "bild": "assets/recipes/kycklingwok.jpg",
+  "kcal": 419,
+  "protein": 40,
+  "kolhydrater": 49,
+  "fett": 5,
+  "proteinkalla": "kyckling",
+  "allergener": [
+   "gluten",
+   "ägg",
+   "soja"
+  ],
+  "butik": "Coop",
+  "tid": 25,
+  "typ": "Snabbt & enkelt",
+  "portionspris": 21,
+  "inkopspris": 84,
+  "sparar": 18,
+  "ingredienser": [
+   "Kycklingfilé",
+   "Äggnudlar",
+   "Wokgrönsaker",
+   "Soja"
+  ],
+  "hemma": [
+   "Olja",
+   "Vitlök"
+  ],
+  "beskrivning": "Snabb wok med mycket grönsaker och smakrik soja.",
+  "steg": [
+   "Koka nudlarna.",
+   "Stek kycklingen tills den är genomstekt.",
+   "Woka grönsakerna och blanda allt med soja."
+  ],
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "billigt",
+   "proteinrikt",
+   "kyckling"
+  ]
+ },
+ {
+  "id": "tomatsoppa",
+  "namn": "Krämig tomatsoppa",
+  "emoji": "🍅",
+  "bild": "assets/recipes/tomatsoppa.jpg",
+  "kcal": 126,
+  "protein": 3,
+  "kolhydrater": 10,
+  "fett": 8,
+  "proteinkalla": "vegetariskt",
+  "allergener": [
+   "laktos"
+  ],
+  "butik": "Hemköp",
+  "tid": 25,
+  "typ": "Vegetarisk",
+  "portionspris": 14,
+  "inkopspris": 56,
+  "sparar": 17,
+  "ingredienser": [
+   "Krossade tomater",
+   "Grädde",
+   "Lök",
+   "Basilika"
+  ],
+  "hemma": [
+   "Buljong",
+   "Peppar"
+  ],
+  "beskrivning": "Len tomatsoppa med basilika och grädde.",
+  "steg": [
+   "Fräs löken mjuk.",
+   "Koka med tomater och buljong.",
+   "Mixa soppan och rör ner grädden."
+  ],
+  "portioner": 4,
+  "kosttyp": "vegetarisk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "barn",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "pannkakor",
+  "namn": "Pannkakor med bär",
+  "emoji": "🥞",
+  "bild": "assets/recipes/pannkakor.jpg",
+  "kcal": 402,
+  "protein": 18,
+  "kolhydrater": 58,
+  "fett": 9,
+  "proteinkalla": "vegetariskt",
+  "allergener": [
+   "gluten",
+   "laktos",
+   "ägg"
+  ],
+  "butik": "Hemköp",
+  "tid": 25,
+  "typ": "Familjefavorit",
+  "portionspris": 12,
+  "inkopspris": 48,
+  "sparar": 14,
+  "ingredienser": [
+   "Vetemjöl",
+   "Mjölk",
+   "Ägg",
+   "Bär"
+  ],
+  "hemma": [
+   "Smör",
+   "Socker"
+  ],
+  "beskrivning": "Klassiska tunna pannkakor för hela familjen.",
+  "steg": [
+   "Vispa ihop smetens ingredienser.",
+   "Stek tunna pannkakor i smör.",
+   "Servera med bär."
+  ],
+  "portioner": 4,
+  "kosttyp": "vegetarisk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "barn"
+  ]
+ },
+ {
+  "id": "kottbullar",
+  "namn": "Köttbullar med potatismos och lingon",
+  "emoji": "🍖",
+  "bild": "assets/recipes/kottbullar.jpg",
+  "kcal": 527,
+  "protein": 28,
+  "kolhydrater": 44,
+  "fett": 25,
+  "proteinkalla": "notkott",
+  "allergener": [
+   "gluten",
+   "laktos",
+   "ägg"
+  ],
+  "butik": "ICA",
+  "tid": 35,
+  "typ": "Familjefavorit",
+  "portionspris": 22,
+  "inkopspris": 88,
+  "sparar": 26,
+  "ingredienser": [
+   "Köttfärs",
+   "Potatis",
+   "Grädde",
+   "Lingonsylt"
+  ],
+  "hemma": [
+   "Ströbröd",
+   "Ägg",
+   "Smör"
+  ],
+  "beskrivning": "Svensk husmanskost med krämigt mos och söta lingon.",
+  "steg": [
+   "Rulla köttbullar av färsen och stek dem gyllenbruna.",
+   "Koka och mosa potatisen med grädde.",
+   "Servera köttbullarna med moset och lingonsylten."
+  ],
+  "tips": "Fräs lite finhackad lök i smöret innan du blandar den i färsen.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "billigt",
+   "kott",
+   "barn"
+  ]
+ },
+ {
+  "id": "vegetarisklasagne",
+  "namn": "Vegetarisk lasagne",
+  "emoji": "🧀",
+  "bild": "assets/recipes/vegetarisklasagne.jpg",
+  "kcal": 442,
+  "protein": 20,
+  "kolhydrater": 62,
+  "fett": 11,
+  "proteinkalla": "vegetariskt",
+  "allergener": [
+   "gluten",
+   "laktos"
+  ],
+  "butik": "Willys",
+  "tid": 45,
+  "typ": "Vegetarisk",
+  "portionspris": 19,
+  "inkopspris": 76,
+  "sparar": 20,
+  "ingredienser": [
+   "Lasagneplattor",
+   "Krossade tomater",
+   "Riven ost",
+   "Zucchini"
+  ],
+  "hemma": [
+   "Olja",
+   "Kryddor"
+  ],
+  "beskrivning": "Ugnsbakad lasagne med saftig zucchini och gyllene osttäcke.",
+  "steg": [
+   "Fräs zucchinin och blanda med de krossade tomaterna.",
+   "Varva plattor, tomatsås och ost i en form.",
+   "Grädda tills lasagnen är genomgräddad och ytan gyllenbrun."
+  ],
+  "tips": "Låt lasagnen vila 5 minuter innan du skär i den så håller den ihop bättre.",
+  "portioner": 4,
+  "kosttyp": "vegetarisk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "helgmiddag"
+  ]
+ },
+ {
+  "id": "scampi",
+  "namn": "Scampi pasta med vitlök och citron",
+  "emoji": "🍤",
+  "bild": "assets/recipes/scampi.jpg",
+  "kcal": 307,
+  "protein": 22,
+  "kolhydrater": 49,
+  "fett": 1,
+  "proteinkalla": "skaldjur",
+  "allergener": [
+   "skaldjur",
+   "gluten"
+  ],
+  "butik": "Coop",
+  "tid": 25,
+  "typ": "Fisk",
+  "portionspris": 26,
+  "inkopspris": 104,
+  "sparar": 22,
+  "ingredienser": [
+   "Räkor",
+   "Pasta",
+   "Vitlök",
+   "Citron"
+  ],
+  "hemma": [
+   "Olja",
+   "Smör",
+   "Persilja"
+  ],
+  "beskrivning": "Snabblagad pasta med räkor, vitlök och en skvätt citron.",
+  "steg": [
+   "Koka pastan enligt anvisningen.",
+   "Fräs vitlöken och räkorna hastigt i smör och olja.",
+   "Vänd ner pastan och pressa över citron precis före servering."
+  ],
+  "tips": "Ta inte räkorna för hett eller för länge, då blir de sega.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": []
+ },
+ {
+  "id": "kikartscurry",
+  "namn": "Kikärtscurry med ris",
+  "emoji": "🫘",
+  "bild": "assets/recipes/kikartscurry.jpg",
+  "kcal": 531,
+  "protein": 13,
+  "kolhydrater": 67,
+  "fett": 21,
+  "proteinkalla": "veganskt",
+  "allergener": [],
+  "butik": "Hemköp",
+  "tid": 30,
+  "typ": "Vegetarisk",
+  "portionspris": 14,
+  "inkopspris": 56,
+  "sparar": 19,
+  "ingredienser": [
+   "Kikärtor",
+   "Kokosmjölk",
+   "Ris",
+   "Curry & grönsaker"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt"
+  ],
+  "beskrivning": "Mild och mättande currygryta med kikärtor och kokosmjölk.",
+  "steg": [
+   "Fräs curryn kort i olja så aromerna vaknar.",
+   "Tillsätt kikärtor och kokosmjölk och låt sjuda 10 minuter.",
+   "Servera currygrytan med nykokt ris."
+  ],
+  "tips": "En klick yoghurt på toppen balanserar currystyrkan fint.",
+  "portioner": 4,
+  "kosttyp": "vegansk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "veganskt",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "flaskfilerotmos",
+  "namn": "Baconlindad fläskfilé med rotsaker",
+  "emoji": "🥓",
+  "bild": "assets/recipes/flaskfilerotmos.jpg",
+  "kcal": 316,
+  "protein": 34,
+  "kolhydrater": 31,
+  "fett": 4,
+  "proteinkalla": "flask",
+  "allergener": [],
+  "butik": "ICA",
+  "tid": 40,
+  "typ": "Familjefavorit",
+  "portionspris": 27,
+  "inkopspris": 106,
+  "sparar": 24,
+  "ingredienser": [
+   "Fläskfilé",
+   "Morötter",
+   "Potatis",
+   "Timjan"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Mör fläskfilé i ugn med rotsaker och färsk timjan.",
+  "steg": [
+   "Sätt ugnen på 200°C och skär rotsakerna i bitar.",
+   "Krydda fläskfilén och lägg den bland rotsakerna i en form.",
+   "Ugnsbaka tills innertemperaturen är 65°C."
+  ],
+  "tips": "Låt köttet vila 5 minuter innan du skär i det så blir det saftigare.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kott"
+  ]
+ },
+ {
+  "id": "biffmedlok",
+  "namn": "Biff med lökröra och potatismos",
+  "emoji": "🥩",
+  "bild": "assets/recipes/biffmedlok.jpg",
+  "kcal": 445,
+  "protein": 38,
+  "kolhydrater": 39,
+  "fett": 13,
+  "proteinkalla": "notkott",
+  "allergener": [
+   "laktos"
+  ],
+  "butik": "Coop",
+  "tid": 25,
+  "typ": "Snabbt & enkelt",
+  "portionspris": 38,
+  "inkopspris": 154,
+  "sparar": 28,
+  "ingredienser": [
+   "Biff",
+   "Potatis",
+   "Lök",
+   "Grädde"
+  ],
+  "hemma": [
+   "Smör",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Snabbstekt biff med krämig lökröra och potatismos.",
+  "steg": [
+   "Koka och mosa potatisen med grädde och smör.",
+   "Fräs löken gyllenbrun och gör en enkel lökröra.",
+   "Stek biffen till önskad innertemperatur och servera med moset."
+  ],
+  "tips": "Låt biffen vila några minuter innan servering.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kott"
+  ]
+ },
+ {
+  "id": "vegobolognese",
+  "namn": "Vegobolognese med spaghetti",
+  "emoji": "🍝",
+  "bild": "assets/recipes/vegobolognese.jpg",
+  "kcal": 423,
+  "protein": 24,
+  "kolhydrater": 55,
+  "fett": 10,
+  "proteinkalla": "veganskt",
+  "allergener": [
+   "gluten",
+   "soja"
+  ],
+  "butik": "Willys",
+  "tid": 30,
+  "typ": "Vegetarisk",
+  "portionspris": 16,
+  "inkopspris": 64,
+  "sparar": 18,
+  "ingredienser": [
+   "Vegofärs",
+   "Pasta",
+   "Krossade tomater",
+   "Lök"
+  ],
+  "hemma": [
+   "Olja",
+   "Kryddor"
+  ],
+  "beskrivning": "Klassisk bolognese fast helt växtbaserad.",
+  "steg": [
+   "Fräs löken och vegofärsen i olja.",
+   "Tillsätt krossade tomater och låt såsen sjuda 15 minuter.",
+   "Koka pastan och servera med den täta vegosåsen."
+  ],
+  "tips": "En skvätt balsamvinäger ger såsen extra djup.",
+  "portioner": 4,
+  "kosttyp": "vegansk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "veganskt"
+  ]
+ },
+ {
+  "id": "kycklingcouscous",
+  "namn": "Ugnskyckling med couscous och paprika",
+  "emoji": "🍋",
+  "bild": "assets/recipes/kycklingcouscous.jpg",
+  "kcal": 404,
+  "protein": 36,
+  "kolhydrater": 51,
+  "fett": 3,
+  "proteinkalla": "kyckling",
+  "allergener": [
+   "gluten"
+  ],
+  "butik": "ICA",
+  "tid": 35,
+  "typ": "Familjefavorit",
+  "portionspris": 30,
+  "inkopspris": 119,
+  "sparar": 22,
+  "ingredienser": [
+   "Kycklingfilé",
+   "Matvete",
+   "Paprika",
+   "Citron"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Ugnsbakad kyckling med citron, paprika och fluffigt matvete.",
+  "steg": [
+   "Ugnsbaka kycklingfilén med paprika och citronskivor.",
+   "Koka matvetet enligt anvisningen.",
+   "Servera kycklingen på matvetet och pressa över lite citron."
+  ],
+  "tips": "Marinera kycklingen en stund i citron och olja för mer smak.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kyckling",
+   "barn"
+  ]
+ },
+ {
+  "id": "rotfruktsgratang",
+  "namn": "Rotfruktsgratäng med rökt falukorv",
+  "emoji": "🥔",
+  "bild": "assets/recipes/rotfruktsgratang.jpg",
+  "kcal": 538,
+  "protein": 23,
+  "kolhydrater": 48,
+  "fett": 26,
+  "proteinkalla": "flask",
+  "allergener": [
+   "laktos"
+  ],
+  "butik": "ICA",
+  "tid": 50,
+  "typ": "Familjefavorit",
+  "portionspris": 13,
+  "inkopspris": 52,
+  "sparar": 16,
+  "ingredienser": [
+   "Falukorv",
+   "Potatis",
+   "Morötter",
+   "Riven ost"
+  ],
+  "hemma": [
+   "Smör",
+   "Salt",
+   "Peppar",
+   "Muskot"
+  ],
+  "beskrivning": "Djup, krämig gratäng där söta morötter och salt korv möts under ett gyllene osttäcke — riktig husmanskost fast lite finare.",
+  "steg": [
+   "Skiva potatis och morötter tunt på mandolin eller osthyvel för jämn gräddning.",
+   "Varva rotfrukterna med tunna skivor falukorv i en smord form.",
+   "Häll över en lätt uppkokad grädde med muskot, salt och peppar.",
+   "Toppa med riven ost och grädda mitt i ugnen tills ytan är gyllenbrun och potatisen mör.",
+   "Låt gratängen vila 5 minuter innan servering så såsen binder."
+  ],
+  "tips": "Ett tunt lager senap mellan lagren ger en syrlig kontrast till den feta osten.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "billigt",
+   "kott",
+   "helgmiddag"
+  ]
+ },
+ {
+  "id": "butterchicken",
+  "namn": "Butter chicken med jasminris",
+  "emoji": "🍛",
+  "bild": "assets/recipes/butterchicken.jpg",
+  "kcal": 253,
+  "protein": 32,
+  "kolhydrater": 9,
+  "fett": 9,
+  "proteinkalla": "kyckling",
+  "allergener": [
+   "laktos"
+  ],
+  "butik": "Willys",
+  "tid": 40,
+  "typ": "Familjefavorit",
+  "portionspris": 31,
+  "inkopspris": 123,
+  "sparar": 27,
+  "ingredienser": [
+   "Kycklingfilé",
+   "Krossade tomater",
+   "Grädde",
+   "Curry & grönsaker"
+  ],
+  "hemma": [
+   "Smör",
+   "Vitlök",
+   "Ingefära",
+   "Ris"
+  ],
+  "beskrivning": "Krämig, lent kryddad tomatsås med mör kyckling — restaurangens favorit, gjord hemma på under en timme.",
+  "steg": [
+   "Marinera kycklingbitarna i yoghurt och kryddor minst 20 minuter om tid finns.",
+   "Bryn kycklingen snabbt i smör tills den fått färg, lyft ur och lägg åt sidan.",
+   "Fräs vitlök, ingefära och curryblandningen i samma panna tills doften vaknar.",
+   "Tillsätt krossade tomater och låt såsen sjuda ihop och tjockna.",
+   "Rör ner grädden och kycklingen, låt det hela sjuda klart och servera över nykokt ris."
+  ],
+  "tips": "En klick smör i slutet ger såsen den där extra silkiga lyskraften.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kyckling",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "fiskgratang",
+  "namn": "Fiskgratäng med räkor och dill",
+  "emoji": "🍤",
+  "bild": "assets/recipes/fiskgratang.jpg",
+  "kcal": 220,
+  "protein": 33,
+  "kolhydrater": 2,
+  "fett": 8,
+  "proteinkalla": "fisk",
+  "allergener": [
+   "fisk",
+   "skaldjur",
+   "laktos"
+  ],
+  "butik": "Coop",
+  "tid": 45,
+  "typ": "Fisk",
+  "portionspris": 50,
+  "inkopspris": 199,
+  "sparar": 30,
+  "ingredienser": [
+   "Fryst torsk",
+   "Räkor",
+   "Dill",
+   "Grädde"
+  ],
+  "hemma": [
+   "Smör",
+   "Citron",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "En elegant men enkel gratäng där torsk och räkor bakas i en len dillsås — fint nog för helgen.",
+  "steg": [
+   "Tina fisken och räkorna försiktigt och klappa torra.",
+   "Lägg fisken i en smord ugnsform och toppa med räkorna.",
+   "Vispa ihop grädde, hackad dill, citronskal och kryddor till en lös sås.",
+   "Häll såsen över fisken så den nästan täcks.",
+   "Grädda tills fisken är genomstekt och ytan fått lite färg, garnera med extra dill."
+  ],
+  "tips": "Pressa i lite citronsaft precis innan servering för att lyfta smakerna.",
+  "portioner": 4,
+  "kosttyp": "pescetarisk",
+  "tags": [
+   "proteinrikt",
+   "fisk",
+   "barn",
+   "mealprep",
+   "helgmiddag"
+  ]
+ },
+ {
+  "id": "tofuwok",
+  "namn": "Krispig tofuwok med sesam och soja",
+  "emoji": "🥢",
+  "bild": "assets/recipes/tofuwok.jpg",
+  "kcal": 345,
+  "protein": 13,
+  "kolhydrater": 56,
+  "fett": 6,
+  "proteinkalla": "veganskt",
+  "allergener": [
+   "soja"
+  ],
+  "butik": "Hemköp",
+  "tid": 25,
+  "typ": "Vegetarisk",
+  "portionspris": 26,
+  "inkopspris": 103,
+  "sparar": 20,
+  "ingredienser": [
+   "Tofu",
+   "Wokgrönsaker",
+   "Soja",
+   "Ris"
+  ],
+  "hemma": [
+   "Olja",
+   "Vitlök",
+   "Sesamfrön"
+  ],
+  "beskrivning": "Knaprig tofu och färgstarka grönsaker i en blank sojaglaze — snabbt, fräscht och mättande.",
+  "steg": [
+   "Pressa tofun lätt och tärna den i jämna bitar.",
+   "Stek tofun i het olja på hög värme tills alla sidor är gyllenbruna och knapriga.",
+   "Lyft ur tofun och woka grönsakerna hastigt i samma panna så de behåller tuggmotstånd.",
+   "Blanda ner soja, lite vatten och pressad vitlök och låt puttra en minut.",
+   "Vänd tillbaka tofun i woken, strö över sesamfrön och servera direkt på riset."
+  ],
+  "tips": "Woka på högsta möjliga värme och rör inte för mycket — då blir grönsakerna krispiga istället för mjäkiga.",
+  "portioner": 4,
+  "kosttyp": "vegansk",
+  "tags": [
+   "vegetariskt",
+   "veganskt"
+  ]
+ },
+ {
+  "id": "ugnstorsk",
+  "namn": "Ugnsbakad torsk med sparris och citronsmör",
+  "emoji": "🐟",
+  "bild": "assets/recipes/ugnstorsk.jpg",
+  "kcal": 264,
+  "protein": 32,
+  "kolhydrater": 28,
+  "fett": 1,
+  "proteinkalla": "fisk",
+  "allergener": [
+   "fisk"
+  ],
+  "butik": "ICA",
+  "tid": 35,
+  "typ": "Fisk",
+  "portionspris": 51,
+  "inkopspris": 204,
+  "sparar": 26,
+  "ingredienser": [
+   "Fryst torsk",
+   "Citron",
+   "Sparris",
+   "Potatis"
+  ],
+  "hemma": [
+   "Smör",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Saftig torsk och knaprig sparris bakas ihop under smält citronsmör — en enkel rätt som känns lite finare.",
+  "steg": [
+   "Koka potatisen mjuk och håll den varm.",
+   "Bryt av de träiga ändarna på sparrisen och lägg den i en ugnsform.",
+   "Lägg torsken ovanpå sparrisen, salta och peppra generöst.",
+   "Smält smör med citronsaft och citronskal och ringla över fisken.",
+   "Ugnsbaka tills torsken flagnar lätt och sparrisen är mör men har tuggmotstånd."
+  ],
+  "tips": "Välj sparris i samma tjocklek så gräddas den jämnt.",
+  "portioner": 4,
+  "kosttyp": "pescetarisk",
+  "tags": [
+   "proteinrikt",
+   "fisk"
+  ]
+ },
+ {
+  "id": "flaskkarre",
+  "namn": "Fläskkarré med äppelmos och rödkål",
+  "emoji": "🍎",
+  "bild": "assets/recipes/flaskkarre.jpg",
+  "kcal": 419,
+  "protein": 34,
+  "kolhydrater": 57,
+  "fett": 4,
+  "proteinkalla": "flask",
+  "allergener": [],
+  "butik": "Coop",
+  "tid": 45,
+  "typ": "Familjefavorit",
+  "portionspris": 26,
+  "inkopspris": 105,
+  "sparar": 24,
+  "ingredienser": [
+   "Fläskfilé",
+   "Äppelmos",
+   "Rödkål",
+   "Potatis"
+  ],
+  "hemma": [
+   "Smör",
+   "Salt",
+   "Peppar",
+   "Timjan"
+  ],
+  "beskrivning": "Klassisk höstmiddag — mör fläskfilé med syrlig äppelmos och sötsyrlig rödkål.",
+  "steg": [
+   "Krydda fläskfilén med salt, peppar och timjan.",
+   "Bryn den runt om i het panna tills ytan fått fin färg.",
+   "Eftersteg i ugn eller på svag värme tills innertemperaturen når 65°C.",
+   "Värm rödkålen och äppelmoset separat medan köttet vilar.",
+   "Skär fläskfilén i skivor och servera med rödkål, äppelmos och kokt potatis."
+  ],
+  "tips": "Låt köttet vila minst 5 minuter under folie innan du skär i det, då rinner mindre saft ut.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kott",
+   "helgmiddag"
+  ]
+ },
+ {
+  "id": "fetapasta",
+  "namn": "Ugnsbakad fetaost-pasta",
+  "emoji": "🍅",
+  "bild": "assets/recipes/fetapasta.jpg",
+  "kcal": 439,
+  "protein": 19,
+  "kolhydrater": 61,
+  "fett": 12,
+  "proteinkalla": "vegetariskt",
+  "allergener": [
+   "gluten",
+   "laktos"
+  ],
+  "butik": "Willys",
+  "tid": 35,
+  "typ": "Vegetarisk",
+  "portionspris": 17,
+  "inkopspris": 67,
+  "sparar": 19,
+  "ingredienser": [
+   "Pasta",
+   "Krossade tomater",
+   "Vitlök",
+   "Feta"
+  ],
+  "hemma": [
+   "Olivolja",
+   "Chiliflakes",
+   "Basilika"
+  ],
+  "beskrivning": "Den virala favoriten — en hel fetaost bakas med tomater till en krämig, salt sås som smälter samman med pastan.",
+  "steg": [
+   "Lägg fetaosten i mitten av en ugnsform och omge den med krossade tomater och hela vitlöksklyftor.",
+   "Ringla över rikligt med olivolja och strö på chiliflakes.",
+   "Ugnsbaka tills tomaterna puttrar och osten fått lite färg på ytan.",
+   "Koka pastan al dente under tiden.",
+   "Mosa ihop fetan och tomaterna till en sås, blanda med pastan och toppa med färsk basilika."
+  ],
+  "tips": "Spara lite pastavatten — det gör såsen silkigare om den blir för tjock.",
+  "portioner": 4,
+  "kosttyp": "vegetarisk",
+  "tags": [
+   "billigt",
+   "vegetariskt"
+  ]
+ },
+ {
+  "id": "kalvschnitzel",
+  "namn": "Kalvschnitzel med citron och kapris",
+  "emoji": "🍽️",
+  "bild": "assets/recipes/kalvschnitzel.jpg",
+  "kcal": 302,
+  "protein": 34,
+  "kolhydrater": 27,
+  "fett": 5,
+  "proteinkalla": "notkott",
+  "allergener": [
+   "gluten",
+   "laktos",
+   "ägg"
+  ],
+  "butik": "Hemköp",
+  "tid": 30,
+  "typ": "Snabbt & enkelt",
+  "portionspris": 60,
+  "inkopspris": 239,
+  "sparar": 32,
+  "ingredienser": [
+   "Kalvschnitzel",
+   "Potatis",
+   "Citron",
+   "Kapris"
+  ],
+  "hemma": [
+   "Smör",
+   "Vetemjöl",
+   "Ägg",
+   "Ströbröd"
+  ],
+  "beskrivning": "Krispigt panerad kalvschnitzel med syrlig kapris och citron — en klassisk restaurangrätt som är enklare hemma än man tror.",
+  "steg": [
+   "Bulta ut kalvschnitzlarna tunt mellan plastfolie.",
+   "Panera dem i tur och ordning i mjöl, uppvispat ägg och ströbröd.",
+   "Stek i rikligt med smör på medelhög värme tills paneringen är gyllenbrun och krispig på båda sidor.",
+   "Koka potatisen mjuk under tiden.",
+   "Servera schnitzeln med citronklyfta, kapris och smörstekt potatis."
+  ],
+  "tips": "Stek inte för många schnitzlar samtidigt — då sjunker temperaturen i pannan och paneringen blir seg istället för krispig.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kott"
+  ]
+ },
+ {
+  "id": "kycklingmatvete",
+  "namn": "Kryddig kycklingbowl med matvete",
+  "emoji": "🍗",
+  "bild": "assets/recipes/kycklingmatvete.jpg",
+  "kcal": 432,
+  "protein": 33,
+  "kolhydrater": 51,
+  "fett": 7,
+  "proteinkalla": "kyckling",
+  "allergener": [
+   "gluten",
+   "laktos"
+  ],
+  "butik": "ICA",
+  "tid": 30,
+  "typ": "Familjefavorit",
+  "portionspris": 33,
+  "inkopspris": 130,
+  "sparar": 29,
+  "ingredienser": [
+   "Kycklinglårfilé",
+   "Matvete",
+   "Paprika",
+   "Yoghurt"
+  ],
+  "hemma": [
+   "Olja",
+   "Spiskummin",
+   "Paprikapulver"
+  ],
+  "beskrivning": "Kryddstekt kyckling på fluffigt matvete med syrlig yoghurtsås — en enkel bowl med mycket smak.",
+  "steg": [
+   "Krydda kycklingen med spiskummin och paprikapulver och stek den gyllenbrun och genomstekt.",
+   "Koka matvetet enligt förpackningen.",
+   "Skär paprikan i strimlor och rör ihop yoghurten med lite salt.",
+   "Bygg bowls med matvete, kyckling, paprika och en klick yoghurtsås."
+  ],
+  "tips": "Marinera kycklingen en stund i kryddorna och lite olja för djupare smak.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kyckling",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "citronkyckling",
+  "namn": "Citronkyckling med rostad potatis",
+  "emoji": "🍋",
+  "bild": "assets/recipes/citronkyckling.jpg",
+  "kcal": 342,
+  "protein": 33,
+  "kolhydrater": 35,
+  "fett": 6,
+  "proteinkalla": "kyckling",
+  "allergener": [],
+  "butik": "Willys",
+  "tid": 40,
+  "typ": "Familjefavorit",
+  "portionspris": 29,
+  "inkopspris": 115,
+  "sparar": 25,
+  "ingredienser": [
+   "Kycklinglårfilé",
+   "Potatis",
+   "Timjan",
+   "Citron"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Ugnsbakad kyckling med citron och timjan tillsammans med krispig rostad potatis — en enkel söndagsmiddag.",
+  "steg": [
+   "Sätt ugnen på 200°C och dela potatisen i klyftor.",
+   "Blanda potatisen med olja, salt och timjan i en ugnsform.",
+   "Lägg kycklinglårfiléerna ovanpå, pressa över citron och baka tills kycklingen är genomstekt och potatisen gyllenbrun."
+  ],
+  "tips": "Lägg citronskalen kvar i formen under gräddningen för extra arom.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kyckling"
+  ]
+ },
+ {
+  "id": "biffmatvetesallad",
+  "namn": "Biffsallad med matvete och vitlök",
+  "emoji": "🥩",
+  "bild": "assets/recipes/biffmatvetesallad.jpg",
+  "kcal": 420,
+  "protein": 34,
+  "kolhydrater": 50,
+  "fett": 6,
+  "proteinkalla": "notkott",
+  "allergener": [
+   "gluten"
+  ],
+  "butik": "Coop",
+  "tid": 25,
+  "typ": "Snabbt & enkelt",
+  "portionspris": 41,
+  "inkopspris": 165,
+  "sparar": 36,
+  "ingredienser": [
+   "Biff",
+   "Matvete",
+   "Paprika",
+   "Vitlök"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Snabbstekt biff i skivor på en fräsch matvetesallad med paprika och vitlöksdressing.",
+  "steg": [
+   "Koka matvetet och låt det svalna något.",
+   "Stek biffen till önskad innertemperatur, låt vila och skär i tunna skivor.",
+   "Fräs pressad vitlök hastigt i olja och blanda med matvete och strimlad paprika.",
+   "Toppa saladen med biffskivorna."
+  ],
+  "tips": "Vila alltid köttet några minuter innan det skärs, då rinner mindre saft ut.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kott"
+  ]
+ },
+ {
+  "id": "biffwok",
+  "namn": "Biffwok med wokgrönsaker",
+  "emoji": "🥢",
+  "bild": "assets/recipes/biffwok.jpg",
+  "kcal": 428,
+  "protein": 34,
+  "kolhydrater": 55,
+  "fett": 6,
+  "proteinkalla": "notkott",
+  "allergener": [
+   "soja"
+  ],
+  "butik": "ICA",
+  "tid": 20,
+  "typ": "Snabbt & enkelt",
+  "portionspris": 53,
+  "inkopspris": 210,
+  "sparar": 46,
+  "ingredienser": [
+   "Biff",
+   "Ris",
+   "Wokgrönsaker",
+   "Soja"
+  ],
+  "hemma": [
+   "Olja",
+   "Vitlök",
+   "Ingefära"
+  ],
+  "beskrivning": "Snabbwokad biff i strimlor med krispiga grönsaker och blank sojasås — klart på under 20 minuter.",
+  "steg": [
+   "Koka riset enligt anvisningen.",
+   "Strimla biffen tunt och wokа den hastigt på hög värme.",
+   "Lyft ur köttet och woka grönsakerna kort så de behåller tuggmotstånd.",
+   "Blanda tillbaka biffen, häll över soja och servera med riset."
+  ],
+  "tips": "Skär köttet mot fibrerna så blir det mörare.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "snabbt",
+   "proteinrikt",
+   "kott"
+  ]
+ },
+ {
+  "id": "flaskcurrygryta",
+  "namn": "Fläskcurrygryta med kokos",
+  "emoji": "🍛",
+  "bild": "assets/recipes/flaskcurrygryta.jpg",
+  "kcal": 543,
+  "protein": 32,
+  "kolhydrater": 52,
+  "fett": 22,
+  "proteinkalla": "flask",
+  "allergener": [],
+  "butik": "Willys",
+  "tid": 35,
+  "typ": "Familjefavorit",
+  "portionspris": 36,
+  "inkopspris": 142,
+  "sparar": 31,
+  "ingredienser": [
+   "Fläskfilé",
+   "Ris",
+   "Curry & grönsaker",
+   "Kokosmjölk"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt"
+  ],
+  "beskrivning": "Mild currygryta med mört fläsk och len kokosmjölk — mättande vardagsmat som värmer.",
+  "steg": [
+   "Tärna fläskfilén och bryn den runt om i het olja.",
+   "Rör ner curryblandningen och fräs kort.",
+   "Häll i kokosmjölken och låt grytan sjuda tills köttet är mört.",
+   "Servera med nykokt ris."
+  ],
+  "tips": "Låt grytan sjuda på svag värme en stund extra — smakerna blir bara bättre.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kott",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "flasktomatpasta",
+  "namn": "Fläskfilé i tomatsås med pasta",
+  "emoji": "🍝",
+  "bild": "assets/recipes/flasktomatpasta.jpg",
+  "kcal": 381,
+  "protein": 34,
+  "kolhydrater": 48,
+  "fett": 4,
+  "proteinkalla": "flask",
+  "allergener": [
+   "gluten"
+  ],
+  "butik": "Coop",
+  "tid": 30,
+  "typ": "Familjefavorit",
+  "portionspris": 34,
+  "inkopspris": 134,
+  "sparar": 29,
+  "ingredienser": [
+   "Fläskfilé",
+   "Pasta",
+   "Krossade tomater",
+   "Basilika"
+  ],
+  "hemma": [
+   "Olja",
+   "Vitlök",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Mör fläskfilé i en enkel tomatsås med färsk basilika, serverad över pasta.",
+  "steg": [
+   "Tärna fläskfilén och bryn den i olja tillsammans med lite vitlök.",
+   "Häll i de krossade tomaterna och låt såsen sjuda tills köttet är genomstekt.",
+   "Koka pastan enligt anvisningen.",
+   "Rör ner färsk basilika i såsen och servera över pastan."
+  ],
+  "tips": "En nypa socker balanserar tomaternas syra.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kott",
+   "barn"
+  ]
+ },
+ {
+  "id": "kalvschnitzelmatvete",
+  "namn": "Kalvschnitzel med matvetesallad",
+  "emoji": "🍽️",
+  "bild": "assets/recipes/kalvschnitzelmatvete.jpg",
+  "kcal": 399,
+  "protein": 33,
+  "kolhydrater": 50,
+  "fett": 4,
+  "proteinkalla": "notkott",
+  "allergener": [
+   "gluten",
+   "laktos",
+   "ägg"
+  ],
+  "butik": "Hemköp",
+  "tid": 30,
+  "typ": "Snabbt & enkelt",
+  "portionspris": 36,
+  "inkopspris": 142,
+  "sparar": 31,
+  "ingredienser": [
+   "Kalvschnitzel",
+   "Matvete",
+   "Paprika",
+   "Citron"
+  ],
+  "hemma": [
+   "Smör",
+   "Vetemjöl",
+   "Ägg",
+   "Ströbröd"
+  ],
+  "beskrivning": "Krispig kalvschnitzel serverad med en fräsch matvetesallad istället för potatis, för en lite lättare middag.",
+  "steg": [
+   "Panera schnitzlarna i mjöl, ägg och ströbröd.",
+   "Stek dem gyllenbruna och krispiga i smör.",
+   "Koka matvetet och blanda med strimlad paprika och en skvätt citron.",
+   "Servera schnitzeln på saladen med extra citronklyfta."
+  ],
+  "tips": "Salta matvetesaladen precis före servering så den inte blir vattnig.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kott"
+  ]
+ },
+ {
+  "id": "teriyakilax",
+  "namn": "Teriyakilax med wokgrönsaker och ris",
+  "emoji": "🐟",
+  "bild": "assets/recipes/teriyakilax.jpg",
+  "kcal": 537,
+  "protein": 32,
+  "kolhydrater": 56,
+  "fett": 19,
+  "proteinkalla": "fisk",
+  "allergener": [
+   "fisk",
+   "soja"
+  ],
+  "butik": "ICA",
+  "tid": 25,
+  "typ": "Fisk",
+  "portionspris": 45,
+  "inkopspris": 180,
+  "sparar": 40,
+  "ingredienser": [
+   "Laxfilé",
+   "Ris",
+   "Wokgrönsaker",
+   "Soja"
+  ],
+  "hemma": [
+   "Olja",
+   "Honung",
+   "Ingefära"
+  ],
+  "beskrivning": "Blank, sötsalt lax stekt i sojaglaze med krispiga wokgrönsaker och ris.",
+  "steg": [
+   "Koka riset enligt anvisningen.",
+   "Stek laxbitarna i het olja tills de nästan är genomstekta.",
+   "Häll i soja och lite honung och låt det bubbla till en blank glaze.",
+   "Woka grönsakerna hastigt och servera allt tillsammans med riset."
+  ],
+  "tips": "Vänd laxen försiktigt så bitarna inte faller sönder i glazen.",
+  "portioner": 4,
+  "kosttyp": "pescetarisk",
+  "tags": [
+   "proteinrikt",
+   "fisk"
+  ]
+ },
+ {
+  "id": "laxsallad",
+  "namn": "Laxsallad med matvete och dill",
+  "emoji": "🥗",
+  "bild": "assets/recipes/laxsallad.jpg",
+  "kcal": 523,
+  "protein": 32,
+  "kolhydrater": 49,
+  "fett": 19,
+  "proteinkalla": "fisk",
+  "allergener": [
+   "fisk",
+   "gluten"
+  ],
+  "butik": "ICA",
+  "tid": 25,
+  "typ": "Fisk",
+  "portionspris": 34,
+  "inkopspris": 135,
+  "sparar": 30,
+  "ingredienser": [
+   "Laxfilé",
+   "Matvete",
+   "Citron",
+   "Dill"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Lätt sommarsallad med stekt lax, fluffigt matvete, citron och rikligt med färsk dill.",
+  "steg": [
+   "Koka matvetet och låt det svalna.",
+   "Stek laxbitarna försiktigt i olja tills de precis är genomstekta.",
+   "Blanda matvetet med olja, citronsaft och hackad dill.",
+   "Toppa saladen med de varma laxbitarna."
+  ],
+  "tips": "Flingsalt och extra citron på toppen lyfter smaken precis innan servering.",
+  "portioner": 4,
+  "kosttyp": "pescetarisk",
+  "tags": [
+   "proteinrikt",
+   "fisk"
+  ]
+ },
+ {
+  "id": "torskitomatsas",
+  "namn": "Torsk i tomatsås",
+  "emoji": "🐟",
+  "bild": "assets/recipes/torskitomatsas.jpg",
+  "kcal": 251,
+  "protein": 27,
+  "kolhydrater": 30,
+  "fett": 1,
+  "proteinkalla": "fisk",
+  "allergener": [
+   "fisk"
+  ],
+  "butik": "Willys",
+  "tid": 30,
+  "typ": "Fisk",
+  "portionspris": 27,
+  "inkopspris": 107,
+  "sparar": 24,
+  "ingredienser": [
+   "Fryst torsk",
+   "Potatis",
+   "Krossade tomater",
+   "Vitlök"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt",
+   "Peppar",
+   "Basilika"
+  ],
+  "beskrivning": "Saftig torsk som puttrar färdig i en enkel, smakrik tomatsås med vitlök.",
+  "steg": [
+   "Koka potatisen mjuk.",
+   "Fräs pressad vitlök kort i olja och häll i de krossade tomaterna.",
+   "Låt såsen sjuda några minuter, lägg sedan i torskbitarna och låt dem sjuda tills de flagnar lätt.",
+   "Servera med den kokta potatisen."
+  ],
+  "tips": "Rör inte för mycket i grytan när fisken puttrar, då håller bitarna ihop bättre.",
+  "portioner": 4,
+  "kosttyp": "pescetarisk",
+  "tags": [
+   "fisk"
+  ]
+ },
+ {
+  "id": "rakcurry",
+  "namn": "Räkcurry med kokos och ris",
+  "emoji": "🍤",
+  "bild": "assets/recipes/rakcurry.jpg",
+  "kcal": 467,
+  "protein": 19,
+  "kolhydrater": 52,
+  "fett": 19,
+  "proteinkalla": "skaldjur",
+  "allergener": [
+   "skaldjur"
+  ],
+  "butik": "Coop",
+  "tid": 20,
+  "typ": "Fisk",
+  "portionspris": 28,
+  "inkopspris": 112,
+  "sparar": 25,
+  "ingredienser": [
+   "Räkor",
+   "Ris",
+   "Curry & grönsaker",
+   "Kokosmjölk"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt"
+  ],
+  "beskrivning": "Snabb och len currygryta med räkor och kokosmjölk — klar på under en halvtimme.",
+  "steg": [
+   "Koka riset enligt anvisningen.",
+   "Fräs curryblandningen kort i olja.",
+   "Häll i kokosmjölken och låt puttra några minuter.",
+   "Rör ner räkorna och värm dem varsamt precis innan servering."
+  ],
+  "tips": "Låt inte räkorna koka för länge, då blir de sega.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "snabbt"
+  ]
+ },
+ {
+  "id": "raksallad",
+  "namn": "Räksallad med matvete",
+  "emoji": "🍤",
+  "bild": "assets/recipes/raksallad.jpg",
+  "kcal": 318,
+  "protein": 20,
+  "kolhydrater": 48,
+  "fett": 2,
+  "proteinkalla": "skaldjur",
+  "allergener": [
+   "skaldjur",
+   "gluten"
+  ],
+  "butik": "Coop",
+  "tid": 20,
+  "typ": "Fisk",
+  "portionspris": 24,
+  "inkopspris": 95,
+  "sparar": 21,
+  "ingredienser": [
+   "Räkor",
+   "Matvete",
+   "Citron",
+   "Dill"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Fräsch sallad med skalade räkor, matvete, citron och rikligt med dill — perfekt till varma dagar.",
+  "steg": [
+   "Koka matvetet och låt det svalna helt.",
+   "Blanda matvetet med olja, citronsaft och hackad dill.",
+   "Vänd ner räkorna försiktigt precis innan servering så de behåller sin fräschör.",
+   "Smaka av med salt och peppar."
+  ],
+  "tips": "Servera saladen kall, gärna direkt från kylen på en varm dag.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "snabbt",
+   "billigt"
+  ]
+ },
+ {
+  "id": "kikartssallad",
+  "namn": "Kikärtssallad med matvete",
+  "emoji": "🫘",
+  "bild": "assets/recipes/kikartssallad.jpg",
+  "kcal": 387,
+  "protein": 14,
+  "kolhydrater": 64,
+  "fett": 4,
+  "proteinkalla": "veganskt",
+  "allergener": [
+   "gluten"
+  ],
+  "butik": "Hemköp",
+  "tid": 20,
+  "typ": "Vegetarisk",
+  "portionspris": 14,
+  "inkopspris": 56,
+  "sparar": 12,
+  "ingredienser": [
+   "Kikärtor",
+   "Matvete",
+   "Paprika",
+   "Citron"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt",
+   "Peppar",
+   "Spiskummin"
+  ],
+  "beskrivning": "Mättande vegansk sallad med kikärtor, matvete och en fräsch citrondressing.",
+  "steg": [
+   "Koka matvetet enligt förpackningen.",
+   "Skölj av kikärtorna och blanda med matvetet och strimlad paprika.",
+   "Rör ihop en dressing av olja, citronsaft, spiskummin, salt och peppar.",
+   "Vänd ner dressingen i saladen precis innan servering."
+  ],
+  "tips": "Saladen håller sig fin i kylen ett par dagar — perfekt att göra extra av.",
+  "portioner": 4,
+  "kosttyp": "vegansk",
+  "tags": [
+   "snabbt",
+   "billigt",
+   "vegetariskt",
+   "veganskt"
+  ]
+ },
+ {
+  "id": "bonbowlmatvete",
+  "namn": "Bönbowl med matvete och salsa",
+  "emoji": "🌶️",
+  "bild": "assets/recipes/bonbowlmatvete.jpg",
+  "kcal": 377,
+  "protein": 16,
+  "kolhydrater": 63,
+  "fett": 2,
+  "proteinkalla": "veganskt",
+  "allergener": [
+   "gluten"
+  ],
+  "butik": "ICA",
+  "tid": 20,
+  "typ": "Vegetarisk",
+  "portionspris": 18,
+  "inkopspris": 72,
+  "sparar": 16,
+  "ingredienser": [
+   "Kidneybönor",
+   "Matvete",
+   "Paprika",
+   "Salsa"
+  ],
+  "hemma": [
+   "Olja",
+   "Spiskummin",
+   "Salt"
+  ],
+  "beskrivning": "Enkel, mexikoinspirerad bowl med kryddiga bönor, matvete och salsa.",
+  "steg": [
+   "Koka matvetet enligt förpackningen.",
+   "Värm kidneybönorna med spiskummin i en het panna.",
+   "Skär paprikan i tärningar.",
+   "Bygg bowls med matvete, bönor, paprika och salsa på toppen."
+  ],
+  "tips": "Toppa gärna med avokado eller lite riven ost om du har hemma.",
+  "portioner": 4,
+  "kosttyp": "vegansk",
+  "tags": [
+   "snabbt",
+   "billigt",
+   "vegetariskt",
+   "veganskt",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "svartbonsbowl",
+  "namn": "Svartbönsbowl med matvete",
+  "emoji": "🌽",
+  "bild": "assets/recipes/svartbonsbowl.jpg",
+  "kcal": 395,
+  "protein": 16,
+  "kolhydrater": 65,
+  "fett": 3,
+  "proteinkalla": "veganskt",
+  "allergener": [
+   "gluten"
+  ],
+  "butik": "ICA",
+  "tid": 20,
+  "typ": "Vegetarisk",
+  "portionspris": 19,
+  "inkopspris": 75,
+  "sparar": 16,
+  "ingredienser": [
+   "Svarta bönor",
+   "Matvete",
+   "Salsa",
+   "Majs"
+  ],
+  "hemma": [
+   "Olja",
+   "Spiskummin",
+   "Salt"
+  ],
+  "beskrivning": "Färgstark bowl med svarta bönor, sötaktig majs och salsa på en bädd av matvete.",
+  "steg": [
+   "Koka matvetet enligt förpackningen.",
+   "Värm de svarta bönorna med spiskummin.",
+   "Blanda majsen med salsan.",
+   "Bygg bowls med matvete, bönor och majssalsan."
+  ],
+  "tips": "Pressa över lite lime om du har hemma för extra fräschör.",
+  "portioner": 4,
+  "kosttyp": "vegansk",
+  "tags": [
+   "snabbt",
+   "billigt",
+   "vegetariskt",
+   "veganskt"
+  ]
+ },
+ {
+  "id": "tofucurry",
+  "namn": "Tofucurry med kokos och ris",
+  "emoji": "🍛",
+  "bild": "assets/recipes/tofucurry.jpg",
+  "kcal": 479,
+  "protein": 13,
+  "kolhydrater": 54,
+  "fett": 23,
+  "proteinkalla": "veganskt",
+  "allergener": [
+   "soja"
+  ],
+  "butik": "Hemköp",
+  "tid": 25,
+  "typ": "Vegetarisk",
+  "portionspris": 23,
+  "inkopspris": 92,
+  "sparar": 20,
+  "ingredienser": [
+   "Tofu",
+   "Ris",
+   "Curry & grönsaker",
+   "Kokosmjölk"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt"
+  ],
+  "beskrivning": "Len och mild currygryta med krispigt stekt tofu och kokosmjölk.",
+  "steg": [
+   "Koka riset enligt anvisningen.",
+   "Tärna tofun och stek den gyllenbrun i het olja.",
+   "Rör ner curryblandningen och häll i kokosmjölken.",
+   "Låt sjuda några minuter och servera med riset."
+  ],
+  "tips": "Pressa tofun lätt innan den steks, då blir den krispigare.",
+  "portioner": 4,
+  "kosttyp": "vegansk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "veganskt"
+  ]
+ },
+ {
+  "id": "teriyakitofu",
+  "namn": "Teriyakitofu med matvetesallad",
+  "emoji": "🥢",
+  "bild": "assets/recipes/teriyakitofu.jpg",
+  "kcal": 327,
+  "protein": 14,
+  "kolhydrater": 49,
+  "fett": 5,
+  "proteinkalla": "veganskt",
+  "allergener": [
+   "gluten",
+   "soja"
+  ],
+  "butik": "Hemköp",
+  "tid": 25,
+  "typ": "Vegetarisk",
+  "portionspris": 24,
+  "inkopspris": 95,
+  "sparar": 21,
+  "ingredienser": [
+   "Tofu",
+   "Matvete",
+   "Paprika",
+   "Soja"
+  ],
+  "hemma": [
+   "Olja",
+   "Honung",
+   "Ingefära"
+  ],
+  "beskrivning": "Krispig tofu i blank sojaglaze på en fräsch matvetesallad med paprika.",
+  "steg": [
+   "Koka matvetet och blanda med strimlad paprika och lite olja.",
+   "Tärna och stek tofun knaprig i het olja.",
+   "Häll i soja och en skvätt honung och låt det bli en blank glaze runt tofun.",
+   "Servera tofun på matvetesaladen."
+  ],
+  "tips": "Låt tofun steka ostört några minuter i taget så den hinner bli knaprig.",
+  "portioner": 4,
+  "kosttyp": "vegansk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "veganskt"
+  ]
+ },
+ {
+  "id": "halloumipasta",
+  "namn": "Halloumipasta med tomat och basilika",
+  "emoji": "🧀",
+  "bild": "assets/recipes/halloumipasta.jpg",
+  "kcal": 411,
+  "protein": 21,
+  "kolhydrater": 49,
+  "fett": 13,
+  "proteinkalla": "vegetariskt",
+  "allergener": [
+   "gluten",
+   "laktos"
+  ],
+  "butik": "Willys",
+  "tid": 25,
+  "typ": "Vegetarisk",
+  "portionspris": 25,
+  "inkopspris": 99,
+  "sparar": 22,
+  "ingredienser": [
+   "Halloumi",
+   "Pasta",
+   "Krossade tomater",
+   "Basilika"
+  ],
+  "hemma": [
+   "Olja",
+   "Vitlök",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Krispigt stekt halloumi i en enkel tomatsås med basilika, över pasta.",
+  "steg": [
+   "Koka pastan enligt anvisningen.",
+   "Skär halloumin i kuber och stek den gyllenbrun i olja.",
+   "Fräs vitlök kort och häll i de krossade tomaterna, låt sjuda några minuter.",
+   "Blanda pastan med såsen, toppa med halloumin och färsk basilika."
+  ],
+  "tips": "Stek halloumin sist så den hinner vara varm och krispig vid servering.",
+  "portioner": 4,
+  "kosttyp": "vegetarisk",
+  "tags": [
+   "billigt",
+   "vegetariskt"
+  ]
+ },
+ {
+  "id": "halloumicurry",
+  "namn": "Halloumicurry med ris",
+  "emoji": "🍛",
+  "bild": "assets/recipes/halloumicurry.jpg",
+  "kcal": 414,
+  "protein": 18,
+  "kolhydrater": 55,
+  "fett": 13,
+  "proteinkalla": "vegetariskt",
+  "allergener": [
+   "laktos"
+  ],
+  "butik": "Willys",
+  "tid": 25,
+  "typ": "Vegetarisk",
+  "portionspris": 25,
+  "inkopspris": 100,
+  "sparar": 22,
+  "ingredienser": [
+   "Halloumi",
+   "Ris",
+   "Paprika",
+   "Curry & grönsaker"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt"
+  ],
+  "beskrivning": "Mild currygryta med paprika och tärnad halloumi som håller formen fint i grytan.",
+  "steg": [
+   "Koka riset enligt anvisningen.",
+   "Fräs paprikan och curryblandningen i olja.",
+   "Häll på lite vatten och låt puttra några minuter.",
+   "Vänd ner tärnad halloumi precis innan servering och låt den bli varm."
+  ],
+  "tips": "Halloumi smälter inte som andra ostar, så den håller formen fint även i en gryta.",
+  "portioner": 4,
+  "kosttyp": "vegetarisk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "fetagryta",
+  "namn": "Fetagryta med kikärtor",
+  "emoji": "🍅",
+  "bild": "assets/recipes/fetagryta.jpg",
+  "kcal": 281,
+  "protein": 16,
+  "kolhydrater": 20,
+  "fett": 14,
+  "proteinkalla": "vegetariskt",
+  "allergener": [
+   "laktos"
+  ],
+  "butik": "Hemköp",
+  "tid": 25,
+  "typ": "Vegetarisk",
+  "portionspris": 22,
+  "inkopspris": 86,
+  "sparar": 19,
+  "ingredienser": [
+   "Feta",
+   "Krossade tomater",
+   "Kikärtor",
+   "Basilika"
+  ],
+  "hemma": [
+   "Olja",
+   "Vitlök",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Mustig tomatgryta med kikärtor där fetaosten smälter ner till en krämig, salt sås.",
+  "steg": [
+   "Fräs vitlök i olja och häll i de krossade tomaterna och kikärtorna.",
+   "Låt grytan sjuda tills den tjocknat något.",
+   "Bryt fetaosten i bitar och rör ner dem i grytan så de smälter delvis.",
+   "Toppa med färsk basilika och servera."
+  ],
+  "tips": "Servera med bröd om du har hemma för att svepa upp den krämiga såsen.",
+  "portioner": 4,
+  "kosttyp": "vegetarisk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "vegofarsgryta",
+  "namn": "Vegofärsgryta med ris",
+  "emoji": "🍚",
+  "bild": "assets/recipes/vegofarsgryta.jpg",
+  "kcal": 418,
+  "protein": 21,
+  "kolhydrater": 59,
+  "fett": 9,
+  "proteinkalla": "veganskt",
+  "allergener": [
+   "soja"
+  ],
+  "butik": "Willys",
+  "tid": 25,
+  "typ": "Vegetarisk",
+  "portionspris": 23,
+  "inkopspris": 92,
+  "sparar": 20,
+  "ingredienser": [
+   "Vegofärs",
+   "Ris",
+   "Krossade tomater",
+   "Paprika"
+  ],
+  "hemma": [
+   "Olja",
+   "Kryddor",
+   "Salt"
+  ],
+  "beskrivning": "Enkel, mättande gryta med vegofärs, tomat och paprika över ris.",
+  "steg": [
+   "Koka riset enligt anvisningen.",
+   "Fräs vegofärsen och den strimlade paprikan i olja.",
+   "Häll i de krossade tomaterna och låt grytan sjuda 10 minuter.",
+   "Servera grytan över riset."
+  ],
+  "tips": "Låt grytan sjuda ett tag extra på svag värme för djupare smak.",
+  "portioner": 4,
+  "kosttyp": "vegansk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "veganskt"
+  ]
+ },
+ {
+  "id": "korvgratang",
+  "namn": "Korvgratäng med pasta",
+  "emoji": "🌭",
+  "bild": "assets/recipes/korvgratang.jpg",
+  "kcal": 589,
+  "protein": 27,
+  "kolhydrater": 57,
+  "fett": 27,
+  "proteinkalla": "flask",
+  "allergener": [
+   "gluten",
+   "laktos"
+  ],
+  "butik": "ICA",
+  "tid": 35,
+  "typ": "Familjefavorit",
+  "portionspris": 24,
+  "inkopspris": 94,
+  "sparar": 21,
+  "ingredienser": [
+   "Falukorv",
+   "Pasta",
+   "Krossade tomater",
+   "Riven ost"
+  ],
+  "hemma": [
+   "Olja",
+   "Kryddor",
+   "Salt"
+  ],
+  "beskrivning": "Enkel vardagsgratäng med skivad falukorv, pasta och tomatsås under ett osttäcke.",
+  "steg": [
+   "Koka pastan två minuter kortare än anvisningen.",
+   "Skiva falukorven och blanda med pastan och de krossade tomaterna i en ugnsform.",
+   "Toppa med riven ost och gratinera i ugnen tills ytan är gyllenbrun."
+  ],
+  "tips": "Krydda tomatsåsen med lite oregano för mer smak.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "billigt",
+   "kott",
+   "barn",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "kottfarssas",
+  "namn": "Köttfärssås med pasta",
+  "emoji": "🍝",
+  "bild": "assets/recipes/kottfarssas.jpg",
+  "kcal": 498,
+  "protein": 32,
+  "kolhydrater": 48,
+  "fett": 19,
+  "proteinkalla": "notkott",
+  "allergener": [
+   "gluten"
+  ],
+  "butik": "ICA",
+  "tid": 30,
+  "typ": "Familjefavorit",
+  "portionspris": 29,
+  "inkopspris": 114,
+  "sparar": 25,
+  "ingredienser": [
+   "Köttfärs",
+   "Pasta",
+   "Krossade tomater",
+   "Basilika"
+  ],
+  "hemma": [
+   "Olja",
+   "Lök",
+   "Vitlök",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Klassisk köttfärssås med tomat och basilika — en trygg favorit för hela familjen.",
+  "steg": [
+   "Fräs finhackad lök och vitlök i olja.",
+   "Bryn köttfärsen väl så den får fin färg.",
+   "Häll i de krossade tomaterna och låt såsen sjuda minst 15 minuter.",
+   "Koka pastan och servera med den rykande varma såsen och färsk basilika."
+  ],
+  "tips": "Ju längre såsen får sjuda desto djupare blir smaken.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kott",
+   "barn",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "currykottfarsgryta",
+  "namn": "Currykryddad köttfärsgryta",
+  "emoji": "🍛",
+  "bild": "assets/recipes/currykottfarsgryta.jpg",
+  "kcal": 501,
+  "protein": 29,
+  "kolhydrater": 54,
+  "fett": 18,
+  "proteinkalla": "notkott",
+  "allergener": [],
+  "butik": "ICA",
+  "tid": 30,
+  "typ": "Familjefavorit",
+  "portionspris": 29,
+  "inkopspris": 115,
+  "sparar": 25,
+  "ingredienser": [
+   "Köttfärs",
+   "Ris",
+   "Paprika",
+   "Curry & grönsaker"
+  ],
+  "hemma": [
+   "Olja",
+   "Lök",
+   "Salt"
+  ],
+  "beskrivning": "Snabb köttfärsgryta med curry och paprika — mustig vardagsmat till hela familjen.",
+  "steg": [
+   "Fräs lök i olja och bryn köttfärsen.",
+   "Rör ner curryblandningen och den strimlade paprikan.",
+   "Häll på lite vatten och låt grytan sjuda 10 minuter.",
+   "Servera med nykokt ris."
+  ],
+  "tips": "En klick crème fraiche på toppen gör grytan lite mildare om det behövs.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "kott",
+   "mealprep"
+  ]
+ },
+ {
+  "id": "tandoorikyckling",
+  "namn": "Tandoorikyckling med ris",
+  "emoji": "🍗",
+  "bild": "assets/recipes/tandoorikyckling.jpg",
+  "kcal": 399,
+  "protein": 36,
+  "kolhydrater": 55,
+  "fett": 4,
+  "proteinkalla": "kyckling",
+  "allergener": [
+   "laktos"
+  ],
+  "butik": "ICA",
+  "tid": 35,
+  "typ": "Familjefavorit",
+  "portionspris": 38,
+  "inkopspris": 150,
+  "sparar": 33,
+  "ingredienser": [
+   "Kycklingfilé",
+   "Ris",
+   "Curry & grönsaker",
+   "Yoghurt"
+  ],
+  "hemma": [
+   "Olja",
+   "Vitlök",
+   "Salt"
+  ],
+  "beskrivning": "Yoghurtmarinerad kyckling med kryddig currysmak, stekt möra och saftiga.",
+  "steg": [
+   "Blanda yoghurt, curryblandning och pressad vitlök till en marinad.",
+   "Vänd kycklingbitarna i marinaden och låt stå en stund om tid finns.",
+   "Stek kycklingen i het panna tills den är genomstekt och fått fin färg.",
+   "Servera med nykokt ris."
+  ],
+  "tips": "Ju längre kycklingen får marinera, desto mörare och smakrikare blir den.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kyckling"
+  ]
+ },
+ {
+  "id": "citronflaskfile",
+  "namn": "Citronmarinerad fläskfilé med matvete",
+  "emoji": "🍋",
+  "bild": "assets/recipes/citronflaskfile.jpg",
+  "kcal": 392,
+  "protein": 32,
+  "kolhydrater": 48,
+  "fett": 4,
+  "proteinkalla": "flask",
+  "allergener": [
+   "gluten"
+  ],
+  "butik": "Coop",
+  "tid": 30,
+  "typ": "Familjefavorit",
+  "portionspris": 31,
+  "inkopspris": 125,
+  "sparar": 28,
+  "ingredienser": [
+   "Fläskfilé",
+   "Matvete",
+   "Citron",
+   "Timjan"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Mör fläskfilé marinerad i citron och timjan, serverad med fluffigt matvete.",
+  "steg": [
+   "Marinera fläskfilén i olja, citronsaft och timjan en stund om tid finns.",
+   "Stek filén i het panna till önskad innertemperatur och låt vila.",
+   "Koka matvetet enligt förpackningen.",
+   "Skär köttet i skivor och servera på matvetet med lite av stekskyn."
+  ],
+  "tips": "Spara citronskal till marinaden — det ger extra arom.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kott"
+  ]
+ },
+ {
+  "id": "biffgraddtimjan",
+  "namn": "Helstekt biff med gräddsås och timjanpotatis",
+  "emoji": "🥩",
+  "bild": "assets/recipes/biffgraddtimjan.jpg",
+  "kcal": 394,
+  "protein": 32,
+  "kolhydrater": 35,
+  "fett": 12,
+  "proteinkalla": "notkott",
+  "allergener": [
+   "laktos"
+  ],
+  "butik": "Coop",
+  "tid": 35,
+  "typ": "Familjefavorit",
+  "portionspris": 44,
+  "inkopspris": 174,
+  "sparar": 38,
+  "ingredienser": [
+   "Biff",
+   "Potatis",
+   "Grädde",
+   "Timjan"
+  ],
+  "hemma": [
+   "Smör",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Saftig helstekt biff med en enkel gräddsås och rostad timjanpotatis — helgmiddag i vardagstempo.",
+  "steg": [
+   "Sätt ugnen på 200°C och rosta potatisklyftorna med olja, salt och timjan.",
+   "Bryn biffen runt om i het panna och stek klart till önskad innertemperatur, låt sedan vila.",
+   "Häll grädden i samma panna och koka ihop till en enkel sås, smaka av med salt och peppar.",
+   "Skiva biffen och servera med såsen och den rostade potatisen."
+  ],
+  "tips": "Använd samma panna till såsen — stekskyn ger mycket smak.",
+  "portioner": 4,
+  "kosttyp": "blandkost",
+  "tags": [
+   "proteinrikt",
+   "kott"
+  ]
+ },
+ {
+  "id": "zucchinipastafeta",
+  "namn": "Zucchinipasta med feta",
+  "emoji": "🥒",
+  "bild": "assets/recipes/zucchinipastafeta.jpg",
+  "kcal": 399,
+  "protein": 17,
+  "kolhydrater": 53,
+  "fett": 12,
+  "proteinkalla": "vegetariskt",
+  "allergener": [
+   "gluten",
+   "laktos"
+  ],
+  "butik": "Willys",
+  "tid": 25,
+  "typ": "Vegetarisk",
+  "portionspris": 19,
+  "inkopspris": 77,
+  "sparar": 17,
+  "ingredienser": [
+   "Zucchini",
+   "Pasta",
+   "Krossade tomater",
+   "Feta"
+  ],
+  "hemma": [
+   "Olja",
+   "Vitlök",
+   "Salt",
+   "Peppar"
+  ],
+  "beskrivning": "Lätt sommarpasta med stekt zucchini, tomatsås och smulad fetaost.",
+  "steg": [
+   "Koka pastan enligt anvisningen.",
+   "Skiva zucchinin och stek den gyllenbrun i olja tillsammans med lite vitlök.",
+   "Häll i de krossade tomaterna och låt sjuda några minuter.",
+   "Blanda med pastan och toppa med smulad feta."
+  ],
+  "tips": "Stek zucchinin på hög värme så den får färg utan att bli blöt.",
+  "portioner": 4,
+  "kosttyp": "vegetarisk",
+  "tags": [
+   "billigt",
+   "vegetariskt"
+  ]
+ },
+ {
+  "id": "sparrispastacitron",
+  "namn": "Sparrispasta med citron och vitlök",
+  "emoji": "🍝",
+  "bild": "assets/recipes/sparrispastacitron.jpg",
+  "kcal": 266,
+  "protein": 10,
+  "kolhydrater": 50,
+  "fett": 1,
+  "proteinkalla": "vegetariskt",
+  "allergener": [
+   "gluten"
+  ],
+  "butik": "ICA",
+  "tid": 20,
+  "typ": "Vegetarisk",
+  "portionspris": 17,
+  "inkopspris": 69,
+  "sparar": 15,
+  "ingredienser": [
+   "Sparris",
+   "Pasta",
+   "Citron",
+   "Vitlök"
+  ],
+  "hemma": [
+   "Olja",
+   "Smör",
+   "Salt",
+   "Peppar",
+   "Parmesan"
+  ],
+  "beskrivning": "Fräsch vårpasta med knaprig sparris, vitlök och en skvätt citron.",
+  "steg": [
+   "Koka pastan enligt anvisningen och spara lite pastavatten.",
+   "Bryt av sparrisens träiga ändar och stek den hastigt i olja och smör.",
+   "Fräs i pressad vitlök kort och pressa över citron.",
+   "Blanda med pastan och lite pastavatten till en lätt sås."
+  ],
+  "tips": "Riven parmesan på toppen om du har hemma lyfter rätten ytterligare.",
+  "portioner": 4,
+  "kosttyp": "vegetarisk",
+  "tags": [
+   "snabbt",
+   "billigt",
+   "vegetariskt"
+  ]
+ },
+ {
+  "id": "morotscurry",
+  "namn": "Morotscurry med kikärtor",
+  "emoji": "🥕",
+  "bild": "assets/recipes/morotscurry.jpg",
+  "kcal": 399,
+  "protein": 13,
+  "kolhydrater": 74,
+  "fett": 3,
+  "proteinkalla": "veganskt",
+  "allergener": [],
+  "butik": "Hemköp",
+  "tid": 30,
+  "typ": "Vegetarisk",
+  "portionspris": 19,
+  "inkopspris": 74,
+  "sparar": 16,
+  "ingredienser": [
+   "Morötter",
+   "Kikärtor",
+   "Curry & grönsaker",
+   "Ris"
+  ],
+  "hemma": [
+   "Olja",
+   "Salt"
+  ],
+  "beskrivning": "Söt och mild currygryta med morötter och kikärtor — mättande vegansk vardagsmat.",
+  "steg": [
+   "Koka riset enligt anvisningen.",
+   "Skiva morötterna och fräs dem i olja tillsammans med curryblandningen.",
+   "Häll på lite vatten och låt puttra tills morötterna är mjuka.",
+   "Rör ner kikärtorna, värm igenom och servera med riset."
+  ],
+  "tips": "Mixa gärna en del av grytan slät om du vill ha en krämigare konsistens.",
+  "portioner": 4,
+  "kosttyp": "vegansk",
+  "tags": [
+   "billigt",
+   "vegetariskt",
+   "veganskt"
+  ]
+ }
+]
