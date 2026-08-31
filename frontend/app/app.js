@@ -157,6 +157,10 @@ async function pullAccountState() {
       applySyncBlob(remote);
       writeStoredState(localStorage, buildSyncPayload());
       syncSettingsInputs(); render(); renderPantry(); restoreNutritionGoalsForm();
+      // A returning account on a NEW device: the synced state already says
+      // onboarding is done, but the modal decided to show itself before the
+      // sync arrived - and then sat on top of a fully restored app.
+      if (state.onboardingComplete) closeOnboarding();
     } else {
       // First time this account has ever synced - bootstrap the server with
       // whatever was already built up locally (e.g. as a guest before logging in).
