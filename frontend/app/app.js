@@ -688,6 +688,17 @@ async function syncDatabasePricing(shoppingItems) {
   }
 }
 
+// The real product the price database picked for one shopping line at the
+// chain currently in use - the actual thing to put in the basket, with its
+// image, pack size, package count and price. Null when this line could not
+// be priced against a real product, which is a fact the card must show
+// rather than paper over with the static estimate.
+function databaseItemFor(name) {
+  const result = state.dbChainTotals[chosenStore()];
+  if (!result) return null;
+  return (result.matchedItems || []).find(item => item.name === name) || null;
+}
+
 function databaseResultFor(branch) {
   return state.dbChainTotals[branch.kedja] || null;
 }
@@ -922,7 +933,43 @@ function renderAttribution(shoppingItems) {
   $("primatAttribution").innerHTML = attributionMarkup(usesPrimat, usesOff);
   $("primatAttribution").hidden = !(usesPrimat || usesOff);
 }
+// One shopping line as a real product card. Everything shown here is a fact
+// from the price database - the product name, its pack size, how many
+// packages this week's amount actually needs, and what that costs. Nothing
+// is estimated, so nothing here carries an "Uppskattat" badge.
+function databaseShoppingItemMarkup(item, match) {
+  const checked = state.avklarade.has(item.namn);
+  const photo = match.imageUrl
+    ? `<img class="shopping-item-image has-image" src="${escapeHtml(safeHttpUrl(match.imageUrl) || "")}" alt="" loading="lazy">`
+    : categoryIconMarkup(itemCategory(item.namn));
+  // A campaign price is only worth a badge when it is actually lower than
+  // the ordinary price - showing "kampanj" on a product at its normal price
+  // would invent a discount.
+  const onCampaign = match.campaignPrice != null && match.regularPrice != null
+    && match.campaignPrice < match.regularPrice;
+  const campaign = onCampaign
+    ? `<small class="shopping-item-campaign">🏷️ Kampanj ${money(match.campaignPrice)} (ord. ${money(match.regularPrice)})</small>`
+    : "";
+  const packageText = match.packageSize && match.packageSize !== "1 st" ? match.packageSize : "";
+  const countText = match.packages > 1 ? `${match.packages} st` : "";
+  // Flagged, not hidden: when the recipe's unit can't be converted to the
+  // pack's unit (a recipe in "st" against a pack in "g") the engine falls
+  // back to one package. That is a guess about QUANTITY, and the shopper is
+  // the one who can tell whether one is enough.
+  const inexact = match.exactPackaging === false
+    ? '<small class="item-status estimated">Antal osäkert</small>' : "";
+  const meta = escapeHtml([match.brand, packageText, countText].filter(Boolean).join(" · ") || "1 st");
+  return `<label class="shopping-item ${checked ? "checked" : ""}"><input type="checkbox" data-shopping="${escapeHtml(item.namn)}" ${checked ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${escapeHtml(match.productName)}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong>${money(match.totalCost)}</strong>${inexact}</span></label>`;
+}
+
 function shoppingItemMarkup(item) {
+  // A real product from Matjakt's own price database beats everything below
+  // it: it is a named product on a real shelf, at a real price, with the
+  // real number of packages you have to buy. The rest of this function is
+  // the fallback for lines the database could not price - which stay
+  // visible and honestly labelled rather than being hidden.
+  const fromDatabase = databaseItemFor(item.namn);
+  if (fromDatabase) return databaseShoppingItemMarkup(item, fromDatabase);
   const product = PRODUCT_CATALOG[item.namn] || { namn: item.namn, marke: "", pris: 0 };
   const pantry = state.pantry[item.namn]?.amount || 0;
   const needed = Math.max(0, item.total - pantry);
