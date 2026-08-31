@@ -17,6 +17,19 @@ import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTag
 const RECEPT = [];
 
 const recipePhoto = recipe => recipe.bild ? `<img class="recipe-photo" src="${recipe.bild}" alt="${recipe.namn}" loading="lazy">` : `<span class="recipe-photo recipe-fallback" role="img" aria-label="Ingen matbild tillgänglig"><svg viewBox="0 0 64 64"><path d="M14 48h36M18 44a14 14 0 0 1 28 0M32 20v10M27 20h10"/></svg><small>Matjakt</small></span>`;
+// A photo URL that 404s or is blocked must degrade into the same calm icon
+// as "no photo at all". Without this the card showed the browser's
+// broken-image glyph with the alt text spilled across it - which reads as a
+// bug, in the one place a food app is supposed to look appetising.
+window.addEventListener("error", event => {
+  const img = event.target;
+  if (img?.tagName === "IMG" && img.classList?.contains("recipe-photo") && !img.dataset.fell) {
+    img.dataset.fell = "1";
+    const holder = document.createElement("span");
+    holder.innerHTML = recipePhoto({});
+    img.replaceWith(holder.firstChild);
+  }
+}, true);
 const macroLine = recipe => recipe.kcal ? `${recipe.kcal} kcal · ${recipe.protein} g protein · ${recipe.kolhydrater} g kolhydrater · ${recipe.fett} g fett` : "";
 function recipeRatingMarkup(recipeId) {
   const current = state.betyg[recipeId] || 0;
@@ -288,6 +301,18 @@ const RECIPE_QUANTITIES = {
 function mapApiRecipe(recipe) {
   const ingredients = (recipe.ingredients || []).map(item => escapeHtml(`${item.measure || ""} ${item.name || ""}`.trim())).filter(Boolean);
   return { id: recipe.id, provider: recipe.provider, providerRecipeId: recipe.providerRecipeId, namn: escapeHtml(recipe.title), butik: "alla", tid: Number(recipe.prepMinutes) || 0, typ: "Provider-recept", portionspris: null, inkopspris: null, sparar: 0, ingredienser: ingredients, hemma: [], beskrivning: "Recept från extern receptkälla. Pris beräknas först när ingredienserna har matchats mot svenska butikprodukter.", steg: (recipe.instructions || []).map(escapeHtml), bild: safeHttpUrl(recipe.imageUrl), imageSource: recipe.imageSource, sourceUrl: safeHttpUrl(recipe.sourceUrl), servings: recipe.servings, priceStatus: "unavailable" };
+}
+
+// The recipe bank's OWN text always wins - description and steps written
+// for the recipe beat the legacy hand-typed map, which only still exists as
+// a fallback for pre-bank local recipes.
+function detailsFor(recipe) {
+  const legacy = RECIPE_DETAILS[recipe.id] || {};
+  return {
+    beskrivning: recipe.beskrivning || recipe.description || legacy.beskrivning,
+    steg: (Array.isArray(recipe.steg) && recipe.steg.length ? recipe.steg : legacy.steg) || [],
+    tips: legacy.tips,
+  };
 }
 
 const RECIPE_DETAILS = {
@@ -682,7 +707,7 @@ function renderRecipes() {
   if (browsing) { $("menuSummary").textContent = ""; return; }
   $("recipeScroll").innerHTML = recipes.length ? recipes.map(recipe => {
     const selected = state.valda.has(recipe.id), expanded = state.expanded === recipe.id;
-    const details = RECIPE_DETAILS[recipe.id] || recipe;
+    const details = detailsFor(recipe);
     return `<article class="recipe-card ${selected ? "selected" : ""}">
       <button class="recipe-details" data-details="${recipe.id}" aria-expanded="${expanded}">
         <span class="recipe-photo-wrap">${recipePhoto(recipe)}<span class="saving">${recipe.sparar ? `Spara ca ${money(recipe.sparar)}` : "Från receptdatabas"}</span></span>
@@ -723,12 +748,27 @@ async function renderRecipePage() {
   const id = new URLSearchParams(location.search).get("recept");
   if (!id) { $("top").hidden = false; document.querySelector(".bottom-nav").hidden = false; $("recipePage").hidden = true; window.scrollTo(0, 0); return; }
   let allRecipes = [...RECEPT, ...state.apiRecipes];
+  // A card deliberately ships without steps and structured ingredients (the
+  // list payload stays small). The detail PAGE is the one place that needs
+  // everything, so fetch the full recipe once and merge it into the same
+  // object every list references.
+  const found = allRecipes.find(r => r.id === new URLSearchParams(location.search).get("recept"));
+  if (found && found.priceStatus !== "unavailable"
+      && (!Array.isArray(found.steg) || !found.steg.length)
+      && !recipeDetailFetches.has(found.id)) {
+    recipeDetailFetches.add(found.id);
+    loadRecipe(found.id).then(detail => {
+      if (!detail) return;
+      Object.assign(found, detail, { steg: detail.instructions || detail.steg || [] });
+      renderRecipePage();
+    }).catch(() => recipeDetailFetches.delete(found.id));
+  }
   let recipe = allRecipes.find(item => item.id === id);
   if (!recipe && id.includes(":")) {
     try { const response = await fetch(recipeDetailApiUrl(id)); if (response.ok) { const data = await response.json(); recipe = mapApiRecipe(data.recipe); state.apiRecipes.push(recipe); allRecipes = [...RECEPT, ...state.apiRecipes]; } } catch { /* The friendly not-found state below remains visible. */ }
   }
   if (!recipe) return;
-  const details = RECIPE_DETAILS[id] || recipe;
+  const details = detailsFor(recipe);
   $("top").hidden = true; document.querySelector(".bottom-nav").hidden = true; $("recipePage").hidden = false;
   $("recipePage").innerHTML = `<button class="back-link recipe-back" type="button">← Alla recept</button><article class="full-recipe">${recipe.bild ? `<img src="${recipe.bild}" alt="${recipe.namn}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${recipe.typ}</p><h1>${recipe.namn}</h1><div class="recipe-detail-meta"><span>${recipe.tid ? recipe.tid + " min" : "Tid saknas"}</span><span>${recipe.servings || state.personer} portioner</span><span>${recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? money(recipe.portionspris) + "/portion" : "Pris saknas"}</span></div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${details.beskrivning || "En god svensk vardagsrätt."}</p><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${recipe.id}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button>${recipeRatingMarkup(recipe.id)}${feedbackMarkup(recipe.id)}<h2>Ingredienser</h2><ul>${recipe.ingredienser.map(item => `<li>${item}</li>`).join("")}</ul><h2>Gör så här</h2><ol>${(details.steg || []).map(step => `<li>${step}</li>`).join("")}</ol>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${details.tips}</p>` : ""}</article>`;
   $("recipePage").querySelector(".recipe-back").addEventListener("click", () => history.back());
@@ -1785,7 +1825,7 @@ function ensureWeekRecipeDetails() {
       if (!detail) return;
       // Merge in place: every list, week and favourites reference THIS
       // object, so replacing it would orphan them.
-      Object.assign(recipe, detail);
+      Object.assign(recipe, detail, { steg: detail.instructions || detail.steg || [] });
       renderBasket();
     }).catch(() => recipeDetailFetches.delete(recipe.id));
   });
@@ -2093,12 +2133,10 @@ const PLAN_TYPES = [
   {
     key: "bulk", label: "Bulkvecka", objective: "protein",
     hint: "Kalorier och protein för den som bygger.",
-    // 450 kcal, not 500: at 500 only 7 of the 58 recipes qualify, which is
-    // fewer than a 7-dinner week needs, so the type could never appear at
-    // all. 450 kcal with 25 g protein is still a real bulk portion. The
-    // proper fix is more recipes - the bank is simply too small for this
-    // type to have much choice yet.
-    filter: recipe => recipe.kcal >= 450 && recipe.protein >= 25,
+    // 500 kcal and 25 g protein - the real bulk rule. It was temporarily
+    // 450 when the bank held 58 recipes and only 7 qualified; the bank now
+    // holds 200+ with 88 qualifying, so the honest threshold is back.
+    filter: recipe => recipe.kcal >= 500 && recipe.protein >= 25,
     highlight: combo => `${Math.round(combo.reduce((sum, r) => sum + r.kcal, 0) / combo.length)} kcal per portion i snitt`,
   },
   {

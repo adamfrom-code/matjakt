@@ -1,0 +1,2253 @@
+[
+ {
+  "id": "kyckling-fajitas",
+  "name": "Kycklingfajitas med paprika",
+  "description": "Strimlad kyckling och paprika i het panna, rullade i tortilla med syrad grädde. Fredagsmys på 25 minuter.",
+  "servings": 4,
+  "prepTime": 15,
+  "cookTime": 10,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 540,
+   "protein": 38,
+   "carbs": 52,
+   "fat": 19,
+   "fiber": 5
+  },
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Paprika",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Rödlök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Tortillabröd",
+    "amount": 320,
+    "unit": "g"
+   },
+   {
+    "name": "Crème fraiche",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Lime",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Paprikapulver",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Spiskummin",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Strimla kyckling, paprika och rödlök.",
+   "Blanda paprikapulver, spiskummin och salt och vänd kycklingen i kryddorna.",
+   "Stek kycklingen i olja på hög värme tills den fått färg och är genomstekt. Lägg åt sidan.",
+   "Stek paprika och lök i samma panna ett par minuter - de ska ha kvar tuggmotstånd.",
+   "Blanda tillbaka kycklingen och pressa över limesaft.",
+   "Värm tortillabröden och servera med fyllningen och crème fraiche."
+  ],
+  "categories": [
+   "Kyckling"
+  ],
+  "tags": [
+   "kyckling",
+   "snabbt",
+   "barn",
+   "Familjefavorit"
+  ],
+  "allergens": [
+   "gluten",
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ]
+ },
+ {
+  "id": "kyckling-pesto-pasta",
+  "name": "Pestopasta med kyckling",
+  "description": "Krämig pasta med grön pesto, kyckling och körsbärstomater. Middagen som alltid hinner före hungern.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 15,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 620,
+   "protein": 39,
+   "carbs": 62,
+   "fat": 24,
+   "fiber": 4
+  },
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Pasta",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Pesto",
+    "amount": 100,
+    "unit": "g"
+   },
+   {
+    "name": "Körsbärstomater",
+    "amount": 250,
+    "unit": "g"
+   },
+   {
+    "name": "Grädde",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Parmesan",
+    "amount": 50,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka pastan enligt anvisningen. Spara en kopp pastavatten.",
+   "Tärna kycklingen, salta och stek den genomstekt i olja.",
+   "Sänk värmen, häll i grädde och pesto och låt sjuda ihop en minut.",
+   "Vänd ner pastan och de halverade tomaterna. Späd med pastavatten till krämig konsistens.",
+   "Servera med riven parmesan över."
+  ],
+  "categories": [
+   "Kyckling",
+   "Pasta"
+  ],
+  "tags": [
+   "kyckling",
+   "snabbt",
+   "barn"
+  ],
+  "allergens": [
+   "gluten",
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/4162492/pexels-photo-4162492.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/delicious-pesto-pasta-on-a-plate-4162492/",
+  "imageCredit": "Daniele Sgura",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Pestopasta med kyckling upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "kyckling-rod-curry",
+  "name": "Röd kycklingcurry med jasminris",
+  "description": "Kycklinglår i kokosmjölk med röd currypasta och grönsaker. Mer smak än vad tiden borde tillåta.",
+  "servings": 4,
+  "prepTime": 15,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 610,
+   "protein": 36,
+   "carbs": 56,
+   "fat": 26,
+   "fiber": 4
+  },
+  "ingredients": [
+   {
+    "name": "Kycklinglårfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Röd currypasta",
+    "amount": 40,
+    "unit": "g"
+   },
+   {
+    "name": "Kokosmjölk",
+    "amount": 400,
+    "unit": "ml"
+   },
+   {
+    "name": "Paprika",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Jasminris",
+    "amount": 320,
+    "unit": "g"
+   },
+   {
+    "name": "Lime",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Fisksås",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Skär kycklingen i bitar och bryn den i olja i en wokpanna.",
+   "Rör ner currypastan och låt fräsa en minut med kycklingen.",
+   "Häll i kokosmjölken och sjud i 10 minuter.",
+   "Lägg i paprikastrimlor och wokgrönsaker och sjud 3-4 minuter till.",
+   "Smaka av med fisksås och limesaft. Servera med riset."
+  ],
+  "categories": [
+   "Kyckling"
+  ],
+  "tags": [
+   "kyckling",
+   "snabbt"
+  ],
+  "allergens": [
+   "fisk"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt",
+   "laktosfritt"
+  ],
+  "image": "https://images.pexels.com/photos/17748116/pexels-photo-17748116.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/curry-meat-with-rice-and-salad-17748116/",
+  "imageCredit": "Augustinus Martinus Noppé",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Röd kycklingcurry med jasminris upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "helstekt-kyckling-rotfrukter",
+  "name": "Hel kyckling i ugn med rotfrukter",
+  "description": "Helstekt kyckling på en bädd av morötter, potatis och lök. En form i ugnen, en helg på tallriken.",
+  "servings": 4,
+  "prepTime": 15,
+  "cookTime": 75,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 640,
+   "protein": 45,
+   "carbs": 42,
+   "fat": 32,
+   "fiber": 7
+  },
+  "ingredients": [
+   {
+    "name": "Kyckling hel",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Morötter",
+    "amount": 4,
+    "unit": "st"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 4,
+    "unit": "st"
+   },
+   {
+    "name": "Timjan",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Svartpeppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Sätt ugnen på 200 grader.",
+   "Skär potatis, morötter och lök i grova bitar och lägg i en långpanna. Vänd med olja och salt.",
+   "Gnid kycklingen med olja, salt och peppar. Lägg citronhalvor och vitlök i kaviteten.",
+   "Lägg kycklingen mitt på grönsaksbädden och strö över timjan.",
+   "Stek i 70-80 minuter tills innertemperaturen i lårets tjockaste del når 72 grader.",
+   "Låt vila tio minuter under folie innan du delar den.",
+   "Servera med rotfrukterna och skyn från långpannan."
+  ],
+  "categories": [
+   "Kyckling"
+  ],
+  "tags": [
+   "kyckling",
+   "helgmiddag",
+   "Familjefavorit"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt",
+   "laktosfritt"
+  ]
+ },
+ {
+  "id": "kycklingklubbor-bbq",
+  "name": "Ugnsbakade kycklingklubbor med majs och sallad",
+  "description": "Klibbiga klubbor med paprikaglaze, majskolvar och krispig sallad. Äts bäst med fingrarna.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 45,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 560,
+   "protein": 38,
+   "carbs": 40,
+   "fat": 27,
+   "fiber": 6
+  },
+  "ingredients": [
+   {
+    "name": "Kycklingklubbor",
+    "amount": 900,
+    "unit": "g"
+   },
+   {
+    "name": "Ketchup",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Honung",
+    "amount": 30,
+    "unit": "g"
+   },
+   {
+    "name": "Paprikapulver",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Majs",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Romansallad",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Gurka",
+    "amount": 0.5,
+    "unit": "st"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Sätt ugnen på 200 grader.",
+   "Rör ihop ketchup, honung, paprikapulver och en nypa salt till en glaze.",
+   "Vänd klubborna i glazen och lägg dem i en ugnsform.",
+   "Baka i 40-45 minuter, pensla en gång halvvägs, tills skinnet är klibbigt och köttet lossnar från benet.",
+   "Koka eller ugnsrosta majsen de sista tio minuterna.",
+   "Skär sallad och gurka och servera till klubborna."
+  ],
+  "categories": [
+   "Kyckling"
+  ],
+  "tags": [
+   "kyckling",
+   "barn",
+   "billigt",
+   "helgmiddag"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt",
+   "laktosfritt"
+  ]
+ },
+ {
+  "id": "lax-teriyaki",
+  "name": "Teriyakilax med ris och broccoli",
+  "description": "Laxfilé glaserad i söt sojasås med ångad broccoli och ris. Vardagslyx som tar 20 minuter.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 15,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 590,
+   "protein": 36,
+   "carbs": 58,
+   "fat": 24,
+   "fiber": 5
+  },
+  "ingredients": [
+   {
+    "name": "Laxfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Sojasås",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Honung",
+    "amount": 40,
+    "unit": "g"
+   },
+   {
+    "name": "Ingefära",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Ris",
+    "amount": 320,
+    "unit": "g"
+   },
+   {
+    "name": "Broccoli",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Sesamfrön",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Koka ihop soja, honung, riven ingefära och pressad vitlök till en simmig glaze, 3-4 minuter.",
+   "Stek laxbitarna i olja, 2-3 minuter per sida.",
+   "Häll glazen över laxen och vänd den glansig i pannan.",
+   "Ånga eller koka broccolin i 3 minuter - den ska vara klargrön.",
+   "Servera lax och broccoli på riset, med sesamfrön över."
+  ],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "fisk",
+   "snabbt",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "fisk",
+   "soja",
+   "sesam"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "laktosfritt"
+  ]
+ },
+ {
+  "id": "ugnslax-citron",
+  "name": "Ugnsbakad lax med citron och örtsås",
+  "description": "Lax i ugn på låg värme tills den precis går isär, med kall örtsås och kokt potatis.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 25,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 560,
+   "protein": 35,
+   "carbs": 42,
+   "fat": 27,
+   "fiber": 4
+  },
+  "ingredients": [
+   {
+    "name": "Laxfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Crème fraiche",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Dill",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Gräslök",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Svartpeppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Sätt ugnen på 175 grader och koka potatisen.",
+   "Lägg laxen i en form, salta, peppra och lägg citronskivor över.",
+   "Baka i 18-22 minuter tills laxen precis går isär med en gaffel.",
+   "Rör ihop crème fraiche, hackad dill, gräslök och lite citronsaft. Smaka av med salt.",
+   "Servera laxen med potatis och örtsåsen."
+  ],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "fisk",
+   "helgmiddag"
+  ],
+  "allergens": [
+   "fisk",
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt",
+   "pescetariskt"
+  ]
+ },
+ {
+  "id": "fishtacos",
+  "name": "Fisktacos med picklad rödlök",
+  "description": "Stekt vit fisk i tortilla med krämig sås, kål och snabbpicklad rödlök. Fräscht, syrligt och snabbt.",
+  "servings": 4,
+  "prepTime": 20,
+  "cookTime": 10,
+  "difficulty": "medel",
+  "nutrition": {
+   "kcal": 520,
+   "protein": 33,
+   "carbs": 54,
+   "fat": 19,
+   "fiber": 6
+  },
+  "ingredients": [
+   {
+    "name": "Torskfilé",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Tortillabröd",
+    "amount": 320,
+    "unit": "g"
+   },
+   {
+    "name": "Rödlök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Vitkål",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Majonnäs",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Grekisk yoghurt",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Lime",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Koriander",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Paprikapulver",
+    "amount": 5,
+    "unit": "g"
+   },
+   {
+    "name": "Ättika",
+    "pantryStaple": true
+   },
+   {
+    "name": "Socker",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Skiva rödlöken tunt och lägg i en blandning av 1 del ättika, 2 delar socker och 3 delar vatten.",
+   "Strimla vitkålen fint och salta lätt.",
+   "Rör ihop majonnäs, yoghurt och saften från en lime.",
+   "Krydda fisken med paprikapulver och salt. Stek 2-3 minuter per sida och dela i bitar.",
+   "Värm tortillabröden.",
+   "Bygg tacos med sås, kål, fisk, picklad lök och koriander. Servera med limeklyftor."
+  ],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "fisk",
+   "snabbt",
+   "helgmiddag"
+  ],
+  "allergens": [
+   "fisk",
+   "gluten",
+   "mjölk",
+   "ägg"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "pescetariskt"
+  ],
+  "image": "https://images.pexels.com/photos/10296421/pexels-photo-10296421.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/top-view-of-a-plate-with-tacos-and-red-cabbage-salad-10296421/",
+  "imageCredit": "Shameel mukkath",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Fisktacos med picklad rödlök upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "raksallad-avokado",
+  "name": "Räksallad med avokado och ägg",
+  "description": "Klassisk räksallad med avokado, kokta ägg och rhode island-sås. Lätt middag eller lyxig lunch.",
+  "servings": 4,
+  "prepTime": 20,
+  "cookTime": 10,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 430,
+   "protein": 28,
+   "carbs": 18,
+   "fat": 28,
+   "fiber": 6
+  },
+  "ingredients": [
+   {
+    "name": "Räkor",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Avokado",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Ägg",
+    "amount": 4,
+    "unit": "st"
+   },
+   {
+    "name": "Romansallad",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Körsbärstomater",
+    "amount": 250,
+    "unit": "g"
+   },
+   {
+    "name": "Gurka",
+    "amount": 0.5,
+    "unit": "st"
+   },
+   {
+    "name": "Majonnäs",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Chilisås",
+    "amount": 0.5,
+    "unit": "dl"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   }
+  ],
+  "instructions": [
+   "Koka äggen i 8 minuter, kyl och skala dem.",
+   "Rör ihop majonnäs och chilisås med en pressad citronklyfta till en rhode island-sås.",
+   "Skär sallad, gurka, tomater och avokado och fördela i skålar.",
+   "Toppa med räkor och äggklyftor.",
+   "Servera med såsen och en citronklyfta, gärna med bröd till."
+  ],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "fisk",
+   "snabbt",
+   "lunch"
+  ],
+  "allergens": [
+   "skaldjur",
+   "ägg"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt",
+   "pescetariskt"
+  ],
+  "image": "https://images.pexels.com/photos/28933153/pexels-photo-28933153.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/classic-caesar-salad-with-creamy-dressing-28933153/",
+  "imageCredit": "Gundula Vogel",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Räksallad med avokado och ägg upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "kyckling-shawarma-bowl",
+  "name": "Kycklingbowl med ris och vitlökssås",
+  "description": "Kryddstekt kycklinglår över ris med tomat, gurka och krämig vitlökssås. Gatuköksklassikern hemma.",
+  "servings": 4,
+  "prepTime": 15,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 580,
+   "protein": 40,
+   "carbs": 56,
+   "fat": 21,
+   "fiber": 4
+  },
+  "ingredients": [
+   {
+    "name": "Kycklinglårfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Ris",
+    "amount": 320,
+    "unit": "g"
+   },
+   {
+    "name": "Grekisk yoghurt",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Tomater",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Gurka",
+    "amount": 0.5,
+    "unit": "st"
+   },
+   {
+    "name": "Spiskummin",
+    "amount": 5,
+    "unit": "g"
+   },
+   {
+    "name": "Paprikapulver",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Skär kycklingen i bitar och vänd med olja, spiskummin, paprikapulver och salt.",
+   "Stek på hög värme tills kycklingen är genomstekt med rejäl stekyta.",
+   "Rör ihop yoghurt, pressad vitlök, lite citronsaft och salt till en sås.",
+   "Tärna tomat och gurka.",
+   "Bygg skålar med ris, kyckling, grönsaker och vitlökssås."
+  ],
+  "categories": [
+   "Kyckling"
+  ],
+  "tags": [
+   "kyckling",
+   "proteinrikt",
+   "mealprep"
+  ],
+  "allergens": [
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt"
+  ],
+  "image": "https://images.pexels.com/photos/8108069/pexels-photo-8108069.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+  "imageCredit": "MART  PRODUCTION",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kycklingbowl med ris och vitlökssås upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "krispig-kyckling-nudelwok",
+  "name": "Nudelwok med kyckling och grönsaker",
+  "description": "Äggnudlar, strimlad kyckling och wokgrönsaker i soja och ostronsås. Allt i en panna, klart på en kvart.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 15,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 560,
+   "protein": 37,
+   "carbs": 60,
+   "fat": 18,
+   "fiber": 5
+  },
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Äggnudlar",
+    "amount": 250,
+    "unit": "g"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Sojasås",
+    "amount": 0.5,
+    "unit": "dl"
+   },
+   {
+    "name": "Ostronsås",
+    "amount": 0.5,
+    "unit": "dl",
+    "optional": true
+   },
+   {
+    "name": "Vitlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Ingefära",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Sesamfrön",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka nudlarna enligt paketet, skölj i kallt vatten och låt rinna av.",
+   "Strimla kycklingen och woka den i het olja tills den är genomstekt.",
+   "Lägg i riven ingefära, pressad vitlök och wokgrönsakerna. Woka 3-4 minuter.",
+   "Vänd ner nudlarna med soja och ostronsås och låt allt bli genomvarmt.",
+   "Toppa med sesamfrön och servera direkt."
+  ],
+  "categories": [
+   "Kyckling"
+  ],
+  "tags": [
+   "kyckling",
+   "snabbt",
+   "barn"
+  ],
+  "allergens": [
+   "gluten",
+   "ägg",
+   "soja",
+   "sesam",
+   "blötdjur"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "laktosfritt"
+  ]
+ },
+ {
+  "id": "kycklingschnitzel",
+  "name": "Kycklingschnitzel med kall sås och ärtor",
+  "description": "Panerad platt kycklingfilé, stekt gyllene, med kokta ärtor, citron och en enkel kall sås.",
+  "servings": 4,
+  "prepTime": 20,
+  "cookTime": 15,
+  "difficulty": "medel",
+  "nutrition": {
+   "kcal": 570,
+   "protein": 42,
+   "carbs": 48,
+   "fat": 22,
+   "fiber": 6
+  },
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Vetemjöl",
+    "amount": 60,
+    "unit": "g"
+   },
+   {
+    "name": "Ägg",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Ströbröd",
+    "amount": 100,
+    "unit": "g"
+   },
+   {
+    "name": "Frysta ärtor",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 700,
+    "unit": "g"
+   },
+   {
+    "name": "Crème fraiche",
+    "amount": 1.5,
+    "unit": "dl"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Smör",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka potatisen i saltat vatten.",
+   "Dela filéerna på längden och banka dem platta mellan plastfolie.",
+   "Vänd dem i mjöl, uppvispat ägg och ströbröd.",
+   "Stek schnitzlarna i smör, 2-3 minuter per sida tills de är gyllene och genomstekta.",
+   "Koka ärtorna och rör ihop crème fraiche med citronsaft och salt.",
+   "Servera schnitzeln med potatis, ärtor, sås och en citronklyfta."
+  ],
+  "categories": [
+   "Kyckling"
+  ],
+  "tags": [
+   "kyckling",
+   "barn",
+   "Familjefavorit"
+  ],
+  "allergens": [
+   "gluten",
+   "mjölk",
+   "ägg"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/33865568/pexels-photo-33865568.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/delicious-homemade-schnitzel-with-fries-33865568/",
+  "imageCredit": "Zhang Thomas",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kycklingschnitzel med kall sås och ärtor upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "tonfiskpasta-citron",
+  "name": "Tonfiskpasta med citron och kapris",
+  "description": "Skafferiräddaren: pasta med tonfisk, citron, kapris och persilja. Middag ur skåpet på tolv minuter.",
+  "servings": 4,
+  "prepTime": 5,
+  "cookTime": 12,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 520,
+   "protein": 31,
+   "carbs": 66,
+   "fat": 14,
+   "fiber": 4
+  },
+  "ingredients": [
+   {
+    "name": "Pasta",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Tonfisk",
+    "amount": 250,
+    "unit": "g"
+   },
+   {
+    "name": "Kapris",
+    "amount": 30,
+    "unit": "g"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Persilja",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Olivolja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Svartpeppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka pastan al dente. Spara en kopp pastavatten.",
+   "Fräs pressad vitlök försiktigt i rikligt med olivolja.",
+   "Rör ner avrunnen tonfisk, kapris, rivet citronskal och saften.",
+   "Vänd ner pastan med en skvätt pastavatten så det blir en blank sås.",
+   "Smaka av med salt och peppar och toppa med hackad persilja."
+  ],
+  "categories": [
+   "Fisk",
+   "Pasta"
+  ],
+  "tags": [
+   "fisk",
+   "snabbt",
+   "billigt",
+   "lunch"
+  ],
+  "allergens": [
+   "gluten",
+   "fisk"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "laktosfritt",
+   "pescetariskt"
+  ],
+  "image": "https://images.pexels.com/photos/5864362/pexels-photo-5864362.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/spaghetti-on-blue-ceramic-plate-5864362/",
+  "imageCredit": "Rachel Claire",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Tonfiskpasta med citron och kapris upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "kycklinglada-sotpotatis",
+  "name": "Kycklinglåda med sötpotatis och fetaost",
+  "description": "Allt-i-en-form: kyckling, sötpotatis och rödlök rostas tillsammans och toppas med fetaost.",
+  "servings": 4,
+  "prepTime": 15,
+  "cookTime": 35,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 560,
+   "protein": 40,
+   "carbs": 44,
+   "fat": 24,
+   "fiber": 7
+  },
+  "ingredients": [
+   {
+    "name": "Kycklinglårfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Sötpotatis",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Rödlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Paprika",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Fetaost",
+    "amount": 150,
+    "unit": "g"
+   },
+   {
+    "name": "Paprikapulver",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Sätt ugnen på 200 grader.",
+   "Tärna sötpotatisen, klyfta rödlöken och skär paprikan i bitar. Lägg i en långpanna.",
+   "Lägg i kycklingen i bitar, pressa över vitlöken och vänd allt med olja, paprikapulver och salt.",
+   "Rosta i 30-35 minuter tills sötpotatisen är mjuk och kycklingen genomstekt.",
+   "Smula över fetaosten direkt ur ugnen och servera i formen."
+  ],
+  "categories": [
+   "Kyckling"
+  ],
+  "tags": [
+   "kyckling",
+   "mealprep",
+   "Familjefavorit"
+  ],
+  "allergens": [
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt"
+  ]
+ },
+ {
+  "id": "torsk-brynt-smor-agg",
+  "name": "Torsk med brynt smör och hackat ägg",
+  "description": "Skånsk klassiker: kokt torsk, brynt smör, hackat ägg och pepparrotston. Enkel och elegant.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 490,
+   "protein": 38,
+   "carbs": 38,
+   "fat": 21,
+   "fiber": 4
+  },
+  "ingredients": [
+   {
+    "name": "Torskfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Ägg",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Smör",
+    "amount": 100,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Persilja",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka potatisen i saltat vatten. Koka äggen hårda, 9 minuter, och hacka dem.",
+   "Sjud torsken i lättsaltat vatten i 6-8 minuter tills den precis går isär.",
+   "Bryn smöret i en kastrull tills det doftar nötigt och tystnat.",
+   "Lägg upp fisken med potatis, strö över hackat ägg och persilja.",
+   "Häll det brynta smöret över och servera med citron."
+  ],
+  "categories": [
+   "Fisk",
+   "Husmanskost"
+  ],
+  "tags": [
+   "fisk",
+   "husmanskost",
+   "snabbt"
+  ],
+  "allergens": [
+   "fisk",
+   "mjölk",
+   "ägg"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt",
+   "pescetariskt"
+  ],
+  "image": "https://images.pexels.com/photos/28191271/pexels-photo-28191271.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/a-white-plate-with-fish-and-vegetables-on-it-28191271/",
+  "imageCredit": "Bingqian Li",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Torsk med brynt smör och hackat ägg upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "kyckling-tikka",
+  "name": "Kyckling tikka masala",
+  "description": "Yoghurtmarinerad kyckling i krämig tomatsås med garam masala. Fredagens hämtmat, fast bättre och billigare.",
+  "servings": 4,
+  "prepTime": 20,
+  "cookTime": 25,
+  "difficulty": "medel",
+  "nutrition": {
+   "kcal": 620,
+   "protein": 41,
+   "carbs": 58,
+   "fat": 24,
+   "fiber": 4
+  },
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Grekisk yoghurt",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Grädde",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Ingefära",
+    "amount": 25,
+    "unit": "g"
+   },
+   {
+    "name": "Garam masala",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Basmatiris",
+    "amount": 320,
+    "unit": "g"
+   },
+   {
+    "name": "Koriander",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Blanda kycklingen i bitar med hälften av yoghurten, hälften av garam masalan och salt. Låt stå 15 minuter.",
+   "Koka riset enligt anvisningen.",
+   "Stek kycklingen på hög värme tills den fått färg. Lägg åt sidan.",
+   "Fräs hackad lök, vitlök och riven ingefära i samma panna.",
+   "Häll i krossade tomater och resten av kryddan, sjud fem minuter, och mixa gärna såsen slät.",
+   "Rör ner grädden och kycklingen och sjud tills kycklingen är genomstekt.",
+   "Toppa med koriander och servera med riset."
+  ],
+  "categories": [
+   "Kyckling",
+   "Grytor"
+  ],
+  "tags": [
+   "kyckling",
+   "helgmiddag",
+   "Familjefavorit"
+  ],
+  "allergens": [
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt"
+  ]
+ },
+ {
+  "id": "fiskpinnar-potatismos",
+  "name": "Fiskpinnar med potatismos och ärtor",
+  "description": "Krispiga fiskpinnar, hemgjort mos och gröna ärtor. Barnens trygga kort, utan att skämmas.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 480,
+   "protein": 24,
+   "carbs": 56,
+   "fat": 18,
+   "fiber": 6
+  },
+  "ingredients": [
+   {
+    "name": "Fiskpinnar",
+    "amount": 448,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Frysta ärtor",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Mjölk",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Smör",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka potatisen mjuk i saltat vatten.",
+   "Stek eller ugnsbaka fiskpinnarna enligt paketets anvisning tills de är gyllene.",
+   "Koka ärtorna.",
+   "Mosa potatisen med mjölk och smör, smaka av med salt.",
+   "Servera fiskpinnarna med mos, ärtor och en citronklyfta."
+  ],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "fisk",
+   "barn",
+   "billigt",
+   "snabbt",
+   "Familjefavorit"
+  ],
+  "allergens": [
+   "fisk",
+   "gluten",
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ]
+ },
+ {
+  "id": "kycklingwraps-lunch",
+  "name": "Kycklingwraps med majs och yoghurtdressing",
+  "description": "Matiga wraps med stekt kyckling, majs, sallad och sval dressing. Lika bra på bordet som i matlådan.",
+  "servings": 4,
+  "prepTime": 15,
+  "cookTime": 10,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 510,
+   "protein": 36,
+   "carbs": 50,
+   "fat": 17,
+   "fiber": 5
+  },
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Tortillabröd",
+    "amount": 320,
+    "unit": "g"
+   },
+   {
+    "name": "Majs",
+    "amount": 200,
+    "unit": "g"
+   },
+   {
+    "name": "Romansallad",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Tomater",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Grekisk yoghurt",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Paprikapulver",
+    "amount": 5,
+    "unit": "g"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Strimla kycklingen, krydda med paprikapulver och salt och stek den genomstekt.",
+   "Rör ihop yoghurt, pressad vitlök och en nypa salt.",
+   "Strimla sallad och tärna tomaterna.",
+   "Värm tortillabröden.",
+   "Fyll bröden med sallad, kyckling, majs och tomat. Toppa med dressingen och rulla ihop."
+  ],
+  "categories": [
+   "Kyckling"
+  ],
+  "tags": [
+   "kyckling",
+   "lunch",
+   "snabbt",
+   "barn",
+   "mealprep"
+  ],
+  "allergens": [
+   "gluten",
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ]
+ },
+ {
+  "id": "sillunch-potatis",
+  "name": "Sill med färskpotatis och gräddfil",
+  "description": "Inlagd sill, kokt potatis, gräddfil och gräslök. Svensk sommarlunch som fungerar hela året.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 430,
+   "protein": 20,
+   "carbs": 44,
+   "fat": 20,
+   "fiber": 4
+  },
+  "ingredients": [
+   {
+    "name": "Sill",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Gräddfil",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Gräslök",
+    "amount": 25,
+    "unit": "g"
+   },
+   {
+    "name": "Rödlök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Ägg",
+    "amount": 4,
+    "unit": "st"
+   },
+   {
+    "name": "Knäckebröd",
+    "amount": 200,
+    "unit": "g"
+   }
+  ],
+  "instructions": [
+   "Koka potatisen med skal i saltat vatten.",
+   "Koka äggen i 8 minuter, kyl och dela dem.",
+   "Skiva rödlöken tunt och hacka gräslöken.",
+   "Lägg upp sill, potatis, ägg och gräddfil.",
+   "Toppa med gräslök och rödlök och servera med knäckebröd."
+  ],
+  "categories": [
+   "Fisk",
+   "Husmanskost"
+  ],
+  "tags": [
+   "fisk",
+   "husmanskost",
+   "lunch",
+   "snabbt"
+  ],
+  "allergens": [
+   "fisk",
+   "mjölk",
+   "ägg",
+   "gluten"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "pescetariskt"
+  ]
+ },
+ {
+  "id": "kyckling-caesarsallad",
+  "name": "Caesarsallad med kyckling och krutonger",
+  "description": "Krispig romansallad, stekt kyckling, parmesan och hemrostade krutonger i krämig dressing.",
+  "servings": 4,
+  "prepTime": 20,
+  "cookTime": 15,
+  "difficulty": "medel",
+  "nutrition": {
+   "kcal": 520,
+   "protein": 40,
+   "carbs": 28,
+   "fat": 28,
+   "fiber": 3
+  },
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Romansallad",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Parmesan",
+    "amount": 60,
+    "unit": "g"
+   },
+   {
+    "name": "Surdegsbröd",
+    "amount": 150,
+    "unit": "g"
+   },
+   {
+    "name": "Majonnäs",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Sardellfilé",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Sätt ugnen på 200 grader. Tärna brödet, vänd i olja och salt och rosta gyllene, 8-10 minuter.",
+   "Stek kycklingen hel i pannan, 5-6 minuter per sida, och låt vila innan du skivar den.",
+   "Mosa sardeller och vitlök, rör ihop med majonnäs, citronsaft och hälften av parmesanen.",
+   "Skär salladen grovt och vänd den i dressingen.",
+   "Toppa med kyckling, krutonger och resten av parmesanen."
+  ],
+  "categories": [
+   "Kyckling"
+  ],
+  "tags": [
+   "kyckling",
+   "lunch",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "gluten",
+   "mjölk",
+   "ägg",
+   "fisk"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/28933152/pexels-photo-28933152.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/classic-caesar-salad-with-egg-and-parmesan-28933152/",
+  "imageCredit": "Gundula Vogel",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Caesarsallad med kyckling och krutonger upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "panerad-flundra-ugn",
+  "name": "Ugnsstekt fisk med parmesantäcke",
+  "description": "Vit fisk under ett frasigt täcke av panko och parmesan, med rostade tomater i samma form.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 20,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 470,
+   "protein": 37,
+   "carbs": 40,
+   "fat": 17,
+   "fiber": 4
+  },
+  "ingredients": [
+   {
+    "name": "Torskfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Panko",
+    "amount": 80,
+    "unit": "g"
+   },
+   {
+    "name": "Parmesan",
+    "amount": 50,
+    "unit": "g"
+   },
+   {
+    "name": "Körsbärstomater",
+    "amount": 250,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 700,
+    "unit": "g"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Persilja",
+    "amount": 15,
+    "unit": "g"
+   },
+   {
+    "name": "Smör",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Sätt ugnen på 200 grader och koka potatisen.",
+   "Lägg fisken i en smord form, salta.",
+   "Blanda panko, riven parmesan och smält smör och tryck fast täcket på fisken.",
+   "Lägg tomaterna runt om och baka i 15-18 minuter tills täcket är gyllene.",
+   "Toppa med persilja och servera med potatis och citron."
+  ],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "fisk",
+   "snabbt",
+   "barn"
+  ],
+  "allergens": [
+   "fisk",
+   "gluten",
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ]
+ },
+ {
+  "id": "kycklinggryta-honung-senap",
+  "name": "Kycklinggryta med honung och senap",
+  "description": "Kycklinglår i gräddig honungssenapssås med potatis kokt bredvid. Söndagsmiddag utan krångel.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 30,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 600,
+   "protein": 38,
+   "carbs": 48,
+   "fat": 28,
+   "fiber": 4
+  },
+  "ingredients": [
+   {
+    "name": "Kycklinglårfilé",
+    "amount": 700,
+    "unit": "g"
+   },
+   {
+    "name": "Grädde",
+    "amount": 3,
+    "unit": "dl"
+   },
+   {
+    "name": "Senap",
+    "amount": 50,
+    "unit": "g"
+   },
+   {
+    "name": "Honung",
+    "amount": 30,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Timjan",
+    "amount": 5,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka potatisen i saltat vatten.",
+   "Bryn kycklingen i olja i en gryta tills den fått fin färg.",
+   "Lägg i hackad lök och fräs någon minut.",
+   "Rör ihop grädde, senap och honung och häll över. Sjud under lock i 15 minuter.",
+   "Smaka av med timjan och salt.",
+   "Servera med potatisen och gärna en grönsallad."
+  ],
+  "categories": [
+   "Kyckling",
+   "Grytor"
+  ],
+  "tags": [
+   "kyckling",
+   "barn",
+   "helgmiddag",
+   "Familjefavorit"
+  ],
+  "allergens": [
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt"
+  ],
+  "image": "https://images.pexels.com/photos/29075345/pexels-photo-29075345.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/rustic-vegetable-stew-in-ceramic-bowl-29075345/",
+  "imageCredit": "Harry Tucker",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kycklinggryta med honung och senap upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "gravlax-hovmastarsas",
+  "name": "Gravad lax med hovmästarsås och dillstuvad potatis",
+  "description": "Skivad gravad lax, söt senapssås och krämig dillpotatis. Festmat som inte kräver någon spis-tid alls för laxen.",
+  "servings": 4,
+  "prepTime": 15,
+  "cookTime": 25,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 540,
+   "protein": 30,
+   "carbs": 46,
+   "fat": 26,
+   "fiber": 3
+  },
+  "ingredients": [
+   {
+    "name": "Gravad lax",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Grädde",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Dill",
+    "amount": 25,
+    "unit": "g"
+   },
+   {
+    "name": "Senap",
+    "amount": 50,
+    "unit": "g"
+   },
+   {
+    "name": "Honung",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Vetemjöl",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Ättika",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka potatisen nästan mjuk och skär den i grova bitar.",
+   "Vispa ihop senap, honung, en tesked ättika och olja i en tunn stråle till en blank hovmästarsås. Rör i hackad dill.",
+   "Gör en stuvning: värm grädden med mjölet under vispning tills den tjocknar, lägg i potatisen och rikligt med dill.",
+   "Lägg upp laxen med den dillstuvade potatisen.",
+   "Servera med såsen och en citronklyfta."
+  ],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "fisk",
+   "helgmiddag"
+  ],
+  "allergens": [
+   "fisk",
+   "mjölk",
+   "gluten"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "pescetariskt"
+  ]
+ },
+ {
+  "id": "kyckling-quesadillas",
+  "name": "Quesadillas med kyckling och majs",
+  "description": "Frasiga tortillor fyllda med kyckling, majs och smält ost. Doppas i syrad grädde och salsa.",
+  "servings": 4,
+  "prepTime": 15,
+  "cookTime": 15,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 590,
+   "protein": 38,
+   "carbs": 52,
+   "fat": 26,
+   "fiber": 4
+  },
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Tortillabröd",
+    "amount": 320,
+    "unit": "g"
+   },
+   {
+    "name": "Riven ost",
+    "amount": 200,
+    "unit": "g"
+   },
+   {
+    "name": "Majs",
+    "amount": 200,
+    "unit": "g"
+   },
+   {
+    "name": "Paprika",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Crème fraiche",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Salsa",
+    "amount": 200,
+    "unit": "g"
+   },
+   {
+    "name": "Paprikapulver",
+    "amount": 5,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Strimla och stek kycklingen med paprikapulver och salt.",
+   "Hacka paprikan och blanda med kyckling och majs.",
+   "Lägg fyllning och riven ost på ena halvan av varje tortilla och vik ihop.",
+   "Stek quesadillorna i torr eller lätt oljad panna, ett par minuter per sida, tills osten smält.",
+   "Skär i trekanter och servera med crème fraiche och salsa."
+  ],
+  "categories": [
+   "Kyckling"
+  ],
+  "tags": [
+   "kyckling",
+   "barn",
+   "snabbt",
+   "Familjefavorit"
+  ],
+  "allergens": [
+   "gluten",
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/5836439/pexels-photo-5836439.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/bread-and-sauces-on-plate-5836439/",
+  "imageCredit": "ROMAN ODINTSOV",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Quesadillas med kyckling och majs upplagd på tallrik",
+  "imageStatus": "ok"
+ },
+ {
+  "id": "rakpasta-vitlok",
+  "name": "Räkpasta med vitlök och citron",
+  "description": "Spaghetti med räkor, vitlök, chili och citron - vardagens tio-i-tolva som känns som restaurang.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 12,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 510,
+   "protein": 28,
+   "carbs": 64,
+   "fat": 15,
+   "fiber": 4
+  },
+  "ingredients": [
+   {
+    "name": "Spaghetti",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Räkor",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 4,
+    "unit": "st"
+   },
+   {
+    "name": "Chili",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Persilja",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Olivolja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Koka spaghettin al dente och spara en kopp pastavatten.",
+   "Fräs skivad vitlök och finhackad chili i rikligt med olivolja på svag värme.",
+   "Lägg i räkorna och värm dem en minut - inte mer, då blir de sega.",
+   "Vänd ner pastan med citronskal, citronsaft och en skvätt pastavatten.",
+   "Toppa med persilja och servera direkt."
+  ],
+  "categories": [
+   "Fisk",
+   "Pasta"
+  ],
+  "tags": [
+   "fisk",
+   "snabbt"
+  ],
+  "allergens": [
+   "gluten",
+   "skaldjur"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "laktosfritt",
+   "pescetariskt"
+  ],
+  "image": "https://images.pexels.com/photos/1150447/pexels-photo-1150447.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/pasta-prawn-1150447/",
+  "imageCredit": "Daniela Elena Tentis",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Räkpasta med vitlök och citron upplagd på tallrik",
+  "imageStatus": "ok"
+ }
+]

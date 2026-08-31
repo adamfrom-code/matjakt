@@ -3,10 +3,10 @@
   "id": "flaskfilerotmos",
   "slug": "baconlindad-flaskfile-med-rotsaker",
   "name": "Baconlindad fläskfilé med rotsaker",
-  "description": null,
+  "description": "Baconlindad fläskfilé i ugn med rostade morötter och potatis. Söndagskänsla med vardagens råvaror.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 35,
   "totalTime": 40,
   "nutrition": {
    "kcal": 316.0,
@@ -56,7 +56,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Sätt ugnen på 200 grader.",
+   "Skär potatis och morötter i bitar, vänd med olja, timjan och salt i en långpanna.",
+   "Salta filén, linda den i baconskivor och lägg den ovanpå grönsakerna.",
+   "Stek i 30-35 minuter tills filéns innertemperatur är 65 grader.",
+   "Låt köttet vila fem minuter under folie, skiva och servera med rotsakerna och skyn."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -80,10 +86,10 @@
   "id": "biffmedlok",
   "slug": "biff-med-lokrora-och-potatismos",
   "name": "Biff med lökröra och potatismos",
-  "description": null,
+  "description": "Stekt biff med sötstekt lök, krämigt potatismos och sky. Klassisk svensk lördagsmiddag.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 445.0,
@@ -133,7 +139,14 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka potatisen mjuk i saltat vatten.",
+   "Skiva löken och stek den långsamt gyllene i smör. Lägg åt sidan.",
+   "Stek biffarna i het panna, 2-3 minuter per sida. Salta och peppra och låt vila.",
+   "Häll grädden i pannan och koka upp till en snabb sky.",
+   "Mosa potatisen med smör och en skvätt mjölk.",
+   "Servera biffen med mos, lökröra och sky."
+  ],
   "categories": [
    "Snabbt & enkelt"
   ],
@@ -154,10 +167,10 @@
   "id": "biffmatvetesallad",
   "slug": "biffsallad-med-matvete-och-vitlok",
   "name": "Biffsallad med matvete och vitlök",
-  "description": null,
+  "description": "Ljummen sallad på matvete, strimlad biff och stekt paprika med vitlök. Mättande utan att vara tung.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 420.0,
@@ -207,7 +220,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka matvetet enligt anvisningen.",
+   "Stek biffen hel i het panna, 2-3 minuter per sida, och låt vila innan du strimlar den.",
+   "Stek paprikastrimlor med pressad vitlök ett par minuter i samma panna.",
+   "Blanda matvete och paprika med olivolja och salt.",
+   "Toppa med biffstrimlorna och servera ljummen."
+  ],
   "categories": [
    "Snabbt & enkelt"
   ],
@@ -233,10 +252,10 @@
   "id": "biffwok",
   "slug": "biffwok-med-wokgronsaker",
   "name": "Biffwok med wokgrönsaker",
-  "description": null,
+  "description": "Strimlad biff wokad med grönsaker och soja, serverad över ris. Snabbt, hett och mättande.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 20,
   "nutrition": {
    "kcal": 428.0,
@@ -286,7 +305,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Strimla biffen tunt och woka den i het olja i omgångar. Lägg åt sidan.",
+   "Woka grönsakerna ett par minuter - de ska ha kvar krispighet.",
+   "Vänd tillbaka köttet, häll i sojan och låt allt bli blankt och varmt.",
+   "Servera direkt över riset."
+  ],
   "categories": [
    "Snabbt & enkelt"
   ],
@@ -313,10 +338,10 @@
   "id": "butterchicken",
   "slug": "butter-chicken-med-jasminris",
   "name": "Butter chicken med jasminris",
-  "description": null,
+  "description": "Krämig indisk-inspirerad kycklinggryta med tomat, curry och grädde över jasminris.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 40,
   "nutrition": {
    "kcal": 253.0,
@@ -345,10 +370,14 @@
     "normalizedId": "gradde"
    },
    {
-    "name": "Curry & grönsaker",
-    "amount": 28.0,
-    "unit": "g",
-    "normalizedId": "curry-gronsaker"
+    "name": "Curry",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 300,
+    "unit": "g"
    },
    {
     "name": "Smör",
@@ -371,7 +400,14 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Tärna kycklingen, salta och stek den gyllene i smör.",
+   "Rör ner curryn och låt den fräsa en halv minut.",
+   "Häll i krossade tomater och sjud i 10 minuter.",
+   "Rör ner grädden och grönsakerna och sjud tills kycklingen är genomstekt.",
+   "Smaka av med salt och servera över riset."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -398,10 +434,10 @@
   "id": "bonbowlmatvete",
   "slug": "bonbowl-med-matvete-och-salsa",
   "name": "Bönbowl med matvete och salsa",
-  "description": null,
+  "description": "Vegansk bowl med kidneybönor, matvete, paprika och salsa. Klar på en kvart och nästan gratis.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 20,
   "nutrition": {
    "kcal": 377.0,
@@ -451,7 +487,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka matvetet enligt anvisningen.",
+   "Skölj bönorna och värm dem i en kastrull med salsan.",
+   "Strimla paprikan.",
+   "Bygg skålar med matvete, bönröra och paprika.",
+   "Toppa med mer salsa och gärna färsk koriander."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -480,10 +522,10 @@
   "id": "citronkyckling",
   "slug": "citronkyckling-med-rostad-potatis",
   "name": "Citronkyckling med rostad potatis",
-  "description": null,
+  "description": "Kycklinglår rostade med citron och timjan över gyllene potatis - allt i en form.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 35,
   "totalTime": 40,
   "nutrition": {
    "kcal": 342.0,
@@ -533,7 +575,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Sätt ugnen på 200 grader.",
+   "Skär potatisen i klyftor och lägg i en långpanna med olja och salt.",
+   "Lägg kycklinglåren ovanpå, pressa över citronen och strö över timjan.",
+   "Rosta i 35-40 minuter tills kycklingen är genomstekt och potatisen mjuk.",
+   "Servera direkt ur formen med skyn."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -557,10 +605,10 @@
   "id": "citronflaskfile",
   "slug": "citronmarinerad-flaskfile-med-matvete",
   "name": "Citronmarinerad fläskfilé med matvete",
-  "description": null,
+  "description": "Citronmarinerad fläskfilé med matvete och sting av timjan. Fräsch vardagsmiddag.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 392.0,
@@ -610,7 +658,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Skiva filén och vänd den i citronsaft, rivet skal, timjan och olja. Låt stå 15 minuter.",
+   "Koka matvetet enligt anvisningen.",
+   "Stek fläskskivorna 3-4 minuter per sida tills de är genomstekta.",
+   "Blanda matvetet med stekskyn.",
+   "Servera köttet över matvetet med en extra citronklyfta."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -636,10 +690,10 @@
   "id": "currykottfarsgryta",
   "slug": "currykryddad-kottfarsgryta",
   "name": "Currykryddad köttfärsgryta",
-  "description": null,
+  "description": "Snabb köttfärsgryta med curry och grönsaker över ris. Vardagsräddaren när tiden är knapp.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 501.0,
@@ -668,10 +722,14 @@
     "normalizedId": "paprika"
    },
    {
-    "name": "Curry & grönsaker",
-    "amount": 28.0,
-    "unit": "g",
-    "normalizedId": "curry-gronsaker"
+    "name": "Curry",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 300,
+    "unit": "g"
    },
    {
     "name": "Olja",
@@ -689,7 +747,14 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Bryn färsen i olja tills den fått färg.",
+   "Rör ner curryn och låt fräsa en halv minut.",
+   "Lägg i paprika i bitar och grönsakerna och stek ett par minuter.",
+   "Häll i en skvätt vatten, sjud fem minuter och smaka av med salt.",
+   "Servera över riset."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -713,10 +778,10 @@
   "id": "fetagryta",
   "slug": "fetagryta-med-kikartor",
   "name": "Fetagryta med kikärtor",
-  "description": null,
+  "description": "Grekisk-inspirerad gryta med fetaost, kikärtor och tomat. Vegetarisk, mustig och enkel.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 281.0,
@@ -771,7 +836,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Fräs hackad lök i olivolja i en gryta.",
+   "Häll i krossade tomater och sjud i 10 minuter.",
+   "Rör ner sköljda kikärtor och värm igenom.",
+   "Smula i fetaosten och låt den mjukna utan att helt smälta.",
+   "Toppa med basilika och servera med bröd eller ris."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -798,10 +869,10 @@
   "id": "fiskgratang",
   "slug": "fiskgratang-med-rakor-och-dill",
   "name": "Fiskgratäng med räkor och dill",
-  "description": null,
+  "description": "Torsk och räkor under krämigt dilltäcke, gratinerad gyllene. Serveras med potatis.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 25,
   "totalTime": 45,
   "nutrition": {
    "kcal": 220.0,
@@ -856,7 +927,14 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Sätt ugnen på 200 grader.",
+   "Lägg den tinade torsken i en smord form. Salta.",
+   "Rör ihop grädde och hackad dill och häll över fisken.",
+   "Gratinera i 20-25 minuter tills fisken är genomkokt.",
+   "Strö över räkorna de sista minuterna så de bara blir varma.",
+   "Servera med kokt potatis och citron."
+  ],
   "categories": [
    "Fisk"
   ],
@@ -887,10 +965,10 @@
   "id": "flaskcurrygryta",
   "slug": "flaskcurrygryta-med-kokos",
   "name": "Fläskcurrygryta med kokos",
-  "description": null,
+  "description": "Strimlad fläskfilé i krämig kokoscurry med grönsaker och ris.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 35,
   "nutrition": {
    "kcal": 543.0,
@@ -913,10 +991,14 @@
     "normalizedId": "ris"
    },
    {
-    "name": "Curry & grönsaker",
-    "amount": 28.0,
-    "unit": "g",
-    "normalizedId": "curry-gronsaker"
+    "name": "Curry",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 300,
+    "unit": "g"
    },
    {
     "name": "Kokosmjölk",
@@ -935,7 +1017,14 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Strimla fläskfilén och bryn den i olja.",
+   "Rör ner curryn och låt fräsa en halv minut.",
+   "Häll i kokosmjölken och sjud i fem minuter.",
+   "Lägg i grönsakerna och sjud tills köttet är genomstekt.",
+   "Smaka av med salt och servera över riset."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -960,10 +1049,10 @@
   "id": "flasktomatpasta",
   "slug": "flaskfile-i-tomatsas-med-pasta",
   "name": "Fläskfilé i tomatsås med pasta",
-  "description": null,
+  "description": "Fläskfilé i basilikadoftande tomatsås med pasta. Enkelt, mättande och omtyckt.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 381.0,
@@ -1018,7 +1107,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka pastan al dente.",
+   "Skiva fläskfilén och stek den gyllene i olja.",
+   "Häll i krossade tomater och sjud i 10 minuter.",
+   "Smaka av med salt, peppar och riven basilika.",
+   "Vänd ner pastan i såsen och servera."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -1040,10 +1135,10 @@
   "id": "flaskkarre",
   "slug": "flaskkarre-med-appelmos-och-rodkal",
   "name": "Fläskkarré med äppelmos och rödkål",
-  "description": null,
+  "description": "Stekt karré med äppelmos, rödkål och kokt potatis. Julens smaker en helt vanlig tisdag.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 20,
   "totalTime": 45,
   "nutrition": {
    "kcal": 419.0,
@@ -1098,7 +1193,12 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka potatisen mjuk i saltat vatten.",
+   "Skiva karrén och stek skivorna 3-4 minuter per sida. Salta och peppra.",
+   "Värm rödkålen i en kastrull.",
+   "Servera köttet med potatis, rödkål och en rejäl klick äppelmos."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -1123,10 +1223,10 @@
   "id": "halloumibowl",
   "slug": "halloumibowl-med-rostade-gronsaker",
   "name": "Halloumibowl med rostade grönsaker",
-  "description": null,
+  "description": "Stekt halloumi över matvete med rostad paprika och sval yoghurt.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 445.0,
@@ -1171,7 +1271,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka matvetet enligt anvisningen.",
+   "Sätt ugnen på 225 grader och rosta paprikastrimlor med olja i 15 minuter.",
+   "Skiva och stek halloumin gyllene.",
+   "Rör ut yoghurten med salt och lite citron om du har.",
+   "Bygg skålar med matvete, paprika och halloumi. Toppa med yoghurten."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -1198,10 +1304,10 @@
   "id": "halloumicurry",
   "slug": "halloumicurry-med-ris",
   "name": "Halloumicurry med ris",
-  "description": null,
+  "description": "Stekt halloumi i krämig curry med grönsaker och ris. Vegetarisk favorit med sting.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 414.0,
@@ -1230,10 +1336,14 @@
     "normalizedId": "paprika"
    },
    {
-    "name": "Curry & grönsaker",
-    "amount": 28.0,
-    "unit": "g",
-    "normalizedId": "curry-gronsaker"
+    "name": "Curry",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 300,
+    "unit": "g"
    },
    {
     "name": "Olja",
@@ -1246,7 +1356,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Tärna och stek halloumin gyllene. Lägg åt sidan.",
+   "Fräs curryn i olja, lägg i paprika och grönsaker och stek ett par minuter.",
+   "Häll i en skvätt vatten eller grädde och sjud fem minuter.",
+   "Vänd ner halloumin och servera över riset."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -1273,10 +1389,10 @@
   "id": "halloumipasta",
   "slug": "halloumipasta-med-tomat-och-basilika",
   "name": "Halloumipasta med tomat och basilika",
-  "description": null,
+  "description": "Pasta i tomatsås med stekt halloumi och basilika. Vegetarisk vardag när den är som bäst.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 411.0,
@@ -1331,7 +1447,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka pastan al dente.",
+   "Tärna och stek halloumin gyllene.",
+   "Häll krossade tomater i pannan och sjud i 10 minuter. Smaka av med salt.",
+   "Vänd ner pastan och halloumin i såsen.",
+   "Toppa med basilika och servera."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -1358,10 +1480,10 @@
   "id": "biffgraddtimjan",
   "slug": "helstekt-biff-med-graddsas-och-timjanpotatis",
   "name": "Helstekt biff med gräddsås och timjanpotatis",
-  "description": null,
+  "description": "Helstekt biff med krämig timjansås och rostad potatis. Helgmiddag utan krångel.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 35,
   "totalTime": 35,
   "nutrition": {
    "kcal": 394.0,
@@ -1411,7 +1533,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Sätt ugnen på 225 grader. Klyfta potatisen, vänd med olja, timjan och salt och rosta i 30-35 minuter.",
+   "Ta ut köttet i god tid så det är rumsvarmt.",
+   "Stek biffen i het panna med smör, 2-3 minuter per sida. Låt vila fem minuter.",
+   "Häll grädden i pannan, skrapa upp stekytan och sjud ihop till en sås med timjan.",
+   "Skiva köttet och servera med potatis och sås."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -1437,10 +1565,10 @@
   "id": "kalvschnitzel",
   "slug": "kalvschnitzel-med-citron-och-kapris",
   "name": "Kalvschnitzel med citron och kapris",
-  "description": null,
+  "description": "Snabbstekt kalvschnitzel med citron, kapris och kokt potatis. Wienerklassikern på vardagssvenska.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 302.0,
@@ -1495,7 +1623,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka potatisen mjuk i saltat vatten.",
+   "Banka schnitzlarna tunna och salta dem.",
+   "Stek dem snabbt i smör, 2 minuter per sida, tills de är gyllene.",
+   "Lägg kapris i pannan och pressa i citron. Häll det brynta smöret över schnitzlarna.",
+   "Servera med potatis och en extra citronklyfta."
+  ],
   "categories": [
    "Snabbt & enkelt"
   ],
@@ -1523,10 +1657,10 @@
   "id": "kalvschnitzelmatvete",
   "slug": "kalvschnitzel-med-matvetesallad",
   "name": "Kalvschnitzel med matvetesallad",
-  "description": null,
+  "description": "Kalvschnitzel med ljummen matvetesallad, paprika och citron.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 399.0,
@@ -1581,7 +1715,12 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka matvetet enligt anvisningen.",
+   "Strimla paprikan och blanda med matvetet, olivolja, citronsaft och salt.",
+   "Banka schnitzlarna tunna, salta och stek dem 2 minuter per sida i smör.",
+   "Servera schnitzeln över salladen med en citronklyfta."
+  ],
   "categories": [
    "Snabbt & enkelt"
   ],
@@ -1609,10 +1748,10 @@
   "id": "kikartscurry",
   "slug": "kikartscurry-med-ris",
   "name": "Kikärtscurry med ris",
-  "description": null,
+  "description": "Vegansk kikärtscurry i kokosmjölk med grönsaker och ris. Skafferimiddag på 20 minuter.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 531.0,
@@ -1641,10 +1780,14 @@
     "normalizedId": "ris"
    },
    {
-    "name": "Curry & grönsaker",
-    "amount": 28.0,
-    "unit": "g",
-    "normalizedId": "curry-gronsaker"
+    "name": "Curry",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 300,
+    "unit": "g"
    },
    {
     "name": "Olja",
@@ -1657,7 +1800,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Fräs curryn i olja en halv minut.",
+   "Häll i kokosmjölken och koka upp.",
+   "Rör ner sköljda kikärtor och grönsakerna och sjud i 10 minuter.",
+   "Smaka av med salt och servera över riset."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -1683,10 +1832,10 @@
   "id": "kikartssallad",
   "slug": "kikartssallad-med-matvete",
   "name": "Kikärtssallad med matvete",
-  "description": null,
+  "description": "Matig sallad på kikärtor, matvete och paprika med citrondressing. Perfekt matlåda.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 20,
   "nutrition": {
    "kcal": 387.0,
@@ -1741,7 +1890,12 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka matvetet och låt det svalna något.",
+   "Skölj kikärtorna och strimla paprikan.",
+   "Blanda allt med olivolja, citronsaft och salt.",
+   "Låt gärna stå tio minuter så smakerna sätter sig innan servering."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -1769,10 +1923,10 @@
   "id": "korvgratang",
   "slug": "korvgratang-med-pasta",
   "name": "Korvgratäng med pasta",
-  "description": null,
+  "description": "Falukorv och pasta i tomatsås under ett gyllene osttäcke. Barnens självklara favorit.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 20,
   "totalTime": 35,
   "nutrition": {
    "kcal": 589.0,
@@ -1822,7 +1976,12 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Sätt ugnen på 225 grader. Koka pastan två minuter kortare än paketet säger.",
+   "Tärna korven och stek den med färg.",
+   "Blanda pasta, korv och krossade tomater i en ugnsform. Salta.",
+   "Toppa med riven ost och gratinera i 15 minuter tills osten fått färg."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -1851,10 +2010,10 @@
   "id": "korvstroganoff",
   "slug": "korvstroganoff",
   "name": "Korvstroganoff",
-  "description": null,
+  "description": "Klassisk korvstroganoff: strimlad falukorv i krämig tomatsås över ris.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 571.0,
@@ -1899,7 +2058,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Strimla korven och stek den gyllene i smör.",
+   "Rör ner tomatpurén och låt fräsa en minut.",
+   "Häll i grädden och sjud i fem minuter tills såsen tjocknat.",
+   "Smaka av med salt och peppar och servera med riset."
+  ],
   "categories": [
    "Snabbt & enkelt"
   ],
@@ -1921,10 +2086,10 @@
   "id": "tofuwok",
   "slug": "krispig-tofuwok-med-sesam-och-soja",
   "name": "Krispig tofuwok med sesam och soja",
-  "description": null,
+  "description": "Krispig tofu i het wok med grönsaker, soja och sesam över ris.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 345.0,
@@ -1974,7 +2139,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Pressa tofun torr, tärna den och stek den krispig i het olja. Lägg åt sidan.",
+   "Woka grönsakerna ett par minuter.",
+   "Vänd tillbaka tofun, häll i sojan och låt allt glaseras.",
+   "Servera över riset, gärna med sesamfrön."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -2000,10 +2171,10 @@
   "id": "kycklingmatvete",
   "slug": "kryddig-kycklingbowl-med-matvete",
   "name": "Kryddig kycklingbowl med matvete",
-  "description": null,
+  "description": "Kryddstekt kycklinglår över matvete med paprika och sval yoghurt.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 432.0,
@@ -2053,7 +2224,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka matvetet enligt anvisningen.",
+   "Skär kycklingen i bitar, krydda med paprikapulver och salt och stek genomstekt.",
+   "Strimla paprikan och stek den hastigt.",
+   "Rör ut yoghurten med salt.",
+   "Bygg skålar med matvete, kyckling och paprika, toppa med yoghurt."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -2081,10 +2258,10 @@
   "id": "fiskpasta",
   "slug": "kramig-fiskpasta",
   "name": "Krämig fiskpasta",
-  "description": null,
+  "description": "Krämig pasta med torsk, crème fraiche och citron. Fiskmiddag som även fiskskeptiker äter.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 486.0,
@@ -2129,7 +2306,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka pastan al dente.",
+   "Skär den tinade torsken i bitar och salta.",
+   "Värm crème fraichen i en djup panna med rivet citronskal.",
+   "Lägg i fisken och sjud i 3-4 minuter tills den precis går isär.",
+   "Vänd försiktigt ner pastan och smaka av med citronsaft och salt."
+  ],
   "categories": [
    "Fisk"
   ],
@@ -2157,17 +2340,17 @@
   "id": "tomatsoppa",
   "slug": "kramig-tomatsoppa",
   "name": "Krämig tomatsoppa",
-  "description": null,
+  "description": "Krämig tomatsoppa med basilika - godare än paketets och nästan lika snabb.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
-   "kcal": 126.0,
-   "protein": 3.0,
-   "carbs": 10.0,
-   "fat": 8.0,
-   "fiber": null
+   "kcal": 330,
+   "protein": 8,
+   "carbs": 34,
+   "fat": 18,
+   "fiber": 5
   },
   "ingredients": [
    {
@@ -2205,7 +2388,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Fräs hackad lök mjuk i olivolja.",
+   "Häll i krossade tomater och 2 dl vatten och sjud i 10 minuter.",
+   "Mixa soppan slät och rör ner grädden.",
+   "Smaka av med salt, peppar och en nypa socker.",
+   "Toppa med basilika och servera med bröd."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -2233,10 +2422,10 @@
   "id": "kycklinggryta",
   "slug": "kycklinggryta-med-ris",
   "name": "Kycklinggryta med ris",
-  "description": null,
+  "description": "Krämig kycklinggryta med kokos, curry och grönsaker över ris.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 580.0,
@@ -2265,10 +2454,14 @@
     "normalizedId": "kokosmjolk"
    },
    {
-    "name": "Curry & grönsaker",
-    "amount": 28.0,
-    "unit": "g",
-    "normalizedId": "curry-gronsaker"
+    "name": "Curry",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 300,
+    "unit": "g"
    },
    {
     "name": "Olja",
@@ -2281,7 +2474,14 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Skär kycklingen i bitar och bryn den i olja.",
+   "Rör ner curryn och låt fräsa en halv minut.",
+   "Häll i kokosmjölken och sjud i 10 minuter.",
+   "Lägg i grönsakerna och sjud tills kycklingen är genomstekt.",
+   "Smaka av med salt och servera över riset."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -2308,10 +2508,10 @@
   "id": "kottfarssas",
   "slug": "kottfarssas-med-pasta",
   "name": "Köttfärssås med pasta",
-  "description": null,
+  "description": "Klassisk köttfärssås med basilika över pasta - vardagens mest pålitliga middag.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 498.0,
@@ -2371,7 +2571,12 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Bryn färsen ordentligt i olja.",
+   "Häll i krossade tomater och sjud i 15 minuter.",
+   "Smaka av med salt, peppar och basilika.",
+   "Koka pastan och servera med såsen."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -2399,10 +2604,10 @@
   "id": "laxsallad",
   "slug": "laxsallad-med-matvete-och-dill",
   "name": "Laxsallad med matvete och dill",
-  "description": null,
+  "description": "Ljummen sallad på ugnsbakad lax, matvete och dill med citrondressing.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 523.0,
@@ -2452,7 +2657,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Sätt ugnen på 175 grader. Baka laxen i 18-20 minuter.",
+   "Koka matvetet och låt svalna något.",
+   "Blanda matvetet med olivolja, citronsaft, hackad dill och salt.",
+   "Bryt laxen i bitar och vänd ner den försiktigt.",
+   "Servera ljummen med en extra citronklyfta."
+  ],
   "categories": [
    "Fisk"
   ],
@@ -2479,10 +2690,10 @@
   "id": "morotscurry",
   "slug": "morotscurry-med-kikartor",
   "name": "Morotscurry med kikärtor",
-  "description": null,
+  "description": "Vegansk morotscurry med kikärtor och grönsaker över ris. Billig, färgglad och god.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 399.0,
@@ -2505,10 +2716,14 @@
     "normalizedId": "kikartor"
    },
    {
-    "name": "Curry & grönsaker",
-    "amount": 28.0,
-    "unit": "g",
-    "normalizedId": "curry-gronsaker"
+    "name": "Curry",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 300,
+    "unit": "g"
    },
    {
     "name": "Ris",
@@ -2527,7 +2742,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Skiva morötterna och fräs dem med curryn i olja ett par minuter.",
+   "Häll i en skvätt vatten och sjud i 10 minuter tills morötterna mjuknat.",
+   "Rör ner sköljda kikärtor och grönsakerna och värm igenom.",
+   "Smaka av med salt och servera över riset."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -2552,10 +2773,10 @@
   "id": "pastagratang",
   "slug": "pastagratang-med-purjolok",
   "name": "Pastagratäng med purjolök",
-  "description": null,
+  "description": "Krämig pastagratäng med purjolök och gyllene osttäcke.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 25,
   "totalTime": 35,
   "nutrition": {
    "kcal": 404.0,
@@ -2600,7 +2821,12 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Sätt ugnen på 225 grader. Koka pastan två minuter kortare än paketet säger.",
+   "Skiva purjolöken och fräs den mjuk i smör.",
+   "Blanda pasta, purjolök och grädde i en ugnsform. Salta.",
+   "Toppa med riven ost och gratinera i 15-20 minuter tills ytan fått färg."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -2629,10 +2855,10 @@
   "id": "rotfruktsgratang",
   "slug": "rotfruktsgratang-med-rokt-falukorv",
   "name": "Rotfruktsgratäng med rökt falukorv",
-  "description": null,
+  "description": "Gratäng på potatis och morot med stekt falukorv och ost.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 45,
   "totalTime": 50,
   "nutrition": {
    "kcal": 538.0,
@@ -2687,7 +2913,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Sätt ugnen på 200 grader.",
+   "Skiva potatis och morötter tunt och varva i en smord form. Salta mellan lagren.",
+   "Häll över grädde eller mjölk så det nästan täcker.",
+   "Grädda i 40 minuter. Toppa med ost och grädda 10 minuter till.",
+   "Stek skivad falukorv och servera till gratängen."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -2714,10 +2946,10 @@
   "id": "rakcurry",
   "slug": "rakcurry-med-kokos-och-ris",
   "name": "Räkcurry med kokos och ris",
-  "description": null,
+  "description": "Räkor i krämig kokoscurry med grönsaker över ris. Vardagslyx på 20 minuter.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 20,
   "nutrition": {
    "kcal": 467.0,
@@ -2740,10 +2972,14 @@
     "normalizedId": "ris"
    },
    {
-    "name": "Curry & grönsaker",
-    "amount": 28.0,
-    "unit": "g",
-    "normalizedId": "curry-gronsaker"
+    "name": "Curry",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 300,
+    "unit": "g"
    },
    {
     "name": "Kokosmjölk",
@@ -2762,7 +2998,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Fräs curryn i olja en halv minut.",
+   "Häll i kokosmjölken och sjud i fem minuter med grönsakerna.",
+   "Lägg i räkorna och låt dem bara bli varma - inte mer, då blir de sega.",
+   "Smaka av med salt och lime om du har. Servera över riset."
+  ],
   "categories": [
    "Fisk"
   ],
@@ -2787,10 +3029,10 @@
   "id": "raksallad",
   "slug": "raksallad-med-matvete",
   "name": "Räksallad med matvete",
-  "description": null,
+  "description": "Fräsch sallad på räkor, matvete och dill med citron.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 20,
   "nutrition": {
    "kcal": 318.0,
@@ -2840,7 +3082,12 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka matvetet och låt svalna.",
+   "Blanda matvetet med olivolja, citronsaft, hackad dill och salt.",
+   "Vänd ner räkorna.",
+   "Servera kylt, gärna med en klick majonnäs."
+  ],
   "categories": [
    "Fisk"
   ],
@@ -2867,10 +3114,10 @@
   "id": "linssoppa",
   "slug": "rod-linssoppa",
   "name": "Röd linssoppa",
-  "description": null,
+  "description": "Värmande röd linssoppa med kokosmjölk och morot. Vegansk, billig och mättande.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 405.0,
@@ -2915,7 +3162,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Fräs hackad lök och vitlök i olja.",
+   "Lägg i sköljda linser, tärnad morot och 8 dl vatten. Sjud i 15 minuter.",
+   "Rör ner kokosmjölken och sjud fem minuter till.",
+   "Mixa slät om du vill och smaka av med salt.",
+   "Servera med bröd eller en klick yoghurt."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -2941,10 +3194,10 @@
   "id": "scampi",
   "slug": "scampi-pasta-med-vitlok-och-citron",
   "name": "Scampi pasta med vitlök och citron",
-  "description": null,
+  "description": "Pasta med räkor, vitlök och citron - enkel lyx på tolv minuter.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 307.0,
@@ -2994,11 +3247,20 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka pastan al dente och spara en kopp pastavatten.",
+   "Fräs skivad vitlök försiktigt i rikligt med olivolja.",
+   "Lägg i räkorna och värm dem en minut.",
+   "Vänd ner pastan med citronskal, citronsaft och en skvätt pastavatten.",
+   "Smaka av med salt och servera direkt."
+  ],
   "categories": [
    "Fisk"
   ],
-  "tags": [],
+  "tags": [
+   "fisk",
+   "snabbt"
+  ],
   "allergens": [
    "gluten",
    "skaldjur"
@@ -3018,10 +3280,10 @@
   "id": "sparrispastacitron",
   "slug": "sparrispasta-med-citron-och-vitlok",
   "name": "Sparrispasta med citron och vitlök",
-  "description": null,
+  "description": "Pasta med smörfräst sparris, citron och vitlök. Försommar på tallriken.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 20,
   "nutrition": {
    "kcal": 266.0,
@@ -3081,7 +3343,12 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka pastan al dente och spara en kopp pastavatten.",
+   "Skär sparrisen i bitar och fräs den med vitlök i smör 3-4 minuter.",
+   "Vänd ner pastan med citronskal, citronsaft och pastavatten till en blank sås.",
+   "Smaka av med salt och rikligt med svartpeppar."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -3108,10 +3375,10 @@
   "id": "svartbonsbowl",
   "slug": "svartbonsbowl-med-matvete",
   "name": "Svartbönsbowl med matvete",
-  "description": null,
+  "description": "Vegansk bowl med svarta bönor, matvete, majs och salsa.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 20,
   "nutrition": {
    "kcal": 395.0,
@@ -3161,7 +3428,12 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka matvetet enligt anvisningen.",
+   "Värm de sköljda bönorna med salsan i en kastrull.",
+   "Bygg skålar med matvete, bönor och majs.",
+   "Toppa med mer salsa och gärna lime och koriander."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -3189,10 +3461,10 @@
   "id": "tacobonor",
   "slug": "tacobowl-med-svarta-bonor",
   "name": "Tacobowl med svarta bönor",
-  "description": null,
+  "description": "Tacokväll med kryddiga svarta bönor, ris, majs och salsa - fredag utan kött.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 20,
   "nutrition": {
    "kcal": 371.0,
@@ -3232,7 +3504,12 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Fräs de sköljda bönorna med tacokryddor och en skvätt vatten. Mosa lätt.",
+   "Värm majsen.",
+   "Bygg skålar med ris, bönröra, majs och salsa."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -3258,10 +3535,10 @@
   "id": "tandoorikyckling",
   "slug": "tandoorikyckling-med-ris",
   "name": "Tandoorikyckling med ris",
-  "description": null,
+  "description": "Yoghurtmarinerad kyckling med curry och grönsaker över ris.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 35,
   "nutrition": {
    "kcal": 399.0,
@@ -3284,10 +3561,14 @@
     "normalizedId": "ris"
    },
    {
-    "name": "Curry & grönsaker",
-    "amount": 28.0,
-    "unit": "g",
-    "normalizedId": "curry-gronsaker"
+    "name": "Curry",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 300,
+    "unit": "g"
    },
    {
     "name": "Yoghurt",
@@ -3311,7 +3592,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Blanda kycklingbitarna med yoghurt, curry och salt. Låt stå 15 minuter.",
+   "Koka riset enligt anvisningen.",
+   "Stek kycklingen på medelhög värme tills den är genomstekt.",
+   "Stek grönsakerna hastigt i samma panna.",
+   "Servera med riset och en klick kall yoghurt."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -3337,10 +3624,10 @@
   "id": "teriyakilax",
   "slug": "teriyakilax-med-wokgronsaker-och-ris",
   "name": "Teriyakilax med wokgrönsaker och ris",
-  "description": null,
+  "description": "Sojaglaserad lax med wokgrönsaker och ris.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 537.0,
@@ -3390,7 +3677,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Stek laxbitarna 2-3 minuter per sida.",
+   "Häll i sojan med en tesked honung om du har, och låt laxen glaseras.",
+   "Woka grönsakerna hastigt.",
+   "Servera laxen över ris och grönsaker med skyn från pannan."
+  ],
   "categories": [
    "Fisk"
   ],
@@ -3412,10 +3705,10 @@
   "id": "teriyakitofu",
   "slug": "teriyakitofu-med-matvetesallad",
   "name": "Teriyakitofu med matvetesallad",
-  "description": null,
+  "description": "Sojaglaserad tofu med ljummen matvetesallad och paprika.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 327.0,
@@ -3465,7 +3758,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka matvetet enligt anvisningen.",
+   "Pressa tofun torr, tärna och stek den krispig i het olja.",
+   "Häll i sojan och låt tofun glaseras blank.",
+   "Strimla paprikan och blanda med matvetet och lite olja.",
+   "Servera tofun över salladen."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -3488,10 +3787,10 @@
   "id": "tofucurry",
   "slug": "tofucurry-med-kokos-och-ris",
   "name": "Tofucurry med kokos och ris",
-  "description": null,
+  "description": "Vegansk tofucurry i kokosmjölk med grönsaker och ris.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 479.0,
@@ -3514,10 +3813,14 @@
     "normalizedId": "ris"
    },
    {
-    "name": "Curry & grönsaker",
-    "amount": 28.0,
-    "unit": "g",
-    "normalizedId": "curry-gronsaker"
+    "name": "Curry",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 300,
+    "unit": "g"
    },
    {
     "name": "Kokosmjölk",
@@ -3536,7 +3839,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Pressa tofun torr, tärna och stek den gyllene. Lägg åt sidan.",
+   "Fräs curryn i olja, häll i kokosmjölken och sjud fem minuter.",
+   "Lägg i grönsakerna och sjud ytterligare några minuter.",
+   "Vänd ner tofun, smaka av med salt och servera över riset."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -3563,10 +3872,10 @@
   "id": "torskitomatsas",
   "slug": "torsk-i-tomatsas",
   "name": "Torsk i tomatsås",
-  "description": null,
+  "description": "Torsk sjuden i vitlöksdoftande tomatsås med kokt potatis.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 251.0,
@@ -3621,7 +3930,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka potatisen mjuk i saltat vatten.",
+   "Fräs pressad vitlök i olivolja, häll i krossade tomater och sjud i 10 minuter.",
+   "Salta såsen och lägg i torskbitarna.",
+   "Sjud i 5-6 minuter tills fisken precis går isär.",
+   "Servera med potatisen och gärna persilja över."
+  ],
   "categories": [
    "Fisk"
   ],
@@ -3641,10 +3956,10 @@
   "id": "fetapasta",
   "slug": "ugnsbakad-fetaost-pasta",
   "name": "Ugnsbakad fetaost-pasta",
-  "description": null,
+  "description": "Virala ugnsfetapastan: hel fetaost bakad med tomater, mosad till krämig sås.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 20,
   "totalTime": 35,
   "nutrition": {
    "kcal": 439.0,
@@ -3694,7 +4009,14 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Sätt ugnen på 200 grader.",
+   "Lägg fetaosten mitt i en ugnsform med krossade tomater och pressad vitlök runt om. Ringla över olivolja.",
+   "Baka i 25 minuter tills osten mjuknat och fått färg.",
+   "Koka pastan under tiden.",
+   "Mosa ihop ost och tomat till en krämig sås och vänd ner pastan.",
+   "Smaka av med svartpeppar och basilika om du har."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -3721,10 +4043,10 @@
   "id": "lax",
   "slug": "ugnsbakad-lax-med-potatis",
   "name": "Ugnsbakad lax med potatis",
-  "description": null,
+  "description": "Ugnsbakad lax med kokt potatis, citron och dill. Enklaste vägen till en riktig fiskmiddag.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 20,
   "totalTime": 35,
   "nutrition": {
    "kcal": 488.0,
@@ -3769,7 +4091,12 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Sätt ugnen på 175 grader och koka potatisen.",
+   "Lägg laxen i en form, salta och lägg citronskivor över.",
+   "Baka i 18-22 minuter tills laxen precis går isär.",
+   "Servera med potatis, hackad dill och en citronklyfta."
+  ],
   "categories": [
    "Fisk"
   ],
@@ -3790,10 +4117,10 @@
   "id": "ugnstorsk",
   "slug": "ugnsbakad-torsk-med-sparris-och-citronsmor",
   "name": "Ugnsbakad torsk med sparris och citronsmör",
-  "description": null,
+  "description": "Ugnsbakad torsk med sparris, citronsmör och potatis.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 20,
   "totalTime": 35,
   "nutrition": {
    "kcal": 264.0,
@@ -3843,7 +4170,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Sätt ugnen på 200 grader och koka potatisen.",
+   "Lägg den tinade torsken i en smord form, salta.",
+   "Baka i 15-18 minuter tills fisken är genomkokt.",
+   "Fräs sparrisen i smör och pressa i citron.",
+   "Servera fisken med potatis, sparris och citronsmöret från pannan."
+  ],
   "categories": [
    "Fisk"
   ],
@@ -3869,10 +4202,10 @@
   "id": "kycklingcouscous",
   "slug": "ugnskyckling-med-couscous-och-paprika",
   "name": "Ugnskyckling med couscous och paprika",
-  "description": null,
+  "description": "Ugnsbakad kyckling med matvete, rostad paprika och citron.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 25,
   "totalTime": 35,
   "nutrition": {
    "kcal": 404.0,
@@ -3922,7 +4255,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Sätt ugnen på 200 grader.",
+   "Lägg kycklingen och paprikastrimlor i en form med olja och salt. Rosta i 25 minuter.",
+   "Koka matvetet enligt anvisningen.",
+   "Blanda matvetet med stekskyn och citronsaft.",
+   "Skiva kycklingen och servera över matvetet."
+  ],
   "categories": [
    "Familjefavorit"
   ],
@@ -3949,10 +4288,10 @@
   "id": "vegetarisklasagne",
   "slug": "vegetarisk-lasagne",
   "name": "Vegetarisk lasagne",
-  "description": null,
+  "description": "Vegetarisk lasagne med zucchini, tomatsås och ost.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 45,
   "totalTime": 45,
   "nutrition": {
    "kcal": 442.0,
@@ -3997,7 +4336,14 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Sätt ugnen på 200 grader.",
+   "Sjud krossade tomater med salt och örter i 10 minuter.",
+   "Hyvla zucchinin tunt.",
+   "Varva tomatsås, lasagneplattor och zucchini i en form. Avsluta med sås.",
+   "Toppa med riven ost och grädda i 35-40 minuter tills plattorna är mjuka.",
+   "Låt vila tio minuter före servering."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -4025,10 +4371,10 @@
   "id": "vegobolognese",
   "slug": "vegobolognese-med-spaghetti",
   "name": "Vegobolognese med spaghetti",
-  "description": null,
+  "description": "Vegobolognese på växtfärs med tomat och lök över spaghetti.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 30,
   "nutrition": {
    "kcal": 423.0,
@@ -4073,7 +4419,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Fräs hackad lök mjuk i olja.",
+   "Lägg i vegofärsen och stek några minuter.",
+   "Häll i krossade tomater och sjud i 15 minuter.",
+   "Smaka av med salt, peppar och gärna basilika.",
+   "Koka pastan och servera med såsen."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -4101,10 +4453,10 @@
   "id": "vegofarsgryta",
   "slug": "vegofarsgryta-med-ris",
   "name": "Vegofärsgryta med ris",
-  "description": null,
+  "description": "Snabb gryta på vegofärs, tomat och paprika över ris.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 418.0,
@@ -4154,7 +4506,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka riset enligt anvisningen.",
+   "Fräs vegofärsen i olja.",
+   "Lägg i strimlad paprika och stek ett par minuter.",
+   "Häll i krossade tomater och sjud i 10 minuter.",
+   "Smaka av med salt och servera över riset."
+  ],
   "categories": [
    "Vegetarisk"
   ],
@@ -4181,10 +4539,10 @@
   "id": "zucchinipastafeta",
   "slug": "zucchinipasta-med-feta",
   "name": "Zucchinipasta med feta",
-  "description": null,
+  "description": "Pasta med stekt zucchini, tomatsås och smulad feta.",
   "servings": 4,
-  "prepTime": null,
-  "cookTime": null,
+  "prepTime": 10,
+  "cookTime": 15,
   "totalTime": 25,
   "nutrition": {
    "kcal": 399.0,
@@ -4239,7 +4597,13 @@
     "pantryStaple": true
    }
   ],
-  "instructions": [],
+  "instructions": [
+   "Koka pastan al dente.",
+   "Skiva zucchinin och stek den gyllene i olivolja.",
+   "Häll i krossade tomater och sjud i 10 minuter. Salta.",
+   "Vänd ner pastan i såsen.",
+   "Smula över fetaosten och servera."
+  ],
   "categories": [
    "Vegetarisk"
   ],

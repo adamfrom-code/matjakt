@@ -120,6 +120,9 @@ SNACK_AISLE_INGREDIENTS = {
     "jordnotter", "cashewnotter", "mandel", "hasselnotter", "valnotter",
     "pistagenotter", "notter", "solrosfron", "pumpafron", "sesamfron",
     "russin", "jordnotssmor",
+    # Tortilla chips for a taco bake are bought exactly where the crisps
+    # live; that is not a matching error, it is where the shelf is.
+    "tortillachips",
 }
 
 # Which departments an ingredient may legitimately come from. An ingredient
@@ -134,6 +137,9 @@ INGREDIENT_DEPARTMENTS = {
     # --- produce that shares its name with drinks and sweets. "Apelsin"
     # matched orange-flavoured sparkling water; fruit comes from the fruit
     # aisle, full stop.
+    # Bread, not the Spanish potato omelette in the ready-meal aisle that
+    # shares the word.
+    "tortillabröd": {"bread", "pantry"},
     "apelsin": {"produce"},
     "citron": {"produce"},
     "lime": {"produce"},
@@ -375,6 +381,11 @@ INGREDIENT_ALIASES = {
     "grön currypasta": ["currypasta", "green curry paste"],
     "currypasta": ["red curry paste"],
     "gula ärtor": ["gula ärter", "ärter"],
+    # Shelf singular/word-order forms found by probing the live catalogue.
+    "rödlök": ["lök röd"],
+    "kycklingklubbor": ["kycklingklubba", "kyckling klubba"],
+    "sardellfilé": ["sardeller"],
+    "tortillabröd": ["tortilla", "tortillas", "wraps"],
     "grönsaksbuljong": ["grönsaksbuljongtärning", "buljong grönsak"],
     "kycklingbuljong": ["kycklingbuljongtärning", "buljong kyckling"],
     "sidfläsk": ["rimmat sidfläsk"],
@@ -583,6 +594,17 @@ def packages_needed(required_amount: float, required_unit: str | None,
     return max(1, math.ceil(converted / package_amount - 1e-9))
 
 
+# A suffix exclusion can collide with a compound whose OWN head contains the
+# excluded word as its tail. "läsk" (soft drink) folds to "lask", and
+# "sidfläsk"/"julfläsk"/every -fläsk compound folds to "...flask" - which
+# ENDS with "lask", so pork bellies were universally excluded as soft
+# drinks. The suffix rule itself is right (apelsinläsk IS läsk); these name
+# the longer heads that override it. Keyed by the folded exclusion term.
+EXCLUSION_SUFFIX_OVERRIDES = {
+    "lask": ("flask",),
+}
+
+
 def _exclusion_hit(text: str, words: set[str], bad: str) -> bool:
     """Whether an exclusion term actually applies to this product name.
 
@@ -607,8 +629,13 @@ def _exclusion_hit(text: str, words: set[str], bad: str) -> bool:
         return False
     if " " in folded_bad or "-" in folded_bad:
         return folded_bad in text
-    return any(word == folded_bad or word.startswith(folded_bad) or word.endswith(folded_bad)
-               for word in words)
+    overrides = EXCLUSION_SUFFIX_OVERRIDES.get(folded_bad, ())
+    return any(
+        word == folded_bad
+        or word.startswith(folded_bad)
+        or (word.endswith(folded_bad)
+            and not any(word.endswith(longer) for longer in overrides))
+        for word in words)
 
 
 def product_matches_ingredient(product_name: str, ingredient: str, brand: str | None = None,

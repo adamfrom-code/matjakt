@@ -1,41 +1,5 @@
 [
  {
-  "id": "kottbullar-potatismos",
-  "name": "Köttbullar med potatismos och lingon",
-  "description": "Hemrullade köttbullar med gräddsås, krämigt mos och lingonsylt. Söndagsmat som fungerar en tisdag.",
-  "servings": 4,
-  "prepTime": 20,
-  "cookTime": 25,
-  "difficulty": "medel",
-  "nutrition": { "kcal": 640, "protein": 34, "carbs": 52, "fat": 32, "fiber": 5 },
-  "ingredients": [
-   { "name": "Blandfärs", "amount": 500, "unit": "g" },
-   { "name": "Gul lök", "amount": 1, "unit": "st" },
-   { "name": "Ströbröd", "amount": 50, "unit": "g" },
-   { "name": "Mjölk", "amount": 1, "unit": "dl" },
-   { "name": "Ägg", "amount": 1, "unit": "st" },
-   { "name": "Potatis", "amount": 800, "unit": "g" },
-   { "name": "Grädde", "amount": 2, "unit": "dl" },
-   { "name": "Lingonsylt", "amount": 100, "unit": "g" },
-   { "name": "Smör", "pantryStaple": true },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Svartpeppar", "pantryStaple": true }
-  ],
-  "instructions": [
-   "Blanda ströbröd och mjölk i en bunke och låt svälla i 5 minuter.",
-   "Riv löken fint och blanda ner den med färs, ägg, salt och peppar. Arbeta ihop till en jämn smet.",
-   "Skala potatisen, dela i bitar och koka mjuk i saltat vatten, cirka 20 minuter.",
-   "Rulla smeten till bullar med fuktade händer och stek dem runtom i smör på medelvärme, 8-10 minuter.",
-   "Ta upp köttbullarna. Häll grädden i pannan, skrapa upp stekytan och låt såsen sjuda ihop några minuter.",
-   "Häll av potatisen, mosa med en skvätt mjölk och en klick smör. Smaka av med salt.",
-   "Servera köttbullarna med mos, sås och lingonsylt."
-  ],
-  "categories": [ "Husmanskost" ],
-  "tags": [ "barn", "husmanskost", "helgmiddag", "Familjefavorit" ],
-  "allergens": [ "gluten", "mjölk", "ägg" ],
-  "dietFlags": [ "blandkost" ]
- },
- {
   "id": "pannbiff-lok",
   "name": "Pannbiff med stekt lök och kokt potatis",
   "description": "Saftiga pannbiffar av nötfärs med gyllene lök, sky och kokt potatis. Rak och ärlig vardagsmat.",
@@ -43,17 +7,56 @@
   "prepTime": 15,
   "cookTime": 25,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 560, "protein": 33, "carbs": 45, "fat": 27, "fiber": 5 },
+  "nutrition": {
+   "kcal": 560,
+   "protein": 33,
+   "carbs": 45,
+   "fat": 27,
+   "fiber": 5
+  },
   "ingredients": [
-   { "name": "Nötfärs", "amount": 500, "unit": "g" },
-   { "name": "Gul lök", "amount": 3, "unit": "st" },
-   { "name": "Ströbröd", "amount": 40, "unit": "g" },
-   { "name": "Mjölk", "amount": 1, "unit": "dl" },
-   { "name": "Potatis", "amount": 800, "unit": "g" },
-   { "name": "Grädde", "amount": 1, "unit": "dl" },
-   { "name": "Smör", "pantryStaple": true },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Svartpeppar", "pantryStaple": true }
+   {
+    "name": "Nötfärs",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Ströbröd",
+    "amount": 40,
+    "unit": "g"
+   },
+   {
+    "name": "Mjölk",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Grädde",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Smör",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Svartpeppar",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Koka potatisen mjuk i saltat vatten.",
@@ -63,10 +66,28 @@
    "Häll grädden i pannan runt biffarna och låt puttra en minut till en enkel sky.",
    "Servera biffarna med potatis, stekt lök och skyn över."
   ],
-  "categories": [ "Husmanskost" ],
-  "tags": [ "husmanskost", "barn", "billigt" ],
-  "allergens": [ "gluten", "mjölk" ],
-  "dietFlags": [ "blandkost" ]
+  "categories": [
+   "Husmanskost"
+  ],
+  "tags": [
+   "husmanskost",
+   "barn",
+   "billigt"
+  ],
+  "allergens": [
+   "gluten",
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/16444386/pexels-photo-16444386.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/meal-with-beef-on-plate-16444386/",
+  "imageCredit": "Dextar Studio ™",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Pannbiff med stekt lök och kokt potatis upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "flygande-jakob",
@@ -76,16 +97,53 @@
   "prepTime": 15,
   "cookTime": 25,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 690, "protein": 38, "carbs": 55, "fat": 35, "fiber": 4 },
+  "nutrition": {
+   "kcal": 690,
+   "protein": 38,
+   "carbs": 55,
+   "fat": 35,
+   "fiber": 4
+  },
   "ingredients": [
-   { "name": "Kycklingfilé", "amount": 600, "unit": "g" },
-   { "name": "Bacon", "amount": 140, "unit": "g" },
-   { "name": "Banan", "amount": 2, "unit": "st" },
-   { "name": "Grädde", "amount": 3, "unit": "dl" },
-   { "name": "Chilisås", "amount": 1, "unit": "dl" },
-   { "name": "Jordnötter", "amount": 50, "unit": "g" },
-   { "name": "Ris", "amount": 320, "unit": "g" },
-   { "name": "Salt", "pantryStaple": true }
+   {
+    "name": "Kycklingfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Bacon",
+    "amount": 140,
+    "unit": "g"
+   },
+   {
+    "name": "Banan",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Grädde",
+    "amount": 3,
+    "unit": "dl"
+   },
+   {
+    "name": "Chilisås",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Jordnötter",
+    "amount": 50,
+    "unit": "g"
+   },
+   {
+    "name": "Ris",
+    "amount": 320,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Sätt ugnen på 225 grader. Koka riset enligt anvisningen.",
@@ -96,10 +154,22 @@
    "Klipp och stek baconet knaprigt under tiden.",
    "Toppa gratängen med bacon och jordnötter och servera med riset."
   ],
-  "categories": [ "Husmanskost" ],
-  "tags": [ "barn", "husmanskost", "helgmiddag", "Familjefavorit" ],
-  "allergens": [ "mjölk", "jordnötter" ],
-  "dietFlags": [ "blandkost" ]
+  "categories": [
+   "Husmanskost"
+  ],
+  "tags": [
+   "barn",
+   "husmanskost",
+   "helgmiddag",
+   "Familjefavorit"
+  ],
+  "allergens": [
+   "mjölk",
+   "jordnötter"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ]
  },
  {
   "id": "dillkott",
@@ -109,18 +179,61 @@
   "prepTime": 15,
   "cookTime": 90,
   "difficulty": "medel",
-  "nutrition": { "kcal": 520, "protein": 38, "carbs": 42, "fat": 21, "fiber": 4 },
+  "nutrition": {
+   "kcal": 520,
+   "protein": 38,
+   "carbs": 42,
+   "fat": 21,
+   "fiber": 4
+  },
   "ingredients": [
-   { "name": "Högrev", "amount": 700, "unit": "g" },
-   { "name": "Gul lök", "amount": 1, "unit": "st" },
-   { "name": "Morötter", "amount": 2, "unit": "st" },
-   { "name": "Dill", "amount": 25, "unit": "g" },
-   { "name": "Grädde", "amount": 1, "unit": "dl" },
-   { "name": "Potatis", "amount": 800, "unit": "g" },
-   { "name": "Vetemjöl", "amount": 30, "unit": "g" },
-   { "name": "Ättika", "pantryStaple": true },
-   { "name": "Socker", "pantryStaple": true },
-   { "name": "Salt", "pantryStaple": true }
+   {
+    "name": "Högrev",
+    "amount": 700,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Morötter",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Dill",
+    "amount": 25,
+    "unit": "g"
+   },
+   {
+    "name": "Grädde",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Vetemjöl",
+    "amount": 30,
+    "unit": "g"
+   },
+   {
+    "name": "Ättika",
+    "pantryStaple": true
+   },
+   {
+    "name": "Socker",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Skär köttet i kuber och lägg i en gryta. Täck med vatten, salta och koka upp. Skumma av.",
@@ -131,10 +244,21 @@
    "Rör ner grädden och köttet, värm igenom och smaka av sting och sälta.",
    "Servera med den kokta potatisen och extra dill över."
   ],
-  "categories": [ "Husmanskost", "Grytor" ],
-  "tags": [ "husmanskost", "mealprep" ],
-  "allergens": [ "gluten", "mjölk" ],
-  "dietFlags": [ "blandkost" ]
+  "categories": [
+   "Husmanskost",
+   "Grytor"
+  ],
+  "tags": [
+   "husmanskost",
+   "mealprep"
+  ],
+  "allergens": [
+   "gluten",
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ]
  },
  {
   "id": "kalops",
@@ -144,18 +268,60 @@
   "prepTime": 20,
   "cookTime": 120,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 510, "protein": 40, "carbs": 44, "fat": 18, "fiber": 6 },
+  "nutrition": {
+   "kcal": 510,
+   "protein": 40,
+   "carbs": 44,
+   "fat": 18,
+   "fiber": 6
+  },
   "ingredients": [
-   { "name": "Högrev", "amount": 1000, "unit": "g" },
-   { "name": "Gul lök", "amount": 3, "unit": "st" },
-   { "name": "Morötter", "amount": 3, "unit": "st" },
-   { "name": "Vetemjöl", "amount": 30, "unit": "g" },
-   { "name": "Potatis", "amount": 1000, "unit": "g" },
-   { "name": "Rödbetor", "amount": 350, "unit": "g" },
-   { "name": "Kryddpeppar", "pantryStaple": true },
-   { "name": "Lagerblad", "pantryStaple": true },
-   { "name": "Smör", "pantryStaple": true },
-   { "name": "Salt", "pantryStaple": true }
+   {
+    "name": "Högrev",
+    "amount": 1000,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Morötter",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Vetemjöl",
+    "amount": 30,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 1000,
+    "unit": "g"
+   },
+   {
+    "name": "Rödbetor",
+    "amount": 350,
+    "unit": "g"
+   },
+   {
+    "name": "Kryddpeppar",
+    "pantryStaple": true
+   },
+   {
+    "name": "Lagerblad",
+    "pantryStaple": true
+   },
+   {
+    "name": "Smör",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Skär köttet i grova kuber och bryn dem runtom i smör i en stor gryta.",
@@ -166,10 +332,22 @@
    "Koka potatisen mot slutet av tiden.",
    "Smaka av grytan och servera med potatis och inlagda rödbetor."
   ],
-  "categories": [ "Husmanskost", "Grytor" ],
-  "tags": [ "husmanskost", "mealprep", "billigt" ],
-  "allergens": [ "gluten", "mjölk" ],
-  "dietFlags": [ "blandkost" ]
+  "categories": [
+   "Husmanskost",
+   "Grytor"
+  ],
+  "tags": [
+   "husmanskost",
+   "mealprep",
+   "billigt"
+  ],
+  "allergens": [
+   "gluten",
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ]
  },
  {
   "id": "korv-stroganoff-klassisk",
@@ -179,17 +357,56 @@
   "prepTime": 10,
   "cookTime": 15,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 610, "protein": 21, "carbs": 58, "fat": 33, "fiber": 3 },
+  "nutrition": {
+   "kcal": 610,
+   "protein": 21,
+   "carbs": 58,
+   "fat": 33,
+   "fiber": 3
+  },
   "ingredients": [
-   { "name": "Falukorv", "amount": 500, "unit": "g" },
-   { "name": "Gul lök", "amount": 1, "unit": "st" },
-   { "name": "Tomatpuré", "amount": 70, "unit": "g" },
-   { "name": "Grädde", "amount": 2.5, "unit": "dl" },
-   { "name": "Ris", "amount": 320, "unit": "g" },
-   { "name": "Senap", "amount": 15, "unit": "g" },
-   { "name": "Smör", "pantryStaple": true },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Svartpeppar", "pantryStaple": true }
+   {
+    "name": "Falukorv",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Tomatpuré",
+    "amount": 70,
+    "unit": "g"
+   },
+   {
+    "name": "Grädde",
+    "amount": 2.5,
+    "unit": "dl"
+   },
+   {
+    "name": "Ris",
+    "amount": 320,
+    "unit": "g"
+   },
+   {
+    "name": "Senap",
+    "amount": 15,
+    "unit": "g"
+   },
+   {
+    "name": "Smör",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Svartpeppar",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Koka riset enligt anvisningen på paketet.",
@@ -199,10 +416,22 @@
    "Häll på grädden, sänk värmen och sjud 5 minuter tills såsen tjocknat.",
    "Smaka av med salt och peppar och servera med riset."
   ],
-  "categories": [ "Husmanskost" ],
-  "tags": [ "barn", "billigt", "snabbt", "husmanskost", "Familjefavorit" ],
-  "allergens": [ "mjölk" ],
-  "dietFlags": [ "blandkost" ]
+  "categories": [
+   "Husmanskost"
+  ],
+  "tags": [
+   "barn",
+   "billigt",
+   "snabbt",
+   "husmanskost",
+   "Familjefavorit"
+  ],
+  "allergens": [
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ]
  },
  {
   "id": "ugnspannkaka",
@@ -212,15 +441,47 @@
   "prepTime": 10,
   "cookTime": 30,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 580, "protein": 24, "carbs": 48, "fat": 32, "fiber": 2 },
+  "nutrition": {
+   "kcal": 580,
+   "protein": 24,
+   "carbs": 48,
+   "fat": 32,
+   "fiber": 2
+  },
   "ingredients": [
-   { "name": "Vetemjöl", "amount": 210, "unit": "g" },
-   { "name": "Mjölk", "amount": 6, "unit": "dl" },
-   { "name": "Ägg", "amount": 4, "unit": "st" },
-   { "name": "Rimmat sidfläsk", "amount": 300, "unit": "g" },
-   { "name": "Lingonsylt", "amount": 150, "unit": "g" },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Smör", "pantryStaple": true }
+   {
+    "name": "Vetemjöl",
+    "amount": 210,
+    "unit": "g"
+   },
+   {
+    "name": "Mjölk",
+    "amount": 6,
+    "unit": "dl"
+   },
+   {
+    "name": "Ägg",
+    "amount": 4,
+    "unit": "st"
+   },
+   {
+    "name": "Rimmat sidfläsk",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Lingonsylt",
+    "amount": 150,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Smör",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Sätt ugnen på 225 grader och lägg en klick smör i en långpanna.",
@@ -229,10 +490,22 @@
    "Skiva fläsket och stek det knaprigt i en torr panna.",
    "Skär pannkakan i bitar och servera med fläsket och lingonsylt."
   ],
-  "categories": [ "Husmanskost" ],
-  "tags": [ "barn", "billigt", "husmanskost" ],
-  "allergens": [ "gluten", "mjölk", "ägg" ],
-  "dietFlags": [ "blandkost" ]
+  "categories": [
+   "Husmanskost"
+  ],
+  "tags": [
+   "barn",
+   "billigt",
+   "husmanskost"
+  ],
+  "allergens": [
+   "gluten",
+   "mjölk",
+   "ägg"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ]
  },
  {
   "id": "raggmunk",
@@ -242,16 +515,52 @@
   "prepTime": 20,
   "cookTime": 30,
   "difficulty": "medel",
-  "nutrition": { "kcal": 560, "protein": 20, "carbs": 52, "fat": 30, "fiber": 4 },
+  "nutrition": {
+   "kcal": 560,
+   "protein": 20,
+   "carbs": 52,
+   "fat": 30,
+   "fiber": 4
+  },
   "ingredients": [
-   { "name": "Potatis", "amount": 900, "unit": "g" },
-   { "name": "Vetemjöl", "amount": 120, "unit": "g" },
-   { "name": "Mjölk", "amount": 4, "unit": "dl" },
-   { "name": "Ägg", "amount": 1, "unit": "st" },
-   { "name": "Rimmat sidfläsk", "amount": 300, "unit": "g" },
-   { "name": "Lingonsylt", "amount": 150, "unit": "g" },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Smör", "pantryStaple": true }
+   {
+    "name": "Potatis",
+    "amount": 900,
+    "unit": "g"
+   },
+   {
+    "name": "Vetemjöl",
+    "amount": 120,
+    "unit": "g"
+   },
+   {
+    "name": "Mjölk",
+    "amount": 4,
+    "unit": "dl"
+   },
+   {
+    "name": "Ägg",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Rimmat sidfläsk",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Lingonsylt",
+    "amount": 150,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Smör",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Vispa ihop mjöl, salt, ägg och mjölk till en slät pannkakssmet.",
@@ -261,10 +570,28 @@
    "Håll raggmunkarna varma i låg ugn medan du steker resten.",
    "Servera direkt med fläsket och lingonsylt."
   ],
-  "categories": [ "Husmanskost" ],
-  "tags": [ "billigt", "husmanskost" ],
-  "allergens": [ "gluten", "mjölk", "ägg" ],
-  "dietFlags": [ "blandkost" ]
+  "categories": [
+   "Husmanskost"
+  ],
+  "tags": [
+   "billigt",
+   "husmanskost"
+  ],
+  "allergens": [
+   "gluten",
+   "mjölk",
+   "ägg"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/10895779/pexels-photo-10895779.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/fresh-salmon-on-white-ceramic-plate-10895779/",
+  "imageCredit": "Nadin Sh",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Raggmunk med fläsk och lingon upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "fiskgratang-dill",
@@ -274,17 +601,57 @@
   "prepTime": 15,
   "cookTime": 30,
   "difficulty": "medel",
-  "nutrition": { "kcal": 480, "protein": 38, "carbs": 38, "fat": 19, "fiber": 3 },
+  "nutrition": {
+   "kcal": 480,
+   "protein": 38,
+   "carbs": 38,
+   "fat": 19,
+   "fiber": 3
+  },
   "ingredients": [
-   { "name": "Torskfilé", "amount": 600, "unit": "g" },
-   { "name": "Räkor", "amount": 200, "unit": "g" },
-   { "name": "Grädde", "amount": 2, "unit": "dl" },
-   { "name": "Crème fraiche", "amount": 2, "unit": "dl" },
-   { "name": "Dill", "amount": 25, "unit": "g" },
-   { "name": "Citron", "amount": 1, "unit": "st" },
-   { "name": "Potatis", "amount": 800, "unit": "g" },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Svartpeppar", "pantryStaple": true }
+   {
+    "name": "Torskfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Räkor",
+    "amount": 200,
+    "unit": "g"
+   },
+   {
+    "name": "Grädde",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Crème fraiche",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Dill",
+    "amount": 25,
+    "unit": "g"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Svartpeppar",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Sätt ugnen på 200 grader och koka potatisen.",
@@ -294,10 +661,30 @@
    "Strö över räkorna de sista fem minuterna så de bara blir varma.",
    "Servera med potatis och en citronklyfta."
   ],
-  "categories": [ "Fisk", "Husmanskost" ],
-  "tags": [ "fisk", "husmanskost", "helgmiddag" ],
-  "allergens": [ "mjölk", "skaldjur" ],
-  "dietFlags": [ "blandkost", "pescetariskt" ]
+  "categories": [
+   "Fisk",
+   "Husmanskost"
+  ],
+  "tags": [
+   "fisk",
+   "husmanskost",
+   "helgmiddag"
+  ],
+  "allergens": [
+   "mjölk",
+   "skaldjur"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "pescetariskt"
+  ],
+  "image": "https://images.pexels.com/photos/2337842/pexels-photo-2337842.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/baked-lasagna-2337842/",
+  "imageCredit": "Vidal Balielo Jr.",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Fiskgratäng med dill och räkor upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "stekt-sej-remoulad",
@@ -307,18 +694,63 @@
   "prepTime": 15,
   "cookTime": 20,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 520, "protein": 36, "carbs": 44, "fat": 22, "fiber": 4 },
+  "nutrition": {
+   "kcal": 520,
+   "protein": 36,
+   "carbs": 44,
+   "fat": 22,
+   "fiber": 4
+  },
   "ingredients": [
-   { "name": "Sejfilé", "amount": 600, "unit": "g" },
-   { "name": "Vetemjöl", "amount": 60, "unit": "g" },
-   { "name": "Ägg", "amount": 1, "unit": "st" },
-   { "name": "Ströbröd", "amount": 80, "unit": "g" },
-   { "name": "Majonnäs", "amount": 1, "unit": "dl" },
-   { "name": "Crème fraiche", "amount": 1, "unit": "dl" },
-   { "name": "Saltgurka", "amount": 100, "unit": "g" },
-   { "name": "Potatis", "amount": 800, "unit": "g" },
-   { "name": "Citron", "amount": 1, "unit": "st" },
-   { "name": "Salt", "pantryStaple": true }
+   {
+    "name": "Sejfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Vetemjöl",
+    "amount": 60,
+    "unit": "g"
+   },
+   {
+    "name": "Ägg",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Ströbröd",
+    "amount": 80,
+    "unit": "g"
+   },
+   {
+    "name": "Majonnäs",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Crème fraiche",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Saltgurka",
+    "amount": 100,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Koka potatisen i saltat vatten.",
@@ -327,10 +759,24 @@
    "Stek filéerna gyllene i smör, 3-4 minuter per sida beroende på tjocklek.",
    "Servera fisken direkt med potatis, kall sås och en klyfta citron."
   ],
-  "categories": [ "Fisk", "Husmanskost" ],
-  "tags": [ "fisk", "husmanskost", "barn" ],
-  "allergens": [ "gluten", "mjölk", "ägg" ],
-  "dietFlags": [ "blandkost", "pescetariskt" ]
+  "categories": [
+   "Fisk",
+   "Husmanskost"
+  ],
+  "tags": [
+   "fisk",
+   "husmanskost",
+   "barn"
+  ],
+  "allergens": [
+   "gluten",
+   "mjölk",
+   "ägg"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "pescetariskt"
+  ]
  },
  {
   "id": "kycklinggryta-paprika",
@@ -340,18 +786,62 @@
   "prepTime": 15,
   "cookTime": 30,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 540, "protein": 38, "carbs": 46, "fat": 22, "fiber": 5 },
+  "nutrition": {
+   "kcal": 540,
+   "protein": 38,
+   "carbs": 46,
+   "fat": 22,
+   "fiber": 5
+  },
   "ingredients": [
-   { "name": "Kycklinglårfilé", "amount": 600, "unit": "g" },
-   { "name": "Paprika", "amount": 2, "unit": "st" },
-   { "name": "Gul lök", "amount": 1, "unit": "st" },
-   { "name": "Vitlök", "amount": 2, "unit": "st" },
-   { "name": "Krossade tomater", "amount": 400, "unit": "g" },
-   { "name": "Crème fraiche", "amount": 2, "unit": "dl" },
-   { "name": "Paprikapulver", "amount": 10, "unit": "g" },
-   { "name": "Ris", "amount": 320, "unit": "g" },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Olja", "pantryStaple": true }
+   {
+    "name": "Kycklinglårfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Paprika",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Crème fraiche",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Paprikapulver",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Ris",
+    "amount": 320,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Skär kycklingen i grytbitar, salta och bryn dem i olja i en gryta.",
@@ -361,10 +851,28 @@
    "Rör ner crème fraiche, låt grytan puttra ihop fem minuter och smaka av.",
    "Servera grytan över riset."
   ],
-  "categories": [ "Kyckling", "Grytor" ],
-  "tags": [ "kyckling", "mealprep", "Familjefavorit" ],
-  "allergens": [ "mjölk" ],
-  "dietFlags": [ "blandkost" ]
+  "categories": [
+   "Kyckling",
+   "Grytor"
+  ],
+  "tags": [
+   "kyckling",
+   "mealprep",
+   "Familjefavorit"
+  ],
+  "allergens": [
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "https://images.pexels.com/photos/29075345/pexels-photo-29075345.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/rustic-vegetable-stew-in-ceramic-bowl-29075345/",
+  "imageCredit": "Harry Tucker",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kycklinggryta med paprika och crème fraiche upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "gulaschgryta",
@@ -374,18 +882,61 @@
   "prepTime": 20,
   "cookTime": 120,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 490, "protein": 37, "carbs": 40, "fat": 19, "fiber": 6 },
+  "nutrition": {
+   "kcal": 490,
+   "protein": 37,
+   "carbs": 40,
+   "fat": 19,
+   "fiber": 6
+  },
   "ingredients": [
-   { "name": "Högrev", "amount": 800, "unit": "g" },
-   { "name": "Gul lök", "amount": 3, "unit": "st" },
-   { "name": "Paprika", "amount": 2, "unit": "st" },
-   { "name": "Potatis", "amount": 700, "unit": "g" },
-   { "name": "Tomatpuré", "amount": 70, "unit": "g" },
-   { "name": "Paprikapulver", "amount": 15, "unit": "g" },
-   { "name": "Vitlök", "amount": 3, "unit": "st" },
-   { "name": "Spiskummin", "pantryStaple": true },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Olja", "pantryStaple": true }
+   {
+    "name": "Högrev",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Paprika",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Potatis",
+    "amount": 700,
+    "unit": "g"
+   },
+   {
+    "name": "Tomatpuré",
+    "amount": 70,
+    "unit": "g"
+   },
+   {
+    "name": "Paprikapulver",
+    "amount": 15,
+    "unit": "g"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Spiskummin",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Skär köttet i kuber och bryn i omgångar i en stor gryta.",
@@ -395,10 +946,27 @@
    "Smaka av med spiskummin, salt och gärna en nypa socker.",
    "Servera i djupa tallrikar med bröd till."
   ],
-  "categories": [ "Grytor" ],
-  "tags": [ "mealprep", "husmanskost", "billigt" ],
+  "categories": [
+   "Grytor"
+  ],
+  "tags": [
+   "mealprep",
+   "husmanskost",
+   "billigt"
+  ],
   "allergens": [],
-  "dietFlags": [ "blandkost", "glutenfritt", "laktosfritt" ]
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt",
+   "laktosfritt"
+  ],
+  "image": "https://images.pexels.com/photos/5863612/pexels-photo-5863612.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+  "imageCredit": "Rachel Claire",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Gulaschgryta med potatis upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "chili-con-carne",
@@ -408,20 +976,70 @@
   "prepTime": 15,
   "cookTime": 45,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 530, "protein": 34, "carbs": 52, "fat": 19, "fiber": 12 },
+  "nutrition": {
+   "kcal": 530,
+   "protein": 34,
+   "carbs": 52,
+   "fat": 19,
+   "fiber": 12
+  },
   "ingredients": [
-   { "name": "Nötfärs", "amount": 600, "unit": "g" },
-   { "name": "Kidneybönor", "amount": 380, "unit": "g" },
-   { "name": "Gul lök", "amount": 2, "unit": "st" },
-   { "name": "Vitlök", "amount": 3, "unit": "st" },
-   { "name": "Krossade tomater", "amount": 800, "unit": "g" },
-   { "name": "Tomatpuré", "amount": 70, "unit": "g" },
-   { "name": "Paprikapulver", "amount": 10, "unit": "g" },
-   { "name": "Ris", "amount": 480, "unit": "g" },
-   { "name": "Spiskummin", "pantryStaple": true },
-   { "name": "Chilipulver", "pantryStaple": true },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Olja", "pantryStaple": true }
+   {
+    "name": "Nötfärs",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Kidneybönor",
+    "amount": 380,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Tomatpuré",
+    "amount": 70,
+    "unit": "g"
+   },
+   {
+    "name": "Paprikapulver",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Ris",
+    "amount": 480,
+    "unit": "g"
+   },
+   {
+    "name": "Spiskummin",
+    "pantryStaple": true
+   },
+   {
+    "name": "Chilipulver",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Bryn färsen i olja i en stor gryta tills den fått ordentlig färg.",
@@ -431,10 +1049,27 @@
    "Skölj bönorna och rör ner dem. Sjud tio minuter till och smaka av.",
    "Koka riset och servera grytan över, gärna med en klick syrad grädde."
   ],
-  "categories": [ "Grytor" ],
-  "tags": [ "mealprep", "billigt", "proteinrikt" ],
+  "categories": [
+   "Grytor"
+  ],
+  "tags": [
+   "mealprep",
+   "billigt",
+   "proteinrikt"
+  ],
   "allergens": [],
-  "dietFlags": [ "blandkost", "glutenfritt", "laktosfritt" ]
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt",
+   "laktosfritt"
+  ],
+  "image": "https://images.pexels.com/photos/5966140/pexels-photo-5966140.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/tomatoes-and-peppers-on-green-background-5966140/",
+  "imageCredit": "Vanessa Loring",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Chili con carne upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kottfarssoppa",
@@ -444,17 +1079,57 @@
   "prepTime": 15,
   "cookTime": 25,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 440, "protein": 30, "carbs": 38, "fat": 18, "fiber": 7 },
+  "nutrition": {
+   "kcal": 440,
+   "protein": 30,
+   "carbs": 38,
+   "fat": 18,
+   "fiber": 7
+  },
   "ingredients": [
-   { "name": "Blandfärs", "amount": 400, "unit": "g" },
-   { "name": "Potatis", "amount": 400, "unit": "g" },
-   { "name": "Morötter", "amount": 3, "unit": "st" },
-   { "name": "Purjolök", "amount": 1, "unit": "st" },
-   { "name": "Krossade tomater", "amount": 400, "unit": "g" },
-   { "name": "Buljongtärning", "amount": 2, "unit": "st" },
-   { "name": "Timjan", "amount": 5, "unit": "g" },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Olja", "pantryStaple": true }
+   {
+    "name": "Blandfärs",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Morötter",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Purjolök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Buljongtärning",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Timjan",
+    "amount": 5,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Bryn färsen i olja i en stor kastrull.",
@@ -464,10 +1139,28 @@
    "Smaka av med timjan, salt och peppar.",
    "Servera med en bit bröd till."
   ],
-  "categories": [ "Soppor" ],
-  "tags": [ "billigt", "barn", "snabbt", "mealprep" ],
+  "categories": [
+   "Soppor"
+  ],
+  "tags": [
+   "billigt",
+   "barn",
+   "snabbt",
+   "mealprep"
+  ],
   "allergens": [],
-  "dietFlags": [ "blandkost", "glutenfritt", "laktosfritt" ]
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt",
+   "laktosfritt"
+  ],
+  "image": "https://images.pexels.com/photos/30852889/pexels-photo-30852889.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/traditional-solyanka-soup-with-rustic-bread-30852889/",
+  "imageCredit": "Gundula Vogel",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Köttfärssoppa med rotfrukter upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "fisksoppa-saffran",
@@ -477,18 +1170,62 @@
   "prepTime": 15,
   "cookTime": 20,
   "difficulty": "medel",
-  "nutrition": { "kcal": 470, "protein": 34, "carbs": 24, "fat": 26, "fiber": 4 },
+  "nutrition": {
+   "kcal": 470,
+   "protein": 34,
+   "carbs": 24,
+   "fat": 26,
+   "fiber": 4
+  },
   "ingredients": [
-   { "name": "Laxfilé", "amount": 400, "unit": "g" },
-   { "name": "Räkor", "amount": 200, "unit": "g" },
-   { "name": "Purjolök", "amount": 1, "unit": "st" },
-   { "name": "Morötter", "amount": 2, "unit": "st" },
-   { "name": "Krossade tomater", "amount": 400, "unit": "g" },
-   { "name": "Grädde", "amount": 2.5, "unit": "dl" },
-   { "name": "Buljongtärning", "amount": 2, "unit": "st" },
-   { "name": "Dill", "amount": 20, "unit": "g" },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Smör", "pantryStaple": true }
+   {
+    "name": "Laxfilé",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Räkor",
+    "amount": 200,
+    "unit": "g"
+   },
+   {
+    "name": "Purjolök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Morötter",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Grädde",
+    "amount": 2.5,
+    "unit": "dl"
+   },
+   {
+    "name": "Buljongtärning",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Dill",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Smör",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Skiva purjolöken och tärna morötterna. Fräs dem mjuka i smör i en stor kastrull.",
@@ -498,10 +1235,31 @@
    "Rör ner räkor och hackad dill, dra av från värmen och smaka av.",
    "Servera med bröd eller aioli."
   ],
-  "categories": [ "Fisk", "Soppor" ],
-  "tags": [ "fisk", "snabbt", "helgmiddag" ],
-  "allergens": [ "mjölk", "skaldjur" ],
-  "dietFlags": [ "blandkost", "pescetariskt", "glutenfritt" ]
+  "categories": [
+   "Fisk",
+   "Soppor"
+  ],
+  "tags": [
+   "fisk",
+   "snabbt",
+   "helgmiddag"
+  ],
+  "allergens": [
+   "mjölk",
+   "skaldjur"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "pescetariskt",
+   "glutenfritt"
+  ],
+  "image": "https://images.pexels.com/photos/30852889/pexels-photo-30852889.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/traditional-solyanka-soup-with-rustic-bread-30852889/",
+  "imageCredit": "Gundula Vogel",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Fisksoppa med lax och räkor upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "broccolisoppa",
@@ -511,16 +1269,52 @@
   "prepTime": 10,
   "cookTime": 15,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 330, "protein": 12, "carbs": 30, "fat": 18, "fiber": 8 },
+  "nutrition": {
+   "kcal": 330,
+   "protein": 12,
+   "carbs": 30,
+   "fat": 18,
+   "fiber": 8
+  },
   "ingredients": [
-   { "name": "Broccoli", "amount": 500, "unit": "g" },
-   { "name": "Potatis", "amount": 300, "unit": "g" },
-   { "name": "Gul lök", "amount": 1, "unit": "st" },
-   { "name": "Grädde", "amount": 2, "unit": "dl" },
-   { "name": "Buljongtärning", "amount": 2, "unit": "st" },
-   { "name": "Solrosfrön", "amount": 50, "unit": "g" },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Smör", "pantryStaple": true }
+   {
+    "name": "Broccoli",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 300,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Grädde",
+    "amount": 2,
+    "unit": "dl"
+   },
+   {
+    "name": "Buljongtärning",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Solrosfrön",
+    "amount": 50,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Smör",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Fräs hackad lök mjuk i smör i en kastrull.",
@@ -530,10 +1324,29 @@
    "Rosta fröna gyllene i en torr panna.",
    "Servera soppan med fröna över och bröd till."
   ],
-  "categories": [ "Vegetariskt", "Soppor" ],
-  "tags": [ "vegetariskt", "billigt", "snabbt" ],
-  "allergens": [ "mjölk" ],
-  "dietFlags": [ "vegetariskt", "glutenfritt" ]
+  "categories": [
+   "Vegetariskt",
+   "Soppor"
+  ],
+  "tags": [
+   "vegetariskt",
+   "billigt",
+   "snabbt"
+  ],
+  "allergens": [
+   "mjölk"
+  ],
+  "dietFlags": [
+   "vegetariskt",
+   "glutenfritt"
+  ],
+  "image": "https://images.pexels.com/photos/3872252/pexels-photo-3872252.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-photo-of-green-smoothie-on-bowl-3872252/",
+  "imageCredit": "Polina Tankilevitch",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Broccolisoppa med frön upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "artsoppa-vegetarisk",
@@ -543,15 +1356,48 @@
   "prepTime": 10,
   "cookTime": 90,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 420, "protein": 24, "carbs": 62, "fat": 6, "fiber": 20 },
+  "nutrition": {
+   "kcal": 420,
+   "protein": 24,
+   "carbs": 62,
+   "fat": 6,
+   "fiber": 20
+  },
   "ingredients": [
-   { "name": "Gula ärtor", "amount": 400, "unit": "g" },
-   { "name": "Gul lök", "amount": 2, "unit": "st" },
-   { "name": "Morötter", "amount": 2, "unit": "st" },
-   { "name": "Buljongtärning", "amount": 3, "unit": "st" },
-   { "name": "Timjan", "amount": 10, "unit": "g" },
-   { "name": "Senap", "amount": 40, "unit": "g" },
-   { "name": "Salt", "pantryStaple": true }
+   {
+    "name": "Gula ärtor",
+    "amount": 400,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Morötter",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Buljongtärning",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Timjan",
+    "amount": 10,
+    "unit": "g"
+   },
+   {
+    "name": "Senap",
+    "amount": 40,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Blötlägg ärtorna över natten och häll av vattnet.",
@@ -560,41 +1406,25 @@
    "Sjud under lock i 75-90 minuter tills ärtorna kokat sönder till en tjock soppa.",
    "Smaka av med salt och servera med senap vid sidan."
   ],
-  "categories": [ "Vegetariskt", "Soppor", "Husmanskost" ],
-  "tags": [ "vegetariskt", "billigt", "husmanskost", "proteinrikt", "mealprep" ],
+  "categories": [
+   "Vegetariskt",
+   "Soppor",
+   "Husmanskost"
+  ],
+  "tags": [
+   "vegetariskt",
+   "billigt",
+   "husmanskost",
+   "proteinrikt",
+   "mealprep"
+  ],
   "allergens": [],
-  "dietFlags": [ "vegetariskt", "veganskt", "glutenfritt", "laktosfritt" ]
- },
- {
-  "id": "pyttipanna",
-  "name": "Pytt i panna med stekt ägg",
-  "description": "Tärnad potatis, lök och korv i stekpannan tills allt fått frasig yta, toppat med stekt ägg och rödbetor.",
-  "servings": 4,
-  "prepTime": 15,
-  "cookTime": 25,
-  "difficulty": "lätt",
-  "nutrition": { "kcal": 560, "protein": 24, "carbs": 50, "fat": 30, "fiber": 5 },
-  "ingredients": [
-   { "name": "Potatis", "amount": 800, "unit": "g" },
-   { "name": "Falukorv", "amount": 300, "unit": "g" },
-   { "name": "Gul lök", "amount": 2, "unit": "st" },
-   { "name": "Ägg", "amount": 4, "unit": "st" },
-   { "name": "Rödbetor", "amount": 200, "unit": "g" },
-   { "name": "Smör", "pantryStaple": true },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Svartpeppar", "pantryStaple": true }
-  ],
-  "instructions": [
-   "Tärna potatisen smått och stek den i smör på medelvärme tills den är mjuk och gyllene, 15 minuter.",
-   "Tärna korv och lök. Lägg i dem och stek 5-7 minuter till tills allt fått fin yta.",
-   "Salta och peppra.",
-   "Stek äggen i en egen panna.",
-   "Servera pytten med ett stekt ägg per person och inlagda rödbetor."
-  ],
-  "categories": [ "Husmanskost" ],
-  "tags": [ "barn", "billigt", "snabbt", "husmanskost" ],
-  "allergens": [ "mjölk", "ägg" ],
-  "dietFlags": [ "blandkost", "glutenfritt" ]
+  "dietFlags": [
+   "vegetariskt",
+   "veganskt",
+   "glutenfritt",
+   "laktosfritt"
+  ]
  },
  {
   "id": "falukorv-ugn",
@@ -604,16 +1434,52 @@
   "prepTime": 10,
   "cookTime": 25,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 620, "protein": 24, "carbs": 46, "fat": 38, "fiber": 4 },
+  "nutrition": {
+   "kcal": 620,
+   "protein": 24,
+   "carbs": 46,
+   "fat": 38,
+   "fiber": 4
+  },
   "ingredients": [
-   { "name": "Falukorv", "amount": 500, "unit": "g" },
-   { "name": "Senap", "amount": 40, "unit": "g" },
-   { "name": "Riven ost", "amount": 100, "unit": "g" },
-   { "name": "Tomater", "amount": 2, "unit": "st" },
-   { "name": "Potatis", "amount": 800, "unit": "g" },
-   { "name": "Mjölk", "amount": 1, "unit": "dl" },
-   { "name": "Smör", "pantryStaple": true },
-   { "name": "Salt", "pantryStaple": true }
+   {
+    "name": "Falukorv",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Senap",
+    "amount": 40,
+    "unit": "g"
+   },
+   {
+    "name": "Riven ost",
+    "amount": 100,
+    "unit": "g"
+   },
+   {
+    "name": "Tomater",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Mjölk",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Smör",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Sätt ugnen på 225 grader. Koka potatisen mjuk i saltat vatten.",
@@ -623,10 +1489,29 @@
    "Mosa potatisen med mjölk och smör och smaka av med salt.",
    "Servera korven skivad med moset."
   ],
-  "categories": [ "Husmanskost" ],
-  "tags": [ "barn", "billigt", "husmanskost", "Familjefavorit" ],
-  "allergens": [ "mjölk" ],
-  "dietFlags": [ "blandkost", "glutenfritt" ]
+  "categories": [
+   "Husmanskost"
+  ],
+  "tags": [
+   "barn",
+   "billigt",
+   "husmanskost",
+   "Familjefavorit"
+  ],
+  "allergens": [
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt"
+  ],
+  "image": "https://images.pexels.com/photos/10183540/pexels-photo-10183540.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/red-sausage-on-white-ceramic-plate-10183540/",
+  "imageCredit": "Nadin Sh",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Ugnsbakad falukorv med potatismos upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "stekt-strommingsflundra",
@@ -636,15 +1521,48 @@
   "prepTime": 10,
   "cookTime": 20,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 450, "protein": 34, "carbs": 40, "fat": 17, "fiber": 4 },
+  "nutrition": {
+   "kcal": 450,
+   "protein": 34,
+   "carbs": 40,
+   "fat": 17,
+   "fiber": 4
+  },
   "ingredients": [
-   { "name": "Torskfilé", "amount": 600, "unit": "g" },
-   { "name": "Vetemjöl", "amount": 60, "unit": "g" },
-   { "name": "Potatis", "amount": 800, "unit": "g" },
-   { "name": "Citron", "amount": 1, "unit": "st" },
-   { "name": "Persilja", "amount": 20, "unit": "g" },
-   { "name": "Smör", "amount": 100, "unit": "g" },
-   { "name": "Salt", "pantryStaple": true }
+   {
+    "name": "Torskfilé",
+    "amount": 600,
+    "unit": "g"
+   },
+   {
+    "name": "Vetemjöl",
+    "amount": 60,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Persilja",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Smör",
+    "amount": 100,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Koka potatisen i saltat vatten.",
@@ -653,10 +1571,23 @@
    "Smält resten av smöret i en liten kastrull tills det tystnar och doftar nötigt.",
    "Servera fisken med potatis, det skirade smöret, hackad persilja och citron."
   ],
-  "categories": [ "Fisk", "Husmanskost" ],
-  "tags": [ "fisk", "husmanskost", "snabbt" ],
-  "allergens": [ "gluten", "mjölk" ],
-  "dietFlags": [ "blandkost", "pescetariskt" ]
+  "categories": [
+   "Fisk",
+   "Husmanskost"
+  ],
+  "tags": [
+   "fisk",
+   "husmanskost",
+   "snabbt"
+  ],
+  "allergens": [
+   "gluten",
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "pescetariskt"
+  ]
  },
  {
   "id": "kycklingsoppa-nudlar",
@@ -666,17 +1597,57 @@
   "prepTime": 15,
   "cookTime": 20,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 420, "protein": 34, "carbs": 44, "fat": 12, "fiber": 4 },
+  "nutrition": {
+   "kcal": 420,
+   "protein": 34,
+   "carbs": 44,
+   "fat": 12,
+   "fiber": 4
+  },
   "ingredients": [
-   { "name": "Kycklinglårfilé", "amount": 500, "unit": "g" },
-   { "name": "Äggnudlar", "amount": 200, "unit": "g" },
-   { "name": "Morötter", "amount": 2, "unit": "st" },
-   { "name": "Purjolök", "amount": 1, "unit": "st" },
-   { "name": "Buljongtärning", "amount": 3, "unit": "st" },
-   { "name": "Ingefära", "amount": 20, "unit": "g" },
-   { "name": "Vitlök", "amount": 2, "unit": "st" },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Olja", "pantryStaple": true }
+   {
+    "name": "Kycklinglårfilé",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Äggnudlar",
+    "amount": 200,
+    "unit": "g"
+   },
+   {
+    "name": "Morötter",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Purjolök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Buljongtärning",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Ingefära",
+    "amount": 20,
+    "unit": "g"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Skär kycklingen i bitar och bryn den lätt i olja i en stor kastrull.",
@@ -685,10 +1656,30 @@
    "Lägg i nudlarna och koka dem enligt paketets tid direkt i soppan.",
    "Smaka av med salt och servera rykande het."
   ],
-  "categories": [ "Kyckling", "Soppor" ],
-  "tags": [ "kyckling", "snabbt", "barn" ],
-  "allergens": [ "gluten", "ägg" ],
-  "dietFlags": [ "blandkost", "laktosfritt" ]
+  "categories": [
+   "Kyckling",
+   "Soppor"
+  ],
+  "tags": [
+   "kyckling",
+   "snabbt",
+   "barn"
+  ],
+  "allergens": [
+   "gluten",
+   "ägg"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "laktosfritt"
+  ],
+  "image": "https://images.pexels.com/photos/8696571/pexels-photo-8696571.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/soup-in-white-ceramic-bowl-8696571/",
+  "imageCredit": "Farhad Ibrahimzade",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kycklingsoppa med nudlar upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "lammfarsbiffar-tzatziki",
@@ -698,18 +1689,62 @@
   "prepTime": 20,
   "cookTime": 35,
   "difficulty": "medel",
-  "nutrition": { "kcal": 590, "protein": 34, "carbs": 44, "fat": 30, "fiber": 5 },
+  "nutrition": {
+   "kcal": 590,
+   "protein": 34,
+   "carbs": 44,
+   "fat": 30,
+   "fiber": 5
+  },
   "ingredients": [
-   { "name": "Blandfärs", "amount": 500, "unit": "g" },
-   { "name": "Potatis", "amount": 800, "unit": "g" },
-   { "name": "Grekisk yoghurt", "amount": 3, "unit": "dl" },
-   { "name": "Gurka", "amount": 0.5, "unit": "st" },
-   { "name": "Vitlök", "amount": 3, "unit": "st" },
-   { "name": "Rödlök", "amount": 1, "unit": "st" },
-   { "name": "Oregano", "amount": 5, "unit": "g" },
-   { "name": "Citron", "amount": 1, "unit": "st" },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Olja", "pantryStaple": true }
+   {
+    "name": "Blandfärs",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Grekisk yoghurt",
+    "amount": 3,
+    "unit": "dl"
+   },
+   {
+    "name": "Gurka",
+    "amount": 0.5,
+    "unit": "st"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 3,
+    "unit": "st"
+   },
+   {
+    "name": "Rödlök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Oregano",
+    "amount": 5,
+    "unit": "g"
+   },
+   {
+    "name": "Citron",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Sätt ugnen på 225 grader. Klyfta potatisen, vänd i olja och salt och rosta i 30-35 minuter.",
@@ -718,10 +1753,20 @@
    "Stek biffarna 4-5 minuter per sida tills de är genomstekta.",
    "Servera med klyftpotatisen, tzatzikin och en klyfta citron."
   ],
-  "categories": [ "Husmanskost" ],
-  "tags": [ "helgmiddag", "Familjefavorit" ],
-  "allergens": [ "mjölk" ],
-  "dietFlags": [ "blandkost", "glutenfritt" ]
+  "categories": [
+   "Husmanskost"
+  ],
+  "tags": [
+   "helgmiddag",
+   "Familjefavorit"
+  ],
+  "allergens": [
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt"
+  ]
  },
  {
   "id": "sotpotatissoppa",
@@ -731,18 +1776,62 @@
   "prepTime": 10,
   "cookTime": 20,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 380, "protein": 7, "carbs": 46, "fat": 19, "fiber": 8 },
+  "nutrition": {
+   "kcal": 380,
+   "protein": 7,
+   "carbs": 46,
+   "fat": 19,
+   "fiber": 8
+  },
   "ingredients": [
-   { "name": "Sötpotatis", "amount": 700, "unit": "g" },
-   { "name": "Gul lök", "amount": 1, "unit": "st" },
-   { "name": "Vitlök", "amount": 2, "unit": "st" },
-   { "name": "Röd currypasta", "amount": 30, "unit": "g" },
-   { "name": "Kokosmjölk", "amount": 400, "unit": "ml" },
-   { "name": "Buljongtärning", "amount": 2, "unit": "st" },
-   { "name": "Lime", "amount": 1, "unit": "st" },
-   { "name": "Jordnötter", "amount": 40, "unit": "g" },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Olja", "pantryStaple": true }
+   {
+    "name": "Sötpotatis",
+    "amount": 700,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Röd currypasta",
+    "amount": 30,
+    "unit": "g"
+   },
+   {
+    "name": "Kokosmjölk",
+    "amount": 400,
+    "unit": "ml"
+   },
+   {
+    "name": "Buljongtärning",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Lime",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Jordnötter",
+    "amount": 40,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Skala och tärna sötpotatisen. Fräs hackad lök och vitlök i olja i en kastrull.",
@@ -752,10 +1841,31 @@
    "Smaka av med limesaft och salt.",
    "Toppa med hackade jordnötter och servera."
   ],
-  "categories": [ "Vegetariskt", "Soppor" ],
-  "tags": [ "vegetariskt", "billigt", "snabbt" ],
-  "allergens": [ "jordnötter" ],
-  "dietFlags": [ "vegetariskt", "veganskt", "glutenfritt", "laktosfritt" ]
+  "categories": [
+   "Vegetariskt",
+   "Soppor"
+  ],
+  "tags": [
+   "vegetariskt",
+   "billigt",
+   "snabbt"
+  ],
+  "allergens": [
+   "jordnötter"
+  ],
+  "dietFlags": [
+   "vegetariskt",
+   "veganskt",
+   "glutenfritt",
+   "laktosfritt"
+  ],
+  "image": "https://images.pexels.com/photos/6853454/pexels-photo-6853454.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/a-bowl-of-pumpkin-soup-6853454/",
+  "imageCredit": "cottonbro studio",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Sötpotatissoppa med kokos och lime upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "biff-a-la-lindstrom",
@@ -765,17 +1875,57 @@
   "prepTime": 20,
   "cookTime": 25,
   "difficulty": "medel",
-  "nutrition": { "kcal": 570, "protein": 32, "carbs": 48, "fat": 28, "fiber": 5 },
+  "nutrition": {
+   "kcal": 570,
+   "protein": 32,
+   "carbs": 48,
+   "fat": 28,
+   "fiber": 5
+  },
   "ingredients": [
-   { "name": "Nötfärs", "amount": 500, "unit": "g" },
-   { "name": "Rödbetor", "amount": 150, "unit": "g" },
-   { "name": "Kapris", "amount": 30, "unit": "g" },
-   { "name": "Gul lök", "amount": 2, "unit": "st" },
-   { "name": "Ägg", "amount": 1, "unit": "st" },
-   { "name": "Potatis", "amount": 800, "unit": "g" },
-   { "name": "Mjölk", "amount": 1, "unit": "dl" },
-   { "name": "Smör", "pantryStaple": true },
-   { "name": "Salt", "pantryStaple": true }
+   {
+    "name": "Nötfärs",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Rödbetor",
+    "amount": 150,
+    "unit": "g"
+   },
+   {
+    "name": "Kapris",
+    "amount": 30,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Ägg",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Mjölk",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Smör",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Koka potatisen mjuk i saltat vatten.",
@@ -785,10 +1935,20 @@
    "Mosa potatisen med mjölk och smör.",
    "Servera biffarna med mos, stekt lök och gärna en klick senap."
   ],
-  "categories": [ "Husmanskost" ],
-  "tags": [ "husmanskost" ],
-  "allergens": [ "mjölk", "ägg" ],
-  "dietFlags": [ "blandkost", "glutenfritt" ]
+  "categories": [
+   "Husmanskost"
+  ],
+  "tags": [
+   "husmanskost"
+  ],
+  "allergens": [
+   "mjölk",
+   "ägg"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt"
+  ]
  },
  {
   "id": "morotssoppa-ingefara",
@@ -798,17 +1958,57 @@
   "prepTime": 10,
   "cookTime": 20,
   "difficulty": "lätt",
-  "nutrition": { "kcal": 290, "protein": 6, "carbs": 40, "fat": 12, "fiber": 9 },
+  "nutrition": {
+   "kcal": 290,
+   "protein": 6,
+   "carbs": 40,
+   "fat": 12,
+   "fiber": 9
+  },
   "ingredients": [
-   { "name": "Morötter", "amount": 700, "unit": "g" },
-   { "name": "Gul lök", "amount": 1, "unit": "st" },
-   { "name": "Ingefära", "amount": 30, "unit": "g" },
-   { "name": "Apelsin", "amount": 1, "unit": "st" },
-   { "name": "Kokosmjölk", "amount": 400, "unit": "ml" },
-   { "name": "Buljongtärning", "amount": 2, "unit": "st" },
-   { "name": "Pumpafrön", "amount": 40, "unit": "g" },
-   { "name": "Salt", "pantryStaple": true },
-   { "name": "Olja", "pantryStaple": true }
+   {
+    "name": "Morötter",
+    "amount": 700,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Ingefära",
+    "amount": 30,
+    "unit": "g"
+   },
+   {
+    "name": "Apelsin",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Kokosmjölk",
+    "amount": 400,
+    "unit": "ml"
+   },
+   {
+    "name": "Buljongtärning",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Pumpafrön",
+    "amount": 40,
+    "unit": "g"
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "pantryStaple": true
+   }
   ],
   "instructions": [
    "Skala och skiva morötterna. Fräs hackad lök och riven ingefära i olja.",
@@ -817,9 +2017,27 @@
    "Pressa i apelsinsaften och smaka av med salt.",
    "Rosta pumpafröna i torr panna och strö över vid servering."
   ],
-  "categories": [ "Vegetariskt", "Soppor" ],
-  "tags": [ "vegetariskt", "billigt" ],
+  "categories": [
+   "Vegetariskt",
+   "Soppor"
+  ],
+  "tags": [
+   "vegetariskt",
+   "billigt"
+  ],
   "allergens": [],
-  "dietFlags": [ "vegetariskt", "veganskt", "glutenfritt", "laktosfritt" ]
+  "dietFlags": [
+   "vegetariskt",
+   "veganskt",
+   "glutenfritt",
+   "laktosfritt"
+  ],
+  "image": "https://images.pexels.com/photos/6853454/pexels-photo-6853454.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/a-bowl-of-pumpkin-soup-6853454/",
+  "imageCredit": "cottonbro studio",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Morotssoppa med ingefära upplagd på tallrik",
+  "imageStatus": "ok"
  }
 ]
