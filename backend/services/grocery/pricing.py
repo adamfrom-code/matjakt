@@ -111,6 +111,17 @@ DEPARTMENT_KEYWORDS = {
 # asks for. Applied to every ingredient, so no per-ingredient rule is needed.
 NEVER_INGREDIENT_DEPARTMENTS = {"pet", "baby", "nonfood", "confectionery"}
 
+# The one legitimate exception to the snacks veto: nuts, seeds and dried
+# fruit really do live in the snacks aisle at every chain. For exactly these
+# ingredients "confectionery" is a real pantry shelf - a recipe topping a
+# soup with peanuts priced as MISSING because the only peanuts in the store
+# sat next to the crisps. Pet/baby/nonfood stay vetoed even for these.
+SNACK_AISLE_INGREDIENTS = {
+    "jordnotter", "cashewnotter", "mandel", "hasselnotter", "valnotter",
+    "pistagenotter", "notter", "solrosfron", "pumpafron", "sesamfron",
+    "russin", "jordnotssmor",
+}
+
 # Which departments an ingredient may legitimately come from. An ingredient
 # NOT listed here gets no category constraint beyond the universal one - the
 # name rules alone decide, exactly as before. That keeps this additive: it
@@ -120,6 +131,20 @@ NEVER_INGREDIENT_DEPARTMENTS = {"pet", "baby", "nonfood", "confectionery"}
 # buy (frozen fish, frozen berries), and left out where it would let a ready
 # meal in.
 INGREDIENT_DEPARTMENTS = {
+    # --- produce that shares its name with drinks and sweets. "Apelsin"
+    # matched orange-flavoured sparkling water; fruit comes from the fruit
+    # aisle, full stop.
+    "apelsin": {"produce"},
+    "citron": {"produce"},
+    "lime": {"produce"},
+    "banan": {"produce"},
+    "äpple": {"produce"},
+    "päron": {"produce"},
+    "mango": {"produce", "frozen"},
+    "ananas": {"produce"},
+    "hallon": {"produce", "frozen"},
+    "blåbär": {"produce", "frozen"},
+    "jordgubbar": {"produce", "frozen"},
     # --- dairy
     "smör": {"dairy"},
     "grädde": {"dairy"},
@@ -344,6 +369,12 @@ INGREDIENT_ALIASES = {
     "fläskkarré": ["karré"],
     "högrev": ["högrev benfri"],
     "buljong": ["buljongtärning"],
+    "buljongtärning": ["buljong", "fond"],
+    # Thai curry pastes are mostly labelled in English on Swedish shelves.
+    "röd currypasta": ["currypasta", "red curry paste"],
+    "grön currypasta": ["currypasta", "green curry paste"],
+    "currypasta": ["red curry paste"],
+    "gula ärtor": ["gula ärter", "ärter"],
     "grönsaksbuljong": ["grönsaksbuljongtärning", "buljong grönsak"],
     "kycklingbuljong": ["kycklingbuljongtärning", "buljong kyckling"],
     "sidfläsk": ["rimmat sidfläsk"],
@@ -421,7 +452,10 @@ def category_allows_ingredient(category, ingredient) -> bool:
     departments = departments_for_category(category)
     if not departments:
         return True
-    if departments & NEVER_INGREDIENT_DEPARTMENTS:
+    vetoed = NEVER_INGREDIENT_DEPARTMENTS
+    if _fold(ingredient) in SNACK_AISLE_INGREDIENTS:
+        vetoed = vetoed - {"confectionery"}
+    if departments & vetoed:
         return False
     # Sliced ham belongs on bread; a recipe frying a steak must not be
     # priced against the cold-cuts aisle.
