@@ -318,8 +318,60 @@ FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 DATA_DIR = Path(os.environ.get("MATJAKT_DATA_DIR") or (Path(__file__).resolve().parent / "data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-ACCOUNT_STORE = AccountStore(DATA_DIR / "matjakt.db")
-PRICE_CACHE = PriceCacheStore(DATA_DIR / "prices.db")
+def storage_info(detail: bool = False) -> dict:
+    """Whether DATA_DIR is actually on a mounted disk - PROVEN, not assumed.
+
+    Exists because production lost a completed 10 837-product import on a
+    deploy: render.yaml declares a disk, but that block only applies to
+    Blueprint-managed services, and this service was created by hand in the
+    dashboard. The lesson is that a setting is not evidence - so this reads
+    the filesystem itself. A mounted disk is a separate device, which means
+    st_dev differs between the data directory and its parent. That check
+    cannot be faked by configuration.
+
+    The boolean is public (via /api/grocery/status): it reveals nothing
+    sensitive and lets an outside check confirm persistence after every
+    deploy. Paths, file sizes and mount details stay behind the admin
+    token."""
+    info = {"dataDir": str(DATA_DIR)}
+    try:
+        info["mounted"] = os.stat(DATA_DIR).st_dev != os.stat(DATA_DIR.parent).st_dev
+    except OSError:
+        info["mounted"] = False
+    if not detail:
+        return info
+    databases = {}
+    for path in sorted(DATA_DIR.glob("*.db")):
+        try:
+            databases[path.name] = path.stat().st_size
+        except OSError:
+            pass
+    info["databases"] = databases
+    # Which mounts actually cover the data directory - answers "the disk IS
+    # mounted, just at the wrong path" directly instead of leaving it to
+    # guesswork.
+    mounts = []
+    try:
+        with open("/proc/mounts", encoding="utf-8") as handle:
+            for line in handle:
+                parts = line.split()
+                if len(parts) >= 2 and parts[1] != "/" and str(DATA_DIR).startswith(parts[1]):
+                    mounts.append({"device": parts[0], "mountPoint": parts[1],
+                                   "fsType": parts[2] if len(parts) > 2 else ""})
+    except OSError:
+        pass  # not Linux - local dev on Windows has no /proc
+    info["mounts"] = mounts
+    return info
+
+
+# Named so the "everything is on the same disk" invariant is checkable - one
+# database persisting while another does not is not persistence, and that is
+# the kind of thing you want a test to catch rather than a user.
+ACCOUNT_STORE_PATH = DATA_DIR / "matjakt.db"
+PRICE_CACHE_PATH = DATA_DIR / "prices.db"
+
+ACCOUNT_STORE = AccountStore(ACCOUNT_STORE_PATH)
+PRICE_CACHE = PriceCacheStore(PRICE_CACHE_PATH)
 # Same SQLite file/connection as PRICE_CACHE (see KeyValueCacheStore's
 # docstring) - campaigns, geocoding, store lists and Primat/OFF lookups used
 # to live only in plain process-memory dicts, which reset to empty on every
@@ -1319,6 +1371,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # with an empty disk.
             summary = grocery_api.database_summary()
             summary["providers"] = grocery_api.provider_status()
+            summary["storage"] = storage_info()
+            # Enabled-flag and next runs are public on purpose: the times are
+            # already in the repo, and an outside persistence check needs to
+            # confirm the scheduler survived a restart without the admin token.
+            scheduler = GROCERY_SCHEDULER.status()
+            summary["scheduler"] = {"enabled": scheduler["enabled"],
+                                    "schedule": scheduler["schedule"]}
             self.send_json(200, summary, cache_seconds=60)
             return
         if parsed.path == "/api/admin/grocery-import":
@@ -1329,6 +1388,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 "import": grocery_importer.status(),
                 "scheduler": GROCERY_SCHEDULER.status(),
                 "providers": grocery_api.provider_status(),
+                "storage": storage_info(detail=True),
             })
             return
         if parsed.path == "/api/auth/me":

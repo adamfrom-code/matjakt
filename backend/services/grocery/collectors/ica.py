@@ -13,6 +13,7 @@ its results, not necessarily --store's own zip.
 """
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -23,7 +24,12 @@ from services.grocery import GroceryStore  # noqa: E402
 from services.grocery.providers.ica import IcaBlockedError, IcaProvider  # noqa: E402
 
 DEFAULT_ZIP = "80293"  # Gävle - resolves Maxi ICA Stormarknad Gävle (1003987), the store this was verified against
-DB_PATH = Path(__file__).resolve().parents[4] / "backend" / "data" / "grocery.db"
+# Honours MATJAKT_DATA_DIR like every other reader/writer of this database.
+# Without this, a collector run on a host where the data directory has been
+# redirected (tests, or a mounted disk at another path) would quietly write
+# to a DIFFERENT grocery.db than the API serves from.
+DB_PATH = Path(os.environ.get("MATJAKT_DATA_DIR")
+               or (Path(__file__).resolve().parents[4] / "backend" / "data")) / "grocery.db"
 
 
 def run(store_id: str, zip_code: str, limit: int) -> dict:

@@ -5,6 +5,7 @@ Both chains use the same provider base and the same save path, so the import
 willys.py, collectors/hemkop.py) just pick a provider and call run().
 """
 
+import os
 import sys
 import time
 from pathlib import Path
@@ -14,7 +15,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from services.grocery import GroceryStore  # noqa: E402
 from services.grocery.errors import ProviderBlockedError  # noqa: E402
 
-DB_PATH = Path(__file__).resolve().parents[4] / "backend" / "data" / "grocery.db"
+# Honours MATJAKT_DATA_DIR like every other reader/writer of this database.
+# Without this, a collector run on a host where the data directory has been
+# redirected (tests, or a mounted disk at another path) would quietly write
+# to a DIFFERENT grocery.db than the API serves from.
+DB_PATH = Path(os.environ.get("MATJAKT_DATA_DIR")
+               or (Path(__file__).resolve().parents[4] / "backend" / "data")) / "grocery.db"
 
 
 def run(provider, store_id: str, limit: int, by_category: bool = False,
