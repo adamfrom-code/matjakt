@@ -26,10 +26,10 @@ def main() -> int:
         return 1
 
     video.CLIP_DIR.mkdir(parents=True, exist_ok=True)
-    manifest, used_ids, total_bytes = {}, set(), 0
+    manifest, used_ids, used_slugs, total_bytes = {}, set(), [], 0
 
     for scene in video.SCENES:
-        found = video.find_clip(scene, used_ids)
+        found = video.find_clip(scene, used_ids, used_slugs=used_slugs)
         if not found:
             # Said out loud rather than filled with something else. A scene
             # without a fitting clip falls back to a still on the page.
@@ -40,6 +40,7 @@ def main() -> int:
             continue
 
         used_ids.add(found["pexelsId"])
+        used_slugs.append(set(video._slug_words(found["sourceUrl"])))
         stem = f"matjakt-{scene['key']}"
         clip_path = video.CLIP_DIR / f"{stem}.mp4"
         poster_path = video.CLIP_DIR / f"{stem}.jpg"

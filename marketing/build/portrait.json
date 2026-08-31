@@ -1,0 +1,138 @@
+{
+  "hero": {
+    "sceneKey": "hero",
+    "pexelsId": 37848043,
+    "sourceUrl": "https://www.pexels.com/video/preparing-fresh-vegetables-in-home-kitchen-37848043/",
+    "credit": "Ardina Setiorini",
+    "creditUrl": "https://www.pexels.com/@ardinasetiorini",
+    "license": "Pexels License",
+    "duration": 14,
+    "width": 1080,
+    "height": 1920,
+    "downloadUrl": "https://videos.pexels.com/video-files/37848043/16055296_1080_1920_24fps.mp4",
+    "posterUrl": "https://images.pexels.com/videos/37848043/art-of-cooking-asian-cooking-authentic-cooking-cooking-area-37848043.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    "score": 5.0,
+    "matchedWords": [
+      "fresh",
+      "kitchen",
+      "preparing",
+      "vegetables"
+    ],
+    "file": "raw-hero.mp4"
+  },
+  "valj": {
+    "sceneKey": "valj",
+    "pexelsId": 35717672,
+    "sourceUrl": "https://www.pexels.com/video/delicious-homemade-vegetable-curry-preparation-35717672/",
+    "credit": "Suzayn",
+    "creditUrl": "https://www.pexels.com/@suzayn-139932674",
+    "license": "Pexels License",
+    "duration": 8,
+    "width": 1080,
+    "height": 1920,
+    "downloadUrl": "https://videos.pexels.com/video-files/35717672/15137819_1080_1920_30fps.mp4",
+    "posterUrl": "https://images.pexels.com/videos/35717672/pexels-photo-35717672.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    "score": 3.5,
+    "matchedWords": [
+      "delicious",
+      "homemade"
+    ],
+    "file": "raw-valj.mp4"
+  },
+  "vecka": {
+    "sceneKey": "vecka",
+    "pexelsId": 7250804,
+    "sourceUrl": "https://www.pexels.com/video/a-woman-holding-food-containers-7250804/",
+    "credit": "Sarah  Chai",
+    "creditUrl": "https://www.pexels.com/@sarah-chai",
+    "license": "Pexels License",
+    "duration": 11,
+    "width": 1080,
+    "height": 1920,
+    "downloadUrl": "https://videos.pexels.com/video-files/7250804/7250804-hd_1080_1920_25fps.mp4",
+    "posterUrl": "https://images.pexels.com/videos/7250804/pexels-photo-7250804.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    "score": 3.5,
+    "matchedWords": [
+      "containers",
+      "food"
+    ],
+    "file": "raw-vecka.mp4"
+  },
+  "lista": {
+    "sceneKey": "lista",
+    "pexelsId": 3832194,
+    "sourceUrl": "https://www.pexels.com/video/writing-to-do-list-on-a-notebook-for-reminders-3832194/",
+    "credit": "cottonbro studio",
+    "creditUrl": "https://www.pexels.com/@cottonbro",
+    "license": "Pexels License",
+    "duration": 24,
+    "width": 1080,
+    "height": 2048,
+    "downloadUrl": "https://videos.pexels.com/video-files/3832194/3832194-hd_1080_2048_25fps.mp4",
+    "posterUrl": "https://images.pexels.com/videos/3832194/book-bookmark-text-3832194.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    "score": 3.5,
+    "matchedWords": [
+      "list",
+      "notebook",
+      "writing"
+    ],
+    "file": "raw-lista.mp4"
+  },
+  "produkter": {
+    "sceneKey": "produkter",
+    "pexelsId": 37101039,
+    "sourceUrl": "https://www.pexels.com/video/busy-supermarket-aisle-with-shoppers-37101039/",
+    "credit": "Ronie Aristosa",
+    "creditUrl": "https://www.pexels.com/@ronie-aristosa-501853897",
+    "license": "Pexels License",
+    "duration": 10,
+    "width": 1080,
+    "height": 1920,
+    "downloadUrl": "https://videos.pexels.com/video-files/37101039/15717532_1080_1920_60fps.mp4",
+    "posterUrl": "https://images.pexels.com/videos/37101039/pexels-photo-37101039.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    "score": 3.5,
+    "matchedWords": [
+      "aisle",
+      "supermarket"
+    ],
+    "file": "raw-produkter.mp4"
+  },
+  "butiker": {
+    "sceneKey": "butiker",
+    "pexelsId": 9474086,
+    "sourceUrl": "https://www.pexels.com/video/a-woman-shopping-in-a-supermarket-with-oranges-9474086/",
+    "credit": "Greta Hoffman",
+    "creditUrl": "https://www.pexels.com/@greta-hoffman",
+    "license": "Pexels License",
+    "duration": 10,
+    "width": 1080,
+    "height": 1920,
+    "downloadUrl": "https://videos.pexels.com/video-files/9474086/9474086-hd_1080_1920_24fps.mp4",
+    "posterUrl": "https://images.pexels.com/videos/9474086/pexels-photo-9474086.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    "score": 3.5,
+    "matchedWords": [
+      "shopping",
+      "supermarket"
+    ],
+    "file": "raw-butiker.mp4"
+  },
+  "billigast": {
+    "sceneKey": "billigast",
+    "pexelsId": 9046227,
+    "sourceUrl": "https://www.pexels.com/video/a-happy-woman-talking-at-a-cashier-counter-9046227/",
+    "credit": "Mike Jones",
+    "creditUrl": "https://www.pexels.com/@mike-jones",
+    "license": "Pexels License",
+    "duration": 10,
+    "width": 1080,
+    "height": 1920,
+    "downloadUrl": "https://videos.pexels.com/video-files/9046227/9046227-hd_1080_1920_24fps.mp4",
+    "posterUrl": "https://images.pexels.com/videos/9046227/adult-business-chef-coffee-9046227.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+    "score": 3.5,
+    "matchedWords": [
+      "cashier",
+      "counter"
+    ],
+    "file": "raw-billigast.mp4"
+  }
+}
