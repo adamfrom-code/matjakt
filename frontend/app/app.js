@@ -3107,7 +3107,10 @@ if (!state.valda.size) chooseMenu(false); else render();
 renderRecipePage();
 refreshUser();
 syncNearbyBranches();
-if (!state.onboardingComplete) openOnboarding();
+// A first-time visitor arriving through a SHARED RECIPE LINK came for the
+// recipe - onboarding on top of it would bury the very thing that brought
+// them here. It opens on their next natural visit instead.
+if (!state.onboardingComplete && !new URLSearchParams(location.search).get("recept")) openOnboarding();
 const billingResult = new URLSearchParams(location.search).get("billing");
 if (billingResult) {
   history.replaceState(null, "", location.pathname);
