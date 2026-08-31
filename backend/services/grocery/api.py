@@ -222,10 +222,15 @@ def priceable_chains() -> list[str]:
     return [entry["chain"] for entry in database_summary()["chains"] if entry["products"] > 0]
 
 
-def _store_id_for(store: GroceryStore, chain: str):
-    row = store.connection.execute(
-        "SELECT id FROM grocery_stores WHERE chain = ? ORDER BY id LIMIT 1", (chain,)
+def _store_row_for(store: GroceryStore, chain: str):
+    return store.connection.execute(
+        "SELECT id, name, external_store_id, city FROM grocery_stores "
+        "WHERE chain = ? ORDER BY id LIMIT 1", (chain,)
     ).fetchone()
+
+
+def _store_id_for(store: GroceryStore, chain: str):
+    row = _store_row_for(store, chain)
     return row["id"] if row else None
 
 
@@ -253,18 +258,25 @@ def price_week(items: list[dict], chains: list[str] | None = None,
     store = open_store()
     try:
         engine = RecipePricingEngine(store)
-        results = []
+        raw_results, store_rows = [], {}
         for chain in chains:
-            store_id = _store_id_for(store, chain)
-            if store_id is None:
+            store_row = _store_row_for(store, chain)
+            if store_row is None:
                 continue
-            result = engine.price_list(items, chain, store_id, pantry=pantry)
+            store_rows[chain] = store_row
+            result = engine.price_list(items, chain, store_row["id"], pantry=pantry)
             result["dataAgeSeconds"] = _chain_age_seconds(store, chain)
-            results.append(result)
+            raw_results.append(result)
     finally:
         store.close()
 
-    payload = {"results": results, "comparison": compare_chains(results)}
+    # The comparison is decided on the raw results, THEN handed to the
+    # formatter - so a chain's "savings" can never be a number the comparison
+    # itself refused to stand behind.
+    comparison = compare_chains(raw_results)
+    results = [format_chain_result(result, store_rows.get(result["chain"]), comparison)
+               for result in raw_results]
+    payload = {"results": results, "comparison": comparison}
     if key:
         _cache_set(key, payload)
     return payload
@@ -280,6 +292,106 @@ def _chain_age_seconds(store: GroceryStore, chain: str):
         (chain,),
     ).fetchone()
     return (time.time() - row[0]) if row and row[0] else None
+
+
+# Three genuinely different states, and collapsing any two of them would
+# mislead. "current" is a real price for a real product. "estimated" is a
+# real price whose PACKAGE COUNT had to be guessed, because the recipe's unit
+# could not be converted to the pack's unit (a recipe in "st" against a pack
+# in "g") - the money is real, the quantity is not certain. "missing" is an
+# ingredient we could not match to a real product at all, and it carries no
+# price whatsoever rather than a filled-in guess.
+PRICE_STATUS_CURRENT = "current"
+PRICE_STATUS_ESTIMATED = "estimated"
+PRICE_STATUS_MISSING = "missing"
+
+
+def format_chain_result(result: dict, store_row=None, comparison: dict | None = None) -> dict:
+    """One chain's result in the single shape the frontend consumes.
+
+    Everything the UI needs is here, so no screen has to re-derive a number
+    and risk disagreeing with another screen that derived it differently -
+    which is how "Coop 351 / Willys 351 / ICA 351, one marked cheapest"
+    happened in the first place.
+
+    items[] merges matched and missing into ONE ordered list. Keeping them in
+    separate arrays pushed every UI into re-merging them, and a UI that
+    forgot would silently drop the unpriced items from the shopping list -
+    exactly the disappearance this engine exists to prevent."""
+    items = []
+    estimated = 0
+    for match in result.get("matchedItems", []):
+        exact = match.get("exactPackaging", True)
+        if not exact:
+            estimated += 1
+        items.append({
+            "ingredient": match.get("name"),
+            "priceStatus": PRICE_STATUS_CURRENT if exact else PRICE_STATUS_ESTIMATED,
+            "neededAmount": match.get("neededAmount"),
+            "neededUnit": match.get("neededUnit"),
+            "productId": match.get("productId"),
+            "productName": match.get("productName"),
+            "brand": match.get("brand"),
+            "imageUrl": match.get("imageUrl"),
+            "category": match.get("category"),
+            "packageSize": match.get("packageSize"),
+            "packageAmount": match.get("packageAmount"),
+            "packageUnit": match.get("packageUnit"),
+            "packages": match.get("packages"),
+            "unitPrice": match.get("unitPrice"),
+            "totalCost": match.get("totalCost"),
+            "regularPrice": match.get("regularPrice"),
+            # Only a real discount: campaignPrice is already only set by the
+            # providers when it is genuinely below the ordinary price.
+            "campaignPrice": match.get("campaignPrice"),
+            "memberPrice": match.get("memberPrice"),
+            "comparisonPrice": match.get("comparisonPrice"),
+            "fetchedAt": match.get("fetchedAt"),
+        })
+    for missing in result.get("missingItems", []):
+        items.append({
+            "ingredient": missing.get("name"),
+            "priceStatus": PRICE_STATUS_MISSING,
+            "neededAmount": missing.get("amount"),
+            "neededUnit": missing.get("unit"),
+            "productName": None, "imageUrl": None, "packages": None,
+            "totalCost": None, "regularPrice": None, "campaignPrice": None,
+            "comparisonPrice": None,
+        })
+
+    chain = result.get("chain")
+    age = result.get("dataAgeSeconds")
+    # Savings are only reported for the chain the comparison actually crowned,
+    # and only when the comparison was allowed to name one at all.
+    savings = None
+    if comparison and comparison.get("cheapestChain") == chain:
+        savings = comparison.get("savings")
+
+    return {
+        "store": {
+            "chain": chain,
+            "name": store_row["name"] if store_row else None,
+            "externalStoreId": store_row["external_store_id"] if store_row else None,
+            "city": store_row["city"] if store_row else None,
+        },
+        "chain": chain,
+        "totalCheckoutCost": result.get("totalCheckoutCost"),
+        "coveragePercent": result.get("coveragePercent"),
+        "realPriceItems": result.get("realPriceItems"),
+        "estimatedItems": estimated,
+        "missingItems": len(result.get("missingItems", [])),
+        # The names too, not just the count - "2 saknas" leaves the user
+        # guessing which two, and whether the total is missing something
+        # expensive.
+        "missingItemNames": [m.get("name") for m in result.get("missingItems", [])],
+        "totalItems": result.get("totalItems"),
+        "savings": savings,
+        "dataAgeSeconds": age,
+        "updatedAt": (time.time() - age) if age is not None else None,
+        "comparable": (result.get("coveragePercent", 0) >= MIN_COVERAGE_FOR_COMPARISON
+                       and result.get("realPriceItems", 0) > 0),
+        "items": items,
+    }
 
 
 def compare_chains(results: list[dict]) -> dict:
@@ -335,12 +447,17 @@ def shopping_list(items: list[dict], chain: str, pantry: dict | None = None) -> 
     could NOT price, which stays visible rather than quietly disappearing."""
     store = open_store()
     try:
-        store_id = _store_id_for(store, chain)
-        if store_id is None:
+        store_row = _store_row_for(store, chain)
+        if store_row is None:
+            # Not an empty list - an empty list would price the week at 0 kr
+            # and read as the cheapest shop in Sweden.
             return {"chain": chain, "error": "no_data_for_chain",
-                    "matchedItems": [], "missingItems": list(items or [])}
-        result = RecipePricingEngine(store).price_list(items, chain, store_id, pantry=pantry)
+                    "store": {"chain": chain, "name": None},
+                    "totalCheckoutCost": None, "coveragePercent": 0,
+                    "realPriceItems": 0, "estimatedItems": 0,
+                    "missingItems": len(items or []), "items": []}
+        result = RecipePricingEngine(store).price_list(items, chain, store_row["id"], pantry=pantry)
         result["dataAgeSeconds"] = _chain_age_seconds(store, chain)
-        return result
+        return format_chain_result(result, store_row)
     finally:
         store.close()

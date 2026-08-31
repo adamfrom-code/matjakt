@@ -114,10 +114,38 @@ class PriceWeekTest(unittest.TestCase):
             {"name": "Ris", "amount": 500, "unit": "g"},
             {"name": "Struts", "amount": 1, "unit": "st"}])
         willys = next(r for r in payload["results"] if r["chain"] == "Willys")
-        self.assertEqual([m["name"] for m in willys["missingItems"]], ["Struts"])
+        self.assertEqual(willys["missingItemNames"], ["Struts"])
         self.assertEqual(willys["coveragePercent"], 50)
         # The missing item must not have quietly reduced the total.
         self.assertEqual(willys["totalCheckoutCost"], 25.0)
+
+    def test_missing_items_stay_in_the_one_items_list(self):
+        """Separate arrays pushed every UI into re-merging them, and a UI that
+        forgot would silently drop unpriced items from the shopping list."""
+        payload = grocery_api.price_week([
+            {"name": "Ris", "amount": 500, "unit": "g"},
+            {"name": "Struts", "amount": 1, "unit": "st"}])
+        willys = next(r for r in payload["results"] if r["chain"] == "Willys")
+        statuses = {item["ingredient"]: item["priceStatus"] for item in willys["items"]}
+        self.assertEqual(statuses, {"Ris": "current", "Struts": "missing"})
+        struts = next(i for i in willys["items"] if i["ingredient"] == "Struts")
+        # No price at all, not a filled-in guess.
+        self.assertIsNone(struts["totalCost"])
+        self.assertIsNone(struts["productName"])
+
+    def test_savings_are_only_reported_for_the_crowned_chain(self):
+        payload = grocery_api.price_week([{"name": "Ris", "amount": 500, "unit": "g"}])
+        by_chain = {r["chain"]: r for r in payload["results"]}
+        self.assertEqual(payload["comparison"]["cheapestChain"], "Willys")
+        self.assertEqual(by_chain["Willys"]["savings"], 6.0)
+        # The pricier chain must not display a "savings" figure of its own.
+        self.assertIsNone(by_chain["Hemköp"]["savings"])
+
+    def test_store_identity_travels_with_the_result(self):
+        payload = grocery_api.price_week([{"name": "Ris", "amount": 500, "unit": "g"}])
+        willys = next(r for r in payload["results"] if r["chain"] == "Willys")
+        self.assertEqual(willys["store"]["name"], "Willys test")
+        self.assertEqual(willys["store"]["externalStoreId"], "2132")
 
     def test_a_chain_with_no_data_is_left_out_entirely(self):
         payload = grocery_api.price_week([{"name": "Ris", "amount": 500, "unit": "g"}],
@@ -126,16 +154,30 @@ class PriceWeekTest(unittest.TestCase):
 
     def test_shopping_list_returns_the_real_product_to_buy(self):
         listing = grocery_api.shopping_list([{"name": "Ris", "amount": 1500, "unit": "g"}], "Willys")
-        item = listing["matchedItems"][0]
+        item = listing["items"][0]
         self.assertEqual(item["productName"], "Ris Jasmin")
         self.assertEqual(item["packages"], 2)      # 1500 g needs two 1 kg bags
         self.assertEqual(item["totalCost"], 50.0)
         self.assertEqual(item["category"], "Skafferi > Pasta, ris & mat > Ris")
+        self.assertEqual(item["priceStatus"], "current")
 
     def test_shopping_list_for_an_unknown_chain_says_so(self):
+        """Not an empty list priced at 0 kr - that would read as the cheapest
+        shop in Sweden."""
         listing = grocery_api.shopping_list([{"name": "Ris", "amount": 500, "unit": "g"}], "Coop")
         self.assertEqual(listing["error"], "no_data_for_chain")
-        self.assertEqual(listing["matchedItems"], [])
+        self.assertEqual(listing["items"], [])
+        self.assertIsNone(listing["totalCheckoutCost"])
+
+    def test_an_unconvertible_unit_is_estimated_not_silently_exact(self):
+        """Recipe in "st" against a pack measured in "g": the money is real,
+        the package count is a guess, and the shopper is the one who can tell
+        whether one pack is enough."""
+        listing = grocery_api.shopping_list([{"name": "Ris", "amount": 2, "unit": "st"}], "Willys")
+        item = listing["items"][0]
+        self.assertEqual(item["priceStatus"], "estimated")
+        self.assertEqual(listing["estimatedItems"], 1)
+        self.assertEqual(listing["realPriceItems"], 1)
 
     def test_summary_reports_what_the_database_actually_holds(self):
         summary = grocery_api.database_summary()

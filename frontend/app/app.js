@@ -696,7 +696,10 @@ async function syncDatabasePricing(shoppingItems) {
 function databaseItemFor(name) {
   const result = state.dbChainTotals[chosenStore()];
   if (!result) return null;
-  return (result.matchedItems || []).find(item => item.name === name) || null;
+  const item = (result.items || []).find(entry => entry.ingredient === name);
+  // A "missing" row is in items[] on purpose - it must stay visible in the
+  // list - but it is not a product to price, so it is not a match.
+  return item && item.priceStatus !== "missing" ? item : null;
 }
 
 function databaseResultFor(branch) {
@@ -718,12 +721,16 @@ function computeStoreResults(selected, branches, shoppingItems) {
       return {
         branch, cost: fromDatabase.totalCheckoutCost, isLive: true, source: "database",
         matched: fromDatabase.realPriceItems, certain: fromDatabase.realPriceItems,
+        estimatedItems: fromDatabase.estimatedItems || 0,
         totalItems: fromDatabase.totalItems || shoppingItems.length,
-        missingItems: fromDatabase.missingItems || [],
+        missingNames: fromDatabase.missingItemNames || [],
+        comparable: fromDatabase.comparable !== false,
+        savings: fromDatabase.savings,
+        updatedAt: fromDatabase.updatedAt,
       };
     }
     const live = state.liveBranchTotals[branchLiveKey(branch)];
-    return { branch, cost: live ? live.cost : shoppingListCost(selected, branch), isLive: live != null, source: live ? "live" : "estimate", matched: live?.matched ?? null, certain: live?.certain ?? null, totalItems: shoppingItems.length, missingItems: [] };
+    return { branch, cost: live ? live.cost : shoppingListCost(selected, branch), isLive: live != null, source: live ? "live" : "estimate", matched: live?.matched ?? null, certain: live?.certain ?? null, estimatedItems: 0, totalItems: shoppingItems.length, missingNames: [], comparable: false, savings: null, updatedAt: null };
   }).sort((a, b) => a.cost - b.cost);
 }
 // Three genuinely different things, and calling them all "Live" would
@@ -749,7 +756,7 @@ function coverageLabel(result) {
   if (result.source === "database") {
     // Named, not just counted: "3 utan pris" leaves the user guessing which
     // three, and whether the total is missing something expensive.
-    const names = (result.missingItems || []).map(item => item.name).filter(Boolean);
+    const names = (result.missingNames || []).filter(Boolean);
     const detail = names.length ? ` · saknar ${escapeHtml(names.slice(0, 3).join(", "))}${names.length > 3 ? ` +${names.length - 3}` : ""}` : "";
     return `<small class="store-compare-coverage">${result.certain} av ${result.totalItems} varor prissatta mot riktiga produkter${missing > 0 ? detail : ""}</small>`;
   }
@@ -862,9 +869,112 @@ function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
   // branchLiveTotal's matched count. An estimate (matched === null) always
   // covers every item by construction, so it's never held to this bar.
   const coverageOk = result.matched == null || result.matched / result.totalItems >= 0.5;
-  const coverageNote = result.matched != null ? `${result.matched} av ${result.totalItems} varor` : "Uppskattat";
-  return `<div class="comparison-store-card ${isCheapest && coverageOk ? "cheapest" : ""}"><div class="comparison-store-main"><span class="comparison-store-name" style="color:${color}">${escapeHtml(result.branch.kedja)}</span><small class="comparison-store-coverage">${coverageNote}</small></div><div class="comparison-store-price">${isCheapest && coverageOk ? '<span class="comparison-billigast">Billigast</span>' : ""}${coverageOk ? `<strong>${money(result.cost)}</strong>${savings > 1 ? `<small class="comparison-savings">Du sparar ${money(savings)}</small>` : ""}` : '<small class="comparison-savings">För få varor hittades</small>'}</div><span class="comparison-store-arrow" aria-hidden="true">›</span></div>`;
+  const coverageNote = result.source === "database"
+    ? `${result.matched} av ${result.totalItems} varor har aktuellt pris`
+    : result.matched != null ? `${result.matched} av ${result.totalItems} varor` : "Uppskattat";
+  // Only a database-priced chain has a real shopping list behind it to open.
+  // The card has always shown a "›" affordance; making a row clickable that
+  // leads nowhere is worse than showing it as plain text.
+  const openable = result.source === "database";
+  const tag = openable ? "button" : "div";
+  const attrs = openable
+    ? ` type="button" data-open-chain="${escapeHtml(result.branch.kedja)}"`
+    : "";
+  return `<${tag} class="comparison-store-card ${isCheapest && coverageOk ? "cheapest" : ""}${openable ? " openable" : ""}"${attrs}><div class="comparison-store-main"><span class="comparison-store-name" style="color:${color}">${escapeHtml(result.branch.kedja)}</span><small class="comparison-store-coverage">${coverageNote}</small></div><div class="comparison-store-price">${isCheapest && coverageOk ? '<span class="comparison-billigast">Billigast</span>' : ""}${coverageOk ? `<strong>${money(result.cost)}</strong>${savings > 1 ? `<small class="comparison-savings">Du sparar ${money(savings)}</small>` : ""}` : '<small class="comparison-savings">För få varor hittades</small>'}</div>${openable ? '<span class="comparison-store-arrow" aria-hidden="true">›</span>' : ""}</${tag}>`;
 }
+// =============================================================================
+// ONE CHAIN'S REAL SHOPPING LIST
+// =============================================================================
+// Opened by tapping a store card. Everything shown is fetched fresh from the
+// pricing API for that chain rather than reused from the week view's cached
+// per-chain totals, so the list can never show products that belong to a
+// different total than the one in its own header.
+async function openChainShoppingList(chain) {
+  const selected = selectedRecipes();
+  const shoppingItems = aggregateShopping(selected);
+  const body = $("chainListBody");
+  $("chainListTitle").textContent = `Inköpslista · ${chain}`;
+  body.innerHTML = `<p class="live-loading">Hämtar ${escapeHtml(chain)}s priser…</p>`;
+  setView("chainlist");
+  try {
+    const response = await fetch(pricingListApiUrl(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chain,
+        items: shoppingItems.map(item => ({ name: item.namn, amount: item.total, unit: item.unit })),
+        pantry: pantryAmounts(state.pantry || {}),
+      }),
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    body.innerHTML = chainShoppingListMarkup(await response.json());
+    body.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => {
+      input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping);
+      saveState();
+    }));
+  } catch {
+    body.innerHTML = `<p class="live-loading">Kunde inte hämta ${escapeHtml(chain)}s priser just nu.</p>`;
+  }
+}
+
+function priceStatusLabel(status) {
+  if (status === "current") return '<span class="price-status current">Aktuellt pris</span>';
+  if (status === "estimated") return '<span class="price-status estimated">Uppskattat antal</span>';
+  return '<span class="price-status missing">Pris saknas</span>';
+}
+
+function chainShoppingListMarkup(data) {
+  if (data.error === "no_data_for_chain") {
+    return `<p class="live-loading">Matjakt har ingen prisdata för ${escapeHtml(data.chain || "den här kedjan")} ännu.</p>`;
+  }
+  const updated = data.updatedAt
+    ? `Uppdaterad ${new Date(data.updatedAt * 1000).toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" })}`
+    : "Uppdateringstid okänd";
+  const savings = data.savings != null && data.savings > 1
+    ? `<span class="chain-list-savings">Du sparar ${money(data.savings)} mot dyraste jämförbara butik</span>` : "";
+  // Said plainly rather than left for the user to infer from a total that
+  // looks suspiciously low.
+  const warning = !data.comparable
+    ? `<p class="chain-list-warning">För få av varorna har aktuellt pris för att den här summan ska gå att jämföra med en annan butik.</p>` : "";
+  const head = `<div class="chain-list-head"><h2>${escapeHtml(data.store?.name || data.chain || "")}</h2><small>${escapeHtml([data.store?.city, data.chain].filter(Boolean).join(" · "))}</small><div class="chain-list-total"><span>Total kassakostnad</span><strong>${money(data.totalCheckoutCost || 0)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor har aktuellt pris</span>${data.estimatedItems ? `<span>${data.estimatedItems} med uppskattat antal</span>` : ""}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span>${savings}</div>${warning}</div>`;
+
+  const rows = (data.items || []).map(item => {
+    const checked = state.avklarade.has(item.ingredient);
+    const missing = item.priceStatus === "missing";
+    const photo = item.imageUrl
+      ? `<img class="chain-item-photo" src="${escapeHtml(safeHttpUrl(item.imageUrl) || "")}" alt="" loading="lazy">`
+      : `<span class="chain-item-photo" aria-hidden="true"></span>`;
+    const need = item.neededAmount != null
+      ? `Behövs ${formatAmount(item.neededAmount)} ${escapeHtml(item.neededUnit || "")}` : "";
+    const pack = item.packageSize ? `Förpackning ${escapeHtml(item.packageSize)}` : "";
+    const count = item.packages ? `${item.packages} paket` : "";
+    // A campaign price is only a discount when it is genuinely below the
+    // ordinary price; otherwise showing both would invent one.
+    const onCampaign = item.campaignPrice != null && item.regularPrice != null
+      && item.campaignPrice < item.regularPrice;
+    const priceBlock = missing
+      ? `<small class="chain-item-compare">—</small>`
+      : `<strong>${money(item.totalCost)}</strong>${onCampaign
+          ? `<small class="chain-item-campaign">Kampanj ${money(item.campaignPrice)}</small><small class="chain-item-was">Ord. ${money(item.regularPrice)}</small>`
+          : item.regularPrice != null ? `<small class="chain-item-compare">Ord. ${money(item.regularPrice)}/st</small>` : ""}${
+          item.comparisonPrice != null ? `<small class="chain-item-compare">Jmf ${money(item.comparisonPrice)}</small>` : ""}`;
+    const title = missing ? escapeHtml(item.ingredient) : escapeHtml(item.productName || item.ingredient);
+    const sub = missing
+      ? `Ingen produkt kunde matchas · ${escapeHtml(item.ingredient)}`
+      : escapeHtml([item.brand, pack, count].filter(Boolean).join(" · "));
+    return `<label class="chain-item ${missing ? "is-missing" : ""}"><input type="checkbox" data-shopping="${escapeHtml(item.ingredient)}" ${checked ? "checked" : ""}>${photo}<span class="chain-item-info"><strong>${title}</strong><small class="chain-item-need">${need}</small><small>${sub}</small>${priceStatusLabel(item.priceStatus)}</span><span class="chain-item-prices">${priceBlock}</span></label>`;
+  }).join("");
+
+  return head + (rows || `<p class="live-loading">Listan är tom.</p>`);
+}
+
+// Whole numbers stay whole ("2 st", not "2.0 st"); fractions keep one decimal.
+function formatAmount(value) {
+  const number = Number(value) || 0;
+  return Number.isInteger(number) ? String(number) : number.toFixed(1);
+}
+
 function renderStoreComparisonPage(selected) {
   const branches = nearbyBranches();
   const shoppingItems = aggregateShopping(selected);
@@ -888,6 +998,8 @@ function renderStoreComparisonPage(selected) {
   const bestCoverage = Math.max(0, ...results.map(r => r.matched ?? 0));
   $("comparisonItemCount").textContent = bestCoverage ? `${bestCoverage} av ${shoppingItems.length} varor` : `${shoppingItems.length} varor`;
   $("comparisonStoreList").innerHTML = results.map(r => comparisonStoreRowMarkup(r, r === cheapest, priciest.cost)).join("");
+  document.querySelectorAll("[data-open-chain]").forEach(card =>
+    card.addEventListener("click", () => openChainShoppingList(card.dataset.openChain)));
   // "vald butik" - the chain actually in use right now, not necessarily the
   // cheapest one shown above, so this reflects what the user would really
   // save with the choice they've already made.
@@ -956,7 +1068,7 @@ function databaseShoppingItemMarkup(item, match) {
   // pack's unit (a recipe in "st" against a pack in "g") the engine falls
   // back to one package. That is a guess about QUANTITY, and the shopper is
   // the one who can tell whether one is enough.
-  const inexact = match.exactPackaging === false
+  const inexact = match.priceStatus === "estimated"
     ? '<small class="item-status estimated">Antal osäkert</small>' : "";
   const meta = escapeHtml([match.brand, packageText, countText].filter(Boolean).join(" · ") || "1 st");
   return `<label class="shopping-item ${checked ? "checked" : ""}"><input type="checkbox" data-shopping="${escapeHtml(item.namn)}" ${checked ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${escapeHtml(match.productName)}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong>${money(match.totalCost)}</strong>${inexact}</span></label>`;

@@ -1,7 +1,7 @@
 :root{--bg:#f6f3ea;--surface:#fff;--primary:#173b2a;--primary-2:#24563e;--primary-soft:#e7efe9;--accent:#f28c28;--accent-2:#d96a1c;--accent-soft:#fff0df;--gold:#b8893c;--gold-2:#8f6a2c;--gold-soft:#f7ecd6;--text:#162019;--muted:#6e786f;--border:rgba(22,32,25,.08);--danger:#b8483e;--r-sm:12px;--r-md:18px;--r-lg:24px;--r-xl:30px;--shadow:0 12px 32px rgba(23,59,42,.08);--shadow-lg:0 28px 60px -16px rgba(15,30,22,.32),0 10px 24px -10px rgba(15,30,22,.18);--shadow-gold:0 14px 32px -8px rgba(184,137,60,.4);--ease:cubic-bezier(.2,.8,.2,1);--ease-spring:cubic-bezier(.34,1.56,.64,1);--noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E")}
 *{box-sizing:border-box}html{scroll-behavior:smooth;background:#e7e4dc}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 "DM Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}button,input,select{font:inherit}button{cursor:pointer}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.phone-shell{position:relative;width:100%;min-height:100dvh;margin:auto;background:var(--bg)}body:has(#recipePage:not([hidden])) .phone-shell{min-height:0}
 .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;height:68px;padding:calc(10px + env(safe-area-inset-top)) 20px 10px;background:rgba(246,243,234,.86);backdrop-filter:blur(20px) saturate(1.4)}.wordmark{color:var(--primary);font:700 27px/1 "Fraunces",serif;text-decoration:none;letter-spacing:-.04em}.wordmark span{color:var(--accent)}.profile-btn{width:42px;height:42px;border:3px solid var(--surface);border-radius:50%;background:var(--primary);color:white;font-size:12px;font-weight:700;box-shadow:0 4px 14px rgba(23,59,42,.18);transition:transform .3s var(--ease-spring)}.profile-btn:active{transform:scale(.92)}.profile-btn.is-premium{position:relative;border-color:var(--surface);background:linear-gradient(135deg,var(--primary),var(--primary-2));box-shadow:0 4px 14px rgba(23,59,42,.18),0 0 0 2px var(--gold),var(--shadow-gold)}
-.app{padding:8px 16px calc(100px + env(safe-area-inset-bottom))}.screen{display:none;animation:screen-in .35s var(--ease)}.view-home .home-screen,.view-week .week-screen,.view-recipes .recipes-library-screen,.view-basket .shopping-screen,.view-pantry .pantry-screen,.view-stats .stats-screen,.view-comparison .comparison-screen{display:block}@keyframes screen-in{from{opacity:0;transform:translateY(10px)}}
+.app{padding:8px 16px calc(100px + env(safe-area-inset-bottom))}.screen{display:none;animation:screen-in .35s var(--ease)}.view-home .home-screen,.view-week .week-screen,.view-recipes .recipes-library-screen,.view-basket .shopping-screen,.view-pantry .pantry-screen,.view-stats .stats-screen,.view-comparison .comparison-screen,.view-chainlist .chain-list-screen{display:block}@keyframes screen-in{from{opacity:0;transform:translateY(10px)}}
 .home-hero{padding:17px 4px 26px}.welcome,.home-hero>p:last-child{margin:0;color:var(--muted);font-size:15px}.home-hero h1,.screen-header h1{margin:8px 0 11px;font:700 38px/1.06 "Fraunces",serif;letter-spacing:-.045em;word-break:break-word}.home-hero>p:last-child{max-width:31ch}.eyebrow{margin:0 0 5px;color:var(--accent);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
 .week-card,.week-summary,.shopping-progress,.pantry-hero{padding:20px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow);transition:box-shadow .3s var(--ease)}.week-card{box-shadow:var(--shadow-lg)}.week-card-label{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}.status-dot{padding:5px 9px;border-radius:99px;background:var(--primary-soft);color:var(--primary);font-size:11px;letter-spacing:0;text-transform:none}.week-overview{padding:12px 0 2px}.week-overview>strong{display:block;background:linear-gradient(135deg,var(--primary),var(--primary-2));background-clip:text;-webkit-background-clip:text;color:transparent;font:700 42px/1 "Fraunces",serif;letter-spacing:-.02em}.week-overview>small{color:var(--muted);font-size:14px}.week-overview p{display:flex;align-items:center;gap:10px;margin:14px 0 0}.week-overview b{font-size:15px}.week-overview i{width:4px;height:4px;border-radius:50%;background:var(--accent)}
 .budget-card{display:flex;flex-direction:column;gap:10px;width:100%;padding:16px 18px;margin-bottom:14px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow);text-align:left;transition:box-shadow .3s var(--ease)}
@@ -172,3 +172,38 @@ button.campaign-deal{cursor:pointer;font:inherit}
 
   .stats-grid{grid-template-columns:repeat(4,1fr)}
 }
+
+/* --- Chain shopping list (opened from a store card) --------------------- */
+/* The three price states are colour AND glyph AND text, never colour alone:
+   a shopper who cannot distinguish the dots must still be able to tell an
+   actual price from a guess from a gap. */
+.price-status { display: inline-flex; align-items: center; gap: .3rem; font-size: .78rem; }
+.price-status::before { font-size: .7rem; line-height: 1; }
+.price-status.current { color: var(--text-muted, #5b6470); }
+.price-status.current::before { content: "🟢"; }
+.price-status.estimated { color: #a16207; }
+.price-status.estimated::before { content: "🟡"; }
+.price-status.missing { color: #b91c1c; }
+.price-status.missing::before { content: "⚪"; }
+
+.chain-list-head { background: var(--surface, #fff); border-radius: 16px; padding: 1rem; margin-bottom: .9rem; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+.chain-list-head h2 { margin: 0 0 .2rem; font-size: 1.05rem; }
+.chain-list-total { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; margin-top: .5rem; }
+.chain-list-total strong { font-size: 1.5rem; }
+.chain-list-meta { display: flex; flex-wrap: wrap; gap: .3rem .9rem; margin-top: .5rem; color: var(--text-muted, #5b6470); font-size: .8rem; }
+.chain-list-savings { color: #15803d; font-weight: 600; }
+.chain-list-warning { margin-top: .5rem; padding: .55rem .7rem; border-radius: 10px; background: #fef3c7; color: #854d0e; font-size: .8rem; }
+
+.chain-item { display: flex; align-items: center; gap: .75rem; padding: .65rem .8rem; background: var(--surface, #fff); border-radius: 14px; margin-bottom: .45rem; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.chain-item.is-missing { background: #fff7f7; }
+.chain-item input[type="checkbox"] { flex: none; width: 20px; height: 20px; }
+.chain-item-photo { flex: none; width: 46px; height: 46px; border-radius: 10px; object-fit: contain; background: #f4f5f7; }
+.chain-item-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .12rem; }
+.chain-item-info strong { font-size: .93rem; }
+.chain-item-info small { color: var(--text-muted, #5b6470); font-size: .78rem; }
+.chain-item-need { font-variant-numeric: tabular-nums; }
+.chain-item-prices { flex: none; text-align: right; display: flex; flex-direction: column; gap: .12rem; }
+.chain-item-prices strong { font-size: .98rem; }
+.chain-item-campaign { color: #b91c1c; font-weight: 600; font-size: .78rem; }
+.chain-item-was { text-decoration: line-through; color: var(--text-muted, #5b6470); font-size: .74rem; }
+.chain-item-compare { color: var(--text-muted, #5b6470); font-size: .72rem; }
