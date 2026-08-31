@@ -223,6 +223,26 @@ def _keyword_in_path(keyword: str, folded_path: str) -> bool:
     return re.search(rf"\b{re.escape(keyword)}\b", folded_path) is not None
 
 
+# Staples where the DEPARTMENT is too coarse to be useful. "Skafferi" holds
+# rice, pasta, tinned asparagus, baking supplies and marinades alike, so
+# allowing the whole department let real wrong matches through against live
+# data: "Ris" -> "Sparris i Bitar" (tinned vegetables), "Pasta" ->
+# "Dadelpasta" (date paste, in baking supplies). Both end with the
+# ingredient word, so the Swedish compound-head rule accepts them and only
+# the aisle can tell them apart.
+#
+# The chains do carry a specific aisle for each of these ("Skafferi > Pasta,
+# ris & matgryn > Ris"), so requiring the aisle to NAME the ingredient is a
+# real signal rather than another hand-written exception.
+INGREDIENT_CATEGORY_KEYWORDS = {
+    "ris": ["ris"],
+    "pasta": ["pasta", "spaghetti", "makaroner", "nudlar"],
+    "spaghetti": ["pasta", "spaghetti"],
+    "makaroner": ["pasta", "makaroner"],
+    "nudlar": ["pasta", "nudlar", "asien"],
+}
+
+
 def departments_for_category(category):
     """Which department(s) a category path belongs to.
 
@@ -237,22 +257,52 @@ def departments_for_category(category):
             if any(_keyword_in_path(keyword, folded) for keyword in keywords)}
 
 
+def allowed_departments_for(ingredient: str) -> set:
+    """Which departments this ingredient may come from.
+
+    A shopping line can name more than one thing ("Lök & vitlök" is one line
+    covering two vegetables). When the whole line has no entry of its own,
+    the union of its known words is used - which is how that line stopped
+    matching "Vitlök Marinad" in the Skafferi aisle. If none of the words are
+    known the ingredient stays unconstrained, so this can only ever tighten."""
+    folded = _fold(ingredient)
+    exact = _FOLDED_INGREDIENT_DEPARTMENTS.get(folded)
+    if exact:
+        return set(exact)
+    departments = set()
+    for word in _words(ingredient):
+        known = _FOLDED_INGREDIENT_DEPARTMENTS.get(word)
+        if known:
+            departments |= set(known)
+    return departments
+
+
 def category_allows_ingredient(category, ingredient) -> bool:
     """Whether a product in this category can be this ingredient at all.
 
-    Three outcomes, in order:
+    Four outcomes, in order:
       1. No category on the product -> True (undecidable, defer to the name).
       2. The category is a department no ingredient comes from (pet food,
          baby food, sweets, non-food) -> False, for every ingredient.
-      3. The ingredient has an allowed-department list -> the product's
+      3. The ingredient names a specific aisle (staples like rice and pasta,
+         where the department is too coarse) -> the category path must name
+         it too.
+      4. The ingredient has an allowed-department list -> the product's
          departments must intersect it.
-    An ingredient with no list is unconstrained beyond rule 2."""
+    An ingredient with neither is unconstrained beyond rule 2."""
     departments = departments_for_category(category)
     if not departments:
         return True
     if departments & NEVER_INGREDIENT_DEPARTMENTS:
         return False
-    allowed = _FOLDED_INGREDIENT_DEPARTMENTS.get(_fold(ingredient))
+
+    required_aisle = _FOLDED_CATEGORY_KEYWORDS.get(_fold(ingredient))
+    if required_aisle:
+        folded_path = _fold(category)
+        if not any(_keyword_in_path(_fold(keyword), folded_path) for keyword in required_aisle):
+            return False
+
+    allowed = allowed_departments_for(ingredient)
     if not allowed:
         return True
     return bool(departments & allowed)
@@ -322,6 +372,7 @@ _FOLDED_RULES = {_fold(key): value for key, value in INGREDIENT_RULES.items()}
 # Same folding reason as _FOLDED_RULES: nearly every key here contains
 # a/a/o, so an unfolded lookup would find almost none of them.
 _FOLDED_INGREDIENT_DEPARTMENTS = {_fold(key): value for key, value in INGREDIENT_DEPARTMENTS.items()}
+_FOLDED_CATEGORY_KEYWORDS = {_fold(key): value for key, value in INGREDIENT_CATEGORY_KEYWORDS.items()}
 
 
 def convert_amount(amount: float | None, from_unit: str | None, to_unit: str | None) -> float | None:
