@@ -1047,7 +1047,11 @@ const CHAIN_COLORS = { ICA: "#E2231A", Willys: "#171717", Coop: "#00953B", "Hemk
 function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
   // null means "no comparable shop to measure against", which is different
   // from "the saving is zero".
-  const savings = priciestCost == null || !result.comparable ? null : priciestCost - result.cost;
+  // Only the winner gets a "du sparar" figure. Shown on every row that is
+  // not the dearest, it reads as though each shop were a deal - three rows
+  // all claiming a saving against each other is not information.
+  const savings = priciestCost == null || !result.comparable || !isCheapest
+    ? null : priciestCost - result.cost;
   const color = CHAIN_COLORS[result.branch.kedja] || "var(--primary)";
   // A store whose live match rate is too thin to trust isn't allowed to
   // just show a partial sum as if it were the real total - see
@@ -1243,9 +1247,14 @@ function renderStoreComparisonPage(selected) {
   // cheapest one shown above, so this reflects what the user would really
   // save with the choice they've already made.
   const activeResult = results.find(r => r.branch.kedja === chosenStore()) || cheapest;
-  const activeSavings = priciest.cost - activeResult.cost;
+  // priciest is null whenever no shop qualified for a comparison - and a
+  // saving measured against nothing is not a saving. Say nothing instead of
+  // crashing the whole render, which is what reading .cost off null did.
+  const activeSavings = priciest && activeResult ? priciest.cost - activeResult.cost : 0;
   $("comparisonCampaignCard").hidden = !(activeSavings > 1);
-  $("comparisonCampaignText").textContent = `Du sparar ${money(activeSavings)} med ${activeResult.branch.kedja}`;
+  if (activeSavings > 1) {
+    $("comparisonCampaignText").textContent = `Du sparar ${money(activeSavings)} med ${activeResult.branch.kedja}`;
+  }
   $("comparisonUpdated").textContent = state.liveUpdatedAt
     ? `Priserna uppdaterades ${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}`
     : "Uppskattade priser - riktiga priser hämtas när du öppnar Handla.";

@@ -1172,7 +1172,28 @@ class ApiHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    # Sent on everything this server serves. The frontend also carries the
+    # policy as a meta tag, because GitHub Pages serves it without any
+    # headers of its own - but frame-ancestors and X-Frame-Options only work
+    # as real headers, so they live here.
+    CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+
+    def send_response(self, *args, **kwargs):
+        # One handler instance serves MANY requests over a keep-alive
+        # connection, so the "already sent" flag has to be cleared where a
+        # response begins - otherwise only the first request on each
+        # connection got the security headers.
+        self._security_headers_sent = False
+        super().send_response(*args, **kwargs)
+
     def end_headers(self):
+        if not getattr(self, "_security_headers_sent", False):
+            self._security_headers_sent = True
+            self.send_header("Content-Security-Policy", self.CONTENT_SECURITY_POLICY)
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+
         # Static files (frontend/*.js, *.css, ...) get no Cache-Control from
         # SimpleHTTPRequestHandler, so browsers fall back to heuristic caching
         # off Last-Modified - which can silently keep serving a stale ES module

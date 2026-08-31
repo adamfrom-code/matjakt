@@ -2,6 +2,18 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8">
+  <!-- The session token is a bearer credential held in localStorage (see
+       src/api/auth.js for why cookies are not usable across matjakt.store
+       -> onrender.com). That makes script injection the way it could be
+       stolen, so script-src has no 'unsafe-inline' and no CDN: the app
+       loads exactly one module from its own origin, which is all it has
+       ever needed. connect-src pins where the app may talk to, so an
+       injected script could not exfiltrate to an attacker's host either.
+       style-src keeps 'unsafe-inline' because the app sets style="" on
+       elements; injected CSS is a far smaller problem than injected JS.
+       frame-ancestors is ignored in a meta tag - the backend sends it as
+       a real header (see api_server.end_headers). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#f6f3ea">
   <meta name="description" content="Matjakt hjälper dig planera billigare middagar efter din budget.">
