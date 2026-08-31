@@ -194,6 +194,45 @@ ingrediensen. Ordningen är:
 En ingrediens utan lista begränsas bara av regel 2. Lagret är alltså
 **additivt**: det kan avvisa en felaktig match, aldrig hitta på en riktig.
 
+## Nästa förbättring: butiksspecifika priser (EJ GJORD)
+
+Willys och Hemköp är **verifierat nationella** — samma fråga med två olika
+`storeId` ger byte-identiska svar. Deras priser gäller alltså i varje butik,
+och den kedja användaren klickar på spelar ingen roll för priset.
+
+**City Gross och ICA prissätter per butik.** Idag importeras City Gross från
+Gävle (`3209`) och ICA från Maxi Gävle (`1003987`), så en användare i
+Stockholm som öppnar City Gross Häggvik ser Gävlepriser. Frontend säger det
+rakt ut (`pricingScope` i pricing-svaret ger varukorgen en tydlig rad om
+det), men det är en varning, inte en lösning.
+
+**Rätt modell är efterfrågestyrd, inte uttömmande.** Att importera alla
+Sveriges butiker skulle multiplicera importvolymen mot kedjor som redan
+stryper oss, för data ingen efterfrågat. I stället:
+
+```
+användarens postnummer
+  → närmaste butiker (finns redan, /api/stores)
+  → importera/cacha PRECIS de butikerna
+  → prissätt mot den butik användaren faktiskt valt
+```
+
+Det som redan finns och bär modellen:
+
+- `grocery_current_prices` är nycklad på `(product_id, store_id)`, så flera
+  butikers priser för samma produkt ryms redan utan schemaändring.
+- `GroceryStore.upsert_store` och providerarnas `get_stores()` löser vilken
+  butik som helst.
+- Collectorerna tar redan `--store`, och importern tar `store_id`.
+- `pricing.price_list(..., store_id=...)` prissätter redan mot en specifik
+  butik.
+
+Det som saknas: en per-butik-TTL och en kö som importerar en butik första
+gången någon frågar efter den, i stället för att alla butiker importeras i
+förväg. **Blockerar ingenting annat** — nationellt prissatta kedjor är redan
+korrekta, och de per-butik-prissatta är korrekta för den importerade butiken
+och ärligt märkta för övriga.
+
 ## Produktmatchning (prioritetsordning)
 
 1. **GTIN**
