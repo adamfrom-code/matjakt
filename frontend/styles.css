@@ -97,3 +97,65 @@ a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visi
   .site-steps-list{grid-template-columns:repeat(3,1fr)}
   .site-footer-inner{flex-direction:row;justify-content:space-between;text-align:left}
 }
+
+/* ---- Hero med film ------------------------------------------------------
+   The clip is background: the words sit on top of it and must stay readable
+   whether the video has loaded, failed, or been turned off by the visitor.
+   That is what the scrim is for, and why every text colour here is set
+   against the scrim rather than against the footage. */
+.site-hero{position:relative;isolation:isolate;text-align:center;padding:72px 20px 76px;margin:-1px calc(50% - 50vw) 0;width:100vw;overflow:hidden;background:var(--primary)}
+.site-hero-media{position:absolute;inset:0;z-index:-1}
+.site-hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.4s ease}
+.site-hero-video.is-active{opacity:1}
+/* Dark at the bottom where the buttons are, lighter at the top so the food
+   is still visible. Without this the white text sits on whatever the clip
+   happens to show, which on a pale frame is unreadable. */
+.site-hero-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,26,19,.62) 0%,rgba(12,26,19,.5) 35%,rgba(12,26,19,.82) 100%)}
+.site-hero-inner{position:relative;max-width:820px;margin:0 auto}
+.site-hero-logo{border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.35);margin-bottom:20px}
+.site-hero .site-eyebrow{color:#ffd9ac}
+.site-hero h1{color:#fff;font-size:38px;max-width:760px;margin-left:auto;margin-right:auto;text-shadow:0 2px 24px rgba(0,0,0,.35)}
+.site-hero-lead{max-width:620px;margin:16px auto 28px;color:rgba(255,255,255,.9);font-size:17px}
+.site-hero-note{margin-top:14px;color:rgba(255,255,255,.72);font-size:13px}
+.site-btn-glass{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.5);color:#fff;backdrop-filter:blur(6px)}
+.site-btn-glass:hover{background:rgba(255,255,255,.24)}
+
+/* ---- Presentationen ----------------------------------------------------- */
+.site-film{padding-top:64px;text-align:center}
+.site-film-track{display:flex;flex-direction:column;gap:18px;margin-top:32px}
+.site-film-scene{margin:0;text-align:left}
+.site-film-media{position:relative;border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow);
+  /* Taller than 16:9 on a phone so the scene fills the screen properly, and
+     wider on a laptop where a tall tile would push the next scene off. */
+  aspect-ratio:4/5;background:var(--primary)}
+.site-film-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.site-film-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,26,19,.05) 30%,rgba(12,26,19,.86) 100%)}
+.site-film-copy{position:absolute;left:22px;right:22px;bottom:22px;color:#fff}
+.site-film-copy h3{color:#fff;font-size:25px;margin:10px 0 6px;text-shadow:0 2px 18px rgba(0,0,0,.4)}
+.site-film-copy p{margin:0;color:rgba(255,255,255,.88);font-size:15px}
+.site-film-step{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 9px;border-radius:99px;background:var(--accent);color:#2b1a08;font-family:"Fraunces",serif;font-weight:700;font-size:14px}
+.site-film-credit{margin:8px 4px 0;font-size:11px;color:var(--muted)}
+.site-film-credit a{color:var(--muted)}
+.site-film-scene-plain .site-film-copy{position:static;color:var(--text);padding:26px;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow)}
+.site-film-scene-plain h3{color:var(--primary);text-shadow:none}
+.site-film-scene-plain p{color:var(--muted)}
+.site-film-closing{margin-top:36px;padding:36px 20px;background:var(--primary);background-image:linear-gradient(155deg,var(--primary-2),var(--primary) 65%);border-radius:var(--r-lg);color:#fff}
+.site-film-closing-line{font-family:"Fraunces",serif;font-size:27px;font-weight:700;margin:0 0 20px}
+
+/* A scene lifts into place as it arrives. Purely decorative, so it is off
+   entirely for anyone who asked for less motion - and the starting state is
+   only ever applied when the observer is there to undo it. */
+[data-video="motion"] .site-film-scene{opacity:.001;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+[data-video="motion"] .site-film-scene.is-visible{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  .site-film-scene{opacity:1 !important;transform:none !important;transition:none !important}
+  .site-hero-video{transition:none}
+}
+@media (min-width:760px){
+  .site-hero{padding:104px 20px 108px}
+  .site-hero h1{font-size:52px}
+  .site-film-media{aspect-ratio:16/9}
+  .site-film-copy{left:38px;right:38px;bottom:34px}
+  .site-film-copy h3{font-size:32px}
+  .site-film-closing-line{font-size:36px}
+}

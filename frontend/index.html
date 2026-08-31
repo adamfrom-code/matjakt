@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=1">
+  <link rel="stylesheet" href="styles.css?v=2">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -66,15 +66,117 @@
 
   <main id="top">
     <section class="site-hero">
-      <p class="site-eyebrow">Matplanering efter din budget</p>
-      <h1>Planera veckans middagar efter din budget, ditt hushåll och din kost</h1>
-      <p class="site-hero-lead">Matjakt planerar veckan efter din budget och jämför tillgängliga butikspriser hos ICA, Coop, Willys och Hemköp. Du ser alltid hur många varor i listan som har ett aktuellt pris.</p>
-      <div class="site-hero-actions">
-        <a class="site-btn site-btn-primary site-btn-lg" href="app/" data-track="cta_testa_gratis">Testa Matjakt gratis →</a>
-        <a class="site-btn site-btn-ghost site-btn-lg" href="#sa-fungerar-det" data-track="cta_se_hur_det_fungerar">Se hur det fungerar</a>
+      <!-- The clip sits behind the words, never in front of them. It is
+           decorative: no sound, no controls, nothing to miss if it never
+           loads. site-video.js decides whether to load it at all - a visitor
+           on Data Saver or reduced motion keeps the poster still. -->
+      <div class="site-hero-media" aria-hidden="true">
+        <video class="site-hero-video is-active" data-hero-clip
+               poster="site/video/matjakt-hero.jpg"
+               muted playsinline loop preload="none" disablepictureinpicture></video>
+        <video class="site-hero-video" data-hero-clip
+               poster="site/video/matjakt-vecka.jpg"
+               muted playsinline loop preload="none" disablepictureinpicture></video>
+        <span class="site-hero-scrim"></span>
       </div>
-      <p class="site-hero-note">Inget betalkort krävs för att komma igång.</p>
-      <div class="site-hero-visual" aria-hidden="true">
+      <div class="site-hero-inner">
+        <img class="site-hero-logo" src="app/assets/icons/icon-192.png" alt="" width="64" height="64">
+        <p class="site-eyebrow">Matplanering efter din budget</p>
+        <h1>Planera veckan. Handla där den blir billigast.</h1>
+        <p class="site-hero-lead">Matjakt bygger veckans middagar efter din budget, gör om dem till en inköpslista med riktiga produkter — och visar vilken butik som blir billigast.</p>
+        <div class="site-hero-actions">
+          <a class="site-btn site-btn-primary site-btn-lg" href="app/" data-track="cta_testa_gratis">Testa Matjakt gratis →</a>
+          <a class="site-btn site-btn-glass site-btn-lg" href="#presentation" data-track="cta_se_hur_det_fungerar">Se hur det fungerar</a>
+        </div>
+        <p class="site-hero-note">Inget betalkort krävs för att komma igång.</p>
+      </div>
+    </section>
+
+    <section class="site-film" id="presentation">
+      <p class="site-eyebrow">På en halv minut</p>
+      <h2>Så gör Matjakt jobbet åt dig</h2>
+      <!-- PRESENTATION:START - genererad av backend/scripts/build_site_presentation.py -->
+      <div class="site-film-track">
+        <article class="site-film-scene">
+          <div class="site-film-media">
+            <video class="site-film-video" data-film-src="site/video/matjakt-valj.mp4"
+                   poster="site/video/matjakt-valj.jpg"
+                   muted playsinline loop preload="none" disablepictureinpicture
+                   aria-hidden="true"></video>
+            <span class="site-film-scrim"></span>
+            <div class="site-film-copy"><span class="site-film-step">1</span><h3>Välj vad du vill äta.</h3><p>Du säger vad du är sugen på.</p></div>
+          </div>
+          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/delicious-homemade-pierogi-on-plate-37659853/" rel="noopener nofollow" target="_blank">Anh Nguyen</a> · Pexels</p>
+        </article>
+        <article class="site-film-scene">
+          <div class="site-film-media">
+            <video class="site-film-video" data-film-src="site/video/matjakt-vecka.mp4"
+                   poster="site/video/matjakt-vecka.jpg"
+                   muted playsinline loop preload="none" disablepictureinpicture
+                   aria-hidden="true"></video>
+            <span class="site-film-scrim"></span>
+            <div class="site-film-copy"><span class="site-film-step">2</span><h3>Matjakt bygger veckan.</h3><p>Sju middagar som håller din budget.</p></div>
+          </div>
+          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/a-person-preparing-healthy-meal-5866265/" rel="noopener nofollow" target="_blank">Vanessa Loring</a> · Pexels</p>
+        </article>
+        <article class="site-film-scene">
+          <div class="site-film-media">
+            <video class="site-film-video" data-film-src="site/video/matjakt-lista.mp4"
+                   poster="site/video/matjakt-lista.jpg"
+                   muted playsinline loop preload="none" disablepictureinpicture
+                   aria-hidden="true"></video>
+            <span class="site-film-scrim"></span>
+            <div class="site-film-copy"><span class="site-film-step">3</span><h3>Recepten blir en inköpslista.</h3><p>Allt du behöver, i rätt mängd.</p></div>
+          </div>
+          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/hand-writing-notes-in-paper-7560925/" rel="noopener nofollow" target="_blank">SHVETS production</a> · Pexels</p>
+        </article>
+        <article class="site-film-scene">
+          <div class="site-film-media">
+            <video class="site-film-video" data-film-src="site/video/matjakt-produkter.mp4"
+                   poster="site/video/matjakt-produkter.jpg"
+                   muted playsinline loop preload="none" disablepictureinpicture
+                   aria-hidden="true"></video>
+            <span class="site-film-scrim"></span>
+            <div class="site-film-copy"><span class="site-film-step">4</span><h3>Riktiga produkter och förpackningar.</h3><p>Rätt förpackning, inte ett cirkapris.</p></div>
+          </div>
+          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/stock-clerk-organizing-grocery-store-shelves-36074343/" rel="noopener nofollow" target="_blank">Circuit Occidental</a> · Pexels</p>
+        </article>
+        <article class="site-film-scene">
+          <div class="site-film-media">
+            <video class="site-film-video" data-film-src="site/video/matjakt-butiker.mp4"
+                   poster="site/video/matjakt-butiker.jpg"
+                   muted playsinline loop preload="none" disablepictureinpicture
+                   aria-hidden="true"></video>
+            <span class="site-film-scrim"></span>
+            <div class="site-film-copy"><span class="site-film-step">5</span><h3>Jämför riktiga matpriser.</h3><p>Samma lista, flera butiker.</p></div>
+          </div>
+          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/shopping-cart-journey-through-grocery-aisle-29068393/" rel="noopener nofollow" target="_blank">Glimpses Into Reality</a> · Pexels</p>
+        </article>
+        <article class="site-film-scene">
+          <div class="site-film-media">
+            <video class="site-film-video" data-film-src="site/video/matjakt-billigast.mp4"
+                   poster="site/video/matjakt-billigast.jpg"
+                   muted playsinline loop preload="none" disablepictureinpicture
+                   aria-hidden="true"></video>
+            <span class="site-film-scrim"></span>
+            <div class="site-film-copy"><span class="site-film-step">6</span><h3>Spara pengar varje vecka.</h3><p>Du ser var veckan blir billigast.</p></div>
+          </div>
+          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/couple-paying-at-the-counter-in-the-grocery-4121754/" rel="noopener nofollow" target="_blank">Jack Sparrow</a> · Pexels</p>
+        </article>
+      </div>
+      <div class="site-film-closing">
+        <p class="site-film-closing-line">Matjakt gör jobbet åt dig.</p>
+        <a class="site-btn site-btn-primary site-btn-lg" href="app/" data-track="cta_testa_gratis">Testa Matjakt gratis →</a>
+      </div>
+      <!-- PRESENTATION:END -->
+    </section>
+
+    <section class="site-savings">
+      <div class="site-savings-inner">
+        <p class="site-savings-tag">Illustration, inte en garanti</p>
+        <h2>Så kan du spara pengar</h2>
+        <p>Matjakt jämför din faktiska veckolista mot flera butiker samtidigt och visar vilken som är billigast just för dig. Ett hushåll som handlar hos den butik Matjakt pekar ut kan spara pengar jämfört med att handla på måfå – hur mycket beror på ditt hushåll, din ort, vad du redan har hemma och hur många priser som går att hämta just den veckan.</p>
+        <div class="site-hero-visual" aria-hidden="true">
         <div class="site-mock-card">
           <div class="site-mock-row"><span>Veckobudget</span><strong>629 kr kvar av 800 kr</strong></div>
           <div class="site-mock-bar"><i style="width:21%"></i></div>
@@ -83,15 +185,8 @@
           <div class="site-mock-row"><span>Handla hos</span><strong>Coop Nian · 461 kr</strong></div>
           <div class="site-mock-tag">Billigast av 4 butiker</div>
         </div>
-      </div>
-      <p class="site-hero-visual-caption">Exempel från appen</p>
-    </section>
-
-    <section class="site-savings">
-      <div class="site-savings-inner">
-        <p class="site-savings-tag">Illustration, inte en garanti</p>
-        <h2>Så kan du spara pengar</h2>
-        <p>Matjakt jämför din faktiska veckolista mot flera butiker samtidigt och visar vilken som är billigast just för dig. Ett hushåll som handlar hos den butik Matjakt pekar ut kan spara pengar jämfört med att handla på måfå – hur mycket beror på ditt hushåll, din ort, vad du redan har hemma och hur många priser som går att hämta just den veckan.</p>
+        </div>
+        <p class="site-hero-visual-caption">Exempel från appen</p>
       </div>
     </section>
 
@@ -266,5 +361,6 @@
       }
     })();
   </script>
+  <script src="site-video.js?v=1" defer></script>
 </body>
 </html>
