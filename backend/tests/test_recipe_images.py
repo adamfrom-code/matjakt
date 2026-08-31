@@ -9,11 +9,14 @@ The rule these protect: a photo of the WRONG dish is worse than no photo. It
 makes the app look careless in the one place a food app cannot afford to.
 """
 
+import os
+import re
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from services.recipes import images  # noqa: E402
 from services.recipes.images import (  # noqa: E402
     COMMERCIAL_LICENCES, build_query, english_terms, placeholder, score_candidate,
 )
@@ -103,6 +106,51 @@ class PlaceholderTest(unittest.TestCase):
 
     def test_it_still_carries_alt_text(self):
         self.assertTrue(placeholder(recipe("Köttfärslimpa", "Köttfärs"))["imageAlt"])
+
+
+
+
+class PexelsSourceTest(unittest.TestCase):
+    """Pexels is the good source - stock food photography rather than the
+    hobby snapshots and species pictures Commons is full of. It needs a key,
+    so everything here has to degrade cleanly when there is not one.
+    """
+
+    def setUp(self):
+        self._original = os.environ.get("PEXELS_API_KEY")
+        self.addCleanup(self._restore)
+
+    def _restore(self):
+        if self._original is None:
+            os.environ.pop("PEXELS_API_KEY", None)
+        else:
+            os.environ["PEXELS_API_KEY"] = self._original
+
+    def test_no_key_means_no_pexels_search_not_a_crash(self):
+        """A missing key must leave the app importing recipes from Commons,
+        not fail the whole run."""
+        os.environ["PEXELS_API_KEY"] = ""
+        self.assertEqual(images.search_pexels("lasagna"), [])
+
+    def test_the_pexels_licence_is_accepted(self):
+        """Without this every Pexels photo would be rejected by the licence
+        check and the key would appear not to work."""
+        self.assertTrue(COMMERCIAL_LICENCES.match("Pexels License"))
+
+    def test_the_key_is_never_part_of_the_stored_image_data(self):
+        """A key that reaches the recipe data reaches the frontend."""
+        source = (Path(__file__).resolve().parents[1] /
+                  "services" / "recipes" / "images.py").read_text(encoding="utf-8")
+        stored = source[source.index("def find_image"):]
+        self.assertNotIn("pexels_key()", stored,
+                         "bildmetadatan får aldrig innehålla nyckeln")
+
+    def test_key_is_read_only_from_the_environment_or_dotenv(self):
+        source = (Path(__file__).resolve().parents[1] /
+                  "services" / "recipes" / "images.py").read_text(encoding="utf-8")
+        self.assertIn('os.environ.get("PEXELS_API_KEY")', source)
+        # No hardcoded key-shaped literal anywhere.
+        self.assertIsNone(re.search(r'["\'][A-Za-z0-9]{40,}["\']', source))
 
 
 if __name__ == "__main__":

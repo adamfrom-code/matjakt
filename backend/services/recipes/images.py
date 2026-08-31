@@ -34,8 +34,42 @@ import unicodedata
 import urllib.parse
 import urllib.request
 
+import os
+from pathlib import Path
+
 USER_AGENT = "Matjakt/1.0 (receptbilder; https://matjakt.store)"
 COMMONS_API = "https://commons.wikimedia.org/w/api.php"
+PEXELS_API = "https://api.pexels.com/v1/search"
+
+# The key is read from the environment and never written anywhere - not to a
+# file, not to a log line, not into the recipe data. Nothing here prints it,
+# and the only thing that leaves this module is the photo metadata.
+def pexels_key() -> str:
+    """The Pexels key, from the environment or from .env.
+
+    CLI scripts do not go through api_server, which is what normally loads
+    .env - so without this the key would have to be exported by hand every
+    time, and the obvious next step would be pasting it into a file that gets
+    committed. Reading .env here removes that temptation."""
+    key = (os.environ.get("PEXELS_API_KEY") or "").strip()
+    if key:
+        return key
+    env_file = Path(__file__).resolve().parents[3] / ".env"
+    try:
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            name, _, value = line.partition("=")
+            if name.strip() == "PEXELS_API_KEY":
+                return value.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return ""
+
+
+# The Pexels License permits commercial use without attribution. We store the
+# photographer and the photo page anyway: crediting a photographer who did
+# not demand it costs nothing, and a photo whose origin we cannot show is a
+# photo we cannot defend later.
+PEXELS_LICENCE = "Pexels License"
 
 # Licences that allow commercial use. Anything not on this list is refused,
 # including "no licence stated" - an unstated licence is not a permissive
@@ -47,7 +81,11 @@ COMMONS_API = "https://commons.wikimedia.org/w/api.php"
 _NON_COMMERCIAL = re.compile(r"n[cd]|noncommercial|no[- ]derivat", re.IGNORECASE)
 _PERMISSIVE = re.compile(
     r"^\s*(cc0.*|cc[- ]by([- ]sa)?([- ]?\d(\.\d)?)?\s*"
-    r"|public domain.*|pd[- ].*|no restrictions\s*)$",
+    r"|public domain.*|pd[- ].*|no restrictions\s*"
+    # The Pexels License permits commercial use without attribution. Named
+    # explicitly rather than pattern-matched: a licence we allow should be a
+    # licence someone decided to allow.
+    r"|pexels license\s*|unsplash license\s*)$",
     re.IGNORECASE)
 
 
@@ -279,6 +317,7 @@ def search_commons(query: str, limit: int = 12) -> list[dict]:
             continue
         credit = re.sub(r"<[^>]+>", "", meta.get("Artist", {}).get("value") or "").strip()
         candidates.append({
+            "creditUrl": info.get("descriptionurl"), "photoId": "",
             "title": page.get("title", "").removeprefix("File:"),
             "url": info.get("thumburl") or info.get("url"),
             "descriptionUrl": info.get("descriptionurl"),
@@ -287,6 +326,55 @@ def search_commons(query: str, limit: int = 12) -> list[dict]:
             "width": info.get("width"), "source": "Wikimedia Commons",
         })
     return candidates
+
+
+def search_pexels(query: str, limit: int = 15) -> list[dict]:
+    """Candidate photos from Pexels, in the same shape as the Commons search.
+
+    Pexels is stock food photography: brighter, better composed and far more
+    likely to show a plated dish than Wikimedia Commons, which is mostly
+    hobby snapshots and species pictures. It needs a key, so it is used when
+    one exists and skipped silently when it does not."""
+    key = pexels_key()
+    if not key:
+        return []
+    request = urllib.request.Request(
+        f"{PEXELS_API}?{urllib.parse.urlencode({'query': query, 'per_page': limit, 'orientation': 'landscape'})}",
+        headers={"Authorization": key, "User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(request, timeout=25) as response:
+            data = json.load(response)
+    except Exception:
+        # A failing image source must never stop a recipe from being created.
+        return []
+
+    candidates = []
+    for photo in data.get("photos") or []:
+        source = photo.get("src") or {}
+        url = source.get("large") or source.get("original")
+        if not url or (photo.get("width") or 0) < MIN_WIDTH:
+            continue
+        candidates.append({
+            # Pexels' own alt text describes the photo's CONTENT, which is a
+            # far better relevance signal than a filename - Commons titles
+            # are whatever the uploader felt like typing.
+            "title": photo.get("alt") or query,
+            "url": url,
+            "descriptionUrl": photo.get("url"),
+            "license": PEXELS_LICENCE,
+            "credit": photo.get("photographer") or "Pexels",
+            "creditUrl": photo.get("photographer_url"),
+            "photoId": str(photo.get("id") or ""),
+            "width": photo.get("width"),
+            "source": "Pexels",
+        })
+    return candidates
+
+
+def search_sources(query: str) -> list[dict]:
+    """Every source, best first. Pexels leads when a key exists because its
+    food photography is simply better suited to a recipe card."""
+    return search_pexels(query) + search_commons(query)
 
 
 def find_image(recipe: dict, used_titles: set | None = None) -> dict | None:
@@ -298,7 +386,7 @@ def find_image(recipe: dict, used_titles: set | None = None) -> dict | None:
     used_titles = used_titles if used_titles is not None else set()
     best = None
     for query in build_query(recipe):
-        for candidate in search_commons(query):
+        for candidate in search_sources(query):
             if candidate["title"] in used_titles:
                 continue
             score = score_candidate(candidate["title"], recipe)
@@ -314,6 +402,8 @@ def find_image(recipe: dict, used_titles: set | None = None) -> dict | None:
         "imageSource": candidate["source"],
         "imageSourceUrl": candidate["descriptionUrl"],
         "imageCredit": candidate["credit"],
+        "imageCreditUrl": candidate.get("creditUrl"),
+        "imagePhotoId": candidate.get("photoId"),
         "imageLicense": candidate["license"],
         "imageAlt": f"{recipe['name']} upplagd på tallrik",
         "imageTitle": candidate["title"],
