@@ -843,7 +843,17 @@ async function renderRecipePage() {
   if (!recipe && id.includes(":")) {
     try { const response = await fetch(recipeDetailApiUrl(id)); if (response.ok) { const data = await response.json(); recipe = mapApiRecipe(data.recipe); state.apiRecipes.push(recipe); allRecipes = [...RECEPT, ...state.apiRecipes]; } } catch { /* The friendly not-found state below remains visible. */ }
   }
-  if (!recipe) return;
+  if (!recipe) {
+    // A deep link (?recept=...) arrives BEFORE the recipe bank has loaded.
+    // Returning to Hem here made every shared recipe link land on the start
+    // page; show the page in a calm loading state instead - the bank's
+    // loadRecipes().then() re-runs this render the moment recipes exist.
+    $("top").hidden = true;
+    $("recipePage").hidden = false;
+    $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe"><div class="full-recipe-fallback">${recipePhoto({})}</div><h1>Hämtar receptet…</h1><p class="full-recipe-description">Ett ögonblick.</p></article>`;
+    $("recipePage").querySelector(".recipe-back").addEventListener("click", () => { history.pushState(null, "", location.pathname); renderRecipePage(); setView("recipes"); });
+    return;
+  }
   const details = detailsFor(recipe);
   $("top").hidden = true;
   document.querySelectorAll(".bottom-nav-item").forEach(item =>
@@ -3119,6 +3129,7 @@ if (pendingVerifyToken) {
 fetchEntitlements();
 loadRecipes().then(recipes => {
   RECEPT.push(...recipes);
+  if (new URLSearchParams(location.search).get("recept")) renderRecipePage();
   if (!RECEPT.length) return;
   if (!state.valda.size && state.onboardingComplete) chooseMenu(false);
   else render();
