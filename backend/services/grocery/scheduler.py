@@ -141,14 +141,11 @@ class GroceryScheduler:
         flat estimate. Verified in production: /api/grocery/status reported
         totalProducts 0 on a fully deployed backend.
 
-        Guards, all three necessary:
+        Guards, both necessary:
           - only when the scheduler is enabled, so a local dev run never
             starts fetching from three chains on its own;
-          - only when the database holds NOTHING, so an ordinary deploy does
-            not re-import a catalogue that is already there;
-          - one chain only. The others follow on their normal nightly slots.
-            Importing three at once on a 512 MB instance, right as it boots
-            and while Chromium is warming up, is how the last OOM happened.
+          - only chains with no completed run, so an ordinary deploy does not
+            re-import a catalogue that is already there.
         """
         if not self.enabled:
             return False
@@ -160,24 +157,41 @@ class GroceryScheduler:
             logger.exception("Kunde inte läsa prisdatabasens tillstånd - hoppar över bootstrap")
             return False
 
-        chain = BOOTSTRAP_CHAIN
-        state = providers.get(chain) or {}
-        empty = summary["totalProducts"] == 0
-        # A catalogue that has NEVER been imported all the way through is not
-        # a working catalogue. Production sat on 2 538 of ~11 000 products
-        # because a deploy killed the import partway and the old guard
-        # ("only when totally empty") refused to resume - leaving a quarter
-        # of a catalogue until the next nightly run.
+        # EVERY schedulable chain that has never completed an import gets one
+        # now, not just Willys. Production ran for hours with Willys full and
+        # Hemköp/City Gross at zero products, because their data had only
+        # ever existed on a disk that predated persistence - and the only
+        # thing that would fill them was the wall clock reaching 03:00. An
+        # empty chain is an empty chain; which one it is does not matter.
         #
-        # This cannot loop: once one run finishes, lastSuccessfulRun is set
-        # and the condition stops being true, however many times we restart.
-        never_finished = not state.get("lastSuccessfulRun")
-        if not (empty or never_finished):
+        # A chain that HAS a completed run is left alone however old its data
+        # is - freshness is the nightly job's job, not bootstrap's.
+        needy = []
+        for chain in sorted(SCHEDULABLE_CHAINS,
+                            key=lambda name: (name != BOOTSTRAP_CHAIN, name)):
+            state = providers.get(chain) or {}
+            # This cannot loop: once one run finishes, lastSuccessfulRun is
+            # set and the condition stops being true, however many times we
+            # restart.
+            if state.get("products", 0) == 0 or not state.get("lastSuccessfulRun"):
+                needy.append(chain)
+        if not needy:
             return False
 
-        logger.warning("Prisdatabasen är %s - startar en import av %s",
-                       "tom" if empty else "ofullständig (ingen körning har blivit klar)", chain)
-        return bool(importer.start(chain).get("started"))
+        logger.warning("Prisdatabasen saknar fungerande data för %s - importerar",
+                       ", ".join(needy))
+        started_any = False
+        for chain in needy:
+            if not importer.start(chain).get("started"):
+                continue
+            started_any = True
+            # One at a time, waited for, not fired in parallel: the importer
+            # refuses concurrent runs anyway, and three simultaneous walks on
+            # a booting 512 MB instance is how the last OOM happened. Waiting
+            # here is free - this whole method runs on its own daemon thread.
+            while importer.status().get("running"):
+                time.sleep(30)
+        return started_any
 
     def start(self):
         if not self.enabled:

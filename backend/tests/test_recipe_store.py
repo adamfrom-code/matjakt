@@ -173,3 +173,74 @@ class SearchTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RecipePriceColumns(unittest.TestCase):
+    """The price columns hold what the pricing RUN computed - a real portion
+    cost with its chain and coverage, or the explicit verdict that no full
+    price exists. Both must round-trip, and 'no price' must overwrite a stale
+    success."""
+
+    def setUp(self):
+        import tempfile
+        self.dir = tempfile.TemporaryDirectory()
+        self.store = RecipeStore(Path(self.dir.name) / "recipes.db")
+        # LIFO: close must run BEFORE the directory removal, or Windows
+        # refuses to delete a database file that is still open.
+        self.addCleanup(self.dir.cleanup)
+        self.addCleanup(self.store.close)
+        self.store.upsert_recipe({
+            "id": "testgryta", "slug": "testgryta", "name": "Testgryta",
+            "servings": 4, "totalTime": 30,
+            "ingredients": [{"name": "Pasta", "amount": 400, "unit": "g"}],
+            "instructions": ["Koka."],
+        })
+
+    def test_price_round_trips(self):
+        self.store.set_price("testgryta", price_per_portion=23.5,
+                             chain="Willys", covered=5, total=5)
+        recipe = self.store.get("testgryta")
+        self.assertEqual(recipe["pricePerPortion"], 23.5)
+        self.assertEqual(recipe["priceChain"], "Willys")
+        self.assertIsNotNone(recipe["pricedAt"])
+
+    def test_no_price_overwrites_a_stale_success(self):
+        """A recipe whose ingredient lost its product match must not keep
+        advertising last month's price."""
+        self.store.set_price("testgryta", price_per_portion=23.5,
+                             chain="Willys", covered=5, total=5)
+        self.store.set_price("testgryta", price_per_portion=None,
+                             chain=None, covered=3, total=5)
+        recipe = self.store.get("testgryta")
+        self.assertIsNone(recipe["pricePerPortion"])
+
+    def test_migration_adds_columns_to_an_existing_database(self):
+        """Production's recipes.db predates the price columns and must not be
+        rebuilt (a rebuild would lose the backfilled images)."""
+        import sqlite3, tempfile
+        with tempfile.TemporaryDirectory() as workdir:
+            path = Path(workdir) / "old.db"
+            connection = sqlite3.connect(path)
+            # Ett schema utan priskolumnerna, som produktionens.
+            connection.executescript(
+                "CREATE TABLE recipes (id TEXT PRIMARY KEY, slug TEXT UNIQUE NOT NULL, "
+                "name TEXT NOT NULL, description TEXT, servings INTEGER NOT NULL DEFAULT 4, "
+                "prep_time INTEGER, cook_time INTEGER, total_time INTEGER, difficulty TEXT, "
+                "kcal REAL, protein REAL, carbs REAL, fat REAL, fiber REAL, image TEXT, "
+                "image_source TEXT, image_source_url TEXT, image_credit TEXT, "
+                "image_license TEXT, image_alt TEXT, image_status TEXT, "
+                "created_at REAL NOT NULL, updated_at REAL NOT NULL);")
+            connection.execute(
+                "INSERT INTO recipes (id, slug, name, created_at, updated_at) "
+                "VALUES ('gammal', 'gammal', 'Gammal', 1, 1)")
+            connection.commit()
+            connection.close()
+            migrated = RecipeStore(path)
+            try:
+                recipe = migrated.get("gammal")
+                self.assertIsNone(recipe["pricePerPortion"])
+                migrated.set_price("gammal", price_per_portion=12.0,
+                                   chain="Willys", covered=1, total=1)
+                self.assertEqual(migrated.get("gammal")["pricePerPortion"], 12.0)
+            finally:
+                migrated.close()

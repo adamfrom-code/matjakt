@@ -125,6 +125,12 @@ def card(recipe: dict) -> dict:
         "image": recipe["image"], "imageAlt": recipe["imageAlt"],
         "tags": recipe["tags"], "categories": recipe["categories"],
         "dietFlags": recipe["dietFlags"], "allergens": recipe["allergens"],
+        # A real portion cost from the pricing run, never an estimate. Null
+        # when the last run could not price every countable ingredient -
+        # a portion price missing two of nine ingredients is not a price.
+        "pricePerPortion": recipe.get("pricePerPortion"),
+        "priceChain": recipe.get("priceChain"),
+        "pricedAt": recipe.get("pricedAt"),
     }
 
 

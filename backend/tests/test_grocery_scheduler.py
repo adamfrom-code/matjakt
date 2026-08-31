@@ -140,24 +140,38 @@ class BootstrapTest(unittest.TestCase):
         self.scheduler = GroceryScheduler({"Willys": "02:00"})
         self.scheduler.enabled = True
 
-    def _summary(self, total, finished=True):
+    def _summary(self, total, finished=True, chains=None):
         """`finished` is whether a full import has EVER completed. A
         catalogue that has never finished importing is not a working
-        catalogue, however many rows it happens to hold."""
+        catalogue, however many rows it happens to hold.
+
+        `chains` overrides the per-chain state: {chain: (products, finished)}.
+        By default every schedulable chain mirrors the summary, because that
+        is what provider_status really returns - a mock that only mentions
+        Willys would make the other chains look permanently empty."""
         from services.grocery import api as grocery_api
         real_summary = grocery_api.database_summary
         real_status = grocery_api.provider_status
+        if chains is None:
+            chains = {chain: (total, finished)
+                      for chain in scheduler_module.SCHEDULABLE_CHAINS}
         grocery_api.database_summary = lambda: {"totalProducts": total, "chains": []}
         grocery_api.provider_status = lambda: [
-            {"chain": "Willys",
-             "lastSuccessfulRun": {"status": "success"} if finished else None}]
+            {"chain": chain, "products": products,
+             "lastSuccessfulRun": {"status": "success"} if done else None}
+            for chain, (products, done) in chains.items()]
         self.addCleanup(lambda: setattr(grocery_api, "database_summary", real_summary))
         self.addCleanup(lambda: setattr(grocery_api, "provider_status", real_status))
 
-    def test_imports_when_the_database_is_empty(self):
-        self._summary(0)
+    def test_imports_every_chain_when_the_database_is_empty(self):
+        """An empty chain is an empty chain - production ran for hours with
+        Willys full and Hemköp/City Gross at zero, waiting for the wall clock
+        to reach their nightly slots."""
+        self._summary(0, finished=False)
         self.assertTrue(self.scheduler.bootstrap_if_empty())
-        self.assertEqual(self.started, ["Willys"])
+        self.assertEqual(self.started[0], "Willys")
+        self.assertEqual(sorted(self.started),
+                         sorted(scheduler_module.SCHEDULABLE_CHAINS))
 
     def test_does_nothing_when_the_catalogue_is_complete(self):
         """An ordinary deploy must not re-import a catalogue that is there."""
@@ -170,7 +184,10 @@ class BootstrapTest(unittest.TestCase):
         the import partway and the old guard ("only when totally empty")
         refused to resume - leaving a quarter of a catalogue until the next
         nightly run."""
-        self._summary(2538, finished=False)
+        self._summary(2538, finished=True,
+                      chains={"Willys": (2538, False),
+                              "Hemköp": (9000, True),
+                              "City Gross": (8000, True)})
         self.assertTrue(self.scheduler.bootstrap_if_empty())
         self.assertEqual(self.started, ["Willys"])
 
@@ -189,12 +206,37 @@ class BootstrapTest(unittest.TestCase):
         self.assertFalse(self.scheduler.bootstrap_if_empty())
         self.assertEqual(self.started, [])
 
-    def test_only_one_chain_is_imported(self):
+    def test_chains_import_one_at_a_time_not_in_parallel(self):
         """Three category walks at once, on a 512 MB instance, right as it
-        boots, is how the last OOM happened."""
-        self._summary(0)
+        boots, is how the last OOM happened. Each started import is waited
+        out before the next chain begins."""
+        self._summary(0, finished=False)
+        running = {"count": 0}
+        real_status = scheduler_module.importer.status
+        def fake_status():
+            # Report "running" exactly once per import, so the loop has to
+            # take its waiting branch every time.
+            running["count"] += 1
+            return {"running": running["count"] % 2 == 1}
+        scheduler_module.importer.status = fake_status
+        self.addCleanup(lambda: setattr(scheduler_module.importer, "status", real_status))
+        real_sleep = scheduler_module.time.sleep
+        scheduler_module.time.sleep = lambda seconds: None
+        self.addCleanup(lambda: setattr(scheduler_module.time, "sleep", real_sleep))
+
         self.scheduler.bootstrap_if_empty()
-        self.assertEqual(len(self.started), 1)
+        self.assertEqual(len(self.started), len(scheduler_module.SCHEDULABLE_CHAINS))
+
+    def test_a_full_chain_is_left_alone_while_empty_chains_import(self):
+        """Bootstrap must not re-walk Willys just because Hemköp is empty -
+        freshness is the nightly job's job."""
+        self._summary(10842, finished=True,
+                      chains={"Willys": (10842, True),
+                              "Hemköp": (0, False),
+                              "City Gross": (0, False)})
+        self.assertTrue(self.scheduler.bootstrap_if_empty())
+        self.assertNotIn("Willys", self.started)
+        self.assertEqual(sorted(self.started), ["City Gross", "Hemköp"])
 
     def test_a_failure_to_read_the_database_is_not_fatal(self):
         from services.grocery import api as grocery_api

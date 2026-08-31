@@ -189,6 +189,16 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
         _set(running=False, finishedAt=time.time(), productsSaved=saved,
              status="blocked" if blocked_message else "done", message=blocked_message)
         logger.info("Import klar för %s: %d produkter", chain, saved)
+        if saved:
+            # Fresh shelf prices should reach the recipe cards without a
+            # redeploy. Guarded: the grocery stack must work even where the
+            # recipes service is absent, and a reprice failure is a stale
+            # card, never a failed import.
+            try:
+                from ..recipes import prices as recipe_prices
+                recipe_prices.reprice_in_background(f"import {chain}")
+            except Exception:
+                logger.exception("Kunde inte starta receptprissättningen")
     except Exception as error:
         logger.exception("Import misslyckades för %s", chain)
         _set(running=False, finishedAt=time.time(), status="failed", message=str(error))

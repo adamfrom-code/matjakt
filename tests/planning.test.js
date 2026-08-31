@@ -71,3 +71,23 @@ test("limitCandidatePool keeps representation from every category instead of onl
   assert.ok(limited.some(r => r.id === "meat1"), "notkott category must survive the cap even though it is pricier");
   assert.ok(limited.length <= 24);
 });
+
+// =============================================================================
+// Regression: "Skapa min vecka" kraschade när poolen svalt veckan
+// =============================================================================
+// A 7-dinner week whose candidates all share one protein source: the
+// 6-per-category cap produced a 6-recipe pool, C(6,7) built zero combos, and
+// pickBalanced read .cost off null - the button died with a TypeError and no
+// week was ever created. Found live in the browser, not by a test, which is
+// why these exist now.
+test("pickBalanced tål en tom pool", () => {
+  assert.equal(pickBalanced([], 800), null);
+});
+
+test("poolbegränsningen svälter aldrig veckan", () => {
+  const recipes = Array.from({ length: 30 }, (_, i) => ({
+    id: `r${i}`, proteinkalla: "vego", inkopspris: 50 + i,
+  }));
+  const pool = limitCandidatePool(recipes, 6, 18, "proteinkalla", "inkopspris", 8);
+  assert.ok(pool.length >= 8, `poolen har ${pool.length} recept, veckan behöver 8`);
+});

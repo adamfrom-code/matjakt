@@ -56,6 +56,13 @@ def normalize_ingredient_id(name: str) -> str:
     return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", folded)).strip("-")
 
 
+def _row_get(row, key):
+    try:
+        return row[key]
+    except (IndexError, KeyError):
+        return None
+
+
 class RecipeStore:
     def __init__(self, db_path: Path):
         db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -64,6 +71,7 @@ class RecipeStore:
         self._connection.execute("PRAGMA journal_mode=WAL")
         self._connection.execute("PRAGMA foreign_keys=ON")
         self._init_schema()
+        self._migrate()
 
     @property
     def connection(self):
@@ -71,6 +79,44 @@ class RecipeStore:
 
     def close(self):
         self._connection.close()
+
+    def _migrate(self):
+        """Adds columns that postdate existing production databases.
+
+        The price columns hold what the PRICING run computed, not what anyone
+        typed: a real portion cost against a real chain, with its coverage,
+        so a card can show a price that is genuinely defensible - or no price
+        at all. ALTER-if-missing because production's recipes.db predates
+        them and must not be rebuilt (it would lose backfilled images)."""
+        have = {row[1] for row in self._connection.execute("PRAGMA table_info(recipes)")}
+        wanted = {
+            "price_per_portion": "REAL",
+            "price_chain": "TEXT",
+            "price_covered": "INTEGER",
+            "price_total": "INTEGER",
+            "priced_at": "REAL",
+        }
+        with self._connection:
+            for column, kind in wanted.items():
+                if column not in have:
+                    self._connection.execute(
+                        f"ALTER TABLE recipes ADD COLUMN {column} {kind}")
+
+    def set_price(self, recipe_id: str, *, price_per_portion, chain,
+                  covered: int, total: int):
+        """Records one pricing run's verdict for a recipe.
+
+        price_per_portion may be None - "we could not price this" is a valid
+        verdict and must overwrite a stale success, or a recipe whose
+        ingredient lost its product match would keep advertising the old
+        price forever."""
+        import time as _time
+        with self._connection:
+            self._connection.execute(
+                """UPDATE recipes SET price_per_portion = ?, price_chain = ?,
+                   price_covered = ?, price_total = ?, priced_at = ?
+                   WHERE id = ?""",
+                (price_per_portion, chain, covered, total, _time.time(), recipe_id))
 
     def _init_schema(self):
         self._connection.executescript(
@@ -285,6 +331,11 @@ class RecipeStore:
             "imageCredit": row["image_credit"], "imageLicense": row["image_license"],
             "imageAlt": row["image_alt"], "imageStatus": row["image_status"],
             "ingredients": ingredients, "instructions": steps,
+            "pricePerPortion": _row_get(row, "price_per_portion"),
+            "priceChain": _row_get(row, "price_chain"),
+            "priceCovered": _row_get(row, "price_covered"),
+            "priceTotal": _row_get(row, "price_total"),
+            "pricedAt": _row_get(row, "priced_at"),
             "createdAt": row["created_at"], "updatedAt": row["updated_at"],
             **self._labels(recipe_id),
         }

@@ -27,7 +27,8 @@ from services.billing import StripeError, cancel_subscription, create_checkout_s
 from services.email import MailError, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.grocery import api as grocery_api  # noqa: E402
-from services.recipes import api as recipes_api  # noqa: E402
+from services.recipes import api as recipes_api
+from services.recipes import prices as recipe_prices  # noqa: E402
 from services.grocery import importer as grocery_importer  # noqa: E402
 from services.grocery.scheduler import SCHEDULER as GROCERY_SCHEDULER  # noqa: E402
 from services.pricing import CHAIN_TO_PRIMAT, KeyValueCacheStore, OpenFoodFactsError, PRIMAT_ATTRIBUTION, PriceCacheStore, PrimatError, image_url_for_gtin, nearby_stores as primat_nearby_stores, primat_account_status, resolve_stores as primat_resolve_stores, search_products as primat_search_products, to_matjakt_product as primat_to_matjakt_product
@@ -1776,11 +1777,74 @@ class ApiHandler(SimpleHTTPRequestHandler):
     # is a mistake or an abuse, not a shopping list.
     MAX_PRICING_ITEMS = 80
 
+    # A week is at most 7 dinners; anything far beyond that in one request
+    # is a mistake, not a menu.
+    MAX_PRICING_RECIPES = 14
+
+    def _recipe_items(self, payload):
+        """Aggregates {recipeIds, people} into priced shopping lines, server
+        side, from the recipe bank's own structured ingredients.
+
+        This is the honest path for recipes: the client sends WHICH recipes
+        and for HOW MANY people, and the amounts come from the same rows the
+        recipe page shows - not from a hand-maintained quantity table in the
+        frontend that new recipes were never added to (which is how a week of
+        database recipes priced as an empty list). Returns (items, error);
+        (None, None) means the payload isn't recipe-shaped at all."""
+        raw_ids = payload.get("recipeIds")
+        if not isinstance(raw_ids, list) or not raw_ids:
+            return None, None
+        if len(raw_ids) > self.MAX_PRICING_RECIPES:
+            return None, f"För många recept (max {self.MAX_PRICING_RECIPES})"
+        try:
+            people = max(1, min(int(payload.get("people") or 4), 20))
+        except (TypeError, ValueError):
+            people = 4
+        totals = {}
+        store = recipes_api.open_store()
+        try:
+            for raw_id in raw_ids[: self.MAX_PRICING_RECIPES]:
+                recipe = store.get(clean_text(str(raw_id)))
+                if not recipe:
+                    # An unknown id is skipped, not fatal: the client may hold
+                    # a stale week from before a recipe was retired.
+                    continue
+                servings = recipe.get("servings") or 4
+                scale = people / servings
+                for ingredient in recipe.get("ingredients", []):
+                    if ingredient.get("pantryStaple") or ingredient.get("optional"):
+                        continue
+                    name = ingredient["name"]
+                    amount = (ingredient.get("amount") or 1) * scale
+                    unit = ingredient.get("unit") or "st"
+                    row = totals.setdefault(name, {"name": name, "amount": 0.0, "unit": unit})
+                    # Mixed units for the same name (400 g + 2 st) can't be
+                    # summed; keep the first unit's line and add a separate
+                    # line for the other so nothing silently disappears.
+                    if row["unit"] != unit:
+                        row = totals.setdefault(f"{name}||{unit}",
+                                                {"name": name, "amount": 0.0, "unit": unit})
+                    row["amount"] += amount
+        finally:
+            store.close()
+        if not totals:
+            return None, "Inga av recepten finns i receptbanken"
+        return list(totals.values()), None
+
     def _pricing_items(self, payload):
         """Normalises the week's summed ingredient lines, dropping anything
         that isn't a usable {name, amount, unit}. Returns (items, error)."""
         if not isinstance(payload, dict):
             return None, "Ogiltig begäran"
+        # Recipe ids take precedence: the server's own aggregation of its own
+        # recipe rows beats whatever the client could reconstruct.
+        recipe_items, recipe_error = self._recipe_items(payload)
+        if recipe_error:
+            return None, recipe_error
+        if recipe_items is not None:
+            extra = payload.get("items") if isinstance(payload.get("items"), list) else []
+            merged = recipe_items + [e for e in extra if isinstance(e, dict)]
+            payload = dict(payload, items=merged)
         raw_items = payload.get("items") or payload.get("varor")
         if not isinstance(raw_items, list) or not raw_items:
             return None, "items saknas"
@@ -2071,6 +2135,13 @@ if __name__ == "__main__":
             logger.warning("Byggde receptbanken från källfilerna: %d recept", imported)
     except Exception:
         logger.exception("Kunde inte bygga receptbanken")
+    # Portion prices on the cards come from the price database, so they are
+    # recomputed whenever the server comes up - cheap when nothing changed,
+    # and the only way a fresh deploy's cards match the shelves.
+    try:
+        recipe_prices.reprice_in_background("serverstart")
+    except Exception:
+        logger.exception("Kunde inte starta receptprissättningen")
 
     GROCERY_SCHEDULER.start()
     try:

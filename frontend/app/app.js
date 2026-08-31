@@ -8,7 +8,7 @@ import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProte
 import { campaignsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
 import { changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, startTrial, storeToken, verifyEmail } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
-import { TAG_LABELS, hasTag, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
+import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
 
 // The recipe bank is DATA, loaded from data/recipes.json - see
 // src/data/recipes.js. It used to be two hardcoded arrays right here, which
@@ -79,7 +79,7 @@ function removeFromWeekPlan(id) { state.weekPlan = state.weekPlan.filter(existin
 // swapping "this day" rather than clearing and re-picking the week.
 function swapWeekPlanDay(dayIndex, newId) { state.weekPlan = state.weekPlan.map((id, index) => index === dayIndex ? newId : id); state.valda = new Set(state.weekPlan); }
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
+const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "80252", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
   // The week's recipe ids in day order (index 0 = Måndag) - the actual
   // source of truth for "which day has which recipe", now that a day swap
   // has to replace exactly one day's recipe in place. state.valda (a Set)
@@ -329,9 +329,32 @@ const comboAffinity = combo => combo.reduce((sum, recipe) => sum + recipeAffinit
 // longer weeks keeps every week length in the same ballpark (~30-40k combos)
 // while still leaving far more candidates than dinners to choose between.
 const CANDIDATE_POOL_FOR_COUNT = { 5: 22, 6: 20, 7: 18 };
+// One recipe's purchase cost for the current household. Bank recipes carry a
+// REAL inkopspris (from the pricing run); one that could not be priced
+// borrows the bank's median so planning still works - that median never
+// reaches a screen, it only keeps an unpriced recipe from looking free.
+let _medianInkopspris = null;
+function medianInkopspris() {
+  if (_medianInkopspris != null) return _medianInkopspris;
+  const priced = [...RECEPT, ...state.apiRecipes]
+    .map(recipe => recipe.inkopspris).filter(value => value != null).sort((a, b) => a - b);
+  _medianInkopspris = priced.length ? priced[Math.floor(priced.length / 2)] : 100;
+  return _medianInkopspris;
+}
+function comboEstimatedCost(combo) {
+  const factor = portionFactor(state.personer);
+  return combo.reduce((sum, recipe) =>
+    sum + (recipe.inkopspris ?? medianInkopspris()) * factor, 0);
+}
 function evaluateCombos(recipes, count, branch) {
-  const pool = limitCandidatePool(recipes, 6, CANDIDATE_POOL_FOR_COUNT[count] || 24);
-  return combinations(pool, count).map(combo => ({ combo, cost: shoppingListCost(combo, branch) }));
+  // minTotal: however hard the pool is capped, a `count`-dinner week needs
+  // at least count+1 candidates or there is nothing to choose between.
+  const pool = limitCandidatePool(recipes, 6, CANDIDATE_POOL_FOR_COUNT[count] || 24,
+                                  "proteinkalla", "inkopspris", count + 1);
+  // comboEstimatedCost, not shoppingListCost: the static catalogue does not
+  // know the bank's ingredients, so it priced every bank-recipe week at
+  // 0 kr - and a planner whose every option is "free" picks arbitrarily.
+  return combinations(pool, count).map(combo => ({ combo, cost: comboEstimatedCost(combo) }));
 }
 function bestMenuCombo(recipes, count, budget, branch, objective = "cheapest") {
   if (!recipes.length) return [];
@@ -501,7 +524,15 @@ function cheapestBranch(chain = null) {
   // instead and never claim it's the cheapest; real cross-store comparison lives
   // in renderStoreComparison() using live data, gated to Premium.
   if (!hasPremium()) return scored.sort((a, b) => a.avstandKm - b.avstandKm)[0];
-  return scored.sort((a, b) => a.total - b.total || a.avstandKm - b.avstandKm)[0];
+  // Premium auto-pick: the server's own comparison decides which CHAIN is
+  // cheapest (real prices, real coverage guards, see compare_chains); the
+  // nearest branch of that chain wins. The static estimates all share
+  // prisfaktor 1, so sorting by their "total" was an arbitrary tie - the
+  // very thing the "Billigast" guards exist to prevent.
+  const winnerChain = state.dbComparison?.cheapestChain;
+  const ofWinner = winnerChain ? scored.filter(branch => branch.kedja === winnerChain) : [];
+  const pool = ofWinner.length ? ofWinner : scored;
+  return pool.sort((a, b) => a.avstandKm - b.avstandKm)[0];
 }
 // A branch the user explicitly picked from the store comparison list (e.g.
 // "Coop Tullhuset" over the auto-picked "Coop Nian") overrides the normal
@@ -627,14 +658,18 @@ function renderRecipes() {
       && matchesAllTags(recipe, [...state.receptTaggar])
       && (!state.baraFavoriter || state.favoriter.has(recipe.id)));
   const branch = selectedBranch();
-  const premiumStoreAuto = hasPremium();
-  const storeLabel = state.butik === "auto" ? `${branch?.namn || "ingen butik hittades"}${premiumStoreAuto ? " (lägst uppskattat)" : " (närmast)"}` : state.butik === "alla" ? "alla butiker" : `${branch?.namn || state.butik}`;
+  // "Billigast" in a label is a claim; it is only made when the server's
+  // real comparison crowned this branch's chain. Otherwise the honest word
+  // is "närmast", which is how the branch was actually picked.
+  const autoIsWinner = hasPremium() && state.dbComparison?.cheapestChain
+    && branch?.kedja === state.dbComparison.cheapestChain;
+  const storeLabel = state.butik === "auto" ? `${branch?.namn || "ingen butik hittades"}${autoIsWinner ? " (billigast för din lista)" : " (närmast)"}` : state.butik === "alla" ? "alla butiker" : `${branch?.namn || state.butik}`;
   const loading = !state.branches.length && branchesSync.loading;
   // avstandKm can be null (e.g. a branch source that doesn't report distance,
   // or no state.position yet to measure from) - .toFixed() on that used to
   // throw and silently abort the rest of this render pass.
   const distanceText = Number.isFinite(branch?.avstandKm) ? ` och ligger ${branch.avstandKm.toFixed(1)} km bort` : "";
-  $("locationHint").textContent = branch ? `${nearbyBranches().length} butiksprofiler jämförda${loading ? " (hämtar riktiga butiker nära dig...)" : ""} · ${branch.namn} ${premiumStoreAuto ? "har lägst uppskattat pris" : "ligger närmast"}${distanceText}.` : `Hittade inga inlästa butiker nära ${state.postnummer} ännu.`;
+  $("locationHint").textContent = branch ? `${nearbyBranches().length} butiksprofiler jämförda${loading ? " (hämtar riktiga butiker nära dig...)" : ""} · ${branch.namn} ${autoIsWinner ? "är billigast för din lista just nu" : "ligger närmast"}${distanceText}.` : `Hittade inga inlästa butiker nära ${state.postnummer} ännu.`;
   $("menuSummary").textContent = search ? (dietFilterActive ? `${recipes.length} recept hittades. Externa recept visas inte när kost-/allergifilter är aktivt, eftersom de inte har kontrollerade allergiuppgifter.` : `${recipes.length} recept hittades. Externa recept kan vara på engelska och sakna svenska butikspriser.`) : `${plural(Math.min(state.middagar, recipes.length), "middag", "middagar")} för ${plural(state.personer, "person", "personer")} från ${storeLabel}. Priserna är uppskattningar.`;
   renderRecipeTagFilters();
   renderRecipeShelves();
@@ -692,7 +727,7 @@ async function renderRecipePage() {
   if (!recipe) return;
   const details = RECIPE_DETAILS[id] || recipe;
   $("top").hidden = true; document.querySelector(".bottom-nav").hidden = true; $("recipePage").hidden = false;
-  $("recipePage").innerHTML = `<button class="back-link recipe-back" type="button">← Alla recept</button><article class="full-recipe">${recipe.bild ? `<img src="${recipe.bild}" alt="${recipe.namn}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${recipe.typ}</p><h1>${recipe.namn}</h1><div class="recipe-detail-meta"><span>${recipe.tid ? recipe.tid + " min" : "Tid saknas"}</span><span>${recipe.servings || state.personer} portioner</span><span>${recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? money(recipe.portionspris) + "/portion" : "Uppskattat butikspris"}</span></div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${details.beskrivning || "En god svensk vardagsrätt."}</p><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${recipe.id}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button>${recipeRatingMarkup(recipe.id)}${feedbackMarkup(recipe.id)}<h2>Ingredienser</h2><ul>${recipe.ingredienser.map(item => `<li>${item}</li>`).join("")}</ul><h2>Gör så här</h2><ol>${(details.steg || []).map(step => `<li>${step}</li>`).join("")}</ol>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${details.tips}</p>` : ""}</article>`;
+  $("recipePage").innerHTML = `<button class="back-link recipe-back" type="button">← Alla recept</button><article class="full-recipe">${recipe.bild ? `<img src="${recipe.bild}" alt="${recipe.namn}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${recipe.typ}</p><h1>${recipe.namn}</h1><div class="recipe-detail-meta"><span>${recipe.tid ? recipe.tid + " min" : "Tid saknas"}</span><span>${recipe.servings || state.personer} portioner</span><span>${recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? money(recipe.portionspris) + "/portion" : "Pris saknas"}</span></div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${details.beskrivning || "En god svensk vardagsrätt."}</p><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${recipe.id}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button>${recipeRatingMarkup(recipe.id)}${feedbackMarkup(recipe.id)}<h2>Ingredienser</h2><ul>${recipe.ingredienser.map(item => `<li>${item}</li>`).join("")}</ul><h2>Gör så här</h2><ol>${(details.steg || []).map(step => `<li>${step}</li>`).join("")}</ol>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${details.tips}</p>` : ""}</article>`;
   $("recipePage").querySelector(".recipe-back").addEventListener("click", () => history.back());
   $("recipePage").querySelector("[data-recipe-add]").addEventListener("click", event => { state.valda.has(recipe.id) ? removeFromWeekPlan(recipe.id) : addToWeekPlan(recipe.id); saveState(); render(); event.currentTarget.querySelector("span").textContent = state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"; });
   wireRatingStars($("recipePage"), recipe.id);
@@ -754,18 +789,31 @@ async function syncBranchComparison(shoppingItems, branches) {
 // same query with two different storeIds returns byte-identical responses).
 // Claiming a branch-specific number here would be inventing precision.
 let databasePricingSync = { key: null, pending: false };
+// The pricing request for the week's recipes: recipe IDS, not a client-built
+// item list. The server aggregates from its own recipe rows - the same rows
+// the recipe page shows - so the priced list can never drift from the
+// recipes. Legacy/offline recipes without a bank id fall back to item lines.
+function weekPricingBody(shoppingItems) {
+  const selected = selectedRecipes();
+  const bankRecipes = selected.filter(recipe => recipe.priceStatus !== "unavailable"
+    && (!Array.isArray(recipe.ingredients) || recipe.ingredients.length || recipe.slug));
+  const recipeIds = bankRecipes.map(recipe => recipe.id);
+  const body = { people: state.personer, pantry: pantryAmounts(state.pantry || {}) };
+  if (recipeIds.length) body.recipeIds = recipeIds;
+  else body.items = shoppingItems.map(item => ({ name: item.namn, amount: item.total, unit: item.unit }));
+  return body;
+}
 async function syncDatabasePricing(shoppingItems) {
-  const items = shoppingItems.map(item => ({ name: item.namn, amount: item.total, unit: item.unit }));
-  const key = items.map(item => `${item.name}:${item.amount}:${item.unit}`).sort().join("|");
-  if (!items.length || databasePricingSync.key === key || databasePricingSync.pending) return;
+  const body = weekPricingBody(shoppingItems);
+  if (!body.recipeIds?.length && !body.items?.length) return;
+  const key = JSON.stringify(body);
+  if (databasePricingSync.key === key || databasePricingSync.pending) return;
   databasePricingSync = { key, pending: true };
   try {
     const response = await fetch(pricingWeekApiUrl(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // The shared helper, not a second local copy - "what's already at
-      // home" must mean the same thing here as everywhere else.
-      body: JSON.stringify({ items, pantry: pantryAmounts(state.pantry || {}) }),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(20000),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -777,8 +825,11 @@ async function syncDatabasePricing(shoppingItems) {
     state.dbPricedAt = Date.now();
     renderBasket();
   } catch {
-    // The price database being unreachable or empty must never break the
-    // week view - the existing estimate stays exactly as it was.
+    // The price database being unreachable must never break the week view.
+    // Nothing fake fills the gap - the views show "pris saknas", and this
+    // timestamp is how they know the fetch actually failed rather than
+    // simply not having finished yet.
+    state.dbPricingFailedAt = Date.now();
   } finally {
     databasePricingSync.pending = false;
   }
@@ -827,7 +878,11 @@ function computeStoreResults(selected, branches, shoppingItems) {
     }
     const live = state.liveBranchTotals[branchLiveKey(branch)];
     return { branch, cost: live ? live.cost : shoppingListCost(selected, branch), isLive: live != null, source: live ? "live" : "estimate", matched: live?.matched ?? null, certain: live?.certain ?? null, estimatedItems: 0, totalItems: shoppingItems.length, missingNames: [], comparable: false, savings: null, updatedAt: null };
-  }).sort((a, b) => a.cost - b.cost);
+    // Estimates last, always. Their cost exists only so week PLANNING has a
+    // number to work with; sorted in among real prices, the flat estimate
+    // could headline as "cheapest", which is a claim about a shop built on a
+    // figure no shop ever quoted.
+  }).sort((a, b) => (a.source === "estimate") - (b.source === "estimate") || a.cost - b.cost);
 }
 // Three genuinely different things, and calling them all "Live" would
 // overstate two of them:
@@ -904,11 +959,17 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
     // and showing it as fact is exactly the kind of mismatch users have reported.
     // Show only the price at the store actually in use, plainly labeled.
     const current = results.find(r => sameBranch(r.branch, selectedBranch())) || results[0];
-    const currentPriceText = hasUsablePrice(current)
-      ? `<strong>ca ${money(current.cost)}</strong>`
-      : `<strong class="price-missing">Pris saknas</strong>`;
-    const currentHeading = !hasUsablePrice(current) ? "Inga priser hittades hos"
-      : current.source === "database" ? "Pris hos" : current.isLive ? "Pris hos" : "Uppskattat pris hos";
+    // A flat estimate is never printed as a store price. While the real
+    // fetch is still under way the head says so; if it came back empty the
+    // head says that instead. A made-up "ca 512 kr" says neither.
+    const stillFetching = databasePricingSync.pending || (!state.dbPricedAt && !state.dbPricingFailedAt);
+    const currentPriceText = current.source === "estimate"
+      ? `<strong class="price-missing">${stillFetching ? "pris hämtas…" : "pris saknas just nu"}</strong>`
+      : hasUsablePrice(current)
+        ? `<strong>ca ${money(current.cost)}</strong>`
+        : `<strong class="price-missing">Pris saknas</strong>`;
+    const currentHeading = !hasUsablePrice(current) && current.source !== "estimate"
+      ? "Inga priser hittades hos" : "Pris hos";
     container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${currentHeading} ${current.branch.namn}</span>${currentPriceText}${coverageLabel(current)}${updatedLabel}</div>${results.length > 1 ? `<button type="button" class="store-compare-upsell" id="storeCompareUpsell-${containerId}">🔒 Prova Premium gratis i 14 dagar och se vilken butik som faktiskt är billigast av ${results.length}</button>` : ""}</div>`;
     $(`storeCompareUpsell-${containerId}`)?.addEventListener("click", openPremiumPitch);
     syncDatabasePricing(shoppingItems);
@@ -1018,7 +1079,12 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
       ? `<button type="button" class="store-compare-row ${tag}" data-pick-branch="${index}">${inner}</button>`
       : `<div class="store-compare-row ${tag} not-pickable">${inner}</div>`;
   }).join("")}</div>`;
-  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${comparisonIsReal && winner && winner.branch.kedja === cheapest.branch.kedja ? "Lägst pris" : cheapest.isLive ? "Pris hos" : "Uppskattat pris"}</span><strong>${cheapest.branch.namn} · ca ${money(cheapest.cost)}</strong>${savingsAreReal ? (winner && winner.branch.kedja !== cheapest.branch.kedja
+  // Same rule as the free tier: the head never prints the flat estimate as
+  // a price. "Uppskattat pris Coop Nian - ca 578 kr" is the exact banner the
+  // no-fabricated-totals rule exists to kill.
+  const headIsEstimate = cheapest.source === "estimate";
+  const headFetching = headIsEstimate && (databasePricingSync.pending || (!state.dbPricedAt && !state.dbPricingFailedAt));
+  container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${comparisonIsReal && winner && winner.branch.kedja === cheapest.branch.kedja ? "Lägst pris" : "Pris hos"}</span><strong>${cheapest.branch.namn}${headIsEstimate ? ` · ${headFetching ? "pris hämtas…" : "pris saknas just nu"}` : ` · ca ${money(cheapest.cost)}`}</strong>${savingsAreReal ? (winner && winner.branch.kedja !== cheapest.branch.kedja
       ? `<small>Billigast: ${escapeHtml(winner.branch.namn)} ${money(winner.cost)} · du sparar ${money(savings)}</small>`
       : `<small>Du sparar ${money(savings)}${state.dbComparison?.priciestTotal ? ` · ${Math.round(100 * savings / state.dbComparison.priciestTotal)} % billigare än dyraste jämförbara butik` : ""}</small>`)
     : !comparisonIsReal && shown.length > 1 ? `<small>${escapeHtml(cheapest.source === "database" && state.dbComparison?.reason ? (COMPARISON_REASONS[state.dbComparison.reason] || "Underlaget räcker inte för en jämförelse") : "Riktiga butiksspecifika priser saknas för en jämförelse")}</small>` : ""}${coverageLabel(cheapest)}${updatedLabel}</div>${list}${pinned ? `<button type="button" class="store-compare-unpin" id="storeCompareUnpin-${containerId}">Välj automatiskt istället</button>` : ""}${results.length > 1 ? `<button type="button" class="store-compare-open" id="storeCompareOpenBtn-${containerId}">Jämför butiker →</button>` : ""}</div>`;
@@ -1076,7 +1142,7 @@ function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
   const coverageOk = hasUsablePrice(result) && (result.comparable || result.source !== "database");
   const coverageNote = result.source === "database"
     ? `${result.matched} av ${result.totalItems} varor har aktuellt pris`
-    : result.matched != null ? `${result.matched} av ${result.totalItems} varor` : "Uppskattat";
+    : result.matched != null ? `${result.matched} av ${result.totalItems} varor` : "Pris saknas";
   // Only a database-priced chain has a real shopping list behind it to open.
   // The card has always shown a "›" affordance; making a row clickable that
   // leads nowhere is worse than showing it as plain text.
@@ -1105,11 +1171,7 @@ async function openChainShoppingList(chain, branch = null) {
     const response = await fetch(pricingListApiUrl(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chain,
-        items: shoppingItems.map(item => ({ name: item.namn, amount: item.total, unit: item.unit })),
-        pantry: pantryAmounts(state.pantry || {}),
-      }),
+      body: JSON.stringify({ chain, ...weekPricingBody(shoppingItems) }),
       signal: AbortSignal.timeout(20000),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -1271,9 +1333,10 @@ function renderStoreComparisonPage(selected) {
   if (activeSavings > 1) {
     $("comparisonCampaignText").textContent = `Du sparar ${money(activeSavings)} med ${activeResult.branch.kedja}`;
   }
-  $("comparisonUpdated").textContent = state.liveUpdatedAt
-    ? `Priserna uppdaterades ${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}`
-    : "Uppskattade priser - riktiga priser hämtas när du öppnar Handla.";
+  const pricedStamp = state.dbPricedAt || state.liveUpdatedAt;
+  $("comparisonUpdated").textContent = pricedStamp
+    ? `Priserna uppdaterades ${new Date(pricedStamp).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}`
+    : "Priser hämtas…";
 }
 
 const CATEGORY_MAP = { "Frukt & grönt": ["Purjolök", "Morötter", "Lök", "Paprika", "Citron", "Dill", "Basilika", "Lök & vitlök", "Zucchini", "Vitlök", "Timjan", "Sparris", "Rödkål"], Mejeri: ["Grädde", "Riven ost", "Yoghurt", "Mjölk", "Crème fraiche", "Ägg", "Halloumi", "Feta"], "Kött & fisk": ["Kycklinglårfilé", "Kycklingfilé", "Falukorv", "Fryst torsk", "Laxfilé", "Köttfärs", "Fläskfilé", "Biff", "Kalvschnitzel"], Torrvaror: ["Pasta", "Ris", "Matvete", "Äggnudlar", "Vetemjöl", "Röda linser", "Kidneybönor", "Svarta bönor", "Majs", "Krossade tomater", "Tomatpuré", "Salsa", "Soja", "Lasagneplattor", "Kikärtor", "Lingonsylt", "Vegofärs", "Tofu", "Äppelmos", "Kapris"], Frys: ["Wokgrönsaker", "Bär", "Räkor"] };
@@ -1481,7 +1544,7 @@ function renderWeekOverview(selected, shoppingItems, total) {
   $("weekPlanToggle").onclick = () => { weekPlanExpanded = !weekPlanExpanded; renderWeekOverview(selected, shoppingItems, total); };
 
   const remainingItems = shoppingItems.filter(item => !state.avklarade.has(item.namn));
-  $("weekShoppingSummary").textContent = shoppingItems.length ? `${plural(remainingItems.length, "vara kvar", "varor kvar")} · ${money(total)}` : "";
+  $("weekShoppingSummary").textContent = shoppingItems.length ? `${plural(remainingItems.length, "vara kvar", "varor kvar")}${total == null ? "" : ` · ${money(total)}`}` : "";
   $("weekShoppingPreview").innerHTML = shoppingItems.length
     ? (remainingItems.length ? remainingItems.slice(0, WEEK_SHOPPING_PREVIEW_COUNT).map(weekShoppingRowMarkup).join("") : `<p class="week-shopping-done">🎉 Allt handlat!</p>`)
     : `<p class="week-shopping-done">Skapa en vecka så samlar vi din inköpslista här.</p>`;
@@ -1537,6 +1600,7 @@ function renderGreeting() {
 }
 function renderBasket() {
   const selected = selectedRecipes();
+  ensureWeekRecipeDetails();
   const shoppingItems = aggregateShopping(selected);
   // The header total must be the SAME number the store-comparison widget
   // shows for the currently selected/pinned branch - a live total when one
@@ -1545,7 +1609,10 @@ function renderBasket() {
   // what's shown right below it.
   const branches = nearbyBranches();
   const currentResult = branches.length ? computeStoreResults(selected, branches, shoppingItems).find(r => sameBranch(r.branch, selectedBranch())) : null;
-  const total = currentResult ? currentResult.cost : shoppingListCost(selected, selectedBranch());
+  // Null when no REAL price exists yet - never the static estimate. This
+  // value also feeds renderWeekOverview, so one fabricated figure here would
+  // show up as fact in two places.
+  const total = currentResult && currentResult.source !== "estimate" ? currentResult.cost : null;
   const groups = shoppingItems.reduce((result, item) => { const category = itemCategory(item.namn); (result[category] ||= []).push(item); return result; }, {});
   $("shoppingList").innerHTML = shoppingItems.length ? Object.entries(groups).map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingItemMarkup).join("")}</section>`).join("") : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
   document.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => { input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping); saveState(); renderBasket(); }));
@@ -1554,7 +1621,7 @@ function renderBasket() {
   // fetch timestamp - that's internal plumbing, not something a shopper needs
   // to see. Only the plain, calm facts: what's left, and what it costs.
   $("shoppingProgress").textContent = shoppingItems.length ? plural(itemsLeft, "vara kvar", "varor kvar") : "";
-  $("shoppingCost").textContent = `${money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
+  $("shoppingCost").textContent = `${total == null ? "pris hämtas…" : money(total)} / ${money(state.budget)}`; $("shoppingProgressBar").style.width = `${progress}%`;
   $("shoppingComplete").hidden = !(shoppingItems.length && completed === shoppingItems.length);
   renderAttribution(shoppingItems);
   renderStoreComparison(selected); renderStoreComparison(selected, "basketStoreCompare"); renderPantry();
@@ -1701,6 +1768,26 @@ async function syncLivePrices(shoppingItems) {
   } catch { /* live-priser är ett tillägg ovanpå uppskattningen - misslyckas det visas bara uppskattningen kvar */ }
   finally { livePriceSync.loading = false; updateWeekStoreStatus(); }
 }
+// The chosen week's recipes need their STRUCTURED ingredients (a card
+// deliberately ships without them) before the shopping list can render its
+// lines. Fetched once per recipe, in the background; each arrival re-renders.
+const recipeDetailFetches = new Set();
+function ensureWeekRecipeDetails() {
+  selectedRecipes().forEach(recipe => {
+    if (Array.isArray(recipe.ingredients) && recipe.ingredients.length) return;
+    if (recipe.priceStatus === "unavailable") return; // provider-recept har inget att hämta
+    if (recipeDetailFetches.has(recipe.id)) return;
+    recipeDetailFetches.add(recipe.id);
+    loadRecipe(recipe.id).then(detail => {
+      if (!detail) return;
+      // Merge in place: every list, week and favourites reference THIS
+      // object, so replacing it would orphan them.
+      Object.assign(recipe, detail);
+      renderBasket();
+    }).catch(() => recipeDetailFetches.delete(recipe.id));
+  });
+}
+
 function aggregateShopping(selected) {
   return aggregateIngredients(selected.filter(recipe => recipe.priceStatus !== "unavailable"), RECIPE_QUANTITIES, PACKAGE_INFO, state.personer);
 }
@@ -1990,7 +2077,9 @@ const PLAN_TYPES = [
     key: "budget", label: "Budgetvecka", objective: "cheapest",
     hint: "Lägsta kassakostnaden för veckan.",
     filter: () => true,
-    highlight: (combo, cost, portions) => `ca ${money(cost / portions)} per portion`,
+    // No highlight: the per-portion price on this card comes from the real
+    // pricing fill-in, and a second, estimate-based figure next to it would
+    // contradict it.
   },
   {
     key: "traning", label: "Träningsvecka", objective: "protein",
@@ -2038,10 +2127,48 @@ function priciestBranchFor(combo) {
 }
 function planCardMarkup(plan, branch) {
   const portions = plan.combo.length * state.personer;
-  const portionCost = plan.cost / portions;
-  const priciest = priciestBranchFor(plan.combo);
-  const savings = priciest ? priciest.cost - plan.cost : 0;
-  return `<div class="plan-card"><div class="plan-card-head"><strong>${plan.label}</strong><span>${plan.hint}</span></div><div class="plan-card-price"><b>${money(plan.cost)}</b><small>ca ${money(portionCost)} / portion hos ${escapeHtml(branch?.namn || "din butik")}</small></div>${plan.highlight ? `<p class="plan-card-highlight">${escapeHtml(String(plan.highlight(plan.combo, plan.cost, portions)))}</p>` : ""}${savings > 1 ? `<p class="plan-card-savings">Uppskattad besparing ca ${money(savings)} mot ${escapeHtml(priciest.branch.namn)} - priser ej live</p>` : ""}<ul class="plan-card-meals">${plan.combo.map(recipe => `<li>${escapeHtml(recipe.namn)}</li>`).join("")}</ul><button class="btn btn-primary" type="button" data-choose-plan="${plan.key}"><span>Välj den här</span></button></div>`;
+  // The number on a plan card comes from the REAL pricing API, filled in by
+  // syncPlanPricing right after render. The static estimate still steers
+  // which recipes fit the budget - that is planning, not a price claim - but
+  // it is never printed: "637 kr hos Willys" computed from a hardcoded
+  // catalogue is exactly the fabricated store total this app must not show.
+  return `<div class="plan-card"><div class="plan-card-head"><strong>${plan.label}</strong><span>${plan.hint}</span></div><div class="plan-card-price" data-plan-price="${plan.key}"><b>pris beräknas…</b><small>mot riktiga butikspriser</small></div>${plan.highlight ? `<p class="plan-card-highlight">${escapeHtml(String(plan.highlight(plan.combo, plan.cost, portions)))}</p>` : ""}<ul class="plan-card-meals">${plan.combo.map(recipe => `<li>${escapeHtml(recipe.namn)}</li>`).join("")}</ul><button class="btn btn-primary" type="button" data-choose-plan="${plan.key}"><span>Välj den här</span></button></div>`;
+}
+
+// Prices every plan card against Matjakt's own price database - the same
+// endpoint, the same package maths and the same coverage rules as the
+// basket. One request per plan, in parallel; a card whose request fails says
+// "pris saknas" rather than falling back to the catalogue estimate.
+async function syncPlanPricing(plans) {
+  await Promise.all(plans.map(async plan => {
+    const recipeIds = plan.combo.filter(recipe => recipe.priceStatus !== "unavailable")
+      .map(recipe => recipe.id);
+    const box = () => document.querySelector(`[data-plan-price="${CSS.escape(plan.key)}"]`);
+    if (!recipeIds.length) { const t = box(); if (t) t.innerHTML = `<b class="price-missing">Pris saknas just nu</b>`; return; }
+    try {
+      const response = await fetch(pricingWeekApiUrl(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipeIds, people: state.personer, pantry: pantryAmounts(state.pantry || {}) }),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      const results = (data.results || []).filter(r => (r.realPriceItems || 0) > 0);
+      // The chain the user is actually shopping at when it priced anything,
+      // otherwise the cheapest chain that did.
+      const result = results.find(r => r.chain === chosenStore())
+        || results.sort((a, b) => a.totalCheckoutCost - b.totalCheckoutCost)[0];
+      const target = box();
+      if (!target) return; // modalen är stängd
+      if (!result) { target.innerHTML = `<b class="price-missing">Pris saknas just nu</b>`; return; }
+      const portionsNow = plan.combo.length * state.personer;
+      target.innerHTML = `<b>${money(result.totalCheckoutCost)}</b><small>ca ${money(result.totalCheckoutCost / portionsNow)} / portion · ${result.realPriceItems} av ${result.totalItems} varor prissatta hos ${escapeHtml(result.chain)}</small>`;
+    } catch {
+      const target = box();
+      if (target) target.innerHTML = `<b class="price-missing">Pris saknas just nu</b>`;
+    }
+  }));
 }
 function openPlanComparison() {
   const branch = selectedBranch();
@@ -2060,6 +2187,7 @@ function openPlanComparison() {
   }).filter(Boolean);
   if (plans.length < 2) { chooseMenu(); return; }
   $("planCards").innerHTML = plans.map(plan => planCardMarkup(plan, branch)).join("");
+  syncPlanPricing(plans);
   document.querySelectorAll("[data-choose-plan]").forEach(button => button.addEventListener("click", () => {
     const plan = plans.find(candidate => candidate.key === button.dataset.choosePlan);
     const priciest = priciestBranchFor(plan.combo);

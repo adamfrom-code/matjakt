@@ -5,13 +5,34 @@ export function portionFactor(people, basePortions = 4) {
 export function aggregateIngredients(recipes, quantities, packages, people) {
   const totals = {};
   const factor = portionFactor(people);
-  recipes.forEach(recipe => recipe.ingredienser.forEach(ingredient => {
-    const quantity = quantities[recipe.id]?.[ingredient];
-    const amount = (quantity ? quantity[0] : 1) * factor;
-    const unit = quantity ? quantity[1] : "st";
-    if (!totals[ingredient]) totals[ingredient] = { namn: ingredient, total: 0, unit, package: packages[ingredient] };
-    totals[ingredient].total += amount;
-  }));
+  recipes.forEach(recipe => {
+    // Recipes from the recipe bank carry their own structured ingredients
+    // (name, amount, unit, per `servings` portions). Those rows are the
+    // truth and are used directly. The `quantities` table is only for the
+    // legacy bundled recipes that never had structured data - new recipes
+    // were never added to it, which is how a week of bank recipes once
+    // aggregated to an EMPTY shopping list.
+    const structured = Array.isArray(recipe.ingredients)
+      ? recipe.ingredients.filter(item => !item.pantryStaple && !item.optional)
+      : [];
+    if (structured.length) {
+      const scale = people / (recipe.servings || 4);
+      structured.forEach(item => {
+        const name = item.name;
+        const unit = item.unit || "st";
+        if (!totals[name]) totals[name] = { namn: name, total: 0, unit, package: packages[name] };
+        totals[name].total += (item.amount ?? 1) * scale;
+      });
+      return;
+    }
+    recipe.ingredienser.forEach(ingredient => {
+      const quantity = quantities[recipe.id]?.[ingredient];
+      const amount = (quantity ? quantity[0] : 1) * factor;
+      const unit = quantity ? quantity[1] : "st";
+      if (!totals[ingredient]) totals[ingredient] = { namn: ingredient, total: 0, unit, package: packages[ingredient] };
+      totals[ingredient].total += amount;
+    });
+  });
   return Object.values(totals).sort((a, b) => a.namn.localeCompare(b.namn, "sv"));
 }
 

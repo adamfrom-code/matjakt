@@ -130,7 +130,29 @@ function fromApi(recipe) {
       ?? (recipe.ingredients || []).filter(i => !i.pantryStaple).map(i => i.name),
     hemma: recipe.hemma
       ?? (recipe.ingredients || []).filter(i => i.pantryStaple).map(i => i.name),
+    // A REAL portion price, computed by the backend's pricing run against
+    // collected store prices - or null, which the UI must show as "pris
+    // saknas". Never a hand-typed figure.
+    portionspris: recipe.pricePerPortion ?? recipe.portionspris ?? null,
+    // The planner's budget maths run on a whole-recipe cost at the standard
+    // 4-portion base (portionFactor scales from there). Derived from the
+    // same real portion price; legacy bundled recipes carry their own.
+    inkopspris: recipe.pricePerPortion != null
+      ? Math.round(recipe.pricePerPortion * 4 * 10) / 10
+      : recipe.inkopspris ?? null,
+    priceChain: recipe.priceChain ?? null,
+    // Protein-source variety drives the "Balanserad vecka". The bank
+    // expresses it as tags; the planner wants one word.
+    proteinkalla: recipe.proteinkalla ?? proteinSourceFromTags(recipe.tags ?? []),
   };
+}
+
+function proteinSourceFromTags(tags) {
+  if (tags.includes("kyckling")) return "kyckling";
+  if (tags.includes("fisk")) return "fisk";
+  if (tags.includes("kott")) return "kött";
+  if (tags.includes("veganskt") || tags.includes("vegetariskt")) return "vego";
+  return "övrigt";
 }
 
 export function hasTag(recipe, tag) {
