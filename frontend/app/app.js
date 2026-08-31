@@ -740,6 +740,28 @@ function computeStoreResults(selected, branches, shoppingItems) {
 //              as fresh as the last import, not as of this second.
 //   live     - a best-effort text search of the store's site right now.
 //   estimate - the flat static figure. Not a price at all.
+// A live total that managed to price NOTHING is not a cheap shop, it is an
+// absent answer. Seen live: "Pris hos Coop Nianca - ca 0 kr, 0 av 10 varor
+// har säkert pris". Showing 0 kr there states a price we do not have, which
+// is the same failure the "Billigast" guards exist to prevent - so the row
+// says so instead of naming a figure.
+function hasUsablePrice(result) {
+  return !(result.isLive && result.certain === 0);
+}
+
+// cheapestBranch() builds a NEW object ({...branch, avstandKm, recipes,
+// total}), so an identity check against a row's own branch never matched and
+// every caller silently fell through to "the cheapest row" instead. That is
+// why the week view could show "Pris hos ICA Nära Stortorget" while the
+// shopping list below it listed Willys products. Compare on a stable
+// identity instead: primatKey when both sides have one, otherwise chain plus
+// name.
+function sameBranch(a, b) {
+  if (!a || !b) return false;
+  if (a.primatKey && b.primatKey) return a.primatKey === b.primatKey;
+  return a.kedja === b.kedja && a.namn === b.namn;
+}
+
 function priceSourceBadge(result) {
   if (result.source === "database") return '<span class="live-badge">Riktigt pris</span>';
   if (result.isLive) return '<span class="live-badge">Live</span>';
@@ -777,14 +799,24 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
     // chain that would just be a guess (see cheapestBranch()'s flat estimate),
     // and showing it as fact is exactly the kind of mismatch users have reported.
     // Show only the price at the store actually in use, plainly labeled.
-    const current = results.find(r => r.branch === selectedBranch()) || results[0];
-    container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${current.isLive ? "Pris" : "Uppskattat pris"} hos ${current.branch.namn}</span><strong>ca ${money(current.cost)}</strong>${coverageLabel(current)}${updatedLabel}</div>${results.length > 1 ? `<button type="button" class="store-compare-upsell" id="storeCompareUpsell-${containerId}">🔒 Prova Premium gratis i 14 dagar och se vilken butik som faktiskt är billigast av ${results.length}</button>` : ""}</div>`;
+    const current = results.find(r => sameBranch(r.branch, selectedBranch())) || results[0];
+    const currentPriceText = hasUsablePrice(current)
+      ? `<strong>ca ${money(current.cost)}</strong>`
+      : `<strong class="price-missing">Pris saknas</strong>`;
+    const currentHeading = !hasUsablePrice(current) ? "Inga priser hittades hos"
+      : current.source === "database" ? "Pris hos" : current.isLive ? "Pris hos" : "Uppskattat pris hos";
+    container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${currentHeading} ${current.branch.namn}</span>${currentPriceText}${coverageLabel(current)}${updatedLabel}</div>${results.length > 1 ? `<button type="button" class="store-compare-upsell" id="storeCompareUpsell-${containerId}">🔒 Prova Premium gratis i 14 dagar och se vilken butik som faktiskt är billigast av ${results.length}</button>` : ""}</div>`;
     $(`storeCompareUpsell-${containerId}`)?.addEventListener("click", openPremiumPitch);
     syncDatabasePricing(shoppingItems);
     syncBranchComparison(shoppingItems, branches);
     return;
   }
-  const cheapest = results[0], priciest = results[results.length - 1];
+  // Sorted by cost, so a row that priced nothing (0 kr) would come first and
+  // be crowned cheapest. Those are excluded from the running before anything
+  // is compared, rather than being caught later by the badge guards.
+  const priceable = results.filter(hasUsablePrice);
+  const cheapest = (priceable.length ? priceable : results)[0];
+  const priciest = (priceable.length ? priceable : results)[priceable.length ? priceable.length - 1 : results.length - 1];
   const savings = priciest.cost - cheapest.cost;
   // A "Billigast" badge is a factual claim, so it needs a comparison that
   // actually holds up. Three things can each make it meaningless:
@@ -800,7 +832,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
   // savings figure, rather than asserting something we can't back up.
   const MIN_COVERAGE_FOR_CLAIM = 0.6;
   const coverageOf = r => (r.certain == null || !r.totalItems) ? 0 : r.certain / r.totalItems;
-  const pricesDiffer = results.some(r => Math.abs(r.cost - cheapest.cost) > 0.5);
+  const pricesDiffer = priceable.some(r => Math.abs(r.cost - cheapest.cost) > 0.5);
   // When the cheapest row came from Matjakt's own price database, the SERVER
   // already decided whether a cheapest chain may be named - it applies the
   // same guards plus two this side can't see (a chain with zero real matches
@@ -823,7 +855,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
     const isPinned = pinned && r.branch.primatKey && r.branch.primatKey === pinned.primatKey;
     const isCheapest = comparisonIsReal && r.branch === cheapest.branch;
     const tag = `${isCheapest ? "cheapest" : ""} ${isPinned ? "pinned" : ""}`.trim();
-    const inner = `<span>${r.branch.namn}${isCheapest ? '<span class="live-badge cheapest-badge">Billigast</span>' : ""}${isPinned ? '<span class="live-badge pinned">Vald</span>' : ""}${priceSourceBadge(r)}</span><strong>${money(r.cost)}</strong>`;
+    const inner = `<span>${r.branch.namn}${isCheapest ? '<span class="live-badge cheapest-badge">Billigast</span>' : ""}${isPinned ? '<span class="live-badge pinned">Vald</span>' : ""}${priceSourceBadge(r)}</span><strong${hasUsablePrice(r) ? "" : ' class="price-missing"'}>${hasUsablePrice(r) ? money(r.cost) : "Pris saknas"}</strong>`;
     return r.branch.primatKey
       ? `<button type="button" class="store-compare-row ${tag}" data-pick-branch="${index}">${inner}</button>`
       : `<div class="store-compare-row ${tag} not-pickable">${inner}</div>`;
@@ -868,7 +900,8 @@ function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
   // just show a partial sum as if it were the real total - see
   // branchLiveTotal's matched count. An estimate (matched === null) always
   // covers every item by construction, so it's never held to this bar.
-  const coverageOk = result.matched == null || result.matched / result.totalItems >= 0.5;
+  const coverageOk = hasUsablePrice(result)
+    && (result.matched == null || result.matched / result.totalItems >= 0.5);
   const coverageNote = result.source === "database"
     ? `${result.matched} av ${result.totalItems} varor har aktuellt pris`
     : result.matched != null ? `${result.matched} av ${result.totalItems} varor` : "Uppskattat";
@@ -880,7 +913,7 @@ function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
   const attrs = openable
     ? ` type="button" data-open-chain="${escapeHtml(result.branch.kedja)}"`
     : "";
-  return `<${tag} class="comparison-store-card ${isCheapest && coverageOk ? "cheapest" : ""}${openable ? " openable" : ""}"${attrs}><div class="comparison-store-main"><span class="comparison-store-name" style="color:${color}">${escapeHtml(result.branch.kedja)}</span><small class="comparison-store-coverage">${coverageNote}</small></div><div class="comparison-store-price">${isCheapest && coverageOk ? '<span class="comparison-billigast">Billigast</span>' : ""}${coverageOk ? `<strong>${money(result.cost)}</strong>${savings > 1 ? `<small class="comparison-savings">Du sparar ${money(savings)}</small>` : ""}` : '<small class="comparison-savings">För få varor hittades</small>'}</div>${openable ? '<span class="comparison-store-arrow" aria-hidden="true">›</span>' : ""}</${tag}>`;
+  return `<${tag} class="comparison-store-card ${isCheapest && coverageOk ? "cheapest" : ""}${openable ? " openable" : ""}"${attrs}><div class="comparison-store-main"><span class="comparison-store-name" style="color:${color}">${escapeHtml(result.branch.kedja)}</span><small class="comparison-store-coverage">${coverageNote}</small></div><div class="comparison-store-price">${isCheapest && coverageOk ? '<span class="comparison-billigast">Billigast</span>' : ""}${coverageOk ? `<strong>${money(result.cost)}</strong>${savings > 1 ? `<small class="comparison-savings">Du sparar ${money(savings)}</small>` : ""}` : `<small class="comparison-savings">${hasUsablePrice(result) ? "För få varor hittades" : "Inga priser hittades"}</small>`}</div>${openable ? '<span class="comparison-store-arrow" aria-hidden="true">›</span>' : ""}</${tag}>`;
 }
 // =============================================================================
 // ONE CHAIN'S REAL SHOPPING LIST
@@ -992,7 +1025,8 @@ function renderStoreComparisonPage(selected) {
     return true;
   });
   if (!results.length) { $("comparisonStoreList").innerHTML = `<p class="live-loading">Ingen data att jämföra ännu.</p>`; $("comparisonItemCount").textContent = "0 varor"; $("comparisonCampaignCard").hidden = true; $("comparisonUpdated").textContent = ""; return; }
-  const validResults = results.filter(r => r.matched == null || r.matched / r.totalItems >= 0.5);
+  const validResults = results.filter(r => hasUsablePrice(r)
+    && (r.matched == null || r.matched / r.totalItems >= 0.5));
   const cheapest = (validResults.length ? validResults : results)[0];
   const priciest = results[results.length - 1];
   const bestCoverage = Math.max(0, ...results.map(r => r.matched ?? 0));
@@ -1280,7 +1314,7 @@ function renderBasket() {
   // second, independently-computed figure that could quietly disagree with
   // what's shown right below it.
   const branches = nearbyBranches();
-  const currentResult = branches.length ? computeStoreResults(selected, branches, shoppingItems).find(r => r.branch === selectedBranch()) : null;
+  const currentResult = branches.length ? computeStoreResults(selected, branches, shoppingItems).find(r => sameBranch(r.branch, selectedBranch())) : null;
   const total = currentResult ? currentResult.cost : shoppingListCost(selected, selectedBranch());
   const groups = shoppingItems.reduce((result, item) => { const category = itemCategory(item.namn); (result[category] ||= []).push(item); return result; }, {});
   $("shoppingList").innerHTML = shoppingItems.length ? Object.entries(groups).map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingItemMarkup).join("")}</section>`).join("") : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
