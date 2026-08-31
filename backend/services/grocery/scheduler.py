@@ -154,14 +154,29 @@ class GroceryScheduler:
             return False
         try:
             from . import api as grocery_api
-            if grocery_api.database_summary()["totalProducts"] > 0:
-                return False
+            summary = grocery_api.database_summary()
+            providers = {entry["chain"]: entry for entry in grocery_api.provider_status()}
         except Exception:
-            logger.exception("Kunde inte läsa prisdatabasens storlek - hoppar över bootstrap")
+            logger.exception("Kunde inte läsa prisdatabasens tillstånd - hoppar över bootstrap")
             return False
 
         chain = BOOTSTRAP_CHAIN
-        logger.warning("Prisdatabasen är tom - startar en första import av %s", chain)
+        state = providers.get(chain) or {}
+        empty = summary["totalProducts"] == 0
+        # A catalogue that has NEVER been imported all the way through is not
+        # a working catalogue. Production sat on 2 538 of ~11 000 products
+        # because a deploy killed the import partway and the old guard
+        # ("only when totally empty") refused to resume - leaving a quarter
+        # of a catalogue until the next nightly run.
+        #
+        # This cannot loop: once one run finishes, lastSuccessfulRun is set
+        # and the condition stops being true, however many times we restart.
+        never_finished = not state.get("lastSuccessfulRun")
+        if not (empty or never_finished):
+            return False
+
+        logger.warning("Prisdatabasen är %s - startar en import av %s",
+                       "tom" if empty else "ofullständig (ingen körning har blivit klar)", chain)
         return bool(importer.start(chain).get("started"))
 
     def start(self):
@@ -171,6 +186,20 @@ class GroceryScheduler:
             return False
         if self._thread and self._thread.is_alive():
             return False
+        # Any run still marked "running" belongs to a process that no longer
+        # exists - clear it before anything reads or acts on that status.
+        try:
+            from . import api as grocery_api
+            store = grocery_api.open_store()
+            try:
+                stale = store.reconcile_interrupted_runs()
+            finally:
+                store.close()
+            if stale:
+                logger.warning("Markerade %d avbruten körning(ar) från en tidigare process", stale)
+        except Exception:
+            logger.exception("Kunde inte städa avbrutna körningar")
+
         self._thread = threading.Thread(target=self._loop, name="grocery-scheduler", daemon=True)
         self._thread.start()
         logger.info("Nattjobb startat: %s (Europe/Stockholm)", self.schedule)

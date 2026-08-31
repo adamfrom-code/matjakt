@@ -140,21 +140,46 @@ class BootstrapTest(unittest.TestCase):
         self.scheduler = GroceryScheduler({"Willys": "02:00"})
         self.scheduler.enabled = True
 
-    def _summary(self, total):
+    def _summary(self, total, finished=True):
+        """`finished` is whether a full import has EVER completed. A
+        catalogue that has never finished importing is not a working
+        catalogue, however many rows it happens to hold."""
         from services.grocery import api as grocery_api
-        real = grocery_api.database_summary
+        real_summary = grocery_api.database_summary
+        real_status = grocery_api.provider_status
         grocery_api.database_summary = lambda: {"totalProducts": total, "chains": []}
-        self.addCleanup(lambda: setattr(grocery_api, "database_summary", real))
+        grocery_api.provider_status = lambda: [
+            {"chain": "Willys",
+             "lastSuccessfulRun": {"status": "success"} if finished else None}]
+        self.addCleanup(lambda: setattr(grocery_api, "database_summary", real_summary))
+        self.addCleanup(lambda: setattr(grocery_api, "provider_status", real_status))
 
     def test_imports_when_the_database_is_empty(self):
         self._summary(0)
         self.assertTrue(self.scheduler.bootstrap_if_empty())
         self.assertEqual(self.started, ["Willys"])
 
-    def test_does_nothing_when_the_database_already_has_products(self):
+    def test_does_nothing_when_the_catalogue_is_complete(self):
         """An ordinary deploy must not re-import a catalogue that is there."""
-        self._summary(10842)
+        self._summary(10842, finished=True)
         self.assertFalse(self.scheduler.bootstrap_if_empty())
+        self.assertEqual(self.started, [])
+
+    def test_resumes_a_catalogue_that_never_finished_importing(self):
+        """Production sat on 2 538 of ~11 000 products because a deploy killed
+        the import partway and the old guard ("only when totally empty")
+        refused to resume - leaving a quarter of a catalogue until the next
+        nightly run."""
+        self._summary(2538, finished=False)
+        self.assertTrue(self.scheduler.bootstrap_if_empty())
+        self.assertEqual(self.started, ["Willys"])
+
+    def test_a_finished_catalogue_is_not_re_imported_on_every_restart(self):
+        """The resume rule must not become a loop: once one run finishes, no
+        number of restarts may start another."""
+        self._summary(10842, finished=True)
+        for _ in range(5):
+            self.scheduler.bootstrap_if_empty()
         self.assertEqual(self.started, [])
 
     def test_does_nothing_when_the_scheduler_is_disabled(self):

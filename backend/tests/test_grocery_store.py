@@ -310,3 +310,58 @@ class DataVersionTest(unittest.TestCase):
         before = self.store.data_version()
         self._add("b", 20.0)
         self.assertNotEqual(self.store.data_version(), before)
+
+
+class InterruptedRunTest(unittest.TestCase):
+    """A collector run lives in a thread. When the process dies - a deploy, a
+    restart, an OOM - the thread goes with it, but the database row stays
+    "running" forever.
+
+    Seen in production: a row claimed an import was in progress 15 minutes
+    after the deploy that killed it. The status endpoint and the admin panel
+    both reported an import that did not exist, lastSuccessfulRun never
+    appeared, and the catalogue sat at 2 538 of ~11 000 products.
+    """
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmpdir.cleanup)
+        self.store = GroceryStore(Path(self._tmpdir.name) / "grocery.db")
+        self.addCleanup(self.store.close)
+
+    def _status(self, run_id):
+        return self.store.get_collector_run(run_id).status
+
+    def test_a_running_row_is_marked_interrupted(self):
+        run = self.store.start_collector_run(chain="Willys")
+        self.assertEqual(self._status(run.id), "running")
+        self.assertEqual(self.store.reconcile_interrupted_runs(), 1)
+        self.assertEqual(self._status(run.id), "interrupted")
+
+    def test_it_records_when_and_why(self):
+        run = self.store.start_collector_run(chain="Willys")
+        self.store.reconcile_interrupted_runs()
+        row = self.store.get_collector_run(run.id)
+        self.assertIsNotNone(row.finished_at)
+        self.assertIn("startade om", row.error_message)
+
+    def test_finished_runs_are_left_alone(self):
+        run = self.store.start_collector_run(chain="Willys")
+        self.store.finish_collector_run(run.id, status="success", products_found=10)
+        self.store.reconcile_interrupted_runs()
+        self.assertEqual(self._status(run.id), "success")
+
+    def test_it_is_safe_to_run_twice(self):
+        self.store.start_collector_run(chain="Willys")
+        self.assertEqual(self.store.reconcile_interrupted_runs(), 1)
+        self.assertEqual(self.store.reconcile_interrupted_runs(), 0)
+
+    def test_nothing_to_do_is_not_an_error(self):
+        self.assertEqual(self.store.reconcile_interrupted_runs(), 0)
+
+    def test_an_interrupted_run_does_not_count_as_successful(self):
+        """The whole point: lastSuccessfulRun must stay empty so the resume
+        logic knows the catalogue was never finished."""
+        run = self.store.start_collector_run(chain="Willys")
+        self.store.reconcile_interrupted_runs()
+        self.assertNotEqual(self._status(run.id), "success")

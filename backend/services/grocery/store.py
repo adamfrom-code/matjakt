@@ -493,6 +493,34 @@ class GroceryStore:
 
     # ---- Collector runs --------------------------------------------
 
+    def reconcile_interrupted_runs(self) -> int:
+        """Marks runs still labelled "running" as interrupted.
+
+        A collector run lives in a thread. When the process dies - a deploy,
+        a restart, an OOM - the thread goes with it, but the database row
+        stays "running" forever. Seen in production: a row claimed an import
+        was in progress 15 minutes after the deploy that killed it, so the
+        status endpoint and the admin panel both reported an import that did
+        not exist, and lastSuccessfulRun never appeared.
+
+        Call this at STARTUP only, never from GroceryStore.__init__: the CLI
+        collectors open the same database, and a server restart must not
+        relabel a collector run that is genuinely still going in another
+        process."""
+        cursor = self._connection.execute(
+            """
+            UPDATE grocery_collector_runs
+            SET status = 'interrupted',
+                finished_at = ?,
+                error_message = COALESCE(error_message,
+                    'Processen startade om innan körningen hann bli klar')
+            WHERE status = 'running'
+            """,
+            (time.time(),),
+        )
+        self._connection.commit()
+        return cursor.rowcount
+
     def data_version(self) -> str:
         """A fingerprint of the data as CUSTOMERS see it.
 
