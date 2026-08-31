@@ -92,8 +92,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "imageAlt": "Köttbullar med potatismos och lingon",
-  "imageStatus": "needs_image"
+  "imageAlt": "Köttbullar med potatismos och lingon upplagd på tallrik",
+  "imageStatus": "ok",
+  "image": "https://images.pexels.com/photos/4210847/pexels-photo-4210847.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/fried-meat-cutlet-served-with-boiled-potatoes-and-salad-4210847/",
+  "imageCredit": "https://kaboompics.com/",
+  "imageLicense": "Pexels License"
  },
  {
   "id": "spaghetti-kottfarssas",
@@ -443,8 +448,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "imageAlt": "Ugnspannkaka med bacon",
-  "imageStatus": "needs_image"
+  "imageAlt": "Ugnspannkaka med bacon upplagd på tallrik",
+  "imageStatus": "ok",
+  "image": "https://images.pexels.com/photos/22882256/pexels-photo-22882256.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/breakfast-on-plate-22882256/",
+  "imageCredit": "Hebert  Santos",
+  "imageLicense": "Pexels License"
  },
  {
   "id": "makaroner-korv",

@@ -86,7 +86,14 @@
   ],
   "dietFlags": [
    "blandkost"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/32371279/pexels-photo-32371279.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/delicious-grilled-chicken-fajitas-in-mexico-city-32371279/",
+  "imageCredit": "DΛVΞ GΛRCIΛ",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kycklingfajitas med paprika upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kyckling-pesto-pasta",
@@ -351,7 +358,14 @@
    "blandkost",
    "glutenfritt",
    "laktosfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/6210955/pexels-photo-6210955.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/appetizing-roasted-chicken-with-vegetables-in-baking-dish-6210955/",
+  "imageCredit": "Tim Douglas",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Hel kyckling i ugn med rotfrukter upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kycklingklubbor-bbq",
@@ -435,7 +449,14 @@
    "blandkost",
    "glutenfritt",
    "laktosfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/24549214/pexels-photo-24549214.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-grilled-chicken-legs-on-a-plate-24549214/",
+  "imageCredit": "Helena Jankovičová Kováčová",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Ugnsbakade kycklingklubbor med majs och sallad upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "lax-teriyaki",
@@ -522,7 +543,14 @@
   "dietFlags": [
    "blandkost",
    "laktosfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/17308546/pexels-photo-17308546.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/a-bowl-of-rice-with-meat-and-green-onions-17308546/",
+  "imageCredit": "Vitaliy Haiduk",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Teriyakilax med ris och broccoli upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "ugnslax-citron",
@@ -601,7 +629,14 @@
    "blandkost",
    "glutenfritt",
    "pescetariskt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/20182293/pexels-photo-20182293.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/meal-on-plate-20182293/",
+  "imageCredit": "Valeria Boltneva",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Ugnsbakad lax med citron och örtsås upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "fishtacos",
@@ -993,7 +1028,14 @@
   "dietFlags": [
    "blandkost",
    "laktosfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/29145757/pexels-photo-29145757.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/colorful-asian-stir-fry-with-vegetables-and-noodles-29145757/",
+  "imageCredit": "Jonathan Borba",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Nudelwok med kyckling och grönsaker upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kycklingschnitzel",
@@ -1266,7 +1308,14 @@
   "dietFlags": [
    "blandkost",
    "glutenfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/34636426/pexels-photo-34636426.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/gourmet-fried-chicken-with-salad-on-elegant-plate-34636426/",
+  "imageCredit": "Novkov Visuals",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kycklinglåda med sötpotatis och fetaost upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "torsk-brynt-smor-agg",
@@ -1452,7 +1501,14 @@
   "dietFlags": [
    "blandkost",
    "glutenfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/29173114/pexels-photo-29173114.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/delicious-chicken-tikka-platter-with-chutney-29173114/",
+  "imageCredit": "Kunal Lakhotia",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kyckling tikka masala upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "fiskpinnar-potatismos",
@@ -1528,7 +1584,14 @@
   ],
   "dietFlags": [
    "blandkost"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/32916221/pexels-photo-32916221.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/crispy-breaded-fish-sticks-in-tray-32916221/",
+  "imageCredit": "lee c",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Fiskpinnar med potatismos och ärtor upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kycklingwraps-lunch",
@@ -1879,7 +1942,14 @@
   ],
   "dietFlags": [
    "blandkost"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/16024082/pexels-photo-16024082.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/fish-with-lemon-slices-16024082/",
+  "imageCredit": "Antigoni Pavlaki",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Ugnsstekt fisk med parmesantäcke upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kycklinggryta-honung-senap",
@@ -2065,7 +2135,14 @@
   "dietFlags": [
    "blandkost",
    "pescetariskt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/19062799/pexels-photo-19062799.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/smoked-salmon-with-mozzarella-cheese-dill-and-olive-oil-19062799/",
+  "imageCredit": "Nadin Sh",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Gravad lax med hovmästarsås och dillstuvad potatis upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kyckling-quesadillas",

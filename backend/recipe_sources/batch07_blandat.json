@@ -1526,7 +1526,14 @@
    "vegetariskt",
    "veganskt",
    "laktosfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/5807018/pexels-photo-5807018.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/spaghetti-bolognese-on-plate-5807018/",
+  "imageCredit": "sascha Mayer",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Vegansk bolognese på vegofärs upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "torskrygg-ortstekt",
@@ -1701,7 +1708,14 @@
   ],
   "dietFlags": [
    "vegetariskt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/109400/pexels-photo-109400.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/burger-with-tomato-and-lettuce-109400/",
+  "imageCredit": "Markus Spiske",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Halloumiburgare med chilimajonnäs upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "krispiga-kikartor-bowl",
@@ -1954,7 +1968,14 @@
   "dietFlags": [
    "vegetariskt",
    "glutenfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/33088378/pexels-photo-33088378.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/creamy-rice-porridge-with-berries-and-cherry-sauce-33088378/",
+  "imageCredit": "Gundula Vogel",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Risgrynsgröt med kanel och äpple upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "wallenbergare",
@@ -2045,7 +2066,14 @@
   ],
   "dietFlags": [
    "blandkost"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/4210847/pexels-photo-4210847.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/fried-meat-cutlet-served-with-boiled-potatoes-and-salad-4210847/",
+  "imageCredit": "https://kaboompics.com/",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Wallenbergare med potatismos och ärtor upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "aggwok-ris",
@@ -2126,7 +2154,14 @@
   "dietFlags": [
    "vegetariskt",
    "laktosfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/15060360/pexels-photo-15060360.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/fried-rice-with-eggs-in-bowls-15060360/",
+  "imageCredit": "Thượng Hy",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Äggfriststekt ris med grönsaker upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "bulk-kyckling-jattebowl",

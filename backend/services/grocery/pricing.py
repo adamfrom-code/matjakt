@@ -602,6 +602,10 @@ def packages_needed(required_amount: float, required_unit: str | None,
 # the longer heads that override it. Keyed by the folded exclusion term.
 EXCLUSION_SUFFIX_OVERRIDES = {
     "lask": ("flask",),
+    # "Tortillachips" is a real recipe ingredient (tacogratäng) whose own
+    # head IS the excluded word. The head-lead rule still keeps chips
+    # products away from every other ingredient.
+    "chips": ("tortillachips",),
 }
 
 

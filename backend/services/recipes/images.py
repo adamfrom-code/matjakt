@@ -223,6 +223,61 @@ DISH_TERMS_EN = {
     "makaroner": "macaroni", "ugnspannkaka": "baked pancake",
     "aggrora": "scrambled eggs", "lax": "salmon dish",
     "torsk": "cod dish", "biff": "beef steak",
+    # Added when 59 of 205 recipes sat imageless: dishes Pexels has plenty
+    # of, under words the map did not know yet.
+    "fajitas": "chicken fajitas", "kycklingfajitas": "chicken fajitas",
+    "tikka": "tikka masala", "minestrone": "minestrone",
+    "burgare": "burger", "halloumiburgare": "halloumi burger",
+    "bonburgare": "veggie burger", "quesadillas": "quesadilla",
+    "spett": "skewers", "kycklingspett": "chicken skewers",
+    "klubbor": "chicken drumsticks", "kycklingklubbor": "baked chicken drumsticks",
+    "fiskpinnar": "fish sticks", "nudelwok": "noodle stir fry",
+    "gravadlax": "cured salmon", "kalops": "beef stew",
+    "kalpudding": "cabbage casserole", "dillkott": "beef stew dill",
+    "wallenbergare": "veal patty", "pannbiff": "beef patty",
+    "farsbiffar": "meat patties", "biffar": "patties",
+    "risgrynsgrot": "rice pudding", "grot": "porridge",
+    "daal": "dal curry", "falafel": "falafel", "paj": "quiche",
+    "gronsakspaj": "vegetable quiche", "poke": "poke bowl",
+    "pokebowl": "poke bowl", "carbonara": "pasta carbonara",
+    "caesarsallad": "caesar salad", "shakshuka": "shakshuka",
+    "gulasch": "goulash", "stroganoff": "stroganoff",
+    "potatissoppa": "potato soup", "morotssoppa": "carrot soup",
+    "sotpotatissoppa": "sweet potato soup", "broccolisoppa": "broccoli soup",
+    "spenatsoppa": "spinach soup", "vitkalssoppa": "cabbage soup",
+    "kottfarssoppa": "minestrone", "sill": "pickled herring",
+    "pyttipanna": "swedish hash", "pytt": "swedish hash",
+    "tzatziki": "tzatziki", "gnocchipanna": "gnocchi",
+    "gnocchi": "gnocchi", "toast": "toast skagen",
+}
+
+# Swedish food words -> the English word a Pexels photographer would use.
+# This is what lets an ENGLISH title score at all: the queries are Swedish
+# and Pexels' search understands them fine, but the scorer judges the title
+# text - and "Delicious grilled salmon with broccoli and rice" contains not
+# one Swedish word. Compound-aware: "kycklinglada" hits "kyckling".
+INGREDIENT_EN = {
+    "kyckling": "chicken", "lax": "salmon", "torsk": "cod", "sej": "fish",
+    "fisk": "fish", "rakor": "shrimp", "tonfisk": "tuna", "sill": "herring",
+    "biff": "steak", "notfars": "beef", "blandfars": "beef", "kottfars": "beef",
+    "hogrev": "beef", "lovbiff": "beef", "rostbiff": "roast beef",
+    "flask": "pork", "karre": "pork", "kassler": "pork", "bacon": "bacon",
+    "korv": "sausage", "chorizo": "chorizo", "kalv": "veal",
+    "halloumi": "halloumi", "feta": "feta", "mozzarella": "mozzarella",
+    "chevre": "goat cheese", "ost": "cheese", "tofu": "tofu", "agg": "egg",
+    "kikartor": "chickpeas", "linser": "lentil", "bonor": "beans",
+    "potatis": "potato", "sotpotatis": "sweet potato", "ris": "rice",
+    "pasta": "pasta", "spaghetti": "spaghetti", "makaroner": "macaroni",
+    "nudlar": "noodle", "bulgur": "bulgur", "quinoa": "quinoa",
+    "broccoli": "broccoli", "blomkal": "cauliflower", "morot": "carrot",
+    "morotter": "carrot", "paprika": "pepper", "tomat": "tomato",
+    "champinjoner": "mushroom", "svamp": "mushroom", "spenat": "spinach",
+    "majs": "corn", "vitkal": "cabbage", "rodbetor": "beetroot",
+    "artor": "peas", "artsoppa": "pea soup", "dill": "dill",
+    "citron": "lemon", "lime": "lime", "kokos": "coconut", "curry": "curry",
+    "teriyaki": "teriyaki", "pesto": "pesto", "apple": "apple",
+    "avokado": "avocado", "banan": "banana", "purjolok": "leek",
+    "zucchini": "zucchini", "sparris": "asparagus", "mos": "mashed",
 }
 
 
@@ -314,7 +369,75 @@ def score_candidate(title: str, recipe: dict) -> float:
     for index, word in enumerate(name_words):
         if word in folded_title:
             score += 2.0 if index == 0 else 0.6
+
+    # English titles: translate the recipe's own food words and score hits.
+    # Pexels' search understands the Swedish queries and returns the right
+    # dishes - "Delicious grilled chicken fajitas with bell peppers" for
+    # "Kycklingfajitas" - but not one Swedish word appears in that title, so
+    # 59 recipes sat imageless while their perfect photos scored 0.0. The
+    # first (head) signal is the main ingredient and carries the most; a
+    # title that names the main ingredient plus one more of the recipe's own
+    # foods clears the bar, one incidental word alone does not.
+    # THE PROTEIN GATE, on the English contribution only. When the recipe's
+    # main food is a protein, an ENGLISH title must name it (or an accepted
+    # stand-in) before any English word may add points - "teriyaki" plus
+    # "rice" must not carry a picture whose salmon is nowhere to be seen.
+    # A SWEDISH title that already matched the recipe's own words is not
+    # touched by this: it named the dish itself, which is stronger evidence
+    # than any translated ingredient list.
+    signals = _english_signals(recipe)
+    gate_open = bool(signals) and (
+        signals[0] not in PROTEIN_ACCEPT
+        or any(word in folded_title for word in PROTEIN_ACCEPT[signals[0]]))
+    if gate_open:
+        for position, english in enumerate(signals):
+            if all(word in folded_title for word in english.split()):
+                score += 1.4 if position == 0 else 0.7
     return score
+
+
+# For each protein, the title words that count as showing it. Deliberately
+# narrow: "meat" is accepted for the red meats (a cutlet caption often says
+# just "meat"), never for fish or chicken - a photo captioned "meat" is not
+# a salmon dinner.
+PROTEIN_ACCEPT = {
+    "chicken": ("chicken",),
+    "salmon": ("salmon",),
+    "cod": ("cod", "white fish", "fish fillet"),
+    "fish": ("fish", "cod", "salmon"),
+    "shrimp": ("shrimp", "prawn"),
+    "tuna": ("tuna",),
+    "herring": ("herring",),
+    "steak": ("steak", "beef"),
+    "beef": ("beef", "steak", "meat", "mince"),
+    "roast beef": ("roast beef", "beef"),
+    "pork": ("pork",),
+    "veal": ("veal", "cutlet", "patty", "schnitzel", "meat"),
+    "sausage": ("sausage", "hot dog"),
+    "bacon": ("bacon",),
+    "chorizo": ("chorizo", "sausage"),
+    "halloumi": ("halloumi",),
+    "tofu": ("tofu",),
+    "egg": ("egg",),
+}
+
+
+def _english_signals(recipe: dict) -> list[str]:
+    """The recipe's food words in English, main ingredient first."""
+    seen, ordered = set(), []
+    def add(text):
+        for token in re.findall(r"[a-z]+", _fold(text or "")):
+            for swedish, english in INGREDIENT_EN.items():
+                if (token == swedish or (len(swedish) > 3 and
+                        (token.endswith(swedish) or token.startswith(swedish)))):
+                    if english not in seen:
+                        seen.add(english)
+                        ordered.append(english)
+    add(recipe.get("name"))
+    for ingredient in (recipe.get("ingredients") or [])[:6]:
+        if isinstance(ingredient, dict) and not ingredient.get("pantryStaple"):
+            add(ingredient.get("name"))
+    return ordered
 
 
 def search_commons(query: str, limit: int = 12) -> list[dict]:
@@ -381,7 +504,12 @@ def search_pexels(query: str, limit: int = 15) -> list[dict]:
             # Pexels' own alt text describes the photo's CONTENT, which is a
             # far better relevance signal than a filename - Commons titles
             # are whatever the uploader felt like typing.
-            "title": photo.get("alt") or query,
+            # No alt text means no evidence of what the photo shows. An
+            # earlier fallback used the QUERY as the title - which then
+            # matched itself perfectly, so any altless photo Pexels returned
+            # scored as ideal. That is how "Teriyakilax" got a rice bowl
+            # whose own slug said "meat". Empty title = candidate skipped.
+            "title": (photo.get("alt") or "").strip(),
             "url": url,
             "descriptionUrl": photo.get("url"),
             "license": PEXELS_LICENCE,
@@ -419,6 +547,8 @@ def find_image(recipe: dict, used_titles: set | None = None) -> dict | None:
     best = None
     for query in build_query(recipe):
         for candidate in search_sources(query):
+            if not candidate["title"]:
+                continue
             if candidate["title"] in used_titles:
                 continue
             score = score_candidate(candidate["title"], recipe)

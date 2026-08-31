@@ -1178,7 +1178,14 @@
   "dietFlags": [
    "blandkost",
    "laktosfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/19993435/pexels-photo-19993435.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/homemade-fried-chicken-cakes-19993435/",
+  "imageCredit": "Alex Bayev",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kycklingfärsbiffar med ris och rostade grönsaker upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "lax-pasta-bulk",
@@ -1453,7 +1460,14 @@
   ],
   "dietFlags": [
    "blandkost"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/6659621/pexels-photo-6659621.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/a-person-grating-a-cheese-on-a-gnocchi-6659621/",
+  "imageCredit": "https://kaboompics.com/",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Krämig gnocchipanna med kyckling upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "carbonara",
@@ -1614,7 +1628,14 @@
   "dietFlags": [
    "blandkost",
    "glutenfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/14537709/pexels-photo-14537709.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/steak-and-potato-puree-on-a-plate-14537709/",
+  "imageCredit": "Cristian Mihaila",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kassler med potatisgratäng upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "proteinpannkakor",
@@ -2087,7 +2108,14 @@
   ],
   "dietFlags": [
    "vegetariskt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/2796841/pexels-photo-2796841.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/hamburger-on-tray-2796841/",
+  "imageCredit": "Vincent M.A. Janssen",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Bönburgare med klyftpotatis upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "flaskytterfile-appelmos",

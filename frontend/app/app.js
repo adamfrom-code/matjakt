@@ -5,7 +5,7 @@ import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/
 import { expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts } from "./src/services/pantry.js";
 import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
-import { campaignsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
+import { API_BASE_URL, campaignsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
 import { changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, startTrial, storeToken, verifyEmail } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
@@ -102,7 +102,12 @@ const state = { budget: savedState.budget || 800, personer: savedState.personer 
   // never valda's own iteration order (a Set has none tied to day position).
   weekPlan: Array.isArray(savedState.weekPlan) ? savedState.weekPlan : [...(savedState.valda || [])] };
 function buildSyncPayload() {
-  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan };
+  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan,
+    // The last real pricing snapshot. Painted immediately on next visit with
+    // its own timestamp while a fresh fetch runs - the difference between
+    // "pris hämtas…" for seconds on every open and prices that are simply
+    // there. Never extended, never displayed without its "Uppdaterad" stamp.
+    dbChainTotals: state.dbChainTotals, dbComparison: state.dbComparison, dbPricedAt: state.dbPricedAt };
 }
 function applySyncBlob(blob) {
   if (!blob) return;
@@ -117,6 +122,7 @@ function applySyncBlob(blob) {
   if (blob.valda !== undefined) state.valda = new Set(blob.valda);
   if (blob.avklarade !== undefined) state.avklarade = new Set(blob.avklarade);
   if (blob.apiRecipes !== undefined) state.apiRecipes = blob.apiRecipes;
+  if (blob.dbChainTotals) { state.dbChainTotals = blob.dbChainTotals; state.dbComparison = blob.dbComparison || null; state.dbPricedAt = blob.dbPricedAt || null; }
   if (blob.naringsmal !== undefined) state.naringsmal = blob.naringsmal;
   if (blob.betyg !== undefined) state.betyg = blob.betyg;
   if (blob.kost !== undefined) state.kost = { kosttyp: blob.kost.kosttyp || "", avoidAllergens: new Set(blob.kost.avoidAllergens || []) };
@@ -873,6 +879,12 @@ async function syncDatabasePricing(shoppingItems) {
     // timestamp is how they know the fetch actually failed rather than
     // simply not having finished yet.
     state.dbPricingFailedAt = Date.now();
+    // A failure must not park the key forever: with the key left in place,
+    // every later render concluded "already fetched" and the header said
+    // "pris hämtas…" until a full reload. One deploy window was enough to
+    // strand every open phone. Clear the key and retry shortly.
+    databasePricingSync.key = null;
+    setTimeout(() => renderBasket(), 8000);
   } finally {
     databasePricingSync.pending = false;
   }
@@ -884,7 +896,14 @@ async function syncDatabasePricing(shoppingItems) {
 // be priced against a real product, which is a fact the card must show
 // rather than paper over with the static estimate.
 function databaseItemFor(name) {
-  const result = state.dbChainTotals[chosenStore()];
+  // The same chain the header total shows. chosenStore() can be "alla" (the
+  // user picked "alla butiker") or a chain the database has no result for -
+  // keying the rows on it then made EVERY row fall back to the old scrape
+  // path while the header proudly showed 18/18 from the database. The rows
+  // and the total must come from one and the same result.
+  const result = state.dbChainTotals[chosenStore()]
+    || state.dbChainTotals[selectedBranch()?.kedja]
+    || Object.values(state.dbChainTotals)[0];
   if (!result) return null;
   const item = (result.items || []).find(entry => entry.ingredient === name);
   // A "missing" row is in items[] on purpose - it must stay visible in the
@@ -1433,14 +1452,21 @@ function databaseShoppingItemMarkup(item, match) {
     ? `<small class="shopping-item-campaign">🏷️ Kampanj ${money(match.campaignPrice)} (ord. ${money(match.regularPrice)})</small>`
     : "";
   const packageText = match.packageSize && match.packageSize !== "1 st" ? match.packageSize : "";
-  const countText = match.packages > 1 ? `${match.packages} st` : "";
+  // What the RECIPES need and what the SHOPPER buys, side by side. "2 st"
+  // alone answered neither question - you want to know that the week needs
+  // 750 g and that two 400 g packs cover it.
+  const neededText = match.neededAmount
+    ? `Behöver ${amountLabel(match.neededAmount, match.neededUnit)}` : "";
+  const countText = match.packages > 1
+    ? `Köp ${match.packages} × ${packageText || "1 st"}`
+    : (packageText ? `Köp 1 × ${packageText}` : "");
   // Flagged, not hidden: when the recipe's unit can't be converted to the
   // pack's unit (a recipe in "st" against a pack in "g") the engine falls
   // back to one package. That is a guess about QUANTITY, and the shopper is
   // the one who can tell whether one is enough.
   const inexact = match.priceStatus === "estimated"
     ? '<small class="item-status estimated">Antal osäkert</small>' : "";
-  const meta = escapeHtml([match.brand, packageText, countText].filter(Boolean).join(" · ") || "1 st");
+  const meta = escapeHtml([match.brand, neededText, countText].filter(Boolean).join(" · ") || "1 st");
   return `<label class="shopping-item ${checked ? "checked" : ""}"><input type="checkbox" data-shopping="${escapeHtml(item.namn)}" ${checked ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${escapeHtml(match.productName)}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong>${money(match.totalCost)}</strong>${inexact}</span></label>`;
 }
 
@@ -1468,9 +1494,15 @@ function shoppingItemMarkup(item) {
   // "Pris saknas", never 0 kr, and must never enter a total (see
   // shoppingListCost/branchLiveTotal).
   const priceMissing = live && live.pris_kr == null;
-  const stillFetching = packages > 0 && !live && livePriceSync.loading && VALID_CHAINS.includes(chain);
-  const isEstimated = packages > 0 && !live && !stillFetching;
-  const priceLabel = priceMissing ? "Pris saknas" : live ? money(live.pris_kr * (packages || 1)) : product.pris ? money(product.pris * packages) : "";
+  // While the database sync is still working the row says so; once it has
+  // answered (this line was in missingItems) the row says "Pris saknas".
+  // The static catalogue price is never printed: "Bär 30 kr - Uppskattat"
+  // is an invented number in a column of real ones, and the moment it later
+  // jumps to a real price the whole list looks unreliable.
+  const dbSyncPending = databasePricingSync.pending || (!state.dbPricedAt && !state.dbPricingFailedAt);
+  const stillFetching = packages > 0 && !live && (dbSyncPending || (livePriceSync.loading && VALID_CHAINS.includes(chain)));
+  const isEstimated = false;
+  const priceLabel = priceMissing ? "Pris saknas" : live ? money(live.pris_kr * (packages || 1)) : stillFetching ? "" : "Pris saknas";
   const displayName = live ? escapeHtml(live.produktnamn) : escapeHtml(item.namn);
   // PRODUCT_CATALOG uses "ICA" as a generic placeholder brand for estimated
   // prices, not a claim that the item comes from ICA specifically - showing it
@@ -1483,11 +1515,19 @@ function shoppingItemMarkup(item) {
   const sizeText = product.storlek && product.storlek !== "1 st" ? product.storlek : "";
   const brandSize = live ? live.markeOchStorlek : [product.marke && product.marke !== "ICA" ? product.marke : "", sizeText].filter(Boolean).join(" ");
   const qty = packages > 1 ? `${packages} st` : "";
-  const meta = !packages ? "Finns hemma" : escapeHtml([brandSize, qty].filter(Boolean).join(" · ") || "1 st");
+  const neededPlain = needed > 0 ? `Behöver ${amountLabel(needed, item.unit)}` : "";
+  const meta = !packages ? "Finns hemma" : escapeHtml([brandSize, neededPlain, qty].filter(Boolean).join(" · ") || "1 st");
   const campaign = live?.kampanj?.text ? `<small class="shopping-item-campaign">🏷️ ${escapeHtml(live.kampanj.text)}</small>` : "";
-  const status = stillFetching ? '<small class="item-status loading">Hämtar…</small>' : isEstimated ? '<small class="item-status estimated">Uppskattat</small>' : "";
+  const status = stillFetching ? '<small class="item-status loading">pris hämtas…</small>' : "";
   const photo = live?.bild ? `<img class="shopping-item-image has-image" src="${live.bild}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(item.namn));
-  return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${displayName}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong class="${priceMissing ? "price-missing" : ""}">${priceLabel}</strong>${status}</span></label>`;
+  return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${displayName}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong class="${priceLabel === "Pris saknas" ? "price-missing" : ""}">${priceLabel}</strong>${status}</span></label>`;
+}
+function amountLabel(amount, unit) {
+  // Pieces are bought whole - "Behöver 0.5 st citron" is true in the pot
+  // but useless in the store, so st rounds up.
+  if (!unit || unit === "st") return `${Math.max(1, Math.ceil(amount))} st`;
+  const rounded = amount >= 100 ? Math.round(amount) : Math.round(amount * 10) / 10;
+  return `${rounded} ${unit}`;
 }
 function pantryStep(name) { return (PACKAGE_INFO[name]?.unit || "st") === "st" ? 1 : 50; }
 const PANTRY_TAB_LABELS = { skafferi: "Skafferi", kyl: "Kyl", frys: "Frys" };
@@ -2468,10 +2508,41 @@ function campaignDealMarkup(deal) {
     ? `<button type="button" class="campaign-deal" data-cook-open="${escapeHtml(recipe.id)}">${inner}</button>`
     : `<div class="campaign-deal">${inner}</div>`;
 }
+// The Hem campaign rail runs on MATJAKT'S OWN collected prices: every card
+// is a product whose campaign_price the chain itself published, across all
+// chains we collect. Free for everyone - it is our own data, it costs one
+// cached request, and it is the single best daily reason to open the app.
+// The old per-chain scrape below remains only as the Premium extra for
+// Coop, which we cannot collect.
+let ownCampaignFetchKey = null;
+async function renderOwnCampaigns() {
+  if (ownCampaignFetchKey === "done") return;
+  ownCampaignFetchKey = "done";
+  try {
+    const response = await fetch(`${API_BASE_URL}/grocery/campaigns`, { signal: AbortSignal.timeout(15000) });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    const all = Object.values(data.deals || {}).flat()
+      .sort((a, b) => b.discountPercent - a.discountPercent);
+    if (!all.length) { $("campaignList").innerHTML = `<p class="live-loading">Inga kampanjer i butikernas data just nu.</p>`; return; }
+    $("campaignList").innerHTML = all.slice(0, 18).map(deal => {
+      const photo = deal.imageUrl ? `<img src="${escapeHtml(safeHttpUrl(deal.imageUrl) || "")}" alt="" loading="lazy">` : categoryIconMarkup("Övrigt");
+      const storeColor = CHAIN_COLORS[deal.chain] || "var(--primary)";
+      return `<div class="campaign-deal"><span class="campaign-deal-image">${photo}<span class="campaign-deal-badge">−${deal.discountPercent}%</span></span><span class="campaign-deal-info"><strong>${escapeHtml(deal.name)}</strong>${deal.brand || deal.size ? `<small class="campaign-deal-brand">${escapeHtml([deal.brand, deal.size].filter(Boolean).join(" · "))}</small>` : ""}<span class="campaign-deal-price-row"><strong class="campaign-deal-price">${money(deal.campaignPrice)}</strong><s>${money(deal.regularPrice)}</s></span><span class="campaign-deal-store" style="color:${storeColor}">${escapeHtml(deal.chain)}</span></span></div>`;
+    }).join("");
+  } catch {
+    ownCampaignFetchKey = null;
+    $("campaignList").innerHTML = `<p class="live-loading">Kunde inte hämta kampanjer just nu.</p>`;
+  }
+}
+
 async function renderCampaignSection() {
+  $("campaignLocked").hidden = true;
+  $("campaignStoreLabel").hidden = true;
+  renderOwnCampaigns();
+  return;
+  /* eslint-disable no-unreachable */
   const premium = hasPremium();
-  $("campaignLocked").hidden = premium;
-  if (!premium) { $("campaignList").innerHTML = ""; $("campaignStoreLabel").hidden = true; return; }
   const chain = chosenStore();
   if (!CAMPAIGN_CHAINS.includes(chain)) {
     $("campaignStoreLabel").hidden = true;

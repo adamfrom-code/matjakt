@@ -330,8 +330,13 @@
   "dietFlags": [
    "blandkost"
   ],
-  "imageAlt": "Pyttipanna med stekt ägg",
-  "imageStatus": "needs_image"
+  "imageAlt": "Pyttipanna med stekt ägg upplagd på tallrik",
+  "imageStatus": "ok",
+  "image": "https://images.pexels.com/photos/22420/pexels-photo.jpg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/egg-with-vegetable-dish-22420/",
+  "imageCredit": "Olia Gozha",
+  "imageLicense": "Pexels License"
  },
  {
   "id": "pasta-tomatsas-vitlok",

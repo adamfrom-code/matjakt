@@ -1098,7 +1098,14 @@
   ],
   "dietFlags": [
    "vegetariskt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/38499046/pexels-photo-38499046.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/healthy-quinoa-salad-with-chickpeas-on-wooden-table-38499046/",
+  "imageCredit": "Mohammed-Ali  Hamadache",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Bulgurpanna med halloumi och kikärtor upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "torskgratang-vasterbotten",
@@ -1277,7 +1284,14 @@
   "dietFlags": [
    "vegetariskt",
    "glutenfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/5836624/pexels-photo-5836624.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/food-served-on-printed-ceramic-plate-5836624/",
+  "imageCredit": "ROMAN ODINTSOV",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Vegopytt med halloumi och stekt ägg upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "hoisin-flask-ris",
@@ -1477,7 +1491,14 @@
    "blandkost",
    "glutenfritt",
    "laktosfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/8973186/pexels-photo-8973186.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/meat-skewers-8973186/",
+  "imageCredit": "Shardar Tarikul Islam",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kycklingspett med jordnötssås och ris upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "vitkalssoppa-fars",
@@ -1658,7 +1679,14 @@
   ],
   "dietFlags": [
    "vegetariskt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/5419294/pexels-photo-5419294.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-baked-quiche-dish-5419294/",
+  "imageCredit": "Polina Tankilevitch",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Grönsakspaj med lagrad ost upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "sotpotatis-bulk-bowl",
@@ -1846,7 +1874,14 @@
    "vegetariskt",
    "veganskt",
    "laktosfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/36853606/pexels-photo-36853606.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/traditional-indonesian-meal-with-rice-and-side-dishes-36853606/",
+  "imageCredit": "Muhammad  Solikin",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Krispig tofu med stekt ris och cashewnötter upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "toast-skagen",
@@ -2017,6 +2052,13 @@
   "dietFlags": [
    "blandkost",
    "glutenfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/10183540/pexels-photo-10183540.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/red-sausage-on-white-ceramic-plate-10183540/",
+  "imageCredit": "Nadin Sh",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Ugnsbakad korv med äppelmos och potatismos upplagd på tallrik",
+  "imageStatus": "ok"
  }
 ]

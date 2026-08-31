@@ -3698,8 +3698,13 @@
   "dietFlags": [
    "pescetarisk"
   ],
-  "imageAlt": "Teriyakilax med wokgrönsaker och ris",
-  "imageStatus": "needs_image"
+  "imageAlt": "Teriyakilax med wokgrönsaker och ris upplagd på tallrik",
+  "imageStatus": "ok",
+  "image": "https://images.pexels.com/photos/17308546/pexels-photo-17308546.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/a-bowl-of-rice-with-meat-and-green-onions-17308546/",
+  "imageCredit": "Vitaliy Haiduk",
+  "imageLicense": "Pexels License"
  },
  {
   "id": "teriyakitofu",
@@ -3780,8 +3785,13 @@
   "dietFlags": [
    "vegansk"
   ],
-  "imageAlt": "Teriyakitofu med matvetesallad",
-  "imageStatus": "needs_image"
+  "imageAlt": "Teriyakitofu med matvetesallad upplagd på tallrik",
+  "imageStatus": "ok",
+  "image": "https://images.pexels.com/photos/37297770/pexels-photo-37297770.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/stir-fried-tofu-and-vegetables-on-plate-37297770/",
+  "imageCredit": "Gu Ko",
+  "imageLicense": "Pexels License"
  },
  {
   "id": "tofucurry",
@@ -4110,8 +4120,13 @@
   "dietFlags": [
    "pescetarisk"
   ],
-  "imageAlt": "Ugnsbakad lax med potatis",
-  "imageStatus": "needs_image"
+  "imageAlt": "Ugnsbakad lax med potatis upplagd på tallrik",
+  "imageStatus": "ok",
+  "image": "https://images.pexels.com/photos/14542171/pexels-photo-14542171.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/salmon-14542171/",
+  "imageCredit": "Jacob  Yavin",
+  "imageLicense": "Pexels License"
  },
  {
   "id": "ugnstorsk",

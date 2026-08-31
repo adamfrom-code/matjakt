@@ -1411,6 +1411,15 @@ class ApiHandler(SimpleHTTPRequestHandler):
             except AccountError as error:
                 self.send_json(401, {"error": str(error)})
             return
+        if parsed.path == "/api/grocery/campaigns":
+            # All chains' current campaign discounts, from our own collected
+            # prices. Public and cheap: one cached SQL pass, no scraping.
+            try:
+                self.send_json(200, grocery_api.campaign_deals(), cache_seconds=900)
+            except Exception:
+                logger.exception("Kampanjlistan misslyckades")
+                self.send_json(503, {"error": "Kampanjerna är inte tillgängliga just nu"})
+            return
         if parsed.path == "/api/recipes/shelves":
             # Every shelf the recipe page draws, in ONE request. Nine
             # requests on a phone is nine chances to be slow, and the page

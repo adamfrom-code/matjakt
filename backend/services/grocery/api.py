@@ -94,6 +94,72 @@ def open_store() -> GroceryStore:
     return GroceryStore(DB_PATH)
 
 
+def campaign_deals(per_chain: int = 10) -> dict:
+    """The best current campaign discounts, per chain, from our own data.
+
+    Every price here was collected from the chain itself - campaign_price
+    genuinely below regular_price, ranked by discount. No scraping at
+    request time, no third party: the Hem screen's campaign rail must never
+    make a phone wait on someone else's website. Cached like everything
+    else keyed on data_version, so a fresh import shows up immediately."""
+    def build():
+        store = open_store()
+        try:
+            deals = {}
+            for chain in priceable_chains():
+                rows = store.connection.execute(
+                    """
+                    SELECT p.name, p.brand, p.size, p.image_url,
+                           cp.campaign_price, cp.regular_price
+                    FROM grocery_current_prices cp
+                    JOIN grocery_products p ON p.id = cp.product_id
+                    -- The PRICE row's own store decides the chain. Joining
+                    -- via external ids let a GTIN-shared product carry one
+                    -- chain's campaign into another chain's rail.
+                    JOIN grocery_stores st ON st.id = cp.store_id
+                    WHERE st.chain = ?
+                      AND cp.campaign_price IS NOT NULL
+                      AND cp.regular_price IS NOT NULL
+                      AND cp.campaign_price < cp.regular_price
+                      AND cp.regular_price > 0
+                    ORDER BY 1.0 - (cp.campaign_price / cp.regular_price) DESC
+                    LIMIT ?
+                    """,
+                    (chain, per_chain * 3),
+                ).fetchall()
+                seen, chain_deals = set(), []
+                for row in rows:
+                    # One deal per product NAME: the same discount on four
+                    # pack sizes reads as filler, not as four offers.
+                    if row["name"] in seen:
+                        continue
+                    seen.add(row["name"])
+                    discount = round(100 * (1 - row["campaign_price"] / row["regular_price"]))
+                    # Below 10 % is shelf noise, not a campaign worth a card.
+                    if discount < 10:
+                        continue
+                    chain_deals.append({
+                        "chain": chain, "name": row["name"], "brand": row["brand"],
+                        "size": row["size"], "imageUrl": row["image_url"],
+                        "campaignPrice": row["campaign_price"],
+                        "regularPrice": row["regular_price"],
+                        "discountPercent": discount,
+                    })
+                    if len(chain_deals) >= per_chain:
+                        break
+                deals[chain] = chain_deals
+            return {"deals": deals}
+        finally:
+            store.close()
+    key = f"campaign_deals:{per_chain}"
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
+    payload = build()
+    _cache_set(key, payload)
+    return payload
+
+
 def database_summary() -> dict:
     """What the price database actually holds, per chain.
 

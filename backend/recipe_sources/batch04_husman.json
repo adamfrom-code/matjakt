@@ -347,7 +347,14 @@
   ],
   "dietFlags": [
    "blandkost"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/34636462/pexels-photo-34636462.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/delicious-beef-stew-with-vegetables-on-plate-34636462/",
+  "imageCredit": "Novkov Visuals",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Kalops med rödbetor upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "korv-stroganoff-klassisk",
@@ -776,7 +783,14 @@
   "dietFlags": [
    "blandkost",
    "pescetariskt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/16273766/pexels-photo-16273766.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/fish-and-potatoes-on-a-plate-16273766/",
+  "imageCredit": "Nadin Sh",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Stekt sej med kall sås och potatis upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kycklinggryta-paprika",
@@ -1587,7 +1601,14 @@
   "dietFlags": [
    "blandkost",
    "pescetariskt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/16273766/pexels-photo-16273766.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/fish-and-potatoes-on-a-plate-16273766/",
+  "imageCredit": "Nadin Sh",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Stekt fisk med skirat smör och potatis upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "kycklingsoppa-nudlar",
@@ -1766,7 +1787,14 @@
   "dietFlags": [
    "blandkost",
    "glutenfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/37245456/pexels-photo-37245456.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/sizzling-burger-patties-grilling-on-bbq-37245456/",
+  "imageCredit": "Caio Niceas",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Färsbiffar med tzatziki och klyftpotatis upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "sotpotatissoppa",
@@ -1948,7 +1976,14 @@
   "dietFlags": [
    "blandkost",
    "glutenfritt"
-  ]
+  ],
+  "image": "https://images.pexels.com/photos/37529064/pexels-photo-37529064.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+  "imageSource": "Pexels",
+  "imageSourceUrl": "https://www.pexels.com/photo/delicious-dinner-plate-with-gourmet-meal-37529064/",
+  "imageCredit": "Muhammad  Khawar Nazir",
+  "imageLicense": "Pexels License",
+  "imageAlt": "Biff à la Lindström med potatismos upplagd på tallrik",
+  "imageStatus": "ok"
  },
  {
   "id": "morotssoppa-ingefara",
