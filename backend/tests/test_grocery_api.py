@@ -1,0 +1,149 @@
+# -*- coding: utf-8 -*-
+"""Tests for the grocery API layer - the thing api_server.py talks to.
+
+The interesting part is compare_chains(): naming a cheapest chain is a
+factual claim about the user's money, and this app has already shipped that
+claim wrongly once (the "Coop 351 / Willys 351 / ICA 351, one marked
+cheapest" bug). Each block below corresponds to a way the comparison can be
+meaningless while still producing numbers.
+"""
+
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from services.grocery import RawProduct  # noqa: E402
+from services.grocery import api as grocery_api  # noqa: E402
+from services.grocery.store import GroceryStore  # noqa: E402
+
+
+def result(chain, total, coverage, matched=10, age=None):
+    return {"chain": chain, "totalCheckoutCost": total, "coveragePercent": coverage,
+            "realPriceItems": matched, "dataAgeSeconds": age}
+
+
+class CompareChainsTest(unittest.TestCase):
+    def test_names_the_cheapest_when_the_comparison_holds(self):
+        comparison = grocery_api.compare_chains([
+            result("Willys", 320.0, 95), result("Hemköp", 380.0, 95)])
+        self.assertEqual(comparison["cheapestChain"], "Willys")
+        self.assertEqual(comparison["savings"], 60.0)
+        self.assertIsNone(comparison["reason"])
+
+    def test_one_chain_alone_is_not_a_comparison(self):
+        comparison = grocery_api.compare_chains([result("Willys", 320.0, 95)])
+        self.assertIsNone(comparison["cheapestChain"])
+        self.assertEqual(comparison["reason"], "too_few_comparable_chains")
+
+    def test_a_poorly_covered_chain_is_not_crowned_cheapest(self):
+        """The whole point: 120 kr covering 3 of 20 items is not cheap, it is
+        incomplete. Without this the WORST-covered chain always wins."""
+        comparison = grocery_api.compare_chains([
+            result("Willys", 120.0, 15, matched=3), result("Hemköp", 380.0, 95)])
+        self.assertIsNone(comparison["cheapestChain"])
+        self.assertEqual(comparison["reason"], "too_few_comparable_chains")
+
+    def test_identical_totals_yield_no_winner(self):
+        comparison = grocery_api.compare_chains([
+            result("Willys", 351.0, 95), result("ICA", 351.0, 95),
+            result("Coop", 351.0, 95)])
+        self.assertIsNone(comparison["cheapestChain"])
+        self.assertEqual(comparison["reason"], "all_totals_identical")
+
+    def test_stale_data_is_not_compared_against_fresh_data(self):
+        old = grocery_api.MAX_AGE_SECONDS_FOR_COMPARISON + 1
+        comparison = grocery_api.compare_chains([
+            result("Willys", 320.0, 95, age=old), result("Hemköp", 380.0, 95, age=60)])
+        self.assertIsNone(comparison["cheapestChain"])
+
+    def test_a_chain_with_zero_matches_never_wins_at_zero_kronor(self):
+        """An empty chain totals 0 kr, which would otherwise read as the
+        cheapest shop in Sweden."""
+        comparison = grocery_api.compare_chains([
+            result("Tom kedja", 0.0, 0, matched=0), result("Willys", 320.0, 95)])
+        self.assertIsNone(comparison["cheapestChain"])
+
+    def test_totals_are_still_returned_when_the_claim_is_blocked(self):
+        results = [result("Willys", 351.0, 95), result("ICA", 351.0, 95)]
+        grocery_api.compare_chains(results)
+        self.assertEqual([r["totalCheckoutCost"] for r in results], [351.0, 351.0])
+
+
+class PriceWeekTest(unittest.TestCase):
+    """End-to-end against a real (temporary) database, so the SQL and the
+    engine are exercised together rather than mocked apart."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.db_path = Path(self._tmp.name) / "grocery.db"
+        self._real_db_path = grocery_api.DB_PATH
+        grocery_api.DB_PATH = self.db_path
+        self.addCleanup(lambda: setattr(grocery_api, "DB_PATH", self._real_db_path))
+        grocery_api.clear_cache()
+        self.addCleanup(grocery_api.clear_cache)
+
+        db = GroceryStore(self.db_path)
+        try:
+            for chain, external, price in (("Willys", "2132", 25.0), ("Hemköp", "4256", 31.0)):
+                store = db.upsert_store(chain=chain, external_store_id=external, name=f"{chain} test",
+                                        city=None, postal_code=None, address=None,
+                                        latitude=None, longitude=None, active=True)
+                product = db.find_or_create_product(RawProduct(
+                    chain=chain, external_product_id=f"{chain}-ris", name="Ris Jasmin",
+                    store_id=external, store_name=chain, gtin=None, brand=None,
+                    size="1kg", quantity=1000.0, unit="g",
+                    category="Skafferi > Pasta, ris & mat > Ris"))
+                db.upsert_current_price(product_id=product.id, store_id=store.id,
+                                        regular_price=price, campaign_price=None,
+                                        member_price=None, multibuy_price=None, unit_price=None,
+                                        currency="SEK", source_url=None, fetched_at=None)
+        finally:
+            db.close()
+
+    def test_prices_the_same_item_at_both_chains(self):
+        payload = grocery_api.price_week([{"name": "Ris", "amount": 500, "unit": "g"}])
+        totals = {r["chain"]: r["totalCheckoutCost"] for r in payload["results"]}
+        # 500 g from a 1 kg bag is one whole bag, not half of one.
+        self.assertEqual(totals, {"Willys": 25.0, "Hemköp": 31.0})
+
+    def test_an_unmatched_ingredient_is_reported_not_hidden(self):
+        payload = grocery_api.price_week([
+            {"name": "Ris", "amount": 500, "unit": "g"},
+            {"name": "Struts", "amount": 1, "unit": "st"}])
+        willys = next(r for r in payload["results"] if r["chain"] == "Willys")
+        self.assertEqual([m["name"] for m in willys["missingItems"]], ["Struts"])
+        self.assertEqual(willys["coveragePercent"], 50)
+        # The missing item must not have quietly reduced the total.
+        self.assertEqual(willys["totalCheckoutCost"], 25.0)
+
+    def test_a_chain_with_no_data_is_left_out_entirely(self):
+        payload = grocery_api.price_week([{"name": "Ris", "amount": 500, "unit": "g"}],
+                                         chains=["Willys", "Coop"])
+        self.assertEqual([r["chain"] for r in payload["results"]], ["Willys"])
+
+    def test_shopping_list_returns_the_real_product_to_buy(self):
+        listing = grocery_api.shopping_list([{"name": "Ris", "amount": 1500, "unit": "g"}], "Willys")
+        item = listing["matchedItems"][0]
+        self.assertEqual(item["productName"], "Ris Jasmin")
+        self.assertEqual(item["packages"], 2)      # 1500 g needs two 1 kg bags
+        self.assertEqual(item["totalCost"], 50.0)
+        self.assertEqual(item["category"], "Skafferi > Pasta, ris & mat > Ris")
+
+    def test_shopping_list_for_an_unknown_chain_says_so(self):
+        listing = grocery_api.shopping_list([{"name": "Ris", "amount": 500, "unit": "g"}], "Coop")
+        self.assertEqual(listing["error"], "no_data_for_chain")
+        self.assertEqual(listing["matchedItems"], [])
+
+    def test_summary_reports_what_the_database_actually_holds(self):
+        summary = grocery_api.database_summary()
+        chains = {c["chain"]: c for c in summary["chains"]}
+        self.assertEqual(sorted(chains), ["Hemköp", "Willys"])
+        self.assertEqual(chains["Willys"]["products"], 1)
+        self.assertEqual(chains["Willys"]["withCategory"], 1)
+
+
+if __name__ == "__main__":
+    unittest.main()

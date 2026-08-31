@@ -530,6 +530,9 @@ class RecipePricingEngine:
                     "productId": product.id,
                     "productName": product.name,
                     "brand": product.brand,
+                    # Carried through so a caller can see WHY this product was
+                    # accepted for this ingredient - the aisle is the evidence.
+                    "category": product.category,
                     "imageUrl": product.image_url,
                     "packageSize": product.size,
                     "packageAmount": product.quantity,

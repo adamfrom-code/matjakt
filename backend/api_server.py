@@ -25,6 +25,8 @@ from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature
 from services.email import MailError, send_email
+from services.grocery import api as grocery_api  # noqa: E402
+from services.grocery import importer as grocery_importer  # noqa: E402
 from services.pricing import CHAIN_TO_PRIMAT, KeyValueCacheStore, OpenFoodFactsError, PRIMAT_ATTRIBUTION, PriceCacheStore, PrimatError, image_url_for_gtin, nearby_stores as primat_nearby_stores, primat_account_status, resolve_stores as primat_resolve_stores, search_products as primat_search_products, to_matjakt_product as primat_to_matjakt_product
 from services.recipe_providers import RecipeService, TheMealDbProvider
 
@@ -1156,6 +1158,19 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 return
             self.send_json(200, {"configured": True, "status": status})
             return
+        if parsed.path == "/api/grocery/status":
+            # Public and deliberately blunt: the frontend must be able to
+            # tell "this chain is expensive" apart from "we have barely any
+            # data for this chain", and so must we when a deploy comes up
+            # with an empty disk.
+            self.send_json(200, grocery_api.database_summary(), cache_seconds=60)
+            return
+        if parsed.path == "/api/admin/grocery-import":
+            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
+                self.send_json(403, {"error": "Admin-token krävs"})
+                return
+            self.send_json(200, grocery_importer.status())
+            return
         if parsed.path == "/api/auth/me":
             user = ACCOUNT_STORE.user_for_token(self._bearer_token())
             if not user:
@@ -1438,10 +1453,101 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/products/batch":
             self._handle_products_batch(payload)
             return
+        if parsed.path == "/api/pricing/week":
+            self._handle_pricing_week(payload)
+            return
+        if parsed.path == "/api/pricing/list":
+            self._handle_pricing_list(payload)
+            return
+        if parsed.path == "/api/admin/grocery-import":
+            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
+                self.send_json(403, {"error": "Admin-token krävs"})
+                return
+            chain = (payload or {}).get("chain")
+            if chain not in grocery_importer.DEFAULT_STORES:
+                self.send_json(400, {"error": f"Okänd kedja. Välj en av "
+                                              f"{sorted(grocery_importer.DEFAULT_STORES)}"})
+                return
+            self.send_json(200, grocery_importer.start(
+                chain, store_id=(payload or {}).get("store"),
+                limit_per_category=(payload or {}).get("perCategory")))
+            return
         if parsed.path == "/api/analytics/event":
             self._handle_analytics_event(payload)
             return
         self.send_json(404, {"error": "Okänd endpoint"})
+
+    # Prices are capped per request so one call can't walk the whole
+    # database: a week's list is ~20-40 lines, and anything far beyond that
+    # is a mistake or an abuse, not a shopping list.
+    MAX_PRICING_ITEMS = 80
+
+    def _pricing_items(self, payload):
+        """Normalises the week's summed ingredient lines, dropping anything
+        that isn't a usable {name, amount, unit}. Returns (items, error)."""
+        if not isinstance(payload, dict):
+            return None, "Ogiltig begäran"
+        raw_items = payload.get("items") or payload.get("varor")
+        if not isinstance(raw_items, list) or not raw_items:
+            return None, "items saknas"
+        if len(raw_items) > self.MAX_PRICING_ITEMS:
+            return None, f"För många varor (max {self.MAX_PRICING_ITEMS})"
+        items = []
+        for entry in raw_items:
+            if not isinstance(entry, dict):
+                continue
+            name = clean_text(str(entry.get("name") or entry.get("namn") or ""))
+            if not name:
+                continue
+            try:
+                amount = float(entry.get("amount") if entry.get("amount") is not None
+                               else entry.get("total") or 0)
+            except (TypeError, ValueError):
+                amount = 0.0
+            unit = clean_text(str(entry.get("unit") or entry.get("enhet") or "st")) or "st"
+            items.append({"name": name, "amount": amount, "unit": unit})
+        if not items:
+            return None, "Inga giltiga varor"
+        return items, None
+
+    def _handle_pricing_week(self, payload):
+        """Real checkout cost for a week's list, per chain, from Matjakt's own
+        price database - not an estimate and not a live scrape.
+
+        Never invents a price: an ingredient with no confident product match
+        comes back in missingItems and lowers that chain's coverage. The
+        comparison is allowed to stay undecided (cheapestChain null with a
+        reason) rather than claim a cheapest chain the data can't support."""
+        items, error = self._pricing_items(payload)
+        if error:
+            self.send_json(400, {"error": error})
+            return
+        chains = payload.get("chains") or payload.get("butiker")
+        chains = [clean_text(str(c)) for c in chains if str(c).strip()] if isinstance(chains, list) else None
+        pantry = payload.get("pantry") if isinstance(payload.get("pantry"), dict) else None
+        try:
+            self.send_json(200, grocery_api.price_week(items, chains, pantry))
+        except Exception:
+            logger.exception("Prissättning av veckan misslyckades")
+            self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})
+
+    def _handle_pricing_list(self, payload):
+        """One chain's store-specific shopping list: the actual products to
+        put in the basket, with image, pack size, package count and price."""
+        items, error = self._pricing_items(payload)
+        if error:
+            self.send_json(400, {"error": error})
+            return
+        chain = clean_text(str(payload.get("chain") or payload.get("butik") or ""))
+        if not chain:
+            self.send_json(400, {"error": "chain saknas"})
+            return
+        pantry = payload.get("pantry") if isinstance(payload.get("pantry"), dict) else None
+        try:
+            self.send_json(200, grocery_api.shopping_list(items, chain, pantry))
+        except Exception:
+            logger.exception("Inköpslista misslyckades för %s", chain)
+            self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})
 
     def _handle_analytics_event(self, payload):
         """Anonymous product-event counter for the landing page - a click on
