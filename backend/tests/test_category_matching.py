@@ -350,3 +350,28 @@ class IngredientAliasTest(unittest.TestCase):
 
     def test_unknown_ingredients_have_no_aliases(self):
         self.assertEqual(aliases_for("Struts"), [])
+
+
+class AliasesCompeteWithLiteralMatches(unittest.TestCase):
+    """Aliases are not a fallback - they compete. "Pasta" literally matched
+    exactly one product at Willys (organic chickpea pasta at 118 kr/kg), so
+    the "cheapest pasta" was a specialty product while every ordinary
+    spaghetti sat unconsidered under its own name."""
+
+    class _Product:
+        def __init__(self, id, name, category="Skafferi > Pasta, ris & matgryn > Pasta"):
+            self.id, self.name, self.brand, self.category = id, name, None, category
+            self.quantity, self.unit = 500.0, "g"
+
+    def test_alias_products_join_the_literal_matches(self):
+        from services.grocery.pricing import RecipePricingEngine
+        engine = RecipePricingEngine.__new__(RecipePricingEngine)
+        chickpea = self._Product(1, "Kikärtspasta Ekologisk")
+        penne = self._Product(2, "Penne Rigate")
+        index = {"pasta": [chickpea], "penne": [penne],
+                 "spaghetti": [], "makaroner": [], "fusilli": [],
+                 "tagliatelle": [], "farfalle": []}
+        engine._index_for = lambda chain: index
+        names = [p.name for p in engine._candidates("Pasta", "Willys")]
+        self.assertIn("Penne Rigate", names, "aliasformen måste konkurrera")
+        self.assertIn("Kikärtspasta Ekologisk", names)

@@ -318,6 +318,41 @@ INGREDIENT_ALIASES = {
     "kikärtor": ["kikärter"],
     "röda linser": ["linser"],
     "svarta bönor": ["bönor svarta"],
+    # Generic pantry words almost never appear in product NAMES - ordinary
+    # pasta is sold as "Spaghetti" or "Penne", never as "Pasta". Without
+    # these, "Pasta" matched exactly one product at Willys: organic chickpea
+    # pasta at 118 kr/kg, and a week's realistic 15 kr bag priced as 75 kr.
+    # The aliases point at the everyday forms so the cheapest REAL option
+    # competes. Each alias still passes the same category guards.
+    "pasta": ["spaghetti", "makaroner", "penne", "fusilli", "tagliatelle", "farfalle"],
+    "ris": ["jasminris", "basmatiris", "långkornigt ris", "grötris"],
+    "matvete": ["vete kärnor", "vetekärnor"],
+    "potatis": ["potatis fast", "potatis mjölig"],
+    "tomater": ["tomat", "kvisttomater"],
+    "körsbärstomater": ["cocktailtomater", "körsbärstomat"],
+    "sallad": ["isbergssallad", "romansallad"],
+    "lök": ["gul lök"],
+    "morötter": ["morot"],
+    "vitlök": ["vitlok"],
+    "champinjoner": ["champinjon"],
+    "paprika": ["paprika röd", "röd paprika"],
+    "grädde": ["vispgrädde", "matlagningsgrädde"],
+    "yoghurt": ["naturell yoghurt", "yoghurt naturell"],
+    "fetaost": ["feta"],
+    "mozzarella": ["mozzarella färsk"],
+    "bacon": ["bacon skivat"],
+    "fläskkarré": ["karré"],
+    "högrev": ["högrev benfri"],
+    "buljong": ["buljongtärning"],
+    "grönsaksbuljong": ["grönsaksbuljongtärning", "buljong grönsak"],
+    "kycklingbuljong": ["kycklingbuljongtärning", "buljong kyckling"],
+    "sidfläsk": ["rimmat sidfläsk"],
+    "rimmat sidfläsk": ["sidfläsk rimmat", "sidfläsk"],
+    "nötfärs": ["köttfärs"],
+    "fläskfärs": ["färs fläsk"],
+    "gröna ärtor": ["ärtor gröna", "frysta ärtor", "ärter"],
+    "frysta ärtor": ["gröna ärtor", "ärter"],
+    "majs": ["majskorn", "sockermajs"],
 }
 
 _FOLDED_ALIASES = None  # built after _fold, below
@@ -799,26 +834,26 @@ class RecipePricingEngine:
             candidates.append(product)
         matched = [p for p in candidates
                    if product_matches_ingredient(p.name, ingredient, p.brand, p.category)]
-        if matched:
-            return matched
-        # Nothing under the recipe's own word - try what the shelf calls it.
-        # Each alias goes through the same rules, so this can only find
-        # products the matcher would have accepted anyway.
+        # The shelf's own names COMPETE with the recipe's word - they do not
+        # merely stand in when it finds nothing. "Pasta" literally matched
+        # exactly one product (organic chickpea pasta, 118 kr/kg), so the
+        # cheapest "real" pasta became a specialty product while every
+        # ordinary spaghetti sat unconsidered under its own name. An alias is
+        # a curated statement that the two names mean the same thing, and
+        # each alias candidate still passes the same matcher and category
+        # guards under the alias's name.
+        matched_ids = {p.id for p in matched}
         for alias in aliases_for(ingredient):
             alias_words = sorted((w for w in _words(alias) if len(w) > 2), key=len, reverse=True)
             if not alias_words:
                 continue
-            seen_alias = set()
-            found = []
             for product in index.get(alias_words[0], ()):
-                if product.id in seen_alias:
+                if product.id in matched_ids:
                     continue
-                seen_alias.add(product.id)
                 if product_matches_ingredient(product.name, alias, product.brand, product.category):
-                    found.append(product)
-            if found:
-                return found
-        return []
+                    matched_ids.add(product.id)
+                    matched.append(product)
+        return matched
 
     def price_item(self, ingredient: str, amount: float, unit: str, chain: str, store_id: int) -> dict:
         """Picks the cheapest real checkout option for one ingredient at one
