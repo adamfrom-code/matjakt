@@ -12,12 +12,23 @@ TWO KEYS, NOT ONE. Limiting by IP alone lets one attacker spread guesses
 across many accounts from a botnet; limiting by account alone lets one IP
 walk a whole user list. Both are counted, and whichever trips first wins.
 
-IN MEMORY, ON PURPOSE. The backend is a single process on a single instance
-(see MATJAKT_MAX_SCRAPES and the OOM history), so a shared store would be
-infrastructure for a problem we do not have. The tradeoff is explicit: a
-restart forgives every counter. That is acceptable for slowing down guessing;
-it would not be acceptable as the only defence against a determined attacker,
-which is why passwords are also PBKDF2-hashed with a per-user salt.
+IN MEMORY, ON PURPOSE - AND ONLY WHILE WE RUN ONE INSTANCE. The backend is a
+single process on a single Render instance (see MATJAKT_MAX_SCRAPES and the
+OOM history), so a shared store would be infrastructure for a problem we do
+not have. Two tradeoffs, both deliberate:
+
+  - A restart forgives every counter. Acceptable for slowing down guessing;
+    not acceptable as the ONLY defence, which is why passwords are also
+    PBKDF2-hashed with a per-user salt.
+
+  - THE LIMIT IS PER PROCESS. The moment we run more than one backend
+    instance - a second Render instance, any autoscaling, a blue/green
+    deploy that overlaps - each one keeps its own counters, so the effective
+    limit becomes (limit x instances) and an attacker simply spreads guesses
+    across them. THIS MODULE MUST THEN BE REPLACED with a shared counter
+    (Redis INCR with EXPIRE is the obvious fit), not merely tuned. Treat
+    "we scaled to two instances" as a change that silently weakens auth
+    until this is done.
 """
 
 import threading

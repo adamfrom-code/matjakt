@@ -136,32 +136,50 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
                 city=store.city, postal_code=store.postal_code, address=store.address,
                 latitude=store.latitude, longitude=store.longitude, active=store.active)
 
+            found = 0
+
+            def save_batch(batch):
+                """Writes one category's products immediately.
+
+                Saving as we go, rather than accumulating the whole
+                catalogue and writing it at the end, is what keeps a crash
+                from costing the entire run - and what stops the
+                empty-database bootstrap from starting the same walk over
+                again after that crash."""
+                nonlocal saved, found
+                found += len(batch)
+                for raw in batch:
+                    try:
+                        product = db.find_or_create_product(raw)
+                        db.upsert_current_price(
+                            product_id=product.id, store_id=db_store.id,
+                            regular_price=raw.regular_price, campaign_price=raw.campaign_price,
+                            member_price=raw.member_price, multibuy_price=raw.multibuy_price,
+                            unit_price=raw.unit_price, currency=raw.currency,
+                            source_url=raw.source_url, fetched_at=raw.fetched_at)
+                        saved += 1
+                    except Exception:
+                        logger.exception("Kunde inte spara %r", raw.name)
+                _set(productsSaved=saved)
+
             try:
-                raw_products = _collect(provider, str(store_id), limit_per_category)
+                leftover = _collect(provider, str(store_id), limit_per_category, save_batch)
             except ProviderBlockedError as blocked:
-                # A block is not data loss: keep everything collected so far.
+                # A block is not data loss: whatever was already handed to
+                # save_batch is on disk, and anything still in flight comes
+                # through here.
                 blocked_message = str(blocked)
-                raw_products = getattr(blocked, "partial_products", []) or []
+                leftover = getattr(blocked, "partial_products", []) or []
                 logger.warning("%s blockerade importen: %s", chain, blocked_message)
 
-            for raw in raw_products:
-                try:
-                    product = db.find_or_create_product(raw)
-                    db.upsert_current_price(
-                        product_id=product.id, store_id=db_store.id,
-                        regular_price=raw.regular_price, campaign_price=raw.campaign_price,
-                        member_price=raw.member_price, multibuy_price=raw.multibuy_price,
-                        unit_price=raw.unit_price, currency=raw.currency,
-                        source_url=raw.source_url, fetched_at=raw.fetched_at)
-                    saved += 1
-                    if saved % 100 == 0:
-                        _set(productsSaved=saved)
-                except Exception:
-                    logger.exception("Kunde inte spara %r", raw.name)
+            # Providers without a category walk (City Gross, ICA) return the
+            # whole list instead of streaming it.
+            if leftover:
+                save_batch(leftover)
 
             status_text = "blocked" if blocked_message else ("success" if saved else "empty")
             db.finish_collector_run(run_record.id, status=status_text,
-                                    products_found=len(raw_products), prices_updated=saved,
+                                    products_found=found, prices_updated=saved,
                                     errors=0, error_message=blocked_message)
         finally:
             db.close()
@@ -176,8 +194,12 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
         _set(running=False, finishedAt=time.time(), status="failed", message=str(error))
 
 
-def _collect(provider, store_id: str, limit_per_category: int | None):
-    """Category walk where the provider supports one, term search otherwise."""
+def _collect(provider, store_id: str, limit_per_category: int | None, on_products=None):
+    """Category walk where the provider supports one, term search otherwise.
+
+    Returns whatever was NOT already handed to on_products - an empty list
+    for a streaming category walk, and the full list for a provider that can
+    only return everything at once."""
     if not hasattr(provider, "get_products_by_category"):
         return provider.get_products(store_id)
 
@@ -189,4 +211,5 @@ def _collect(provider, store_id: str, limit_per_category: int | None):
         _set(categoriesDone=_count[0], currentCategory=category.get("path") or category.get("slug"))
 
     return provider.get_products_by_category(
-        store_id, categories, limit_per_category=limit_per_category, on_category=on_category)
+        store_id, categories, limit_per_category=limit_per_category,
+        on_category=on_category, on_products=on_products)

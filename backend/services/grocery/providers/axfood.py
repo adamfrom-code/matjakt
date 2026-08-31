@@ -316,7 +316,7 @@ class AxfoodProvider(GroceryProvider):
 
     def get_products_by_category(self, store_id: str, categories: list[dict] | None = None,
                                  limit_per_category: int | None = None,
-                                 on_category=None) -> list[RawProduct]:
+                                 on_category=None, on_products=None) -> list[RawProduct]:
         """Walks the category tree and imports every product in every leaf.
 
         Each product gets the category path of the listing it came from -
@@ -326,7 +326,15 @@ class AxfoodProvider(GroceryProvider):
         A single failing category is logged and skipped, not fatal: losing one
         aisle is a partial import, while aborting would throw away every aisle
         already collected. An outright block (403/429) is still terminal and
-        carries the partial results, exactly as term search does."""
+        carries the partial results, exactly as term search does.
+
+        on_products, when given, receives each category's products as soon as
+        that category is done, and NOTHING is accumulated in memory. Without
+        it a full Willys walk holds ~10 800 RawProducts until the very end,
+        which on a 512 MB instance sharing memory with Chromium is a real
+        risk - and one that fails badly: an OOM loses the whole run AND
+        leaves the database empty, so the empty-database bootstrap starts the
+        same walk over again. That is a crash loop that hammers the chain."""
         categories = categories if categories is not None else self.get_categories()
         seen: set[str] = set()
         products: list[RawProduct] = []
@@ -337,6 +345,7 @@ class AxfoodProvider(GroceryProvider):
             if on_category:
                 on_category(category)
             collected_here = 0
+            batch: list[RawProduct] = []
             page = 0
             while True:
                 time.sleep(REQUEST_DELAY_SECONDS)
@@ -365,9 +374,10 @@ class AxfoodProvider(GroceryProvider):
                         continue
                     seen.add(code)
                     try:
-                        products.append(self.normalize_product({
+                        normalized = self.normalize_product({
                             **raw, "_store_id": store_id, "_category": category_path,
-                        }))
+                        })
+                        (batch if on_products else products).append(normalized)
                         collected_here += 1
                     except Exception:
                         logger.exception("Failed to normalize %s product %r", self.name, code)
@@ -380,6 +390,12 @@ class AxfoodProvider(GroceryProvider):
                     break
                 if limit_per_category and collected_here >= limit_per_category:
                     break
+
+            if on_products and batch:
+                # Handed over and dropped: this aisle's products are saved
+                # now, so a later failure cannot take them with it.
+                on_products(batch)
+                batch = []
         return products
 
     def get_products(self, store_id: str) -> list[RawProduct]:
