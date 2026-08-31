@@ -388,6 +388,8 @@ INGREDIENT_ALIASES = {
     "grön currypasta": ["currypasta", "green curry paste"],
     "currypasta": ["red curry paste"],
     "gula ärtor": ["gula ärter", "ärter"],
+    # Varumärkesformer: "Coca-Cola" leder med Coca, inte Cola.
+    "cola": ["coca-cola", "pepsi"],
     # Shelf singular/word-order forms found by probing the live catalogue.
     "rödlök": ["lök röd"],
     "kycklingklubbor": ["kycklingklubba", "kyckling klubba"],
@@ -509,7 +511,6 @@ INGREDIENT_RULES = {
     "majs": {"exclude": ["stärkelse", "mjöl", "olja", "chips", "flingor", "sirap"]},
     "smör": {"exclude": ["gräs", "kaka", "deg", "kräm", "jordnöts", "smördeg", "popcorn", "micropop", "sås", "kniv", "form", "papper", "mess"]},
     "grädde": {"exclude": ["glass", "kaka", "bakelse", "tårta", "vaniljsås", "sås", "pulver"]},
-    "ost": {"exclude": ["ostbågar", "ostkaka", "dessert", "chips", "snacks", "frasrost", "rostat", "knäcke", "skorpa", "vallmo", "bröd", "kex", "levain", "rost"]},
     # 3-letter ingredients collide in head position too - these are the
     # collisions seen in real Willys/Hemköp data, not hypothetical ones.
     "ägg": {"exclude": ["choklad", "godis", "påsk", "nudel", "kaka"]},
@@ -557,6 +558,19 @@ INGREDIENT_RULES = {
     "persilja": {"exclude": ["sås", "smör", "dressing"]},
     # Räkor i recept är färska/frysta skalräkor - inte konserv i lake.
     "räkor": {"exclude": ["lake", "konserv", "ost", "röra", "sallad", "smörgås"]},
+    # Kaffe är kaffe - inte havredryck som slutar på ordet ("Ikaffe
+    # Barista"), inte kaffebröd, inte kaffegrädde.
+    "kaffe": {"exclude": ["ikaffe", "iskaffe", "dryck", "grädde", "bröd", "kaka", "filter", "likör", "glass", "iste"]},
+    # "Cola" matchade Ruccola och "Läsk" matchade Fläsk Luncheon - svenska
+    # suffixsammansättningar åt andra hållet. Extraprodukter går genom samma
+    # matchare, så även dryckerna behöver kanoniska krav.
+    "cola": {"exclude": ["ruccola", "rucola", "sallad", "choklad", "godis", "mix", "koncentrat", "sodastream", "sirap"]},
+    "läsk": {"exclude": ["fläsk", "sidfläsk", "luncheon"]},
+    # Generisk "Ost" är en bit ost - inte marinerade salladsostkuber.
+    # Generisk "Ost" i ett recept är hård ost i bit eller riven - annars
+    # vinner billigaste tub (Baconost, Räkost, Mjukost) varje gång.
+    "ost": {"require": ["riven", "block", "bit", "hushållsost", "herrgård", "prästost", "grevé", "cheddar", "gouda", "gratängost"],
+            "exclude": ["ostbågar", "ostkaka", "dessert", "chips", "snacks", "frasrost", "rostat", "knäcke", "skorpa", "vallmo", "bröd", "kex", "levain", "rost", "salladsost", "grillost", "stekost", "halloumi", "mjukost", "färskost", "smältost", "cream", "räkost", "tärnad", "kaviar", "feta", "mozzarella", "i olja", "gratinerad", "sås"]},
     # Biff = a beef steak cut. Not roast beef, not the fat-cap trim, not a
     # grill patty, and never another animal.
     "biff": {"exclude": ["rostbiff", "skinka", "fläsk", "kyckling", "kalkon", "vego", "vegansk", "sallad"]},
@@ -703,6 +717,16 @@ def _exclusion_hit(text: str, words: set[str], bad: str) -> bool:
         or (word.endswith(folded_bad)
             and not any(word.endswith(longer) for longer in suffix_overrides))
         for word in words)
+
+
+def _violates_own_rules(product, ingredient: str) -> bool:
+    """Whether a product trips the INGREDIENT'S OWN exclude-rules - used to
+    make alias matches inherit the canonical requirement's constraints."""
+    haystack = f"{product.name or ''} {product.brand or ''}"
+    words = _words(haystack)
+    folded = _fold(haystack)
+    rules = _FOLDED_RULES.get(_fold(ingredient), {})
+    return any(_exclusion_hit(folded, words, bad) for bad in rules.get("exclude", []))
 
 
 def product_matches_ingredient(product_name: str, ingredient: str, brand: str | None = None,
@@ -978,9 +1002,17 @@ class RecipePricingEngine:
             for product in index.get(alias_words[0], ()):
                 if product.id in matched_ids:
                     continue
-                if product_matches_ingredient(product.name, alias, product.brand, product.category):
-                    matched_ids.add(product.id)
-                    matched.append(product)
+                if not product_matches_ingredient(product.name, alias, product.brand, product.category):
+                    continue
+                # THE ORIGINAL'S canonical exclusions apply to alias matches
+                # too. "Cola" -> alias "pepsi" found "Pepsi Max SODA MIX"
+                # (a concentrate): the alias's own rules knew nothing about
+                # the requirement's forbidden forms. An alias may widen the
+                # NAME, never the requirement.
+                if _violates_own_rules(product, ingredient):
+                    continue
+                matched_ids.add(product.id)
+                matched.append(product)
         return matched
 
     def price_item(self, ingredient: str, amount: float, unit: str, chain: str, store_id: int) -> dict:
