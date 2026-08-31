@@ -2063,6 +2063,15 @@ if __name__ == "__main__":
         _scrape_executor.submit(get_shared_browser)
     # Off unless MATJAKT_GROCERY_SCHEDULE_ENABLED is set, so a local dev run
     # never starts fetching from three chains on its own.
+    # The recipe bank is built from committed JSON. Without this a deploy
+    # comes up with no recipes at all, since recipes.db is not in the image.
+    try:
+        imported = recipes_api.bootstrap_if_empty()
+        if imported:
+            logger.warning("Byggde receptbanken från källfilerna: %d recept", imported)
+    except Exception:
+        logger.exception("Kunde inte bygga receptbanken")
+
     GROCERY_SCHEDULER.start()
     try:
         ThreadingHTTPServer((HOST, PORT), ApiHandler).serve_forever()

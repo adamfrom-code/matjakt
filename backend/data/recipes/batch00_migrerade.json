@@ -1,0 +1,4300 @@
+[
+ {
+  "id": "flaskfilerotmos",
+  "slug": "baconlindad-flaskfile-med-rotsaker",
+  "name": "Baconlindad fläskfilé med rotsaker",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 40,
+  "nutrition": {
+   "kcal": 316.0,
+   "protein": 34.0,
+   "carbs": 31.0,
+   "fat": 4.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Fläskfilé",
+    "amount": 600.0,
+    "unit": "g",
+    "normalizedId": "flaskfile"
+   },
+   {
+    "name": "Morötter",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "morotter"
+   },
+   {
+    "name": "Potatis",
+    "amount": 600.0,
+    "unit": "g",
+    "normalizedId": "potatis"
+   },
+   {
+    "name": "Timjan",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "timjan"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "kott",
+   "proteinrikt"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/flaskfilerotmos.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Svinem%C3%B8rbrad_med_bacon_og_rodfrugter_(5018776216).jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "cyclonebill from Copenhagen, Denmark",
+  "imageLicense": "CC BY-SA 2.0",
+  "imageAlt": "Baconlindad fläskfilé med rotsaker serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "biffmedlok",
+  "slug": "biff-med-lokrora-och-potatismos",
+  "name": "Biff med lökröra och potatismos",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 445.0,
+   "protein": 38.0,
+   "carbs": 39.0,
+   "fat": 13.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Biff",
+    "amount": 600.0,
+    "unit": "g",
+    "normalizedId": "biff"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800.0,
+    "unit": "g",
+    "normalizedId": "potatis"
+   },
+   {
+    "name": "Lök",
+    "amount": 2.0,
+    "unit": "st",
+    "normalizedId": "lok"
+   },
+   {
+    "name": "Grädde",
+    "amount": 200.0,
+    "unit": "ml",
+    "normalizedId": "gradde"
+   },
+   {
+    "name": "Smör",
+    "normalizedId": "smor",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Snabbt & enkelt"
+  ],
+  "tags": [
+   "kott",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/biffmedlok.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Beef_medallion_topped_with_fried_onions.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Armineaghayan",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Biff med lökröra och potatismos serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "biffmatvetesallad",
+  "slug": "biffsallad-med-matvete-och-vitlok",
+  "name": "Biffsallad med matvete och vitlök",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 420.0,
+   "protein": 34.0,
+   "carbs": 50.0,
+   "fat": 6.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Biff",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "biff"
+   },
+   {
+    "name": "Matvete",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "matvete"
+   },
+   {
+    "name": "Paprika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "paprika"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "vitlok"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Snabbt & enkelt"
+  ],
+  "tags": [
+   "kott",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "gluten"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/biffmatvetesallad.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Marinated_beef_steak_with_potato_vegetable_salad.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Len Rizzi (Photographer)",
+  "imageLicense": "Public domain",
+  "imageAlt": "Biffsallad med matvete och vitlök serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "biffwok",
+  "slug": "biffwok-med-wokgronsaker",
+  "name": "Biffwok med wokgrönsaker",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 20,
+  "nutrition": {
+   "kcal": 428.0,
+   "protein": 34.0,
+   "carbs": 55.0,
+   "fat": 6.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Biff",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "biff"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "wokgronsaker"
+   },
+   {
+    "name": "Soja",
+    "amount": 30.0,
+    "unit": "ml",
+    "normalizedId": "soja"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Vitlök",
+    "normalizedId": "vitlok",
+    "pantryStaple": true
+   },
+   {
+    "name": "Ingefära",
+    "normalizedId": "ingefara",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Snabbt & enkelt"
+  ],
+  "tags": [
+   "kott",
+   "proteinrikt",
+   "snabbt"
+  ],
+  "allergens": [
+   "soja"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/biffwok.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:2016-08-20_Stir_fried_beef_slices_with_celery_in_a_Beijing_Restaurant_anagoria.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Anagoria",
+  "imageLicense": "CC BY 3.0",
+  "imageAlt": "Biffwok med wokgrönsaker serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "butterchicken",
+  "slug": "butter-chicken-med-jasminris",
+  "name": "Butter chicken med jasminris",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 40,
+  "nutrition": {
+   "kcal": 253.0,
+   "protein": 32.0,
+   "carbs": 9.0,
+   "fat": 9.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "kycklingfile"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "krossade-tomater"
+   },
+   {
+    "name": "Grädde",
+    "amount": 200.0,
+    "unit": "ml",
+    "normalizedId": "gradde"
+   },
+   {
+    "name": "Curry & grönsaker",
+    "amount": 28.0,
+    "unit": "g",
+    "normalizedId": "curry-gronsaker"
+   },
+   {
+    "name": "Smör",
+    "normalizedId": "smor",
+    "pantryStaple": true
+   },
+   {
+    "name": "Vitlök",
+    "normalizedId": "vitlok",
+    "pantryStaple": true
+   },
+   {
+    "name": "Ingefära",
+    "normalizedId": "ingefara",
+    "pantryStaple": true
+   },
+   {
+    "name": "Ris",
+    "normalizedId": "ris",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "kyckling",
+   "mealprep",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/butterchicken.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Butter_chicken_curry_of_Lawson.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "毒島みるく",
+  "imageLicense": "CC0",
+  "imageAlt": "Butter chicken med jasminris serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "bonbowlmatvete",
+  "slug": "bonbowl-med-matvete-och-salsa",
+  "name": "Bönbowl med matvete och salsa",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 20,
+  "nutrition": {
+   "kcal": 377.0,
+   "protein": 16.0,
+   "carbs": 63.0,
+   "fat": 2.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Kidneybönor",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "kidneybonor"
+   },
+   {
+    "name": "Matvete",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "matvete"
+   },
+   {
+    "name": "Paprika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "paprika"
+   },
+   {
+    "name": "Salsa",
+    "amount": 230.0,
+    "unit": "g",
+    "normalizedId": "salsa"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Spiskummin",
+    "normalizedId": "spiskummin",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "mealprep",
+   "snabbt",
+   "veganskt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "gluten"
+  ],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "assets/recipes/bonbowlmatvete.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Mexican_Bean_%26_Cheese_Salad.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Siddharthagandhi26",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Bönbowl med matvete och salsa serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "citronkyckling",
+  "slug": "citronkyckling-med-rostad-potatis",
+  "name": "Citronkyckling med rostad potatis",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 40,
+  "nutrition": {
+   "kcal": 342.0,
+   "protein": 33.0,
+   "carbs": 35.0,
+   "fat": 6.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Kycklinglårfilé",
+    "amount": 600.0,
+    "unit": "g",
+    "normalizedId": "kycklinglarfile"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800.0,
+    "unit": "g",
+    "normalizedId": "potatis"
+   },
+   {
+    "name": "Timjan",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "timjan"
+   },
+   {
+    "name": "Citron",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "citron"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "kyckling",
+   "proteinrikt"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/citronkyckling.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Lemon_Brined_Roasted_Chicken.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Prayitno",
+  "imageLicense": "CC BY 2.0",
+  "imageAlt": "Citronkyckling med rostad potatis serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "citronflaskfile",
+  "slug": "citronmarinerad-flaskfile-med-matvete",
+  "name": "Citronmarinerad fläskfilé med matvete",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 392.0,
+   "protein": 32.0,
+   "carbs": 48.0,
+   "fat": 4.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Fläskfilé",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "flaskfile"
+   },
+   {
+    "name": "Matvete",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "matvete"
+   },
+   {
+    "name": "Citron",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "citron"
+   },
+   {
+    "name": "Timjan",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "timjan"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "kott",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "gluten"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/citronflaskfile.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Roast_pork_loin,_potatoes_(2585116058).jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Sara Goldsmith",
+  "imageLicense": "CC BY 2.0",
+  "imageAlt": "Citronmarinerad fläskfilé med matvete serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "currykottfarsgryta",
+  "slug": "currykryddad-kottfarsgryta",
+  "name": "Currykryddad köttfärsgryta",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 501.0,
+   "protein": 29.0,
+   "carbs": 54.0,
+   "fat": 18.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Köttfärs",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "kottfars"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Paprika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "paprika"
+   },
+   {
+    "name": "Curry & grönsaker",
+    "amount": 28.0,
+    "unit": "g",
+    "normalizedId": "curry-gronsaker"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Lök",
+    "normalizedId": "lok",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "kott",
+   "mealprep"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/currykottfarsgryta.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Beef_curry_rice_001.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Ocdp",
+  "imageLicense": "CC0",
+  "imageAlt": "Currykryddad köttfärsgryta serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "fetagryta",
+  "slug": "fetagryta-med-kikartor",
+  "name": "Fetagryta med kikärtor",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 281.0,
+   "protein": 16.0,
+   "carbs": 20.0,
+   "fat": 14.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Feta",
+    "amount": 200.0,
+    "unit": "g",
+    "normalizedId": "feta"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "krossade-tomater"
+   },
+   {
+    "name": "Kikärtor",
+    "amount": 380.0,
+    "unit": "g",
+    "normalizedId": "kikartor"
+   },
+   {
+    "name": "Basilika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "basilika"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Vitlök",
+    "normalizedId": "vitlok",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "mealprep",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "laktos"
+  ],
+  "dietFlags": [
+   "vegetarisk"
+  ],
+  "image": "assets/recipes/fetagryta.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Shiro_wet.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Yonihahasis",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Fetagryta med kikärtor serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "fiskgratang",
+  "slug": "fiskgratang-med-rakor-och-dill",
+  "name": "Fiskgratäng med räkor och dill",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 45,
+  "nutrition": {
+   "kcal": 220.0,
+   "protein": 33.0,
+   "carbs": 2.0,
+   "fat": 8.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Fryst torsk",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "fryst-torsk"
+   },
+   {
+    "name": "Räkor",
+    "amount": 200.0,
+    "unit": "g",
+    "normalizedId": "rakor"
+   },
+   {
+    "name": "Dill",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "dill"
+   },
+   {
+    "name": "Grädde",
+    "amount": 200.0,
+    "unit": "g",
+    "normalizedId": "gradde"
+   },
+   {
+    "name": "Smör",
+    "normalizedId": "smor",
+    "pantryStaple": true
+   },
+   {
+    "name": "Citron",
+    "normalizedId": "citron",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "barn",
+   "fisk",
+   "helgmiddag",
+   "mealprep",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "fisk",
+   "laktos",
+   "skaldjur"
+  ],
+  "dietFlags": [
+   "pescetarisk"
+  ],
+  "image": "assets/recipes/fiskgratang.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Shrimp_gratin_(4782471125).jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "pelican from Tokyo, Japan",
+  "imageLicense": "CC BY-SA 2.0",
+  "imageAlt": "Fiskgratäng med räkor och dill serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "flaskcurrygryta",
+  "slug": "flaskcurrygryta-med-kokos",
+  "name": "Fläskcurrygryta med kokos",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 35,
+  "nutrition": {
+   "kcal": 543.0,
+   "protein": 32.0,
+   "carbs": 52.0,
+   "fat": 22.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Fläskfilé",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "flaskfile"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Curry & grönsaker",
+    "amount": 28.0,
+    "unit": "g",
+    "normalizedId": "curry-gronsaker"
+   },
+   {
+    "name": "Kokosmjölk",
+    "amount": 400.0,
+    "unit": "ml",
+    "normalizedId": "kokosmjolk"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "kott",
+   "mealprep",
+   "proteinrikt"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/flaskcurrygryta.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Green_Curry_with_Crispy_Pulled_Pork_-_Eem.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "TurquoiseGoose",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Fläskcurrygryta med kokos serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "flasktomatpasta",
+  "slug": "flaskfile-i-tomatsas-med-pasta",
+  "name": "Fläskfilé i tomatsås med pasta",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 381.0,
+   "protein": 34.0,
+   "carbs": 48.0,
+   "fat": 4.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Fläskfilé",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "flaskfile"
+   },
+   {
+    "name": "Pasta",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "pasta"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "krossade-tomater"
+   },
+   {
+    "name": "Basilika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "basilika"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Vitlök",
+    "normalizedId": "vitlok",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "barn",
+   "kott",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "gluten"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/flasktomatpasta.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:04666_Polish_spaghetti_pasta_with_sauce_made_of_pork_meat,_tomatoes,_garlic_and_olive.JPG",
+  "imageSourceUrl": null,
+  "imageCredit": "Silar",
+  "imageLicense": "CC BY-SA 3.0",
+  "imageAlt": "Fläskfilé i tomatsås med pasta serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "flaskkarre",
+  "slug": "flaskkarre-med-appelmos-och-rodkal",
+  "name": "Fläskkarré med äppelmos och rödkål",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 45,
+  "nutrition": {
+   "kcal": 419.0,
+   "protein": 34.0,
+   "carbs": 57.0,
+   "fat": 4.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Fläskfilé",
+    "amount": 600.0,
+    "unit": "g",
+    "normalizedId": "flaskfile"
+   },
+   {
+    "name": "Äppelmos",
+    "amount": 200.0,
+    "unit": "g",
+    "normalizedId": "appelmos"
+   },
+   {
+    "name": "Rödkål",
+    "amount": 300.0,
+    "unit": "g",
+    "normalizedId": "rodkal"
+   },
+   {
+    "name": "Potatis",
+    "amount": 600.0,
+    "unit": "g",
+    "normalizedId": "potatis"
+   },
+   {
+    "name": "Smör",
+    "normalizedId": "smor",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   },
+   {
+    "name": "Timjan",
+    "normalizedId": "timjan",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "helgmiddag",
+   "kott",
+   "proteinrikt"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/flaskkarre.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Roasted_Loin_of_Pork_(2287948470).jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Alpha from Melbourne, Australia",
+  "imageLicense": "CC BY-SA 2.0",
+  "imageAlt": "Fläskkarré med äppelmos och rödkål serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "halloumibowl",
+  "slug": "halloumibowl-med-rostade-gronsaker",
+  "name": "Halloumibowl med rostade grönsaker",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 445.0,
+   "protein": 21.0,
+   "carbs": 51.0,
+   "fat": 15.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Halloumi",
+    "amount": 225.0,
+    "unit": "g",
+    "normalizedId": "halloumi"
+   },
+   {
+    "name": "Matvete",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "matvete"
+   },
+   {
+    "name": "Paprika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "paprika"
+   },
+   {
+    "name": "Yoghurt",
+    "amount": 200.0,
+    "unit": "g",
+    "normalizedId": "yoghurt"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Kryddor",
+    "normalizedId": "kryddor",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "gluten",
+   "laktos"
+  ],
+  "dietFlags": [
+   "vegetarisk"
+  ],
+  "image": "assets/recipes/halloumibowl.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Grilled_Halloumi.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Hmioannou",
+  "imageLicense": "CC BY 3.0",
+  "imageAlt": "Halloumibowl med rostade grönsaker serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "halloumicurry",
+  "slug": "halloumicurry-med-ris",
+  "name": "Halloumicurry med ris",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 414.0,
+   "protein": 18.0,
+   "carbs": 55.0,
+   "fat": 13.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Halloumi",
+    "amount": 225.0,
+    "unit": "g",
+    "normalizedId": "halloumi"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Paprika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "paprika"
+   },
+   {
+    "name": "Curry & grönsaker",
+    "amount": 28.0,
+    "unit": "g",
+    "normalizedId": "curry-gronsaker"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "mealprep",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "laktos"
+  ],
+  "dietFlags": [
+   "vegetarisk"
+  ],
+  "image": "assets/recipes/halloumicurry.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Halloumi_Fries_-_The_Real_Pizza_Company_2026-03-30.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Andy Li",
+  "imageLicense": "CC0",
+  "imageAlt": "Halloumicurry med ris serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "halloumipasta",
+  "slug": "halloumipasta-med-tomat-och-basilika",
+  "name": "Halloumipasta med tomat och basilika",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 411.0,
+   "protein": 21.0,
+   "carbs": 49.0,
+   "fat": 13.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Halloumi",
+    "amount": 225.0,
+    "unit": "g",
+    "normalizedId": "halloumi"
+   },
+   {
+    "name": "Pasta",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "pasta"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "krossade-tomater"
+   },
+   {
+    "name": "Basilika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "basilika"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Vitlök",
+    "normalizedId": "vitlok",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "gluten",
+   "laktos"
+  ],
+  "dietFlags": [
+   "vegetarisk"
+  ],
+  "image": "assets/recipes/halloumipasta.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Fruit_Salad_with_Grilled_Halloumi_Cheese.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "روتانا",
+  "imageLicense": "CC BY 4.0",
+  "imageAlt": "Halloumipasta med tomat och basilika serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "biffgraddtimjan",
+  "slug": "helstekt-biff-med-graddsas-och-timjanpotatis",
+  "name": "Helstekt biff med gräddsås och timjanpotatis",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 35,
+  "nutrition": {
+   "kcal": 394.0,
+   "protein": 32.0,
+   "carbs": 35.0,
+   "fat": 12.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Biff",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "biff"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800.0,
+    "unit": "g",
+    "normalizedId": "potatis"
+   },
+   {
+    "name": "Grädde",
+    "amount": 200.0,
+    "unit": "ml",
+    "normalizedId": "gradde"
+   },
+   {
+    "name": "Timjan",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "timjan"
+   },
+   {
+    "name": "Smör",
+    "normalizedId": "smor",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "kott",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/biffgraddtimjan.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Roast_beef_with_gravy,_mashed_potato,_and_vegetables_-_Massachusetts.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Daderot",
+  "imageLicense": "CC0",
+  "imageAlt": "Helstekt biff med gräddsås och timjanpotatis serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "kalvschnitzel",
+  "slug": "kalvschnitzel-med-citron-och-kapris",
+  "name": "Kalvschnitzel med citron och kapris",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 302.0,
+   "protein": 34.0,
+   "carbs": 27.0,
+   "fat": 5.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Kalvschnitzel",
+    "amount": 600.0,
+    "unit": "g",
+    "normalizedId": "kalvschnitzel"
+   },
+   {
+    "name": "Potatis",
+    "amount": 600.0,
+    "unit": "g",
+    "normalizedId": "potatis"
+   },
+   {
+    "name": "Citron",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "citron"
+   },
+   {
+    "name": "Kapris",
+    "amount": 30.0,
+    "unit": "g",
+    "normalizedId": "kapris"
+   },
+   {
+    "name": "Smör",
+    "normalizedId": "smor",
+    "pantryStaple": true
+   },
+   {
+    "name": "Vetemjöl",
+    "normalizedId": "vetemjol",
+    "pantryStaple": true
+   },
+   {
+    "name": "Ägg",
+    "normalizedId": "agg",
+    "pantryStaple": true
+   },
+   {
+    "name": "Ströbröd",
+    "normalizedId": "strobrod",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Snabbt & enkelt"
+  ],
+  "tags": [
+   "kott",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "gluten",
+   "laktos",
+   "ägg"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/kalvschnitzel.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Wiener_Schnitzel_at_Hotel_Dermuth.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "JIP",
+  "imageLicense": "CC BY-SA 3.0",
+  "imageAlt": "Kalvschnitzel med citron och kapris serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "kalvschnitzelmatvete",
+  "slug": "kalvschnitzel-med-matvetesallad",
+  "name": "Kalvschnitzel med matvetesallad",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 399.0,
+   "protein": 33.0,
+   "carbs": 50.0,
+   "fat": 4.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Kalvschnitzel",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "kalvschnitzel"
+   },
+   {
+    "name": "Matvete",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "matvete"
+   },
+   {
+    "name": "Paprika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "paprika"
+   },
+   {
+    "name": "Citron",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "citron"
+   },
+   {
+    "name": "Smör",
+    "normalizedId": "smor",
+    "pantryStaple": true
+   },
+   {
+    "name": "Vetemjöl",
+    "normalizedId": "vetemjol",
+    "pantryStaple": true
+   },
+   {
+    "name": "Ägg",
+    "normalizedId": "agg",
+    "pantryStaple": true
+   },
+   {
+    "name": "Ströbröd",
+    "normalizedId": "strobrod",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Snabbt & enkelt"
+  ],
+  "tags": [
+   "kott",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "gluten",
+   "laktos",
+   "ägg"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/kalvschnitzelmatvete.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Food_Wiener_schnitzel.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Jan Helebrant",
+  "imageLicense": "CC0",
+  "imageAlt": "Kalvschnitzel med matvetesallad serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "kikartscurry",
+  "slug": "kikartscurry-med-ris",
+  "name": "Kikärtscurry med ris",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 531.0,
+   "protein": 13.0,
+   "carbs": 67.0,
+   "fat": 21.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Kikärtor",
+    "amount": 380.0,
+    "unit": "g",
+    "normalizedId": "kikartor"
+   },
+   {
+    "name": "Kokosmjölk",
+    "amount": 400.0,
+    "unit": "ml",
+    "normalizedId": "kokosmjolk"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Curry & grönsaker",
+    "amount": 28.0,
+    "unit": "g",
+    "normalizedId": "curry-gronsaker"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "mealprep",
+   "veganskt",
+   "vegetariskt"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "assets/recipes/kikartscurry.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Curried_cauliflower_and_chickpea_stew.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Jim Reynolds from Cleveland, USA",
+  "imageLicense": "CC BY 2.0",
+  "imageAlt": "Kikärtscurry med ris serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "kikartssallad",
+  "slug": "kikartssallad-med-matvete",
+  "name": "Kikärtssallad med matvete",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 20,
+  "nutrition": {
+   "kcal": 387.0,
+   "protein": 14.0,
+   "carbs": 64.0,
+   "fat": 4.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Kikärtor",
+    "amount": 380.0,
+    "unit": "g",
+    "normalizedId": "kikartor"
+   },
+   {
+    "name": "Matvete",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "matvete"
+   },
+   {
+    "name": "Paprika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "paprika"
+   },
+   {
+    "name": "Citron",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "citron"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   },
+   {
+    "name": "Spiskummin",
+    "normalizedId": "spiskummin",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "snabbt",
+   "veganskt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "gluten"
+  ],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "assets/recipes/kikartssallad.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:%D7%97%D7%95%D7%9E%D7%95%D7%A1_%D7%A2%D7%9D_%D7%A1%D7%9C%D7%98_%D7%99%D7%A9%D7%A8%D7%90%D7%9C%D7%99.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Vikingit",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Kikärtssallad med matvete serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "korvgratang",
+  "slug": "korvgratang-med-pasta",
+  "name": "Korvgratäng med pasta",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 35,
+  "nutrition": {
+   "kcal": 589.0,
+   "protein": 27.0,
+   "carbs": 57.0,
+   "fat": 27.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Falukorv",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "falukorv"
+   },
+   {
+    "name": "Pasta",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "pasta"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "krossade-tomater"
+   },
+   {
+    "name": "Riven ost",
+    "amount": 100.0,
+    "unit": "g",
+    "normalizedId": "riven-ost"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Kryddor",
+    "normalizedId": "kryddor",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "barn",
+   "billigt",
+   "kott",
+   "mealprep"
+  ],
+  "allergens": [
+   "gluten",
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/korvgratang.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Baked_macaroni_and_cheese_1.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Martin",
+  "imageLicense": "CC BY 2.0",
+  "imageAlt": "Korvgratäng med pasta serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "korvstroganoff",
+  "slug": "korvstroganoff",
+  "name": "Korvstroganoff",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 571.0,
+   "protein": 20.0,
+   "carbs": 61.0,
+   "fat": 27.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Falukorv",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "falukorv"
+   },
+   {
+    "name": "Grädde",
+    "amount": 200.0,
+    "unit": "ml",
+    "normalizedId": "gradde"
+   },
+   {
+    "name": "Tomatpuré",
+    "amount": 70.0,
+    "unit": "g",
+    "normalizedId": "tomatpure"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Snabbt & enkelt"
+  ],
+  "tags": [
+   "barn",
+   "billigt",
+   "kott"
+  ],
+  "allergens": [
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/korvstroganoff.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Beef_stroganoff_with_pasta.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "benketaro",
+  "imageLicense": "CC BY 2.0",
+  "imageAlt": "Korvstroganoff serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "tofuwok",
+  "slug": "krispig-tofuwok-med-sesam-och-soja",
+  "name": "Krispig tofuwok med sesam och soja",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 345.0,
+   "protein": 13.0,
+   "carbs": 56.0,
+   "fat": 6.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Tofu",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "tofu"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "wokgronsaker"
+   },
+   {
+    "name": "Soja",
+    "amount": 30.0,
+    "unit": "ml",
+    "normalizedId": "soja"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Vitlök",
+    "normalizedId": "vitlok",
+    "pantryStaple": true
+   },
+   {
+    "name": "Sesamfrön",
+    "normalizedId": "sesamfron",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "veganskt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "soja"
+  ],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "assets/recipes/tofuwok.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Horka_Litinova_Panev_Tofu_Zlaty_Klas_2025.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Mojmir Churavy",
+  "imageLicense": "CC0",
+  "imageAlt": "Krispig tofuwok med sesam och soja serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "kycklingmatvete",
+  "slug": "kryddig-kycklingbowl-med-matvete",
+  "name": "Kryddig kycklingbowl med matvete",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 432.0,
+   "protein": 33.0,
+   "carbs": 51.0,
+   "fat": 7.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Kycklinglårfilé",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "kycklinglarfile"
+   },
+   {
+    "name": "Matvete",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "matvete"
+   },
+   {
+    "name": "Paprika",
+    "amount": 2.0,
+    "unit": "st",
+    "normalizedId": "paprika"
+   },
+   {
+    "name": "Yoghurt",
+    "amount": 200.0,
+    "unit": "g",
+    "normalizedId": "yoghurt"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Spiskummin",
+    "normalizedId": "spiskummin",
+    "pantryStaple": true
+   },
+   {
+    "name": "Paprikapulver",
+    "normalizedId": "paprikapulver",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "kyckling",
+   "mealprep",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "gluten",
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/kycklingmatvete.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Roasted_chicken_with_cauliflower_broccoli_potatoes_rice_and_salad.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "HaJunkiyada",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Kryddig kycklingbowl med matvete serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "fiskpasta",
+  "slug": "kramig-fiskpasta",
+  "name": "Krämig fiskpasta",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 486.0,
+   "protein": 29.0,
+   "carbs": 48.0,
+   "fat": 19.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Fryst torsk",
+    "amount": 450.0,
+    "unit": "g",
+    "normalizedId": "fryst-torsk"
+   },
+   {
+    "name": "Pasta",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "pasta"
+   },
+   {
+    "name": "Crème fraiche",
+    "amount": 200.0,
+    "unit": "g",
+    "normalizedId": "creme-fraiche"
+   },
+   {
+    "name": "Citron",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "citron"
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "barn",
+   "fisk"
+  ],
+  "allergens": [
+   "fisk",
+   "gluten",
+   "laktos"
+  ],
+  "dietFlags": [
+   "pescetarisk"
+  ],
+  "image": "assets/recipes/fiskpasta.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Tilapia_with_cream_based_pasta,_vegetables,_and_mushrooms.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "HaJunkiyada",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Krämig fiskpasta serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "tomatsoppa",
+  "slug": "kramig-tomatsoppa",
+  "name": "Krämig tomatsoppa",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 126.0,
+   "protein": 3.0,
+   "carbs": 10.0,
+   "fat": 8.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Krossade tomater",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "krossade-tomater"
+   },
+   {
+    "name": "Grädde",
+    "amount": 200.0,
+    "unit": "ml",
+    "normalizedId": "gradde"
+   },
+   {
+    "name": "Lök",
+    "amount": 2.0,
+    "unit": "st",
+    "normalizedId": "lok"
+   },
+   {
+    "name": "Basilika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "basilika"
+   },
+   {
+    "name": "Buljong",
+    "normalizedId": "buljong",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "barn",
+   "billigt",
+   "mealprep",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "laktos"
+  ],
+  "dietFlags": [
+   "vegetarisk"
+  ],
+  "image": "assets/recipes/tomatsoppa.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Cream_of_Tomato_Soup.JPG",
+  "imageSourceUrl": null,
+  "imageCredit": "Miansari66",
+  "imageLicense": "CC0",
+  "imageAlt": "Krämig tomatsoppa serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "kycklinggryta",
+  "slug": "kycklinggryta-med-ris",
+  "name": "Kycklinggryta med ris",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 580.0,
+   "protein": 36.0,
+   "carbs": 52.0,
+   "fat": 25.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Kycklinglårfilé",
+    "amount": 600.0,
+    "unit": "g",
+    "normalizedId": "kycklinglarfile"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Kokosmjölk",
+    "amount": 400.0,
+    "unit": "ml",
+    "normalizedId": "kokosmjolk"
+   },
+   {
+    "name": "Curry & grönsaker",
+    "amount": 28.0,
+    "unit": "g",
+    "normalizedId": "curry-gronsaker"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "barn",
+   "billigt",
+   "kyckling",
+   "mealprep",
+   "proteinrikt"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/kycklinggryta.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Creamy_Chicken_Curry.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Shrabee",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Kycklinggryta med ris serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "kottfarssas",
+  "slug": "kottfarssas-med-pasta",
+  "name": "Köttfärssås med pasta",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 498.0,
+   "protein": 32.0,
+   "carbs": 48.0,
+   "fat": 19.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Köttfärs",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "kottfars"
+   },
+   {
+    "name": "Pasta",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "pasta"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "krossade-tomater"
+   },
+   {
+    "name": "Basilika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "basilika"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Lök",
+    "normalizedId": "lok",
+    "pantryStaple": true
+   },
+   {
+    "name": "Vitlök",
+    "normalizedId": "vitlok",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "barn",
+   "kott",
+   "mealprep",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "gluten"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/kottfarssas.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Spaghetti_Bolognese_Lokal_K.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Superbass",
+  "imageLicense": "CC BY-SA 3.0",
+  "imageAlt": "Köttfärssås med pasta serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "laxsallad",
+  "slug": "laxsallad-med-matvete-och-dill",
+  "name": "Laxsallad med matvete och dill",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 523.0,
+   "protein": 32.0,
+   "carbs": 49.0,
+   "fat": 19.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Laxfilé",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "laxfile"
+   },
+   {
+    "name": "Matvete",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "matvete"
+   },
+   {
+    "name": "Citron",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "citron"
+   },
+   {
+    "name": "Dill",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "dill"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "fisk",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "fisk",
+   "gluten"
+  ],
+  "dietFlags": [
+   "pescetarisk"
+  ],
+  "image": "assets/recipes/laxsallad.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:DZ6_1891_Seared_salmon_in_a_rich_brown_sauce_with_grilled_potatoes_fresh_greens_and_toasted_bread_garnished_with_dill.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "PattayaPatrol",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Laxsallad med matvete och dill serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "morotscurry",
+  "slug": "morotscurry-med-kikartor",
+  "name": "Morotscurry med kikärtor",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 399.0,
+   "protein": 13.0,
+   "carbs": 74.0,
+   "fat": 3.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Morötter",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "morotter"
+   },
+   {
+    "name": "Kikärtor",
+    "amount": 380.0,
+    "unit": "g",
+    "normalizedId": "kikartor"
+   },
+   {
+    "name": "Curry & grönsaker",
+    "amount": 28.0,
+    "unit": "g",
+    "normalizedId": "curry-gronsaker"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "veganskt",
+   "vegetariskt"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "assets/recipes/morotscurry.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Carrot_curry_and_rice_(8479175466).jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "pelican from Tokyo, Japan",
+  "imageLicense": "CC BY-SA 2.0",
+  "imageAlt": "Morotscurry med kikärtor serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "pastagratang",
+  "slug": "pastagratang-med-purjolok",
+  "name": "Pastagratäng med purjolök",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 35,
+  "nutrition": {
+   "kcal": 404.0,
+   "protein": 16.0,
+   "carbs": 49.0,
+   "fat": 15.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Pasta",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "pasta"
+   },
+   {
+    "name": "Purjolök",
+    "amount": 0.5,
+    "unit": "st",
+    "normalizedId": "purjolok"
+   },
+   {
+    "name": "Grädde",
+    "amount": 200.0,
+    "unit": "ml",
+    "normalizedId": "gradde"
+   },
+   {
+    "name": "Riven ost",
+    "amount": 100.0,
+    "unit": "g",
+    "normalizedId": "riven-ost"
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "barn",
+   "billigt",
+   "mealprep",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "gluten",
+   "laktos"
+  ],
+  "dietFlags": [
+   "vegetarisk"
+  ],
+  "image": "assets/recipes/pastagratang.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Baked_macaroni_and_cheese_close-up.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Scott Veg",
+  "imageLicense": "CC BY 2.0",
+  "imageAlt": "Pastagratäng med purjolök serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "rotfruktsgratang",
+  "slug": "rotfruktsgratang-med-rokt-falukorv",
+  "name": "Rotfruktsgratäng med rökt falukorv",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 50,
+  "nutrition": {
+   "kcal": 538.0,
+   "protein": 23.0,
+   "carbs": 48.0,
+   "fat": 26.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Falukorv",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "falukorv"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800.0,
+    "unit": "g",
+    "normalizedId": "potatis"
+   },
+   {
+    "name": "Morötter",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "morotter"
+   },
+   {
+    "name": "Riven ost",
+    "amount": 100.0,
+    "unit": "g",
+    "normalizedId": "riven-ost"
+   },
+   {
+    "name": "Smör",
+    "normalizedId": "smor",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   },
+   {
+    "name": "Muskot",
+    "normalizedId": "muskot",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "billigt",
+   "helgmiddag",
+   "kott"
+  ],
+  "allergens": [
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/rotfruktsgratang.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Potatoes_au_gratin_by_sa.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "sa",
+  "imageLicense": "CC BY-SA 2.0",
+  "imageAlt": "Rotfruktsgratäng med rökt falukorv serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "rakcurry",
+  "slug": "rakcurry-med-kokos-och-ris",
+  "name": "Räkcurry med kokos och ris",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 20,
+  "nutrition": {
+   "kcal": 467.0,
+   "protein": 19.0,
+   "carbs": 52.0,
+   "fat": 19.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Räkor",
+    "amount": 300.0,
+    "unit": "g",
+    "normalizedId": "rakor"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Curry & grönsaker",
+    "amount": 28.0,
+    "unit": "g",
+    "normalizedId": "curry-gronsaker"
+   },
+   {
+    "name": "Kokosmjölk",
+    "amount": 400.0,
+    "unit": "ml",
+    "normalizedId": "kokosmjolk"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "snabbt"
+  ],
+  "allergens": [
+   "skaldjur"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/rakcurry.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Goa._Homemade_prawn_curry_with_boiled_Rice_and_Kismur..._IMG-20210120-WA0009.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Sharbelle Fernandez",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Räkcurry med kokos och ris serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "raksallad",
+  "slug": "raksallad-med-matvete",
+  "name": "Räksallad med matvete",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 20,
+  "nutrition": {
+   "kcal": 318.0,
+   "protein": 20.0,
+   "carbs": 48.0,
+   "fat": 2.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Räkor",
+    "amount": 300.0,
+    "unit": "g",
+    "normalizedId": "rakor"
+   },
+   {
+    "name": "Matvete",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "matvete"
+   },
+   {
+    "name": "Citron",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "citron"
+   },
+   {
+    "name": "Dill",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "dill"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "billigt",
+   "snabbt"
+  ],
+  "allergens": [
+   "gluten",
+   "skaldjur"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/raksallad.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Shrimp_cream_salad_with_lemon_wedge.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "yomi yomi",
+  "imageLicense": "CC BY 2.0",
+  "imageAlt": "Räksallad med matvete serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "linssoppa",
+  "slug": "rod-linssoppa",
+  "name": "Röd linssoppa",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 405.0,
+   "protein": 19.0,
+   "carbs": 30.0,
+   "fat": 19.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Röda linser",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "roda-linser"
+   },
+   {
+    "name": "Kokosmjölk",
+    "amount": 400.0,
+    "unit": "ml",
+    "normalizedId": "kokosmjolk"
+   },
+   {
+    "name": "Morötter",
+    "amount": 300.0,
+    "unit": "g",
+    "normalizedId": "morotter"
+   },
+   {
+    "name": "Lök & vitlök",
+    "amount": 150.0,
+    "unit": "g",
+    "normalizedId": "lok-vitlok"
+   },
+   {
+    "name": "Buljong",
+    "normalizedId": "buljong",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "mealprep",
+   "veganskt",
+   "vegetariskt"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "assets/recipes/linssoppa.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Bowl_of_lentil_soup_with_green_and_red_lentils.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Whoisjohngalt",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Röd linssoppa serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "scampi",
+  "slug": "scampi-pasta-med-vitlok-och-citron",
+  "name": "Scampi pasta med vitlök och citron",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 307.0,
+   "protein": 22.0,
+   "carbs": 49.0,
+   "fat": 1.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Räkor",
+    "amount": 300.0,
+    "unit": "g",
+    "normalizedId": "rakor"
+   },
+   {
+    "name": "Pasta",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "pasta"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "vitlok"
+   },
+   {
+    "name": "Citron",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "citron"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Smör",
+    "normalizedId": "smor",
+    "pantryStaple": true
+   },
+   {
+    "name": "Persilja",
+    "normalizedId": "persilja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [],
+  "allergens": [
+   "gluten",
+   "skaldjur"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/scampi.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:DFC_4054_Garlic_chili_spaghetti_tossed_with_shrimp_fresh_parsley_and_vibrant_veggies_-_a_simple_savory_seafood_pasta_delight.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "PattayaPatrol",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Scampi pasta med vitlök och citron serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "sparrispastacitron",
+  "slug": "sparrispasta-med-citron-och-vitlok",
+  "name": "Sparrispasta med citron och vitlök",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 20,
+  "nutrition": {
+   "kcal": 266.0,
+   "protein": 10.0,
+   "carbs": 50.0,
+   "fat": 1.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Sparris",
+    "amount": 300.0,
+    "unit": "g",
+    "normalizedId": "sparris"
+   },
+   {
+    "name": "Pasta",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "pasta"
+   },
+   {
+    "name": "Citron",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "citron"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "vitlok"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Smör",
+    "normalizedId": "smor",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   },
+   {
+    "name": "Parmesan",
+    "normalizedId": "parmesan",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "snabbt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "gluten"
+  ],
+  "dietFlags": [
+   "vegetarisk"
+  ],
+  "image": "assets/recipes/sparrispastacitron.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Pasta_with_tomatoes_and_asparagus_(4880297603).jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Vegan Feast Catering",
+  "imageLicense": "CC BY 2.0",
+  "imageAlt": "Sparrispasta med citron och vitlök serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "svartbonsbowl",
+  "slug": "svartbonsbowl-med-matvete",
+  "name": "Svartbönsbowl med matvete",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 20,
+  "nutrition": {
+   "kcal": 395.0,
+   "protein": 16.0,
+   "carbs": 65.0,
+   "fat": 3.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Svarta bönor",
+    "amount": 380.0,
+    "unit": "g",
+    "normalizedId": "svarta-bonor"
+   },
+   {
+    "name": "Matvete",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "matvete"
+   },
+   {
+    "name": "Salsa",
+    "amount": 230.0,
+    "unit": "g",
+    "normalizedId": "salsa"
+   },
+   {
+    "name": "Majs",
+    "amount": 150.0,
+    "unit": "g",
+    "normalizedId": "majs"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Spiskummin",
+    "normalizedId": "spiskummin",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "snabbt",
+   "veganskt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "gluten"
+  ],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "assets/recipes/svartbonsbowl.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Mexican_Salad_with_toasted_tortilla_strips.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "FranHogan",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Svartbönsbowl med matvete serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "tacobonor",
+  "slug": "tacobowl-med-svarta-bonor",
+  "name": "Tacobowl med svarta bönor",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 20,
+  "nutrition": {
+   "kcal": 371.0,
+   "protein": 14.0,
+   "carbs": 68.0,
+   "fat": 2.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Svarta bönor",
+    "amount": 380.0,
+    "unit": "g",
+    "normalizedId": "svarta-bonor"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Majs",
+    "amount": 150.0,
+    "unit": "g",
+    "normalizedId": "majs"
+   },
+   {
+    "name": "Salsa",
+    "amount": 230.0,
+    "unit": "g",
+    "normalizedId": "salsa"
+   },
+   {
+    "name": "Kryddor",
+    "normalizedId": "kryddor",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "barn",
+   "billigt",
+   "snabbt",
+   "vegetariskt"
+  ],
+  "allergens": [],
+  "dietFlags": [
+   "vegetarisk"
+  ],
+  "image": "assets/recipes/tacobonor.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Mexican-Rice-and-Beans-3_(35582784560).jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Meg H",
+  "imageLicense": "CC BY 2.0",
+  "imageAlt": "Tacobowl med svarta bönor serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "tandoorikyckling",
+  "slug": "tandoorikyckling-med-ris",
+  "name": "Tandoorikyckling med ris",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 35,
+  "nutrition": {
+   "kcal": 399.0,
+   "protein": 36.0,
+   "carbs": 55.0,
+   "fat": 4.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "kycklingfile"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Curry & grönsaker",
+    "amount": 28.0,
+    "unit": "g",
+    "normalizedId": "curry-gronsaker"
+   },
+   {
+    "name": "Yoghurt",
+    "amount": 200.0,
+    "unit": "g",
+    "normalizedId": "yoghurt"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Vitlök",
+    "normalizedId": "vitlok",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "kyckling",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "laktos"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/tandoorikyckling.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Chicken_Tandoori_full_(7843249604).jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Joegoaukfishcurry2",
+  "imageLicense": "CC BY-SA 2.0",
+  "imageAlt": "Tandoorikyckling med ris serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "teriyakilax",
+  "slug": "teriyakilax-med-wokgronsaker-och-ris",
+  "name": "Teriyakilax med wokgrönsaker och ris",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 537.0,
+   "protein": 32.0,
+   "carbs": 56.0,
+   "fat": 19.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Laxfilé",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "laxfile"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Wokgrönsaker",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "wokgronsaker"
+   },
+   {
+    "name": "Soja",
+    "amount": 30.0,
+    "unit": "ml",
+    "normalizedId": "soja"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Honung",
+    "normalizedId": "honung",
+    "pantryStaple": true
+   },
+   {
+    "name": "Ingefära",
+    "normalizedId": "ingefara",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "fisk",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "fisk",
+   "soja"
+  ],
+  "dietFlags": [
+   "pescetarisk"
+  ],
+  "image": "assets/recipes/teriyakilax.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Grilled_Teriyaki_Salmon_(10900376705).jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Prayitno",
+  "imageLicense": "CC BY 2.0",
+  "imageAlt": "Teriyakilax med wokgrönsaker och ris serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "teriyakitofu",
+  "slug": "teriyakitofu-med-matvetesallad",
+  "name": "Teriyakitofu med matvetesallad",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 327.0,
+   "protein": 14.0,
+   "carbs": 49.0,
+   "fat": 5.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Tofu",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "tofu"
+   },
+   {
+    "name": "Matvete",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "matvete"
+   },
+   {
+    "name": "Paprika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "paprika"
+   },
+   {
+    "name": "Soja",
+    "amount": 30.0,
+    "unit": "ml",
+    "normalizedId": "soja"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Honung",
+    "normalizedId": "honung",
+    "pantryStaple": true
+   },
+   {
+    "name": "Ingefära",
+    "normalizedId": "ingefara",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "veganskt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "gluten",
+   "soja"
+  ],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "assets/recipes/teriyakitofu.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Tofu_Steaks_-_Taro_2026-02-11.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Andy Li",
+  "imageLicense": "CC0",
+  "imageAlt": "Teriyakitofu med matvetesallad serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "tofucurry",
+  "slug": "tofucurry-med-kokos-och-ris",
+  "name": "Tofucurry med kokos och ris",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 479.0,
+   "protein": 13.0,
+   "carbs": 54.0,
+   "fat": 23.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Tofu",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "tofu"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Curry & grönsaker",
+    "amount": 28.0,
+    "unit": "g",
+    "normalizedId": "curry-gronsaker"
+   },
+   {
+    "name": "Kokosmjölk",
+    "amount": 400.0,
+    "unit": "ml",
+    "normalizedId": "kokosmjolk"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "veganskt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "soja"
+  ],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "assets/recipes/tofucurry.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Tofu_curry_with_rice.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Anna Korcheva",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Tofucurry med kokos och ris serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "torskitomatsas",
+  "slug": "torsk-i-tomatsas",
+  "name": "Torsk i tomatsås",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 251.0,
+   "protein": 27.0,
+   "carbs": 30.0,
+   "fat": 1.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Fryst torsk",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "fryst-torsk"
+   },
+   {
+    "name": "Potatis",
+    "amount": 600.0,
+    "unit": "g",
+    "normalizedId": "potatis"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "krossade-tomater"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "vitlok"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   },
+   {
+    "name": "Basilika",
+    "normalizedId": "basilika",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "fisk"
+  ],
+  "allergens": [
+   "fisk"
+  ],
+  "dietFlags": [
+   "pescetarisk"
+  ],
+  "image": "assets/recipes/torskitomatsas.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Cod_in_tomato_sauce_(Oslo).jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "MOs810",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Torsk i tomatsås serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "fetapasta",
+  "slug": "ugnsbakad-fetaost-pasta",
+  "name": "Ugnsbakad fetaost-pasta",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 35,
+  "nutrition": {
+   "kcal": 439.0,
+   "protein": 19.0,
+   "carbs": 61.0,
+   "fat": 12.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Pasta",
+    "amount": 300.0,
+    "unit": "g",
+    "normalizedId": "pasta"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "krossade-tomater"
+   },
+   {
+    "name": "Vitlök",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "vitlok"
+   },
+   {
+    "name": "Feta",
+    "amount": 200.0,
+    "unit": "g",
+    "normalizedId": "feta"
+   },
+   {
+    "name": "Olivolja",
+    "normalizedId": "olivolja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Chiliflakes",
+    "normalizedId": "chiliflakes",
+    "pantryStaple": true
+   },
+   {
+    "name": "Basilika",
+    "normalizedId": "basilika",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "gluten",
+   "laktos"
+  ],
+  "dietFlags": [
+   "vegetarisk"
+  ],
+  "image": "assets/recipes/fetapasta.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Baked_feta_pasta.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Delicious Adventures",
+  "imageLicense": "CC BY 3.0",
+  "imageAlt": "Ugnsbakad fetaost-pasta serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "lax",
+  "slug": "ugnsbakad-lax-med-potatis",
+  "name": "Ugnsbakad lax med potatis",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 35,
+  "nutrition": {
+   "kcal": 488.0,
+   "protein": 34.0,
+   "carbs": 36.0,
+   "fat": 22.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Laxfilé",
+    "amount": 600.0,
+    "unit": "g",
+    "normalizedId": "laxfile"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800.0,
+    "unit": "g",
+    "normalizedId": "potatis"
+   },
+   {
+    "name": "Citron",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "citron"
+   },
+   {
+    "name": "Dill",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "dill"
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "fisk",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "fisk"
+  ],
+  "dietFlags": [
+   "pescetarisk"
+  ],
+  "image": "assets/recipes/lax.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Baked_salmon_with_dill_and_lemon.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "MOs810",
+  "imageLicense": "CC BY-SA 3.0",
+  "imageAlt": "Ugnsbakad lax med potatis serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "ugnstorsk",
+  "slug": "ugnsbakad-torsk-med-sparris-och-citronsmor",
+  "name": "Ugnsbakad torsk med sparris och citronsmör",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 35,
+  "nutrition": {
+   "kcal": 264.0,
+   "protein": 32.0,
+   "carbs": 28.0,
+   "fat": 1.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Fryst torsk",
+    "amount": 600.0,
+    "unit": "g",
+    "normalizedId": "fryst-torsk"
+   },
+   {
+    "name": "Citron",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "citron"
+   },
+   {
+    "name": "Sparris",
+    "amount": 300.0,
+    "unit": "g",
+    "normalizedId": "sparris"
+   },
+   {
+    "name": "Potatis",
+    "amount": 600.0,
+    "unit": "g",
+    "normalizedId": "potatis"
+   },
+   {
+    "name": "Smör",
+    "normalizedId": "smor",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Fisk"
+  ],
+  "tags": [
+   "fisk",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "fisk"
+  ],
+  "dietFlags": [
+   "pescetarisk"
+  ],
+  "image": "assets/recipes/ugnstorsk.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Dorschfilet_Hafenliebe_Warnem%C3%BCnde.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Benreis",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Ugnsbakad torsk med sparris och citronsmör serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "kycklingcouscous",
+  "slug": "ugnskyckling-med-couscous-och-paprika",
+  "name": "Ugnskyckling med couscous och paprika",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 35,
+  "nutrition": {
+   "kcal": 404.0,
+   "protein": 36.0,
+   "carbs": 51.0,
+   "fat": 3.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Kycklingfilé",
+    "amount": 500.0,
+    "unit": "g",
+    "normalizedId": "kycklingfile"
+   },
+   {
+    "name": "Matvete",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "matvete"
+   },
+   {
+    "name": "Paprika",
+    "amount": 2.0,
+    "unit": "st",
+    "normalizedId": "paprika"
+   },
+   {
+    "name": "Citron",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "citron"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Familjefavorit"
+  ],
+  "tags": [
+   "barn",
+   "kyckling",
+   "proteinrikt"
+  ],
+  "allergens": [
+   "gluten"
+  ],
+  "dietFlags": [
+   "blandkost"
+  ],
+  "image": "assets/recipes/kycklingcouscous.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Grilled_chicken_thighs_with_ptitim_and_Israeli_salad.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "HaJunkiyada",
+  "imageLicense": "CC BY-SA 4.0",
+  "imageAlt": "Ugnskyckling med couscous och paprika serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "vegetarisklasagne",
+  "slug": "vegetarisk-lasagne",
+  "name": "Vegetarisk lasagne",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 45,
+  "nutrition": {
+   "kcal": 442.0,
+   "protein": 20.0,
+   "carbs": 62.0,
+   "fat": 11.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Lasagneplattor",
+    "amount": 300.0,
+    "unit": "g",
+    "normalizedId": "lasagneplattor"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "krossade-tomater"
+   },
+   {
+    "name": "Riven ost",
+    "amount": 150.0,
+    "unit": "g",
+    "normalizedId": "riven-ost"
+   },
+   {
+    "name": "Zucchini",
+    "amount": 2.0,
+    "unit": "st",
+    "normalizedId": "zucchini"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Kryddor",
+    "normalizedId": "kryddor",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "helgmiddag",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "gluten",
+   "laktos"
+  ],
+  "dietFlags": [
+   "vegetarisk"
+  ],
+  "image": "assets/recipes/vegetarisklasagne.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Eggplant_Lasagna_(Vegitarian)_(1_of_6).jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Wheeler Cowperthwaite",
+  "imageLicense": "CC BY 2.0",
+  "imageAlt": "Vegetarisk lasagne serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "vegobolognese",
+  "slug": "vegobolognese-med-spaghetti",
+  "name": "Vegobolognese med spaghetti",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 30,
+  "nutrition": {
+   "kcal": 423.0,
+   "protein": 24.0,
+   "carbs": 55.0,
+   "fat": 10.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Vegofärs",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "vegofars"
+   },
+   {
+    "name": "Pasta",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "pasta"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "krossade-tomater"
+   },
+   {
+    "name": "Lök",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "lok"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Kryddor",
+    "normalizedId": "kryddor",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "veganskt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "gluten",
+   "soja"
+  ],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "assets/recipes/vegobolognese.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Spaghetti_bolognese_-_Enzo%27s_2026-04-21.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Andy Li",
+  "imageLicense": "CC0",
+  "imageAlt": "Vegobolognese med spaghetti serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "vegofarsgryta",
+  "slug": "vegofarsgryta-med-ris",
+  "name": "Vegofärsgryta med ris",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 418.0,
+   "protein": 21.0,
+   "carbs": 59.0,
+   "fat": 9.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Vegofärs",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "vegofars"
+   },
+   {
+    "name": "Ris",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "ris"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "krossade-tomater"
+   },
+   {
+    "name": "Paprika",
+    "amount": 1.0,
+    "unit": "st",
+    "normalizedId": "paprika"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Kryddor",
+    "normalizedId": "kryddor",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "veganskt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "soja"
+  ],
+  "dietFlags": [
+   "vegansk"
+  ],
+  "image": "assets/recipes/vegofarsgryta.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:NoBeef_mince_in_chipotle_burrito_-_A_Tribe_Called_Veg_2024-04-06.jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Andy Li",
+  "imageLicense": "CC0",
+  "imageAlt": "Vegofärsgryta med ris serverad på tallrik",
+  "imageStatus": null
+ },
+ {
+  "id": "zucchinipastafeta",
+  "slug": "zucchinipasta-med-feta",
+  "name": "Zucchinipasta med feta",
+  "description": null,
+  "servings": 4,
+  "prepTime": null,
+  "cookTime": null,
+  "totalTime": 25,
+  "nutrition": {
+   "kcal": 399.0,
+   "protein": 17.0,
+   "carbs": 53.0,
+   "fat": 12.0,
+   "fiber": null
+  },
+  "ingredients": [
+   {
+    "name": "Zucchini",
+    "amount": 2.0,
+    "unit": "st",
+    "normalizedId": "zucchini"
+   },
+   {
+    "name": "Pasta",
+    "amount": 250.0,
+    "unit": "g",
+    "normalizedId": "pasta"
+   },
+   {
+    "name": "Krossade tomater",
+    "amount": 400.0,
+    "unit": "g",
+    "normalizedId": "krossade-tomater"
+   },
+   {
+    "name": "Feta",
+    "amount": 200.0,
+    "unit": "g",
+    "normalizedId": "feta"
+   },
+   {
+    "name": "Olja",
+    "normalizedId": "olja",
+    "pantryStaple": true
+   },
+   {
+    "name": "Vitlök",
+    "normalizedId": "vitlok",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "normalizedId": "salt",
+    "pantryStaple": true
+   },
+   {
+    "name": "Peppar",
+    "normalizedId": "peppar",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [],
+  "categories": [
+   "Vegetarisk"
+  ],
+  "tags": [
+   "billigt",
+   "vegetariskt"
+  ],
+  "allergens": [
+   "gluten",
+   "laktos"
+  ],
+  "dietFlags": [
+   "vegetarisk"
+  ],
+  "image": "assets/recipes/zucchinipastafeta.jpg",
+  "imageSource": "https://commons.wikimedia.org/wiki/File:Pasta_with_tomato_sauce_and_zucchini_(50540732361).jpg",
+  "imageSourceUrl": null,
+  "imageCredit": "Julien Seguinot",
+  "imageLicense": "CC BY-SA 2.0",
+  "imageAlt": "Zucchinipasta med feta serverad på tallrik",
+  "imageStatus": null
+ }
+]

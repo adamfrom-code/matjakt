@@ -31,6 +31,59 @@ _CACHE_TTL_SECONDS = 120
 _LOCK = threading.Lock()
 
 
+# The recipe SOURCES are committed JSON; recipes.db is built from them. On a
+# developer's machine that happens when you run the import script. In
+# production nothing ever ran it, so the database was empty and the app had no
+# recipes at all - the same shape of gap that left the price database empty
+# after every deploy.
+RECIPE_SOURCE_DIR = Path(__file__).resolve().parents[2] / "data" / "recipes"
+
+
+def bootstrap_if_empty() -> int:
+    """Builds the recipe bank from the committed JSON when it is missing.
+
+    Runs at startup, once, and only when the database holds nothing - an
+    ordinary deploy must not rebuild a bank that is already there, because
+    that would also throw away images the backfill has since attached.
+
+    Returns how many recipes were imported."""
+    store = open_store()
+    try:
+        if store.count() > 0:
+            return 0
+    finally:
+        store.close()
+
+    # Imported lazily: the importer pulls in the image pipeline, which is not
+    # something an ordinary request path should ever load.
+    import json as _json
+    from .images import placeholder
+
+    store = open_store()
+    imported = 0
+    try:
+        for path in sorted(RECIPE_SOURCE_DIR.glob("*.json")):
+            try:
+                recipes = _json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            for recipe in recipes:
+                nutrition = recipe.pop("nutrition", {}) or {}
+                recipe.update({k: nutrition.get(k) for k in ("kcal", "protein", "carbs", "fat", "fiber")})
+                recipe["totalTime"] = (recipe.get("prepTime") or 0) + (recipe.get("cookTime") or 0)
+                # No image lookup here. Startup must not depend on a network
+                # call to Wikimedia or Pexels, and images are attached by the
+                # backfill script, which is where that belongs.
+                if not recipe.get("image"):
+                    recipe.update(placeholder(recipe))
+                store.upsert_recipe(recipe)
+                imported += 1
+    finally:
+        store.close()
+    clear_cache()
+    return imported
+
+
 def open_store() -> RecipeStore:
     return RecipeStore(DB_PATH)
 
