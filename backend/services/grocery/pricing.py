@@ -298,6 +298,12 @@ INGREDIENT_CATEGORY_KEYWORDS = {
 PROCESSED_MEAT_FORMS = [
     "pannbiff", "farsbiff", "burgare", "bulle", "nugget", "panerad",
     "schnitzel", "sylta", "pastej", "kebab", "fars", "formad", "krossad",
+    # Found in the cross-store audit: a whole cut must not become the FAT
+    # CAP of one, strips of one, or a different cut entirely. "Biff"
+    # simultaneously priced as "Biff med Kappa" (Willys), "Rostbiff i Bit"
+    # (Hemköp) and "Grillbiff av Skinka" - PORK - (City Gross): three shops,
+    # three different raw materials, one "comparison".
+    "kappa", "strimlad", "strimlor", "grillbiff", "rulle",
 ]
 
 # Ingredients that mean a WHOLE piece of meat or fish. These are the ones a
@@ -336,13 +342,14 @@ INGREDIENT_ALIASES = {
     "fryst torsk": ["torskfilé", "torsk"],
     "torsk": ["torskfilé"],
     "lax": ["laxfilé"],
-    "kycklinglårfilé": ["kyckling lårfilé", "lårfilé", "kycklinglår"],
+    # "kycklinglår" (ben-i) borttagen: lårfilé är benfri, låret är det inte.
+    "kycklinglårfilé": ["kyckling lårfilé", "lårfilé"],
     "kycklingfilé": ["kyckling bröstfilé"],
     "wokgrönsaker": ["wokmix", "wokblandning", "grönsaksblandning"],
     "räkor": ["handskalade räkor"],
     "crème fraiche": ["creme fraiche"],
     "riven ost": ["gratängost", "riven hushållsost"],
-    "vispgrädde": ["grädde"],
+    # vispgrädde->grädde borttagen: den släppte in matgrädde 13% som "grädde".
     "matlagningsgrädde": ["matgrädde", "grädde"],
     "tomatpuré": ["tomatpure"],
     "krossade tomater": ["tomater krossade", "krossad tomat"],
@@ -506,6 +513,53 @@ INGREDIENT_RULES = {
     # 3-letter ingredients collide in head position too - these are the
     # collisions seen in real Willys/Hemköp data, not hypothetical ones.
     "ägg": {"exclude": ["choklad", "godis", "påsk", "nudel", "kaka"]},
+    # ---- CANONICAL CONSTRAINTS (cross-store fairness) -----------------------
+    # The same requirement is priced at every chain; these rules make sure a
+    # chain can only answer with the SAME raw material. Brand and pack may
+    # differ - the food may not. Each entry is a violation actually observed
+    # in the cross-store audit 2026-09-01, not a hypothetical.
+    #
+    # Vispgrädde must whip: 13% matgrädde cannot. Both directions locked.
+    "vispgrädde": {"exclude": ["matlagnings", "matgrädde", "kaffe", "havre", "soja", "mellan"]},
+    "matlagningsgrädde": {"exclude": ["visp", "kaffe"]},
+    # Lårfilé is boneless; "Kycklinglår" and "klubba" are not the same cut.
+    # (Also enforced via the alias list: the bone-in aliases are gone.)
+    "kycklinglårfilé": {"require": ["lårfilé"],
+                        "exclude": ["korv", "bacon", "pastej", "sås", "buljong", "krydda", "nugget", "färs", "klubba", "klubbor", "vinge"]},
+    # A generic cooking yoghurt is naturell. Flavoured cups are a different
+    # product: "Grekisk Yoghurt CITRON" priced as grekisk yoghurt at two of
+    # three chains while the third got plain - incomparable.
+    "yoghurt": {"exclude": ["vanilj", "citron", "jordgubb", "hallon", "blåbär", "päron", "honung", "mango", "smultron", "dryck", "drick", "müsli", "musli"]},
+    "grekisk yoghurt": {"exclude": ["vanilj", "citron", "jordgubb", "hallon", "blåbär", "päron", "honung", "mango", "dryck", "drick", "müsli", "musli", "granola"]},
+    # Fetaost is CHEESE. "Feta Tomat Lätt Crème Fraiche" is a cooking sauce
+    # that happens to lead with the word - every chain picked it.
+    "fetaost": {"exclude": ["fraiche", "röra", "dressing", "dipp", "sås", "paj", "creme"]},
+    "feta": {"exclude": ["fraiche", "röra", "dressing", "dipp", "sås", "paj", "creme"]},
+    # Generic pasta requirements mean ordinary wheat pasta. Corn/gluten-free/
+    # legume pasta is a legitimate product and an illegitimate SUBSTITUTE -
+    # if the recipe wants it, the recipe says so.
+    "pasta": {"exclude": ["majs", "glutenfri", "kikärt", "lins", "bön", "proteinpasta"]},
+    "spaghetti": {"exclude": ["majs", "glutenfri", "kikärt", "lins", "bön"]},
+    "makaroner": {"exclude": ["majs", "glutenfri", "kikärt", "lins", "bön"]},
+    # A recipe that wants light dairy says "lätt". Generic crème fraiche is
+    # the standard product; one chain answering with Lätt 13% against
+    # another's 32% compares two different foods.
+    "crème fraiche": {"exclude": ["lätt", "light"]},
+    # Lök är lök - purjolök är en annan grönsak som råkar sluta på ordet.
+    # Hemköp prissatte "Lök" som Purjolök medan grannkedjan tog gul lök.
+    "lök": {"exclude": ["purjo", "sallads", "gräslök", "ringar", "pulver", "friterad", "picklad"]},
+    # "Honung Grillkrydda" är en kryddblandning, "Honung Glazer" en glaze -
+    # inte honung. Två av tre kedjor svarade med fel vara.
+    "honung": {"exclude": ["krydda", "glaze", "glazer", "senap", "marinad", "dressing", "sås", "yoghurt", "rostad"]},
+    # "Dill Gräslök Majskakor" är riskakor. Örten är örten.
+    "dill": {"exclude": ["majskakor", "kaka", "kakor", "chips", "sås", "dressing", "dipp", "sill", "lax"]},
+    "gräslök": {"exclude": ["majskakor", "kaka", "kakor", "chips", "sås", "dressing", "färskost"]},
+    "persilja": {"exclude": ["sås", "smör", "dressing"]},
+    # Räkor i recept är färska/frysta skalräkor - inte konserv i lake.
+    "räkor": {"exclude": ["lake", "konserv", "ost", "röra", "sallad", "smörgås"]},
+    # Biff = a beef steak cut. Not roast beef, not the fat-cap trim, not a
+    # grill patty, and never another animal.
+    "biff": {"exclude": ["rostbiff", "skinka", "fläsk", "kyckling", "kalkon", "vego", "vegansk", "sallad"]},
 }
 
 # Same rules keyed by their folded name, so lookups by an accent-stripped
@@ -600,6 +654,13 @@ def packages_needed(required_amount: float, required_unit: str | None,
 # ENDS with "lask", so pork bellies were universally excluded as soft
 # drinks. The suffix rule itself is right (apelsinläsk IS läsk); these name
 # the longer heads that override it. Keyed by the folded exclusion term.
+# Same idea from the PREFIX end: "färsk" folds to "farsk", which STARTS with
+# "fars" (mince) - so the mince-form exclusion rejected every product merely
+# labelled fresh. A whole cut marked "Färsk" is the opposite of processed.
+EXCLUSION_PREFIX_OVERRIDES = {
+    "fars": ("farsk",),
+}
+
 EXCLUSION_SUFFIX_OVERRIDES = {
     "lask": ("flask",),
     # "Tortillachips" is a real recipe ingredient (tacogratäng) whose own
@@ -633,12 +694,14 @@ def _exclusion_hit(text: str, words: set[str], bad: str) -> bool:
         return False
     if " " in folded_bad or "-" in folded_bad:
         return folded_bad in text
-    overrides = EXCLUSION_SUFFIX_OVERRIDES.get(folded_bad, ())
+    suffix_overrides = EXCLUSION_SUFFIX_OVERRIDES.get(folded_bad, ())
+    prefix_overrides = EXCLUSION_PREFIX_OVERRIDES.get(folded_bad, ())
     return any(
         word == folded_bad
-        or word.startswith(folded_bad)
+        or (word.startswith(folded_bad)
+            and not any(word.startswith(longer) for longer in prefix_overrides))
         or (word.endswith(folded_bad)
-            and not any(word.endswith(longer) for longer in overrides))
+            and not any(word.endswith(longer) for longer in suffix_overrides))
         for word in words)
 
 

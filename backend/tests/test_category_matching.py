@@ -202,8 +202,15 @@ class WrongAisleIsRejectedTest(unittest.TestCase):
         self.assertTrue(product_matches_ingredient(
             "Smör Normalsaltat 82%", "smör", "Svenskt Smör",
             category="Mejeri, ost & ägg > Smör, margarin & jäst > Smör"))
-        self.assertTrue(product_matches_ingredient(
+        # Strimlad filé är en annan FORM än hel filé - kanoniska kravet
+        # (2026-09-01) är att en butik får byta märke och förpackning men
+        # aldrig styckningsform: strimlor mot hel filé är inte samma vara i
+        # en prisjämförelse.
+        self.assertFalse(product_matches_ingredient(
             "Kycklingfilé Strimlad Sverige", "kycklingfilé", "Kronfågel",
+            category="Kött, chark & fågel > Fågel > Färsk fågel"))
+        self.assertTrue(product_matches_ingredient(
+            "Kycklingfilé Färsk Sverige", "kycklingfilé", "Kronfågel",
             category="Kött, chark & fågel > Fågel > Färsk fågel"))
         self.assertTrue(product_matches_ingredient(
             "Ägg Frigående Inomhus M", "ägg", None,
@@ -311,8 +318,19 @@ class WholeCutTest(unittest.TestCase):
     def test_real_steaks_still_match(self):
         """Precision must not come from rejecting everything."""
         for name in ["Ryggbiff Bit Sverige", "Lövbiff Skivad Sverige",
-                     "Biff med Kappa Brasilien", "Pepparbiff av Nöt Sverige"]:
+                     "Pepparbiff av Nöt Sverige"]:
             self.assertTrue(product_matches_ingredient(
+                name, "Biff", None, category="Kött, chark & fågel > Kött > Nöt & kalv"), name)
+
+    def test_a_steak_requirement_is_canonical_across_stores(self):
+        """Fanns i verklig data: "Biff" prissattes som Biff med Kappa hos en
+        kedja, Rostbiff hos en annan och Grillbiff av SKINKA hos en tredje.
+        Tre butiker, tre råvaror - ingen jämförelse. En butik får välja
+        märke och förpackning, aldrig en annan styckdetalj eller ett annat
+        djur."""
+        for name in ["Biff med Kappa Brasilien", "Rostbiff Nöt i Bit Sverige",
+                     "Grillbiff av Skinka", "Biff Strimlad Sverige"]:
+            self.assertFalse(product_matches_ingredient(
                 name, "Biff", None, category="Kött, chark & fågel > Kött > Nöt & kalv"), name)
 
     def test_minced_meat_may_still_match_minced_products(self):
@@ -367,11 +385,96 @@ class AliasesCompeteWithLiteralMatches(unittest.TestCase):
         from services.grocery.pricing import RecipePricingEngine
         engine = RecipePricingEngine.__new__(RecipePricingEngine)
         chickpea = self._Product(1, "Kikärtspasta Ekologisk")
+        wholegrain = self._Product(3, "Fullkornspasta")
         penne = self._Product(2, "Penne Rigate")
-        index = {"pasta": [chickpea], "penne": [penne],
+        index = {"pasta": [chickpea, wholegrain], "penne": [penne],
                  "spaghetti": [], "makaroner": [], "fusilli": [],
                  "tagliatelle": [], "farfalle": []}
         engine._index_for = lambda chain: index
         names = [p.name for p in engine._candidates("Pasta", "Willys")]
         self.assertIn("Penne Rigate", names, "aliasformen måste konkurrera")
-        self.assertIn("Kikärtspasta Ekologisk", names)
+        self.assertIn("Fullkornspasta", names)
+        # Kanoniskt krav: baljväxtpasta är en substitution, aldrig ett svar
+        # på generisk pasta - vill receptet ha kikärtspasta säger det det.
+        self.assertNotIn("Kikärtspasta Ekologisk", names)
+
+
+class CanonicalCrossStoreRequirements(unittest.TestCase):
+    """§Kanoniska krav (2026-09-01): butiksjämförelsen bygger på ETT
+    oföränderligt behov per ingrediens. En butik får välja märke och
+    förpackning - aldrig råvara, styckdetalj, form eller smaksättning.
+    Varje FALSE här är en substitution som observerats eller efterfrågats
+    förbjuden; varje TRUE är den äkta varan som måste fortsätta matcha."""
+
+    MEAT = "Kött, chark & fågel > Kött > Nöt & kalv"
+    DAIRY = "Mejeri, ost & ägg > Mjölk, fil & grädde"
+    PANTRY = "Skafferi > Pasta, ris & matgryn > Pasta"
+
+    def test_forbidden_substitutions(self):
+        cases = [
+            ("Lövbiff", "Biffkappa Bit", self.MEAT),
+            ("Lövbiff", "Pannbiff Färdigstekt", "Färdigmat > Kylda rätter"),
+            ("Biff", "Grillbiff av Skinka", self.MEAT),
+            ("Biff", "Rostbiff Nöt i Bit", self.MEAT),
+            ("Biff", "Nöt Strimlad Sverige", self.MEAT),
+            ("Vispgrädde", "Matgrädde Laktosfri 13%", self.DAIRY),
+            ("Matlagningsgrädde", "Vispgrädde 40%", self.DAIRY),
+            ("Laxfilé", "Fiskpinnar Frysta", "Fryst > Fisk & skaldjur"),
+            ("Yoghurt", "Vaniljyoghurt Laktosfri", self.DAIRY),
+            ("Grekisk yoghurt", "Grekisk Yoghurt Müsli 7%", self.DAIRY),
+            ("Fetaost", "Feta Tomat Lätt Crème Fraiche 12%", self.DAIRY),
+            ("Pasta", "Kikärtspasta Ekologisk", self.PANTRY),
+            ("Spaghetti", "Spaghetti Majspasta Glutenfri", self.PANTRY),
+            ("Crème fraiche", "Crème Fraiche Lätt 13%", self.DAIRY),
+            ("Kycklinglårfilé", "Kycklingklubba Sverige", "Kött, chark & fågel > Fågel"),
+            ("Apelsin", "Apelsin Mandarin Kolsyrat Vatten", "Dryck > Vatten"),
+        ]
+        for ingredient, product, category in cases:
+            self.assertFalse(
+                product_matches_ingredient(product, ingredient, None, category),
+                f"{product!r} får aldrig prissätta {ingredient!r}")
+
+    def test_the_genuine_article_still_matches_everywhere(self):
+        cases = [
+            ("Lövbiff", "Lövbiff Skivad Sverige", self.MEAT),
+            ("Biff", "Ryggbiff Skivad", self.MEAT),
+            ("Nötfärs", "Nötfärs 12% Sverige", self.MEAT),
+            ("Blandfärs", "Blandfärs 20% Irland Danmark", self.MEAT),
+            ("Kycklingfilé", "Kycklingfilé Färsk Sverige", "Kött, chark & fågel > Fågel"),
+            # Tvåordsformen "Kyckling Lårfilé" nås via aliaslagret i motorn;
+            # matcharens direkta kontrakt testas med sammansättningen.
+            ("Kycklinglårfilé", "Kycklinglårfilé Sverige", "Fryst > Kött & fågel"),
+            ("Laxfilé", "Laxfilé Fryst", "Fryst > Fisk"),
+            ("Torskfilé", "Torskfilé", "Fisk & skaldjur"),
+            ("Vispgrädde", "Vispgrädde Färsk 40%", self.DAIRY),
+            # "Matgrädde" nås via aliaslagret; direktmatcharen testas med
+            # produktens fulla namnform.
+            ("Matlagningsgrädde", "Matlagningsgrädde 15%", self.DAIRY),
+            ("Yoghurt", "Yoghurt Naturell 3%", self.DAIRY),
+            ("Grekisk yoghurt", "Grekisk Matyoghurt 10%", self.DAIRY),
+            ("Fetaost", "Fetaost Block 23%", "Mejeri, ost & ägg > Ost"),
+            ("Pasta", "Pasta Penne Rigate", self.PANTRY),
+            ("Ris", "Ris Långkornigt", "Skafferi > Pasta, ris & matgryn > Ris"),
+            ("Riven ost", "Gratängost Riven 27%", "Mejeri, ost & ägg > Ost"),
+        ]
+        for ingredient, product, category in cases:
+            self.assertTrue(
+                product_matches_ingredient(product, ingredient, None, category),
+                f"{product!r} är den äkta varan för {ingredient!r} och måste matcha")
+
+    def test_the_requirement_object_is_identical_for_every_chain(self):
+        """Invarianten: kedjorna får exakt samma krav. price_list muterar
+        aldrig items - en butik som "behövde" ändra kravet för att hitta en
+        match har ingen match."""
+        import copy
+        from services.grocery.pricing import RecipePricingEngine
+        engine = RecipePricingEngine.__new__(RecipePricingEngine)
+        engine._index_for = lambda chain: {}
+        engine._prices_for = lambda store_id: {}
+        items = [{"name": "Lövbiff", "amount": 600, "unit": "g"},
+                 {"name": "Vispgrädde", "amount": 3, "unit": "dl"}]
+        snapshot = copy.deepcopy(items)
+        for chain in ("Willys", "Hemköp", "City Gross"):
+            engine.price_list(items, chain, store_id=1)
+            self.assertEqual(items, snapshot,
+                             f"{chain} förändrade det kanoniska kravet")
