@@ -1894,7 +1894,7 @@ function renderHemRecipePreview() {
   $("hemRecipePreview").innerHTML = recipes.length ? recipes.map(hemRecipePreviewMarkup).join("") : `<p class="empty-state">Inga recept matchar din butik ännu.</p>`;
   document.querySelectorAll("[data-hem-details]").forEach(btn => btn.addEventListener("click", () => openRecipeTab(btn.dataset.hemDetails)));
 }
-function render() { renderGreeting(); renderRecipes(); renderHemRecipePreview(); renderBasket(); updateSummary(); renderStats(); }
+function render() { renderGreeting(); renderRecipes(); renderHemRecipePreview(); renderBasket(); updateSummary(); renderStats(); renderCampaignSection(); }
 function step(key, delta, min, max) { state[key] = Math.min(max, Math.max(min, state[key] + delta)); $(`${key === "personer" ? "people" : "meals"}Value`).textContent = state[key]; saveState(); render(); }
 function syncSettingsInputs() {
   $("budgetInput").value = state.budget; $("peopleValue").textContent = state.personer; $("mealsValue").textContent = state.middagar; $("storeInput").value = state.butik; $("postcodeInput").value = state.postnummer;
