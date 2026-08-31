@@ -1051,14 +1051,15 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
 // comparison is driven by the DATA, never by this map.
 const CHAIN_COLORS = { ICA: "#E2231A", Willys: "#171717", Coop: "#00953B", "Hemköp": "#E4032E", "City Gross": "#C8102E" };
 function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
-  const savings = priciestCost - result.cost;
+  // null means "no comparable shop to measure against", which is different
+  // from "the saving is zero".
+  const savings = priciestCost == null || !result.comparable ? null : priciestCost - result.cost;
   const color = CHAIN_COLORS[result.branch.kedja] || "var(--primary)";
   // A store whose live match rate is too thin to trust isn't allowed to
   // just show a partial sum as if it were the real total - see
   // branchLiveTotal's matched count. An estimate (matched === null) always
   // covers every item by construction, so it's never held to this bar.
-  const coverageOk = hasUsablePrice(result)
-    && (result.matched == null || result.matched / result.totalItems >= 0.5);
+  const coverageOk = hasUsablePrice(result) && (result.comparable || result.source !== "database");
   const coverageNote = result.source === "database"
     ? `${result.matched} av ${result.totalItems} varor har aktuellt pris`
     : result.matched != null ? `${result.matched} av ${result.totalItems} varor` : "Uppskattat";
@@ -1070,7 +1071,7 @@ function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
   const attrs = openable
     ? ` type="button" data-open-chain="${escapeHtml(result.branch.kedja)}"`
     : "";
-  return `<${tag} class="comparison-store-card ${isCheapest && coverageOk ? "cheapest" : ""}${openable ? " openable" : ""}"${attrs}><div class="comparison-store-main"><span class="comparison-store-name" style="color:${color}">${escapeHtml(result.branch.kedja)}</span><small class="comparison-store-coverage">${coverageNote}</small></div><div class="comparison-store-price">${isCheapest && coverageOk ? '<span class="comparison-billigast">Billigast</span>' : ""}${coverageOk ? `<strong>${money(result.cost)}</strong>${savings > 1 ? `<small class="comparison-savings">Du sparar ${money(savings)}</small>` : ""}` : `<small class="comparison-savings">${hasUsablePrice(result) ? "För få varor hittades" : "Inga priser hittades"}</small>`}</div>${openable ? '<span class="comparison-store-arrow" aria-hidden="true">›</span>' : ""}</${tag}>`;
+  return `<${tag} class="comparison-store-card ${isCheapest && coverageOk ? "cheapest" : ""}${openable ? " openable" : ""}"${attrs}><div class="comparison-store-main"><span class="comparison-store-name" style="color:${color}">${escapeHtml(result.branch.kedja)}</span><small class="comparison-store-coverage">${coverageNote}</small></div><div class="comparison-store-price">${isCheapest && coverageOk ? '<span class="comparison-billigast">Billigast</span>' : ""}${coverageOk ? `<strong>${money(result.cost)}</strong>${savings != null && savings > 1 ? `<small class="comparison-savings">Du sparar ${money(savings)}</small>` : ""}` : `<small class="comparison-savings">${!hasUsablePrice(result) ? "Inga priser hittades" : "För få aktuella priser för en jämförelse"}</small>`}</div>${openable ? '<span class="comparison-store-arrow" aria-hidden="true">›</span>' : ""}</${tag}>`;
 }
 // =============================================================================
 // ONE CHAIN'S REAL SHOPPING LIST
@@ -1140,8 +1141,18 @@ function chainShoppingListMarkup(data, branch = null) {
   // another shop's prices is the worst outcome this screen can produce.
   const distance = branch?.avstandKm != null ? `${branch.avstandKm} km bort` : "";
   const storeName = branch?.namn || data.store?.name || data.chain || "";
+  // Where the prices actually come from. Only worth saying when it is not
+  // the shop whose name is at the top: for Willys and Hemköp the price is
+  // verified national, so any branch pays it. For City Gross and ICA it is
+  // not - a price collected in Gävle under a Stockholm branch's name would
+  // be a quiet lie, so the screen says which store it was collected in.
+  const pricedStore = data.store?.name;
+  const perStore = data.pricingScope === "store";
+  const pricedElsewhere = perStore && pricedStore && branch?.namn && pricedStore !== branch.namn
+    ? `<p class="chain-list-warning">Priserna är hämtade i ${escapeHtml(pricedStore)}. ${escapeHtml(data.chain)} sätter priser per butik, så ${escapeHtml(branch.namn)} kan skilja sig.</p>`
+    : "";
   const sticky = `<div class="chain-list-sticky"><strong>${escapeHtml(storeName)}</strong><span>${money(total)} · ${data.realPriceItems}/${data.totalItems} varor</span></div>`;
-  const head = sticky + `<div class="chain-list-head"><h2>${escapeHtml(storeName)}</h2><small>${escapeHtml([data.chain, branch?.kedja && branch.kedja !== data.chain ? "" : "", data.store?.city, distance].filter(Boolean).join(" · "))}</small><div class="chain-list-total"><span>Total kassakostnad</span><strong>${money(total)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor prissatta · ${coverage} % täckning</span>${data.estimatedItems ? `<span>${data.estimatedItems} med uppskattat antal</span>` : ""}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span>${savings}</div>${warning}</div>`;
+  const head = sticky + `<div class="chain-list-head"><h2>${escapeHtml(storeName)}</h2><small>${escapeHtml([data.chain, distance].filter(Boolean).join(" · "))}</small>${pricedElsewhere}<div class="chain-list-total"><span>Total kassakostnad</span><strong>${money(total)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor prissatta · ${coverage} % täckning</span>${data.estimatedItems ? `<span>${data.estimatedItems} med uppskattat antal</span>` : ""}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span>${savings}</div>${warning}</div>`;
 
   const rows = (data.items || []).map(item => {
     const checked = state.avklarade.has(item.ingredient);
@@ -1205,13 +1216,23 @@ function renderStoreComparisonPage(selected) {
     return true;
   });
   if (!results.length) { $("comparisonStoreList").innerHTML = `<p class="live-loading">Ingen data att jämföra ännu.</p>`; $("comparisonItemCount").textContent = "0 varor"; $("comparisonCampaignCard").hidden = true; $("comparisonUpdated").textContent = ""; return; }
-  const validResults = results.filter(r => hasUsablePrice(r)
-    && (r.matched == null || r.matched / r.totalItems >= 0.5));
+  // The same rule as everywhere else: only shops with enough REAL coverage
+  // take part. Two things were wrong on this page - Hemköp at 13 of 16
+  // (81 %, under the threshold) was being priced and compared, and every
+  // real shop showed "Du sparar 85 kr" measured against COOP'S ESTIMATE of
+  // 300 kr. Saving money against a number we made up is not a saving.
+  const validResults = results.filter(r => r.comparable && hasUsablePrice(r));
   const cheapest = (validResults.length ? validResults : results)[0];
-  const priciest = results[results.length - 1];
+  // Priciest is the dearest COMPARABLE shop, never an estimate.
+  const priciest = validResults.length ? validResults[validResults.length - 1] : null;
   const bestCoverage = Math.max(0, ...results.map(r => r.matched ?? 0));
   $("comparisonItemCount").textContent = bestCoverage ? `${bestCoverage} av ${shoppingItems.length} varor` : `${shoppingItems.length} varor`;
-  $("comparisonStoreList").innerHTML = results.map(r => comparisonStoreRowMarkup(r, r === cheapest, priciest.cost)).join("");
+  // A saving is only shown when there are at least two comparable shops -
+  // one shop cannot be cheaper than itself.
+  const priciestCost = validResults.length > 1 ? priciest.cost : null;
+  $("comparisonStoreList").innerHTML = results
+    .map(r => comparisonStoreRowMarkup(r, validResults.length > 1 && r === cheapest, priciestCost))
+    .join("");
   document.querySelectorAll("[data-open-chain]").forEach(card =>
     card.addEventListener("click", () => {
       const row = results.find(r => r.branch.kedja === card.dataset.openChain);

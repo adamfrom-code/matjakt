@@ -4,9 +4,9 @@
   "description": "En app där du anger hur mycket pengar du har att handla mat för denna\r vecka och antal personer i hushållet, och får receptförslag +\r inköpslista baserat på de billigaste priserna hos butiker i din närhet.",
   "main": "index.js",
   "scripts": {
-    "test": "node --test && python -m unittest discover -s backend/tests",
+    "test": "node --test && python backend/tests/run.py",
     "check": "node --check frontend/app/app.js && python -m compileall -q backend",
-    "frontend": "python -m http.server 5500 --directory frontend",
+    "frontend": "python scripts/serve_frontend.py",
     "backend": "python backend/api_server.py"
   },
   "repository": {

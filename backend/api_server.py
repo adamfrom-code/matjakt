@@ -303,8 +303,17 @@ def run_on_scrape_thread(fn):
         raise
 RECIPE_SERVICE = RecipeService([TheMealDbProvider()])
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
-ACCOUNT_STORE = AccountStore(Path(__file__).resolve().parent / "data" / "matjakt.db")
-PRICE_CACHE = PriceCacheStore(Path(__file__).resolve().parent / "data" / "prices.db")
+# Where the persisted stores live. Overridable so a TEST RUN never touches
+# the real files: the suite calls KV_CACHE.clear() (documented "test-only")
+# nine times, which against the real database wipes every cached geocode,
+# store list, campaign and product image the machine had. On a developer's
+# machine that just made the app slow for a while; pointed at a deployed data
+# directory it would throw away real cached state on every CI run.
+DATA_DIR = Path(os.environ.get("MATJAKT_DATA_DIR") or (Path(__file__).resolve().parent / "data"))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+ACCOUNT_STORE = AccountStore(DATA_DIR / "matjakt.db")
+PRICE_CACHE = PriceCacheStore(DATA_DIR / "prices.db")
 # Same SQLite file/connection as PRICE_CACHE (see KeyValueCacheStore's
 # docstring) - campaigns, geocoding, store lists and Primat/OFF lookups used
 # to live only in plain process-memory dicts, which reset to empty on every

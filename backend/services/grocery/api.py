@@ -22,6 +22,7 @@ softened by anything here:
 """
 
 import logging
+import os
 import threading
 import time
 from pathlib import Path
@@ -31,7 +32,10 @@ from .store import GroceryStore
 
 logger = logging.getLogger("matjakt.grocery.api")
 
-DB_PATH = Path(__file__).resolve().parents[2] / "data" / "grocery.db"
+# Same override as api_server's DATA_DIR, for the same reason: a test run
+# must never read or write the real price database.
+DB_PATH = Path(os.environ.get("MATJAKT_DATA_DIR")
+               or (Path(__file__).resolve().parents[2] / "data")) / "grocery.db"
 
 # THE central coverage rule. A chain must price at least this share of the
 # list before its total may be compared with another chain's, be crowned
@@ -410,6 +414,12 @@ def format_chain_result(result: dict, store_row=None, comparison: dict | None = 
     if comparison and comparison.get("cheapestChain") == chain:
         savings = comparison.get("savings")
 
+    # WHICH store these prices actually came from, and whether that matters.
+    # Willys and Hemköp are verified nationally priced, so any branch of the
+    # chain pays this. City Gross and ICA price per store, so a price
+    # collected in Gävle is a Gävle price - presenting it under a Stockholm
+    # branch's name without saying so would be a quiet lie.
+    scope = (PROVIDER_STATUS.get(chain) or {}).get("pricingScope")
     return {
         "store": {
             "chain": chain,
@@ -417,6 +427,7 @@ def format_chain_result(result: dict, store_row=None, comparison: dict | None = 
             "externalStoreId": store_row["external_store_id"] if store_row else None,
             "city": store_row["city"] if store_row else None,
         },
+        "pricingScope": scope,
         "chain": chain,
         "totalCheckoutCost": result.get("totalCheckoutCost"),
         "coveragePercent": result.get("coveragePercent"),
