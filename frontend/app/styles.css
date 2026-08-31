@@ -223,3 +223,7 @@ button.campaign-deal{cursor:pointer;font:inherit}
   box-shadow: 0 2px 8px rgba(0,0,0,.18); }
 .chain-list-sticky strong { font-size: .95rem; }
 .chain-list-sticky span { font-size: .8rem; opacity: .9; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.account-change-password { margin: .75rem 0; border: 1px solid var(--line, #e3e6ea); border-radius: 12px; padding: .5rem .75rem; }
+.account-change-password > summary { cursor: pointer; font-weight: 600; font-size: .9rem; padding: .25rem 0; }
+.account-change-password .account-form { margin-top: .5rem; }

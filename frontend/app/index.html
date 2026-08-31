@@ -304,6 +304,19 @@
           <p class="account-error" id="verifyError"></p>
         </div>
 
+        <details class="account-change-password" id="changePasswordPanel">
+          <summary>Byt lösenord</summary>
+          <form id="changePasswordForm" class="account-form">
+            <label for="currentPasswordInput">Nuvarande lösenord</label>
+            <input id="currentPasswordInput" type="password" required autocomplete="current-password">
+            <label for="newPasswordInput">Nytt lösenord (minst 8 tecken)</label>
+            <input id="newPasswordInput" type="password" required minlength="8" autocomplete="new-password">
+            <p class="account-error" id="changePasswordError"></p>
+            <p class="account-success" id="changePasswordSuccess" hidden>Lösenordet är bytt. Andra enheter har loggats ut.</p>
+            <button class="btn btn-primary" type="submit"><span>Spara nytt lösenord</span></button>
+          </form>
+        </details>
+
         <div class="subscription-panel" id="subscriptionPanel" hidden>
           <p class="subscription-panel-line" id="subscriptionPanelLine"></p>
           <button class="btn btn-ghost account-redeem-btn" type="button" id="manageBillingBtn">Hantera prenumeration</button>

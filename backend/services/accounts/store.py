@@ -283,6 +283,38 @@ class AccountStore:
         self._connection.execute("DELETE FROM sessions WHERE user_id = ?", (row["id"],))
         self._connection.commit()
 
+    def change_password(self, token: str, current_password: str, new_password: str) -> dict:
+        """Changes a logged-in user's password.
+
+        The CURRENT password is required even though the session already
+        proves who this is: a borrowed or stolen session must not be enough
+        to lock the real owner out of their own account.
+
+        Every OTHER session is dropped afterwards. A password change is what
+        a person does when they think someone else has access, and leaving
+        those sessions alive would make the change cosmetic. The session
+        doing the change survives, so the user is not logged out of the
+        device they are holding."""
+        row = self._session_user_row(token)
+        if not row:
+            raise AccountError("Du måste vara inloggad")
+        expected = _hash_password(current_password or "", bytes.fromhex(row["salt"]))
+        if not secrets.compare_digest(expected, row["password_hash"]):
+            raise AccountError("Fel nuvarande lösenord")
+        if not new_password or len(new_password) < 8:
+            raise AccountError("Det nya lösenordet måste vara minst 8 tecken")
+        if secrets.compare_digest(_hash_password(new_password, bytes.fromhex(row["salt"])), row["password_hash"]):
+            raise AccountError("Det nya lösenordet måste skilja sig från det nuvarande")
+        salt = secrets.token_bytes(16)
+        self._connection.execute(
+            "UPDATE users SET password_hash = ?, salt = ? WHERE id = ?",
+            (_hash_password(new_password, salt), salt.hex(), row["id"]),
+        )
+        self._connection.execute(
+            "DELETE FROM sessions WHERE user_id = ? AND token != ?", (row["id"], token))
+        self._connection.commit()
+        return self._to_public(self._session_user_row(token))
+
     def delete_account(self, token: str):
         """Returns (stripe_customer_id, stripe_subscription_id) so the caller can
         cancel any active Stripe subscription before the account record is gone."""

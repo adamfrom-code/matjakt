@@ -25,6 +25,7 @@ from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature
 from services.email import MailError, send_email
+from services.accounts import ratelimit  # noqa: E402
 from services.grocery import api as grocery_api  # noqa: E402
 from services.grocery import importer as grocery_importer  # noqa: E402
 from services.grocery.scheduler import SCHEDULER as GROCERY_SCHEDULER  # noqa: E402
@@ -128,6 +129,11 @@ COOP_STORE_SEARCH_TTL_SECONDS = 86400
 # How long a CLIENT may reuse a store list. Deliberately short and unrelated
 # to the server-side cache above it: the payload is tiny, and a stale list is
 # a user standing outside a shop that is not there.
+# Whether X-Forwarded-For may be believed. True only when a trusted proxy
+# sits in front of us and overwrites it (Render does); false by default so a
+# directly-exposed instance cannot be fooled about who is calling.
+TRUST_PROXY_HEADERS = str(os.environ.get("MATJAKT_TRUST_PROXY", "")).strip().lower() in {"1", "true", "yes", "on"}
+
 STORE_LIST_RESPONSE_CACHE_SECONDS = 900
 
 NEARBY_STORE_LIMIT = 12
@@ -1190,6 +1196,37 @@ class ApiHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Max-Age", "600")
         self.end_headers()
 
+    def _client_ip(self):
+        """The caller's address, honouring the proxy header Render sets.
+
+        Behind a proxy every request appears to come from the proxy, which
+        would put every user of the app in ONE rate-limit bucket - the first
+        ten failed logins anywhere would lock out the whole world. Only the
+        FIRST entry of X-Forwarded-For is used: the rest are attacker-supplied
+        and trivially spoofed."""
+        # X-Forwarded-For is only believed when we are actually behind a
+        # proxy that sets it. A client talking to us directly can put
+        # anything in that header, so trusting it unconditionally would let
+        # an attacker rotate it and walk straight past the per-IP limit -
+        # turning the rate limiter into decoration. Render terminates TLS at
+        # its own proxy, so MATJAKT_TRUST_PROXY=1 is set there and nowhere
+        # else. Only the FIRST entry is used; the rest are appended by
+        # upstream hops and are attacker-controlled.
+        if TRUST_PROXY_HEADERS:
+            forwarded = self.headers.get("X-Forwarded-For", "")
+            if forwarded:
+                return forwarded.split(",")[0].strip()[:64]
+        return (self.client_address[0] if self.client_address else "") or ""
+
+    def _rate_limit(self, action, *identifiers):
+        """Returns True when the request must be refused. Sends the 429."""
+        try:
+            ratelimit.check(action, self._client_ip(), *identifiers)
+            return False
+        except ratelimit.RateLimited as limited:
+            self.send_json(429, {"error": str(limited), "retryAfter": limited.retry_after})
+            return True
+
     def _bearer_token(self):
         header = self.headers.get("Authorization", "")
         return header[7:] if header.lower().startswith("bearer ") else None
@@ -1429,6 +1466,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(400, {"error": "Ogiltig JSON"})
             return
         if parsed.path == "/api/auth/register":
+            if self._rate_limit("register", str(payload.get("email") or "").strip().lower()):
+                return
             try:
                 token, user = ACCOUNT_STORE.register(payload.get("email"), payload.get("password"))
                 try:
@@ -1444,11 +1483,27 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/auth/login":
+            email = str(payload.get("email") or "").strip().lower()
+            if self._rate_limit("login", email):
+                return
             try:
                 token, user = ACCOUNT_STORE.login(payload.get("email"), payload.get("password"))
+                # A person who mistypes twice and then gets it right must not
+                # stay throttled for the rest of the window.
+                ratelimit.clear_on_success("login", self._client_ip(), email)
                 self.send_json(200, {"token": token, "user": user})
             except AccountError as error:
                 self.send_json(401, {"error": str(error)})
+            return
+        if parsed.path == "/api/auth/change-password":
+            if self._rate_limit("change_password"):
+                return
+            try:
+                user = ACCOUNT_STORE.change_password(
+                    self._bearer_token(), payload.get("currentPassword"), payload.get("newPassword"))
+                self.send_json(200, {"user": user})
+            except AccountError as error:
+                self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/auth/logout":
             token = self._bearer_token()
@@ -1471,6 +1526,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/auth/request-password-reset":
+            if self._rate_limit("password_reset", str(payload.get("email") or "").strip().lower()):
+                return
             reset_token = ACCOUNT_STORE.request_password_reset(payload.get("email"))
             if reset_token:
                 try:
@@ -1485,6 +1542,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(200, {"ok": True})
             return
         if parsed.path == "/api/auth/reset-password":
+            if self._rate_limit("password_reset"):
+                return
             try:
                 ACCOUNT_STORE.reset_password(payload.get("token"), payload.get("password"))
                 self.send_json(200, {"ok": True})

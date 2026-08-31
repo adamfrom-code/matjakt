@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import api_server  # noqa: E402
+from services.accounts import ratelimit  # noqa: E402
 from api_server import clean_text, parse_price, parse_willys_price  # noqa: E402
 from services.accounts import AccountStore  # noqa: E402
 
@@ -1098,6 +1099,13 @@ class AuthHttpTest(unittest.TestCase):
         cls.thread.join(timeout=5)
 
     def setUp(self):
+        # The auth endpoints are rate limited per IP, and every test in this
+        # class calls them from the same loopback address - so without this
+        # the sixth registration in the suite gets a 429 instead of a 201.
+        # Resetting per test also keeps each test independent of how many
+        # requests the ones before it happened to make.
+        ratelimit.reset()
+        self.addCleanup(ratelimit.reset)
         self._tmpdir = tempfile.TemporaryDirectory()
         self._original_store = api_server.ACCOUNT_STORE
         self._original_code = api_server.PREMIUM_CODE

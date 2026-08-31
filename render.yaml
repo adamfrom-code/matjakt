@@ -17,6 +17,12 @@ services:
         value: https://matjakt.store/app
       - key: MATJAKT_PREMIUM_CODE
         sync: false
+      # Render terminates TLS at its own proxy, so X-Forwarded-For is set by
+      # infrastructure we control and can be believed. Without this every
+      # request would appear to come from the proxy and share one rate-limit
+      # bucket - ten failed logins anywhere would lock out everyone.
+      - key: MATJAKT_TRUST_PROXY
+        value: "1"
       - key: MATJAKT_MAX_SCRAPES
         value: "1"
       - key: PRIMAT_API_KEY

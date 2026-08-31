@@ -6,7 +6,7 @@ import { expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts
 import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
 import { campaignsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
-import { deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, startTrial, storeToken, verifyEmail } from "./src/api/auth.js";
+import { changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, startTrial, storeToken, verifyEmail } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 
 const RECEPT = [
@@ -1694,6 +1694,25 @@ function syncSettingsInputs() {
 syncSettingsInputs();
 $("budgetInput").addEventListener("input", e => { state.budget = clampBudget(e.target.value); saveState(); updateSummary(); renderBasket(); });
 const debouncedGeocode = createDebouncedSearch((zip, signal) => fetch(geocodeApiUrl(zip), { signal }).then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }), 400);
+$("changePasswordForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const error = $("changePasswordError"), success = $("changePasswordSuccess");
+  error.textContent = ""; success.hidden = true;
+  try {
+    // The server drops every OTHER session on success, so this device stays
+    // logged in and any other one does not - which is the whole point of
+    // changing a password.
+    const { user } = await changePassword(state.authToken,
+      $("currentPasswordInput").value, $("newPasswordInput").value);
+    if (user) state.user = user;
+    $("currentPasswordInput").value = ""; $("newPasswordInput").value = "";
+    success.hidden = false;
+    render();
+  } catch (problem) {
+    error.textContent = problem.message;
+  }
+});
+
 $("postcodeInput").addEventListener("input", e => {
   const previous = state.postnummer;
   state.position = null;

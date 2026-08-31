@@ -82,6 +82,14 @@ export function openBillingPortal(token) {
   }).then(parseJsonResponse);
 }
 
+export function changePassword(token, currentPassword, newPassword) {
+  return fetch(`${API_BASE_URL}/auth/change-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  }).then(parseJsonResponse);
+}
+
 export function requestPasswordReset(email) {
   return fetch(`${API_BASE_URL}/auth/request-password-reset`, {
     method: "POST",
