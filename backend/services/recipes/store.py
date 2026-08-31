@@ -102,6 +102,22 @@ class RecipeStore:
                     self._connection.execute(
                         f"ALTER TABLE recipes ADD COLUMN {column} {kind}")
 
+    def get_meta(self, key: str):
+        try:
+            row = self._connection.execute(
+                "SELECT value FROM recipe_meta WHERE key = ?", (key,)).fetchone()
+        except Exception:
+            return None
+        return row["value"] if row else None
+
+    def set_meta(self, key: str, value: str):
+        with self._connection:
+            self._connection.execute(
+                "CREATE TABLE IF NOT EXISTS recipe_meta (key TEXT PRIMARY KEY, value TEXT)")
+            self._connection.execute(
+                "INSERT INTO recipe_meta (key, value) VALUES (?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (key, value))
+
     def set_price(self, recipe_id: str, *, price_per_portion, chain,
                   covered: int, total: int):
         """Records one pricing run's verdict for a recipe.
@@ -182,6 +198,11 @@ class RecipeStore:
             -- they are all "a label of some kind on a recipe", and separate
             -- tables would mean four near-identical queries for every filter
             -- the recipe page offers.
+            CREATE TABLE IF NOT EXISTS recipe_meta (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            );
+
             CREATE TABLE IF NOT EXISTS recipe_labels (
                 recipe_id TEXT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
                 kind TEXT NOT NULL,

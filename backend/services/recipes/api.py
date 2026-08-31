@@ -44,17 +44,36 @@ _LOCK = threading.Lock()
 RECIPE_SOURCE_DIR = Path(__file__).resolve().parents[2] / "recipe_sources"
 
 
-def bootstrap_if_empty() -> int:
-    """Builds the recipe bank from the committed JSON when it is missing.
+def source_fingerprint() -> str:
+    """One hash over every committed source file, order-independent."""
+    import hashlib
+    digest = hashlib.sha256()
+    for path in sorted(RECIPE_SOURCE_DIR.glob("*.json")):
+        digest.update(path.name.encode("utf-8"))
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
 
-    Runs at startup, once, and only when the database holds nothing - an
-    ordinary deploy must not rebuild a bank that is already there, because
-    that would also throw away images the backfill has since attached.
+
+def bootstrap_if_empty() -> int:
+    """Syncs the recipe bank from the committed JSON when the sources changed.
+
+    "If empty" was the original rule, and it had a hole big enough to lose a
+    release in: production held 86 recipes on its persistent disk, the next
+    deploy shipped 204 in the sources - and nothing ever imported them,
+    because the bank was not empty. The committed sources are the truth; the
+    database is a build product of them plus whatever the image backfill and
+    pricing runs have added since (which the sources now also carry, so an
+    upsert loses nothing).
+
+    A fingerprint of the source files is stored in the database after every
+    sync, so an ordinary deploy with unchanged sources still does nothing.
 
     Returns how many recipes were imported."""
+    fingerprint = source_fingerprint()
     store = open_store()
     try:
-        if store.count() > 0:
+        stored = store.get_meta("source_fingerprint")
+        if store.count() > 0 and stored == fingerprint:
             return 0
     finally:
         store.close()
@@ -83,6 +102,7 @@ def bootstrap_if_empty() -> int:
                     recipe.update(placeholder(recipe))
                 store.upsert_recipe(recipe)
                 imported += 1
+        store.set_meta("source_fingerprint", fingerprint)
     finally:
         store.close()
     clear_cache()

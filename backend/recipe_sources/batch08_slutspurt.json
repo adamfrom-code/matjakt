@@ -269,108 +269,6 @@
   "imageStatus": "ok"
  },
  {
-  "id": "spagetti-kottfarssas",
-  "name": "Spaghetti med köttfärssås",
-  "description": "Den självklara vardagsklassikern: mustig köttfärssås som sjuder medan pastan kokar.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 30,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 610,
-   "protein": 35,
-   "carbs": 68,
-   "fat": 22,
-   "fiber": 6
-  },
-  "ingredients": [
-   {
-    "name": "Blandfärs",
-    "amount": 500,
-    "unit": "g"
-   },
-   {
-    "name": "Spaghetti",
-    "amount": 400,
-    "unit": "g"
-   },
-   {
-    "name": "Krossade tomater",
-    "amount": 800,
-    "unit": "g"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Vitlök",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Morötter",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Tomatpuré",
-    "amount": 70,
-    "unit": "g"
-   },
-   {
-    "name": "Oregano",
-    "amount": 5,
-    "unit": "g"
-   },
-   {
-    "name": "Buljongtärning",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Olja",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Bryn färsen ordentligt i olja.",
-   "Lägg i hackad lök, riven morot och vitlök och fräs mjukt.",
-   "Rör ner tomatpurén, häll i krossade tomater och smula i buljongtärningen.",
-   "Sjud i 20 minuter. Smaka av med oregano och salt.",
-   "Koka spaghettin och servera med såsen."
-  ],
-  "categories": [
-   "Kött",
-   "Pasta"
-  ],
-  "tags": [
-   "kott",
-   "barn",
-   "billigt",
-   "Familjefavorit"
-  ],
-  "allergens": [
-   "gluten"
-  ],
-  "dietFlags": [
-   "blandkost",
-   "laktosfritt"
-  ],
-  "image": "https://images.pexels.com/photos/546945/pexels-photo-546945.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/shallow-focus-photo-of-pasta-546945/",
-  "imageCredit": "Maurijn Pach",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Spaghetti med köttfärssås upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
   "id": "kikartscurry-snabb",
   "name": "Snabb kikärtscurry med spenat",
   "description": "Kikärtor i currydoftande kokossås med spenat - vegansk middag ur skafferiet på en kvart.",
@@ -2042,5 +1940,83 @@
   "imageLicense": "Pexels License",
   "imageAlt": "Toast Skagen upplagd på tallrik",
   "imageStatus": "ok"
+ },
+ {
+  "id": "ugnskorv-potatismos-appel",
+  "name": "Ugnsbakad korv med äppelmos och potatismos",
+  "description": "Grov korv i ugn med potatismos, stekt äpple och senap. Höstmiddag på 30 minuter.",
+  "servings": 4,
+  "prepTime": 10,
+  "cookTime": 25,
+  "difficulty": "lätt",
+  "nutrition": {
+   "kcal": 560,
+   "protein": 20,
+   "carbs": 52,
+   "fat": 30,
+   "fiber": 4
+  },
+  "ingredients": [
+   {
+    "name": "Falukorv",
+    "amount": 500,
+    "unit": "g"
+   },
+   {
+    "name": "Potatis",
+    "amount": 800,
+    "unit": "g"
+   },
+   {
+    "name": "Äpple",
+    "amount": 2,
+    "unit": "st"
+   },
+   {
+    "name": "Mjölk",
+    "amount": 1,
+    "unit": "dl"
+   },
+   {
+    "name": "Senap",
+    "amount": 40,
+    "unit": "g"
+   },
+   {
+    "name": "Gul lök",
+    "amount": 1,
+    "unit": "st"
+   },
+   {
+    "name": "Smör",
+    "pantryStaple": true
+   },
+   {
+    "name": "Salt",
+    "pantryStaple": true
+   }
+  ],
+  "instructions": [
+   "Sätt ugnen på 200 grader. Koka potatisen mjuk i saltat vatten.",
+   "Skär korven i tjocka skivor och lägg i en form med klyftad lök. Baka i 20 minuter.",
+   "Tärna äpplena och stek dem gyllene i smör.",
+   "Mosa potatisen med mjölk och smör och smaka av med salt.",
+   "Servera korven med mos, stekt äpple och senap."
+  ],
+  "categories": [
+   "Husmanskost"
+  ],
+  "tags": [
+   "barn",
+   "billigt",
+   "husmanskost"
+  ],
+  "allergens": [
+   "mjölk"
+  ],
+  "dietFlags": [
+   "blandkost",
+   "glutenfritt"
+  ]
  }
 ]
