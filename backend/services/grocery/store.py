@@ -494,19 +494,33 @@ class GroceryStore:
     # ---- Collector runs --------------------------------------------
 
     def data_version(self) -> str:
-        """A cheap fingerprint of the product/price data.
+        """A fingerprint of the data as CUSTOMERS see it.
 
         Anything derived from this database - matched products, chain totals,
         a whole priced week - stays valid exactly as long as this string
-        does. It changes when a collector run finishes or any price is
-        written, so a cache keyed on it cannot serve yesterday's prices after
-        an import, and does not have to be cleared by hand either."""
+        does, so it is the invalidation key for every cache over this data.
+
+        It deliberately advances only when a collector run FINISHES, never on
+        each price written. That is what keeps an import invisible from the
+        outside: a category walk writes for tens of minutes, and if the
+        version moved with every batch then every cached index, price map and
+        priced week would be discarded continuously - the import window would
+        become the slowest the app ever is, which is exactly when it must not
+        be. Instead the version holds still, customers keep being served from
+        warm caches built on the data that was already there, and when the run
+        completes it moves once and everything picks up the new prices
+        together.
+
+        Rows written mid-import are still real, complete rows (imports only
+        ever upsert - there is no delete path here), so nothing is lost or
+        half-written. A cache miss during an import simply sees some newer
+        prices, which is what an upsert has always meant."""
         row = self._connection.execute(
             """
             SELECT (SELECT COUNT(*) FROM grocery_products),
                    (SELECT COUNT(*) FROM grocery_current_prices),
-                   (SELECT MAX(updated_at) FROM grocery_current_prices),
-                   (SELECT MAX(id) FROM grocery_collector_runs)
+                   (SELECT MAX(id) FROM grocery_collector_runs
+                     WHERE status IS NOT NULL AND status != 'running')
             """
         ).fetchone()
         return "-".join(str(value or 0) for value in row)

@@ -65,13 +65,21 @@ from functools import lru_cache
 # what they are compared against.
 DEPARTMENT_KEYWORDS = {
     "meat": ["kott, chark", "kott, fagel", "chark & fagel", "fagel & chark",
-             "kott & fagel", "kott & kyckling", "kott, burgare"],
+             "kott & fagel", "kott & kyckling", "kott, burgare", "chark",
+             "manuell delikatess"],
     "fish": ["fisk & skaldjur", "fisk och skaldjur"],
     "dairy": ["mejeri", "ost & agg", "delikatessen > ost"],
     "produce": ["frukt & gront", "frukt och gront", "potatis & rotsaker",
                 "kal & rotsaker"],
-    "pantry": ["skafferi"],
-    "bread": ["brod & kakor", "brod och kakor"],
+    "pantry": ["skafferi", "skafferiet"],
+    # City Gross words several of these differently from the Axfood chains,
+    # and a wording we do not know maps to NO department - which means the
+    # category layer silently steps aside and the name rules decide alone.
+    # That is how "Smör Havssalt Majskakor" (rice cakes, in "Bröd & bageri >
+    # Kex & tilltugg") got priced as butter: the aisle knew, we just did not
+    # speak its dialect. Taken from the real vocabulary of all three chains.
+    "bread": ["brod & kakor", "brod och kakor", "brod & bageri", "brod", "bageri",
+              "kex & tilltugg"],
     "frozen": ["fryst"],
     "readymeal": ["fardigmat"],
     "vegetarian": ["vegetariskt"],
@@ -85,11 +93,12 @@ DEPARTMENT_KEYWORDS = {
     # Matched on WORD BOUNDARIES, not as raw substrings - "djur" as a plain
     # substring also matches "skaldjur", which classified every shrimp and
     # shellfish aisle as pet food and took "Räkor" from 13 candidates to 0.
-    "pet": ["djur", "hund", "katt", "smadjur", "djurmat", "djurtillbehor"],
+    "pet": ["djur", "hund", "katt", "smadjur", "djurmat", "djurtillbehor", "husdjur"],
     "baby": ["barn", "blojor", "valling & ersattning", "barnmat", "barnsnacks",
              "barnvard"],
     "nonfood": ["hem & stad", "hem & hushall", "halsa & skonhet", "apotek",
-                "tobak", "kiosk", "blommor", "gor det sjalv", "media", "klader"],
+                "tobak", "kiosk", "blommor", "gor det sjalv", "media", "klader",
+                "koket", "hem & fritid", "skonhet & hygien", "hushall", "halsa"],
     "confectionery": ["godis", "snacks", "chips", "choklad", "tuggummi",
                       "popcorn", "glass"],
 }

@@ -1598,7 +1598,21 @@ async function syncLivePrices(shoppingItems) {
   // otherwise this is a plain chain-level fetch, same as always.
   const branch = selectedBranch();
   const storeKey = branch?.kedja === chain ? branch.primatKey : "";
-  const names = shoppingItems.map(item => item.namn).sort();
+  // ONLY the lines Matjakt's own price database could not answer. Everything
+  // it CAN answer is already on screen, from our own collected data, with no
+  // request to a chain at all.
+  //
+  // This is the line between the two halves of the system: collecting from
+  // the chains is slow background work, and using Matjakt must never wait on
+  // it. Before this, opening Handla fired a live per-item lookup for the
+  // whole week even when every single item was already priced from our
+  // database - a minute of requests to a chain, to arrive at prices we
+  // already had.
+  const priced = state.dbChainTotals[chain];
+  const answered = new Set((priced?.items || [])
+    .filter(item => item.priceStatus !== "missing")
+    .map(item => item.ingredient));
+  const names = shoppingItems.map(item => item.namn).filter(name => !answered.has(name)).sort();
   const key = `${chain}|${storeKey}|${state.postnummer}|${names.join(",")}`;
   if (!names.length || !VALID_CHAINS.includes(chain) || livePriceSync.loading || livePriceSync.key === key) return;
   livePriceSync = { key, loading: true };

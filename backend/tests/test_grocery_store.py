@@ -258,3 +258,55 @@ class GroceryStoreTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DataVersionTest(unittest.TestCase):
+    """The data version is the invalidation key for every cache over this
+    database, so what makes it move matters as much as what it contains."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmpdir.cleanup)
+        self.store = GroceryStore(Path(self._tmpdir.name) / "grocery.db")
+        self.addCleanup(self.store.close)
+        self.db_store = self.store.upsert_store(
+            chain="Willys", external_store_id="2132", name="Willys test",
+            city=None, postal_code=None, address=None,
+            latitude=None, longitude=None, active=True)
+
+    def _add(self, external_id, price):
+        product = self.store.find_or_create_product(RawProduct(
+            chain="Willys", external_product_id=external_id, name=f"Vara {external_id}",
+            store_id="2132", store_name="Willys test", quantity=500.0, unit="g"))
+        self.store.upsert_current_price(
+            product_id=product.id, store_id=self.db_store.id, regular_price=price,
+            campaign_price=None, member_price=None, multibuy_price=None,
+            unit_price=None, currency="SEK", source_url=None, fetched_at=None)
+        return product
+
+    def test_is_stable_when_nothing_changes(self):
+        self._add("a", 10.0)
+        self.assertEqual(self.store.data_version(), self.store.data_version())
+
+    def test_a_price_change_alone_does_not_move_it_mid_import(self):
+        """The whole point: a running import writes for tens of minutes, and
+        if every batch moved the version, every cache would be thrown away
+        continuously - making the import window the slowest the app ever is."""
+        self._add("a", 10.0)
+        run = self.store.start_collector_run(chain="Willys")
+        before = self.store.data_version()
+        self._add("a", 12.0)          # same product, new price
+        self.assertEqual(self.store.data_version(), before)
+
+    def test_it_moves_when_the_run_finishes(self):
+        self._add("a", 10.0)
+        run = self.store.start_collector_run(chain="Willys")
+        during = self.store.data_version()
+        self.store.finish_collector_run(run.id, status="success")
+        self.assertNotEqual(self.store.data_version(), during)
+
+    def test_a_new_product_moves_it(self):
+        self._add("a", 10.0)
+        before = self.store.data_version()
+        self._add("b", 20.0)
+        self.assertNotEqual(self.store.data_version(), before)
