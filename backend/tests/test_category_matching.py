@@ -21,7 +21,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from services.grocery.pricing import (  # noqa: E402
-    category_allows_ingredient, departments_for_category, product_matches_ingredient,
+    aliases_for, category_allows_ingredient, departments_for_category,
+    product_matches_ingredient,
 )
 from services.grocery.providers.axfood import flatten_category_tree  # noqa: E402
 from services.grocery.providers.willys import WillysProvider  # noqa: E402
@@ -280,3 +281,72 @@ class SubstringBoundaryTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WholeCutTest(unittest.TestCase):
+    """A whole piece of meat is not a patty, a sausage or a cold cut.
+
+    Found by pricing the real recipe bank against real Willys data: 7 of 22
+    matches for "Biff" were wrong, in exactly two classes - formed mince
+    ("Pannbiff" ends with "biff", so compound-head matching accepts it) and
+    sliced cold cuts ("Rostbiff Deliskivor" is something you put on bread).
+    Both produce a confidently wrong price for a different product.
+    """
+
+    def test_a_steak_is_not_a_mince_patty(self):
+        self.assertFalse(product_matches_ingredient(
+            "Pannbiff Fryst/1 Port", "Biff", None,
+            category="Kött, chark & fågel > Kött > Färdiglagat & pannfärdigt"))
+
+    def test_a_steak_is_not_sliced_cold_cuts(self):
+        self.assertFalse(product_matches_ingredient(
+            "Rostbiff Deliskivor", "Biff", None,
+            category="Kött, chark & fågel > Pålägg > Skivat pålägg"))
+
+    def test_a_fillet_is_not_a_breaded_schnitzel(self):
+        self.assertFalse(product_matches_ingredient(
+            "Fläskschnitzel Panerad", "Fläskfilé", None,
+            category="Kött, chark & fågel > Kött > Fläsk"))
+
+    def test_real_steaks_still_match(self):
+        """Precision must not come from rejecting everything."""
+        for name in ["Ryggbiff Bit Sverige", "Lövbiff Skivad Sverige",
+                     "Biff med Kappa Brasilien", "Pepparbiff av Nöt Sverige"]:
+            self.assertTrue(product_matches_ingredient(
+                name, "Biff", None, category="Kött, chark & fågel > Kött > Nöt & kalv"), name)
+
+    def test_minced_meat_may_still_match_minced_products(self):
+        """The rule is about WHOLE cuts. A recipe asking for köttfärs
+        obviously may be priced against minced meat."""
+        self.assertTrue(product_matches_ingredient(
+            "Blandfärs 20% Sverige", "Blandfärs", None,
+            category="Kött, chark & fågel > Kött > Köttfärs"))
+
+    def test_ham_may_still_be_a_cold_cut(self):
+        """Skinka genuinely IS a cold cut - the cold-cuts rejection applies
+        only to whole raw cuts."""
+        self.assertTrue(product_matches_ingredient(
+            "Skinka Kokt Skivad", "Skinka", None,
+            category="Kött, chark & fågel > Pålägg > Skivat pålägg"))
+
+
+class IngredientAliasTest(unittest.TestCase):
+    """What a recipe calls something and what the shelf calls it are often
+    two different Swedish words. A recipe says "Köttfärs"; the shelf says
+    "Blandfärs". No amount of string matching bridges that - it is
+    vocabulary, so it lives in data.
+    """
+
+    def test_aliases_exist_for_the_measured_misses(self):
+        for ingredient in ["Köttfärs", "Soja", "Fryst torsk", "Kycklinglårfilé",
+                           "Wokgrönsaker"]:
+            self.assertTrue(aliases_for(ingredient), ingredient)
+
+    def test_an_alias_still_goes_through_every_rule(self):
+        """An alias may only find products the matcher would have accepted
+        anyway - it widens coverage without loosening precision."""
+        self.assertFalse(product_matches_ingredient(
+            "Blandfärs Hundfoder", "Blandfärs", None, category="Djur > Hund > Torrfoder"))
+
+    def test_unknown_ingredients_have_no_aliases(self):
+        self.assertEqual(aliases_for("Struts"), [])

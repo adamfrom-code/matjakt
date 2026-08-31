@@ -84,6 +84,10 @@ DEPARTMENT_KEYWORDS = {
     "readymeal": ["fardigmat"],
     "vegetarian": ["vegetariskt"],
     "deli": ["delikatessen"],
+    # Cold cuts. Their department is "meat", but sliced ham and roast beef
+    # are things you put on bread, not things you fry. "Rostbiff Deliskivor"
+    # was being priced as a steak.
+    "coldcuts": ["palagg", "skivat palagg", "delikatesschark", "charkuterier"],
     "drinks": ["dryck"],
     # Departments a raw recipe ingredient NEVER comes from. This is the
     # single broadest precision win: it rejects the whole class of failures
@@ -253,6 +257,85 @@ INGREDIENT_CATEGORY_KEYWORDS = {
 }
 
 
+# Words meaning "this meat has been minced, formed, breaded or cured". A
+# recipe asking for a steak must not be priced against a patty: "Pannbiff"
+# ends with "biff", so Swedish compound-head matching accepts it, and the
+# result is a confidently wrong price for a different product entirely.
+#
+# Found by pricing the real recipe bank against real Willys data - 7 of 22
+# matches for "Biff" were wrong, in exactly these two classes.
+PROCESSED_MEAT_FORMS = [
+    "pannbiff", "farsbiff", "burgare", "bulle", "nugget", "panerad",
+    "schnitzel", "sylta", "pastej", "kebab", "fars", "formad", "krossad",
+]
+
+# Ingredients that mean a WHOLE piece of meat or fish. These are the ones a
+# processed form can impersonate; a recipe asking for "köttfärs" obviously
+# may match minced meat, so it is deliberately not in here.
+WHOLE_CUT_INGREDIENTS = {
+    "biff", "ryggbiff", "lovbiff", "entrecote", "oxfile", "hogrev",
+    "fransyska", "rostbiff", "flaskfile", "flaskkarre", "kotlett", "karre",
+    "kycklingfile", "kycklinglarfile", "kycklingbrost", "laxfile", "lax",
+    "torskfile", "torsk", "fiskfile", "skinkstek", "lammstek", "kalvfile",
+}
+
+# Departments a RAW cut must not come from, on top of the universal ones.
+# Cold cuts and ready meals both contain the word, neither is the raw
+# ingredient a recipe asks you to cook.
+WHOLE_CUT_FORBIDDEN_DEPARTMENTS = {"coldcuts", "readymeal"}
+
+
+# What a recipe calls something and what the shelf calls it are often two
+# different Swedish words for the same thing. A recipe says "Köttfärs"; the
+# shelf says "Blandfärs" and "Nötfärs". Neither is wrong, and no amount of
+# clever string matching bridges them - it is vocabulary, so it belongs in
+# data.
+#
+# Every alias is matched with the FULL rule set (head position, department,
+# processed-form and exclusion rules), so this can only find products the
+# matcher would already have accepted under a different name. It widens
+# coverage without loosening precision.
+#
+# Derived from the real misses: six ingredients accounted for all 29 unmatched
+# items across the whole recipe bank.
+INGREDIENT_ALIASES = {
+    "köttfärs": ["blandfärs", "nötfärs"],
+    "blandfärs": ["köttfärs", "nötfärs"],
+    "soja": ["sojasås"],
+    "fryst torsk": ["torskfilé", "torsk"],
+    "torsk": ["torskfilé"],
+    "lax": ["laxfilé"],
+    "kycklinglårfilé": ["kyckling lårfilé", "lårfilé", "kycklinglår"],
+    "kycklingfilé": ["kyckling bröstfilé"],
+    "wokgrönsaker": ["wokmix", "wokblandning", "grönsaksblandning"],
+    "räkor": ["handskalade räkor"],
+    "crème fraiche": ["creme fraiche"],
+    "riven ost": ["gratängost", "riven hushållsost"],
+    "vispgrädde": ["grädde"],
+    "matlagningsgrädde": ["matgrädde", "grädde"],
+    "tomatpuré": ["tomatpure"],
+    "krossade tomater": ["tomater krossade", "krossad tomat"],
+    "kikärtor": ["kikärter"],
+    "röda linser": ["linser"],
+    "svarta bönor": ["bönor svarta"],
+}
+
+_FOLDED_ALIASES = None  # built after _fold, below
+
+
+def aliases_for(ingredient: str) -> list:
+    """Alternative shelf names for an ingredient, primary name first."""
+    return _FOLDED_ALIASES.get(_fold(ingredient), [])
+
+
+def is_whole_cut(ingredient: str) -> bool:
+    folded = _fold(ingredient)
+    if folded in WHOLE_CUT_INGREDIENTS:
+        return True
+    # "Biff" inside "Biff Strimlad" and similar multi-word shopping lines.
+    return any(word in WHOLE_CUT_INGREDIENTS for word in _words(ingredient))
+
+
 def departments_for_category(category):
     """Which department(s) a category path belongs to.
 
@@ -304,6 +387,10 @@ def category_allows_ingredient(category, ingredient) -> bool:
     if not departments:
         return True
     if departments & NEVER_INGREDIENT_DEPARTMENTS:
+        return False
+    # Sliced ham belongs on bread; a recipe frying a steak must not be
+    # priced against the cold-cuts aisle.
+    if is_whole_cut(ingredient) and (departments & WHOLE_CUT_FORBIDDEN_DEPARTMENTS):
         return False
 
     required_aisle = _FOLDED_CATEGORY_KEYWORDS.get(_fold(ingredient))
@@ -390,6 +477,7 @@ _FOLDED_RULES = {_fold(key): value for key, value in INGREDIENT_RULES.items()}
 # Same folding reason as _FOLDED_RULES: nearly every key here contains
 # a/a/o, so an unfolded lookup would find almost none of them.
 _FOLDED_INGREDIENT_DEPARTMENTS = {_fold(key): value for key, value in INGREDIENT_DEPARTMENTS.items()}
+_FOLDED_ALIASES = {_fold(key): value for key, value in INGREDIENT_ALIASES.items()}
 _FOLDED_CATEGORY_KEYWORDS = {_fold(key): value for key, value in INGREDIENT_CATEGORY_KEYWORDS.items()}
 
 
@@ -547,6 +635,12 @@ def product_matches_ingredient(product_name: str, ingredient: str, brand: str | 
     # accents stripped ("agg", "smor", "kottfars"), so a raw .get() silently
     # missed every rule containing å/ä/ö - which is why chokladägg and
     # smörkniv were still being matched despite having exclusions.
+    # A whole cut of meat or fish is not a patty, a sausage or a slice of
+    # cold cut, however similar the names look.
+    if is_whole_cut(ingredient) and any(
+            _exclusion_hit(folded_product, product_words, bad) for bad in PROCESSED_MEAT_FORMS):
+        return False
+
     rules = _FOLDED_RULES.get(folded_ingredient, {})
     if any(_exclusion_hit(folded_product, product_words, bad) for bad in rules.get("exclude", [])):
         return False
@@ -703,8 +797,28 @@ class RecipePricingEngine:
                 continue
             seen.add(product.id)
             candidates.append(product)
-        return [p for p in candidates
-                if product_matches_ingredient(p.name, ingredient, p.brand, p.category)]
+        matched = [p for p in candidates
+                   if product_matches_ingredient(p.name, ingredient, p.brand, p.category)]
+        if matched:
+            return matched
+        # Nothing under the recipe's own word - try what the shelf calls it.
+        # Each alias goes through the same rules, so this can only find
+        # products the matcher would have accepted anyway.
+        for alias in aliases_for(ingredient):
+            alias_words = sorted((w for w in _words(alias) if len(w) > 2), key=len, reverse=True)
+            if not alias_words:
+                continue
+            seen_alias = set()
+            found = []
+            for product in index.get(alias_words[0], ()):
+                if product.id in seen_alias:
+                    continue
+                seen_alias.add(product.id)
+                if product_matches_ingredient(product.name, alias, product.brand, product.category):
+                    found.append(product)
+            if found:
+                return found
+        return []
 
     def price_item(self, ingredient: str, amount: float, unit: str, chain: str, store_id: int) -> dict:
         """Picks the cheapest real checkout option for one ingredient at one

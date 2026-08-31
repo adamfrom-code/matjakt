@@ -19,9 +19,10 @@ Two things are measured:
              non-food). This needs no judgement call: any match there is
              objectively wrong, so it is the precision metric to trust.
 
-Ingredients come from the app's own recipes (frontend/app/app.js), not from a
-list invented for this script - measuring against a vocabulary chosen to
-flatter the matcher would prove nothing.
+Ingredients come from Matjakt's own recipe bank, not from a list invented for
+this script - measuring against a vocabulary chosen to flatter the matcher
+would prove nothing. Note this measures NAME matching only; the end-to-end
+number including ingredient aliases is what verify_recipe_pricing.py reports.
 """
 
 import argparse
@@ -39,23 +40,29 @@ from services.grocery.pricing import (  # noqa: E402
 )
 
 DB_PATH = ROOT / "backend" / "data" / "grocery.db"
-APP_JS = ROOT / "frontend" / "app" / "app.js"
 
 
 def recipe_ingredients() -> list[str]:
-    """Every distinct ingredient the shipped recipes actually ask for."""
-    source = APP_JS.read_text(encoding="utf-8")
-    seen = []
-    for block in re.findall(r"ingredienser: \[([^\]]*)\]", source):
-        for item in block.split(","):
-            value = item.strip().strip('"').strip()
-            # "Lök & vitlök" is one shopping-list line covering two things;
-            # split it so each is measured on its own.
-            for part in re.split(r"\s*&\s*", value):
-                part = part.strip()
-                if part and part not in seen:
-                    seen.append(part)
-    return seen
+    """Every distinct ingredient the recipe bank actually asks for.
+
+    Reads the RECIPE DATABASE, not app.js. The recipes moved out of the UI
+    file, and this script kept reading the empty array left behind - which
+    made it divide by zero rather than measure anything.
+    """
+    from services.recipes import RecipeStore
+    store = RecipeStore(ROOT / "backend" / "data" / "recipes.db")
+    try:
+        seen = []
+        for recipe in store.search(limit=5000):
+            for ingredient in recipe["ingredients"]:
+                if ingredient["pantryStaple"]:
+                    continue
+                name = ingredient["name"]
+                if name not in seen:
+                    seen.append(name)
+        return seen
+    finally:
+        store.close()
 
 
 def load_products(store: GroceryStore, chain: str) -> list:
@@ -89,7 +96,7 @@ def main():
     print(f"Produkter i databasen: {len(products)}")
     print(f"  varav med kategori:  {len(with_category)} "
           f"({100 * len(with_category) // max(1, len(products))}%)")
-    print(f"Ingredienser (ur appens egna recept): {len(ingredients)}")
+    print(f"Ingredienser (ur receptbanken): {len(ingredients)}")
     print()
 
     report = []
