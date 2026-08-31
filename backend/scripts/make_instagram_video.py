@@ -151,6 +151,21 @@ def run(args: list[str]) -> bool:
     return result.returncode == 0
 
 
+# Picked BY EYE from a portrait contact sheet of ~60 candidates - the same
+# lesson as the landing page: slug text does not tell you what a clip looks
+# like. Bright Nordic kitchens, a written meal plan, fresh produce, a clean
+# checkout. Search remains the fallback if an id disappears.
+PORTRAIT_PICKS = {
+    "hero": [9001860, 9001864],        # ljust vitt kök, kvinna lagar mat
+    "valj": [9015743, 12009197],       # servering vid bordet
+    "vecka": [8844930],                # veckoplan skrivs i anteckningsbok
+    "lista": [38455504, 3832195],      # hand skriver inköpslista
+    "produkter": [8801824, 9474086],   # färskvaror, paprika i handen
+    "butiker": [8803792],              # korg med grönsaker genom butiken
+    "billigast": [37101039, 13736697], # kassalinjen
+}
+
+
 def fetch_portrait_clips() -> dict:
     """Portrait footage for each scene, cached so a rebuild is not a re-download."""
     manifest_path = WORK_DIR / "portrait.json"
@@ -159,8 +174,18 @@ def fetch_portrait_clips() -> dict:
 
     clips, used, used_slugs = {}, set(), []
     for scene in video.SCENES:
-        found = video.find_clip(scene, used, orientation="portrait",
-                                used_slugs=used_slugs)
+        found = None
+        for pick in PORTRAIT_PICKS.get(scene["key"], []):
+            if pick in used:
+                continue
+            raw = video.fetch_by_id(pick)
+            if raw:
+                found = video._describe(raw, scene, "portrait", score=9.9)
+                if found:
+                    break
+        if not found:
+            found = video.find_clip(scene, used, orientation="portrait",
+                                    used_slugs=used_slugs)
         if not found:
             # Landscape is a real fallback here: cropped it loses framing, but
             # a missing scene loses the story.
