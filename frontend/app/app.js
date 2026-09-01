@@ -3301,7 +3301,9 @@ async function renderOwnCampaigns() {
     }));
   } catch {
     ownCampaignFetchKey = null;
-    $("campaignList").innerHTML = `<p class="live-loading">Kunde inte hämta kampanjer just nu.</p>`;
+    $("campaignList").innerHTML = `<p class="live-loading">Kunde inte hämta erbjudanden just nu - försöker igen strax.</p>`;
+    // Utan egen omstart låg felet kvar tills någon annan render råkade ske.
+    setTimeout(() => renderOwnCampaigns(), 10000);
   }
 }
 

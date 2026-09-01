@@ -94,6 +94,11 @@ def open_store() -> GroceryStore:
     return GroceryStore(DB_PATH)
 
 
+# Kampanjer är veckovaror: data äldre än så här visas inte som "aktiv
+# kampanj" - hellre en tom rad än ett erbjudande som gick ut i förrgår.
+MAX_CAMPAIGN_AGE_SECONDS = 3 * 24 * 3600
+
+
 def campaign_deals(per_chain: int = 10) -> dict:
     """The best current campaign discounts, per chain, from our own data.
 
