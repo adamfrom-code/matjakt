@@ -128,6 +128,7 @@ def campaign_deals(per_chain: int = 10) -> dict:
                       AND cp.regular_price IS NOT NULL
                       AND cp.campaign_price < cp.regular_price
                       AND cp.regular_price > 0
+                      AND cp.fetched_at >= ?
                     ORDER BY 1.0 - (cp.campaign_price / cp.regular_price) DESC
                     LIMIT ?
                     """,
