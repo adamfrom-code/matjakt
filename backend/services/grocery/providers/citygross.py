@@ -147,6 +147,20 @@ PAGE_SIZE = 20
 NAVIGATION_URL = f"{BASE}/api/v1/navigation"
 CATEGORY_PAGE_SIZE = 100
 
+# Statisk reserv när navigationsendpointen inte svarar (produktionens
+# nattkörning 2026-09-02 föll tyst tillbaka till termsökningen och fick
+# 4 030 produkter i stället för ~8 700 - PRODUKTendpointen fungerar
+# bevisligen från servern, så avdelnings-id:na tar oss hela vägen även när
+# trädet inte går att läsa). Id:na är sajtens egna sidnummer och har varit
+# stabila; ändrar City Gross dem faller vi tillbaka till termer igen och
+# loggar det - vi gissar aldrig.
+FALLBACK_FOOD_DEPARTMENTS = [
+    (1493, "Kött & fågel"), (1448, "Frukt & grönt"), (1503, "Mejeri, ost & ägg"),
+    (1507, "Skafferiet"), (1511, "Fryst"), (1502, "Bröd & bageri"),
+    (1504, "Chark & pålägg"), (1505, "Fisk & skaldjur"), (1506, "Kyld färdigmat"),
+    (3473, "Vegetariskt"), (1510, "Dryck"),
+]
+
 # The departments that belong in a grocery-price service. A deliberate
 # allow-list by NAME: new seasonal pages appear all the time ("Fotbollsfest!",
 # "Kanelbullens dag") and re-shelve existing products, while LEGO, Tobak,
@@ -362,8 +376,9 @@ class CityGrossProvider(GroceryProvider):
         try:
             tree = ((self._request(NAVIGATION_URL) or {}).get("data") or {}).get("tree") or {}
         except CityGrossRequestError:
-            logger.warning("City Gross navigation unavailable - falling back to term search")
-            return []
+            logger.warning("City Gross-navigationen svarar inte härifrån - "
+                           "använder den statiska avdelningslistan")
+            return list(FALLBACK_FOOD_DEPARTMENTS)
         found: list[tuple[int, str]] = []
 
         def walk(node):
@@ -379,6 +394,10 @@ class CityGrossProvider(GroceryProvider):
                 walk(child)
 
         walk(tree)
+        if not found:
+            logger.warning("City Gross-navigationen gav inga matavdelningar - "
+                           "använder den statiska avdelningslistan")
+            return list(FALLBACK_FOOD_DEPARTMENTS)
         return found
 
     def _category_products(self, store_id: str, seen: set[str],

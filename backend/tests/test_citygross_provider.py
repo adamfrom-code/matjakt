@@ -303,7 +303,7 @@ class StoreListTest(Base):
 
 class ProductListingTest(Base):
     def test_normalizes_search_results(self):
-        cg_module.urllib.request.urlopen = route({"api/v1/navigation": EMPTY_NAVIGATION, "Loop54/search": search_response(REAL_PRODUCT)})
+        cg_module.urllib.request.urlopen = route({"api/v1/navigation": EMPTY_NAVIGATION, "Loop54/category/": category_response(), "Loop54/search": search_response(REAL_PRODUCT)})
         products = self.provider.get_products("3209")
         self.assertEqual(len(products), 1)
         self.assertEqual(products[0].gtin, "07340083443893")
@@ -315,6 +315,8 @@ class ProductListingTest(Base):
         def _open(request, timeout=None):
             if "api/v1/navigation" in request.full_url:
                 return FakeResponse(json.dumps(EMPTY_NAVIGATION).encode("utf-8"))
+            if "Loop54/category/" in request.full_url:
+                return FakeResponse(json.dumps(category_response()).encode("utf-8"))
             calls["n"] += 1
             page = search_response(REAL_PRODUCT, total=40) if "skip=0" in request.full_url else search_response(second, total=40)
             return FakeResponse(json.dumps(page).encode("utf-8"))
@@ -326,25 +328,25 @@ class ProductListingTest(Base):
 
     def test_duplicate_ids_returned_once(self):
         provider = CityGrossProvider(search_terms=["mjölk", "mjolk"])
-        cg_module.urllib.request.urlopen = route({"api/v1/navigation": EMPTY_NAVIGATION, "Loop54/search": search_response(REAL_PRODUCT)})
+        cg_module.urllib.request.urlopen = route({"api/v1/navigation": EMPTY_NAVIGATION, "Loop54/category/": category_response(), "Loop54/search": search_response(REAL_PRODUCT)})
         self.assertEqual(len(provider.get_products("3209")), 1)
 
     def test_products_without_id_are_skipped(self):
-        cg_module.urllib.request.urlopen = route({"api/v1/navigation": EMPTY_NAVIGATION, "Loop54/search": search_response({"name": "Utan id"})})
+        cg_module.urllib.request.urlopen = route({"api/v1/navigation": EMPTY_NAVIGATION, "Loop54/category/": category_response(), "Loop54/search": search_response({"name": "Utan id"})})
         self.assertEqual(self.provider.get_products("3209"), [])
 
     def test_empty_results_are_not_an_error(self):
-        cg_module.urllib.request.urlopen = route({"api/v1/navigation": EMPTY_NAVIGATION, "Loop54/search": search_response()})
+        cg_module.urllib.request.urlopen = route({"api/v1/navigation": EMPTY_NAVIGATION, "Loop54/category/": category_response(), "Loop54/search": search_response()})
         self.assertEqual(self.provider.get_products("3209"), [])
 
     def test_get_product_details_finds_matching_id(self):
-        cg_module.urllib.request.urlopen = route({"api/v1/navigation": EMPTY_NAVIGATION, "Loop54/search": search_response(REAL_PRODUCT)})
+        cg_module.urllib.request.urlopen = route({"api/v1/navigation": EMPTY_NAVIGATION, "Loop54/category/": category_response(), "Loop54/search": search_response(REAL_PRODUCT)})
         raw = self.provider.get_product_details("101233933_ST", "3209")
         self.assertIsNotNone(raw)
         self.assertEqual(raw.name, "Mellanmjölk Längre Hållbarhet")
 
     def test_get_product_details_returns_none_when_absent(self):
-        cg_module.urllib.request.urlopen = route({"api/v1/navigation": EMPTY_NAVIGATION, "Loop54/search": search_response(REAL_PRODUCT)})
+        cg_module.urllib.request.urlopen = route({"api/v1/navigation": EMPTY_NAVIGATION, "Loop54/category/": category_response(), "Loop54/search": search_response(REAL_PRODUCT)})
         self.assertIsNone(self.provider.get_product_details("nope", "3209"))
 
 
@@ -401,6 +403,8 @@ class ErrorHandlingTest(Base):
         def _open(request, timeout=None):
             if "api/v1/navigation" in request.full_url:
                 return FakeResponse(json.dumps(EMPTY_NAVIGATION).encode("utf-8"))
+            if "Loop54/category/" in request.full_url:
+                return FakeResponse(json.dumps(category_response()).encode("utf-8"))
             calls["n"] += 1
             if calls["n"] == 1:
                 return FakeResponse(json.dumps(search_response(REAL_PRODUCT)).encode("utf-8"))
@@ -473,3 +477,27 @@ class CategoryBrowseTest(Base):
         with self.assertRaises(CityGrossBlockedError) as ctx:
             provider.get_products("3209")
         self.assertEqual(len(ctx.exception.partial_products), 1)
+
+
+class NavigationFallsBackToStaticDepartments(unittest.TestCase):
+    """Produktionens nattkörning föll tyst till termsökning när navigations-
+    endpointen inte svarade - reserven är den statiska avdelningslistan,
+    eftersom PRODUKTendpointen bevisligen fungerar därifrån."""
+
+    def test_unreachable_navigation_uses_static_departments(self):
+        urls = []
+
+        def _open(request, timeout=None):
+            urls.append(request.full_url)
+            if "api/v1/navigation" in request.full_url:
+                raise http_error(500)
+            if "Loop54/category/" in request.full_url:
+                return FakeResponse(json.dumps(category_response(REAL_PRODUCT)).encode("utf-8"))
+            return FakeResponse(json.dumps(search_response()).encode("utf-8"))
+
+        cg_module.urllib.request.urlopen = _open
+        provider = CityGrossProvider(search_terms=["mjölk"])
+        products = provider.get_products("3209")
+        self.assertTrue(any("Loop54/category/1503" in url for url in urls),
+                        "avdelnings-id:na ska användas när trädet inte går att läsa")
+        self.assertTrue(products)
