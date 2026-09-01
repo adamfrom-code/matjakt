@@ -149,7 +149,7 @@ function removeFromWeekPlan(id) { state.weekPlan = state.weekPlan.filter(existin
 // swapping "this day" rather than clearing and re-picking the week.
 function swapWeekPlanDay(dayIndex, newId) { state.weekPlan = state.weekPlan.map((id, index) => index === dayIndex ? newId : id); state.valda = new Set(state.weekPlan); }
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: Math.min(12, Math.max(1, Number(savedState.personer) || 2)), middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), removedItems: new Set(savedState.removedItems || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, dbLockedChains: [], extraItems: savedState.extraItems || [], extraMatches: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null, weekHistory: savedState.weekHistory || [],
+const state = { budget: savedState.budget || 800, personer: Math.min(12, Math.max(1, Number(savedState.personer) || 2)), middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), removedItems: new Set(savedState.removedItems || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, dbLockedChains: [], extraItems: savedState.extraItems || [], extraMatches: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null, weekHistory: savedState.weekHistory || [], foljdaVaror: savedState.foljdaVaror || [],
   // The week's recipe ids in day order (index 0 = Måndag) - the actual
   // source of truth for "which day has which recipe", now that a day swap
   // has to replace exactly one day's recipe in place. state.valda (a Set)
@@ -159,7 +159,7 @@ const state = { budget: savedState.budget || 800, personer: Math.min(12, Math.ma
   // never valda's own iteration order (a Set has none tied to day position).
   weekPlan: Array.isArray(savedState.weekPlan) ? savedState.weekPlan : [...(savedState.valda || [])] };
 function buildSyncPayload() {
-  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], removedItems: [...state.removedItems], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan, weekHistory: state.weekHistory, extraItems: state.extraItems,
+  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], removedItems: [...state.removedItems], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan, weekHistory: state.weekHistory, foljdaVaror: state.foljdaVaror, extraItems: state.extraItems,
     // The last real pricing snapshot. Painted immediately on next visit with
     // its own timestamp while a fresh fetch runs - the difference between
     // "pris hämtas…" for seconds on every open and prices that are simply
@@ -182,6 +182,7 @@ function applySyncBlob(blob) {
   if (blob.apiRecipes !== undefined) state.apiRecipes = blob.apiRecipes;
   if (blob.extraItems !== undefined) state.extraItems = blob.extraItems;
   if (blob.weekHistory !== undefined) state.weekHistory = blob.weekHistory;
+  if (blob.foljdaVaror !== undefined) state.foljdaVaror = blob.foljdaVaror;
   if (blob.dbChainTotals) { state.dbChainTotals = blob.dbChainTotals; state.dbComparison = blob.dbComparison || null; state.dbPricedAt = blob.dbPricedAt || null; }
   if (blob.naringsmal !== undefined) state.naringsmal = blob.naringsmal;
   if (blob.betyg !== undefined) state.betyg = blob.betyg;
@@ -2064,7 +2065,21 @@ function amountLabel(amount, unit) {
 }
 function pantryStep(name) { return (PACKAGE_INFO[name]?.unit || "st") === "st" ? 1 : 50; }
 const PANTRY_TAB_LABELS = { skafferi: "Skafferi", kyl: "Kyl", frys: "Frys" };
+function renderFollowedProducts() {
+  const section = $("followedSection");
+  if (!section) return;
+  section.hidden = !state.foljdaVaror.length;
+  if (!state.foljdaVaror.length) return;
+  $("followedList").innerHTML = state.foljdaVaror.map(item =>
+    `<div class="ing-row"><strong>♥</strong><span>${escapeHtml(item.name)}${item.chain ? ` <em>(${escapeHtml(item.chain)})</em>` : ""}</span><button type="button" class="shopping-remove" data-unfollow="${escapeHtml(item.name)}" aria-label="Sluta följa">×</button></div>`).join("");
+  $("followedList").querySelectorAll("[data-unfollow]").forEach(button => button.addEventListener("click", () => {
+    state.foljdaVaror = state.foljdaVaror.filter(f => f.name !== button.dataset.unfollow);
+    saveState(); renderFollowedProducts();
+  }));
+}
+
 function renderPantry() {
+  renderFollowedProducts();
   const allItems = Object.entries(state.pantry).filter(([, entry]) => entry.amount > 0);
   $("pantryCount").textContent = allItems.length;
   document.querySelectorAll("#pantryTabs button").forEach(button => button.classList.toggle("active", button.dataset.pantryTab === state.pantryTab));
@@ -3352,9 +3367,22 @@ async function renderOwnCampaigns() {
       const addButton = added
         ? `<button type="button" class="campaign-deal-add added" disabled>✓ Tillagd</button>`
         : `<button type="button" class="campaign-deal-add" data-deal-add="${escapeHtml(String(deal.productId))}">+ Lägg i inköpslistan</button>`;
-      return `<div class="campaign-deal"><span class="campaign-deal-image">${photo}<span class="campaign-deal-badge">−${deal.discountPercent}%</span></span><span class="campaign-deal-info"><strong>${escapeHtml(deal.name)}</strong>${deal.brand || deal.size ? `<small class="campaign-deal-brand">${escapeHtml([deal.brand, deal.size].filter(Boolean).join(" · "))}</small>` : ""}<span class="campaign-deal-price-row"><strong class="campaign-deal-price">${money(deal.campaignPrice)}</strong><s>${money(deal.regularPrice)}</s></span><span class="campaign-deal-store" style="color:${storeColor}">${escapeHtml(deal.chain)}</span>${addButton}</span></div>`;
+      return `<div class="campaign-deal"><span class="campaign-deal-image">${photo}<span class="campaign-deal-badge">−${deal.discountPercent}%</span></span><span class="campaign-deal-info"><strong>${escapeHtml(deal.name)}</strong>${deal.brand || deal.size ? `<small class="campaign-deal-brand">${escapeHtml([deal.brand, deal.size].filter(Boolean).join(" · "))}</small>` : ""}<span class="campaign-deal-price-row"><strong class="campaign-deal-price">${money(deal.campaignPrice)}</strong><s>${money(deal.regularPrice)}</s></span>${deal.lowestSeen != null ? (deal.campaignPrice <= deal.lowestSeen ? `<small class="campaign-history good">Lägsta pris vi sett</small>` : `<small class="campaign-history">Har nyligen kostat ${money(deal.lowestSeen)}</small>`) : ""}<span class="campaign-deal-store" style="color:${storeColor}">${escapeHtml(deal.chain)}</span>${addButton}<button type="button" class="campaign-follow ${state.foljdaVaror.some(f => f.name === deal.name) ? "following" : ""}" data-deal-follow="${escapeHtml(deal.name)}" aria-label="Följ ${escapeHtml(deal.name)}">${state.foljdaVaror.some(f => f.name === deal.name) ? "♥ Följer" : "♡ Följ varan"}</button></span></div>`;
     }).join("");
     ownCampaignDeals = all;
+    document.querySelectorAll("[data-deal-follow]").forEach(button => button.addEventListener("click", () => {
+      const name = button.dataset.dealFollow;
+      const deal = ownCampaignDeals.find(d => d.name === name);
+      const already = state.foljdaVaror.some(f => f.name === name);
+      // Grunden för prisbevakningar: en följd vara är namn+gtin, inget mer.
+      // Notisen som säger till när priset dyker kommer med App Store-appen.
+      state.foljdaVaror = already
+        ? state.foljdaVaror.filter(f => f.name !== name)
+        : [...state.foljdaVaror, { name, gtin: deal?.gtin || null, chain: deal?.chain || null }];
+      saveState();
+      button.classList.toggle("following", !already);
+      button.textContent = already ? "♡ Följ varan" : "♥ Följer";
+    }));
     document.querySelectorAll("[data-deal-add]").forEach(button => button.addEventListener("click", () => {
       const deal = ownCampaignDeals.find(d => String(d.productId) === button.dataset.dealAdd);
       if (!deal) return;

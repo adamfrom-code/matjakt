@@ -5,7 +5,7 @@
 // the same URL - which is exactly what happened after the recipe-bank and
 // week-type work shipped: the site was updated, phones still showed the old
 // three week types.
-const CACHE_NAME = "matjakt-shell-v15";
+const CACHE_NAME = "matjakt-shell-v16";
 
 self.addEventListener("install", () => self.skipWaiting());
 

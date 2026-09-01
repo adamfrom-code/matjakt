@@ -116,7 +116,7 @@ def campaign_deals(per_chain: int = 10) -> dict:
                     """
                     SELECT p.id AS product_id, p.gtin, p.name, p.brand,
                            p.size, p.image_url,
-                           cp.campaign_price, cp.regular_price
+                           cp.campaign_price, cp.regular_price, cp.store_id
                     FROM grocery_current_prices cp
                     JOIN grocery_products p ON p.id = cp.product_id
                     -- The PRICE row's own store decides the chain. Joining
@@ -141,6 +141,18 @@ def campaign_deals(per_chain: int = 10) -> dict:
                     if row["name"] in seen:
                         continue
                     seen.add(row["name"])
+                    # Prishistoriken avgör om fyndet FAKTISKT är bra: lägsta
+                    # pris vi själva noterat för produkten i denna butik
+                    # senaste 30 dagarna. Historiken växer per natt - fältet
+                    # betyder "lägsta vi sett", aldrig mer än vi vet.
+                    lowest_seen = store.connection.execute(
+                        """SELECT MIN(COALESCE(campaign_price, regular_price))
+                           FROM grocery_price_history
+                           WHERE product_id = ? AND store_id = ?
+                             AND timestamp >= ?
+                             AND COALESCE(campaign_price, regular_price) > 0""",
+                        (row["product_id"], row["store_id"],
+                         time.time() - 30 * 24 * 3600)).fetchone()[0]
                     discount = round(100 * (1 - row["campaign_price"] / row["regular_price"]))
                     # Below 10 % is shelf noise, not a campaign worth a card.
                     if discount < 10:
@@ -155,6 +167,7 @@ def campaign_deals(per_chain: int = 10) -> dict:
                         "campaignPrice": row["campaign_price"],
                         "regularPrice": row["regular_price"],
                         "discountPercent": discount,
+                        "lowestSeen": lowest_seen,
                     })
                     if len(chain_deals) >= per_chain:
                         break
