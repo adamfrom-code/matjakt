@@ -1,2064 +1,2063 @@
 [
- {
-  "id": "pannkakor-klassiska",
-  "name": "Pannkakor med sylt och grädde",
-  "description": "Tunna klassiska pannkakor - torsdagens givna följeslagare till soppan, eller en hel middag för barnfamiljen.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 25,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 480,
-   "protein": 16,
-   "carbs": 62,
-   "fat": 19,
-   "fiber": 2
+  {
+    "id": "pannkakor-klassiska",
+    "name": "Pannkakor med sylt och grädde",
+    "description": "Tunna klassiska pannkakor - torsdagens givna följeslagare till soppan, eller en hel middag för barnfamiljen.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 480,
+      "protein": 16,
+      "carbs": 62,
+      "fat": 19,
+      "fiber": 2
+    },
+    "ingredients": [
+      {
+        "name": "Vetemjöl",
+        "amount": 210,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 6,
+        "unit": "dl"
+      },
+      {
+        "name": "Ägg",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Jordgubbssylt",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Grädde",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Vispa mjöl, salt och hälften av mjölken till en slät smet.",
+      "Vispa i resten av mjölken och äggen. Låt gärna svälla tio minuter.",
+      "Stek tunna pannkakor i smör på medelhög värme, en dryg minut per sida.",
+      "Vispa grädden.",
+      "Servera pannkakorna med sylt och grädde."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Vegetariskt"
+    ],
+    "tags": [
+      "barn",
+      "billigt",
+      "husmanskost",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "vegetariskt"
+    ],
+    "image": "https://images.pexels.com/photos/3807390/pexels-photo-3807390.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/person-filling-crepe-with-custard-3807390/",
+    "imageCredit": "Elina Fairytale",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Pannkakor med sylt och grädde upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Vetemjöl",
-    "amount": 210,
-    "unit": "g"
-   },
-   {
-    "name": "Mjölk",
-    "amount": 6,
-    "unit": "dl"
-   },
-   {
-    "name": "Ägg",
-    "amount": 3,
-    "unit": "st"
-   },
-   {
-    "name": "Jordgubbssylt",
-    "amount": 200,
-    "unit": "g"
-   },
-   {
-    "name": "Grädde",
-    "amount": 2,
-    "unit": "dl"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Smör",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Vispa mjöl, salt och hälften av mjölken till en slät smet.",
-   "Vispa i resten av mjölken och äggen. Låt gärna svälla tio minuter.",
-   "Stek tunna pannkakor i smör på medelhög värme, en dryg minut per sida.",
-   "Vispa grädden.",
-   "Servera pannkakorna med sylt och grädde."
-  ],
-  "categories": [
-   "Husmanskost",
-   "Vegetariskt"
-  ],
-  "tags": [
-   "barn",
-   "billigt",
-   "husmanskost",
-   "Familjefavorit"
-  ],
-  "allergens": [
-   "gluten",
-   "mjölk",
-   "ägg"
-  ],
-  "dietFlags": [
-   "vegetariskt"
-  ],
-  "image": "https://images.pexels.com/photos/3807390/pexels-photo-3807390.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/person-filling-crepe-with-custard-3807390/",
-  "imageCredit": "Elina Fairytale",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Pannkakor med sylt och grädde upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "varmkorv-gourmet",
-  "name": "Korv med bröd - uppgraderad",
-  "description": "Wienerkorv i korvbröd med hemgjord snabbrostad lök, gurka och senap. Fredagskänsla för en femtiolapp.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 15,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 520,
-   "protein": 18,
-   "carbs": 52,
-   "fat": 27,
-   "fiber": 3
+  {
+    "id": "varmkorv-gourmet",
+    "name": "Korv med bröd - uppgraderad",
+    "description": "Wienerkorv i korvbröd med hemgjord snabbrostad lök, gurka och senap. Fredagskänsla för en femtiolapp.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 520,
+      "protein": 18,
+      "carbs": 52,
+      "fat": 27,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Wienerkorv",
+        "amount": 480,
+        "unit": "g"
+      },
+      {
+        "name": "Korvbröd",
+        "amount": 270,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Saltgurka",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Senap",
+        "amount": 50,
+        "unit": "g"
+      },
+      {
+        "name": "Ketchup",
+        "amount": 0.5,
+        "unit": "dl"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Skiva löken och stek den långsamt gyllene och söt i smör, 10-12 minuter.",
+      "Värm korvarna i vatten strax under kokpunkten eller stek dem.",
+      "Värm bröden.",
+      "Skiva saltgurkan.",
+      "Bygg med korv, rostad lök, gurka, senap och ketchup."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "barn",
+      "billigt",
+      "snabbt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ]
   },
-  "ingredients": [
-   {
-    "name": "Wienerkorv",
-    "amount": 480,
-    "unit": "g"
-   },
-   {
-    "name": "Korvbröd",
-    "amount": 270,
-    "unit": "g"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 3,
-    "unit": "st"
-   },
-   {
-    "name": "Saltgurka",
-    "amount": 150,
-    "unit": "g"
-   },
-   {
-    "name": "Senap",
-    "amount": 50,
-    "unit": "g"
-   },
-   {
-    "name": "Ketchup",
-    "amount": 0.5,
-    "unit": "dl"
-   },
-   {
-    "name": "Smör",
-    "pantryStaple": true
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Skiva löken och stek den långsamt gyllene och söt i smör, 10-12 minuter.",
-   "Värm korvarna i vatten strax under kokpunkten eller stek dem.",
-   "Värm bröden.",
-   "Skiva saltgurkan.",
-   "Bygg med korv, rostad lök, gurka, senap och ketchup."
-  ],
-  "categories": [
-   "Husmanskost"
-  ],
-  "tags": [
-   "barn",
-   "billigt",
-   "snabbt"
-  ],
-  "allergens": [
-   "gluten",
-   "mjölk"
-  ],
-  "dietFlags": [
-   "blandkost"
-  ]
- },
- {
-  "id": "laxpoke",
-  "name": "Pokébowl med lax och ris",
-  "description": "Sushiris, rå eller lättstekt lax, avokado, gurka och sojadressing. Fräsch bowl med rejäl mättnad.",
-  "servings": 4,
-  "prepTime": 20,
-  "cookTime": 15,
-  "difficulty": "medel",
-  "nutrition": {
-   "kcal": 620,
-   "protein": 34,
-   "carbs": 64,
-   "fat": 26,
-   "fiber": 6
+  {
+    "id": "laxpoke",
+    "name": "Pokébowl med lax och ris",
+    "description": "Sushiris, rå eller lättstekt lax, avokado, gurka och sojadressing. Fräsch bowl med rejäl mättnad.",
+    "servings": 4,
+    "prepTime": 20,
+    "cookTime": 15,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 620,
+      "protein": 34,
+      "carbs": 64,
+      "fat": 26,
+      "fiber": 6
+    },
+    "ingredients": [
+      {
+        "name": "Laxfilé",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 320,
+        "unit": "g"
+      },
+      {
+        "name": "Avokado",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Gurka",
+        "amount": 0.5,
+        "unit": "st"
+      },
+      {
+        "name": "Edamamebönor",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Sojasås",
+        "amount": 0.5,
+        "unit": "dl"
+      },
+      {
+        "name": "Sesamfrön",
+        "amount": 20,
+        "unit": "g"
+      },
+      {
+        "name": "Lime",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Honung",
+        "amount": 15,
+        "unit": "g"
+      },
+      {
+        "name": "Majonnäs",
+        "amount": 0.5,
+        "unit": "dl"
+      },
+      {
+        "name": "Sriracha",
+        "amount": 10,
+        "unit": "ml"
+      }
+    ],
+    "instructions": [
+      "Koka riset och låt det svalna något.",
+      "Stek laxen och dela i bitar, eller tärna den rå om den är fryst-och-tinad sushikvalitet.",
+      "Vispa ihop soja, limesaft och honung till en dressing, och majonnäs med sriracha till en het topping.",
+      "Tärna gurka och skiva avokadon.",
+      "Bygg skålar med ris, lax, edamame, gurka och avokado.",
+      "Ringla över båda såserna och strö på sesamfrön."
+    ],
+    "categories": [
+      "Fisk"
+    ],
+    "tags": [
+      "fisk",
+      "lunch",
+      "helgmiddag"
+    ],
+    "allergens": [
+      "fisk",
+      "soja",
+      "sesam",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt",
+      "laktosfritt",
+      "pescetariskt"
+    ],
+    "image": "https://images.pexels.com/photos/8108069/pexels-photo-8108069.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+    "imageCredit": "MART  PRODUCTION",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Pokébowl med lax och ris upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Laxfilé",
-    "amount": 500,
-    "unit": "g"
-   },
-   {
-    "name": "Ris",
-    "amount": 320,
-    "unit": "g"
-   },
-   {
-    "name": "Avokado",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Gurka",
-    "amount": 0.5,
-    "unit": "st"
-   },
-   {
-    "name": "Edamamebönor",
-    "amount": 200,
-    "unit": "g"
-   },
-   {
-    "name": "Sojasås",
-    "amount": 0.5,
-    "unit": "dl"
-   },
-   {
-    "name": "Sesamfrön",
-    "amount": 20,
-    "unit": "g"
-   },
-   {
-    "name": "Lime",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Honung",
-    "amount": 15,
-    "unit": "g"
-   },
-   {
-    "name": "Majonnäs",
-    "amount": 0.5,
-    "unit": "dl"
-   },
-   {
-    "name": "Sriracha",
-    "amount": 10,
-    "unit": "ml"
-   }
-  ],
-  "instructions": [
-   "Koka riset och låt det svalna något.",
-   "Stek laxen och dela i bitar, eller tärna den rå om den är fryst-och-tinad sushikvalitet.",
-   "Vispa ihop soja, limesaft och honung till en dressing, och majonnäs med sriracha till en het topping.",
-   "Tärna gurka och skiva avokadon.",
-   "Bygg skålar med ris, lax, edamame, gurka och avokado.",
-   "Ringla över båda såserna och strö på sesamfrön."
-  ],
-  "categories": [
-   "Fisk"
-  ],
-  "tags": [
-   "fisk",
-   "lunch",
-   "helgmiddag"
-  ],
-  "allergens": [
-   "fisk",
-   "soja",
-   "sesam",
-   "ägg"
-  ],
-  "dietFlags": [
-   "blandkost",
-   "glutenfritt",
-   "laktosfritt",
-   "pescetariskt"
-  ],
-  "image": "https://images.pexels.com/photos/8108069/pexels-photo-8108069.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
-  "imageCredit": "MART  PRODUCTION",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Pokébowl med lax och ris upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "kikartscurry-snabb",
-  "name": "Snabb kikärtscurry med spenat",
-  "description": "Kikärtor i currydoftande kokossås med spenat - vegansk middag ur skafferiet på en kvart.",
-  "servings": 4,
-  "prepTime": 5,
-  "cookTime": 15,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 510,
-   "protein": 15,
-   "carbs": 64,
-   "fat": 22,
-   "fiber": 11
+  {
+    "id": "kikartscurry-snabb",
+    "name": "Snabb kikärtscurry med spenat",
+    "description": "Kikärtor i currydoftande kokossås med spenat - vegansk middag ur skafferiet på en kvart.",
+    "servings": 4,
+    "prepTime": 5,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 510,
+      "protein": 15,
+      "carbs": 64,
+      "fat": 22,
+      "fiber": 11
+    },
+    "ingredients": [
+      {
+        "name": "Kikärtor",
+        "amount": 760,
+        "unit": "g"
+      },
+      {
+        "name": "Kokosmjölk",
+        "amount": 400,
+        "unit": "ml"
+      },
+      {
+        "name": "Krossade tomater",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Spenat",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Curry",
+        "amount": 10,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 320,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Olja",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka riset enligt anvisningen.",
+      "Fräs hackad lök och vitlök i olja, rör ner curryn.",
+      "Häll i krossade tomater, kokosmjölk och sköljda kikärtor. Sjud i 10 minuter.",
+      "Vänd ner spenaten och smaka av med salt.",
+      "Servera med riset."
+    ],
+    "categories": [
+      "Vegetariskt",
+      "Grytor"
+    ],
+    "tags": [
+      "vegetariskt",
+      "snabbt",
+      "billigt",
+      "mealprep"
+    ],
+    "allergens": [],
+    "dietFlags": [
+      "vegetariskt",
+      "veganskt",
+      "glutenfritt",
+      "laktosfritt"
+    ],
+    "image": "https://images.pexels.com/photos/9213999/pexels-photo-9213999.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/curry-and-rice-served-on-blue-plate-9213999/",
+    "imageCredit": "Loren Castillo",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Snabb kikärtscurry med spenat upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Kikärtor",
-    "amount": 760,
-    "unit": "g"
-   },
-   {
-    "name": "Kokosmjölk",
-    "amount": 400,
-    "unit": "ml"
-   },
-   {
-    "name": "Krossade tomater",
-    "amount": 400,
-    "unit": "g"
-   },
-   {
-    "name": "Spenat",
-    "amount": 100,
-    "unit": "g"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Vitlök",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Curry",
-    "amount": 10,
-    "unit": "g"
-   },
-   {
-    "name": "Ris",
-    "amount": 320,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Olja",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Koka riset enligt anvisningen.",
-   "Fräs hackad lök och vitlök i olja, rör ner curryn.",
-   "Häll i krossade tomater, kokosmjölk och sköljda kikärtor. Sjud i 10 minuter.",
-   "Vänd ner spenaten och smaka av med salt.",
-   "Servera med riset."
-  ],
-  "categories": [
-   "Vegetariskt",
-   "Grytor"
-  ],
-  "tags": [
-   "vegetariskt",
-   "snabbt",
-   "billigt",
-   "mealprep"
-  ],
-  "allergens": [],
-  "dietFlags": [
-   "vegetariskt",
-   "veganskt",
-   "glutenfritt",
-   "laktosfritt"
-  ],
-  "image": "https://images.pexels.com/photos/9213999/pexels-photo-9213999.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/curry-and-rice-served-on-blue-plate-9213999/",
-  "imageCredit": "Loren Castillo",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Snabb kikärtscurry med spenat upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "kraftig-omelett-lunch",
-  "name": "Ugnsomelett med potatis och ost",
-  "description": "Spansk-inspirerad tjock omelett med potatis, lök och ost. Middag av det som redan finns hemma.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 30,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 460,
-   "protein": 24,
-   "carbs": 34,
-   "fat": 25,
-   "fiber": 3
+  {
+    "id": "kraftig-omelett-lunch",
+    "name": "Ugnsomelett med potatis och ost",
+    "description": "Spansk-inspirerad tjock omelett med potatis, lök och ost. Middag av det som redan finns hemma.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 30,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 460,
+      "protein": 24,
+      "carbs": 34,
+      "fat": 25,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Ägg",
+        "amount": 8,
+        "unit": "st"
+      },
+      {
+        "name": "Potatis",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 1,
+        "unit": "dl"
+      },
+      {
+        "name": "Gräslök",
+        "amount": 15,
+        "unit": "g"
+      },
+      {
+        "name": "Romansallad",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Olja",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 200 grader.",
+      "Tärna potatisen smått och stek den mjuk med hackad lök.",
+      "Vispa ägg, mjölk och salt. Rör ner osten.",
+      "Lägg potatisblandningen i en smord form och häll över äggsmeten.",
+      "Grädda i 20-25 minuter tills omeletten stannat i mitten.",
+      "Toppa med gräslök och servera med sallad."
+    ],
+    "categories": [
+      "Vegetariskt"
+    ],
+    "tags": [
+      "vegetariskt",
+      "billigt",
+      "lunch",
+      "barn"
+    ],
+    "allergens": [
+      "ägg",
+      "laktos"
+    ],
+    "dietFlags": [
+      "vegetariskt",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/39022508/pexels-photo-39022508.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/golden-omelette-on-red-plate-against-black-background-39022508/",
+    "imageCredit": "Deane Bayas",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Ugnsomelett med potatis och ost upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Ägg",
-    "amount": 8,
-    "unit": "st"
-   },
-   {
-    "name": "Potatis",
-    "amount": 500,
-    "unit": "g"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Riven ost",
-    "amount": 150,
-    "unit": "g"
-   },
-   {
-    "name": "Mjölk",
-    "amount": 1,
-    "unit": "dl"
-   },
-   {
-    "name": "Gräslök",
-    "amount": 15,
-    "unit": "g"
-   },
-   {
-    "name": "Romansallad",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Olja",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Sätt ugnen på 200 grader.",
-   "Tärna potatisen smått och stek den mjuk med hackad lök.",
-   "Vispa ägg, mjölk och salt. Rör ner osten.",
-   "Lägg potatisblandningen i en smord form och häll över äggsmeten.",
-   "Grädda i 20-25 minuter tills omeletten stannat i mitten.",
-   "Toppa med gräslök och servera med sallad."
-  ],
-  "categories": [
-   "Vegetariskt"
-  ],
-  "tags": [
-   "vegetariskt",
-   "billigt",
-   "lunch",
-   "barn"
-  ],
-  "allergens": [
-   "ägg",
-   "mjölk"
-  ],
-  "dietFlags": [
-   "vegetariskt",
-   "glutenfritt"
-  ],
-  "image": "https://images.pexels.com/photos/39022508/pexels-photo-39022508.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/golden-omelette-on-red-plate-against-black-background-39022508/",
-  "imageCredit": "Deane Bayas",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Ugnsomelett med potatis och ost upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "biff-bearnaise-vardag",
-  "name": "Pannbiff med snabb bearnaise och pommes",
-  "description": "Färsbiffar med enkel vardagsbearnaise och pommes ur ugnen. Bistromat en helt vanlig onsdag.",
-  "servings": 4,
-  "prepTime": 15,
-  "cookTime": 30,
-  "difficulty": "medel",
-  "nutrition": {
-   "kcal": 700,
-   "protein": 35,
-   "carbs": 48,
-   "fat": 40,
-   "fiber": 4
+  {
+    "id": "biff-bearnaise-vardag",
+    "name": "Pannbiff med snabb bearnaise och pommes",
+    "description": "Färsbiffar med enkel vardagsbearnaise och pommes ur ugnen. Bistromat en helt vanlig onsdag.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 30,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 700,
+      "protein": 35,
+      "carbs": 48,
+      "fat": 40,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Nötfärs",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Pommes frites",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Majonnäs",
+        "amount": 1.5,
+        "unit": "dl"
+      },
+      {
+        "name": "Crème fraiche",
+        "amount": 1,
+        "unit": "dl"
+      },
+      {
+        "name": "Dragon",
+        "amount": 10,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Haricots verts",
+        "amount": 250,
+        "unit": "g"
+      },
+      {
+        "name": "Ättika",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Tillaga pommes friten i ugnen enligt paketet.",
+      "Rör ihop majonnäs, crème fraiche, hackad dragon, finhackad lök och några droppar ättika till en snabb bearnaise.",
+      "Forma färsen till biffar, salta och stek dem 4 minuter per sida.",
+      "Koka haricots verts i 3 minuter.",
+      "Servera biffarna med pommes, sås och bönor."
+    ],
+    "categories": [
+      "Kött"
+    ],
+    "tags": [
+      "kott",
+      "barn",
+      "helgmiddag",
+      "bulk"
+    ],
+    "allergens": [
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/16444386/pexels-photo-16444386.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/meal-with-beef-on-plate-16444386/",
+    "imageCredit": "Dextar Studio ™",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Pannbiff med snabb bearnaise och pommes upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Nötfärs",
-    "amount": 600,
-    "unit": "g"
-   },
-   {
-    "name": "Pommes frites",
-    "amount": 600,
-    "unit": "g"
-   },
-   {
-    "name": "Majonnäs",
-    "amount": 1.5,
-    "unit": "dl"
-   },
-   {
-    "name": "Crème fraiche",
-    "amount": 1,
-    "unit": "dl"
-   },
-   {
-    "name": "Dragon",
-    "amount": 10,
-    "unit": "g"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Haricots verts",
-    "amount": 250,
-    "unit": "g"
-   },
-   {
-    "name": "Ättika",
-    "pantryStaple": true
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Smör",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Tillaga pommes friten i ugnen enligt paketet.",
-   "Rör ihop majonnäs, crème fraiche, hackad dragon, finhackad lök och några droppar ättika till en snabb bearnaise.",
-   "Forma färsen till biffar, salta och stek dem 4 minuter per sida.",
-   "Koka haricots verts i 3 minuter.",
-   "Servera biffarna med pommes, sås och bönor."
-  ],
-  "categories": [
-   "Kött"
-  ],
-  "tags": [
-   "kott",
-   "barn",
-   "helgmiddag",
-   "bulk"
-  ],
-  "allergens": [
-   "mjölk",
-   "ägg"
-  ],
-  "dietFlags": [
-   "blandkost",
-   "glutenfritt"
-  ],
-  "image": "https://images.pexels.com/photos/16444386/pexels-photo-16444386.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/meal-with-beef-on-plate-16444386/",
-  "imageCredit": "Dextar Studio ™",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Pannbiff med snabb bearnaise och pommes upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "krogarens-makaroner",
-  "name": "Stuvade makaroner med falukorv",
-  "description": "Makaroner stuvade i mjölk tills de är krämiga, med stekt falukorv och ketchup. Barndomens trygghet.",
-  "servings": 4,
-  "prepTime": 5,
-  "cookTime": 20,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 580,
-   "protein": 22,
-   "carbs": 62,
-   "fat": 28,
-   "fiber": 3
+  {
+    "id": "krogarens-makaroner",
+    "name": "Stuvade makaroner med falukorv",
+    "description": "Makaroner stuvade i mjölk tills de är krämiga, med stekt falukorv och ketchup. Barndomens trygghet.",
+    "servings": 4,
+    "prepTime": 5,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 580,
+      "protein": 22,
+      "carbs": 62,
+      "fat": 28,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Makaroner",
+        "amount": 350,
+        "unit": "g"
+      },
+      {
+        "name": "Falukorv",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 8,
+        "unit": "dl"
+      },
+      {
+        "name": "Ketchup",
+        "amount": 0.5,
+        "unit": "dl"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka upp mjölken med en klick smör och salt i en rymlig kastrull.",
+      "Häll i makaronerna och sjud på svag värme under omrörning tills de är mjuka och stuvningen krämig, 10-12 minuter.",
+      "Skiva och stek falukorven gyllene i smör.",
+      "Servera de stuvade makaronerna med korven och ketchup."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Pasta"
+    ],
+    "tags": [
+      "barn",
+      "billigt",
+      "snabbt",
+      "husmanskost",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/36627079/pexels-photo-36627079.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/delicious-macaroni-and-ground-beef-dish-36627079/",
+    "imageCredit": "Valeria Boltneva",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Stuvade makaroner med falukorv upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Makaroner",
-    "amount": 350,
-    "unit": "g"
-   },
-   {
-    "name": "Falukorv",
-    "amount": 500,
-    "unit": "g"
-   },
-   {
-    "name": "Mjölk",
-    "amount": 8,
-    "unit": "dl"
-   },
-   {
-    "name": "Ketchup",
-    "amount": 0.5,
-    "unit": "dl"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Smör",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Koka upp mjölken med en klick smör och salt i en rymlig kastrull.",
-   "Häll i makaronerna och sjud på svag värme under omrörning tills de är mjuka och stuvningen krämig, 10-12 minuter.",
-   "Skiva och stek falukorven gyllene i smör.",
-   "Servera de stuvade makaronerna med korven och ketchup."
-  ],
-  "categories": [
-   "Husmanskost",
-   "Pasta"
-  ],
-  "tags": [
-   "barn",
-   "billigt",
-   "snabbt",
-   "husmanskost",
-   "Familjefavorit"
-  ],
-  "allergens": [
-   "gluten",
-   "mjölk"
-  ],
-  "dietFlags": [
-   "blandkost"
-  ],
-  "image": "https://images.pexels.com/photos/36627079/pexels-photo-36627079.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/delicious-macaroni-and-ground-beef-dish-36627079/",
-  "imageCredit": "Valeria Boltneva",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Stuvade makaroner med falukorv upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "vegansk-chili-sin-carne",
-  "name": "Chili sin carne med tre sorters bönor",
-  "description": "Rökig vegansk chili på kidneybönor, svarta bönor och linser. Blir bara bättre dagen efter.",
-  "servings": 6,
-  "prepTime": 10,
-  "cookTime": 35,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 470,
-   "protein": 22,
-   "carbs": 76,
-   "fat": 8,
-   "fiber": 18
+  {
+    "id": "vegansk-chili-sin-carne",
+    "name": "Chili sin carne med tre sorters bönor",
+    "description": "Rökig vegansk chili på kidneybönor, svarta bönor och linser. Blir bara bättre dagen efter.",
+    "servings": 6,
+    "prepTime": 10,
+    "cookTime": 35,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 470,
+      "protein": 22,
+      "carbs": 76,
+      "fat": 8,
+      "fiber": 18
+    },
+    "ingredients": [
+      {
+        "name": "Kidneybönor",
+        "amount": 380,
+        "unit": "g"
+      },
+      {
+        "name": "Svarta bönor",
+        "amount": 380,
+        "unit": "g"
+      },
+      {
+        "name": "Röda linser",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Krossade tomater",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Paprika",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Tomatpuré",
+        "amount": 70,
+        "unit": "g"
+      },
+      {
+        "name": "Paprikapulver",
+        "amount": 15,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 480,
+        "unit": "g"
+      },
+      {
+        "name": "Spiskummin",
+        "pantryStaple": true
+      },
+      {
+        "name": "Chilipulver",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Olja",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Fräs hackad lök, vitlök och paprika i olja.",
+      "Rör ner tomatpuré, paprikapulver, spiskummin och chilipulver.",
+      "Häll i krossade tomater, linser och 3 dl vatten. Sjud i 15 minuter.",
+      "Rör ner de sköljda bönorna och sjud tio minuter till.",
+      "Koka riset. Smaka av chilin med salt.",
+      "Servera över ris, gärna med lime och koriander."
+    ],
+    "categories": [
+      "Vegetariskt",
+      "Grytor"
+    ],
+    "tags": [
+      "vegetariskt",
+      "billigt",
+      "mealprep",
+      "proteinrikt"
+    ],
+    "allergens": [],
+    "dietFlags": [
+      "vegetariskt",
+      "veganskt",
+      "glutenfritt",
+      "laktosfritt"
+    ],
+    "image": "https://images.pexels.com/photos/5966140/pexels-photo-5966140.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/tomatoes-and-peppers-on-green-background-5966140/",
+    "imageCredit": "Vanessa Loring",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Chili sin carne med tre sorters bönor upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Kidneybönor",
-    "amount": 380,
-    "unit": "g"
-   },
-   {
-    "name": "Svarta bönor",
-    "amount": 380,
-    "unit": "g"
-   },
-   {
-    "name": "Röda linser",
-    "amount": 150,
-    "unit": "g"
-   },
-   {
-    "name": "Krossade tomater",
-    "amount": 800,
-    "unit": "g"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Vitlök",
-    "amount": 3,
-    "unit": "st"
-   },
-   {
-    "name": "Paprika",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Tomatpuré",
-    "amount": 70,
-    "unit": "g"
-   },
-   {
-    "name": "Paprikapulver",
-    "amount": 15,
-    "unit": "g"
-   },
-   {
-    "name": "Ris",
-    "amount": 480,
-    "unit": "g"
-   },
-   {
-    "name": "Spiskummin",
-    "pantryStaple": true
-   },
-   {
-    "name": "Chilipulver",
-    "pantryStaple": true
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Olja",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Fräs hackad lök, vitlök och paprika i olja.",
-   "Rör ner tomatpuré, paprikapulver, spiskummin och chilipulver.",
-   "Häll i krossade tomater, linser och 3 dl vatten. Sjud i 15 minuter.",
-   "Rör ner de sköljda bönorna och sjud tio minuter till.",
-   "Koka riset. Smaka av chilin med salt.",
-   "Servera över ris, gärna med lime och koriander."
-  ],
-  "categories": [
-   "Vegetariskt",
-   "Grytor"
-  ],
-  "tags": [
-   "vegetariskt",
-   "billigt",
-   "mealprep",
-   "proteinrikt"
-  ],
-  "allergens": [],
-  "dietFlags": [
-   "vegetariskt",
-   "veganskt",
-   "glutenfritt",
-   "laktosfritt"
-  ],
-  "image": "https://images.pexels.com/photos/5966140/pexels-photo-5966140.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/tomatoes-and-peppers-on-green-background-5966140/",
-  "imageCredit": "Vanessa Loring",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Chili sin carne med tre sorters bönor upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "lantlig-potatissoppa-purjolok",
-  "name": "Potatis- och purjolökssoppa",
-  "description": "Slät och krämig soppa på potatis och purjolök med knaperstekt bacon som topping.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 20,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 420,
-   "protein": 14,
-   "carbs": 44,
-   "fat": 21,
-   "fiber": 5
+  {
+    "id": "lantlig-potatissoppa-purjolok",
+    "name": "Potatis- och purjolökssoppa",
+    "description": "Slät och krämig soppa på potatis och purjolök med knaperstekt bacon som topping.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 420,
+      "protein": 14,
+      "carbs": 44,
+      "fat": 21,
+      "fiber": 5
+    },
+    "ingredients": [
+      {
+        "name": "Potatis",
+        "amount": 700,
+        "unit": "g"
+      },
+      {
+        "name": "Purjolök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Grädde",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Bacon",
+        "amount": 140,
+        "unit": "g"
+      },
+      {
+        "name": "Buljongtärning",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Gräslök",
+        "amount": 15,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Skiva purjolöken och fräs den mjuk i smör utan att den tar färg.",
+      "Lägg i tärnad potatis, 8 dl vatten och buljongtärningarna. Koka i 15 minuter.",
+      "Mixa soppan slät och rör ner grädden.",
+      "Klipp och stek baconet knaprigt.",
+      "Smaka av soppan med salt och toppa med bacon och gräslök."
+    ],
+    "categories": [
+      "Soppor",
+      "Husmanskost"
+    ],
+    "tags": [
+      "billigt",
+      "husmanskost",
+      "snabbt"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ]
   },
-  "ingredients": [
-   {
-    "name": "Potatis",
-    "amount": 700,
-    "unit": "g"
-   },
-   {
-    "name": "Purjolök",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Grädde",
-    "amount": 2,
-    "unit": "dl"
-   },
-   {
-    "name": "Bacon",
-    "amount": 140,
-    "unit": "g"
-   },
-   {
-    "name": "Buljongtärning",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Gräslök",
-    "amount": 15,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Smör",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Skiva purjolöken och fräs den mjuk i smör utan att den tar färg.",
-   "Lägg i tärnad potatis, 8 dl vatten och buljongtärningarna. Koka i 15 minuter.",
-   "Mixa soppan slät och rör ner grädden.",
-   "Klipp och stek baconet knaprigt.",
-   "Smaka av soppan med salt och toppa med bacon och gräslök."
-  ],
-  "categories": [
-   "Soppor",
-   "Husmanskost"
-  ],
-  "tags": [
-   "billigt",
-   "husmanskost",
-   "snabbt"
-  ],
-  "allergens": [
-   "mjölk"
-  ],
-  "dietFlags": [
-   "blandkost",
-   "glutenfritt"
-  ]
- },
- {
-  "id": "kyckling-parmesan-pasta-bulk",
-  "name": "Kycklingpasta med parmesan och spenat",
-  "description": "Krämig kycklingpasta byggd för volym: mycket protein, mycket kolhydrater, mycket smak.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 20,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 740,
-   "protein": 52,
-   "carbs": 72,
-   "fat": 26,
-   "fiber": 4
+  {
+    "id": "kyckling-parmesan-pasta-bulk",
+    "name": "Kycklingpasta med parmesan och spenat",
+    "description": "Krämig kycklingpasta byggd för volym: mycket protein, mycket kolhydrater, mycket smak.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 740,
+      "protein": 52,
+      "carbs": 72,
+      "fat": 26,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Kycklingfilé",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Pasta",
+        "amount": 450,
+        "unit": "g"
+      },
+      {
+        "name": "Grädde",
+        "amount": 3,
+        "unit": "dl"
+      },
+      {
+        "name": "Parmesan",
+        "amount": 80,
+        "unit": "g"
+      },
+      {
+        "name": "Spenat",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Buljongtärning",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Olja",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka pastan al dente.",
+      "Tärna kycklingen, salta och stek den genomstekt.",
+      "Fräs pressad vitlök, häll i grädden och smula i buljongtärningen. Sjud ihop.",
+      "Rör ner parmesanen och spenaten.",
+      "Vänd ner pastan och kycklingen och späd med pastavatten till krämighet."
+    ],
+    "categories": [
+      "Kyckling",
+      "Pasta"
+    ],
+    "tags": [
+      "kyckling",
+      "bulk",
+      "proteinrikt",
+      "snabbt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/20051317/pexels-photo-20051317.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/pasta-with-chicken-stew-20051317/",
+    "imageCredit": "Роман Нагаевский",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Kycklingpasta med parmesan och spenat upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Kycklingfilé",
-    "amount": 800,
-    "unit": "g"
-   },
-   {
-    "name": "Pasta",
-    "amount": 450,
-    "unit": "g"
-   },
-   {
-    "name": "Grädde",
-    "amount": 3,
-    "unit": "dl"
-   },
-   {
-    "name": "Parmesan",
-    "amount": 80,
-    "unit": "g"
-   },
-   {
-    "name": "Spenat",
-    "amount": 150,
-    "unit": "g"
-   },
-   {
-    "name": "Vitlök",
-    "amount": 3,
-    "unit": "st"
-   },
-   {
-    "name": "Buljongtärning",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Olja",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Koka pastan al dente.",
-   "Tärna kycklingen, salta och stek den genomstekt.",
-   "Fräs pressad vitlök, häll i grädden och smula i buljongtärningen. Sjud ihop.",
-   "Rör ner parmesanen och spenaten.",
-   "Vänd ner pastan och kycklingen och späd med pastavatten till krämighet."
-  ],
-  "categories": [
-   "Kyckling",
-   "Pasta"
-  ],
-  "tags": [
-   "kyckling",
-   "bulk",
-   "proteinrikt",
-   "snabbt"
-  ],
-  "allergens": [
-   "gluten",
-   "mjölk"
-  ],
-  "dietFlags": [
-   "blandkost"
-  ],
-  "image": "https://images.pexels.com/photos/20051317/pexels-photo-20051317.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/pasta-with-chicken-stew-20051317/",
-  "imageCredit": "Роман Нагаевский",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Kycklingpasta med parmesan och spenat upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "rostbiff-potatissallad",
-  "name": "Rostbiff med kall potatissallad",
-  "description": "Skivad rostbiff med krämig potatissallad på crème fraiche, senap och gräslök. Sommarmiddag året runt.",
-  "servings": 4,
-  "prepTime": 20,
-  "cookTime": 20,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 480,
-   "protein": 34,
-   "carbs": 42,
-   "fat": 19,
-   "fiber": 4
+  {
+    "id": "rostbiff-potatissallad",
+    "name": "Rostbiff med kall potatissallad",
+    "description": "Skivad rostbiff med krämig potatissallad på crème fraiche, senap och gräslök. Sommarmiddag året runt.",
+    "servings": 4,
+    "prepTime": 20,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 480,
+      "protein": 34,
+      "carbs": 42,
+      "fat": 19,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Rostbiff",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Crème fraiche",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Majonnäs",
+        "amount": 0.5,
+        "unit": "dl"
+      },
+      {
+        "name": "Senap",
+        "amount": 20,
+        "unit": "g"
+      },
+      {
+        "name": "Gräslök",
+        "amount": 20,
+        "unit": "g"
+      },
+      {
+        "name": "Rödlök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Saltgurka",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka potatisen, låt svalna och skär i bitar.",
+      "Rör ihop crème fraiche, majonnäs och senap. Vänd ner potatis, hackad saltgurka, tunt skivad rödlök och gräslök.",
+      "Smaka av med salt.",
+      "Lägg upp rostbiffen och servera med potatissalladen."
+    ],
+    "categories": [
+      "Kött"
+    ],
+    "tags": [
+      "kott",
+      "lunch",
+      "snabbt",
+      "helgmiddag"
+    ],
+    "allergens": [
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/16444386/pexels-photo-16444386.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/meal-with-beef-on-plate-16444386/",
+    "imageCredit": "Dextar Studio ™",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Rostbiff med kall potatissallad upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Rostbiff",
-    "amount": 400,
-    "unit": "g"
-   },
-   {
-    "name": "Potatis",
-    "amount": 800,
-    "unit": "g"
-   },
-   {
-    "name": "Crème fraiche",
-    "amount": 2,
-    "unit": "dl"
-   },
-   {
-    "name": "Majonnäs",
-    "amount": 0.5,
-    "unit": "dl"
-   },
-   {
-    "name": "Senap",
-    "amount": 20,
-    "unit": "g"
-   },
-   {
-    "name": "Gräslök",
-    "amount": 20,
-    "unit": "g"
-   },
-   {
-    "name": "Rödlök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Saltgurka",
-    "amount": 100,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Koka potatisen, låt svalna och skär i bitar.",
-   "Rör ihop crème fraiche, majonnäs och senap. Vänd ner potatis, hackad saltgurka, tunt skivad rödlök och gräslök.",
-   "Smaka av med salt.",
-   "Lägg upp rostbiffen och servera med potatissalladen."
-  ],
-  "categories": [
-   "Kött"
-  ],
-  "tags": [
-   "kott",
-   "lunch",
-   "snabbt",
-   "helgmiddag"
-  ],
-  "allergens": [
-   "mjölk",
-   "ägg"
-  ],
-  "dietFlags": [
-   "blandkost",
-   "glutenfritt"
-  ],
-  "image": "https://images.pexels.com/photos/16444386/pexels-photo-16444386.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/meal-with-beef-on-plate-16444386/",
-  "imageCredit": "Dextar Studio ™",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Rostbiff med kall potatissallad upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "bulgur-halloumi-bulk",
-  "name": "Bulgurpanna med halloumi och kikärtor",
-  "description": "Stekt halloumi, kikärtor och bulgur i samma panna med citron - vegetarisk bulkmat med 500+ kalorier.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 20,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 640,
-   "protein": 30,
-   "carbs": 66,
-   "fat": 29,
-   "fiber": 12
+  {
+    "id": "bulgur-halloumi-bulk",
+    "name": "Bulgurpanna med halloumi och kikärtor",
+    "description": "Stekt halloumi, kikärtor och bulgur i samma panna med citron - vegetarisk bulkmat med 500+ kalorier.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 640,
+      "protein": 30,
+      "carbs": 66,
+      "fat": 29,
+      "fiber": 12
+    },
+    "ingredients": [
+      {
+        "name": "Halloumi",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Bulgur",
+        "amount": 320,
+        "unit": "g"
+      },
+      {
+        "name": "Kikärtor",
+        "amount": 380,
+        "unit": "g"
+      },
+      {
+        "name": "Paprika",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Rödlök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Citron",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Persilja",
+        "amount": 20,
+        "unit": "g"
+      },
+      {
+        "name": "Paprikapulver",
+        "amount": 10,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Olja",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka bulguren enligt anvisningen.",
+      "Tärna och stek halloumin gyllene. Lägg åt sidan.",
+      "Stek paprika i bitar och klyftad rödlök i samma panna.",
+      "Vänd ner sköljda kikärtor och paprikapulver och stek ett par minuter.",
+      "Blanda i bulgur och halloumi, pressa över citron och smaka av.",
+      "Toppa med persilja."
+    ],
+    "categories": [
+      "Vegetariskt"
+    ],
+    "tags": [
+      "vegetariskt",
+      "bulk",
+      "proteinrikt",
+      "mealprep"
+    ],
+    "allergens": [
+      "laktos",
+      "gluten"
+    ],
+    "dietFlags": [
+      "vegetariskt"
+    ],
+    "image": "https://images.pexels.com/photos/38499046/pexels-photo-38499046.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/healthy-quinoa-salad-with-chickpeas-on-wooden-table-38499046/",
+    "imageCredit": "Mohammed-Ali  Hamadache",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Bulgurpanna med halloumi och kikärtor upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Halloumi",
-    "amount": 400,
-    "unit": "g"
-   },
-   {
-    "name": "Bulgur",
-    "amount": 320,
-    "unit": "g"
-   },
-   {
-    "name": "Kikärtor",
-    "amount": 380,
-    "unit": "g"
-   },
-   {
-    "name": "Paprika",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Rödlök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Citron",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Persilja",
-    "amount": 20,
-    "unit": "g"
-   },
-   {
-    "name": "Paprikapulver",
-    "amount": 10,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Olja",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Koka bulguren enligt anvisningen.",
-   "Tärna och stek halloumin gyllene. Lägg åt sidan.",
-   "Stek paprika i bitar och klyftad rödlök i samma panna.",
-   "Vänd ner sköljda kikärtor och paprikapulver och stek ett par minuter.",
-   "Blanda i bulgur och halloumi, pressa över citron och smaka av.",
-   "Toppa med persilja."
-  ],
-  "categories": [
-   "Vegetariskt"
-  ],
-  "tags": [
-   "vegetariskt",
-   "bulk",
-   "proteinrikt",
-   "mealprep"
-  ],
-  "allergens": [
-   "mjölk",
-   "gluten"
-  ],
-  "dietFlags": [
-   "vegetariskt"
-  ],
-  "image": "https://images.pexels.com/photos/38499046/pexels-photo-38499046.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/healthy-quinoa-salad-with-chickpeas-on-wooden-table-38499046/",
-  "imageCredit": "Mohammed-Ali  Hamadache",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Bulgurpanna med halloumi och kikärtor upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "torskgratang-vasterbotten",
-  "name": "Torskgratäng med ostsås och purjolök",
-  "description": "Torsk under gyllene ostsås med purjolök, serverad med pressad potatis. Vardagslyx ur ugnen.",
-  "servings": 4,
-  "prepTime": 15,
-  "cookTime": 30,
-  "difficulty": "medel",
-  "nutrition": {
-   "kcal": 540,
-   "protein": 40,
-   "carbs": 40,
-   "fat": 24,
-   "fiber": 3
+  {
+    "id": "torskgratang-vasterbotten",
+    "name": "Torskgratäng med ostsås och purjolök",
+    "description": "Torsk under gyllene ostsås med purjolök, serverad med pressad potatis. Vardagslyx ur ugnen.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 30,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 540,
+      "protein": 40,
+      "carbs": 40,
+      "fat": 24,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Torskfilé",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Grädde",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Purjolök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Vetemjöl",
+        "amount": 30,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 200 grader och koka potatisen.",
+      "Skiva och fräs purjolöken mjuk i smör. Pudra över mjölet.",
+      "Späd med mjölk och grädde under vispning till en slät sås. Rör ner hälften av osten och salta.",
+      "Lägg torsken i en form, häll över såsen och toppa med resten av osten.",
+      "Gratinera i 20-25 minuter tills fisken är klar och ytan gyllene.",
+      "Servera med potatisen."
+    ],
+    "categories": [
+      "Fisk",
+      "Husmanskost"
+    ],
+    "tags": [
+      "fisk",
+      "husmanskost",
+      "barn"
+    ],
+    "allergens": [
+      "fisk",
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/2337842/pexels-photo-2337842.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/baked-lasagna-2337842/",
+    "imageCredit": "Vidal Balielo Jr.",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Torskgratäng med ostsås och purjolök upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Torskfilé",
-    "amount": 600,
-    "unit": "g"
-   },
-   {
-    "name": "Riven ost",
-    "amount": 150,
-    "unit": "g"
-   },
-   {
-    "name": "Grädde",
-    "amount": 2,
-    "unit": "dl"
-   },
-   {
-    "name": "Mjölk",
-    "amount": 2,
-    "unit": "dl"
-   },
-   {
-    "name": "Purjolök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Vetemjöl",
-    "amount": 30,
-    "unit": "g"
-   },
-   {
-    "name": "Potatis",
-    "amount": 800,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Smör",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Sätt ugnen på 200 grader och koka potatisen.",
-   "Skiva och fräs purjolöken mjuk i smör. Pudra över mjölet.",
-   "Späd med mjölk och grädde under vispning till en slät sås. Rör ner hälften av osten och salta.",
-   "Lägg torsken i en form, häll över såsen och toppa med resten av osten.",
-   "Gratinera i 20-25 minuter tills fisken är klar och ytan gyllene.",
-   "Servera med potatisen."
-  ],
-  "categories": [
-   "Fisk",
-   "Husmanskost"
-  ],
-  "tags": [
-   "fisk",
-   "husmanskost",
-   "barn"
-  ],
-  "allergens": [
-   "fisk",
-   "gluten",
-   "mjölk"
-  ],
-  "dietFlags": [
-   "blandkost"
-  ],
-  "image": "https://images.pexels.com/photos/2337842/pexels-photo-2337842.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/baked-lasagna-2337842/",
-  "imageCredit": "Vidal Balielo Jr.",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Torskgratäng med ostsås och purjolök upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "vego-pytt",
-  "name": "Vegopytt med halloumi och stekt ägg",
-  "description": "Pytt i panna på rotfrukter och halloumi med stekt ägg och rödbetor - vegetarisk version av klassikern.",
-  "servings": 4,
-  "prepTime": 15,
-  "cookTime": 25,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 520,
-   "protein": 24,
-   "carbs": 46,
-   "fat": 27,
-   "fiber": 7
+  {
+    "id": "vego-pytt",
+    "name": "Vegopytt med halloumi och stekt ägg",
+    "description": "Pytt i panna på rotfrukter och halloumi med stekt ägg och rödbetor - vegetarisk version av klassikern.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 520,
+      "protein": 24,
+      "carbs": 46,
+      "fat": 27,
+      "fiber": 7
+    },
+    "ingredients": [
+      {
+        "name": "Potatis",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Sötpotatis",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Halloumi",
+        "amount": 250,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Ägg",
+        "amount": 4,
+        "unit": "st"
+      },
+      {
+        "name": "Rödbetor",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Timjan",
+        "amount": 5,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Tärna potatis och sötpotatis smått och stek i smör på medelvärme tills allt är mjukt och gyllene.",
+      "Tärna halloumi och lök, lägg i och stek tills halloumin fått färg.",
+      "Krydda med timjan och salt.",
+      "Stek äggen.",
+      "Servera pytten med stekt ägg och inlagda rödbetor."
+    ],
+    "categories": [
+      "Vegetariskt",
+      "Husmanskost"
+    ],
+    "tags": [
+      "vegetariskt",
+      "billigt",
+      "snabbt",
+      "husmanskost"
+    ],
+    "allergens": [
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "vegetariskt",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/5836624/pexels-photo-5836624.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/food-served-on-printed-ceramic-plate-5836624/",
+    "imageCredit": "ROMAN ODINTSOV",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Vegopytt med halloumi och stekt ägg upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Potatis",
-    "amount": 600,
-    "unit": "g"
-   },
-   {
-    "name": "Sötpotatis",
-    "amount": 300,
-    "unit": "g"
-   },
-   {
-    "name": "Halloumi",
-    "amount": 250,
-    "unit": "g"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Ägg",
-    "amount": 4,
-    "unit": "st"
-   },
-   {
-    "name": "Rödbetor",
-    "amount": 200,
-    "unit": "g"
-   },
-   {
-    "name": "Timjan",
-    "amount": 5,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Smör",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Tärna potatis och sötpotatis smått och stek i smör på medelvärme tills allt är mjukt och gyllene.",
-   "Tärna halloumi och lök, lägg i och stek tills halloumin fått färg.",
-   "Krydda med timjan och salt.",
-   "Stek äggen.",
-   "Servera pytten med stekt ägg och inlagda rödbetor."
-  ],
-  "categories": [
-   "Vegetariskt",
-   "Husmanskost"
-  ],
-  "tags": [
-   "vegetariskt",
-   "billigt",
-   "snabbt",
-   "husmanskost"
-  ],
-  "allergens": [
-   "mjölk",
-   "ägg"
-  ],
-  "dietFlags": [
-   "vegetariskt",
-   "glutenfritt"
-  ],
-  "image": "https://images.pexels.com/photos/5836624/pexels-photo-5836624.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/food-served-on-printed-ceramic-plate-5836624/",
-  "imageCredit": "ROMAN ODINTSOV",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Vegopytt med halloumi och stekt ägg upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "hoisin-flask-ris",
-  "name": "Sticky fläsk med ris och gurksallad",
-  "description": "Strimlat fläsk i klibbig soja-honungsglaze med syrlig gurksallad som balans.",
-  "servings": 4,
-  "prepTime": 15,
-  "cookTime": 15,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 620,
-   "protein": 36,
-   "carbs": 68,
-   "fat": 22,
-   "fiber": 3
+  {
+    "id": "hoisin-flask-ris",
+    "name": "Sticky fläsk med ris och gurksallad",
+    "description": "Strimlat fläsk i klibbig soja-honungsglaze med syrlig gurksallad som balans.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 620,
+      "protein": 36,
+      "carbs": 68,
+      "fat": 22,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Fläskkarré",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 320,
+        "unit": "g"
+      },
+      {
+        "name": "Sojasås",
+        "amount": 0.75,
+        "unit": "dl"
+      },
+      {
+        "name": "Honung",
+        "amount": 40,
+        "unit": "g"
+      },
+      {
+        "name": "Gurka",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Ingefära",
+        "amount": 20,
+        "unit": "g"
+      },
+      {
+        "name": "Sesamfrön",
+        "amount": 15,
+        "unit": "g"
+      },
+      {
+        "name": "Ättika",
+        "pantryStaple": true
+      },
+      {
+        "name": "Socker",
+        "pantryStaple": true
+      },
+      {
+        "name": "Olja",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka riset enligt anvisningen.",
+      "Skiva gurkan tunt och lägg i ättika, socker och en nypa salt.",
+      "Strimla fläsket och stek det på hög värme tills det fått ordentlig färg.",
+      "Lägg i riven ingefära och vitlök, häll i soja och honung och låt glasera till klibbigt.",
+      "Servera fläsket på ris med gurksalladen och sesamfrön."
+    ],
+    "categories": [
+      "Kött"
+    ],
+    "tags": [
+      "kott",
+      "snabbt",
+      "bulk"
+    ],
+    "allergens": [
+      "soja",
+      "sesam"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "laktosfritt"
+    ],
+    "image": "https://images.pexels.com/photos/32123676/pexels-photo-32123676.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/authentic-thai-grilled-pork-with-sticky-rice-dish-32123676/",
+    "imageCredit": "Markus Winkler",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Sticky fläsk med ris och gurksallad upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Fläskkarré",
-    "amount": 600,
-    "unit": "g"
-   },
-   {
-    "name": "Ris",
-    "amount": 320,
-    "unit": "g"
-   },
-   {
-    "name": "Sojasås",
-    "amount": 0.75,
-    "unit": "dl"
-   },
-   {
-    "name": "Honung",
-    "amount": 40,
-    "unit": "g"
-   },
-   {
-    "name": "Gurka",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Vitlök",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Ingefära",
-    "amount": 20,
-    "unit": "g"
-   },
-   {
-    "name": "Sesamfrön",
-    "amount": 15,
-    "unit": "g"
-   },
-   {
-    "name": "Ättika",
-    "pantryStaple": true
-   },
-   {
-    "name": "Socker",
-    "pantryStaple": true
-   },
-   {
-    "name": "Olja",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Koka riset enligt anvisningen.",
-   "Skiva gurkan tunt och lägg i ättika, socker och en nypa salt.",
-   "Strimla fläsket och stek det på hög värme tills det fått ordentlig färg.",
-   "Lägg i riven ingefära och vitlök, häll i soja och honung och låt glasera till klibbigt.",
-   "Servera fläsket på ris med gurksalladen och sesamfrön."
-  ],
-  "categories": [
-   "Kött"
-  ],
-  "tags": [
-   "kott",
-   "snabbt",
-   "bulk"
-  ],
-  "allergens": [
-   "soja",
-   "sesam"
-  ],
-  "dietFlags": [
-   "blandkost",
-   "laktosfritt"
-  ],
-  "image": "https://images.pexels.com/photos/32123676/pexels-photo-32123676.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/authentic-thai-grilled-pork-with-sticky-rice-dish-32123676/",
-  "imageCredit": "Markus Winkler",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Sticky fläsk med ris och gurksallad upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "kycklingspett-jordnot",
-  "name": "Kycklingspett med jordnötssås och ris",
-  "description": "Marinerade kycklingspett med krämig jordnötssås, ris och gurksallad. Grillkänsla i stekpannan.",
-  "servings": 4,
-  "prepTime": 20,
-  "cookTime": 15,
-  "difficulty": "medel",
-  "nutrition": {
-   "kcal": 600,
-   "protein": 42,
-   "carbs": 58,
-   "fat": 22,
-   "fiber": 4
+  {
+    "id": "kycklingspett-jordnot",
+    "name": "Kycklingspett med jordnötssås och ris",
+    "description": "Marinerade kycklingspett med krämig jordnötssås, ris och gurksallad. Grillkänsla i stekpannan.",
+    "servings": 4,
+    "prepTime": 20,
+    "cookTime": 15,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 600,
+      "protein": 42,
+      "carbs": 58,
+      "fat": 22,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Kycklingfilé",
+        "amount": 700,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 320,
+        "unit": "g"
+      },
+      {
+        "name": "Jordnötssmör",
+        "amount": 80,
+        "unit": "g"
+      },
+      {
+        "name": "Kokosmjölk",
+        "amount": 200,
+        "unit": "ml"
+      },
+      {
+        "name": "Sojasås",
+        "amount": 0.5,
+        "unit": "dl"
+      },
+      {
+        "name": "Lime",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Gurka",
+        "amount": 0.5,
+        "unit": "st"
+      },
+      {
+        "name": "Honung",
+        "amount": 20,
+        "unit": "g"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Ättika",
+        "pantryStaple": true
+      },
+      {
+        "name": "Socker",
+        "pantryStaple": true
+      },
+      {
+        "name": "Olja",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Skär kycklingen i bitar och blanda med soja, honung och pressad vitlök. Låt stå 15 minuter.",
+      "Koka riset enligt anvisningen.",
+      "Trä kycklingen på spett och stek eller grilla dem runtom tills de är genomstekta.",
+      "Värm jordnötssmör med kokosmjölk till en slät sås. Smaka av med lime och soja.",
+      "Skiva gurkan tunt och lägg i ättika, socker och en nypa salt.",
+      "Servera spetten med ris, jordnötssås och gurksallad."
+    ],
+    "categories": [
+      "Kyckling"
+    ],
+    "tags": [
+      "kyckling",
+      "helgmiddag",
+      "proteinrikt"
+    ],
+    "allergens": [
+      "jordnötter",
+      "soja"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt",
+      "laktosfritt"
+    ],
+    "image": "https://images.pexels.com/photos/8973186/pexels-photo-8973186.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/meat-skewers-8973186/",
+    "imageCredit": "Shardar Tarikul Islam",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Kycklingspett med jordnötssås och ris upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Kycklingfilé",
-    "amount": 700,
-    "unit": "g"
-   },
-   {
-    "name": "Ris",
-    "amount": 320,
-    "unit": "g"
-   },
-   {
-    "name": "Jordnötssmör",
-    "amount": 80,
-    "unit": "g"
-   },
-   {
-    "name": "Kokosmjölk",
-    "amount": 200,
-    "unit": "ml"
-   },
-   {
-    "name": "Sojasås",
-    "amount": 0.5,
-    "unit": "dl"
-   },
-   {
-    "name": "Lime",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Gurka",
-    "amount": 0.5,
-    "unit": "st"
-   },
-   {
-    "name": "Honung",
-    "amount": 20,
-    "unit": "g"
-   },
-   {
-    "name": "Vitlök",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Ättika",
-    "pantryStaple": true
-   },
-   {
-    "name": "Socker",
-    "pantryStaple": true
-   },
-   {
-    "name": "Olja",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Skär kycklingen i bitar och blanda med soja, honung och pressad vitlök. Låt stå 15 minuter.",
-   "Koka riset enligt anvisningen.",
-   "Trä kycklingen på spett och stek eller grilla dem runtom tills de är genomstekta.",
-   "Värm jordnötssmör med kokosmjölk till en slät sås. Smaka av med lime och soja.",
-   "Skiva gurkan tunt och lägg i ättika, socker och en nypa salt.",
-   "Servera spetten med ris, jordnötssås och gurksallad."
-  ],
-  "categories": [
-   "Kyckling"
-  ],
-  "tags": [
-   "kyckling",
-   "helgmiddag",
-   "proteinrikt"
-  ],
-  "allergens": [
-   "jordnötter",
-   "soja"
-  ],
-  "dietFlags": [
-   "blandkost",
-   "glutenfritt",
-   "laktosfritt"
-  ],
-  "image": "https://images.pexels.com/photos/8973186/pexels-photo-8973186.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/meat-skewers-8973186/",
-  "imageCredit": "Shardar Tarikul Islam",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Kycklingspett med jordnötssås och ris upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "vitkalssoppa-fars",
-  "name": "Vitkålssoppa med köttfärs",
-  "description": "Snabbkokt kålsoppa med färs - kåldolmens alla smaker utan rullandet.",
-  "servings": 4,
-  "prepTime": 15,
-  "cookTime": 25,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 420,
-   "protein": 30,
-   "carbs": 34,
-   "fat": 18,
-   "fiber": 8
+  {
+    "id": "vitkalssoppa-fars",
+    "name": "Vitkålssoppa med köttfärs",
+    "description": "Snabbkokt kålsoppa med färs - kåldolmens alla smaker utan rullandet.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 420,
+      "protein": 30,
+      "carbs": 34,
+      "fat": 18,
+      "fiber": 8
+    },
+    "ingredients": [
+      {
+        "name": "Blandfärs",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Vitkål",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Morötter",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Buljongtärning",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Tomatpuré",
+        "amount": 40,
+        "unit": "g"
+      },
+      {
+        "name": "Sirap",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Olja",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Bryn färsen i olja i en stor kastrull.",
+      "Lägg i strimlad kål och hackad lök och stek tills kålen mjuknat något.",
+      "Rör ner tomatpurén och en matsked sirap.",
+      "Lägg i tärnad potatis och morot, häll på 1,2 liter vatten och buljongtärningarna.",
+      "Sjud i 20 minuter tills allt är mjukt. Smaka av med salt."
+    ],
+    "categories": [
+      "Soppor",
+      "Husmanskost"
+    ],
+    "tags": [
+      "billigt",
+      "husmanskost",
+      "mealprep"
+    ],
+    "allergens": [],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt",
+      "laktosfritt"
+    ],
+    "image": "https://images.pexels.com/photos/19193024/pexels-photo-19193024.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/woman-holding-a-plate-with-creamy-soup-19193024/",
+    "imageCredit": "Nadin Sh",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Vitkålssoppa med köttfärs upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Blandfärs",
-    "amount": 500,
-    "unit": "g"
-   },
-   {
-    "name": "Vitkål",
-    "amount": 600,
-    "unit": "g"
-   },
-   {
-    "name": "Potatis",
-    "amount": 400,
-    "unit": "g"
-   },
-   {
-    "name": "Morötter",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Buljongtärning",
-    "amount": 3,
-    "unit": "st"
-   },
-   {
-    "name": "Tomatpuré",
-    "amount": 40,
-    "unit": "g"
-   },
-   {
-    "name": "Sirap",
-    "pantryStaple": true
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Olja",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Bryn färsen i olja i en stor kastrull.",
-   "Lägg i strimlad kål och hackad lök och stek tills kålen mjuknat något.",
-   "Rör ner tomatpurén och en matsked sirap.",
-   "Lägg i tärnad potatis och morot, häll på 1,2 liter vatten och buljongtärningarna.",
-   "Sjud i 20 minuter tills allt är mjukt. Smaka av med salt."
-  ],
-  "categories": [
-   "Soppor",
-   "Husmanskost"
-  ],
-  "tags": [
-   "billigt",
-   "husmanskost",
-   "mealprep"
-  ],
-  "allergens": [],
-  "dietFlags": [
-   "blandkost",
-   "glutenfritt",
-   "laktosfritt"
-  ],
-  "image": "https://images.pexels.com/photos/19193024/pexels-photo-19193024.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/woman-holding-a-plate-with-creamy-soup-19193024/",
-  "imageCredit": "Nadin Sh",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Vitkålssoppa med köttfärs upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "gronsakspaj",
-  "name": "Grönsakspaj med lagrad ost",
-  "description": "Knaprig pajdeg fylld med broccoli, purjolök och lagrad ost. Vegetarisk paj som räcker länge.",
-  "servings": 6,
-  "prepTime": 25,
-  "cookTime": 45,
-  "difficulty": "medel",
-  "nutrition": {
-   "kcal": 520,
-   "protein": 18,
-   "carbs": 38,
-   "fat": 33,
-   "fiber": 4
+  {
+    "id": "gronsakspaj",
+    "name": "Grönsakspaj med lagrad ost",
+    "description": "Knaprig pajdeg fylld med broccoli, purjolök och lagrad ost. Vegetarisk paj som räcker länge.",
+    "servings": 6,
+    "prepTime": 25,
+    "cookTime": 45,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 520,
+      "protein": 18,
+      "carbs": 38,
+      "fat": 33,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Vetemjöl",
+        "amount": 180,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "amount": 125,
+        "unit": "g"
+      },
+      {
+        "name": "Broccoli",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Purjolök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Ägg",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Grädde",
+        "amount": 2.5,
+        "unit": "dl"
+      },
+      {
+        "name": "Romansallad",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Nyp ihop mjöl, kallt smör och en matsked vatten till en deg. Tryck ut i pajform och kyl 15 minuter.",
+      "Sätt ugnen på 200 grader och förgrädda skalet i 10 minuter.",
+      "Fräs skivad purjolök och broccolibuketter ett par minuter.",
+      "Vispa ägg och grädde, rör ner osten och salta.",
+      "Lägg grönsakerna i skalet och häll över äggstanningen.",
+      "Grädda i 30-35 minuter tills pajen stannat och fått färg. Servera med sallad."
+    ],
+    "categories": [
+      "Vegetariskt"
+    ],
+    "tags": [
+      "vegetariskt",
+      "lunch",
+      "mealprep",
+      "helgmiddag"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "vegetariskt"
+    ],
+    "image": "https://images.pexels.com/photos/5419294/pexels-photo-5419294.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-baked-quiche-dish-5419294/",
+    "imageCredit": "Polina Tankilevitch",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Grönsakspaj med lagrad ost upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Vetemjöl",
-    "amount": 180,
-    "unit": "g"
-   },
-   {
-    "name": "Smör",
-    "amount": 125,
-    "unit": "g"
-   },
-   {
-    "name": "Broccoli",
-    "amount": 300,
-    "unit": "g"
-   },
-   {
-    "name": "Purjolök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Riven ost",
-    "amount": 200,
-    "unit": "g"
-   },
-   {
-    "name": "Ägg",
-    "amount": 3,
-    "unit": "st"
-   },
-   {
-    "name": "Grädde",
-    "amount": 2.5,
-    "unit": "dl"
-   },
-   {
-    "name": "Romansallad",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Nyp ihop mjöl, kallt smör och en matsked vatten till en deg. Tryck ut i pajform och kyl 15 minuter.",
-   "Sätt ugnen på 200 grader och förgrädda skalet i 10 minuter.",
-   "Fräs skivad purjolök och broccolibuketter ett par minuter.",
-   "Vispa ägg och grädde, rör ner osten och salta.",
-   "Lägg grönsakerna i skalet och häll över äggstanningen.",
-   "Grädda i 30-35 minuter tills pajen stannat och fått färg. Servera med sallad."
-  ],
-  "categories": [
-   "Vegetariskt"
-  ],
-  "tags": [
-   "vegetariskt",
-   "lunch",
-   "mealprep",
-   "helgmiddag"
-  ],
-  "allergens": [
-   "gluten",
-   "mjölk",
-   "ägg"
-  ],
-  "dietFlags": [
-   "vegetariskt"
-  ],
-  "image": "https://images.pexels.com/photos/5419294/pexels-photo-5419294.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-baked-quiche-dish-5419294/",
-  "imageCredit": "Polina Tankilevitch",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Grönsakspaj med lagrad ost upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "sotpotatis-bulk-bowl",
-  "name": "Bulkbowl med färsbiffar och sötpotatis",
-  "description": "Färsbiffar, rostad sötpotatis och ris med yoghurtsås - en riktig volymrätt för träningsveckor.",
-  "servings": 4,
-  "prepTime": 15,
-  "cookTime": 30,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 700,
-   "protein": 44,
-   "carbs": 76,
-   "fat": 24,
-   "fiber": 8
+  {
+    "id": "sotpotatis-bulk-bowl",
+    "name": "Bulkbowl med färsbiffar och sötpotatis",
+    "description": "Färsbiffar, rostad sötpotatis och ris med yoghurtsås - en riktig volymrätt för träningsveckor.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 30,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 700,
+      "protein": 44,
+      "carbs": 76,
+      "fat": 24,
+      "fiber": 8
+    },
+    "ingredients": [
+      {
+        "name": "Nötfärs",
+        "amount": 700,
+        "unit": "g"
+      },
+      {
+        "name": "Sötpotatis",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 320,
+        "unit": "g"
+      },
+      {
+        "name": "Grekisk yoghurt",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Spiskummin",
+        "amount": 5,
+        "unit": "g"
+      },
+      {
+        "name": "Paprikapulver",
+        "amount": 10,
+        "unit": "g"
+      },
+      {
+        "name": "Citron",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Olja",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 225 grader. Tärna sötpotatisen, vänd i olja och salt och rosta i 25 minuter.",
+      "Koka riset enligt anvisningen.",
+      "Blanda färsen med spiskummin, paprikapulver och salt. Forma små biffar och stek dem genomstekta.",
+      "Rör ihop yoghurt, pressad vitlök, citronsaft och salt.",
+      "Bygg skålar med ris, sötpotatis och biffar. Toppa med såsen."
+    ],
+    "categories": [
+      "Kött"
+    ],
+    "tags": [
+      "kott",
+      "bulk",
+      "proteinrikt",
+      "mealprep"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/8108102/pexels-photo-8108102.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/grains-and-beans-on-bowls-8108102/",
+    "imageCredit": "MART  PRODUCTION",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Bulkbowl med färsbiffar och sötpotatis upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Nötfärs",
-    "amount": 700,
-    "unit": "g"
-   },
-   {
-    "name": "Sötpotatis",
-    "amount": 600,
-    "unit": "g"
-   },
-   {
-    "name": "Ris",
-    "amount": 320,
-    "unit": "g"
-   },
-   {
-    "name": "Grekisk yoghurt",
-    "amount": 2,
-    "unit": "dl"
-   },
-   {
-    "name": "Vitlök",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Spiskummin",
-    "amount": 5,
-    "unit": "g"
-   },
-   {
-    "name": "Paprikapulver",
-    "amount": 10,
-    "unit": "g"
-   },
-   {
-    "name": "Citron",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Olja",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Sätt ugnen på 225 grader. Tärna sötpotatisen, vänd i olja och salt och rosta i 25 minuter.",
-   "Koka riset enligt anvisningen.",
-   "Blanda färsen med spiskummin, paprikapulver och salt. Forma små biffar och stek dem genomstekta.",
-   "Rör ihop yoghurt, pressad vitlök, citronsaft och salt.",
-   "Bygg skålar med ris, sötpotatis och biffar. Toppa med såsen."
-  ],
-  "categories": [
-   "Kött"
-  ],
-  "tags": [
-   "kott",
-   "bulk",
-   "proteinrikt",
-   "mealprep"
-  ],
-  "allergens": [
-   "mjölk"
-  ],
-  "dietFlags": [
-   "blandkost",
-   "glutenfritt"
-  ],
-  "image": "https://images.pexels.com/photos/8108102/pexels-photo-8108102.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/grains-and-beans-on-bowls-8108102/",
-  "imageCredit": "MART  PRODUCTION",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Bulkbowl med färsbiffar och sötpotatis upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "krispig-tofu-ris-bulk",
-  "name": "Krispig tofu med stekt ris och cashewnötter",
-  "description": "Sojaglaserad krispig tofu över stekt ris med cashewnötter - vegansk bulkmiddag.",
-  "servings": 4,
-  "prepTime": 15,
-  "cookTime": 20,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 620,
-   "protein": 26,
-   "carbs": 72,
-   "fat": 26,
-   "fiber": 6
+  {
+    "id": "krispig-tofu-ris-bulk",
+    "name": "Krispig tofu med stekt ris och cashewnötter",
+    "description": "Sojaglaserad krispig tofu över stekt ris med cashewnötter - vegansk bulkmiddag.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 620,
+      "protein": 26,
+      "carbs": 72,
+      "fat": 26,
+      "fiber": 6
+    },
+    "ingredients": [
+      {
+        "name": "Tofu",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Cashewnötter",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Wokgrönsaker",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Sojasås",
+        "amount": 0.75,
+        "unit": "dl"
+      },
+      {
+        "name": "Honung",
+        "amount": 20,
+        "unit": "g"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Ingefära",
+        "amount": 20,
+        "unit": "g"
+      },
+      {
+        "name": "Maizena",
+        "pantryStaple": true
+      },
+      {
+        "name": "Olja",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka riset och låt det gärna svalna.",
+      "Pressa tofun torr, tärna och vänd i maizena. Stek den riktigt krispig i het olja.",
+      "Häll i hälften av sojan och honungen och låt tofun glaseras. Lägg åt sidan.",
+      "Woka grönsakerna med vitlök och ingefära, lägg i riset och stek med resten av sojan.",
+      "Rosta cashewnötterna i torr panna.",
+      "Servera riset med tofun och nötterna över."
+    ],
+    "categories": [
+      "Vegetariskt",
+      "Ris"
+    ],
+    "tags": [
+      "vegetariskt",
+      "bulk",
+      "proteinrikt"
+    ],
+    "allergens": [
+      "soja",
+      "nötter"
+    ],
+    "dietFlags": [
+      "vegetariskt",
+      "laktosfritt"
+    ],
+    "image": "https://images.pexels.com/photos/36853606/pexels-photo-36853606.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/traditional-indonesian-meal-with-rice-and-side-dishes-36853606/",
+    "imageCredit": "Muhammad  Solikin",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Krispig tofu med stekt ris och cashewnötter upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Tofu",
-    "amount": 500,
-    "unit": "g"
-   },
-   {
-    "name": "Ris",
-    "amount": 400,
-    "unit": "g"
-   },
-   {
-    "name": "Cashewnötter",
-    "amount": 100,
-    "unit": "g"
-   },
-   {
-    "name": "Wokgrönsaker",
-    "amount": 400,
-    "unit": "g"
-   },
-   {
-    "name": "Sojasås",
-    "amount": 0.75,
-    "unit": "dl"
-   },
-   {
-    "name": "Honung",
-    "amount": 20,
-    "unit": "g"
-   },
-   {
-    "name": "Vitlök",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Ingefära",
-    "amount": 20,
-    "unit": "g"
-   },
-   {
-    "name": "Maizena",
-    "pantryStaple": true
-   },
-   {
-    "name": "Olja",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Koka riset och låt det gärna svalna.",
-   "Pressa tofun torr, tärna och vänd i maizena. Stek den riktigt krispig i het olja.",
-   "Häll i hälften av sojan och honungen och låt tofun glaseras. Lägg åt sidan.",
-   "Woka grönsakerna med vitlök och ingefära, lägg i riset och stek med resten av sojan.",
-   "Rosta cashewnötterna i torr panna.",
-   "Servera riset med tofun och nötterna över."
-  ],
-  "categories": [
-   "Vegetariskt",
-   "Ris"
-  ],
-  "tags": [
-   "vegetariskt",
-   "bulk",
-   "proteinrikt"
-  ],
-  "allergens": [
-   "soja",
-   "nötter"
-  ],
-  "dietFlags": [
-   "vegetariskt",
-   "veganskt",
-   "laktosfritt"
-  ],
-  "image": "https://images.pexels.com/photos/36853606/pexels-photo-36853606.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/traditional-indonesian-meal-with-rice-and-side-dishes-36853606/",
-  "imageCredit": "Muhammad  Solikin",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Krispig tofu med stekt ris och cashewnötter upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "toast-skagen",
-  "name": "Toast Skagen",
-  "description": "Klassisk skagenröra på smörstekt bröd med dill och citron. Förrätten som blivit en älskad lättmiddag.",
-  "servings": 4,
-  "prepTime": 15,
-  "cookTime": 5,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 460,
-   "protein": 24,
-   "carbs": 28,
-   "fat": 28,
-   "fiber": 2
+  {
+    "id": "toast-skagen",
+    "name": "Toast Skagen",
+    "description": "Klassisk skagenröra på smörstekt bröd med dill och citron. Förrätten som blivit en älskad lättmiddag.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 5,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 460,
+      "protein": 24,
+      "carbs": 28,
+      "fat": 28,
+      "fiber": 2
+    },
+    "ingredients": [
+      {
+        "name": "Räkor",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Majonnäs",
+        "amount": 1,
+        "unit": "dl"
+      },
+      {
+        "name": "Crème fraiche",
+        "amount": 1,
+        "unit": "dl"
+      },
+      {
+        "name": "Dill",
+        "amount": 20,
+        "unit": "g"
+      },
+      {
+        "name": "Surdegsbröd",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Citron",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Rödlök",
+        "amount": 0.5,
+        "unit": "st"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Blanda räkor med majonnäs, crème fraiche, hackad dill och finhackad rödlök.",
+      "Smaka av med citronsaft, salt och peppar.",
+      "Stek brödskivorna gyllene i smör.",
+      "Lägg röran på bröden och toppa med dill och en citronklyfta."
+    ],
+    "categories": [
+      "Fisk"
+    ],
+    "tags": [
+      "fisk",
+      "helgmiddag",
+      "snabbt",
+      "lunch"
+    ],
+    "allergens": [
+      "skaldjur",
+      "gluten",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "pescetariskt"
+    ],
+    "image": "https://images.pexels.com/photos/11454620/pexels-photo-11454620.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/toasted-bread-on-a-plate-11454620/",
+    "imageCredit": "Vlad",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Toast Skagen upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Räkor",
-    "amount": 500,
-    "unit": "g"
-   },
-   {
-    "name": "Majonnäs",
-    "amount": 1,
-    "unit": "dl"
-   },
-   {
-    "name": "Crème fraiche",
-    "amount": 1,
-    "unit": "dl"
-   },
-   {
-    "name": "Dill",
-    "amount": 20,
-    "unit": "g"
-   },
-   {
-    "name": "Surdegsbröd",
-    "amount": 200,
-    "unit": "g"
-   },
-   {
-    "name": "Citron",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Rödlök",
-    "amount": 0.5,
-    "unit": "st"
-   },
-   {
-    "name": "Smör",
-    "pantryStaple": true
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Blanda räkor med majonnäs, crème fraiche, hackad dill och finhackad rödlök.",
-   "Smaka av med citronsaft, salt och peppar.",
-   "Stek brödskivorna gyllene i smör.",
-   "Lägg röran på bröden och toppa med dill och en citronklyfta."
-  ],
-  "categories": [
-   "Fisk"
-  ],
-  "tags": [
-   "fisk",
-   "helgmiddag",
-   "snabbt",
-   "lunch"
-  ],
-  "allergens": [
-   "skaldjur",
-   "gluten",
-   "mjölk",
-   "ägg"
-  ],
-  "dietFlags": [
-   "blandkost",
-   "pescetariskt"
-  ],
-  "image": "https://images.pexels.com/photos/11454620/pexels-photo-11454620.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/toasted-bread-on-a-plate-11454620/",
-  "imageCredit": "Vlad",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Toast Skagen upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "ugnskorv-potatismos-appel",
-  "name": "Ugnsbakad korv med äppelmos och potatismos",
-  "description": "Grov korv i ugn med potatismos, stekt äpple och senap. Höstmiddag på 30 minuter.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 25,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 560,
-   "protein": 20,
-   "carbs": 52,
-   "fat": 30,
-   "fiber": 4
-  },
-  "ingredients": [
-   {
-    "name": "Falukorv",
-    "amount": 500,
-    "unit": "g"
-   },
-   {
-    "name": "Potatis",
-    "amount": 800,
-    "unit": "g"
-   },
-   {
-    "name": "Äpple",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Mjölk",
-    "amount": 1,
-    "unit": "dl"
-   },
-   {
-    "name": "Senap",
-    "amount": 40,
-    "unit": "g"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Smör",
-    "pantryStaple": true
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Sätt ugnen på 200 grader. Koka potatisen mjuk i saltat vatten.",
-   "Skär korven i tjocka skivor och lägg i en form med klyftad lök. Baka i 20 minuter.",
-   "Tärna äpplena och stek dem gyllene i smör.",
-   "Mosa potatisen med mjölk och smör och smaka av med salt.",
-   "Servera korven med mos, stekt äpple och senap."
-  ],
-  "categories": [
-   "Husmanskost"
-  ],
-  "tags": [
-   "barn",
-   "billigt",
-   "husmanskost"
-  ],
-  "allergens": [
-   "mjölk"
-  ],
-  "dietFlags": [
-   "blandkost",
-   "glutenfritt"
-  ],
-  "image": "https://images.pexels.com/photos/10183540/pexels-photo-10183540.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/red-sausage-on-white-ceramic-plate-10183540/",
-  "imageCredit": "Nadin Sh",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Ugnsbakad korv med äppelmos och potatismos upplagd på tallrik",
-  "imageStatus": "ok"
- }
+  {
+    "id": "ugnskorv-potatismos-appel",
+    "name": "Ugnsbakad korv med äppelmos och potatismos",
+    "description": "Grov korv i ugn med potatismos, stekt äpple och senap. Höstmiddag på 30 minuter.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 560,
+      "protein": 20,
+      "carbs": 52,
+      "fat": 30,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Falukorv",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Äpple",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 1,
+        "unit": "dl"
+      },
+      {
+        "name": "Senap",
+        "amount": 40,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 200 grader. Koka potatisen mjuk i saltat vatten.",
+      "Skär korven i tjocka skivor och lägg i en form med klyftad lök. Baka i 20 minuter.",
+      "Tärna äpplena och stek dem gyllene i smör.",
+      "Mosa potatisen med mjölk och smör och smaka av med salt.",
+      "Servera korven med mos, stekt äpple och senap."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "barn",
+      "billigt",
+      "husmanskost"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/10183540/pexels-photo-10183540.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/red-sausage-on-white-ceramic-plate-10183540/",
+    "imageCredit": "Nadin Sh",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Ugnsbakad korv med äppelmos och potatismos upplagd på tallrik",
+    "imageStatus": "ok"
+  }
 ]

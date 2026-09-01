@@ -203,7 +203,10 @@ def shelves(per_shelf: int = 12) -> dict:
 
 
 def search(**kwargs) -> dict:
-    limit = min(int(kwargs.pop("limit", 60) or 60), 200)
+    # 500, inte 200: appen hämtar HELA banken till receptfliken, och taket
+    # klippte tyst bort recepten som sorterade sist (Å/Ä/Ö) när banken växte
+    # förbi gränsen - fem recept fanns men kunde aldrig ses.
+    limit = min(int(kwargs.pop("limit", 60) or 60), 500)
     offset = max(int(kwargs.pop("offset", 0) or 0), 0)
     def build():
         store = open_store()

@@ -1,923 +1,923 @@
 [
- {
-  "id": "kottbullar-potatismos",
-  "name": "Köttbullar med potatismos och lingon",
-  "description": "Husmanskost som aldrig sviker. Mjuka köttbullar, krämigt potatismos och syrliga lingon - vardagens tryggaste tallrik.",
-  "servings": 4,
-  "prepTime": 20,
-  "cookTime": 25,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 640,
-   "protein": 34,
-   "carbs": 58,
-   "fat": 29,
-   "fiber": 5
+  {
+    "id": "kottbullar-potatismos",
+    "name": "Köttbullar med potatismos och lingon",
+    "description": "Husmanskost som aldrig sviker. Mjuka köttbullar, krämigt potatismos och syrliga lingon - vardagens tryggaste tallrik.",
+    "servings": 4,
+    "prepTime": 20,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 640,
+      "protein": 34,
+      "carbs": 58,
+      "fat": 29,
+      "fiber": 5
+    },
+    "ingredients": [
+      {
+        "name": "Blandfärs",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 900,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 200,
+        "unit": "ml"
+      },
+      {
+        "name": "Ströbröd",
+        "amount": 50,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Ägg",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Lingonsylt",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "amount": 40,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Peppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Skala och riv löken fint. Blanda ströbröd med hälften av mjölken och låt svälla 10 minuter.",
+      "Rör ihop färs, blötlagt ströbröd, ägg och riven lök. Salta och peppra ordentligt.",
+      "Rulla bollar stora som valnötter med fuktade händer.",
+      "Skala potatisen, koka den mjuk i saltat vatten, cirka 20 minuter.",
+      "Stek köttbullarna i smör på medelvärme tills de fått fin färg runt om och är genomstekta, cirka 8 minuter.",
+      "Häll av potatisvattnet, mosa potatisen och rör ner resten av mjölken och smöret. Smaka av med salt.",
+      "Servera köttbullarna med moset och lingonsylt."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Familj"
+    ],
+    "tags": [
+      "barn",
+      "familj",
+      "husmanskost",
+      "kott",
+      "proteinrikt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "imageAlt": "Köttbullar med potatismos och lingon upplagd på tallrik",
+    "imageStatus": "ok",
+    "image": "https://images.pexels.com/photos/4210847/pexels-photo-4210847.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/fried-meat-cutlet-served-with-boiled-potatoes-and-salad-4210847/",
+    "imageCredit": "https://kaboompics.com/",
+    "imageLicense": "Pexels License"
   },
-  "ingredients": [
-   {
-    "name": "Blandfärs",
-    "amount": 500,
-    "unit": "g"
-   },
-   {
-    "name": "Potatis",
-    "amount": 900,
-    "unit": "g"
-   },
-   {
-    "name": "Mjölk",
-    "amount": 200,
-    "unit": "ml"
-   },
-   {
-    "name": "Ströbröd",
-    "amount": 50,
-    "unit": "g"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Ägg",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Lingonsylt",
-    "amount": 100,
-    "unit": "g"
-   },
-   {
-    "name": "Smör",
-    "amount": 40,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Peppar",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Skala och riv löken fint. Blanda ströbröd med hälften av mjölken och låt svälla 10 minuter.",
-   "Rör ihop färs, blötlagt ströbröd, ägg och riven lök. Salta och peppra ordentligt.",
-   "Rulla bollar stora som valnötter med fuktade händer.",
-   "Skala potatisen, koka den mjuk i saltat vatten, cirka 20 minuter.",
-   "Stek köttbullarna i smör på medelvärme tills de fått fin färg runt om och är genomstekta, cirka 8 minuter.",
-   "Häll av potatisvattnet, mosa potatisen och rör ner resten av mjölken och smöret. Smaka av med salt.",
-   "Servera köttbullarna med moset och lingonsylt."
-  ],
-  "categories": [
-   "Husmanskost",
-   "Familj"
-  ],
-  "tags": [
-   "barn",
-   "familj",
-   "husmanskost",
-   "kott",
-   "proteinrikt"
-  ],
-  "allergens": [
-   "gluten",
-   "laktos",
-   "ägg"
-  ],
-  "dietFlags": [
-   "blandkost"
-  ],
-  "imageAlt": "Köttbullar med potatismos och lingon upplagd på tallrik",
-  "imageStatus": "ok",
-  "image": "https://images.pexels.com/photos/4210847/pexels-photo-4210847.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/fried-meat-cutlet-served-with-boiled-potatoes-and-salad-4210847/",
-  "imageCredit": "https://kaboompics.com/",
-  "imageLicense": "Pexels License"
- },
- {
-  "id": "spaghetti-kottfarssas",
-  "name": "Spaghetti med köttfärssås",
-  "description": "Långsamt puttrad köttfärssås med tomat och morot. Barnens favorit och veckans säkraste kort.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 30,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 610,
-   "protein": 32,
-   "carbs": 72,
-   "fat": 20,
-   "fiber": 7
+  {
+    "id": "spaghetti-kottfarssas",
+    "name": "Spaghetti med köttfärssås",
+    "description": "Långsamt puttrad köttfärssås med tomat och morot. Barnens favorit och veckans säkraste kort.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 30,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 610,
+      "protein": 32,
+      "carbs": 72,
+      "fat": 20,
+      "fiber": 7
+    },
+    "ingredients": [
+      {
+        "name": "Blandfärs",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Spaghetti",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Krossade tomater",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Morötter",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Tomatpuré",
+        "amount": 2,
+        "unit": "msk"
+      },
+      {
+        "name": "Olja",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Oregano",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Hacka lök och vitlök. Riv morötterna grovt.",
+      "Fräs lök och morot mjuka i olja i en vid gryta, cirka 5 minuter.",
+      "Lägg i färsen och bryn den tills all vätska kokat bort och färsen fått färg.",
+      "Rör ner tomatpuré och vitlök, stek ytterligare en minut så tomatpurén mörknar.",
+      "Häll i krossade tomater, krydda med oregano och salt. Låt puttra utan lock i 20 minuter.",
+      "Koka spaghettin enligt anvisningen på paketet under tiden.",
+      "Smaka av såsen och servera över pastan."
+    ],
+    "categories": [
+      "Pasta",
+      "Familj"
+    ],
+    "tags": [
+      "barn",
+      "familj",
+      "billigt",
+      "kott",
+      "proteinrikt",
+      "mealprep"
+    ],
+    "allergens": [
+      "gluten"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/546945/pexels-photo-546945.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/shallow-focus-photo-of-pasta-546945/",
+    "imageCredit": "Maurijn Pach",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Spaghetti med köttfärssås upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Blandfärs",
-    "amount": 500,
-    "unit": "g"
-   },
-   {
-    "name": "Spaghetti",
-    "amount": 400,
-    "unit": "g"
-   },
-   {
-    "name": "Krossade tomater",
-    "amount": 400,
-    "unit": "g"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Morötter",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Vitlök",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Tomatpuré",
-    "amount": 2,
-    "unit": "msk"
-   },
-   {
-    "name": "Olja",
-    "pantryStaple": true
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Oregano",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Hacka lök och vitlök. Riv morötterna grovt.",
-   "Fräs lök och morot mjuka i olja i en vid gryta, cirka 5 minuter.",
-   "Lägg i färsen och bryn den tills all vätska kokat bort och färsen fått färg.",
-   "Rör ner tomatpuré och vitlök, stek ytterligare en minut så tomatpurén mörknar.",
-   "Häll i krossade tomater, krydda med oregano och salt. Låt puttra utan lock i 20 minuter.",
-   "Koka spaghettin enligt anvisningen på paketet under tiden.",
-   "Smaka av såsen och servera över pastan."
-  ],
-  "categories": [
-   "Pasta",
-   "Familj"
-  ],
-  "tags": [
-   "barn",
-   "familj",
-   "billigt",
-   "kott",
-   "proteinrikt",
-   "mealprep"
-  ],
-  "allergens": [
-   "gluten"
-  ],
-  "dietFlags": [
-   "blandkost"
-  ],
-  "image": "https://images.pexels.com/photos/546945/pexels-photo-546945.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/shallow-focus-photo-of-pasta-546945/",
-  "imageCredit": "Maurijn Pach",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Spaghetti med köttfärssås upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "tacos-kottfars",
-  "name": "Tacos med köttfärs och krispiga grönsaker",
-  "description": "Fredagsmys med mjuka tortillas, kryddig färs och allt gott att toppa med. Alla bygger sin egen.",
-  "servings": 4,
-  "prepTime": 15,
-  "cookTime": 15,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 590,
-   "protein": 30,
-   "carbs": 55,
-   "fat": 26,
-   "fiber": 8
+  {
+    "id": "tacos-kottfars",
+    "name": "Tacos med köttfärs och krispiga grönsaker",
+    "description": "Fredagsmys med mjuka tortillas, kryddig färs och allt gott att toppa med. Alla bygger sin egen.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 590,
+      "protein": 30,
+      "carbs": 55,
+      "fat": 26,
+      "fiber": 8
+    },
+    "ingredients": [
+      {
+        "name": "Blandfärs",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Tortilla",
+        "amount": 8,
+        "unit": "st"
+      },
+      {
+        "name": "Paprika",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Gurka",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Tomat",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Majs",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Crème fraiche",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Paprikapulver",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Bryn färsen i en het panna tills den fått ordentlig färg.",
+      "Krydda med paprikapulver och salt, tillsätt en skvätt vatten och låt koka in någon minut.",
+      "Strimla paprika och gurka, tärna tomaterna och häll av majsen.",
+      "Värm tortillabröden hastigt i torr panna eller i ugnen.",
+      "Ställ fram allt på bordet och låt var och en fylla sina egna bröd."
+    ],
+    "categories": [
+      "Familj",
+      "Helgmiddag"
+    ],
+    "tags": [
+      "barn",
+      "familj",
+      "kott",
+      "proteinrikt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/28895976/pexels-photo-28895976.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-tacos-with-assorted-fillings-and-sauce-28895976/",
+    "imageCredit": "Nano Erdozain",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Tacos med köttfärs och krispiga grönsaker upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Blandfärs",
-    "amount": 500,
-    "unit": "g"
-   },
-   {
-    "name": "Tortilla",
-    "amount": 8,
-    "unit": "st"
-   },
-   {
-    "name": "Paprika",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Gurka",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Tomat",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Majs",
-    "amount": 200,
-    "unit": "g"
-   },
-   {
-    "name": "Riven ost",
-    "amount": 100,
-    "unit": "g"
-   },
-   {
-    "name": "Crème fraiche",
-    "amount": 200,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Paprikapulver",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Bryn färsen i en het panna tills den fått ordentlig färg.",
-   "Krydda med paprikapulver och salt, tillsätt en skvätt vatten och låt koka in någon minut.",
-   "Strimla paprika och gurka, tärna tomaterna och häll av majsen.",
-   "Värm tortillabröden hastigt i torr panna eller i ugnen.",
-   "Ställ fram allt på bordet och låt var och en fylla sina egna bröd."
-  ],
-  "categories": [
-   "Familj",
-   "Helgmiddag"
-  ],
-  "tags": [
-   "barn",
-   "familj",
-   "kott",
-   "proteinrikt"
-  ],
-  "allergens": [
-   "gluten",
-   "laktos"
-  ],
-  "dietFlags": [
-   "blandkost"
-  ],
-  "image": "https://images.pexels.com/photos/28895976/pexels-photo-28895976.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-tacos-with-assorted-fillings-and-sauce-28895976/",
-  "imageCredit": "Nano Erdozain",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Tacos med köttfärs och krispiga grönsaker upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "pannkakor",
-  "name": "Pannkakor",
-  "description": "Tunna, gyllene pannkakor som steks i smör. Servera med sylt och en klick grädde - eller bara som de är.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 20,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 480,
-   "protein": 17,
-   "carbs": 58,
-   "fat": 20,
-   "fiber": 2
+  {
+    "id": "pannkakor",
+    "name": "Pannkakor",
+    "description": "Tunna, gyllene pannkakor som steks i smör. Servera med sylt och en klick grädde - eller bara som de är.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 480,
+      "protein": 17,
+      "carbs": 58,
+      "fat": 20,
+      "fiber": 2
+    },
+    "ingredients": [
+      {
+        "name": "Vetemjöl",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 900,
+        "unit": "ml"
+      },
+      {
+        "name": "Ägg",
+        "amount": 4,
+        "unit": "st"
+      },
+      {
+        "name": "Smör",
+        "amount": 50,
+        "unit": "g"
+      },
+      {
+        "name": "Lingonsylt",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Vispa ihop mjöl, salt och hälften av mjölken till en slät smet utan klumpar.",
+      "Vispa ner resten av mjölken och äggen. Låt smeten svälla 15 minuter.",
+      "Smält lite smör i en stekpanna på medelvärme.",
+      "Häll i en slev smet, fördela den tunt över pannan och stek tills ytan stannat och kanterna släpper.",
+      "Vänd och stek ytterligare en halv minut. Fortsätt tills smeten är slut.",
+      "Servera pannkakorna med lingonsylt."
+    ],
+    "categories": [
+      "Familj",
+      "Husmanskost"
+    ],
+    "tags": [
+      "barn",
+      "familj",
+      "billigt",
+      "vegetariskt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "vegetariskt"
+    ],
+    "image": "https://images.pexels.com/photos/3807390/pexels-photo-3807390.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/person-filling-crepe-with-custard-3807390/",
+    "imageCredit": "Elina Fairytale",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Pannkakor upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Vetemjöl",
-    "amount": 300,
-    "unit": "g"
-   },
-   {
-    "name": "Mjölk",
-    "amount": 900,
-    "unit": "ml"
-   },
-   {
-    "name": "Ägg",
-    "amount": 4,
-    "unit": "st"
-   },
-   {
-    "name": "Smör",
-    "amount": 50,
-    "unit": "g"
-   },
-   {
-    "name": "Lingonsylt",
-    "amount": 150,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Vispa ihop mjöl, salt och hälften av mjölken till en slät smet utan klumpar.",
-   "Vispa ner resten av mjölken och äggen. Låt smeten svälla 15 minuter.",
-   "Smält lite smör i en stekpanna på medelvärme.",
-   "Häll i en slev smet, fördela den tunt över pannan och stek tills ytan stannat och kanterna släpper.",
-   "Vänd och stek ytterligare en halv minut. Fortsätt tills smeten är slut.",
-   "Servera pannkakorna med lingonsylt."
-  ],
-  "categories": [
-   "Familj",
-   "Husmanskost"
-  ],
-  "tags": [
-   "barn",
-   "familj",
-   "billigt",
-   "vegetariskt"
-  ],
-  "allergens": [
-   "gluten",
-   "laktos",
-   "ägg"
-  ],
-  "dietFlags": [
-   "vegetarisk"
-  ],
-  "image": "https://images.pexels.com/photos/3807390/pexels-photo-3807390.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/person-filling-crepe-with-custard-3807390/",
-  "imageCredit": "Elina Fairytale",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Pannkakor upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "ugnspannkaka-bacon",
-  "name": "Ugnspannkaka med bacon",
-  "description": "Fluffig pannkaka som får svälla i ugnen med salt bacon i botten. Ett bleck räcker till hela familjen.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 35,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 560,
-   "protein": 22,
-   "carbs": 52,
-   "fat": 28,
-   "fiber": 2
+  {
+    "id": "ugnspannkaka-bacon",
+    "name": "Ugnspannkaka med bacon",
+    "description": "Fluffig pannkaka som får svälla i ugnen med salt bacon i botten. Ett bleck räcker till hela familjen.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 35,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 560,
+      "protein": 22,
+      "carbs": 52,
+      "fat": 28,
+      "fiber": 2
+    },
+    "ingredients": [
+      {
+        "name": "Vetemjöl",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 800,
+        "unit": "ml"
+      },
+      {
+        "name": "Ägg",
+        "amount": 4,
+        "unit": "st"
+      },
+      {
+        "name": "Bacon",
+        "amount": 140,
+        "unit": "g"
+      },
+      {
+        "name": "Lingonsylt",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 225 grader.",
+      "Vispa ihop mjöl, salt och hälften av mjölken slät. Vispa ner resten av mjölken och äggen.",
+      "Stek baconet knaprigt och fördela det i en smord långpanna.",
+      "Häll smeten över baconet.",
+      "Grädda mitt i ugnen 30-35 minuter tills pannkakan svällt och fått gyllene yta.",
+      "Skär i bitar och servera med lingonsylt."
+    ],
+    "categories": [
+      "Familj",
+      "Husmanskost"
+    ],
+    "tags": [
+      "barn",
+      "familj",
+      "billigt",
+      "mealprep"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "imageAlt": "Ugnspannkaka med bacon upplagd på tallrik",
+    "imageStatus": "ok",
+    "image": "https://images.pexels.com/photos/22882256/pexels-photo-22882256.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/breakfast-on-plate-22882256/",
+    "imageCredit": "Hebert  Santos",
+    "imageLicense": "Pexels License"
   },
-  "ingredients": [
-   {
-    "name": "Vetemjöl",
-    "amount": 300,
-    "unit": "g"
-   },
-   {
-    "name": "Mjölk",
-    "amount": 800,
-    "unit": "ml"
-   },
-   {
-    "name": "Ägg",
-    "amount": 4,
-    "unit": "st"
-   },
-   {
-    "name": "Bacon",
-    "amount": 140,
-    "unit": "g"
-   },
-   {
-    "name": "Lingonsylt",
-    "amount": 150,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Sätt ugnen på 225 grader.",
-   "Vispa ihop mjöl, salt och hälften av mjölken slät. Vispa ner resten av mjölken och äggen.",
-   "Stek baconet knaprigt och fördela det i en smord långpanna.",
-   "Häll smeten över baconet.",
-   "Grädda mitt i ugnen 30-35 minuter tills pannkakan svällt och fått gyllene yta.",
-   "Skär i bitar och servera med lingonsylt."
-  ],
-  "categories": [
-   "Familj",
-   "Husmanskost"
-  ],
-  "tags": [
-   "barn",
-   "familj",
-   "billigt",
-   "mealprep"
-  ],
-  "allergens": [
-   "gluten",
-   "laktos",
-   "ägg"
-  ],
-  "dietFlags": [
-   "blandkost"
-  ],
-  "imageAlt": "Ugnspannkaka med bacon upplagd på tallrik",
-  "imageStatus": "ok",
-  "image": "https://images.pexels.com/photos/22882256/pexels-photo-22882256.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/breakfast-on-plate-22882256/",
-  "imageCredit": "Hebert  Santos",
-  "imageLicense": "Pexels License"
- },
- {
-  "id": "makaroner-korv",
-  "name": "Makaroner och korv i ugn",
-  "description": "Snabb vardagsmat med makaroner, falukorv och ost som blir gyllene i ugnen. Klart på en halvtimme.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 20,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 620,
-   "protein": 26,
-   "carbs": 66,
-   "fat": 27,
-   "fiber": 4
+  {
+    "id": "makaroner-korv",
+    "name": "Makaroner och korv i ugn",
+    "description": "Snabb vardagsmat med makaroner, falukorv och ost som blir gyllene i ugnen. Klart på en halvtimme.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 620,
+      "protein": 26,
+      "carbs": 66,
+      "fat": 27,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Makaroner",
+        "amount": 350,
+        "unit": "g"
+      },
+      {
+        "name": "Falukorv",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 200,
+        "unit": "ml"
+      },
+      {
+        "name": "Ägg",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Ketchup",
+        "amount": 60,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Peppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 225 grader. Koka makaronerna två minuter kortare än paketet anger.",
+      "Skär falukorven i skivor och stek dem snabbt i en het panna tills kanterna fått färg.",
+      "Vispa ihop mjölk och ägg, salta och peppra.",
+      "Blanda makaroner och korv i en ugnsform, häll över äggstanningen och strö osten överst.",
+      "Gratinera 15-20 minuter tills osten är gyllene.",
+      "Servera med ketchup."
+    ],
+    "categories": [
+      "Familj",
+      "Pasta"
+    ],
+    "tags": [
+      "barn",
+      "familj",
+      "billigt",
+      "snabbt",
+      "mealprep"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/806357/pexels-photo-806357.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/close-up-photography-of-baked-mac-806357/",
+    "imageCredit": "Ronmar Lacamiento",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Makaroner och korv i ugn upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Makaroner",
-    "amount": 350,
-    "unit": "g"
-   },
-   {
-    "name": "Falukorv",
-    "amount": 400,
-    "unit": "g"
-   },
-   {
-    "name": "Riven ost",
-    "amount": 150,
-    "unit": "g"
-   },
-   {
-    "name": "Mjölk",
-    "amount": 200,
-    "unit": "ml"
-   },
-   {
-    "name": "Ägg",
-    "amount": 2,
-    "unit": "st"
-   },
-   {
-    "name": "Ketchup",
-    "amount": 60,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Peppar",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Sätt ugnen på 225 grader. Koka makaronerna två minuter kortare än paketet anger.",
-   "Skär falukorven i skivor och stek dem snabbt i en het panna tills kanterna fått färg.",
-   "Vispa ihop mjölk och ägg, salta och peppra.",
-   "Blanda makaroner och korv i en ugnsform, häll över äggstanningen och strö osten överst.",
-   "Gratinera 15-20 minuter tills osten är gyllene.",
-   "Servera med ketchup."
-  ],
-  "categories": [
-   "Familj",
-   "Pasta"
-  ],
-  "tags": [
-   "barn",
-   "familj",
-   "billigt",
-   "snabbt",
-   "mealprep"
-  ],
-  "allergens": [
-   "gluten",
-   "laktos",
-   "ägg"
-  ],
-  "dietFlags": [
-   "blandkost"
-  ],
-  "image": "https://images.pexels.com/photos/806357/pexels-photo-806357.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/close-up-photography-of-baked-mac-806357/",
-  "imageCredit": "Ronmar Lacamiento",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Makaroner och korv i ugn upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "kottfarslimpa-graddsas",
-  "name": "Köttfärslimpa med gräddsås",
-  "description": "Saftig färslimpa som får gotta sig i ugnen medan skyn blir till en len gräddsås.",
-  "servings": 4,
-  "prepTime": 15,
-  "cookTime": 45,
-  "difficulty": "medel",
-  "nutrition": {
-   "kcal": 660,
-   "protein": 36,
-   "carbs": 40,
-   "fat": 38,
-   "fiber": 4
+  {
+    "id": "kottfarslimpa-graddsas",
+    "name": "Köttfärslimpa med gräddsås",
+    "description": "Saftig färslimpa som får gotta sig i ugnen medan skyn blir till en len gräddsås.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 45,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 660,
+      "protein": 36,
+      "carbs": 40,
+      "fat": 38,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Blandfärs",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Grädde",
+        "amount": 300,
+        "unit": "ml"
+      },
+      {
+        "name": "Ströbröd",
+        "amount": 60,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Ägg",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Bacon",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Peppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 200 grader. Riv löken fint.",
+      "Blanda färs, ströbröd, ägg, riven lök, salt och peppar. Forma en limpa i en ugnsform.",
+      "Lägg baconskivorna över limpan.",
+      "Stek i ugnen 40-45 minuter tills innertemperaturen når 70 grader.",
+      "Koka potatisen mjuk i saltat vatten under tiden.",
+      "Lyft upp limpan och låt vila. Häll grädden i formen, rör ut skyn och låt koka ihop några minuter på spisen.",
+      "Skiva limpan och servera med potatis och gräddsås."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Familj"
+    ],
+    "tags": [
+      "barn",
+      "familj",
+      "husmanskost",
+      "kott",
+      "proteinrikt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/31673752/pexels-photo-31673752.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/delicious-meatloaf-with-egg-and-zesty-potatoes-31673752/",
+    "imageCredit": "Zoltan Istella",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Köttfärslimpa med gräddsås upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Blandfärs",
-    "amount": 600,
-    "unit": "g"
-   },
-   {
-    "name": "Potatis",
-    "amount": 800,
-    "unit": "g"
-   },
-   {
-    "name": "Grädde",
-    "amount": 300,
-    "unit": "ml"
-   },
-   {
-    "name": "Ströbröd",
-    "amount": 60,
-    "unit": "g"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Ägg",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Bacon",
-    "amount": 100,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Peppar",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Sätt ugnen på 200 grader. Riv löken fint.",
-   "Blanda färs, ströbröd, ägg, riven lök, salt och peppar. Forma en limpa i en ugnsform.",
-   "Lägg baconskivorna över limpan.",
-   "Stek i ugnen 40-45 minuter tills innertemperaturen når 70 grader.",
-   "Koka potatisen mjuk i saltat vatten under tiden.",
-   "Lyft upp limpan och låt vila. Häll grädden i formen, rör ut skyn och låt koka ihop några minuter på spisen.",
-   "Skiva limpan och servera med potatis och gräddsås."
-  ],
-  "categories": [
-   "Husmanskost",
-   "Familj"
-  ],
-  "tags": [
-   "barn",
-   "familj",
-   "husmanskost",
-   "kott",
-   "proteinrikt"
-  ],
-  "allergens": [
-   "gluten",
-   "laktos",
-   "ägg"
-  ],
-  "dietFlags": [
-   "blandkost"
-  ],
-  "image": "https://images.pexels.com/photos/31673752/pexels-photo-31673752.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/delicious-meatloaf-with-egg-and-zesty-potatoes-31673752/",
-  "imageCredit": "Zoltan Istella",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Köttfärslimpa med gräddsås upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "lasagne-klassisk",
-  "name": "Lasagne",
-  "description": "Lager på lager av köttfärssås, bechamel och pasta. Tar sin tid i ugnen och är värd varenda minut.",
-  "servings": 4,
-  "prepTime": 25,
-  "cookTime": 40,
-  "difficulty": "medel",
-  "nutrition": {
-   "kcal": 690,
-   "protein": 36,
-   "carbs": 58,
-   "fat": 34,
-   "fiber": 6
+  {
+    "id": "lasagne-klassisk",
+    "name": "Lasagne",
+    "description": "Lager på lager av köttfärssås, bechamel och pasta. Tar sin tid i ugnen och är värd varenda minut.",
+    "servings": 4,
+    "prepTime": 25,
+    "cookTime": 40,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 690,
+      "protein": 36,
+      "carbs": 58,
+      "fat": 34,
+      "fiber": 6
+    },
+    "ingredients": [
+      {
+        "name": "Blandfärs",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Lasagneplattor",
+        "amount": 250,
+        "unit": "g"
+      },
+      {
+        "name": "Krossade tomater",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 500,
+        "unit": "ml"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Vetemjöl",
+        "amount": 50,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "amount": 50,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Oregano",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 200 grader. Hacka löken.",
+      "Bryn färsen ordentligt, tillsätt löken och fräs den mjuk.",
+      "Häll i krossade tomater och oregano, salta och låt puttra 15 minuter.",
+      "Smält smöret i en kastrull, vispa ner mjölet och låt fräsa en halv minut.",
+      "Vispa i mjölken lite i taget och koka bechamelsåsen slät och tjock. Smaka av med salt.",
+      "Varva köttfärssås, lasagneplattor och bechamel i en ugnsform, avsluta med bechamel och osten.",
+      "Grädda 35-40 minuter tills ytan är gyllene. Låt vila 10 minuter före servering."
+    ],
+    "categories": [
+      "Pasta",
+      "Familj",
+      "Helgmiddag"
+    ],
+    "tags": [
+      "barn",
+      "familj",
+      "kott",
+      "proteinrikt",
+      "mealprep",
+      "helgmiddag"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/33312938/pexels-photo-33312938.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/delicious-homemade-lasagna-with-tomato-sauce-33312938/",
+    "imageCredit": "Büşra Yurt",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Lasagne upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Blandfärs",
-    "amount": 500,
-    "unit": "g"
-   },
-   {
-    "name": "Lasagneplattor",
-    "amount": 250,
-    "unit": "g"
-   },
-   {
-    "name": "Krossade tomater",
-    "amount": 400,
-    "unit": "g"
-   },
-   {
-    "name": "Mjölk",
-    "amount": 500,
-    "unit": "ml"
-   },
-   {
-    "name": "Riven ost",
-    "amount": 150,
-    "unit": "g"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Vetemjöl",
-    "amount": 50,
-    "unit": "g"
-   },
-   {
-    "name": "Smör",
-    "amount": 50,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Oregano",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Sätt ugnen på 200 grader. Hacka löken.",
-   "Bryn färsen ordentligt, tillsätt löken och fräs den mjuk.",
-   "Häll i krossade tomater och oregano, salta och låt puttra 15 minuter.",
-   "Smält smöret i en kastrull, vispa ner mjölet och låt fräsa en halv minut.",
-   "Vispa i mjölken lite i taget och koka bechamelsåsen slät och tjock. Smaka av med salt.",
-   "Varva köttfärssås, lasagneplattor och bechamel i en ugnsform, avsluta med bechamel och osten.",
-   "Grädda 35-40 minuter tills ytan är gyllene. Låt vila 10 minuter före servering."
-  ],
-  "categories": [
-   "Pasta",
-   "Familj",
-   "Helgmiddag"
-  ],
-  "tags": [
-   "barn",
-   "familj",
-   "kott",
-   "proteinrikt",
-   "mealprep",
-   "helgmiddag"
-  ],
-  "allergens": [
-   "gluten",
-   "laktos"
-  ],
-  "dietFlags": [
-   "blandkost"
-  ],
-  "image": "https://images.pexels.com/photos/33312938/pexels-photo-33312938.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/delicious-homemade-lasagna-with-tomato-sauce-33312938/",
-  "imageCredit": "Büşra Yurt",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Lasagne upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "kyckling-ris-mild",
-  "name": "Mild kycklinggryta med ris",
-  "description": "Krämig gryta med mjuka kycklingbitar och sötma från paprika. Mild nog för de minsta.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 25,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 570,
-   "protein": 38,
-   "carbs": 62,
-   "fat": 18,
-   "fiber": 4
+  {
+    "id": "kyckling-ris-mild",
+    "name": "Mild kycklinggryta med ris",
+    "description": "Krämig gryta med mjuka kycklingbitar och sötma från paprika. Mild nog för de minsta.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 570,
+      "protein": 38,
+      "carbs": 62,
+      "fat": 18,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Kycklingfilé",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Grädde",
+        "amount": 200,
+        "unit": "ml"
+      },
+      {
+        "name": "Paprika",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Buljong",
+        "amount": 200,
+        "unit": "ml"
+      },
+      {
+        "name": "Olja",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Skär kycklingen i bitar. Hacka lök och strimla paprikan.",
+      "Bryn kycklingen i olja tills den fått färg runt om. Salta.",
+      "Tillsätt lök och paprika och fräs ett par minuter.",
+      "Häll i buljong och grädde och låt sjuda 15 minuter tills såsen tjocknat.",
+      "Koka riset enligt anvisningen på paketet under tiden.",
+      "Smaka av grytan med salt och servera med riset."
+    ],
+    "categories": [
+      "Familj",
+      "Ris"
+    ],
+    "tags": [
+      "barn",
+      "familj",
+      "kyckling",
+      "proteinrikt",
+      "mealprep"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/10338450/pexels-photo-10338450.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/a-close-up-shot-of-a-delicious-chicken-soup-10338450/",
+    "imageCredit": "Istvan Szabo",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Mild kycklinggryta med ris upplagd på tallrik",
+    "imageStatus": "ok"
   },
-  "ingredients": [
-   {
-    "name": "Kycklingfilé",
-    "amount": 600,
-    "unit": "g"
-   },
-   {
-    "name": "Ris",
-    "amount": 300,
-    "unit": "g"
-   },
-   {
-    "name": "Grädde",
-    "amount": 200,
-    "unit": "ml"
-   },
-   {
-    "name": "Paprika",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Gul lök",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Buljong",
-    "amount": 200,
-    "unit": "ml"
-   },
-   {
-    "name": "Olja",
-    "pantryStaple": true
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Skär kycklingen i bitar. Hacka lök och strimla paprikan.",
-   "Bryn kycklingen i olja tills den fått färg runt om. Salta.",
-   "Tillsätt lök och paprika och fräs ett par minuter.",
-   "Häll i buljong och grädde och låt sjuda 15 minuter tills såsen tjocknat.",
-   "Koka riset enligt anvisningen på paketet under tiden.",
-   "Smaka av grytan med salt och servera med riset."
-  ],
-  "categories": [
-   "Familj",
-   "Ris"
-  ],
-  "tags": [
-   "barn",
-   "familj",
-   "kyckling",
-   "proteinrikt",
-   "mealprep"
-  ],
-  "allergens": [
-   "laktos"
-  ],
-  "dietFlags": [
-   "blandkost"
-  ],
-  "image": "https://images.pexels.com/photos/10338450/pexels-photo-10338450.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/a-close-up-shot-of-a-delicious-chicken-soup-10338450/",
-  "imageCredit": "Istvan Szabo",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Mild kycklinggryta med ris upplagd på tallrik",
-  "imageStatus": "ok"
- },
- {
-  "id": "torsk-potatismos",
-  "name": "Ugnsbakad torsk med potatismos",
-  "description": "Vit fisk som bakas mör i ugnen, med smörigt potatismos och en skvätt citron.",
-  "servings": 4,
-  "prepTime": 10,
-  "cookTime": 25,
-  "difficulty": "lätt",
-  "nutrition": {
-   "kcal": 480,
-   "protein": 38,
-   "carbs": 46,
-   "fat": 15,
-   "fiber": 5
-  },
-  "ingredients": [
-   {
-    "name": "Torskfilé",
-    "amount": 600,
-    "unit": "g"
-   },
-   {
-    "name": "Potatis",
-    "amount": 900,
-    "unit": "g"
-   },
-   {
-    "name": "Mjölk",
-    "amount": 200,
-    "unit": "ml"
-   },
-   {
-    "name": "Smör",
-    "amount": 40,
-    "unit": "g"
-   },
-   {
-    "name": "Citron",
-    "amount": 1,
-    "unit": "st"
-   },
-   {
-    "name": "Dill",
-    "amount": 20,
-    "unit": "g"
-   },
-   {
-    "name": "Salt",
-    "pantryStaple": true
-   },
-   {
-    "name": "Peppar",
-    "pantryStaple": true
-   }
-  ],
-  "instructions": [
-   "Sätt ugnen på 175 grader. Skala potatisen och sätt den att koka i saltat vatten.",
-   "Lägg torsken i en smord ugnsform, salta och peppra och pressa över halva citronen.",
-   "Baka fisken 18-20 minuter tills den precis går att dela med en gaffel.",
-   "Häll av potatisvattnet, mosa potatisen och rör ner mjölk och smör. Smaka av med salt.",
-   "Hacka dillen och strö den över fisken.",
-   "Servera med moset och resten av citronen i klyftor."
-  ],
-  "categories": [
-   "Fisk",
-   "Familj"
-  ],
-  "tags": [
-   "barn",
-   "familj",
-   "fisk",
-   "proteinrikt"
-  ],
-  "allergens": [
-   "fisk",
-   "laktos"
-  ],
-  "dietFlags": [
-   "pescetarisk"
-  ],
-  "image": "https://images.pexels.com/photos/11044248/pexels-photo-11044248.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/food-restaurant-fish-cooking-11044248/",
-  "imageCredit": "Sylwester Ficek",
-  "imageLicense": "Pexels License",
-  "imageAlt": "Ugnsbakad torsk med potatismos upplagd på tallrik",
-  "imageStatus": "ok"
- }
+  {
+    "id": "torsk-potatismos",
+    "name": "Ugnsbakad torsk med potatismos",
+    "description": "Vit fisk som bakas mör i ugnen, med smörigt potatismos och en skvätt citron.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 480,
+      "protein": 38,
+      "carbs": 46,
+      "fat": 15,
+      "fiber": 5
+    },
+    "ingredients": [
+      {
+        "name": "Torskfilé",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 900,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 200,
+        "unit": "ml"
+      },
+      {
+        "name": "Smör",
+        "amount": 40,
+        "unit": "g"
+      },
+      {
+        "name": "Citron",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Dill",
+        "amount": 20,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Peppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 175 grader. Skala potatisen och sätt den att koka i saltat vatten.",
+      "Lägg torsken i en smord ugnsform, salta och peppra och pressa över halva citronen.",
+      "Baka fisken 18-20 minuter tills den precis går att dela med en gaffel.",
+      "Häll av potatisvattnet, mosa potatisen och rör ner mjölk och smör. Smaka av med salt.",
+      "Hacka dillen och strö den över fisken.",
+      "Servera med moset och resten av citronen i klyftor."
+    ],
+    "categories": [
+      "Fisk",
+      "Familj"
+    ],
+    "tags": [
+      "barn",
+      "familj",
+      "fisk",
+      "proteinrikt"
+    ],
+    "allergens": [
+      "fisk",
+      "laktos"
+    ],
+    "dietFlags": [
+      "pescetariskt"
+    ],
+    "image": "https://images.pexels.com/photos/11044248/pexels-photo-11044248.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/food-restaurant-fish-cooking-11044248/",
+    "imageCredit": "Sylwester Ficek",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Ugnsbakad torsk med potatismos upplagd på tallrik",
+    "imageStatus": "ok"
+  }
 ]

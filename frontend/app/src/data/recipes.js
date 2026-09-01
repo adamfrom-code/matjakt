@@ -48,7 +48,7 @@ async function getJson(path, { timeout = 12000 } = {}) {
  *  outage leaves the app usable rather than empty. */
 export async function loadRecipes() {
   try {
-    const data = await getJson("/recipes?limit=200");
+    const data = await getJson("/recipes?limit=500");
     if (Array.isArray(data.recipes) && data.recipes.length) return data.recipes.map(fromApi);
   } catch {
     // fall through to the bundled copy
@@ -151,7 +151,11 @@ function proteinSourceFromTags(tags) {
   if (tags.includes("kyckling")) return "kyckling";
   if (tags.includes("fisk")) return "fisk";
   if (tags.includes("kott")) return "kött";
-  if (tags.includes("veganskt") || tags.includes("vegetariskt")) return "vego";
+  // Exakta värden, inte samlingsordet "vego": kosttypfiltret jämför mot
+  // "veganskt"/"vegetariskt", och med "vego" här fick en vegetarian en TOM
+  // receptlista - varje bankrecept föll bort.
+  if (tags.includes("veganskt")) return "veganskt";
+  if (tags.includes("vegetariskt")) return "vegetariskt";
   return "övrigt";
 }
 
