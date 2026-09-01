@@ -354,3 +354,13 @@ button.campaign-deal{cursor:pointer;font:inherit}
 .week-savings-row{display:flex;align-items:baseline;gap:8px;width:100%;border:0;background:transparent;padding:0 2px;font:inherit;text-align:left;cursor:pointer;color:var(--muted);font-size:13px}
 .week-savings-row strong{color:var(--accent-3)}
 .week-savings-row small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.week-card-label{display:flex;align-items:center;gap:8px}
+.week-sheet-plus-corner{margin-left:auto;border:0;cursor:pointer;font:inherit;font-size:16px}
+
+/* hidden-attributet måste vinna över display:flex - annars visas raden
+   med sin ursäkt trots att koden gömt den. */
+.week-savings-row[hidden]{display:none}
+/* Fallback-ikonen (recept utan bild) delar yta med titelöverlägget -
+   ankra ikonen mot toppen så texten längst ned går fri. */
+.hero-meal-photo .recipe-fallback{justify-content:flex-start;padding-top:30px}

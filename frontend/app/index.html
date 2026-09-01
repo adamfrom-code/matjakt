@@ -37,7 +37,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=46">
+  <link rel="stylesheet" href="styles.css?v=47">
 </head>
 <body>
   <div class="phone-shell">
@@ -60,11 +60,10 @@
              Budget- och sparkorten var egna boxar som konkurrerade om
              uppmärksamheten - nu är de rader i veckans eget kort. -->
         <section class="week-card compact" aria-labelledby="weekCardTitle">
-          <div class="week-card-label"><span id="weekCardTitle">Din vecka</span><span class="status-dot" id="weekCardStatus">Redo</span></div>
-          <button type="button" class="week-summary-row" id="weekSheetOpen" aria-haspopup="dialog" aria-controls="weekSheet">
-            <b id="summaryPeople">2 personer</b><i aria-hidden="true">·</i><b id="summaryMeals">4 middagar</b>
-            <span class="week-sheet-plus" aria-hidden="true">＋</span>
-          </button>
+          <div class="week-card-label">
+            <span id="weekCardTitle">Din vecka</span><span class="status-dot" id="weekCardStatus">Redo</span>
+            <button type="button" class="week-sheet-plus week-sheet-plus-corner" id="weekSheetOpen" aria-haspopup="dialog" aria-controls="weekSheet" aria-label="Justera personer, middagar och budget">＋</button>
+          </div>
           <button type="button" class="week-budget-row" id="budgetCardBtn">
             <span class="week-budget-text"><strong id="summaryBudgetRemaining">800 kr</strong> kvar av <span id="summaryBudgetTotal">800 kr</span><b id="summaryBudgetPercent">0%</b></span>
             <span class="progress-track"><i id="summaryBudgetBar"></i></span>
@@ -474,6 +473,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=88"></script>
+  <script type="module" src="app.js?v=89"></script>
 </body>
 </html>
