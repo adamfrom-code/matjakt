@@ -1148,6 +1148,9 @@ function renderExtraItems(chain) {
   section.querySelectorAll("[data-extra-check]").forEach(el => el.addEventListener("change", () => {
     state.extraItems = state.extraItems.map(e => e.id === el.dataset.extraCheck ? { ...e, checked: el.checked } : e);
     saveState();
+    // Utan omritning fick raden aldrig sin checked-stil och "Allt handlat"
+    // utvärderades inte när sista extra-varan bockades av.
+    renderBasket();
   }));
   section.querySelectorAll("[data-extra-plus]").forEach(el => el.addEventListener("click", () => {
     const current = state.extraItems.find(e => e.id === el.dataset.extraPlus);
@@ -1196,7 +1199,10 @@ function renderStoreCards() {
   const entries = qualified
     .map(result => ({
       chain: result.chain,
-      total: result.totalCheckoutCost + extrasTotalForChain(result.chain),
+      // Sorteras på SAMMA underlag som serverns Billigast-krona - den
+      // kanoniska matkorgen utan extras. Extras i sorteringen lät ett kort
+      // utan kronan lägga sig först och motsäga badgen.
+      total: result.totalCheckoutCost,
       cheapest: result.chain === cheapestChain,
       active: result.chain === chain,
     }))
@@ -1212,8 +1218,10 @@ function renderStoreCards() {
   container.innerHTML = entries.map(storeCardMarkup).join("");
   container.querySelectorAll("[data-store-card]").forEach(card => card.addEventListener("click", () => {
     if (card.dataset.storeCard === chosenStore()) return;
-    state.butik = card.dataset.storeCard;
-    saveState(); renderBasket();
+    // switchWeekStore, inte bara state.butik: livepriserna är nyckelsatta på
+    // varunamn UTAN kedja, så utan rensning visade raderna förra kedjans
+    // produktnamn och kampanjer under nya kedjans kort tills omhämtningen.
+    switchWeekStore(card.dataset.storeCard);
   }));
   container.querySelectorAll("[data-store-card-paywall]").forEach(card =>
     card.addEventListener("click", () => openPaywall("all_store_baskets")));
@@ -1873,6 +1881,16 @@ function renderPantry() {
 // use in renderBasket) - so this only ever indexes into that same array,
 // never a separate day-assignment concept.
 let weekOverviewDay = (new Date().getDay() + 6) % 7;
+// En 4-middagarsvecka har inget på fre-sön: att öppna Vecka på en tom dag
+// (och visa "Ingen middag planerad" på Hem) fast fyra rätter väntar läser
+// som en trasig app. Först dagens middag, annars nästa planerade.
+function firstPlannedDayFrom(selected, startIndex) {
+  for (let offset = 0; offset < 7; offset++) {
+    const index = (startIndex + offset) % 7;
+    if (selected[index]) return index;
+  }
+  return startIndex;
+}
 let weekPlanExpanded = false;
 const WEEK_PLAN_PREVIEW_COUNT = 4;
 const WEEK_SHOPPING_PREVIEW_COUNT = 4;
@@ -1944,7 +1962,15 @@ function weekShoppingRowMarkup(item) {
   const photo = image ? `<img class="shopping-item-image has-image" src="${escapeHtml(safeHttpUrl(image) || "")}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(item.namn));
   return `<label class="week-shopping-row"><input type="checkbox" data-week-shopping="${escapeHtml(item.namn)}">${photo}<span class="week-shopping-info"><strong>${escapeHtml(item.namn)}</strong>${campaign}</span><strong class="week-shopping-price ${missing ? "price-missing" : ""}">${price}</strong></label>`;
 }
+let weekDayAutoPicked = false;
 function renderWeekOverview(selected, shoppingItems, total) {
+  // Bara vid FÖRSTA målningen: att öppna appen en fredag med en
+  // 4-middagarsvecka ska visa en planerad dag, inte "Ingen middag". Men den
+  // som själv klickar på söndagsfliken ska självklart få se söndagen.
+  if (!weekDayAutoPicked) {
+    weekDayAutoPicked = true;
+    if (!selected[weekOverviewDay]) weekOverviewDay = firstPlannedDayFrom(selected, weekOverviewDay);
+  }
   $("weekDayTabs").innerHTML = DAYS.map((day, index) => `<button type="button" class="week-day-tab ${index === weekOverviewDay ? "active" : ""} ${selected[index] ? "" : "empty"}" data-week-day="${index}" role="tab" aria-selected="${index === weekOverviewDay}">${day}</button>`).join("");
 
   const todayRecipe = selected[weekOverviewDay];
@@ -1967,16 +1993,20 @@ function renderWeekOverview(selected, shoppingItems, total) {
   // day tab the user has clicked above (that's a browsing choice on the
   // Vecka page, not a change to what "next" means on Hem). Same recipePhoto
   // call as the Vecka card above, so it's the same image, not a new fetch.
-  const heroRecipe = selected[todayIndex()];
+  const heroRecipe = selected[todayIndex()] || selected[firstPlannedDayFrom(selected, todayIndex())];
   $("nextMealCard").innerHTML = heroRecipe ? nextMealCardMarkup(heroRecipe) : nextMealEmptyMarkup();
 
   // Hem's budget-progress card - fed the same total this function already
   // received from renderBasket(), never recomputed separately.
   const heroRemaining = budgetRemaining(state.budget, total);
-  const percentUsed = state.budget ? Math.min(100, Math.round(total / state.budget * 100)) : 0;
-  $("summaryBudgetRemaining").textContent = money(Math.max(0, heroRemaining));
+  // total == null betyder "riktigt pris ej hämtat ännu" - inte "veckan
+  // kostar 0 kr". Kortet visar då ett lugnt hämtningsläge i stället för
+  // "800 kr kvar · 0%" som fakta.
+  const totalKnown = total != null;
+  const percentUsed = totalKnown && state.budget ? Math.min(100, Math.round(total / state.budget * 100)) : 0;
+  $("summaryBudgetRemaining").textContent = totalKnown ? money(Math.max(0, heroRemaining)) : "–";
   $("summaryBudgetTotal").textContent = money(state.budget);
-  $("summaryBudgetPercent").textContent = `${percentUsed}%`;
+  $("summaryBudgetPercent").textContent = totalKnown ? `${percentUsed}%` : "hämtas…";
   $("summaryBudgetBar").style.width = `${percentUsed}%`;
   $("summaryBudgetBar").classList.toggle("over-budget", heroRemaining < 0);
 
@@ -1986,7 +2016,7 @@ function renderWeekOverview(selected, shoppingItems, total) {
   // at that point.
   document.querySelectorAll("[data-week-day]").forEach(button => button.addEventListener("click", () => { weekOverviewDay = Number(button.dataset.weekDay); renderWeekOverview(selected, shoppingItems, total); }));
   document.querySelectorAll("[data-week-details]").forEach(button => button.addEventListener("click", () => openRecipeTab(button.dataset.weekDetails)));
-  document.querySelectorAll("[data-week-add-meal]").forEach(button => button.addEventListener("click", () => setView("home")));
+  document.querySelectorAll("[data-week-add-meal]").forEach(button => button.addEventListener("click", () => setView("recipes")));
   document.querySelectorAll("[data-week-browse-recipes]").forEach(button => button.addEventListener("click", () => $("recipeScroll")?.scrollIntoView({ behavior: "smooth" })));
   document.querySelectorAll("[data-week-shopping]").forEach(input => {
     input.checked = state.avklarade.has(input.dataset.weekShopping);
@@ -3143,7 +3173,13 @@ $("generateBtn").addEventListener("click", () => {
   if (selectedRecipes().length) setView("week");
   else openPlanComparison();
 });
-$("newWeekBtn").addEventListener("click", () => openPlanComparison()); $("refreshBtn").addEventListener("click", () => { RECEPT.push(RECEPT.shift()); chooseMenu(); });
+$("newWeekBtn").addEventListener("click", () => openPlanComparison()); $("refreshBtn").addEventListener("click", () => {
+  // Roterar ENDAST förslagsraden. Tidigare regenererades hela veckan (och
+  // avbockade/borttagna varor rensades) plus att fliken byttes - av en knapp
+  // som lovar nya förslag.
+  RECEPT.push(...RECEPT.splice(0, 8));
+  render();
+});
 $("startNewWeekBtn").addEventListener("click", () => openPlanComparison());
 let pantryPickLocation = "skafferi";
 function renderPantryPicker(query) {
