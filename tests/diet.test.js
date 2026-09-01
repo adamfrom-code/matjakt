@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { filterByDiet } from "../frontend/app/src/services/diet.js";
+import { ALLERGENS, filterByDiet } from "../frontend/app/src/services/diet.js";
 
 const recipes = [
   { id: "a", proteinkalla: "kyckling", allergener: ["gluten"] },
@@ -28,4 +28,19 @@ test("undviker recept som innehåller en vald allergen", () => {
 test("kombinerar kosttyp och allergenfilter", () => {
   const result = filterByDiet(recipes, { kosttyp: "vegetariskt", avoidAllergens: new Set(["laktos"]) });
   assert.deepEqual(result.map(r => r.id), ["c"]);
+});
+
+// Säkerhetskritiskt (RC-audit 2026-09-01): ett recept märkt "mjölk" får
+// ALDRIG passera ett laktos-filter för att orden skiljer, och en vegetarian
+// får aldrig en tom lista för att bankens taggar blev samlingsordet "vego".
+test("allergen-synonymer fångas: mjölk är laktos, blötdjur är skaldjur", () => {
+  const bank = [
+    { proteinkalla: "vegetariskt", allergener: ["mjölk"] },
+    { proteinkalla: "veganskt", allergener: ["blötdjur"] },
+    { proteinkalla: "kött", allergener: ["laktos"] },
+  ];
+  assert.equal(filterByDiet(bank, { kosttyp: "vegetariskt" }).length, 2);
+  assert.equal(filterByDiet(bank, { avoidAllergens: ["laktos"] }).length, 1);
+  assert.equal(filterByDiet(bank, { avoidAllergens: ["skaldjur"] }).length, 2);
+  assert.ok(ALLERGENS.includes("jordnötter") && ALLERGENS.includes("sesam"));
 });
