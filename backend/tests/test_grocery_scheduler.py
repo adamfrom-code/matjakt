@@ -251,3 +251,41 @@ class BootstrapTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CrashedImportEndsItsRun(unittest.TestCase):
+    """En serverimport som kraschar oväntat får aldrig lämna sin körning som
+    evig 'running' - då visar adminpanelen en fantomimport och lastRun löses
+    aldrig."""
+
+    def test_unexpected_crash_marks_the_run_failed(self):
+        from services.grocery import api as grocery_api
+        from services.grocery import importer
+
+        class ExplodingProvider:
+            name = "Willys"
+            def get_stores(self):
+                raise RuntimeError("nätverket exploderade")
+
+        original_provider = importer._provider_for
+        importer._provider_for = lambda chain: ExplodingProvider()
+        try:
+            importer.start("Willys")
+            import time as _t
+            for _ in range(200):
+                if not importer.status().get("running"):
+                    break
+                _t.sleep(0.05)
+            store = grocery_api.open_store()
+            try:
+                run = store.connection.execute(
+                    "SELECT status, error_message FROM grocery_collector_runs "
+                    "ORDER BY id DESC LIMIT 1").fetchone()
+            finally:
+                store.close()
+            self.assertIsNotNone(run)
+            self.assertEqual(run["status"], "failed")
+            self.assertIn("exploderade", run["error_message"])
+            self.assertFalse(importer.status().get("running"))
+        finally:
+            importer._provider_for = original_provider

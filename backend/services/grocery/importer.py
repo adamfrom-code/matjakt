@@ -83,7 +83,11 @@ def _set(**fields):
 def _provider_for(chain: str):
     if chain == "ICA":
         from .providers.ica import IcaProvider
-        return IcaProvider()
+        # Butiksuppslag kräver ett postnummer; MANUAL_ONLY_STORES pekar på
+        # ICA Kvantum Gävle, så dess postnummer är rätt default. Utan
+        # argumentet kraschade varje manuell adminimport med TypeError innan
+        # den ens börjat - "started: true" följt av omedelbar failed.
+        return IcaProvider(zip_code="80252")
     if chain == "Willys":
         from .providers.willys import WillysProvider
         return WillysProvider()
@@ -181,6 +185,20 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
             db.finish_collector_run(run_record.id, status=status_text,
                                     products_found=found, prices_updated=saved,
                                     errors=0, error_message=blocked_message)
+        except Exception as error:
+            # Utan denna hoppade varje oväntad krasch (get_stores-fel, okänd
+            # butik, providerbugg) över finish_collector_run och lämnade
+            # raden som evig fantom-"running" i adminpanelen, med lastRun
+            # olöst för alltid. ProviderBlockedError fångas redan i den inre
+            # hanteringen; det här är allt annat.
+            logger.exception("%s-importen kraschade", chain)
+            db.finish_collector_run(run_record.id, status="failed",
+                                    products_found=0, prices_updated=saved,
+                                    errors=1, error_message=str(error)[:300])
+            grocery_api.clear_cache()
+            _set(running=False, finishedAt=time.time(), status="failed",
+                 message=str(error)[:300])
+            return
         finally:
             db.close()
 

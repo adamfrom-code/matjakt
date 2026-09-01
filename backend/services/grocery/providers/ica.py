@@ -110,6 +110,7 @@ import urllib.error
 import urllib.request
 from urllib.parse import quote
 
+from ..errors import ProviderBlockedError, ProviderRequestError
 from ..base import GroceryProvider
 from .axfood import CATEGORY_PATH_SEPARATOR
 from ..models import RawProduct, Store
@@ -143,14 +144,14 @@ DEFAULT_SEARCH_TERMS = [
 ]
 
 
-class IcaRequestError(Exception):
+class IcaRequestError(ProviderRequestError):
     """Raised for anything that isn't a clean 200 - a 403/429/5xx, a timeout,
     or a response that doesn't parse as the expected JSON shape. Callers
     (get_products, the collector script) catch this per-item and keep going;
     it is never allowed to crash a whole run over one bad response."""
 
 
-class IcaBlockedError(IcaRequestError):
+class IcaBlockedError(IcaRequestError, ProviderBlockedError):
     """ICA's WAF is actively challenging/refusing us - a distinct, terminal
     condition, not a transient error.
 
