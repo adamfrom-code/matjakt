@@ -2397,6 +2397,17 @@ if __name__ == "__main__":
         logger.exception("Kunde inte starta receptprissättningen")
 
     GROCERY_SCHEDULER.start()
+    # Förvärm prismotorns ordindex i bakgrunden: kallstarten (indexbygge
+    # per kedja, ~2-3 s) ska betalas här vid deploy - inte av första kundens
+    # första prisanrop.
+    def _prewarm():
+        try:
+            grocery_api.price_week([{"name": "Mjölk", "amount": 1, "unit": "l"}])
+            logger.info("Prismotorn förvärmd")
+        except Exception:
+            logger.exception("Förvärmningen misslyckades - första anropet betalar i stället")
+    threading.Thread(target=_prewarm, name="matjakt-prewarm", daemon=True).start()
+
     # Nattliga, verifierade säkerhetskopior av alla databaser. Persistens är
     # inte backup - se services/backup.py för de ärliga gränserna och
     # återställningsinstruktionen.
