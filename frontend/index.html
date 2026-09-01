@@ -2,365 +2,91 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8">
-  <!-- Old GitHub Pages bookmarks/installed PWAs point straight at this file, which
-       used to be the app. Now that the root is the landing page, send visitors on
-       that one specific old hostname straight into the app instead of silently
-       showing them marketing copy. Checking for that exact hostname (not just
-       "!== matjakt.store") is deliberate - a blanket check would also redirect
-       local dev/preview environments (localhost, Render, etc.), making the
-       landing page impossible to test anywhere but production. Runs before
-       anything else loads to avoid a content flash. -->
-  <script>if (location.hostname === "adamfrom-code.github.io") location.replace("app/");</script>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f6f3ea">
-  <!-- Cloudflare Web Analytics site token (not a secret - it's a public,
-       page-embedded identifier, same category as a Google Analytics
-       measurement id). Empty = no analytics beacon loads at all. See
-       README.md "Statistik" for how to get one and fill this in. -->
-  <meta name="cf-beacon-token" content="">
-  <title>Matjakt – planera veckans middagar efter din budget</title>
-  <meta name="description" content="Matjakt planerar veckans middagar efter din budget, ditt hushåll och din kost, och jämför riktiga butikspriser hos Willys, Hemköp och City Gross.">
-  <link rel="canonical" href="https://matjakt.store/">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Matjakt">
-  <meta property="og:title" content="Matjakt – planera veckans middagar efter din budget">
-  <meta property="og:description" content="Matjakt planerar veckans middagar efter din budget, ditt hushåll och din kost, och jämför riktiga butikspriser hos Willys, Hemköp och City Gross.">
-  <meta property="og:url" content="https://matjakt.store/">
-  <meta property="og:image" content="https://matjakt.store/og-image.svg">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Matjakt – planera veckans middagar efter din budget">
-  <meta name="twitter:description" content="Matjakt planerar veckans middagar efter din budget och jämför tillgängliga butikspriser.">
-  <meta name="twitter:image" content="https://matjakt.store/og-image.svg">
+  <!-- Matjakt är stängt för allmänheten under utveckling. Den här sidan
+       avslöjar ingenting om produkten. Verifieringen sker på servern - det
+       finns ingen hemlighet i den här filen att hitta. noindex är hygien,
+       inte säkerhet; säkerheten är att servern inte lämnar ut data utan
+       godkänd token. -->
+  <meta name="robots" content="noindex, nofollow">
+  <title>Matjakt</title>
   <link rel="icon" href="app/assets/icons/icon-192.png">
-  <link rel="apple-touch-icon" href="app/assets/icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3">
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Matjakt",
-    "applicationCategory": "LifestyleApplication",
-    "operatingSystem": "Web",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "SEK" },
-    "description": "Matjakt planerar veckans middagar efter din budget, ditt hushåll och din kost, och jämför riktiga butikspriser hos Willys, Hemköp och City Gross."
-  }
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#f6f3ea;--primary:#173b2a;--accent:#f28c28;--border:rgba(22,32,25,.14);--muted:#5c665d}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:var(--bg);font-family:"DM Sans",system-ui,sans-serif;color:var(--primary)}
+    main{width:min(320px,calc(100vw - 48px))}
+    h1{font-family:"Fraunces",serif;font-weight:700;font-size:34px;text-align:center;margin:0 0 28px;letter-spacing:-.02em}
+    h1 span{color:var(--accent)}
+    label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 6px}
+    input{width:100%;padding:13px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;font:inherit;font-size:16px;color:var(--primary)}
+    input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+    button{width:100%;margin-top:22px;padding:14px;border:0;border-radius:12px;background:var(--primary);color:#fff;font:inherit;font-size:16px;font-weight:600;cursor:pointer}
+    button:hover{background:#24563e}
+    button[disabled]{opacity:.6;cursor:default}
+    .error{min-height:20px;margin:12px 0 0;text-align:center;font-size:14px;color:#bf3636}
+  </style>
 </head>
 <body>
-  <header class="site-topbar">
-    <a class="site-wordmark" href="#top">Matjakt<span>.</span></a>
-    <nav class="site-nav" aria-label="Huvudmeny">
-      <a href="#sa-fungerar-det">Så fungerar det</a>
-      <a href="#funktioner">Funktioner</a>
-      <a href="#premium">Premium</a>
-      <a href="#faq">Vanliga frågor</a>
-    </nav>
-    <div class="site-topbar-actions">
-      <a class="site-btn site-btn-ghost" href="app/" data-track="cta_logga_in">Logga in</a>
-      <a class="site-btn site-btn-primary" href="app/" data-track="cta_testa_gratis">Testa gratis</a>
-    </div>
-  </header>
-
-  <main id="top">
-    <section class="site-hero">
-      <!-- The clip sits behind the words, never in front of them. It is
-           decorative: no sound, no controls, nothing to miss if it never
-           loads. site-video.js decides whether to load it at all - a visitor
-           on Data Saver or reduced motion keeps the poster still. -->
-      <div class="site-hero-media" aria-hidden="true">
-        <video class="site-hero-video is-active" data-hero-clip
-               poster="site/video/matjakt-hero.jpg"
-               muted playsinline loop preload="none" disablepictureinpicture></video>
-        <video class="site-hero-video" data-hero-clip
-               poster="site/video/matjakt-vecka.jpg"
-               muted playsinline loop preload="none" disablepictureinpicture></video>
-        <span class="site-hero-scrim"></span>
-      </div>
-      <div class="site-hero-inner">
-        <img class="site-hero-logo" src="app/assets/icons/icon-192.png" alt="" width="64" height="64">
-        <p class="site-eyebrow">Matplanering efter din budget</p>
-        <h1>Planera veckan. Handla där den blir billigast.</h1>
-        <p class="site-hero-lead">Matjakt bygger veckans middagar efter din budget, gör om dem till en inköpslista med riktiga produkter — och visar vilken butik som blir billigast.</p>
-        <div class="site-hero-actions">
-          <a class="site-btn site-btn-primary site-btn-lg" href="app/" data-track="cta_testa_gratis">Testa Matjakt gratis →</a>
-          <a class="site-btn site-btn-glass site-btn-lg" href="#presentation" data-track="cta_se_hur_det_fungerar">Se hur det fungerar</a>
-        </div>
-        <p class="site-hero-note">Inget betalkort krävs för att komma igång.</p>
-      </div>
-    </section>
-
-    <section class="site-film" id="presentation">
-      <p class="site-eyebrow">På en halv minut</p>
-      <h2>Så gör Matjakt jobbet åt dig</h2>
-      <!-- PRESENTATION:START - genererad av backend/scripts/build_site_presentation.py -->
-      <div class="site-film-track">
-        <article class="site-film-scene">
-          <div class="site-film-media">
-            <video class="site-film-video" data-film-src="site/video/matjakt-valj.mp4"
-                   poster="site/video/matjakt-valj.jpg"
-                   muted playsinline loop preload="none" disablepictureinpicture
-                   aria-hidden="true"></video>
-            <span class="site-film-scrim"></span>
-            <div class="site-film-copy"><span class="site-film-step">1</span><h3>Välj vad du vill äta.</h3><p>Du säger vad du är sugen på.</p></div>
-          </div>
-          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/person-serving-food-on-the-table-5765844/" rel="noopener nofollow" target="_blank">Andi  Farruku</a> · Pexels</p>
-        </article>
-        <article class="site-film-scene">
-          <div class="site-film-media">
-            <video class="site-film-video" data-film-src="site/video/matjakt-vecka.mp4"
-                   poster="site/video/matjakt-vecka.jpg"
-                   muted playsinline loop preload="none" disablepictureinpicture
-                   aria-hidden="true"></video>
-            <span class="site-film-scrim"></span>
-            <div class="site-film-copy"><span class="site-film-step">2</span><h3>Matjakt bygger veckan.</h3><p>Sju middagar som håller din budget.</p></div>
-          </div>
-          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/woman-writing-in-notebook-8845453/" rel="noopener nofollow" target="_blank">Yaroslav Shuraev</a> · Pexels</p>
-        </article>
-        <article class="site-film-scene">
-          <div class="site-film-media">
-            <video class="site-film-video" data-film-src="site/video/matjakt-lista.mp4"
-                   poster="site/video/matjakt-lista.jpg"
-                   muted playsinline loop preload="none" disablepictureinpicture
-                   aria-hidden="true"></video>
-            <span class="site-film-scrim"></span>
-            <div class="site-film-copy"><span class="site-film-step">3</span><h3>Recepten blir en inköpslista.</h3><p>Allt du behöver, i rätt mängd.</p></div>
-          </div>
-          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/a-woman-writing-on-a-notebook-5449990/" rel="noopener nofollow" target="_blank">Gustavo Fring</a> · Pexels</p>
-        </article>
-        <article class="site-film-scene">
-          <div class="site-film-media">
-            <video class="site-film-video" data-film-src="site/video/matjakt-produkter.mp4"
-                   poster="site/video/matjakt-produkter.jpg"
-                   muted playsinline loop preload="none" disablepictureinpicture
-                   aria-hidden="true"></video>
-            <span class="site-film-scrim"></span>
-            <div class="site-film-copy"><span class="site-film-step">4</span><h3>Riktiga produkter och förpackningar.</h3><p>Rätt förpackning, inte ett cirkapris.</p></div>
-          </div>
-          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/dairy-aisle-shopping-in-supermarket-39221961/" rel="noopener nofollow" target="_blank">Kiwi and Camera</a> · Pexels</p>
-        </article>
-        <article class="site-film-scene">
-          <div class="site-film-media">
-            <video class="site-film-video" data-film-src="site/video/matjakt-butiker.mp4"
-                   poster="site/video/matjakt-butiker.jpg"
-                   muted playsinline loop preload="none" disablepictureinpicture
-                   aria-hidden="true"></video>
-            <span class="site-film-scrim"></span>
-            <div class="site-film-copy"><span class="site-film-step">5</span><h3>Jämför riktiga matpriser.</h3><p>Samma lista, flera butiker.</p></div>
-          </div>
-          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/a-couple-buying-groceries-4121625/" rel="noopener nofollow" target="_blank">Jack Sparrow</a> · Pexels</p>
-        </article>
-        <article class="site-film-scene">
-          <div class="site-film-media">
-            <video class="site-film-video" data-film-src="site/video/matjakt-billigast.mp4"
-                   poster="site/video/matjakt-billigast.jpg"
-                   muted playsinline loop preload="none" disablepictureinpicture
-                   aria-hidden="true"></video>
-            <span class="site-film-scrim"></span>
-            <div class="site-film-copy"><span class="site-film-step">6</span><h3>Spara pengar varje vecka.</h3><p>Du ser var veckan blir billigast.</p></div>
-          </div>
-          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/woman-getting-things-out-of-grocery-basket-at-billing-counter-5103988/" rel="noopener nofollow" target="_blank">Gustavo Fring</a> · Pexels</p>
-        </article>
-      </div>
-      <div class="site-film-closing">
-        <p class="site-film-closing-line">Matjakt gör jobbet åt dig.</p>
-        <a class="site-btn site-btn-primary site-btn-lg" href="app/" data-track="cta_testa_gratis">Testa Matjakt gratis →</a>
-      </div>
-      <!-- PRESENTATION:END -->
-    </section>
-
-    <section class="site-savings">
-      <div class="site-savings-inner">
-        <p class="site-savings-tag">Illustration, inte en garanti</p>
-        <h2>Så kan du spara pengar</h2>
-        <p>Matjakt jämför din faktiska veckolista mot flera butiker samtidigt och visar vilken som är billigast just för dig. Ett hushåll som handlar hos den butik Matjakt pekar ut kan spara pengar jämfört med att handla på måfå – hur mycket beror på ditt hushåll, din ort, vad du redan har hemma och hur många priser som går att hämta just den veckan.</p>
-        <div class="site-hero-visual" aria-hidden="true">
-        <div class="site-mock-card">
-          <div class="site-mock-row"><span>Veckobudget</span><strong>629 kr kvar av 800 kr</strong></div>
-          <div class="site-mock-bar"><i style="width:21%"></i></div>
-        </div>
-        <div class="site-mock-card">
-          <div class="site-mock-row"><span>Handla hos</span><strong>Coop Nian · 461 kr</strong></div>
-          <div class="site-mock-tag">Billigast av 4 butiker</div>
-        </div>
-        </div>
-        <p class="site-hero-visual-caption">Exempel från appen</p>
-      </div>
-    </section>
-
-    <section class="site-features" id="funktioner">
-      <h2>Allt du behöver för matveckan</h2>
-      <div class="site-feature-grid">
-        <article class="site-feature-card">
-          <span class="site-feature-icon" aria-hidden="true">📅</span>
-          <h3>Vecka</h3>
-          <p>Se hela veckans middagar på ett ställe. Byt en enskild rätt utan att rubba resten av planen.</p>
-        </article>
-        <article class="site-feature-card">
-          <span class="site-feature-icon" aria-hidden="true">📖</span>
-          <h3>Recept</h3>
-          <p>Sök och filtrera bland recept efter tid, pris, kost och näringsvärde.</p>
-        </article>
-        <article class="site-feature-card">
-          <span class="site-feature-icon" aria-hidden="true">🛒</span>
-          <h3>Handla</h3>
-          <p>En inköpslista som uppdateras efter vald butik, med priser och kampanjer när de går att hämta – och en tydlig markering när ett pris saknas.</p>
-        </article>
-        <article class="site-feature-card">
-          <span class="site-feature-icon" aria-hidden="true">🥫</span>
-          <h3>Skafferi</h3>
-          <p>Lägg in det du redan har hemma – Matjakt räknar bort det från listan automatiskt.</p>
-        </article>
-        <article class="site-feature-card">
-          <span class="site-feature-icon" aria-hidden="true">⚖️</span>
-          <h3>Butiksjämförelse</h3>
-          <p>Se totalpriset för din lista hos Willys, Hemköp och City Gross, sida vid sida – beräknat på riktiga produkter och förpackningar.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="site-steps" id="sa-fungerar-det">
-      <h2>Så fungerar det</h2>
-      <ol class="site-steps-list">
-        <li>
-          <span class="site-step-number">1</span>
-          <h3>Berätta var du handlar</h3>
-          <p>Ange ort, postnummer eller butik – och hur ditt hushåll ser ut: antal personer, budget och kost.</p>
-        </li>
-        <li>
-          <span class="site-step-number">2</span>
-          <h3>Få en färdig veckoplan</h3>
-          <p>Matjakt sätter ihop en hel veckas middagar som håller budgeten, med tillgängliga priser från din butik.</p>
-        </li>
-        <li>
-          <span class="site-step-number">3</span>
-          <h3>Handla från en smart lista</h3>
-          <p>Inköpslistan vet redan vad du har hemma i skafferiet och räknar bort det åt dig.</p>
-        </li>
-      </ol>
-    </section>
-
-    <section class="site-premium" id="premium">
-      <h2>Gratis att komma igång, Premium när du vill mer</h2>
-      <div class="site-plan-grid">
-        <article class="site-plan-card">
-          <h3>Gratis</h3>
-          <p class="site-plan-price">0 kr</p>
-          <ul>
-            <li>Skapa veckoplaner efter budget och hushåll</li>
-            <li>Uppskattade priser och en inköpslista som fungerar</li>
-            <li>Skafferi och receptbibliotek</li>
-            <li>Byt recept upp till 3 gånger i veckan</li>
-          </ul>
-        </article>
-        <article class="site-plan-card site-plan-featured">
-          <p class="site-plan-badge">Bäst värde: 399 kr/år</p>
-          <h3>Premium</h3>
-          <p class="site-plan-price">59 kr/mån <small>eller 399 kr/år (≈ 33 kr/mån – spara 309 kr)</small></p>
-          <ul>
-            <li>Obegränsade receptbyten</li>
-            <li>Butiksjämförelse mellan Willys, Hemköp och City Gross, med antal varor som har aktuellt pris</li>
-            <li>Näringsmål per måltid – kalorier, protein, kolhydrater och fett</li>
-            <li>Välj och spara en specifik favoritbutik</li>
-          </ul>
-          <a class="site-btn site-btn-primary" href="app/" data-track="cta_testa_gratis">Kom igång gratis →</a>
-        </article>
-      </div>
-    </section>
-
-    <section class="site-faq" id="faq">
-      <h2>Vanliga frågor</h2>
-      <details>
-        <summary>Hur aktuella är priserna?</summary>
-        <p>Matjakt hämtar priser direkt från butikerna när det går, i stället för att gissa. Ibland saknas ett pris, eller så visas det senast kända priset med tidpunkt – då syns det tydligt i appen, och antalet varor med säkert pris räknas alltid upp öppet. ICA:s priser kan vara mindre tillförlitliga än de andra butikernas.</p>
-      </details>
-      <details>
-        <summary>Kostar Matjakt något?</summary>
-        <p>Matjakt är gratis att använda: veckoplanering, inköpslista, skafferi och riktigt pris hos den billigaste butiken. Premium kostar 59 kr/mån eller 399 kr/år och låser upp alla veckotyper, alla butikers priser och full butiksjämförelse.</p>
-      </details>
-      <details>
-        <summary>Vilka butiker jämför ni?</summary>
-        <p>Just nu jämför Matjakt riktiga priser hos Willys, Hemköp och City Gross. Fler kedjor läggs till i takt med att vi får tillgång till deras priser. Täckningen kan variera med var du bor och vad som finns i din lista.</p>
-      </details>
-      <details>
-        <summary>Finns Matjakt som app?</summary>
-        <p>Matjakt fungerar som en webbapp som går att lägga till på hemskärmen och använda precis som en vanlig app. En version i App Store planeras längre fram.</p>
-      </details>
-      <details>
-        <summary>Vad händer med mina uppgifter?</summary>
-        <p>Läs vår <a href="integritetspolicy.html">integritetspolicy</a> för hela detaljerna kring vilka uppgifter som sparas och varför.</p>
-      </details>
-    </section>
-
-    <section class="site-cta">
-      <h2>Redo att sluta gissa på matbudgeten?</h2>
-      <a class="site-btn site-btn-primary site-btn-lg" href="app/" data-track="cta_testa_gratis">Testa Matjakt gratis →</a>
-    </section>
+  <main>
+    <h1>Matjakt<span>.</span></h1>
+    <form id="gateForm" autocomplete="off">
+      <label for="user">Användarnamn</label>
+      <input id="user" name="username" autocomplete="username" required>
+      <label for="code">Lösenord</label>
+      <input id="code" name="code" type="password" autocomplete="current-password" required>
+      <button type="submit" id="submitBtn">Logga in</button>
+      <p class="error" id="gateError" role="alert"></p>
+    </form>
   </main>
-
-  <footer class="site-footer">
-    <div class="site-footer-inner">
-      <span>Matjakt<span class="site-footer-dot">.</span></span>
-      <nav aria-label="Sidfot">
-        <a href="mailto:adamfrom@icloud.com">Kontakta support</a>
-        <a href="integritetspolicy.html">Integritetspolicy</a>
-        <a href="anvandarvillkor.html">Användarvillkor</a>
-      </nav>
-    </div>
-  </footer>
-
   <script>
     (function () {
-      // Anonymous, best-effort product-event counter (see
-      // backend/api_server.py's ANALYTICS_ALLOWED_EVENTS) - never blocks a
-      // click, never throws, never delays navigation. If this request is
-      // blocked (ad blocker, offline, CORS not yet configured for this
-      // origin) the button still works exactly the same; the count just
-      // isn't recorded.
-      var ANALYTICS_URL = "https://matjakt.onrender.com/api/analytics/event";
-      function trackEvent(name) {
-        try {
-          fetch(ANALYTICS_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ event: name }),
-            keepalive: true,
+      var API = location.hostname === "localhost" || location.hostname === "127.0.0.1"
+        ? "" : "https://matjakt.onrender.com";
+      var stored = null;
+      try { stored = localStorage.getItem("matjakt-gate"); } catch (e) {}
+      if (stored) {
+        // Redan godkänd? Verifiera mot servern innan vidareslussning - en
+        // hemsnickrad token i localStorage öppnar ingenting.
+        fetch(API + "/api/gate/check", { headers: { "X-Gate-Token": stored } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && d.ok) location.replace("app/");
+            else try { localStorage.removeItem("matjakt-gate"); } catch (e) {}
           }).catch(function () {});
-        } catch (err) { /* analytics must never break the page */ }
       }
-      document.querySelectorAll("[data-track]").forEach(function (el) {
-        el.addEventListener("click", function () { trackEvent(el.getAttribute("data-track")); });
+      document.getElementById("gateForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+        var button = document.getElementById("submitBtn");
+        var error = document.getElementById("gateError");
+        button.disabled = true; error.textContent = "";
+        fetch(API + "/api/gate/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: document.getElementById("user").value,
+            code: document.getElementById("code").value,
+          }),
+        }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+          .then(function (res) {
+            if (res.ok && res.d.gateToken) {
+              try { localStorage.setItem("matjakt-gate", res.d.gateToken); } catch (e) {}
+              location.replace("app/");
+            } else {
+              error.textContent = (res.d && res.d.error) || "Fel användarnamn eller kod";
+              button.disabled = false;
+            }
+          })
+          .catch(function () {
+            error.textContent = "Kunde inte nå servern. Försök igen.";
+            button.disabled = false;
+          });
       });
-      // "Visning av prissidan" - fires once, the first time the Premium
-      // section actually scrolls into view, not just on page load.
-      var premiumSection = document.getElementById("premium");
-      if (premiumSection && "IntersectionObserver" in window) {
-        var firedViewPremium = false;
-        var observer = new IntersectionObserver(function (entries) {
-          if (!firedViewPremium && entries[0].isIntersecting) {
-            firedViewPremium = true;
-            trackEvent("view_premium");
-            observer.disconnect();
-          }
-        }, { threshold: 0.3 });
-        observer.observe(premiumSection);
-      }
-
-      // Cloudflare Web Analytics - pure pageview/performance beacon, only
-      // loads if a real token has been filled in below. No cookies, no
-      // fingerprinting, nothing that identifies an individual visitor.
-      var cfToken = document.querySelector('meta[name="cf-beacon-token"]')?.content?.trim();
-      if (cfToken) {
-        var beacon = document.createElement("script");
-        beacon.src = "https://static.cloudflareinsights.com/beacon.min.js";
-        beacon.setAttribute("data-cf-beacon", JSON.stringify({ token: cfToken }));
-        beacon.defer = true;
-        document.head.appendChild(beacon);
-      }
     })();
   </script>
-  <script src="site-video.js?v=2" defer></script>
 </body>
 </html>

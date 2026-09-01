@@ -2,6 +2,11 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <!-- Utvecklingslåset: utan gate-token skickas besökaren till låsskärmen
+       innan appen ens börjar ladda. Att ta bort denna rad i DevTools öppnar
+       ingenting - servern vägrar all data utan giltig token. -->
+  <script>try{if(!localStorage.getItem("matjakt-gate")&&location.hostname!=="localhost"&&location.hostname!=="127.0.0.1")location.replace("../")}catch(e){}</script>
   <!-- The session token is a bearer credential held in localStorage (see
        src/api/auth.js for why cookies are not usable across matjakt.store
        -> onrender.com). That makes script injection the way it could be
@@ -393,6 +398,7 @@
         </div>
 
         <button class="account-logout-btn" id="logoutBtn" type="button">Logga ut</button>
+        <button class="account-logout-btn" id="gateLogoutBtn" type="button">Lås förhandsvisningen</button>
         <button class="account-delete-btn" id="deleteAccountBtn" type="button">Radera konto</button>
         <p class="account-error" id="deleteError"></p>
         <p class="account-legal-links"><a href="mailto:adamfrom@icloud.com">Kontakta support</a> · <a href="../integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="../anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
@@ -470,6 +476,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=77"></script>
+  <script type="module" src="app.js?v=78"></script>
 </body>
 </html>

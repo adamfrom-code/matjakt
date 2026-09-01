@@ -44,6 +44,9 @@ LIMITS = {
     # A premium code is a credential; guessing it must cost as much as
     # guessing a password.
     "redeem": (10, 3600),
+    # Utvecklingslåsets inloggning bär samma kod som redeem och får samma
+    # gissningsbudget.
+    "gate": (10, 3600),
 }
 
 # A single dict of key -> [timestamps]. Pruned as it goes, and hard-capped so

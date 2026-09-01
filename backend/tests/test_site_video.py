@@ -146,23 +146,28 @@ class Manifest(unittest.TestCase):
         self.assertEqual(len(used), len(set(used)), "samma klipp i två scener")
 
 
-class Presentation(unittest.TestCase):
-    def test_the_landing_page_renders_the_generated_block(self):
-        index = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
-        self.assertIn("PRESENTATION:START", index)
-        self.assertIn("site-film-scene", index)
+class LockedLandingPage(unittest.TestCase):
+    """Matjakt är stängt för allmänheten (2026-09-01): roten är en låsskärm.
+    Marknadssidan med presentation/video ligger kvar i git-historiken och
+    återinförs när produkten öppnas."""
 
-    def test_every_clip_on_the_page_is_lazy_and_silent(self):
-        """muted and playsinline are what let it autoplay on iOS at all;
-        preload="none" is what keeps it from being downloaded before anyone
-        has scrolled to it."""
-        index = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
-        for tag in index.split("<video")[1:]:
-            attributes = tag.split(">")[0]
-            for required in ("muted", "playsinline", 'preload="none"'):
-                self.assertIn(required, attributes, f"saknar {required}")
-            self.assertNotIn("autoplay", attributes,
-                             "autoplay kringgår kontrollen av datasparläge")
+    def _index(self):
+        return (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+
+    def test_the_lock_screen_reveals_nothing_about_the_product(self):
+        index = self._index().lower()
+        for leak in ("recept", "butik", "premium", "pris", "vecka", "handla",
+                     "inköpslista", "spara pengar", "screenshots", "site-film"):
+            self.assertNotIn(leak, index, f"låsskärmen läcker: {leak!r}")
+
+    def test_the_lock_screen_has_form_and_noindex_but_no_secret(self):
+        index = self._index()
+        self.assertIn('name="robots" content="noindex', index)
+        for field in ('id="user"', 'id="code"', 'type="password"', "/api/gate/login"):
+            self.assertIn(field, index)
+        # Verifieringen är serverns - sidan får inte bära något att jämföra
+        # mot, inte ens användarnamnet.
+        self.assertNotIn("adam", index.lower())
 
 
 if __name__ == "__main__":

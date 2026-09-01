@@ -7,6 +7,7 @@ before deploying this publicly.
 """
 
 import concurrent.futures
+import hashlib
 import hmac
 import json
 import logging
@@ -104,6 +105,43 @@ CAMPAIGN_CAPABLE_CHAINS = ("Coop", "Hemköp")
 CAMPAIGN_SCAN_INGREDIENTS = ["Kycklingfilé", "Kycklinglårfilé", "Köttfärs", "Biff", "Fläskfilé", "Laxfilé", "Fryst torsk", "Räkor", "Kalvschnitzel", "Falukorv", "Halloumi"]
 GEOCODE_CACHE_TTL_SECONDS = 86400
 PREMIUM_CODE = os.environ.get("MATJAKT_PREMIUM_CODE", "")
+
+# =============================================================================
+# UTVECKLINGSLÅSET. Matjakt är dold för allmänheten tills vidare: varje
+# data-endpoint kräver en gate-token som bara delas ut mot rätt användarnamn
+# och samma kod som låser upp Premium (MATJAKT_PREMIUM_CODE - miljövariabel,
+# aldrig i repo eller frontend). GitHub Pages kan inte skydda statiska filer,
+# så skalet är hämtbart - men utan godkänd inloggning svarar servern inte
+# med någon data alls, och appen är ett tomt skal.
+#
+# På av-läget: lokal utveckling och testsviten kör utan lås. Render sätter
+# alltid env-variabeln RENDER, så produktionen låser sig själv utan manuell
+# konfiguration; MATJAKT_GATE=0/1 finns som uttrycklig override åt båda håll.
+_gate_env = os.environ.get("MATJAKT_GATE", "").strip()
+GATE_ENABLED = _gate_env == "1" if _gate_env in ("0", "1") else bool(os.environ.get("RENDER"))
+GATE_USERNAME = "adam from"
+GATE_TOKEN_TTL_SECONDS = 30 * 24 * 3600
+# Härledd, inte lagrad: byts Premium-koden eller admin-token roteras alla
+# utdelade gate-tokens automatiskt.
+def _gate_secret() -> bytes:
+    return hashlib.sha256(f"matjakt-gate:{PREMIUM_CODE}:{ADMIN_TOKEN}".encode("utf-8")).digest()
+
+
+def _gate_sign(expiry: int) -> str:
+    signature = hmac.new(_gate_secret(), f"gate:{expiry}".encode(), hashlib.sha256).hexdigest()
+    return f"{expiry}.{signature}"
+
+
+def gate_token_valid(token: str) -> bool:
+    expiry_text, _, signature = (token or "").partition(".")
+    try:
+        expiry = int(expiry_text)
+    except ValueError:
+        return False
+    if expiry < time.time():
+        return False
+    expected = hmac.new(_gate_secret(), f"gate:{expiry}".encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(signature, expected)
 # Gates GET /api/admin/primat-status (current Primat quota usage) - a
 # separate, unset-by-default secret, not tied to any user account (this app
 # has no admin-role concept on accounts, and building one just for this one
@@ -1331,7 +1369,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", self._cors_origin())
         self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Gate-Token")
         self.send_header("Access-Control-Max-Age", "600")
         self.end_headers()
 
@@ -1405,9 +1443,33 @@ class ApiHandler(SimpleHTTPRequestHandler):
             )
         self.send_json(200, {"received": True})
 
+    # Vägar som fungerar utan gate-token. Login förstås; health för Renders
+    # egen övervakning; analytics-beacon (räknar bara namngivna events).
+    GATE_EXEMPT = ("/api/gate/", "/api/health", "/api/analytics/event")
+
+    def _gate_blocked(self, parsed) -> bool:
+        """True när utvecklingslåset stoppar denna begäran (svaret är då
+        redan skickat). Admin-token är en starkare hemlighet och passerar."""
+        if not GATE_ENABLED or not parsed.path.startswith("/api/"):
+            return False
+        if any(parsed.path.startswith(prefix) for prefix in self.GATE_EXEMPT):
+            return False
+        if ADMIN_TOKEN and hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
+            return False
+        if gate_token_valid(self.headers.get("X-Gate-Token", "")):
+            return False
+        self.send_json(401, {"error": "Matjakt är inte öppet ännu", "gate": True})
+        return True
+
     def do_GET(self):
         self._json_response = False
         parsed = urlparse(self.path)
+        if self._gate_blocked(parsed):
+            return
+        if parsed.path == "/api/gate/check":
+            self.send_json(200, {"ok": True} if gate_token_valid(self.headers.get("X-Gate-Token", ""))
+                           else {"ok": False})
+            return
         if parsed.path == "/api/health":
             self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG), "recipeProviders": sorted(RECIPE_SERVICE.providers)}, cache_seconds=900)
             return
@@ -1660,9 +1722,32 @@ class ApiHandler(SimpleHTTPRequestHandler):
             logger.exception("Product scrape failed for %s/%s", chain, query)
             self.send_json(502, {"error": "Butikens webbsida kunde inte läsas"})
 
+    def _handle_gate_login(self, payload):
+        """Byter användarnamn + Premium-koden mot en signerad gate-token.
+
+        Verifieringen sker HÄR och ingen annanstans - frontenden bär aldrig
+        vare sig koden eller något att jämföra mot. Utan konfigurerad kod
+        förblir låset stängt i stället för att falla öppet."""
+        if self._rate_limit("gate", self._client_ip()):
+            self.send_json(429, {"error": "För många försök. Vänta en stund."})
+            return
+        username = " ".join(str((payload or {}).get("username") or "").split()).casefold()
+        code = str((payload or {}).get("code") or "")
+        username_ok = hmac.compare_digest(username, GATE_USERNAME)
+        code_ok = bool(PREMIUM_CODE) and hmac.compare_digest(code, PREMIUM_CODE)
+        if not (username_ok and code_ok):
+            if not PREMIUM_CODE:
+                logger.error("Gate-inloggning nekad: MATJAKT_PREMIUM_CODE är inte satt i miljön")
+            self.send_json(401, {"error": "Fel användarnamn eller kod"})
+            return
+        expiry = int(time.time()) + GATE_TOKEN_TTL_SECONDS
+        self.send_json(200, {"gateToken": _gate_sign(expiry), "expiresAt": expiry})
+
     def do_POST(self):
         self._json_response = False
         parsed = urlparse(self.path)
+        if self._gate_blocked(parsed):
+            return
         if parsed.path == "/api/billing/webhook":
             self._handle_stripe_webhook()
             return
@@ -1670,6 +1755,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
             payload = self._read_json_body()
         except (json.JSONDecodeError, UnicodeDecodeError):
             self.send_json(400, {"error": "Ogiltig JSON"})
+            return
+        if parsed.path == "/api/gate/login":
+            self._handle_gate_login(payload)
             return
         if parsed.path == "/api/auth/register":
             if self._rate_limit("register", str(payload.get("email") or "").strip().lower()):

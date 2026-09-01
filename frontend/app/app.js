@@ -1,3 +1,32 @@
+// ---------------------------------------------------------------------------
+// UTVECKLINGSLÅSET. Servern kräver X-Gate-Token på varje data-anrop medan
+// Matjakt är stängt för allmänheten. En wrapper på fetch skickar token på
+// alla API-anrop så ingen enskild anropsplats kan glömmas; ett 401 med
+// gate-flaggan (utgången/ogiltig token) låser skärmen igen.
+(function () {
+  const gateToken = () => { try { return localStorage.getItem("matjakt-gate") || ""; } catch (e) { return ""; } };
+  const local = ["localhost", "127.0.0.1"].includes(location.hostname);
+  const lock = () => {
+    try { localStorage.removeItem("matjakt-gate"); } catch (e) {}
+    if (!local) location.replace("../");
+  };
+  const original = window.fetch.bind(window);
+  window.fetch = (resource, options = {}) => {
+    const url = typeof resource === "string" ? resource : resource?.url || "";
+    if (url.includes("/api/")) {
+      options = { ...options, headers: { ...(options.headers || {}), "X-Gate-Token": gateToken() } };
+      return original(resource, options).then(response => {
+        if (response.status === 401) {
+          response.clone().json().then(body => { if (body && body.gate) lock(); }).catch(() => {});
+        }
+        return response;
+      });
+    }
+    return original(resource, options);
+  };
+  window.__matjaktGateLock = lock;
+})();
+
 import { readStoredState, writeStoredState } from "./src/state/storage.js";
 import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
 import { createDebouncedSearch, filterRecipes, mergeRecipeResults } from "./src/services/recipe-search.js";
@@ -1898,12 +1927,22 @@ function weekPlanRowMarkup(recipe, index) {
   </div>`;
 }
 function weekShoppingRowMarkup(item) {
+  // SAMMA prisdisciplin som Handla-fliken: databasens riktiga pris först,
+  // livepriset sedan, och när inget av dem finns - INGET pris. Den gamla
+  // PRODUCT_CATALOG-fallbacken skrev ut en hårdkodad demosiffra som fakta,
+  // så samma vara kunde kosta olika på Vecka och Handla, och Vecka-priset
+  // kunde vara rent påhitt.
+  const match = databaseItemFor(item.namn);
   const live = state.livePriser[item.namn];
-  const priceMissing = live && live.pris_kr == null;
-  const price = priceMissing ? "Pris saknas" : live ? money(live.pris_kr) : PRODUCT_CATALOG[item.namn]?.pris ? money(PRODUCT_CATALOG[item.namn].pris) : "";
+  let price = "";
+  let missing = false;
+  if (match && match.totalCost != null) price = money(match.totalCost);
+  else if (live && live.pris_kr != null) price = money(live.pris_kr);
+  else if (live) { price = "Pris saknas"; missing = true; }
   const campaign = live?.kampanj?.text ? `<small class="week-shopping-campaign">🏷️ ${escapeHtml(live.kampanj.text)}</small>` : "";
-  const photo = live?.bild ? `<img class="shopping-item-image has-image" src="${live.bild}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(item.namn));
-  return `<label class="week-shopping-row"><input type="checkbox" data-week-shopping="${escapeHtml(item.namn)}">${photo}<span class="week-shopping-info"><strong>${escapeHtml(item.namn)}</strong>${campaign}</span><strong class="week-shopping-price ${priceMissing ? "price-missing" : ""}">${price}</strong></label>`;
+  const image = match?.imageUrl || live?.bild;
+  const photo = image ? `<img class="shopping-item-image has-image" src="${escapeHtml(safeHttpUrl(image) || "")}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(item.namn));
+  return `<label class="week-shopping-row"><input type="checkbox" data-week-shopping="${escapeHtml(item.namn)}">${photo}<span class="week-shopping-info"><strong>${escapeHtml(item.namn)}</strong>${campaign}</span><strong class="week-shopping-price ${missing ? "price-missing" : ""}">${price}</strong></label>`;
 }
 function renderWeekOverview(selected, shoppingItems, total) {
   $("weekDayTabs").innerHTML = DAYS.map((day, index) => `<button type="button" class="week-day-tab ${index === weekOverviewDay ? "active" : ""} ${selected[index] ? "" : "empty"}" data-week-day="${index}" role="tab" aria-selected="${index === weekOverviewDay}">${day}</button>`).join("");
@@ -2316,18 +2355,29 @@ $("postcodeInput").addEventListener("input", e => {
   // changes, not when the new ones happen to arrive - otherwise the user
   // sees Gävle stores while typing a Stockholm postcode.
   if (state.postnummer !== previous) clearLocationDerivedState();
-  saveState(); chooseMenu(false);
+  saveState(); refreshAfterSettingsChange();
   if (state.postnummer.length !== 5) return;
   const zip = state.postnummer;
   syncNearbyBranches();
   debouncedGeocode(zip).then(place => {
     if (state.postnummer !== zip) return;
     state.position = { lat: place.lat, lon: place.lon, ort: place.ort };
-    saveState(); chooseMenu(false);
+    saveState(); refreshAfterSettingsChange();
   }).catch(() => { /* geokodning misslyckades - postnumret används ändå för exakt/ungefärlig matchning som innan */ });
 });
-$("locateBtn").addEventListener("click", () => { if (!navigator.geolocation) return; $("locateBtn").textContent = "Hämtar..."; navigator.geolocation.getCurrentPosition(({ coords }) => { state.position = { lat: coords.latitude, lon: coords.longitude }; $("locateBtn").textContent = "Hittad"; chooseMenu(false); }, () => { $("locateBtn").textContent = "Försök igen"; }); });
-$("storeInput").addEventListener("change", e => { state.butik = e.target.value; saveState(); chooseMenu(); renderCampaignSection(); });
+$("locateBtn").addEventListener("click", () => { if (!navigator.geolocation) return; $("locateBtn").textContent = "Hämtar..."; navigator.geolocation.getCurrentPosition(({ coords }) => { state.position = { lat: coords.latitude, lon: coords.longitude }; $("locateBtn").textContent = "Hittad"; refreshAfterSettingsChange(); }, () => { $("locateBtn").textContent = "Försök igen"; }); });
+$("storeInput").addEventListener("change", e => { state.butik = e.target.value; saveState(); refreshAfterSettingsChange(); renderCampaignSection(); });
+// En inställningsändring (postnummer, butik, kost, näringsmål) påverkar
+// NÄSTA vecka och det som räknas om automatiskt (butiker, priser). Den får
+// aldrig tyst regenerera en befintlig vecka - det kastade användarens valda
+// recept, manuella byten, avbockade varor och borttagningar på varje
+// TANGENTTRYCK i postnummerfältet. Finns ingen vecka byggs förslaget om som
+// förut; finns en, ritas allt om mot de nya inställningarna med veckan kvar.
+function refreshAfterSettingsChange() {
+  if (state.valda.size) render();
+  else chooseMenu(false);
+}
+
 function openWeekSheet() { $("weekSheet").hidden = false; document.body.style.overflow = "hidden"; }
 function closeWeekSheet() { $("weekSheet").hidden = true; document.body.style.overflow = ""; }
 $("budgetCardBtn").addEventListener("click", openWeekSheet);
@@ -2378,7 +2428,7 @@ function restoreNutritionGoalsForm() {
 function onNutritionGoalsChanged() {
   state.naringsmal = nutritionGoalsSnapshot();
   saveState();
-  chooseMenu(false);
+  refreshAfterSettingsChange();
 }
 $("goalPreset").addEventListener("change", e => {
   const preset = GOAL_PRESETS[e.target.value];
@@ -2389,7 +2439,7 @@ $("goalPreset").addEventListener("change", e => {
 document.querySelectorAll("#proteinSourceChips input").forEach(box => box.addEventListener("change", onNutritionGoalsChanged));
 function onDietChanged() {
   state.kost = { kosttyp: $("kosttypInput").value, avoidAllergens: new Set([...document.querySelectorAll("#allergenChips input:checked")].map(box => box.value)) };
-  saveState(); chooseMenu(false);
+  saveState(); refreshAfterSettingsChange();
 }
 $("kosttypInput").addEventListener("change", onDietChanged);
 document.querySelectorAll("#allergenChips input").forEach(box => box.addEventListener("change", onDietChanged));
@@ -3073,6 +3123,7 @@ $("manageBillingBtn").addEventListener("click", async () => {
     window.location.href = url;
   } catch (error) { $("portalError").textContent = error.message; }
 });
+$("gateLogoutBtn").addEventListener("click", () => window.__matjaktGateLock());
 $("logoutBtn").addEventListener("click", async () => {
   if (state.authToken) { try { await logoutRequest(state.authToken); } catch { /* session redan ogiltig server-side, städa lokalt ändå */ } }
   state.authToken = null; state.user = null; storeToken(null);

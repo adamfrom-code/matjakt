@@ -1544,3 +1544,82 @@ class NearbyStoresTest(unittest.TestCase):
             api_server.primat_nearby_stores = original
             api_server.geocode_postcode = original_geocode
         self.assertEqual(first, second)
+
+
+class DevelopmentGateTest(unittest.TestCase):
+    """Utvecklingslåset: ingen data utan godkänd inloggning, verifiering
+    endast server-side, och admin-token passerar."""
+
+    def setUp(self):
+        self._enabled = api_server.GATE_ENABLED
+        self._code = api_server.PREMIUM_CODE
+        api_server.GATE_ENABLED = True
+        api_server.PREMIUM_CODE = "hemlig-kod"
+
+    def tearDown(self):
+        api_server.GATE_ENABLED = self._enabled
+        api_server.PREMIUM_CODE = self._code
+
+    def _handler(self, headers=None):
+        handler = api_server.ApiHandler.__new__(api_server.ApiHandler)
+        handler.headers = headers or {}
+        handler.sent = []
+        handler.send_json = lambda status, payload, **kw: handler.sent.append((status, payload))
+        return handler
+
+    def _parsed(self, path):
+        from urllib.parse import urlparse
+        return urlparse(path)
+
+    def test_data_endpoints_are_blocked_without_token(self):
+        handler = self._handler()
+        self.assertTrue(handler._gate_blocked(self._parsed("/api/recipes")))
+        self.assertEqual(handler.sent[0][0], 401)
+        self.assertTrue(handler.sent[0][1].get("gate"))
+
+    def test_gate_login_and_health_stay_open(self):
+        handler = self._handler()
+        self.assertFalse(handler._gate_blocked(self._parsed("/api/gate/login")))
+        self.assertFalse(handler._gate_blocked(self._parsed("/api/health")))
+
+    def test_valid_token_passes(self):
+        token = api_server._gate_sign(int(api_server.time.time()) + 3600)
+        handler = self._handler({"X-Gate-Token": token})
+        self.assertFalse(handler._gate_blocked(self._parsed("/api/recipes")))
+
+    def test_expired_and_forged_tokens_are_refused(self):
+        expired = api_server._gate_sign(int(api_server.time.time()) - 10)
+        self.assertTrue(self._handler({"X-Gate-Token": expired})._gate_blocked(self._parsed("/api/recipes")))
+        forged = api_server._gate_sign(int(api_server.time.time()) + 3600)[:-4] + "beef"
+        self.assertTrue(self._handler({"X-Gate-Token": forged})._gate_blocked(self._parsed("/api/recipes")))
+
+    def test_admin_token_passes_without_gate_token(self):
+        original = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "admin-hemlis"
+        try:
+            handler = self._handler({"X-Admin-Token": "admin-hemlis"})
+            self.assertFalse(handler._gate_blocked(self._parsed("/api/grocery/status")))
+        finally:
+            api_server.ADMIN_TOKEN = original
+
+    def test_login_requires_exact_username_and_code(self):
+        handler = self._handler()
+        handler._rate_limit = lambda *a: False
+        handler._client_ip = lambda: "1.2.3.4"
+        handler._handle_gate_login({"username": "  adam   FROM ", "code": "hemlig-kod"})
+        status, payload = handler.sent[-1]
+        self.assertEqual(status, 200)
+        self.assertTrue(api_server.gate_token_valid(payload["gateToken"]))
+        for bad in ({"username": "Adam From", "code": "fel"},
+                    {"username": "Eva From", "code": "hemlig-kod"}, {}):
+            handler.sent.clear()
+            handler._handle_gate_login(bad)
+            self.assertEqual(handler.sent[-1][0], 401)
+
+    def test_unset_code_keeps_the_gate_shut(self):
+        api_server.PREMIUM_CODE = ""
+        handler = self._handler()
+        handler._rate_limit = lambda *a: False
+        handler._client_ip = lambda: "1.2.3.4"
+        handler._handle_gate_login({"username": "Adam From", "code": ""})
+        self.assertEqual(handler.sent[-1][0], 401)

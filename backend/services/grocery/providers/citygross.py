@@ -119,6 +119,45 @@ PAGE_SIZE = 20
 # Ordered roughly by how often a week's list needs them, because City Gross
 # throttles by dropping connections and a run may not finish - the terms most
 # likely to matter should already be in when it stops.
+# =============================================================================
+# CATEGORY BROWSE (verified live 2026-09-01) - the full catalogue
+# =============================================================================
+# The term-driven collection below tops out around 4 000 products because it
+# only sees what the ~60 recipe-vocabulary terms happen to hit. The site's
+# own category browse reaches everything:
+#
+#   GET /api/v1/navigation
+#       -> {"data": {"tree": {...}}} - a page tree where every node with
+#          link.categoryPageId and type "ProductCategoryPage" is a browsable
+#          category. 1 113 such pages exist; the top-level food departments
+#          under "Matvaror" (Mejeri id 1503, Kött & fågel 1493, ...) cover
+#          the whole assortment, while the seasonal pages ("Jul", "Semlor",
+#          "Nutelladagen"...) only re-shelve products the departments already
+#          carry.
+#   GET /api/v1/Loop54/category/{id}/products
+#           ?skip={n}&categoryName={name}&store={storeNumber}&take={n}
+#       -> {"items": [...], "totalCount", "pageSize", "totalPages"} - same
+#          product shape as the search endpoint (gtin, prices, images, all
+#          of it), with honest pagination. Verified: id 1503 reports
+#          totalCount 1344 for store 3209.
+#
+# Both endpoints are the public ones the site itself calls on every page
+# load - no auth, no cookie, no session. Same 3-second request delay, same
+# blocked-means-stop rules as the search path.
+NAVIGATION_URL = f"{BASE}/api/v1/navigation"
+CATEGORY_PAGE_SIZE = 100
+
+# The departments that belong in a grocery-price service. A deliberate
+# allow-list by NAME: new seasonal pages appear all the time ("Fotbollsfest!",
+# "Kanelbullens dag") and re-shelve existing products, while LEGO, Tobak,
+# Husdjur and Skönhet are simply not food. A department City Gross renames
+# falls out of collection visibly instead of silently collecting junk.
+FOOD_DEPARTMENTS = {
+    "Kött & fågel", "Frukt & grönt", "Mejeri, ost & ägg", "Skafferiet",
+    "Fryst", "Bröd & bageri", "Chark & pålägg", "Fisk & skaldjur",
+    "Kyld färdigmat", "Vegetariskt", "Dryck",
+}
+
 DEFAULT_SEARCH_TERMS = [
     # protein
     "kyckling", "kycklingfilé", "köttfärs", "fläskfilé", "lax", "torsk",
@@ -314,11 +353,85 @@ class CityGrossProvider(GroceryProvider):
             ))
         return stores
 
+    def _food_categories(self) -> list[tuple[int, str]]:
+        """The top-level food departments from the site's own navigation.
+
+        Returns [] when the navigation cannot be read or looks unexpected -
+        the caller then falls back to term search rather than aborting, so a
+        navigation redesign degrades collection instead of killing it."""
+        try:
+            tree = ((self._request(NAVIGATION_URL) or {}).get("data") or {}).get("tree") or {}
+        except CityGrossRequestError:
+            logger.warning("City Gross navigation unavailable - falling back to term search")
+            return []
+        found: list[tuple[int, str]] = []
+
+        def walk(node):
+            link = node.get("link") or {}
+            if (link.get("categoryPageId") and node.get("type") == "ProductCategoryPage"
+                    and (node.get("name") or "").strip() in FOOD_DEPARTMENTS):
+                found.append((int(node["id"]), node["name"].strip()))
+                # Children are subcategories of a department already being
+                # collected in full - walking into them would only re-fetch
+                # the same products.
+                return
+            for child in node.get("children") or []:
+                walk(child)
+
+        walk(tree)
+        return found
+
+    def _category_products(self, store_id: str, seen: set[str],
+                           products: list[RawProduct]) -> bool:
+        """Collects every food department via the category browse. Returns
+        False when the navigation gave nothing usable."""
+        categories = self._food_categories()
+        if not categories:
+            return False
+        for category_id, category_name in categories:
+            skip = 0
+            while True:
+                time.sleep(REQUEST_DELAY_SECONDS)
+                url = (f"{BASE}/api/v1/Loop54/category/{category_id}/products"
+                       f"?skip={skip}&categoryName={quote(category_name)}"
+                       f"&store={quote(str(store_id))}&take={CATEGORY_PAGE_SIZE}")
+                try:
+                    data = self._request(url)
+                except CityGrossBlockedError as blocked:
+                    logger.error("City Gross blocked this run in category %r - stopping after %d product(s)",
+                                 category_name, len(products))
+                    blocked.partial_products = products
+                    raise
+                except CityGrossRequestError:
+                    logger.exception("City Gross category %r failed (skip %d) - moving on", category_name, skip)
+                    break
+                items = data.get("items") or []
+                for raw in items:
+                    product_id = str(raw.get("id") or "")
+                    if not product_id or product_id in seen:
+                        continue
+                    seen.add(product_id)
+                    try:
+                        products.append(self.normalize_product({**raw, "_store_id": store_id}))
+                    except Exception:
+                        logger.exception("Failed to normalize City Gross product %r", product_id)
+                total = data.get("totalCount") or 0
+                skip += CATEGORY_PAGE_SIZE
+                if skip >= total or not items:
+                    break
+            logger.info("City Gross %r klar: %d produkter totalt hittills", category_name, len(products))
+        return True
+
     def get_products(self, store_id: str) -> list[RawProduct]:
         """store_id is City Gross' storeNumber (e.g. "3209"). It scopes which
-        products come back, though not their prices - see pricing_scope."""
+        products come back, though not their prices - see pricing_scope.
+
+        Category browse first (the whole catalogue), term search as the
+        fallback when navigation is unreadable - and as a top-up for
+        anything assortment quirks keep out of the department pages."""
         seen: set[str] = set()
         products: list[RawProduct] = []
+        self._category_products(store_id, seen, products)
         for term in self.search_terms:
             skip = 0
             while True:
