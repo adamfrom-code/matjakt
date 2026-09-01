@@ -5,7 +5,7 @@
 // the same URL - which is exactly what happened after the recipe-bank and
 // week-type work shipped: the site was updated, phones still showed the old
 // three week types.
-const CACHE_NAME = "matjakt-shell-v10";
+const CACHE_NAME = "matjakt-shell-v11";
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -19,14 +19,31 @@ self.addEventListener("activate", event => {
 // Network-first for everything except /api/* - API calls must always hit the
 // server live (prices, auth, recipes). Static assets are cached as a fallback
 // so the app shell still opens when offline.
+//
+// Cache-reglerna inför release:
+// - Bara SAMMA ORIGIN caches. Cross-origin (Pexels-bilder, fonter) blir
+//   opaka svar som inte kan felkontrolleras och räknas med kvotpadding -
+//   webbläsarens egen HTTP-cache sköter dem bättre.
+// - Bara response.ok caches. En cachad 404/500 skulle annars bli appens
+//   offline-"fallback" för alltid.
+// - Navigationer och /app/src/-modulerna hämtas med cache: "no-cache" så
+//   varje sidöppning revaliderar mot servern (ETag/304 är billigt). Utan
+//   detta kunde GitHub Pages 10-minuters HTTP-cache blanda ny app.js med
+//   gamla moduler - "sidan är deployad men telefonen kör gammal kod".
 self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   if (event.request.method !== "GET" || url.pathname.startsWith("/api/")) return;
+
+  const revalidate = event.request.mode === "navigate" || url.pathname.includes("/src/");
+  const request = revalidate ? new Request(event.request, { cache: "no-cache" }) : event.request;
+
   event.respondWith(
-    fetch(event.request)
+    fetch(request)
       .then(response => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        if (response.ok && url.origin === self.location.origin) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        }
         return response;
       })
       .catch(() => caches.match(event.request))
