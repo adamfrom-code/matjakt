@@ -1,3 +1,3 @@
-from .mailer import MailError, send_email
+from .mailer import MailError, is_configured, send_email
 
-__all__ = ["MailError", "send_email"]
+__all__ = ["MailError", "is_configured", "send_email"]

@@ -25,7 +25,7 @@ from urllib.request import Request, urlopen
 from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature
-from services.email import MailError, send_email
+from services.email import MailError, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.grocery import api as grocery_api  # noqa: E402
 from services.recipes import api as recipes_api
@@ -1863,6 +1863,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/auth/request-password-reset":
             if self._rate_limit("password_reset", str(payload.get("email") or "").strip().lower()):
                 return
+            if not mail_is_configured(MAIL_CONFIG):
+                # Sägs INNAN kontouppslaget och identiskt för varje adress -
+                # ett serverfaktum läcker inga konton. Tidigare svarade vi
+                # "ok" och användaren väntade på ett mejl som aldrig hade
+                # en chans att skickas.
+                self.send_json(503, {"error": "Mejl är inte konfigurerat på servern ännu. Kontakta support på adamfrom@icloud.com."})
+                return
             reset_token = ACCOUNT_STORE.request_password_reset(payload.get("email"))
             if reset_token:
                 try:
@@ -1893,6 +1900,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/auth/resend-verification":
+            # Mejl på begäran är en mejlbombningsvektor utan spärr.
+            if self._rate_limit("resend_verification", (self._bearer_token() or "")[:16], self._client_ip()):
+                return
             try:
                 email, verify_token = ACCOUNT_STORE.resend_verification(self._bearer_token())
                 send_email(

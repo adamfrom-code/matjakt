@@ -1227,10 +1227,34 @@ class AuthHttpTest(unittest.TestCase):
     def test_request_password_reset_returns_ok_for_known_and_unknown_email(self):
         email = self._email()
         self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        # Med mejl konfigurerat: samma 200 för känd och okänd adress - inget
+        # kontoläckage. (Utan konfiguration: samma ärliga 503 för båda, se
+        # nästa test.)
+        original = dict(api_server.MAIL_CONFIG)
+        api_server.MAIL_CONFIG.update(host="smtp.test.local", from_email="noreply@matjakt.store")
+        sent = []
+        original_send = api_server.send_email
+        api_server.send_email = lambda *a, **k: sent.append(a)
+        try:
+            status, payload = self.post("/api/auth/request-password-reset", {"email": email})
+            self.assertEqual(status, 200)
+            status, payload = self.post("/api/auth/request-password-reset", {"email": "nobody-" + email})
+            self.assertEqual(status, 200)
+            self.assertEqual(len(sent), 1, "bara den riktiga adressen får mejl")
+        finally:
+            api_server.MAIL_CONFIG.clear(); api_server.MAIL_CONFIG.update(original)
+            api_server.send_email = original_send
+
+    def test_request_password_reset_is_honest_when_mail_is_unconfigured(self):
+        """Användaren ska ALDRIG vänta på ett mejl som aldrig kunde skickas.
+        Okonfigurerat mejl är ett serverfaktum, identiskt för varje adress -
+        att säga det läcker inga konton."""
+        email = self._email()
+        self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
         status, payload = self.post("/api/auth/request-password-reset", {"email": email})
-        self.assertEqual(status, 200)
-        status, payload = self.post("/api/auth/request-password-reset", {"email": "nobody-" + email})
-        self.assertEqual(status, 200)
+        self.assertEqual(status, 503)
+        status2, payload2 = self.post("/api/auth/request-password-reset", {"email": "nobody-" + email})
+        self.assertEqual((status2, payload2), (status, payload), "samma svar för okänd adress")
 
     def test_reset_password_via_http_then_login_with_new_password(self):
         email = self._email()

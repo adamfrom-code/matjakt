@@ -14,6 +14,14 @@ class MailError(Exception):
     """Raised for both "not configured" and real SMTP delivery errors."""
 
 
+def is_configured(config) -> bool:
+    """Whether mail can even be attempted. Callers use this to answer
+    honestly BEFORE claiming a mail was sent - an unconfigured server is a
+    fact about the server, identical for every address, so saying it out
+    loud leaks nothing about which accounts exist."""
+    return bool(config.get("host") and config.get("from_email"))
+
+
 def send_email(config, to_email, subject, body_text):
     host = config.get("host")
     from_email = config.get("from_email")

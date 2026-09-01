@@ -47,6 +47,9 @@ LIMITS = {
     # Utvecklingslåsets inloggning bär samma kod som redeem och får samma
     # gissningsbudget.
     "gate": (10, 3600),
+    # Mejl på begäran: utan spärr kan vem som helst be servern bombardera en
+    # adress den inte äger.
+    "resend_verification": (5, 3600),
 }
 
 # A single dict of key -> [timestamps]. Pruned as it goes, and hard-capped so
