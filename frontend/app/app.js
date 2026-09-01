@@ -121,7 +121,27 @@ function selectedRecipes() {
   const allRecipes = [...RECEPT, ...state.apiRecipes];
   return state.weekPlan.map(id => allRecipes.find(recipe => recipe.id === id)).filter(Boolean);
 }
-function setWeekPlan(ids) { state.weekPlan = [...ids]; state.valda = new Set(ids); }
+function setWeekPlan(ids) {
+  // Papperskorgen: den vecka som just ersätts läggs överst i historiken
+  // (tre senaste behålls, synkas med kontot). "Skapa ny vecka" av misstag
+  // ska aldrig kosta en kurerad vecka.
+  if (state.weekPlan?.length && state.weekPlan.join() !== [...ids].join()) {
+    state.weekHistory = [{ plan: [...state.weekPlan], savedAt: Date.now() },
+                         ...(state.weekHistory || [])].slice(0, 3);
+  }
+  state.weekPlan = [...ids]; state.valda = new Set(ids);
+}
+
+function restorePreviousWeek() {
+  const previous = (state.weekHistory || [])[0];
+  if (!previous) return;
+  state.weekHistory = state.weekHistory.slice(1);
+  state.weekPlan = [...previous.plan]; state.valda = new Set(previous.plan);
+  state.avklarade.clear(); state.removedItems.clear();
+  clearPriceSnapshots();
+  saveState(); render();
+  showUndoToast("Förra veckan är tillbaka", () => {});
+}
 function addToWeekPlan(id) { if (!state.weekPlan.includes(id)) state.weekPlan.push(id); state.valda.add(id); }
 function removeFromWeekPlan(id) { state.weekPlan = state.weekPlan.filter(existing => existing !== id); state.valda.delete(id); }
 // Replaces exactly the recipe at this day's position - every other day's
@@ -129,7 +149,7 @@ function removeFromWeekPlan(id) { state.weekPlan = state.weekPlan.filter(existin
 // swapping "this day" rather than clearing and re-picking the week.
 function swapWeekPlanDay(dayIndex, newId) { state.weekPlan = state.weekPlan.map((id, index) => index === dayIndex ? newId : id); state.valda = new Set(state.weekPlan); }
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: Math.min(12, Math.max(1, Number(savedState.personer) || 2)), middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), removedItems: new Set(savedState.removedItems || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, dbLockedChains: [], extraItems: savedState.extraItems || [], extraMatches: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
+const state = { budget: savedState.budget || 800, personer: Math.min(12, Math.max(1, Number(savedState.personer) || 2)), middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), removedItems: new Set(savedState.removedItems || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, dbLockedChains: [], extraItems: savedState.extraItems || [], extraMatches: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null, weekHistory: savedState.weekHistory || [],
   // The week's recipe ids in day order (index 0 = Måndag) - the actual
   // source of truth for "which day has which recipe", now that a day swap
   // has to replace exactly one day's recipe in place. state.valda (a Set)
@@ -139,7 +159,7 @@ const state = { budget: savedState.budget || 800, personer: Math.min(12, Math.ma
   // never valda's own iteration order (a Set has none tied to day position).
   weekPlan: Array.isArray(savedState.weekPlan) ? savedState.weekPlan : [...(savedState.valda || [])] };
 function buildSyncPayload() {
-  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], removedItems: [...state.removedItems], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan, extraItems: state.extraItems,
+  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], removedItems: [...state.removedItems], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan, weekHistory: state.weekHistory, extraItems: state.extraItems,
     // The last real pricing snapshot. Painted immediately on next visit with
     // its own timestamp while a fresh fetch runs - the difference between
     // "pris hämtas…" for seconds on every open and prices that are simply
@@ -161,6 +181,7 @@ function applySyncBlob(blob) {
   if (blob.removedItems !== undefined) state.removedItems = new Set(blob.removedItems);
   if (blob.apiRecipes !== undefined) state.apiRecipes = blob.apiRecipes;
   if (blob.extraItems !== undefined) state.extraItems = blob.extraItems;
+  if (blob.weekHistory !== undefined) state.weekHistory = blob.weekHistory;
   if (blob.dbChainTotals) { state.dbChainTotals = blob.dbChainTotals; state.dbComparison = blob.dbComparison || null; state.dbPricedAt = blob.dbPricedAt || null; }
   if (blob.naringsmal !== undefined) state.naringsmal = blob.naringsmal;
   if (blob.betyg !== undefined) state.betyg = blob.betyg;
@@ -175,15 +196,32 @@ function applySyncBlob(blob) {
   if (blob.weekPlan !== undefined) state.weekPlan = blob.weekPlan;
 }
 let serverSyncTimer = null;
+// Sparat / synkar / kunde inte synka - sanningen om var datat är, visad
+// diskret i kontovyn. Lokalt sparas ALLTID (localStorage, synkront);
+// statusen gäller resan till kontot.
+let syncStatus = "idle";
+function setSyncStatus(status) {
+  syncStatus = status;
+  const label = $("syncStatusLabel");
+  if (!label) return;
+  label.textContent = status === "pending" ? "Synkar…"
+    : status === "error" ? "Kunde inte synka - försöker igen"
+    : state.authToken ? "Allt sparat på ditt konto" : "Sparat på den här enheten";
+  label.classList.toggle("sync-error", status === "error");
+}
+
 function scheduleServerSync() {
-  if (!state.authToken) return;
+  if (!state.authToken) { setSyncStatus("idle"); return; }
   clearTimeout(serverSyncTimer);
+  setSyncStatus("pending");
   // Debounced: saveState() fires on nearly every interaction (pantry +/-, ratings,
   // swaps...) - pushing to the server on every single one would be wasteful and
   // could race with itself. One request ~1.5s after the last change is enough for
   // "follows you to another phone", which is the actual requirement here.
   serverSyncTimer = setTimeout(() => {
-    saveAccountState(state.authToken, buildSyncPayload()).catch(() => { /* nästa saveState-anrop försöker igen */ });
+    saveAccountState(state.authToken, buildSyncPayload())
+      .then(() => setSyncStatus("idle"))
+      .catch(() => { setSyncStatus("error"); /* nästa saveState-anrop försöker igen */ });
   }, 1500);
 }
 async function pullAccountState() {
@@ -2682,7 +2720,10 @@ $("feedbackSend").addEventListener("click", async () => {
   }
 });
 
-function openWeekSheet() { $("weekSheet").hidden = false; document.body.style.overflow = "hidden"; }
+function openWeekSheet() {
+  $("restoreWeekBtn").hidden = !(state.weekHistory || []).length;
+  $("weekSheet").hidden = false; document.body.style.overflow = "hidden";
+}
 function closeWeekSheet() { $("weekSheet").hidden = true; document.body.style.overflow = ""; }
 $("budgetCardBtn").addEventListener("click", openWeekSheet);
 $("weekSheetOpen").addEventListener("click", openWeekSheet);
@@ -2691,6 +2732,7 @@ $("weekSheetDone").addEventListener("click", closeWeekSheet);
 $("weekSheet").addEventListener("click", event => { if (event.target === $("weekSheet")) closeWeekSheet(); });
 document.addEventListener("keydown", event => { if (event.key === "Escape" && !$("weekSheet").hidden) closeWeekSheet(); });
 $("sheetPlanBtn").addEventListener("click", () => { closeWeekSheet(); openPlanComparison(); });
+$("restoreWeekBtn").addEventListener("click", () => { closeWeekSheet(); restorePreviousWeek(); });
 
 const GOAL_PRESETS = {
   hogprotein: { kcalGoal: "", proteinGoal: "40" },
@@ -3629,6 +3671,15 @@ $("manualItemInput")?.addEventListener("keydown", event => {
 });
 
 window.addEventListener("popstate", renderRecipePage);
+// Offline är inget fel: listan och veckan bor i localStorage och fungerar.
+// Men det ska SÄGAS - annars ser misslyckade prisuppdateringar ut som
+// buggar. En stilla rad, inte en skrikande banner.
+function renderOfflineNote() {
+  document.body.classList.toggle("is-offline", !navigator.onLine);
+}
+window.addEventListener("online", () => { renderOfflineNote(); render(); });
+window.addEventListener("offline", renderOfflineNote);
+renderOfflineNote();
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => { /* offline-stödet är ett tillägg - appen funkar utan det */ }));
 }

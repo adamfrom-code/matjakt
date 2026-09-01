@@ -37,7 +37,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=50">
+  <link rel="stylesheet" href="styles.css?v=51">
 </head>
 <body>
   <div class="phone-shell">
@@ -47,6 +47,7 @@
       <button class="profile-btn" type="button" id="profileBtn" aria-label="Öppna profil och inställningar">MJ</button>
     </header>
 
+    <p class="offline-note">Du är offline - listan och veckan visas från senaste besöket.</p>
     <main class="app view-home" id="top">
       <section class="screen home-screen" aria-labelledby="homeTitle">
         <div class="home-hero"><h1 id="homeGreeting">God morgon <span aria-hidden="true">👋</span></h1><p id="homeSubtitle">Redo för en god och prisvärd vecka.</p></div>
@@ -164,6 +165,7 @@
               </div>
             </div>
             <button type="button" class="btn btn-ghost sheet-plan-btn" id="sheetPlanBtn">Välj veckotyp →</button>
+            <button type="button" class="btn btn-ghost sheet-plan-btn" id="restoreWeekBtn" hidden>Återställ förra veckan</button>
             <button class="btn btn-primary sheet-done" id="weekSheetDone">Klart</button>
           </div>
         </div>
@@ -309,7 +311,7 @@
       <button class="account-modal-close" type="button" data-account-close aria-label="Stäng">×</button>
 
       <div id="accountLoggedOut">
-        <h2 id="accountModalTitle">Konto</h2>
+        <h2 id="accountModalTitle">Konto</h2><p class="sync-status" id="syncStatusLabel"></p>
         <div class="account-tabs" role="tablist">
           <button type="button" class="account-tab active" data-account-tab="login">Logga in</button>
           <button type="button" class="account-tab" data-account-tab="register">Skapa konto</button>
@@ -485,6 +487,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=92"></script>
+  <script type="module" src="app.js?v=93"></script>
 </body>
 </html>
