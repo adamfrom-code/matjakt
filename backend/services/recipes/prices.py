@@ -86,9 +86,16 @@ def _reprice_locked() -> dict:
             best = None  # (portion_price, chain, covered, total)
             for chain, store_id in stores.items():
                 result = engine.price_list(items, chain, store_id)
-                covered = result.get("realPriceItems", 0)
+                # Matchade rader räcker här - även de vars PAKETANTAL är en
+                # gissning (kryddmått mot gram-burkar). Portionspriset är
+                # uttryckligen ett cirkapris per portion; det är BUTIKS-
+                # JÄMFÖRELSEN som aldrig får räkna en gissning som säker,
+                # och den läser realPriceItems, inte det här kriteriet.
+                # (Skärpningen av realPriceItems 2026-09-01 nollade annars
+                # portionspriset för varje recept med en kryddrad.)
+                covered = result.get("realPriceItems", 0) + result.get("estimatedItems", 0)
                 total = result.get("totalItems", len(items))
-                # Full coverage or nothing: a partially-priced week total is
+                # Full match or nothing: a partially-matched week total is
                 # a smaller number than the real one, presented as smaller.
                 if total == 0 or covered < total:
                     continue
