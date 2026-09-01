@@ -387,6 +387,10 @@ INGREDIENT_ALIASES = {
     "gula ärtor": ["gula ärter", "ärter"],
     # Varumärkesformer: "Coca-Cola" leder med Coca, inte Cola.
     "cola": ["coca-cola", "pepsi"],
+    # Samma vara under sitt italienska namn respektive sin vanligaste form -
+    # identiteten ändras inte, bara ordet.
+    "parmesan": ["parmigiano"],
+    "buljong": ["buljongtärning", "fond"],
     # Shelf singular/word-order forms found by probing the live catalogue.
     "rödlök": ["lök röd"],
     "kycklingklubbor": ["kycklingklubba", "kyckling klubba"],
