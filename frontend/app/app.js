@@ -926,6 +926,31 @@ function recipeIngredientListMarkup(recipe) {
     return `<li class="recipe-ingredient ${inPantry ? "in-pantry" : ""}"><svg class="recipe-ingredient-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12.5 2.5 2.5 5-5.5"/></svg><span class="recipe-ingredient-name">${escapeHtml(name)}${inPantry ? '<small>Finns i skafferiet</small>' : ""}</span><span class="recipe-ingredient-amount">${escapeHtml(amountText)}</span></li>`;
   }).join("");
 }
+// "2.5" är ett tal, "2 ½" är ett mått. Recepten pratar kökssvenska.
+function formatMeasure(amount) {
+  if (amount == null) return "";
+  const whole = Math.floor(amount);
+  const fraction = Math.round((amount - whole) * 100) / 100;
+  const parts = { 0.25: "¼", 0.33: "⅓", 0.5: "½", 0.67: "⅔", 0.75: "¾" };
+  if (parts[fraction]) return whole ? `${whole} ${parts[fraction]}` : parts[fraction];
+  return Number.isInteger(amount) ? String(amount) : String(Math.round(amount * 10) / 10);
+}
+
+// Ingrediensmängderna skalas till HUSHÅLLET - receptbankens rader gäller
+// recipe.servings portioner, men veckan lagas för state.personer.
+function scaledIngredientRows(recipe) {
+  const structured = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+  if (!structured.length) return null;
+  const scale = state.personer / (recipe.servings || 4);
+  const rows = { buy: [], home: [] };
+  structured.forEach(item => {
+    const target = item.pantryStaple ? rows.home : rows.buy;
+    const amount = item.amount != null && !item.pantryStaple ? formatMeasure(item.amount * scale) : "";
+    target.push({ amount, unit: item.pantryStaple ? "" : (item.unit || ""), name: item.name, optional: item.optional });
+  });
+  return rows;
+}
+
 async function renderRecipePage() {
   const id = new URLSearchParams(location.search).get("recept");
   if (!id) { $("top").hidden = false; $("recipePage").hidden = true; window.scrollTo(0, 0); return; }
@@ -965,8 +990,34 @@ async function renderRecipePage() {
   document.querySelectorAll(".bottom-nav-item").forEach(item =>
     item.classList.toggle("active", item.dataset.view === "recipes")); /* bottennavigeringen följer med in på receptsidan - flikarna ska alltid
      vara ett tryck bort */ $("recipePage").hidden = false;
-  $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe">${recipe.bild ? `<img class="recipe-photo full-recipe-hero" src="${recipe.bild}" alt="${recipe.namn}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${recipe.typ}</p><h1>${recipe.namn}</h1><div class="recipe-detail-meta"><span>${recipe.tid ? recipe.tid + " min" : "Tid saknas"}</span><span>${recipe.servings || state.personer} portioner</span><span>${recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? money(recipe.portionspris) + "/portion" : "Pris saknas"}</span></div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${details.beskrivning || "En god svensk vardagsrätt."}</p><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${recipe.id}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button>${recipeRatingMarkup(recipe.id)}${feedbackMarkup(recipe.id)}<h2>Ingredienser</h2><ul>${recipe.ingredienser.map(item => `<li>${item}</li>`).join("")}</ul><h2>Gör så här</h2><ol>${(details.steg || []).map(step => `<li>${step}</li>`).join("")}</ol>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${details.tips}</p>` : ""}</article>`;
+  const chips = [
+    recipe.tid ? `⏱ ${recipe.tid} min` : null,
+    `${state.personer} portioner`,
+    recipe.difficulty || null,
+    recipe.priceStatus !== "unavailable" && recipe.portionspris ? `${money(recipe.portionspris)}/portion` : null,
+  ].filter(Boolean);
+  const ingredientRows = scaledIngredientRows(recipe);
+  const ingredientsMarkup = ingredientRows
+    ? `${ingredientRows.buy.map(row => `<div class="ing-row${row.optional ? " ing-optional" : ""}"><strong>${escapeHtml([row.amount, row.unit].filter(Boolean).join(" "))}</strong><span>${escapeHtml(row.name)}${row.optional ? " <em>(valfritt)</em>" : ""}</span></div>`).join("")}${ingredientRows.home.length ? `<p class="ing-home-label">Har du säkert hemma</p>${ingredientRows.home.map(row => `<div class="ing-row ing-home"><strong></strong><span>${escapeHtml(row.name)}</span></div>`).join("")}` : ""}`
+    : `${recipe.ingredienser.map(item => `<div class="ing-row"><strong></strong><span>${escapeHtml(item)}</span></div>`).join("")}`;
+  const stepsMarkup = (details.steg || []).map((step, index) => `<label class="step-row"><input type="checkbox" data-step-check="${index}"><span class="step-number">${index + 1}</span><span class="step-text">${escapeHtml(step)}</span></label>`).join("");
+  $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe">${recipe.bild ? `<img class="recipe-photo full-recipe-hero" src="${recipe.bild}" alt="${recipe.namn}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${recipe.typ}</p><h1>${recipe.namn}</h1><div class="recipe-chips">${chips.map(chip => `<span class="recipe-chip">${escapeHtml(chip)}</span>`).join("")}</div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${details.beskrivning || "En god svensk vardagsrätt."}</p><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${recipe.id}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button><section class="recipe-block"><div class="ing-head"><h2>Ingredienser</h2><span>${state.personer} portioner</span></div>${ingredientsMarkup}</section><section class="recipe-block"><h2>Gör så här</h2><div class="steps">${stepsMarkup}</div></section>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${details.tips}</p>` : ""}<div class="recipe-block">${recipeRatingMarkup(recipe.id)}${feedbackMarkup(recipe.id)}</div></article>`;
   $("recipePage").querySelector(".recipe-back").addEventListener("click", () => history.back());
+  // Avbockade steg medan man lagar - sparas lokalt per recept så ett
+  // vridet-bort-och-tillbaka på telefonen inte tappar var man var.
+  const stepKey = `matjakt-steps-${recipe.id}`;
+  let done = [];
+  try { done = JSON.parse(localStorage.getItem(stepKey) || "[]"); } catch { /* trasig lagring = börja om */ }
+  $("recipePage").querySelectorAll("[data-step-check]").forEach(box => {
+    const index = Number(box.dataset.stepCheck);
+    box.checked = done.includes(index);
+    box.closest(".step-row").classList.toggle("step-done", box.checked);
+    box.addEventListener("change", () => {
+      box.checked ? done.push(index) : (done = done.filter(x => x !== index));
+      box.closest(".step-row").classList.toggle("step-done", box.checked);
+      try { localStorage.setItem(stepKey, JSON.stringify(done)); } catch { /* full lagring - bocken lever ändå i DOM */ }
+    });
+  });
   $("recipePage").querySelector("[data-recipe-add]").addEventListener("click", event => { state.valda.has(recipe.id) ? removeFromWeekPlan(recipe.id) : addToWeekPlan(recipe.id); saveState(); render(); event.currentTarget.querySelector("span").textContent = state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"; });
   wireRatingStars($("recipePage"), recipe.id);
   wireFeedbackButtons($("recipePage"), recipe.id);
