@@ -1408,15 +1408,34 @@ class ApiHandler(SimpleHTTPRequestHandler):
         header = self.headers.get("Authorization", "")
         return header[7:] if header.lower().startswith("bearer ") else None
 
+    # Största JSON-kropp servern läser in. Största legitima kroppen är ett
+    # kontos synkade state (veckor, skafferi, extraval) - långt under 256 kB.
+    # Utan tak var en oautentiserad POST med hundratals MB body en gratis
+    # OOM-krasch av 512MB-instansen.
+    MAX_JSON_BODY_BYTES = 256 * 1024
+
+    class _BodyTooLarge(ValueError):
+        pass
+
     def _read_json_body(self):
         length = int(self.headers.get("Content-Length", 0) or 0)
+        if length > self.MAX_JSON_BODY_BYTES:
+            raise self._BodyTooLarge(length)
         raw = self.rfile.read(length) if length else b""
         if not raw:
             return {}
-        return json.loads(raw)
+        parsed = json.loads(raw)
+        # En array eller ett tal är aldrig en giltig begäran här, och varje
+        # hanterare antar dict - utan detta blev icke-dict en 500.
+        if not isinstance(parsed, dict):
+            raise json.JSONDecodeError("JSON-kroppen måste vara ett objekt", raw.decode("utf-8", "replace")[:40], 0)
+        return parsed
 
     def _handle_stripe_webhook(self):
         length = int(self.headers.get("Content-Length", 0) or 0)
+        if length > self.MAX_JSON_BODY_BYTES:
+            self.send_json(413, {"error": "För stor begäran"})
+            return
         raw = self.rfile.read(length) if length else b""
         try:
             verify_webhook_signature(raw, self.headers.get("Stripe-Signature", ""), STRIPE_WEBHOOK_SECRET)
@@ -1767,6 +1786,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return
         try:
             payload = self._read_json_body()
+        except self._BodyTooLarge:
+            self.send_json(413, {"error": "För stor begäran"})
+            return
         except (json.JSONDecodeError, UnicodeDecodeError):
             self.send_json(400, {"error": "Ogiltig JSON"})
             return

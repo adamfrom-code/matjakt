@@ -196,19 +196,24 @@ def database_summary() -> dict:
             """
         ).fetchall()
         for row in rows:
+            # Prisradens EGEN butik avgör kedjan - samma bugg och samma fix
+            # som campaign_deals: en GTIN-delad produkt lät en Willys-hämtning
+            # räknas som färskhet (och prisantal) för ICA, vilket både visade
+            # osant färsk data för kund och släppte en stale kedja förbi
+            # åldersspärren i jämförelsen.
             fetched = store.connection.execute(
                 """
                 SELECT MAX(cp.fetched_at) FROM grocery_current_prices cp
-                JOIN grocery_product_external_ids e ON e.product_id = cp.product_id
-                WHERE e.chain = ?
+                JOIN grocery_stores st ON st.id = cp.store_id
+                WHERE st.chain = ?
                 """,
                 (row["chain"],),
             ).fetchone()[0]
             prices = store.connection.execute(
                 """
                 SELECT COUNT(*) FROM grocery_current_prices cp
-                JOIN grocery_product_external_ids e ON e.product_id = cp.product_id
-                WHERE e.chain = ?
+                JOIN grocery_stores st ON st.id = cp.store_id
+                WHERE st.chain = ?
                 """,
                 (row["chain"],),
             ).fetchone()[0]
@@ -401,11 +406,13 @@ def price_week(items: list[dict], chains: list[str] | None = None,
 
 
 def _chain_age_seconds(store: GroceryStore, chain: str):
+    # st.chain, inte external_ids: prisradens egen butik avgör vems ålder
+    # det är (se database_summary för hela historien).
     row = store.connection.execute(
         """
         SELECT MAX(cp.fetched_at) FROM grocery_current_prices cp
-        JOIN grocery_product_external_ids e ON e.product_id = cp.product_id
-        WHERE e.chain = ?
+        JOIN grocery_stores st ON st.id = cp.store_id
+        WHERE st.chain = ?
         """,
         (chain,),
     ).fetchone()
@@ -513,8 +520,14 @@ def format_chain_result(result: dict, store_row=None, comparison: dict | None = 
         "savings": savings,
         "dataAgeSeconds": age,
         "updatedAt": (time.time() - age) if age is not None else None,
+        # SAMMA definition som compare_chains använder för kröningen - även
+        # ålderskravet. Docstringen lovar att konsumenter läser denna flagga
+        # i stället för att härleda själva; två olika definitioner gjorde
+        # löftet till en fälla (frontend byggde egen billigast-beräkning på
+        # kedjor som kröningen just diskvalificerat för ålder).
         "comparable": (result.get("coveragePercent", 0) >= MIN_COVERAGE_FOR_COMPARISON
-                       and result.get("realPriceItems", 0) > 0),
+                       and result.get("realPriceItems", 0) > 0
+                       and (age is None or age <= MAX_AGE_SECONDS_FOR_COMPARISON)),
         "items": items,
     }
 
@@ -554,6 +567,11 @@ def compare_chains(results: list[dict]) -> dict:
     if cheapest["totalCheckoutCost"] == priciest["totalCheckoutCost"]:
         return {"cheapestChain": None, "savings": None, "comparedChains": len(comparable),
                 "reason": "all_totals_identical"}
+    # Delad förstaplats: att kröna den som råkar ligga först i listan vore
+    # en osann exklusivitetsclaim av exakt den sort blocket ovan stoppar.
+    if len(totals) > 1 and cheapest["totalCheckoutCost"] == totals[1]["totalCheckoutCost"]:
+        return {"cheapestChain": None, "savings": None, "comparedChains": len(comparable),
+                "reason": "tied_cheapest"}
 
     return {
         "cheapestChain": cheapest["chain"],

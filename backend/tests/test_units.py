@@ -2,7 +2,8 @@
 """Enhetskonverteringens regressionslås (§51).
 
 Volym konverteras aldrig till vikt utan ingrediensspecifik densitet, och
-msk/tsk är MEDVETET okonverterbara i prissättningen: en gissad densitet ger
+msk/tsk KONVERTERAR inom volymfamiljen (1 msk = 15 ml är en definition,
+ingen gissning) men vägrar mot vikt: en gissad densitet ger
 fel paketantal, och fel antal är ett fel pris. None är rätt svar."""
 
 import sys
@@ -22,8 +23,14 @@ class UnitConversion(unittest.TestCase):
         self.assertEqual(convert_amount(30, "cl", "dl"), 3.0)
         self.assertEqual(convert_amount(3, "hg", "g"), 300.0)
 
+    def test_spoons_convert_within_volume(self):
+        self.assertEqual(convert_amount(1, "msk", "ml"), 15.0)
+        self.assertEqual(convert_amount(2, "tsk", "ml"), 10.0)
+        self.assertEqual(convert_amount(1, "krm", "ml"), 1.0)
+        self.assertEqual(convert_amount(1, "msk", "dl"), 0.15)
+
     def test_spoons_pieces_and_cross_family_refuse(self):
-        for amount, source, target in [(1, "msk", "ml"), (1, "tsk", "g"),
+        for amount, source, target in [(1, "tsk", "g"),
                                        (2, "st", "g"), (400, "g", "l"),
                                        (1, "dl", "kg")]:
             self.assertIsNone(convert_amount(amount, source, target),

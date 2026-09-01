@@ -1674,3 +1674,29 @@ class GateUnsetCodeDiagnosis(unittest.TestCase):
             self.assertIn("gateToken", payload)
         finally:
             api_server.PREMIUM_CODE = original
+
+
+class RequestBodyLimits(unittest.TestCase):
+    """En oautentiserad POST med jättekropp var en gratis OOM-krasch."""
+
+    def _handler(self, body: bytes, length=None):
+        import io as _io
+        handler = api_server.ApiHandler.__new__(api_server.ApiHandler)
+        handler.headers = {"Content-Length": str(length if length is not None else len(body))}
+        handler.rfile = _io.BytesIO(body)
+        return handler
+
+    def test_oversized_body_is_refused_before_reading(self):
+        handler = self._handler(b"", length=500 * 1024 * 1024)
+        with self.assertRaises(api_server.ApiHandler._BodyTooLarge):
+            handler._read_json_body()
+
+    def test_normal_body_still_parses(self):
+        handler = self._handler(b'{"a": 1}')
+        self.assertEqual(handler._read_json_body(), {"a": 1})
+
+    def test_non_dict_json_is_a_400_not_a_500(self):
+        import json as _json
+        handler = self._handler(b'[1,2,3]')
+        with self.assertRaises(_json.JSONDecodeError):
+            handler._read_json_body()

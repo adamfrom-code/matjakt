@@ -258,10 +258,18 @@ class AccountStore:
             raise AccountError("Du måste vara inloggad")
         return row["synced_state"]
 
+    # Ett kontos synkade state är veckor, skafferi och inställningar - några
+    # tiotal kB. Utan tak delar varje konto skrivrätt till samma 1GB-disk som
+    # prisdatabasen, och EN illasinnad klient kan fylla den tills varje
+    # skrivning i hela tjänsten fallerar.
+    MAX_SYNCED_STATE_BYTES = 200 * 1024
+
     def set_synced_state(self, token, state_json: str):
         row = self._session_user_row(token)
         if not row:
             raise AccountError("Du måste vara inloggad")
+        if len((state_json or "").encode("utf-8")) > self.MAX_SYNCED_STATE_BYTES:
+            raise AccountError("Datat är för stort för att sparas")
         self._connection.execute("UPDATE users SET synced_state = ? WHERE id = ?", (state_json, row["id"]))
         self._connection.commit()
 

@@ -177,7 +177,10 @@ class PriceWeekTest(unittest.TestCase):
         item = listing["items"][0]
         self.assertEqual(item["priceStatus"], "estimated")
         self.assertEqual(listing["estimatedItems"], 1)
-        self.assertEqual(listing["realPriceItems"], 1)
+        # Skärpt 2026-09-01: ett gissat paketantal är INTE ett säkert pris.
+        # Det räknas som estimat och hålls utanför täckningen - en kedja ska
+        # aldrig kunna vinna Billigast på en underskattad gissning.
+        self.assertEqual(listing["realPriceItems"], 0)
 
     def test_summary_reports_what_the_database_actually_holds(self):
         summary = grocery_api.database_summary()

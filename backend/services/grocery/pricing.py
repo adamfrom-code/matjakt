@@ -141,10 +141,6 @@ INGREDIENT_DEPARTMENTS = {
     # shares the word.
     "tortillabröd": {"bread", "pantry"},
     "apelsin": {"produce"},
-    "citron": {"produce"},
-    "lime": {"produce"},
-    "banan": {"produce"},
-    "äpple": {"produce"},
     "päron": {"produce"},
     "mango": {"produce", "frozen"},
     "ananas": {"produce"},
@@ -252,7 +248,8 @@ INGREDIENT_DEPARTMENTS = {
     "bröd": {"bread"},
     "tortilla": {"bread", "pantry"},
     # --- vegetarian
-    "tofu": {"vegetarian"},
+    # Tofu står hos flera kedjor i asiatiska skafferihyllan eller mejerikylen.
+    "tofu": {"vegetarian", "pantry", "dairy"},
     "quorn": {"vegetarian", "frozen"},
 }
 
@@ -501,7 +498,6 @@ def category_allows_ingredient(category, ingredient) -> bool:
 #   exclude: any of these words disqualifies the product outright
 INGREDIENT_RULES = {
     "kycklingfilé": {"exclude": ["korv", "bacon", "pastej", "sås", "buljong", "krydda", "nugget", "pannbiff", "färs"]},
-    "kycklinglårfilé": {"exclude": ["korv", "bacon", "pastej", "sås", "buljong", "krydda", "nugget", "färs"]},
     "köttfärs": {"exclude": ["sås", "färdig", "buljong", "krydda", "pastej", "biff"]},
     "fläskfilé": {"exclude": ["korv", "pastej", "sås", "krydda", "bacon"]},
     "laxfilé": {"exclude": ["pastej", "sås", "krydda", "soppa", "rom", "gravad", "rökt"]},
@@ -510,7 +506,7 @@ INGREDIENT_RULES = {
     "ris": {"require": ["ris"], "exclude": ["risotto", "grynsallad", "chips", "kaka", "risgryn", "gröt", "risifrutti", "hund", "katt", "active", "foder"]},
     "majs": {"exclude": ["stärkelse", "mjöl", "olja", "chips", "flingor", "sirap"]},
     "smör": {"exclude": ["gräs", "kaka", "deg", "kräm", "jordnöts", "smördeg", "popcorn", "micropop", "sås", "kniv", "form", "papper", "mess"]},
-    "grädde": {"exclude": ["glass", "kaka", "bakelse", "tårta", "vaniljsås", "sås", "pulver"]},
+    "grädde": {"exclude": ["glass", "kaka", "bakelse", "tårta", "vaniljsås", "sås", "pulver", "havre", "soja", "kokos", "ärt", "vegansk"]},
     # 3-letter ingredients collide in head position too - these are the
     # collisions seen in real Willys/Hemköp data, not hypothetical ones.
     "ägg": {"exclude": ["choklad", "godis", "påsk", "nudel", "kaka"]},
@@ -522,7 +518,7 @@ INGREDIENT_RULES = {
     #
     # Vispgrädde must whip: 13% matgrädde cannot. Both directions locked.
     "vispgrädde": {"exclude": ["matlagnings", "matgrädde", "kaffe", "havre", "soja", "mellan"]},
-    "matlagningsgrädde": {"exclude": ["visp", "kaffe"]},
+    "matlagningsgrädde": {"exclude": ["visp", "kaffe", "havre", "soja", "kokos", "ärt", "vegansk"]},
     # Lårfilé is boneless; "Kycklinglår" and "klubba" are not the same cut.
     # (Also enforced via the alias list: the bone-in aliases are gone.)
     "kycklinglårfilé": {"require": ["lårfilé"],
@@ -574,6 +570,10 @@ INGREDIENT_RULES = {
     # Biff = a beef steak cut. Not roast beef, not the fat-cap trim, not a
     # grill patty, and never another animal.
     "biff": {"exclude": ["rostbiff", "skinka", "fläsk", "kyckling", "kalkon", "vego", "vegansk", "sallad"]},
+    # Bacon är fläsk. Kalkonbacon ligger i samma köttavdelning och vegobacon
+    # bredvid - avdelningsspärren hjälper inte, bara namnregeln.
+    "bacon": {"exclude": ["kalkon", "vego", "vegansk", "veggie", "tofu", "chips", "snacks", "smak", "krydda", "ost", "dressing"]},
+    "halloumi": {"exclude": ["panerad", "sticks", "snacks", "burgare", "krydda"]},
 }
 
 # Same rules keyed by their folded name, so lookups by an accent-stripped
@@ -597,7 +597,10 @@ UNIVERSAL_EXCLUDE = [
 # against "how much is in a package". Anything outside this stays uncompared
 # rather than being guessed at.
 _MASS = {"g": 1.0, "gram": 1.0, "hg": 100.0, "kg": 1000.0}
-_VOLUME = {"ml": 1.0, "cl": 10.0, "dl": 100.0, "l": 1000.0, "liter": 1000.0, "ltr": 1000.0}
+_VOLUME = {"ml": 1.0, "cl": 10.0, "dl": 100.0, "l": 1000.0, "liter": 1000.0, "ltr": 1000.0,
+           # Kökets vardagsmått. Utan dessa blev varje msk-rad ett gissat
+           # "1 paket" som räknades som säkert pris i täckningen.
+           "msk": 15.0, "tsk": 5.0, "krm": 1.0}
 
 
 @lru_cache(maxsize=65536)
@@ -1096,7 +1099,14 @@ class RecipePricingEngine:
             "totalCheckoutCost": round(total, 2),
             "matchedItems": matched,
             "missingItems": missing,
-            "realPriceItems": len(matched),
+            # Ett paketantal som GISSADES till 1 (enheterna gick inte att
+            # jämföra) är inte ett säkert pris: det räknas som estimat och
+            # hålls utanför täckningen och Billigast-underlaget. Hellre en
+            # kedja som ärligt inte kan jämföras än en som vinner på en
+            # underskattad gissning.
+            "realPriceItems": sum(1 for item in matched if item.get("exactPackaging", True)),
+            "estimatedItems": sum(1 for item in matched if not item.get("exactPackaging", True)),
             "totalItems": requested,
-            "coveragePercent": round(100 * len(matched) / requested) if requested else 0,
+            "coveragePercent": (round(100 * sum(1 for item in matched if item.get("exactPackaging", True)) / requested)
+                                if requested else 0),
         }
