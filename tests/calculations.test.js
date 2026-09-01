@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, portionFactor } from "../frontend/app/src/services/calculations.js";
+import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, packagesFor, portionFactor } from "../frontend/app/src/services/calculations.js";
 
 const recipes = [{ id: "pasta", ingredienser: ["Pasta", "Tomat"] }, { id: "soppa", ingredienser: ["Tomat"] }];
 const quantities = { pasta: { Pasta: [250, "g"], Tomat: [1, "st"] }, soppa: { Tomat: [2, "st"] } };
@@ -36,4 +36,35 @@ test("live-totalsumma räknar bort det som redan finns i skafferiet, precis som 
   const items = [{ namn: "Ris", total: 500, package: { amount: 1000 } }];
   const chainProducts = { Ris: { pris_kr: 28 } };
   assert.equal(calculateLiveShoppingTotal(items, chainProducts, { Ris: 500 }).cost, 0, "500g behövs, 500g finns redan hemma");
+});
+
+// ---- Enhetsmedvetet aggregat (RC-audit 2026-09-01) -------------------------
+// "2 st morötter" + "400 g morötter" är inte "402 st" - en verklig rad ur
+// banken som visades exakt så. Samma familj summeras i basenheter; olika
+// familjer förblir egna rader, precis som backend-aggregatet.
+test("blandade enheter summeras aldrig numeriskt", () => {
+  const recipes = [
+    { servings: 4, ingredients: [{ name: "Morötter", amount: 2, unit: "st" }] },
+    { servings: 4, ingredients: [{ name: "Morötter", amount: 400, unit: "g" }] },
+    { servings: 4, ingredients: [{ name: "Mjölk", amount: 1, unit: "l" }] },
+    { servings: 4, ingredients: [{ name: "Mjölk", amount: 1, unit: "dl" }] },
+  ];
+  const rows = aggregateIngredients(recipes, {}, {}, 4);
+  const carrots = rows.filter(row => row.namn === "Morötter");
+  assert.equal(carrots.length, 2, "st och g är egna rader");
+  const milk = rows.filter(row => row.namn === "Mjölk");
+  assert.equal(milk.length, 1, "l + dl är samma volymfamilj");
+  assert.equal(milk[0].baseAmount, 1100, "1 l + 1 dl = 1100 ml");
+  assert.equal(milk[0].unit, "l");
+});
+
+test("skafferi och paket räknar i samma basenheter", () => {
+  const item = { namn: "Grädde", total: 5, unit: "dl", baseAmount: 500,
+                 family: "vol", package: { amount: 200, unit: "ml" } };
+  // 500 ml behov - 200 ml hemma = 300 ml -> 2 paket à 200 ml
+  assert.equal(packagesFor(item, { "Grädde": 200 }), 2);
+  // Utan skafferi: 3 paket
+  assert.equal(packagesFor(item, {}), 3);
+  // Allt hemma: 0 paket
+  assert.equal(packagesFor(item, { "Grädde": 500 }), 0);
 });

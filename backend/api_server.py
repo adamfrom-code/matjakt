@@ -2036,7 +2036,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     if ingredient.get("pantryStaple") or ingredient.get("optional"):
                         continue
                     name = ingredient["name"]
-                    amount = (ingredient.get("amount") or 1) * scale
+                    # `if ... is not None`, inte `or`: en 0-mängd är noll,
+                    # inte "en hel enhet" - klientens ?? behåller 0 och båda
+                    # aggregaten måste säga samma sak.
+                    amount = (ingredient.get("amount") if ingredient.get("amount") is not None else 1) * scale
                     unit = ingredient.get("unit") or "st"
                     row = totals.setdefault(name, {"name": name, "amount": 0.0, "unit": unit})
                     # Mixed units for the same name (400 g + 2 st) can't be

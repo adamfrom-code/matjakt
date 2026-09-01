@@ -1089,7 +1089,23 @@ class RecipePricingEngine:
             amount = float(item.get("amount") or item.get("total") or 0)
             unit = item.get("unit") or "st"
 
-            at_home = float(pantry.get(name) or 0)
+            # Skafferiet lagras i basenheter (ml/vikt-g/st) medan radens
+            # mängd står i receptets enhet (dl, l, msk...). Avdraget görs i
+            # radens enhet via riktig konvertering - 50 ml grädde hemma
+            # nollade annars en hel literrad ("1 - 50 = köps inte"), och
+            # skräpvärden (icke-tal) 500:ade hela prissättningen.
+            try:
+                raw_at_home = float(pantry.get(name) or 0)
+            except (TypeError, ValueError):
+                raw_at_home = 0.0
+            at_home = 0.0
+            if raw_at_home > 0:
+                pantry_unit = "ml" if _fold(unit) in _VOLUME else ("g" if _fold(unit) in _MASS else "st")
+                converted = convert_amount(raw_at_home, pantry_unit, unit)
+                # Ojämförbara enheter (st hemma mot gram-rad): inget avdrag -
+                # hellre att varan står kvar än att den försvinner på en
+                # gissning.
+                at_home = converted if converted is not None else 0.0
             needed = max(0.0, amount - at_home)
             if needed <= 0:
                 continue  # already in the pantry - costs nothing, isn't missing

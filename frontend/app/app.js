@@ -128,7 +128,7 @@ function removeFromWeekPlan(id) { state.weekPlan = state.weekPlan.filter(existin
 // swapping "this day" rather than clearing and re-picking the week.
 function swapWeekPlanDay(dayIndex, newId) { state.weekPlan = state.weekPlan.map((id, index) => index === dayIndex ? newId : id); state.valda = new Set(state.weekPlan); }
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), removedItems: new Set(savedState.removedItems || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, dbLockedChains: [], extraItems: savedState.extraItems || [], extraMatches: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
+const state = { budget: savedState.budget || 800, personer: Math.min(12, Math.max(1, Number(savedState.personer) || 2)), middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), removedItems: new Set(savedState.removedItems || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, dbLockedChains: [], extraItems: savedState.extraItems || [], extraMatches: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
   // The week's recipe ids in day order (index 0 = Måndag) - the actual
   // source of truth for "which day has which recipe", now that a day swap
   // has to replace exactly one day's recipe in place. state.valda (a Set)
@@ -148,7 +148,7 @@ function buildSyncPayload() {
 function applySyncBlob(blob) {
   if (!blob) return;
   if (blob.budget !== undefined) state.budget = blob.budget;
-  if (blob.personer !== undefined) state.personer = blob.personer;
+  if (blob.personer !== undefined) state.personer = Math.min(12, Math.max(1, Number(blob.personer) || 2));
   if (blob.middagar !== undefined) state.middagar = blob.middagar;
   if (blob.butik !== undefined) state.butik = blob.butik;
   if (blob.postnummer !== undefined) state.postnummer = blob.postnummer;
@@ -1045,10 +1045,19 @@ function databaseItemFor(name) {
     || state.dbChainTotals[selectedBranch()?.kedja]
     || Object.values(state.dbChainTotals)[0];
   if (!result) return null;
-  const item = (result.items || []).find(entry => entry.ingredient === name);
-  // A "missing" row is in items[] on purpose - it must stay visible in the
-  // list - but it is not a product to price, so it is not a match.
-  return item && item.priceStatus !== "missing" ? item : null;
+  // Servern delar en blandenhetsingrediens i en rad per enhet (Grädde
+  // 200 g + 1 dl blir två rader med samma namn). Klientens enda rad måste
+  // summera ALLA - att visa första radens delpris bredvid en header som
+  // summerar samtliga fick radsumman att motsäga totalen.
+  const rows = (result.items || []).filter(entry =>
+    entry.ingredient === name && entry.priceStatus !== "missing");
+  if (!rows.length) return null;
+  if (rows.length === 1) return rows[0];
+  return {
+    ...rows[0],
+    packages: rows.reduce((sum, row) => sum + (row.packages || 0), 0),
+    totalCost: Math.round(rows.reduce((sum, row) => sum + (row.totalCost || 0), 0) * 100) / 100,
+  };
 }
 
 function databaseResultFor(branch) {
@@ -1627,7 +1636,7 @@ function chainShoppingListMarkup(data, branch = null) {
     // What the recipe asks for, and what that means at the till: how many
     // whole packages of THIS product you have to put in the basket.
     const need = item.neededAmount != null
-      ? `Behövs ${formatAmount(item.neededAmount)} ${escapeHtml(item.neededUnit || "")}` : "";
+      ? `Behövs ${formatAmount(item.neededAmount, item.neededUnit || item.unit)} ${escapeHtml(item.neededUnit || "")}` : "";
     const pack = item.packageSize ? `Förpackning ${escapeHtml(item.packageSize)}` : "";
     const count = item.packages ? `${item.packages} ${item.packages === 1 ? "paket" : "paket"}` : "";
     // A campaign price is only a discount when it is genuinely below the
@@ -1658,8 +1667,13 @@ function chainShoppingListMarkup(data, branch = null) {
 }
 
 // Whole numbers stay whole ("2 st", not "2.0 st"); fractions keep one decimal.
-function formatAmount(value) {
+function formatAmount(value, unit) {
   const number = Number(value) || 0;
+  // "Behöver 0.5 st citron" är sann i grytan men värdelös i butiken - hela
+  // styck avrundas uppåt, precis som amountLabel gör.
+  if ((unit || "").toLowerCase() === "st" || (unit || "").toLowerCase() === "förp") {
+    return String(Math.max(1, Math.ceil(number)));
+  }
   return Number.isInteger(number) ? String(number) : number.toFixed(1);
 }
 
@@ -2885,7 +2899,7 @@ function wireOnboardingStep() {
   document.querySelectorAll("[data-ob-adj]").forEach(button => button.addEventListener("click", () => {
     const key = button.dataset.obAdj, delta = Number(button.dataset.delta), min = key === "vuxna" ? 1 : 0;
     state.hushall[key] = Math.max(min, state.hushall[key] + delta);
-    state.personer = state.hushall.vuxna + state.hushall.barn;
+    state.personer = Math.min(12, Math.max(1, state.hushall.vuxna + state.hushall.barn));
     saveState(); renderOnboardingStep();
   }));
   $("obBudget")?.addEventListener("input", e => { state.budget = clampBudget(e.target.value); saveState(); });
