@@ -187,7 +187,10 @@ SHELVES = [
     {"key": "vardagsmat", "title": "Enkel vardagsmat", "tags": ["vardagsmat"]},
     {"key": "barn", "title": "Barnens favoriter", "tags": ["barn"]},
     {"key": "snabbt", "title": "Under 20 minuter", "maxTime": 20},
-    {"key": "billigt", "title": "Under 25 kr/portion", "tags": ["billigt"]},
+    # Dynamisk, inte taggad: sorterad på det RIKTIGA portionspriset från
+    # senaste prissättningskörningen - det som är billigt just nu, inte det
+    # som var billigt när taggen sattes.
+    {"key": "billigt", "title": "Billigt just nu", "order": "cheapest"},
     {"key": "proteinrikt", "title": "Proteinrikt", "minProtein": 30},
     {"key": "familj", "title": "Familjemiddag", "tags": ["Familjefavorit"]},
     {"key": "vegetariskt", "title": "Vegetariskt", "tags": ["vegetariskt"]},
@@ -209,6 +212,12 @@ def shelves(per_shelf: int = 12) -> dict:
                 if shelf.get("order") == "newest":
                     rows = [dict(r) for r in store.connection.execute(
                         "SELECT id FROM recipes ORDER BY created_at DESC, name LIMIT ?",
+                        (per_shelf,))]
+                    recipes = [store.get(row["id"]) for row in rows]
+                elif shelf.get("order") == "cheapest":
+                    rows = [dict(r) for r in store.connection.execute(
+                        "SELECT id FROM recipes WHERE price_per_portion IS NOT NULL "
+                        "ORDER BY price_per_portion ASC, name LIMIT ?",
                         (per_shelf,))]
                     recipes = [store.get(row["id"]) for row in rows]
                 else:

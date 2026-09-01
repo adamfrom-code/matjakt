@@ -100,7 +100,14 @@ CAMPAIGN_CACHE_TTL_SECONDS = 3600
 # never become a place to smuggle arbitrary or identifying data through. No
 # IP, user id, or timestamp finer than "today" is ever stored alongside a
 # count.
-ANALYTICS_ALLOWED_EVENTS = frozenset({"cta_testa_gratis", "cta_logga_in", "cta_se_hur_det_fungerar", "view_premium"})
+# Kärnhändelserna som avgör om Matjakt fungerar: skapas veckor, används
+# fynden, bockas listan av, delas recept - och rapporteras prisfel.
+# Nedladdningar är fåfänga; återkommande veckor är sanningen.
+ANALYTICS_ALLOWED_EVENTS = frozenset({
+    "cta_testa_gratis", "cta_logga_in", "cta_se_hur_det_fungerar", "view_premium",
+    "vecka_skapad", "fynd_tillagt", "lista_anvand", "recept_delat",
+    "prisfel_rapporterat", "recept_bytt",
+})
 CAMPAIGN_CAPABLE_CHAINS = ("Coop", "Hemköp")
 CAMPAIGN_SCAN_INGREDIENTS = ["Kycklingfilé", "Kycklinglårfilé", "Köttfärs", "Biff", "Fläskfilé", "Laxfilé", "Fryst torsk", "Räkor", "Kalvschnitzel", "Falukorv", "Halloumi"]
 GEOCODE_CACHE_TTL_SECONDS = 86400

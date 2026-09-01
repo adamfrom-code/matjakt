@@ -791,6 +791,7 @@ function chooseMenu(shouldScroll = true) {
   state.removedItems.clear();
   state.swapsThisWeek = 0;
   clearPriceSnapshots();
+  trackEvent("vecka_skapad");
   saveState();
   render();
   if (shouldScroll) {
@@ -1001,7 +1002,7 @@ async function renderRecipePage() {
     ? `${ingredientRows.buy.map(row => `<div class="ing-row${row.optional ? " ing-optional" : ""}"><strong>${escapeHtml([row.amount, row.unit].filter(Boolean).join(" "))}</strong><span>${escapeHtml(row.name)}${row.optional ? " <em>(valfritt)</em>" : ""}</span></div>`).join("")}${ingredientRows.home.length ? `<p class="ing-home-label">Har du säkert hemma</p>${ingredientRows.home.map(row => `<div class="ing-row ing-home"><strong></strong><span>${escapeHtml(row.name)}</span></div>`).join("")}` : ""}`
     : `${recipe.ingredienser.map(item => `<div class="ing-row"><strong></strong><span>${escapeHtml(item)}</span></div>`).join("")}`;
   const stepsMarkup = (details.steg || []).map((step, index) => `<label class="step-row"><input type="checkbox" data-step-check="${index}"><span class="step-number">${index + 1}</span><span class="step-text">${escapeHtml(step)}</span></label>`).join("");
-  $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe">${recipe.bild ? `<img class="recipe-photo full-recipe-hero" src="${recipe.bild}" alt="${recipe.namn}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${recipe.typ}</p><h1>${recipe.namn}</h1><div class="recipe-chips">${chips.map(chip => `<span class="recipe-chip">${escapeHtml(chip)}</span>`).join("")}</div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${details.beskrivning || "En god svensk vardagsrätt."}</p><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${recipe.id}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button><section class="recipe-block"><div class="ing-head"><h2>Ingredienser</h2><span>${state.personer} portioner</span></div>${ingredientsMarkup}</section><section class="recipe-block"><h2>Gör så här</h2><div class="steps">${stepsMarkup}</div></section>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${details.tips}</p>` : ""}<div class="recipe-block">${recipeRatingMarkup(recipe.id)}${feedbackMarkup(recipe.id)}</div></article>`;
+  $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe">${recipe.bild ? `<img class="recipe-photo full-recipe-hero" src="${recipe.bild}" alt="${recipe.namn}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${recipe.typ}</p><h1>${recipe.namn}</h1><div class="recipe-chips">${chips.map(chip => `<span class="recipe-chip">${escapeHtml(chip)}</span>`).join("")}</div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${details.beskrivning || "En god svensk vardagsrätt."}</p><div class="recipe-cta-row"><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${recipe.id}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button><button type="button" class="recipe-share-btn" data-recipe-share aria-label="Dela receptet">Dela</button></div><section class="recipe-block"><div class="ing-head"><h2>Ingredienser</h2><span>${state.personer} portioner</span></div>${ingredientsMarkup}</section><section class="recipe-block"><h2>Gör så här</h2><div class="steps">${stepsMarkup}</div></section>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${details.tips}</p>` : ""}<div class="recipe-block">${recipeRatingMarkup(recipe.id)}${feedbackMarkup(recipe.id)}</div></article>`;
   $("recipePage").querySelector(".recipe-back").addEventListener("click", () => history.back());
   // Avbockade steg medan man lagar - sparas lokalt per recept så ett
   // vridet-bort-och-tillbaka på telefonen inte tappar var man var.
@@ -1017,6 +1018,17 @@ async function renderRecipePage() {
       box.closest(".step-row").classList.toggle("step-done", box.checked);
       try { localStorage.setItem(stepKey, JSON.stringify(done)); } catch { /* full lagring - bocken lever ändå i DOM */ }
     });
+  });
+  $("recipePage").querySelector("[data-recipe-share]")?.addEventListener("click", async () => {
+    const url = `https://matjakt.store/app/?recept=${encodeURIComponent(recipe.id)}`;
+    trackEvent("recept_delat");
+    // Web Share där det finns (mobilen), annars urklipp - båda vägarna
+    // slutar i samma delbara djuplänk.
+    if (navigator.share) {
+      try { await navigator.share({ title: recipe.namn, url }); } catch { /* avbruten delning är inget fel */ }
+    } else {
+      try { await navigator.clipboard.writeText(url); showUndoToast("Länk kopierad", () => {}); } catch { /* utan urklippsrättighet finns adressfältet */ }
+    }
   });
   $("recipePage").querySelector("[data-recipe-add]").addEventListener("click", event => { state.valda.has(recipe.id) ? removeFromWeekPlan(recipe.id) : addToWeekPlan(recipe.id); saveState(); render(); event.currentTarget.querySelector("span").textContent = state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"; });
   wireRatingStars($("recipePage"), recipe.id);
@@ -1238,6 +1250,15 @@ function extrasTotalForChain(chain) {
 }
 
 function addExtraItem(fields) {
+  // Varna - men hindra aldrig - när varan redan står i listan eller ligger
+  // i skafferiet. Dubbelköp är pengar i sjön, men användaren bestämmer.
+  const foldName = String(fields.name || "").toLowerCase();
+  const inList = aggregateShopping(selectedRecipes()).some(item => item.namn.toLowerCase() === foldName)
+    || state.extraItems.some(item => (item.name || "").toLowerCase() === foldName);
+  const inPantry = Object.keys(state.pantry).some(key => key.toLowerCase() === foldName);
+  if (inList || inPantry) {
+    showUndoToast(inPantry ? `${fields.name} finns redan i ditt skafferi` : `${fields.name} står redan i listan`, () => {});
+  }
   const extra = newExtraItem(fields);
   state.extraItems = [...state.extraItems, extra];
   state.extraMatches = {}; extraMatchSync = {};
@@ -1748,7 +1769,7 @@ function chainShoppingListMarkup(data, branch = null) {
     ? `<p class="chain-list-warning">Priserna är hämtade i ${escapeHtml(pricedStore)}. ${escapeHtml(data.chain)} sätter priser per butik, så ${escapeHtml(branch.namn)} kan skilja sig.</p>`
     : "";
   const sticky = `<div class="chain-list-sticky"><strong>${escapeHtml(storeName)}</strong><span>${money(total)} · ${data.realPriceItems}/${data.totalItems} varor</span></div>`;
-  const head = sticky + `<div class="chain-list-head"><h2>${escapeHtml(storeName)}</h2><small>${escapeHtml([data.chain, distance].filter(Boolean).join(" · "))}</small>${pricedElsewhere}<div class="chain-list-total"><span>Total kassakostnad</span><strong>${money(total)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor har pris</span>${data.estimatedItems ? `<span>${data.estimatedItems} med uppskattat antal</span>` : ""}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span>${savings}</div>${warning}</div>`;
+  const head = sticky + `<div class="chain-list-head"><h2>${escapeHtml(storeName)}</h2><small>${escapeHtml([data.chain, distance].filter(Boolean).join(" · "))}</small>${pricedElsewhere}<div class="chain-list-total"><span>Total kassakostnad</span><strong>${money(total)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor har pris</span>${data.estimatedItems ? `<span>${data.estimatedItems} med uppskattat antal</span>` : ""}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span><button type="button" class="report-price-btn" data-report-price>Ser något fel ut?</button>${savings}</div>${warning}</div>`;
 
   const rows = (data.items || []).map(item => {
     const checked = state.avklarade.has(item.ingredient);
@@ -1935,7 +1956,10 @@ function databaseShoppingItemMarkup(item, match) {
   // the one who can tell whether one is enough.
   const inexact = match.priceStatus === "estimated"
     ? '<small class="item-status estimated">Antal osäkert</small>' : "";
-  const meta = escapeHtml([match.brand, neededText, countText].filter(Boolean).join(" · ") || "1 st");
+  // Jämförpriset (kr/kg eller kr/l) är det som gör olika förpacknings-
+  // storlekar jämförbara - hyllkantens viktigaste siffra.
+  const comparePrice = match.comparisonPrice != null ? `${money(match.comparisonPrice)}/${/l|ml|dl/.test(match.packageUnit || "") ? "l" : "kg"}` : "";
+  const meta = escapeHtml([match.brand, neededText, countText, comparePrice].filter(Boolean).join(" · ") || "1 st");
   return `<label class="shopping-item ${checked ? "checked" : ""}"><input type="checkbox" data-shopping="${escapeHtml(item.namn)}" ${checked ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${escapeHtml(match.productName)}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong>${money(match.totalCost)}</strong>${inexact}</span><button type="button" class="shopping-remove" data-remove-item="${escapeHtml(item.namn)}" aria-label="Ta bort ${escapeHtml(item.namn)} från listan">×</button></label>`;
 }
 
@@ -2177,6 +2201,11 @@ function renderWeekOverview(selected, shoppingItems, total) {
   document.querySelectorAll("[data-week-details]").forEach(button => button.addEventListener("click", () => openRecipeTab(button.dataset.weekDetails)));
   document.querySelectorAll("[data-week-add-meal]").forEach(button => button.addEventListener("click", () => setView("recipes")));
   document.querySelectorAll("[data-hem-create]").forEach(button => button.addEventListener("click", () => openPlanComparison()));
+  document.querySelectorAll("[data-report-price]").forEach(button => button.addEventListener("click", () => {
+    trackEvent("prisfel_rapporterat");
+    button.textContent = "Tack! Vi kollar på det.";
+    button.disabled = true;
+  }));
   document.querySelectorAll("[data-week-browse-recipes]").forEach(button => button.addEventListener("click", () => $("recipeScroll")?.scrollIntoView({ behavior: "smooth" })));
   document.querySelectorAll("[data-week-shopping]").forEach(input => {
     input.checked = state.avklarade.has(input.dataset.weekShopping);
@@ -2238,7 +2267,11 @@ function renderBasket() {
       `<button type="button" class="restore-removed" id="restoreRemovedBtn">${plural(state.removedItems.size, "borttagen vara", "borttagna varor")} · Återställ alla</button>`);
     $("restoreRemovedBtn").addEventListener("click", () => { state.removedItems.clear(); saveState(); render(); });
   }
-  document.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => { input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping); saveState(); renderBasket(); }));
+  document.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => {
+    input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping);
+    if (input.checked && !window.__matjaktListaAnvand) { window.__matjaktListaAnvand = true; trackEvent("lista_anvand"); }
+    saveState(); renderBasket();
+  }));
   document.querySelectorAll("[data-remove-item]").forEach(button => button.addEventListener("click", event => {
     // Knappen bor i en <label> - utan detta togglar klicket också checkboxen.
     event.preventDefault();
@@ -2250,6 +2283,25 @@ function renderBasket() {
   // fetch timestamp - that's internal plumbing, not something a shopper needs
   // to see. Only the plain, calm facts: what's left, and what it costs.
   $("shoppingProgress").textContent = shoppingItems.length ? plural(itemsLeft, "vara kvar", "varor kvar") : "";
+  // Var priserna kommer ifrån och hur färska de är - förtroende byggs av
+  // att säga det, inte av att låta användaren gissa.
+  // SAMMA prioritetskedja som raderna (databaseItemFor) - annars kan noten
+  // hävda en annan kedja än den vars priser faktiskt visas.
+  const sourceResult = state.dbChainTotals[chosenStore()]
+    || state.dbChainTotals[selectedBranch()?.kedja]
+    || Object.values(state.dbChainTotals)[0];
+  const sourceNote = $("priceSourceNote");
+  if (sourceNote) {
+    if (sourceResult?.updatedAt) {
+      const updatedDate = new Date(sourceResult.updatedAt * 1000);
+      const today = new Date().toDateString() === updatedDate.toDateString();
+      const when = today ? `idag ${updatedDate.toTimeString().slice(0, 5)}` : updatedDate.toLocaleDateString("sv-SE");
+      sourceNote.textContent = `Priser från ${sourceResult.chain} · uppdaterade ${when}`;
+      sourceNote.hidden = false;
+    } else {
+      sourceNote.hidden = true;
+    }
+  }
   const nothingPlanned = !shoppingItems.length && !state.extraItems.length;
   $("shoppingCost").textContent = nothingPlanned
     ? `– / ${money(state.budget)}`
@@ -2469,6 +2521,20 @@ function clearPriceSnapshots() {
   state.dbChainTotals = {};
   state.dbComparison = null;
   state.dbPricedAt = null;
+}
+
+// Anonym produkthändelseräknare - får aldrig blockera ett klick, aldrig
+// kasta. Räknar kärnhändelserna som avgör om Matjakt fungerar: skapade
+// veckor och använda listor, inte nedladdningar.
+function trackEvent(name) {
+  try {
+    fetch(`${API_BASE_URL}/analytics/event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event: name }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch { /* mätning får aldrig störa appen */ }
 }
 
 function removeShoppingItem(name) {
@@ -2798,6 +2864,7 @@ $("swapShowMoreBtn").addEventListener("click", () => { if (swapContext) { swapCo
 $("swapConfirmBtn").addEventListener("click", () => {
   if (!swapContext?.selectedId) return;
   swapWeekPlanDay(swapContext.dayIndex, swapContext.selectedId);
+  trackEvent("recept_bytt");
   if (!hasPremium()) state.swapsThisWeek++;
   // Ett byte är en ny lista: förra listans totaler och Billigast-krona får
   // inte målas som fakta medan omhämtningen pågår.
@@ -3224,7 +3291,7 @@ async function renderOwnCampaigns() {
     document.querySelectorAll("[data-deal-add]").forEach(button => button.addEventListener("click", () => {
       const deal = ownCampaignDeals.find(d => String(d.productId) === button.dataset.dealAdd);
       if (!deal) return;
-      addExtraItem({
+      trackEvent("fynd_tillagt"); addExtraItem({
         name: deal.name, source: "campaign", chain: deal.chain,
         productId: deal.productId, gtin: deal.gtin, imageUrl: deal.imageUrl,
         packageSize: deal.size, campaignPrice: deal.campaignPrice,
