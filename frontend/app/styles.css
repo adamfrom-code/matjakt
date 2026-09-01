@@ -328,3 +328,29 @@ button.campaign-deal{cursor:pointer;font:inherit}
 
 .screen-intro{margin:6px 0 0;color:var(--muted);font-size:14px;line-height:1.5}
 .section-subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+
+
+/* ---- Nya Hem: Ikväll-hjälten + samlat veckokort -------------------------- */
+.home-hero h1{font-size:30px}
+.home-hero{margin-bottom:14px}
+.hero-meal-card{position:relative;border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow)}
+.hero-meal-open{display:block;width:100%;border:0;padding:0;background:var(--primary);text-align:left;cursor:pointer}
+.hero-meal-photo{display:block;height:210px}
+.hero-meal-photo .recipe-photo,.hero-meal-photo img{width:100%;height:210px;object-fit:cover;display:block}
+.hero-meal-photo .recipe-fallback{width:100%;height:210px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.hero-meal-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,26,19,0) 35%,rgba(12,26,19,.82) 100%);pointer-events:none}
+.hero-meal-info{position:absolute;left:16px;right:16px;bottom:14px;color:#fff;display:flex;flex-direction:column;gap:2px;pointer-events:none}
+.hero-meal-info small{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#ffd9ac}
+.hero-meal-info strong{font-family:"Fraunces",serif;font-size:22px;line-height:1.15;text-shadow:0 2px 14px rgba(0,0,0,.35)}
+.hero-meal-meta{font-size:13px;color:rgba(255,255,255,.85)}
+.hero-meal-swap{position:absolute;top:12px;right:12px;border:0;border-radius:99px;padding:7px 14px;background:rgba(255,255,255,.92);color:var(--primary);font:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:var(--shadow)}
+.hero-meal-invite{border:0;width:100%;text-align:left;font:inherit;cursor:pointer;background:var(--primary);background-image:linear-gradient(155deg,var(--primary-2),var(--primary) 70%);color:#fff;padding:26px 22px}
+.hero-meal-invite strong{font-family:"Fraunces",serif;font-size:23px;display:block;margin-bottom:8px}
+.hero-meal-invite p{margin:0;color:rgba(255,255,255,.85);font-size:14px;line-height:1.55}
+.week-budget-row{display:block;width:100%;border:0;background:transparent;padding:2px 2px 0;font:inherit;text-align:left;cursor:pointer}
+.week-budget-text{display:flex;align-items:baseline;gap:6px;font-size:13px;color:var(--muted);margin-bottom:6px}
+.week-budget-text strong{color:var(--primary);font-size:15px}
+.week-budget-text b{margin-left:auto;color:var(--muted);font-weight:600}
+.week-savings-row{display:flex;align-items:baseline;gap:8px;width:100%;border:0;background:transparent;padding:0 2px;font:inherit;text-align:left;cursor:pointer;color:var(--muted);font-size:13px}
+.week-savings-row strong{color:var(--accent-3)}
+.week-savings-row small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

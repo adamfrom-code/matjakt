@@ -107,6 +107,7 @@ function wireFeedbackButtons(container, recipeId) {
   });
 }
 
+const DAYS_LONG = ["måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag", "söndag"];
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 // One dinner per weekday is the real ceiling - derived from DAYS so the
 // stepper, the onboarding stepper and the week view can never disagree
@@ -2005,12 +2006,26 @@ function weekEmptyDayMarkup() {
   return `<div class="week-today-empty"><p>Ingen middag inplanerad den här dagen ännu.</p><button type="button" class="btn btn-ghost" data-week-add-meal>+ Lägg till middag</button></div>`;
 }
 function todayIndex() { return (new Date().getDay() + 6) % 7; }
-function nextMealCardMarkup(recipe) {
-  const badge = recipe.typ && recipe.typ !== "Provider-recept" ? `<span class="next-meal-badge">${escapeHtml(recipe.typ)}</span>` : "";
-  return `<button type="button" class="next-meal-card" data-week-details="${escapeHtml(recipe.id)}"><span class="next-meal-photo">${recipePhoto(recipe)}</span><span class="next-meal-info"><small>Idag</small><strong>${escapeHtml(recipe.namn)}</strong>${badge}</span><span class="next-meal-arrow" aria-hidden="true">›</span></button>`;
+function nextMealCardMarkup(recipe, dayLabel = "Ikväll") {
+  const meta = [recipe.tid ? `${recipe.tid} min` : null,
+                `${recipe.servings || state.personer} portioner`].filter(Boolean).join(" · ");
+  // Fotot ÄR kortet: hela ytan öppnar receptet, "Byt" ligger som egen knapp
+  // ovanpå (syskon, inte kapslad knapp-i-knapp).
+  return `<div class="hero-meal-card">
+    <button type="button" class="hero-meal-open" data-week-details="${escapeHtml(recipe.id)}" aria-label="Öppna ${escapeHtml(recipe.namn)}">
+      <span class="hero-meal-photo">${recipePhoto(recipe)}</span>
+      <span class="hero-meal-scrim" aria-hidden="true"></span>
+      <span class="hero-meal-info"><small>${escapeHtml(dayLabel)}</small><strong>${escapeHtml(recipe.namn)}</strong><span class="hero-meal-meta">${escapeHtml(meta)}</span></span>
+    </button>
+    <button type="button" class="hero-meal-swap" data-week-swap="${escapeHtml(recipe.id)}">Byt</button>
+  </div>`;
 }
 function nextMealEmptyMarkup() {
-  return `<div class="next-meal-empty"><p>Ingen middag planerad för idag ännu.</p><button type="button" class="btn btn-ghost" data-week-browse-recipes>Bläddra recept</button></div>`;
+  // Ingen vecka: hjälteytan blir inbjudan i stället för ett tomt hål.
+  return `<button type="button" class="hero-meal-card hero-meal-invite" data-hem-create>
+    <strong>Vad blir det för middag i veckan?</strong>
+    <p>Tryck här så sätter Matjakt ihop veckans middagar - med riktiga priser från butikerna nära dig.</p>
+  </button>`;
 }
 function weekPlanRowMarkup(recipe, index) {
   const price = recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? money(recipe.portionspris) : "–";
@@ -2084,8 +2099,10 @@ function renderWeekOverview(selected, shoppingItems, total) {
   // day tab the user has clicked above (that's a browsing choice on the
   // Vecka page, not a change to what "next" means on Hem). Same recipePhoto
   // call as the Vecka card above, so it's the same image, not a new fetch.
-  const heroRecipe = selected[todayIndex()] || selected[firstPlannedDayFrom(selected, todayIndex())];
-  $("nextMealCard").innerHTML = heroRecipe ? nextMealCardMarkup(heroRecipe) : nextMealEmptyMarkup();
+  const heroIndex = selected[todayIndex()] ? todayIndex() : firstPlannedDayFrom(selected, todayIndex());
+  const heroRecipe = selected[heroIndex];
+  const heroLabel = heroIndex === todayIndex() ? "Ikväll" : `På ${DAYS_LONG[heroIndex] || DAYS[heroIndex]}`;
+  $("nextMealCard").innerHTML = heroRecipe ? nextMealCardMarkup(heroRecipe, heroLabel) : nextMealEmptyMarkup();
 
   // Hem's budget-progress card - fed the same total this function already
   // received from renderBasket(), never recomputed separately.
@@ -2108,6 +2125,7 @@ function renderWeekOverview(selected, shoppingItems, total) {
   document.querySelectorAll("[data-week-day]").forEach(button => button.addEventListener("click", () => { weekOverviewDay = Number(button.dataset.weekDay); renderWeekOverview(selected, shoppingItems, total); }));
   document.querySelectorAll("[data-week-details]").forEach(button => button.addEventListener("click", () => openRecipeTab(button.dataset.weekDetails)));
   document.querySelectorAll("[data-week-add-meal]").forEach(button => button.addEventListener("click", () => setView("recipes")));
+  document.querySelectorAll("[data-hem-create]").forEach(button => button.addEventListener("click", () => openPlanComparison()));
   document.querySelectorAll("[data-week-browse-recipes]").forEach(button => button.addEventListener("click", () => $("recipeScroll")?.scrollIntoView({ behavior: "smooth" })));
   document.querySelectorAll("[data-week-shopping]").forEach(input => {
     input.checked = state.avklarade.has(input.dataset.weekShopping);
@@ -2952,11 +2970,15 @@ function renderStats() {
     ? comparison.savings
     : comparison?.locked && comparison?.priceSpread > 1 ? comparison.priceSpread : null;
   if (realSaving != null) {
+    $("openStatsBtn").hidden = false;
     $("savingsCardValue").textContent = money(realSaving);
     $("savingsCardSubtitle").textContent = comparison.locked
       ? "så mycket skiljer det mellan butikerna den här veckan"
       : `genom att handla veckan hos ${comparison.cheapestChain}`;
   } else {
+    // Ingen rad alls när det inte finns något sant att säga - en synlig
+    // ursäkt ("kan inte beräknas ännu...") är bara brus på Hem.
+    $("openStatsBtn").hidden = true;
     $("savingsCardValue").textContent = "–";
     $("savingsCardSubtitle").textContent = selectedRecipes().length
       ? "Kan inte beräknas ännu – kräver två jämförbara butiker"

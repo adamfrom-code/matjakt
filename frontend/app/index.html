@@ -37,7 +37,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=45">
+  <link rel="stylesheet" href="styles.css?v=46">
 </head>
 <body>
   <div class="phone-shell">
@@ -50,17 +50,27 @@
       <section class="screen home-screen" aria-labelledby="homeTitle">
         <div class="home-hero"><h1 id="homeGreeting">God morgon <span aria-hidden="true">👋</span></h1><p id="homeSubtitle">Redo för en god och prisvärd vecka.</p></div>
 
-        <button type="button" class="budget-card" id="budgetCardBtn">
-          <span class="budget-card-head"><span>Veckobudget</span></span>
-          <span class="budget-card-row"><strong id="summaryBudgetRemaining">800 kr</strong><small>kvar av <span id="summaryBudgetTotal">800 kr</span></small><b id="summaryBudgetPercent">0%</b></span>
-          <span class="progress-track"><i id="summaryBudgetBar"></i></span>
-        </button>
+        <!-- IKVÄLL FÖRST. Det en familj öppnar appen för klockan 16 är
+             "vad blir det för middag?" - inte en instrumentpanel. -->
+        <section class="next-meal-section" aria-label="Kvällens middag">
+          <div id="nextMealCard"></div>
+        </section>
 
+        <!-- ETT veckokort: rad, budgetmätare, sparande och huvudknapp.
+             Budget- och sparkorten var egna boxar som konkurrerade om
+             uppmärksamheten - nu är de rader i veckans eget kort. -->
         <section class="week-card compact" aria-labelledby="weekCardTitle">
           <div class="week-card-label"><span id="weekCardTitle">Din vecka</span><span class="status-dot" id="weekCardStatus">Redo</span></div>
           <button type="button" class="week-summary-row" id="weekSheetOpen" aria-haspopup="dialog" aria-controls="weekSheet">
             <b id="summaryPeople">2 personer</b><i aria-hidden="true">·</i><b id="summaryMeals">4 middagar</b><i aria-hidden="true">·</i><b id="summaryBudgetInline">800 kr</b>
             <span class="week-sheet-plus" aria-hidden="true">＋</span>
+          </button>
+          <button type="button" class="week-budget-row" id="budgetCardBtn">
+            <span class="week-budget-text"><strong id="summaryBudgetRemaining">800 kr</strong> kvar av <span id="summaryBudgetTotal">800 kr</span><b id="summaryBudgetPercent">0%</b></span>
+            <span class="progress-track"><i id="summaryBudgetBar"></i></span>
+          </button>
+          <button class="week-savings-row" type="button" id="openStatsBtn">
+            <span class="savings-card-label">Du sparar</span><strong id="savingsCardValue">–</strong><small id="savingsCardSubtitle">Skapa din första vecka för att se detta</small>
           </button>
           <p class="nutrition-warning" id="nutritionWarning" hidden></p>
           <button class="btn btn-primary" id="generateBtn"><span id="generateBtnLabel">Skapa min vecka</span><span aria-hidden="true">→</span></button>
@@ -162,18 +172,6 @@
           <div class="section-heading"><div><h2 id="campaignHeading">Veckans fynd</h2><p class="section-subtitle">Bra erbjudanden i butikerna just nu</p></div><button type="button" class="btn-ghost" id="campaignShowAllBtn">Visa alla</button></div>
           <div class="campaign-scroll" id="campaignList"></div>
         </section>
-
-        <button class="savings-card" type="button" id="openStatsBtn">
-          <span class="savings-card-body"><span class="savings-card-label">Du sparar</span><strong id="savingsCardValue">–</strong><small id="savingsCardSubtitle">Skapa din första vecka för att se detta</small></span>
-          <span class="savings-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg></span>
-        </button>
-
-        <section class="next-meal-section" aria-label="Nästa middag">
-          <div class="section-heading"><h2>Nästa middag</h2></div>
-          <div id="nextMealCard"></div>
-        </section>
-
-
 
         <section class="hem-recipes-section" aria-labelledby="hemRecipesHeading">
           <div class="section-heading"><div><p class="eyebrow">Utvalt för dig</p><h2 id="hemRecipesHeading">Recept att gilla</h2></div><div class="hem-recipes-actions"><button type="button" class="btn-ghost" id="refreshBtn">Byt förslag</button><button type="button" class="btn-ghost" id="hemShowAllRecipesBtn">Visa alla</button></div></div>
@@ -476,6 +474,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=86"></script>
+  <script type="module" src="app.js?v=87"></script>
 </body>
 </html>
