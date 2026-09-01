@@ -127,7 +127,11 @@ function fromApi(recipe) {
     // The week planner needs ingredient NAMES; the pricing engine gets the
     // structured version straight from the backend.
     ingredienser: recipe.ingredienser
-      ?? (recipe.ingredients || []).filter(i => !i.pantryStaple).map(i => i.name),
+      ?? ((recipe.ingredients || []).length
+        ? (recipe.ingredients || []).filter(i => !i.pantryStaple).map(i => i.name)
+        // Listprojektionen bär ingredientNames (bara namn) - utan dem såg
+        // "Laga med det jag har" aldrig ett enda bankrecept.
+        : (recipe.ingredientNames || [])),
     hemma: recipe.hemma
       ?? (recipe.ingredients || []).filter(i => i.pantryStaple).map(i => i.name),
     // A REAL portion price, computed by the backend's pricing run against

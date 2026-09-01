@@ -720,8 +720,8 @@ function chooseMenu(shouldScroll = true) {
   // the same name was checked off last week.
   state.avklarade.clear();
   state.removedItems.clear();
-  state.livePriser = {};
-  state.liveBranchTotals = {};
+  state.swapsThisWeek = 0;
+  clearPriceSnapshots();
   saveState();
   render();
   if (shouldScroll) {
@@ -1576,6 +1576,9 @@ async function openChainShoppingList(chain, branch = null) {
     body.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => {
       input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping);
       saveState();
+      // Handla-vyn delar samma avbockningar - utan omritning såg dess lista,
+      // progress och "Allt handlat" inget förrän någon orelaterad render.
+      renderBasket();
     }));
   } catch {
     body.innerHTML = `<p class="live-loading">Kunde inte hämta ${escapeHtml(chain)}s priser just nu.</p>`;
@@ -2146,6 +2149,9 @@ function switchWeekStore(chain) {
   state.butik = chain;
   state.livePriser = {};
   state.liveBranchTotals = {};
+  // dbChainTotals behålls - de är per kedja och fortfarande sanna - men
+  // jämförelse-snapshotten för DENNA lista mot förra butiken rensas via
+  // renderns egen omhämtning.
   saveState();
   render();
   renderCampaignSection();
@@ -2302,13 +2308,30 @@ function aggregateShopping(selected) {
   // Beskär mot det verkliga aggregatet - men bara när det finns ett: under
   // uppstart är listan tom för att recepten inte laddats än, inte för att
   // borttagningarna blivit ogiltiga.
-  if (everything.length && state.removedItems.size) {
+  if (everything.length && (state.removedItems.size || state.avklarade.size)) {
     const names = new Set(everything.map(item => item.namn));
     for (const name of [...state.removedItems]) {
       if (!names.has(name)) state.removedItems.delete(name);
     }
+    // Samma spöknamnsfälla för avbockade: ett receptbyte stryker varan,
+    // namnet ligger kvar, och när ett senare byte återinför samma namn
+    // visas varan förbockad som "redan handlad".
+    for (const name of [...state.avklarade]) {
+      if (!names.has(name)) state.avklarade.delete(name);
+    }
   }
   return everything.filter(item => !state.removedItems.has(item.namn));
+}
+
+function clearPriceSnapshots() {
+  // Allt som prissatte den FÖRRA listan: live-totaler, databastotaler och
+  // jämförelsen. En veckomutation utan denna rensning målade förra veckans
+  // "Billigast"-krona och totaler som fakta tills en omhämtning råkade ske.
+  state.livePriser = {};
+  state.liveBranchTotals = {};
+  state.dbChainTotals = {};
+  state.dbComparison = null;
+  state.dbPricedAt = null;
 }
 
 function removeShoppingItem(name) {
@@ -2318,12 +2341,12 @@ function removeShoppingItem(name) {
   // Cached live totals priced the removed item; painting them once more
   // would show the OLD sum next to the new list. Drop them and let the
   // refetch fill honest numbers in.
-  state.liveBranchTotals = {};
+  clearPriceSnapshots();
   saveState();
   render();
   showUndoToast(`${name} borttagen`, () => {
     state.removedItems.delete(name);
-    state.liveBranchTotals = {};
+    clearPriceSnapshots();
     saveState();
     render();
   });
@@ -2371,7 +2394,9 @@ function step(key, delta, min, max) { state[key] = Math.min(max, Math.max(min, s
 function syncSettingsInputs() {
   $("budgetInput").value = state.budget; $("peopleValue").textContent = state.personer; $("mealsValue").textContent = state.middagar; $("storeInput").value = state.butik; $("postcodeInput").value = state.postnummer;
   $("kosttypInput").value = state.kost.kosttyp;
-  document.querySelectorAll("#allergenChips input").forEach(box => { box.checked = state.kost.avoidAllergens.has(box.value); });
+  document.querySelectorAll("#allergenChips input").forEach(box => { box.checked = state.kost.avoidAllergens.has(box.value);   const timeFilter = $("timeFilter");
+  if (timeFilter) timeFilter.value = String(state.maxTid || "");
+});
   const autoOption = document.querySelector('#storeInput option[value="auto"]');
   if (autoOption) autoOption.textContent = hasPremium() ? "Billigast automatiskt" : "Närmast automatiskt (Premium: billigast)";
 }
@@ -2416,7 +2441,13 @@ $("postcodeInput").addEventListener("input", e => {
   }).catch(() => { /* geokodning misslyckades - postnumret används ändå för exakt/ungefärlig matchning som innan */ });
 });
 $("locateBtn").addEventListener("click", () => { if (!navigator.geolocation) return; $("locateBtn").textContent = "Hämtar..."; navigator.geolocation.getCurrentPosition(({ coords }) => { state.position = { lat: coords.latitude, lon: coords.longitude }; $("locateBtn").textContent = "Hittad"; refreshAfterSettingsChange(); }, () => { $("locateBtn").textContent = "Försök igen"; }); });
-$("storeInput").addEventListener("change", e => { state.butik = e.target.value; saveState(); refreshAfterSettingsChange(); renderCampaignSection(); });
+$("storeInput").addEventListener("change", e => {
+  // Via switchWeekStore, inte bara state.butik: livepriserna är nyckelsatta
+  // på varunamn UTAN kedja och måste rensas vid varje byte.
+  state.livePriser = {}; state.liveBranchTotals = {};
+  state.butik = e.target.value;
+  saveState(); refreshAfterSettingsChange(); renderCampaignSection();
+});
 // En inställningsändring (postnummer, butik, kost, näringsmål) påverkar
 // NÄSTA vecka och det som räknas om automatiskt (butiker, priser). Den får
 // aldrig tyst regenerera en befintlig vecka - det kastade användarens valda
@@ -2605,7 +2636,11 @@ function openSwapModal(currentId) {
   const dayIndex = state.weekPlan.indexOf(currentId);
   const branch = selectedBranch();
   const candidates = candidateRecipesForUser().filter(recipe => !state.valda.has(recipe.id));
-  const allOptions = candidates.map(candidate => ({ candidate, total: shoppingListCost(selected.map(recipe => recipe.id === currentId ? candidate : recipe), branch) })).sort((a, b) => a.total - b.total);
+  // Sorteras på kandidatens RIKTIGA portionspris (databasprissatt vid
+  // import). shoppingListCost gick via statiska PRODUCT_CATALOG som inte
+  // känner bankreceptens ingredienser - varje kandidat kostade ~samma och
+  // "billigast först" blev slumpartad.
+  const allOptions = candidates.map(candidate => ({ candidate, total: candidate.portionspris || 9999 })).sort((a, b) => a.total - b.total);
   if (!allOptions.length) { $("swapModalHint").textContent = ""; $("swapOptions").innerHTML = `<p class="live-loading">Inga alternativ hittades som passar budget, butik och dina filter just nu.</p>`; $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true; $("swapModal").hidden = false; return; }
   swapContext = { currentId, dayIndex, allOptions, visibleCount: SWAP_OPTIONS_BATCH, selectedId: null };
   renderSwapModal();
@@ -2630,6 +2665,9 @@ $("swapConfirmBtn").addEventListener("click", () => {
   if (!swapContext?.selectedId) return;
   swapWeekPlanDay(swapContext.dayIndex, swapContext.selectedId);
   if (!hasPremium()) state.swapsThisWeek++;
+  // Ett byte är en ny lista: förra listans totaler och Billigast-krona får
+  // inte målas som fakta medan omhämtningen pågår.
+  clearPriceSnapshots();
   saveState(); render(); closeSwapModal();
 });
 function closeSwapModal() { $("swapModal").hidden = true; swapContext = null; }
@@ -2803,8 +2841,7 @@ function openPlanComparison() {
     // veckans "finns hemma"-borttagningar får inte tyst filtrera bort samma
     // ingrediensnamn ur den nya.
     state.removedItems.clear();
-    state.livePriser = {};
-    state.liveBranchTotals = {};
+    clearPriceSnapshots();
     saveState(); render(); closePlanModal(); setView("week");
   }));
   $("planModal").hidden = false;
@@ -3176,7 +3213,23 @@ $("gateLogoutBtn").addEventListener("click", () => window.__matjaktGateLock());
 $("logoutBtn").addEventListener("click", async () => {
   if (state.authToken) { try { await logoutRequest(state.authToken); } catch { /* session redan ogiltig server-side, städa lokalt ändå */ } }
   state.authToken = null; state.user = null; storeToken(null);
-  renderAccount(); closeAccountModal();
+  // Utloggning är ett byte av person, inte en paus: skafferi, vecka,
+  // allergival och historik tillhör KONTOT. Kvarlämnat laddades det upp
+  // till NÄSTA konto som registrerades på enheten (bootstrap-grenen i
+  // pullAccountState) - förra användarens allergier och skafferi blev
+  // den nyas. Inställningar av apparat-karaktär (postnummer, butik,
+  // onboarding klar) får stanna.
+  state.pantry = {};
+  state.valda = new Set(); state.weekPlan = [];
+  state.avklarade = new Set(); state.removedItems = new Set();
+  state.favoriter = new Set(); state.ogillar = new Set();
+  state.betyg = {}; state.feedback = {}; state.extraItems = [];
+  state.kost = { kosttyp: "", avoidAllergens: new Set() };
+  state.naringsmal = null; state.savingsLog = []; state.swapsThisWeek = 0;
+  state.apiRecipes = []; state.dbChainTotals = {}; state.dbComparison = null;
+  state.dbPricedAt = null; state.livePriser = {}; state.liveBranchTotals = {};
+  saveState();
+  renderAccount(); closeAccountModal(); render();
 });
 $("peopleMinus").addEventListener("click", () => step("personer", -1, 1, 12)); $("peoplePlus").addEventListener("click", () => step("personer", 1, 1, 12));
 $("mealsMinus").addEventListener("click", () => step("middagar", -1, 1, MAX_MEALS));
@@ -3236,7 +3289,14 @@ function openPantryAddConfirm(key, product) {
   document.querySelectorAll("#pantryAddLocation button").forEach(button => button.classList.toggle("active", button.dataset.location === pantryPickLocation));
   $("pantryAddConfirmBtn").onclick = () => {
     const entry = state.pantry[key] || { amount: 0, location: pantryPickLocation, expiry: null };
-    state.pantry[key] = { amount: entry.amount + (PACKAGE_INFO[key]?.amount || 1), location: pantryPickLocation, expiry: $("pantryAddExpiry").value || null };
+    // Ett påfyllt paket ska inte RADERA vad som redan är känt: lämnas
+    // datumfältet tomt behålls befintligt bäst före-datum, och en vara som
+    // redan har en plats behåller den om användaren inte aktivt bytt flik.
+    state.pantry[key] = {
+      amount: entry.amount + (PACKAGE_INFO[key]?.amount || 1),
+      location: pantryPickLocation,
+      expiry: $("pantryAddExpiry").value || entry.expiry || null,
+    };
     saveState(); render(); closePantryModal();
   };
 }

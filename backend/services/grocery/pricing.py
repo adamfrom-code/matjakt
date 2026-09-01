@@ -1094,8 +1094,17 @@ class RecipePricingEngine:
             # radens enhet via riktig konvertering - 50 ml grädde hemma
             # nollade annars en hel literrad ("1 - 50 = köps inte"), och
             # skräpvärden (icke-tal) 500:ade hela prissättningen.
+            # Veckat uppslag: {"ris": 500} ska träffa varan "Ris" - exakt
+            # skiftlägeskänslig likhet lät skafferiet tyst sluta dra av.
+            pantry_value = pantry.get(name)
+            if pantry_value is None and pantry:
+                folded_name = _fold(name)
+                for pantry_key, value in pantry.items():
+                    if _fold(str(pantry_key)) == folded_name:
+                        pantry_value = value
+                        break
             try:
-                raw_at_home = float(pantry.get(name) or 0)
+                raw_at_home = float(pantry_value or 0)
             except (TypeError, ValueError):
                 raw_at_home = 0.0
             at_home = 0.0

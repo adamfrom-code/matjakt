@@ -407,7 +407,22 @@ class RecipeStore:
             sql += " WHERE " + " AND ".join(where)
         sql += " ORDER BY name LIMIT ? OFFSET ?"
         params.extend([limit, offset])
-        return [self._to_dict(row) for row in self._connection.execute(sql, params)]
+        recipes = [self._to_dict(row) for row in self._connection.execute(sql, params)]
+        # IngrediensNAMNEN följer med listraderna (en batchfråga, inte N+1).
+        # Fulla ingredienser med mängder är fortsatt detaljsidans sak - men
+        # utan namnen kunde "Laga med det jag har" aldrig se ett enda
+        # bankrecept, eftersom listprojektionen gav ingredients: [].
+        if recipes:
+            ids = [r["id"] for r in recipes]
+            names: dict[str, list] = {}
+            marks = ",".join("?" * len(ids))
+            for row in self._connection.execute(
+                    f"SELECT recipe_id, name FROM recipe_ingredients WHERE recipe_id IN ({marks}) ORDER BY position",
+                    ids):
+                names.setdefault(row["recipe_id"], []).append(row["name"])
+            for recipe in recipes:
+                recipe["ingredientNames"] = names.get(recipe["id"], [])
+        return recipes
 
     def stats(self) -> dict:
         """What the bank actually contains - used by the report and by the
