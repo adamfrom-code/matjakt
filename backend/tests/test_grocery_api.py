@@ -257,3 +257,45 @@ class ExcludeItemsRespectRemovals(unittest.TestCase):
             "items": [{"name": "Falukorv", "amount": 800, "unit": "g"}]})
         self.assertIsNone(error)
         self.assertEqual(len(items), 1)
+
+
+class CampaignDealsSmokeTest(unittest.TestCase):
+    """Kampanjlistan gick sönder i produktion TVÅ gånger av samma halva
+    patch (konstant + SQL-rad som bara körs vid anrop). En tom test-DB
+    hade dessutom dolt felet - noll kedjor betyder att frågan aldrig
+    exekveras. Därför seedas en riktig kampanjrad här, så själva SQL:en
+    bevisligen körs varje testkörning."""
+
+    def test_campaign_deals_executes_the_real_query(self):
+        import tempfile
+        from pathlib import Path
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        db_path = Path(tmp.name) / "grocery.db"
+        real = grocery_api.DB_PATH
+        grocery_api.DB_PATH = db_path
+        self.addCleanup(lambda: setattr(grocery_api, "DB_PATH", real))
+        grocery_api.clear_cache()
+        self.addCleanup(grocery_api.clear_cache)
+
+        db = GroceryStore(db_path)
+        try:
+            store = db.upsert_store(chain="Willys", external_store_id="2132", name="Willys test",
+                                    city=None, postal_code=None, address=None,
+                                    latitude=None, longitude=None, active=True)
+            product = db.find_or_create_product(RawProduct(
+                chain="Willys", external_product_id="willys-kampanj", name="Kaffe Mellanrost",
+                store_id="2132", store_name="Willys", gtin=None, brand=None,
+                size="450g", quantity=450.0, unit="g",
+                category="Skafferi > Kaffe"))
+            db.upsert_current_price(product_id=product.id, store_id=store.id,
+                                    regular_price=79.0, campaign_price=49.0,
+                                    member_price=None, multibuy_price=None, unit_price=None,
+                                    currency="SEK", source_url=None, fetched_at=None)
+        finally:
+            db.close()
+
+        result = grocery_api.campaign_deals()
+        willys = result["deals"].get("Willys") or []
+        self.assertTrue(willys, "den seedade kampanjen måste komma ut ur frågan")
+        self.assertEqual(willys[0]["campaignPrice"], 49.0)
