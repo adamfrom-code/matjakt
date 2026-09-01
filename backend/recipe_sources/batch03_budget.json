@@ -151,7 +151,9 @@
       "billigt",
       "barn",
       "familj",
-      "mealprep"
+      "mealprep",
+      "husmanskost",
+      "vardagsmat"
     ],
     "allergens": [],
     "dietFlags": [
@@ -237,7 +239,8 @@
       "vegetariskt",
       "veganskt",
       "snabbt",
-      "mealprep"
+      "mealprep",
+      "vardagsmat"
     ],
     "allergens": [],
     "dietFlags": [
@@ -321,7 +324,8 @@
       "billigt",
       "husmanskost",
       "snabbt",
-      "familj"
+      "familj",
+      "vardagsmat"
     ],
     "allergens": [
       "ägg",
@@ -410,7 +414,8 @@
       "vegetariskt",
       "veganskt",
       "snabbt",
-      "barn"
+      "barn",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten"
@@ -581,7 +586,8 @@
       "vegetariskt",
       "veganskt",
       "mealprep",
-      "proteinrikt"
+      "proteinrikt",
+      "vardagsmat"
     ],
     "allergens": [],
     "dietFlags": [
@@ -755,7 +761,9 @@
       "barn",
       "familj",
       "snabbt",
-      "mealprep"
+      "mealprep",
+      "husmanskost",
+      "vardagsmat"
     ],
     "allergens": [
       "laktos"
@@ -838,7 +846,8 @@
       "barn",
       "familj",
       "snabbt",
-      "vegetariskt"
+      "vegetariskt",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten",

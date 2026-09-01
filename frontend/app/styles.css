@@ -325,3 +325,6 @@ button.campaign-deal{cursor:pointer;font:inherit}
 .undo-toast span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .undo-toast button{border:0;background:transparent;color:var(--accent);font:inherit;font-weight:700;cursor:pointer;padding:2px 4px}
 @media(min-width:481px){.undo-toast{bottom:calc(86px + 28px)}}
+
+.screen-intro{margin:6px 0 0;color:var(--muted);font-size:14px;line-height:1.5}
+.section-subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}

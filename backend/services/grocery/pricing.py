@@ -390,6 +390,9 @@ INGREDIENT_ALIASES = {
     # Samma vara under sitt italienska namn respektive sin vanligaste form -
     # identiteten ändras inte, bara ordet.
     "parmesan": ["parmigiano"],
+    # Butikerna säljer varan som "Kebab Grillad"/"Klassisk Kebab" - ordet
+    # kebabkött förekommer knappt i produktnamn.
+    "kebabkött": ["kebab"],
     "buljong": ["buljongtärning", "fond"],
     # Shelf singular/word-order forms found by probing the live catalogue.
     "rödlök": ["lök röd"],

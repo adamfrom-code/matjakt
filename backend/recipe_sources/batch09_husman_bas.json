@@ -1,0 +1,1092 @@
+[
+  {
+    "id": "flaskpannkaka",
+    "name": "Fläskpannkaka i ugn",
+    "description": "Ugnspannkaka med rimmat fläsk som får bli knaprigt i formen innan smeten hälls på. Serveras med lingon.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 35,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 610,
+      "protein": 24,
+      "carbs": 52,
+      "fat": 34,
+      "fiber": 2
+    },
+    "ingredients": [
+      {
+        "name": "Sidfläsk",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Vetemjöl",
+        "amount": 3,
+        "unit": "dl"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 6,
+        "unit": "dl"
+      },
+      {
+        "name": "Ägg",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Lingonsylt",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 225 grader. Tärna fläsket.",
+      "Vispa ihop mjöl, salt och hälften av mjölken till en slät smet. Vispa i resten av mjölken och äggen.",
+      "Lägg fläsket i en ugnsform och låt det bli knaprigt i ugnen cirka 10 minuter.",
+      "Häll smeten över det varma fläsket och grädda 25 minuter tills pannkakan är gyllene och stannat i mitten.",
+      "Servera direkt ur formen med lingonsylt."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "billigt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ]
+  },
+  {
+    "id": "kaldolmar",
+    "name": "Kåldolmar med gräddsås och potatis",
+    "description": "Mjuka kåldolmar med färs- och risfyllning, sirapsstekta i ugn. Serveras med kokt potatis, gräddsås och lingon.",
+    "servings": 4,
+    "prepTime": 40,
+    "cookTime": 40,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 580,
+      "protein": 30,
+      "carbs": 52,
+      "fat": 27,
+      "fiber": 6
+    },
+    "ingredients": [
+      {
+        "name": "Vitkål",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Blandfärs",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 1,
+        "unit": "dl"
+      },
+      {
+        "name": "Sirap",
+        "amount": 2,
+        "unit": "msk"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Lingonsylt",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka riset. Sätt ugnen på 200 grader.",
+      "Skär ur kålhuvudets stock och koka huvudet i saltat vatten tills bladen släpper, cirka 10 minuter. Lossa 12 fina blad.",
+      "Blanda färs, kokt ris, finhackad lök, mjölk, salt och peppar.",
+      "Lägg en klick fyllning på varje kålblad, vik in kanterna och rulla ihop. Lägg rullarna med skarven nedåt i en smord form.",
+      "Ringla över sirap, klicka på smör och stek i ugnen cirka 40 minuter tills dolmarna fått fin färg.",
+      "Koka potatisen. Koka ihop grädden med skyn från formen till en enkel sås. Servera med lingon."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "helgmiddag"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/12072441/pexels-photo-12072441.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/close-up-shot-of-vegetables-12072441/",
+    "imageCredit": "Boryslav Shoot",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Kåldolmar med gräddsås och potatis upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "sjomansbiff",
+    "name": "Sjömansbiff",
+    "description": "Klassisk sjömansbiff där lövbiff, potatis och lök får sjuda långsamt i öl eller buljong tills allt är mört.",
+    "servings": 4,
+    "prepTime": 20,
+    "cookTime": 60,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 540,
+      "protein": 36,
+      "carbs": 48,
+      "fat": 21,
+      "fiber": 5
+    },
+    "ingredients": [
+      {
+        "name": "Lövbiff",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 900,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Buljong",
+        "amount": 4,
+        "unit": "dl"
+      },
+      {
+        "name": "Persilja",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 175 grader. Skala och skiva potatis och lök.",
+      "Bryn lövbiffarna hastigt i smör, salta och peppra.",
+      "Stek löken mjuk i samma gryta.",
+      "Varva potatis, lök och kött i en gryta med lock. Häll på buljongen.",
+      "Låt sjuda i ugnen eller på svag värme cirka 1 timme tills potatisen är mjuk och köttet mört.",
+      "Strö över hackad persilja och servera direkt ur grytan."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "billigt",
+      "helgmiddag"
+    ],
+    "allergens": [],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt",
+      "laktosfritt"
+    ],
+    "image": "https://images.pexels.com/photos/33673991/pexels-photo-33673991.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/creamy-fettuccine-with-beef-and-mushroom-sauce-33673991/",
+    "imageCredit": "pedro furtado",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Sjömansbiff upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "sondagsstek",
+    "name": "Söndagsstek med gräddsås",
+    "description": "Långstekt nötstek med klassisk gräddsås, kokt potatis och gelé. Tar sin tid i ugnen men sköter sig själv.",
+    "servings": 6,
+    "prepTime": 20,
+    "cookTime": 90,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 570,
+      "protein": 42,
+      "carbs": 38,
+      "fat": 26,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Fransyska",
+        "amount": 1000,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Morötter",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Buljong",
+        "amount": 4,
+        "unit": "dl"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Soja",
+        "amount": 1,
+        "unit": "msk"
+      },
+      {
+        "name": "Potatis",
+        "amount": 1000,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 150 grader. Salta och peppra steken runt om.",
+      "Bryn steken i smör i en gryta tills den fått fin yta på alla sidor.",
+      "Lägg i grovt hackad lök och morot, häll på buljongen och sätt in grytan med lock i ugnen.",
+      "Stek cirka 1,5 timme tills steken är mör. Låt vila 15 minuter innan den skivas.",
+      "Sila skyn, koka upp med grädde och soja och låt såsen tjockna några minuter.",
+      "Koka potatisen och servera med tunt skivad stek, sås och gärna gelé."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "helgmiddag",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "laktos",
+      "soja"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ]
+  },
+  {
+    "id": "isterband-dillstuvad",
+    "name": "Isterband med dillstuvad potatis",
+    "description": "Knaperstekta isterband med krämig dillstuvad potatis. Enkel klassiker med syrlig korv och len stuvning.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 30,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 640,
+      "protein": 22,
+      "carbs": 46,
+      "fat": 40,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Isterband",
+        "amount": 4,
+        "unit": "st"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 4,
+        "unit": "dl"
+      },
+      {
+        "name": "Vetemjöl",
+        "amount": 2,
+        "unit": "msk"
+      },
+      {
+        "name": "Dill",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Skala potatisen, tärna den och koka den nästan mjuk i saltat vatten. Häll av.",
+      "Smält smör i kastrullen, vispa i mjölet och späd med mjölken under vispning till en slät stuvning.",
+      "Lägg tillbaka potatisen i stuvningen och låt sjuda några minuter. Smaka av med salt, peppar och rikligt med hackad dill.",
+      "Stek isterbanden i en torr panna på medelvärme tills de är knapriga runt om, cirka 12 minuter.",
+      "Servera isterbanden med den dillstuvade potatisen."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "billigt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ]
+  },
+  {
+    "id": "kroppkakor",
+    "name": "Kroppkakor med smör och lingon",
+    "description": "Mjuka potatisknyten fyllda med stekt fläsk och lök, kokta och serverade med smält smör och lingonsylt.",
+    "servings": 4,
+    "prepTime": 40,
+    "cookTime": 25,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 620,
+      "protein": 20,
+      "carbs": 74,
+      "fat": 27,
+      "fiber": 5
+    },
+    "ingredients": [
+      {
+        "name": "Potatis",
+        "amount": 1000,
+        "unit": "g"
+      },
+      {
+        "name": "Vetemjöl",
+        "amount": 3,
+        "unit": "dl"
+      },
+      {
+        "name": "Ägg",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Sidfläsk",
+        "amount": 250,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Lingonsylt",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Kryddpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka potatisen mjuk, häll av och låt ånga av ordentligt. Pressa eller mosa den slät och låt kallna något.",
+      "Tärna fläsket och hacka löken. Stek dem gyllene med kryddpeppar och låt fyllningen svalna.",
+      "Arbeta ihop potatis, mjöl, ägg och salt till en deg. Dela i 8 bitar.",
+      "Platta ut varje bit, lägg på fyllning och forma runda knyten med fyllningen i mitten.",
+      "Sjud kroppkakorna i saltat vatten cirka 5 minuter efter att de flutit upp.",
+      "Servera med smält smör och lingonsylt."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "helgmiddag",
+      "billigt"
+    ],
+    "allergens": [
+      "gluten",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ]
+  },
+  {
+    "id": "panerad-torsk-potatismos",
+    "name": "Panerad torsk med potatismos och ärtor",
+    "description": "Krispigt panerad torskfilé med hemlagat potatismos, gröna ärtor och en citronklyfta. Barnvänlig fiskklassiker.",
+    "servings": 4,
+    "prepTime": 20,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 540,
+      "protein": 34,
+      "carbs": 56,
+      "fat": 20,
+      "fiber": 6
+    },
+    "ingredients": [
+      {
+        "name": "Torskfilé",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Ströbröd",
+        "amount": 80,
+        "unit": "g"
+      },
+      {
+        "name": "Vetemjöl",
+        "amount": 50,
+        "unit": "g"
+      },
+      {
+        "name": "Ägg",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 1.5,
+        "unit": "dl"
+      },
+      {
+        "name": "Frysta ärtor",
+        "amount": 250,
+        "unit": "g"
+      },
+      {
+        "name": "Citron",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka potatisen mjuk. Mosa med smör och varm mjölk och smaka av med salt.",
+      "Torka av torskbitarna och salta lätt. Vänd dem i mjöl, sedan uppvispat ägg och sist ströbröd.",
+      "Stek fisken gyllene i rikligt med smör, cirka 3 minuter per sida beroende på tjocklek.",
+      "Koka upp ärtorna i lättsaltat vatten.",
+      "Servera den panerade torsken med mos, ärtor och en citronklyfta."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Fisk"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg",
+      "fisk"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "pescetariskt"
+    ],
+    "image": "https://images.pexels.com/photos/28191271/pexels-photo-28191271.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/a-white-plate-with-fish-and-vegetables-on-it-28191271/",
+    "imageCredit": "Bingqian Li",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Panerad torsk med potatismos och ärtor upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "torsk-aggsas",
+    "name": "Torsk med äggsås och kokt potatis",
+    "description": "Skånsk klassiker: pocherad torsk med len äggsås, kokt potatis och dill. Mild och trygg fiskmiddag.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 500,
+      "protein": 35,
+      "carbs": 42,
+      "fat": 21,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Torskfilé",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Ägg",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 3,
+        "unit": "dl"
+      },
+      {
+        "name": "Vetemjöl",
+        "amount": 2,
+        "unit": "msk"
+      },
+      {
+        "name": "Dill",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Vitpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka potatisen. Hårdkoka två av äggen, skala och hacka dem.",
+      "Sjud torsken i lättsaltat vatten tills den precis flagar sig, cirka 8 minuter.",
+      "Smält smör, vispa i mjöl och späd med mjölk till en slät sås. Låt sjuda några minuter.",
+      "Rör ner de hackade äggen i såsen och smaka av med salt och vitpeppar.",
+      "Servera torsken med potatis, äggsås och rikligt med dill."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Fisk"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg",
+      "fisk"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "pescetariskt"
+    ],
+    "image": "https://images.pexels.com/photos/28191271/pexels-photo-28191271.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/a-white-plate-with-fish-and-vegetables-on-it-28191271/",
+    "imageCredit": "Bingqian Li",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Torsk med äggsås och kokt potatis upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "korvsoppa",
+    "name": "Korvsoppa med rotfrukter",
+    "description": "Värmande korvsoppa med falukorv, potatis och morötter i buljong. Snabb, billig och omtyckt av barn.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 480,
+      "protein": 17,
+      "carbs": 42,
+      "fat": 27,
+      "fiber": 6
+    },
+    "ingredients": [
+      {
+        "name": "Falukorv",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Morötter",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Purjolök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Buljong",
+        "amount": 1,
+        "unit": "l"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Skala och tärna potatis och morötter. Hacka löken och skiva purjolöken.",
+      "Fräs lök och purjolök mjuka i en stor kastrull.",
+      "Tillsätt potatis, morötter och buljong. Koka cirka 12 minuter tills rotfrukterna är mjuka.",
+      "Tärna falukorven och låt den sjuda med de sista 5 minuterna.",
+      "Smaka av med salt och peppar. Servera med bröd."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Soppa"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "billigt",
+      "snabbt"
+    ],
+    "allergens": [],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt",
+      "laktosfritt"
+    ],
+    "image": "https://images.pexels.com/photos/30852890/pexels-photo-30852890.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/traditional-solyanka-soup-with-sliced-bread-and-garnish-30852890/",
+    "imageCredit": "Gundula Vogel",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Korvsoppa med rotfrukter upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "tomatsoppa-varma-mackor",
+    "name": "Tomatsoppa med varma ostmackor",
+    "description": "Krämig tomatsoppa med smörstekta varma mackor med mycket ost. En enkel middag som alltid går hem.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 520,
+      "protein": 19,
+      "carbs": 52,
+      "fat": 26,
+      "fiber": 6
+    },
+    "ingredients": [
+      {
+        "name": "Krossade tomater",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Buljong",
+        "amount": 4,
+        "unit": "dl"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 1,
+        "unit": "dl"
+      },
+      {
+        "name": "Bröd",
+        "amount": 8,
+        "unit": "st"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      },
+      {
+        "name": "Socker",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Fräs hackad lök och vitlök mjuka i en kastrull.",
+      "Tillsätt krossade tomater och buljong och låt sjuda 15 minuter.",
+      "Mixa soppan slät, rör i grädden och smaka av med salt, peppar och en nypa socker.",
+      "Bre smör på brödskivorna, lägg rikligt med ost mellan två skivor och stek mackorna gyllene i smör på båda sidor.",
+      "Servera soppan rykande het med de varma mackorna."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Soppa",
+      "Vegetariskt"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "billigt",
+      "snabbt",
+      "vegetariskt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "vegetariskt"
+    ],
+    "image": "https://images.pexels.com/photos/2421593/pexels-photo-2421593.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/white-ceramic-mug-with-soup-beside-spoon-2421593/",
+    "imageCredit": "Danijela Pantic Conic",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Tomatsoppa med varma ostmackor upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "hamburgare-klyftpotatis",
+    "name": "Hamburgare med klyftpotatis",
+    "description": "Hemmagjorda burgare på nötfärs med ugnsrostad klyftpotatis och klassiska tillbehör. Fredagsmys utan hämtmat.",
+    "servings": 4,
+    "prepTime": 20,
+    "cookTime": 35,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 680,
+      "protein": 35,
+      "carbs": 58,
+      "fat": 34,
+      "fiber": 5
+    },
+    "ingredients": [
+      {
+        "name": "Nötfärs",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Hamburgerbröd",
+        "amount": 4,
+        "unit": "st"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Tomater",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Isbergssallad",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Rödlök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Ost",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Ketchup",
+        "amount": 4,
+        "unit": "msk"
+      },
+      {
+        "name": "Majonnäs",
+        "amount": 4,
+        "unit": "msk"
+      },
+      {
+        "name": "Olivolja",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 225 grader. Klyfta potatisen, vänd med olja och salt och rosta cirka 30 minuter.",
+      "Forma färsen till fyra burgare, tryck en grop i mitten och krydda med salt och peppar.",
+      "Stek eller grilla burgarna 3-4 minuter per sida. Lägg ost på mot slutet så den smälter.",
+      "Rosta bröden snabbt i pannan.",
+      "Montera burgarna med sallad, tomat, rödlök, ketchup och majonnäs. Servera med klyftpotatisen."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Helg"
+    ],
+    "tags": [
+      "vardagsmat",
+      "barn",
+      "helgmiddag",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/12362923/pexels-photo-12362923.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/close-up-shot-of-a-burger-beside-the-french-fries-12362923/",
+    "imageCredit": "Shawkat Galib",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Hamburgare med klyftpotatis upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "hemmagjord-pizza",
+    "name": "Hemmagjord pizza med skinka och ost",
+    "description": "Enkel pizzadeg på jäst, tomatsås, skinka och massor av ost. Låt hela familjen toppa sin egen bit.",
+    "servings": 4,
+    "prepTime": 25,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 650,
+      "protein": 30,
+      "carbs": 78,
+      "fat": 24,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Vetemjöl",
+        "amount": 6,
+        "unit": "dl"
+      },
+      {
+        "name": "Jäst",
+        "amount": 25,
+        "unit": "g"
+      },
+      {
+        "name": "Krossade tomater",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Skinka",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Oregano",
+        "amount": 1,
+        "unit": "msk"
+      },
+      {
+        "name": "Olivolja",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Lös jästen i 2,5 dl fingervarmt vatten. Arbeta in mjöl, salt och en skvätt olja till en smidig deg. Jäs 30 minuter.",
+      "Sätt ugnen på högsta värme med en plåt inne.",
+      "Koka under tiden ihop krossade tomater med oregano och salt till en enkel pizzasås.",
+      "Kavla ut degen tunt till två pizzor. Bred på sås, strö över ost och fördela skinkan.",
+      "Grädda en pizza i taget på den heta plåten 8-10 minuter tills kanterna fått färg och osten bubblar."
+    ],
+    "categories": [
+      "Helg"
+    ],
+    "tags": [
+      "vardagsmat",
+      "barn",
+      "helgmiddag",
+      "billigt",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/8471699/pexels-photo-8471699.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/plates-of-pizzas-on-a-wooden-table-8471699/",
+    "imageCredit": "Cup of  Couple",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Hemmagjord pizza med skinka och ost upplagd på tallrik",
+    "imageStatus": "ok"
+  }
+]

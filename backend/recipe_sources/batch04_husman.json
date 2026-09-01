@@ -72,7 +72,8 @@
     "tags": [
       "husmanskost",
       "barn",
-      "billigt"
+      "billigt",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten",
@@ -431,7 +432,8 @@
       "billigt",
       "snabbt",
       "husmanskost",
-      "Familjefavorit"
+      "Familjefavorit",
+      "vardagsmat"
     ],
     "allergens": [
       "laktos"
@@ -503,7 +505,8 @@
     "tags": [
       "barn",
       "billigt",
-      "husmanskost"
+      "husmanskost",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten",
@@ -774,7 +777,8 @@
     "tags": [
       "fisk",
       "husmanskost",
-      "barn"
+      "barn",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten",
@@ -874,7 +878,8 @@
     "tags": [
       "kyckling",
       "mealprep",
-      "Familjefavorit"
+      "Familjefavorit",
+      "vardagsmat"
     ],
     "allergens": [
       "laktos"
@@ -1162,7 +1167,8 @@
       "billigt",
       "barn",
       "snabbt",
-      "mealprep"
+      "mealprep",
+      "vardagsmat"
     ],
     "allergens": [],
     "dietFlags": [
@@ -1348,7 +1354,8 @@
     "tags": [
       "vegetariskt",
       "billigt",
-      "snabbt"
+      "snabbt",
+      "vardagsmat"
     ],
     "allergens": [
       "laktos"
@@ -1513,7 +1520,8 @@
       "barn",
       "billigt",
       "husmanskost",
-      "Familjefavorit"
+      "Familjefavorit",
+      "vardagsmat"
     ],
     "allergens": [
       "laktos"
@@ -1688,7 +1696,8 @@
     "tags": [
       "kyckling",
       "snabbt",
-      "barn"
+      "barn",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten",
@@ -1880,7 +1889,8 @@
     "tags": [
       "vegetariskt",
       "billigt",
-      "snabbt"
+      "snabbt",
+      "vardagsmat"
     ],
     "allergens": [
       "jordnötter"
@@ -2062,7 +2072,8 @@
     ],
     "tags": [
       "vegetariskt",
-      "billigt"
+      "billigt",
+      "vardagsmat"
     ],
     "allergens": [],
     "dietFlags": [

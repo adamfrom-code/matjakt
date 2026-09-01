@@ -1,0 +1,789 @@
+[
+  {
+    "id": "kebabgryta",
+    "name": "Kebabgryta med ris",
+    "description": "Krämig kebabgryta med strimlat kebabkött, paprika och en mild tomatig gräddsås. Serveras med ris.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 640,
+      "protein": 28,
+      "carbs": 55,
+      "fat": 34,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Kebabkött",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 340,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Paprika",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 3,
+        "unit": "dl"
+      },
+      {
+        "name": "Tomatpuré",
+        "amount": 2,
+        "unit": "msk"
+      },
+      {
+        "name": "Sambal oelek",
+        "amount": 1,
+        "unit": "tsk"
+      },
+      {
+        "name": "Olivolja",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka riset enligt anvisningen på paketet.",
+      "Strimla lök och paprika och fräs dem mjuka i olja.",
+      "Tillsätt kebabköttet och stek någon minut.",
+      "Rör i tomatpuré och sambal oelek, häll på grädden och låt grytan sjuda 5-10 minuter.",
+      "Smaka av med salt och peppar och servera med riset."
+    ],
+    "categories": [
+      "Helg"
+    ],
+    "tags": [
+      "vardagsmat",
+      "snabbt",
+      "helgmiddag"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/5863612/pexels-photo-5863612.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+    "imageCredit": "Rachel Claire",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Kebabgryta med ris upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "stekt-flask-loksas",
+    "name": "Stekt fläsk med löksås och potatis",
+    "description": "Knaperstekt rimmat sidfläsk med krämig löksås och kokt potatis. Så enkel och så klassisk som husmanskost blir.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 30,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 680,
+      "protein": 22,
+      "carbs": 45,
+      "fat": 45,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Sidfläsk",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 4,
+        "unit": "dl"
+      },
+      {
+        "name": "Vetemjöl",
+        "amount": 2,
+        "unit": "msk"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka potatisen mjuk i saltat vatten.",
+      "Skiva fläsket och stek det knaprigt i omgångar. Låt rinna av på papper.",
+      "Skiva löken och stek den mjuk och gyllene i lite av fläskfettet.",
+      "Pudra mjölet över löken, späd med mjölken under omrörning och låt såsen sjuda tills den tjocknat.",
+      "Smaka av löksåsen med salt och peppar och servera med fläsket och potatisen."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "billigt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ]
+  },
+  {
+    "id": "makaronipudding",
+    "name": "Makaronipudding",
+    "description": "Ugnsgratinerad makaronipudding med falukorv, ägg och mjölk. Enkel, mättande och gjord på det som finns hemma.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 35,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 560,
+      "protein": 25,
+      "carbs": 55,
+      "fat": 27,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Makaroner",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Falukorv",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Ägg",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 4,
+        "unit": "dl"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 200 grader. Koka makaronerna knappt klara och häll av.",
+      "Tärna falukorven och stek den lätt.",
+      "Vispa ihop ägg och mjölk med salt och peppar.",
+      "Blanda makaroner och korv i en smord ugnsform, häll över äggstanningen och strö osten på toppen.",
+      "Grädda cirka 30 minuter tills puddingen stannat och fått gyllene yta."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "billigt",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/806357/pexels-photo-806357.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/close-up-photography-of-baked-mac-806357/",
+    "imageCredit": "Ronmar Lacamiento",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Makaronipudding upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "makaroner-kottbullar",
+    "name": "Makaroner och köttbullar",
+    "description": "Snabbaste barnmiddagen: stekta köttbullar, nykokta makaroner och ketchup. Ibland är det enkla det bästa.",
+    "servings": 4,
+    "prepTime": 5,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 520,
+      "protein": 26,
+      "carbs": 52,
+      "fat": 23,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Köttbullar",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Makaroner",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Ketchup",
+        "amount": 6,
+        "unit": "msk"
+      },
+      {
+        "name": "Gurka",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka makaronerna enligt paketet.",
+      "Stek köttbullarna runt om i smör tills de är varma rakt igenom.",
+      "Skiva gurkan.",
+      "Servera makaroner och köttbullar med ketchup och gurkskivor."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "billigt",
+      "snabbt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/36627079/pexels-photo-36627079.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/delicious-macaroni-and-ground-beef-dish-36627079/",
+    "imageCredit": "Valeria Boltneva",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Makaroner och köttbullar upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "kramig-kycklinggryta",
+    "name": "Krämig kycklinggryta med grönsaker",
+    "description": "Vardagsgryta med kycklingfilé, morötter och ärtor i len gräddsås. Serveras med ris eller potatis.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 560,
+      "protein": 39,
+      "carbs": 46,
+      "fat": 24,
+      "fiber": 5
+    },
+    "ingredients": [
+      {
+        "name": "Kycklingfilé",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Morötter",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Frysta ärtor",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Buljong",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Ris",
+        "amount": 340,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka riset. Tärna kycklingen och skär morötterna i slantar.",
+      "Bryn kycklingen i smör tills den fått fin färg. Lägg åt sidan.",
+      "Fräs lök och morötter några minuter i samma gryta.",
+      "Häll på buljong och grädde, lägg tillbaka kycklingen och låt sjuda 10 minuter.",
+      "Rör i ärtorna sista minuterna, smaka av med salt och peppar och servera med riset."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Kyckling"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/29075345/pexels-photo-29075345.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/rustic-vegetable-stew-in-ceramic-bowl-29075345/",
+    "imageCredit": "Harry Tucker",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Krämig kycklinggryta med grönsaker upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "kyckling-currysas-ris",
+    "name": "Kyckling i currysås med ris",
+    "description": "Mild gul currysås med saftig kyckling och ris - en svensk vardagsklassiker som barnen känner igen.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 590,
+      "protein": 38,
+      "carbs": 52,
+      "fat": 25,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Kycklingfilé",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 340,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Curry",
+        "amount": 1,
+        "unit": "msk"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 2.5,
+        "unit": "dl"
+      },
+      {
+        "name": "Buljong",
+        "amount": 1,
+        "unit": "dl"
+      },
+      {
+        "name": "Äpple",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka riset. Strimla kycklingen och hacka löken.",
+      "Bryn kycklingen i smör och lägg åt sidan.",
+      "Fräs lök och curry i smöret så kryddan får blomma ut.",
+      "Tillsätt tärnat äpple, grädde och buljong. Lägg tillbaka kycklingen och sjud 8-10 minuter.",
+      "Smaka av med salt och peppar och servera med riset."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Kyckling"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "billigt",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/7111537/pexels-photo-7111537.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/cooked-food-on-black-ceramic-plate-7111537/",
+    "imageCredit": "Piotr Arnoldes",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Kyckling i currysås med ris upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "kramig-kycklingpasta",
+    "name": "Krämig kycklingpasta",
+    "description": "Pasta med strimlad kyckling, grädde och parmesan. Klar på tjugo minuter och alltid uppskattad.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 620,
+      "protein": 40,
+      "carbs": 58,
+      "fat": 25,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Kycklingfilé",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Pasta",
+        "amount": 350,
+        "unit": "g"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 2.5,
+        "unit": "dl"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Parmesan",
+        "amount": 50,
+        "unit": "g"
+      },
+      {
+        "name": "Babyspenat",
+        "amount": 70,
+        "unit": "g"
+      },
+      {
+        "name": "Olivolja",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka pastan al dente. Spara en kopp pastavatten.",
+      "Strimla kycklingen, salta och peppra och stek den gyllene i olja.",
+      "Tillsätt pressad vitlök och grädde och låt sjuda några minuter.",
+      "Vänd ner pasta, spenat och riven parmesan. Späd med pastavatten till krämig konsistens.",
+      "Smaka av och servera direkt med extra parmesan."
+    ],
+    "categories": [
+      "Kyckling",
+      "Pasta"
+    ],
+    "tags": [
+      "vardagsmat",
+      "snabbt",
+      "barn",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/20051317/pexels-photo-20051317.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/pasta-with-chicken-stew-20051317/",
+    "imageCredit": "Роман Нагаевский",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Krämig kycklingpasta upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "kycklinggratang-broccoli",
+    "name": "Kycklinggratäng med broccoli",
+    "description": "Ugnsgratäng med kyckling, broccoli och ris i krämig sås under ett osttäcke. Går att förbereda dagen innan.",
+    "servings": 4,
+    "prepTime": 20,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 610,
+      "protein": 42,
+      "carbs": 48,
+      "fat": 27,
+      "fiber": 5
+    },
+    "ingredients": [
+      {
+        "name": "Kycklingfilé",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Broccoli",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 250,
+        "unit": "g"
+      },
+      {
+        "name": "Crème fraiche",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 1,
+        "unit": "dl"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Curry",
+        "amount": 1,
+        "unit": "tsk"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 200 grader. Koka riset och dela broccolin i buketter.",
+      "Tärna kycklingen, krydda och bryn den i smör.",
+      "Blanda crème fraiche, grädde och curry till en sås.",
+      "Varva ris, kyckling och broccoli i en smord form. Häll över såsen och toppa med ost.",
+      "Gratinera cirka 20 minuter tills osten fått gyllene färg."
+    ],
+    "categories": [
+      "Kyckling"
+    ],
+    "tags": [
+      "vardagsmat",
+      "barn",
+      "mealprep",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/32039641/pexels-photo-32039641.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/cheesy-vegetable-baked-casserole-in-white-dish-32039641/",
+    "imageCredit": "Sylwester Ficek",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Kycklinggratäng med broccoli upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "lax-kall-dillsas",
+    "name": "Ugnslax med kokt potatis och kall dillsås",
+    "description": "Ugnsbakad laxfilé med kokt färskpotatis och en kall sås på crème fraiche och dill. Enklare blir det inte.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 560,
+      "protein": 34,
+      "carbs": 40,
+      "fat": 29,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Laxfilé",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Crème fraiche",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Dill",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Citron",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 175 grader. Koka potatisen.",
+      "Lägg laxen i en form, salta, peppra och pressa över lite citron. Baka 15-20 minuter tills laxen precis går isär.",
+      "Rör ihop crème fraiche med rikligt hackad dill, citronsaft, salt och peppar.",
+      "Servera laxen med potatis, kall dillsås och citronklyftor."
+    ],
+    "categories": [
+      "Fisk"
+    ],
+    "tags": [
+      "vardagsmat",
+      "snabbt",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "laktos",
+      "fisk"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "pescetariskt",
+      "glutenfritt"
+    ]
+  }
+]

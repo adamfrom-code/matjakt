@@ -425,8 +425,16 @@ function comboEstimatedCost(combo) {
 function evaluateCombos(recipes, count, branch) {
   // minTotal: however hard the pool is capped, a `count`-dinner week needs
   // at least count+1 candidates or there is nothing to choose between.
+  // Enkel vardagsmat överlever poolklippet: rank 0 för vardags-/husman-
+  // taggade recept, 1 för övriga. Priset styr fortfarande inom varje klass
+  // och budgeten räknas på ärliga kostnader - det här ändrar bara VILKA som
+  // får vara med och tävla.
+  const everydayRank = recipe => {
+    const tags = recipe.taggar || recipe.tags || [];
+    return tags.includes("vardagsmat") || tags.includes("husmanskost") ? 0 : 1;
+  };
   const pool = limitCandidatePool(recipes, 6, CANDIDATE_POOL_FOR_COUNT[count] || 24,
-                                  "proteinkalla", "inkopspris", count + 1);
+                                  "proteinkalla", "inkopspris", count + 1, everydayRank);
   // comboEstimatedCost, not shoppingListCost: the static catalogue does not
   // know the bank's ingredients, so it priced every bank-recipe week at
   // 0 kr - and a planner whose every option is "free" picks arbitrarily.
@@ -636,8 +644,25 @@ function candidateRecipesForUser() {
 // This is the single choke point both chooseMenu() and openPlanComparison() go
 // through to generate a week, so falling back to the diet-only pool (and
 // surfacing #nutritionWarning) here fixes it everywhere a week gets (re)built.
+// Enkel svensk vardagsmat först i förslagspoolen. En ny användares första
+// vecka ska kännas som "korv stroganoff, köttbullar, kyckling med ris" -
+// inte fem Instagram-recept. Stabil sortering: vardags-/husmanskostrecepten
+// leder, resten följer i sin gamla ordning så variationen finns kvar (och
+// urvalslogiken blandar fortfarande in annat via sina egna poäng).
+function everydayFirst(recipes) {
+  const score = recipe => {
+    const tags = recipe.taggar || recipe.tags || [];
+    return (tags.includes("vardagsmat") ? 2 : 0)
+         + (tags.includes("husmanskost") ? 1 : 0)
+         + (tags.includes("barn") ? 1 : 0);
+  };
+  return recipes.map((recipe, index) => ({ recipe, index, score: score(recipe) }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map(entry => entry.recipe);
+}
+
 function weekPlanCandidates() {
-  const dietOnly = localRecipesForUser().filter(recipe => !state.feedback[recipe.id]?.disliked);
+  const dietOnly = everydayFirst(localRecipesForUser().filter(recipe => !state.feedback[recipe.id]?.disliked));
   const goalsActive = hasPremium() && hasActiveNutritionGoals(currentNutritionGoals());
   if (!goalsActive) return { candidates: dietOnly, nutritionShortfall: false };
   const nutritionCandidates = candidateRecipesForUser();
@@ -1336,7 +1361,7 @@ function coverageLabel(result) {
     const names = (result.missingNames || []).filter(Boolean);
     const detail = names.length ? ` · saknar ${escapeHtml(names.slice(0, 3).join(", "))}${names.length > 3 ? ` +${names.length - 3}` : ""}` : "";
       const percent = result.totalItems ? Math.round(100 * result.certain / result.totalItems) : 0;
-    return `<small class="store-compare-coverage">${result.certain} av ${result.totalItems} varor prissatta · ${percent} % täckning${missing > 0 ? detail : ""}</small>`;
+    return `<small class="store-compare-coverage">${result.certain} av ${result.totalItems} varor har pris${missing > 0 ? detail : ""}</small>`;
   }
   return `<small class="store-compare-coverage">${result.certain} av ${result.totalItems} varor har säkert pris${missing > 0 ? ` · ${missing} utan pris` : ""}</small>`;
 }
@@ -1628,7 +1653,7 @@ function chainShoppingListMarkup(data, branch = null) {
     ? `<p class="chain-list-warning">Priserna är hämtade i ${escapeHtml(pricedStore)}. ${escapeHtml(data.chain)} sätter priser per butik, så ${escapeHtml(branch.namn)} kan skilja sig.</p>`
     : "";
   const sticky = `<div class="chain-list-sticky"><strong>${escapeHtml(storeName)}</strong><span>${money(total)} · ${data.realPriceItems}/${data.totalItems} varor</span></div>`;
-  const head = sticky + `<div class="chain-list-head"><h2>${escapeHtml(storeName)}</h2><small>${escapeHtml([data.chain, distance].filter(Boolean).join(" · "))}</small>${pricedElsewhere}<div class="chain-list-total"><span>Total kassakostnad</span><strong>${money(total)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor prissatta · ${coverage} % täckning</span>${data.estimatedItems ? `<span>${data.estimatedItems} med uppskattat antal</span>` : ""}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span>${savings}</div>${warning}</div>`;
+  const head = sticky + `<div class="chain-list-head"><h2>${escapeHtml(storeName)}</h2><small>${escapeHtml([data.chain, distance].filter(Boolean).join(" · "))}</small>${pricedElsewhere}<div class="chain-list-total"><span>Total kassakostnad</span><strong>${money(total)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor har pris</span>${data.estimatedItems ? `<span>${data.estimatedItems} med uppskattat antal</span>` : ""}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span>${savings}</div>${warning}</div>`;
 
   const rows = (data.items || []).map(item => {
     const checked = state.avklarade.has(item.ingredient);
@@ -2898,13 +2923,15 @@ function renderStats() {
 $("openStatsBtn").addEventListener("click", () => { renderStats(); setView("stats"); });
 
 const DISLIKE_SUGGESTIONS = ["Lök", "Svamp", "Fisk", "Skaldjur", "Nötter", "Inälvsmat", "Stark mat", "Kokosmjölk"];
+// Fyra steg, inte sju. En förstagångare ska svara på det Matjakt inte kan
+// gissa - vilka ni är, vad ni vill lägga, vad ni inte äter, var ni handlar -
+// och sedan SE sin vecka. Tidsfiltret bor i Recept-fliken och kalorier/makron
+// är en Premium-inställning i "Justera veckan"; mitt i onboardingen var de
+// bara friktion (och ett Premium-formulär för någon som inte ens sett appen).
 const ONBOARDING_STEPS = [
   { title: "Vilka är ni hemma?", render: renderObHushall },
   { title: "Budget & antal middagar", render: renderObBudget },
   { title: "Kost & allergier", render: renderObKost },
-  { title: "Något ni hellre slipper?", render: renderObOgillar },
-  { title: "Hur mycket tid har ni?", render: renderObTid },
-  { title: "Kalorier & makron", render: renderObNaring },
   { title: "Var handlar ni?", render: renderObButik },
 ];
 let onboardingStep = 0;
@@ -2930,7 +2957,7 @@ function renderObNaring() {
   return `<p class="ob-teaser">${premium ? `Du har redan Premium - ställ in exakta mål för kalorier, protein, kolhydrater och fett under "Justera veckan" på Hem.` : `Med Premium kan Matjakt styra veckan efter kalorier, protein, kolhydrater, fett och proteinkälla per måltid - inte bara pris. Du kan sätta det senare under "Justera veckan".`}</p>${premium ? "" : `<div class="ob-premium-badge">59 kr/mån · Premium</div>`}`;
 }
 function renderObButik() {
-  return `<label for="obPostcode">Postnummer</label><div class="location-row"><input id="obPostcode" value="${escapeHtml(state.postnummer)}" inputmode="numeric" maxlength="5"><button type="button" id="obLocateBtn">Hitta mig</button></div><p class="ob-error" id="obPostcodeError"></p><label for="obStore">Favoritbutik</label><select id="obStore"><option value="auto" ${state.butik === "auto" ? "selected" : ""}>Billigast automatiskt</option><option value="alla" ${state.butik === "alla" ? "selected" : ""}>Alla butiker</option><option value="ICA" ${state.butik === "ICA" ? "selected" : ""}>ICA</option><option value="Willys" ${state.butik === "Willys" ? "selected" : ""}>Willys</option><option value="Hemköp" ${state.butik === "Hemköp" ? "selected" : ""}>Hemköp</option><option value="City Gross" ${state.butik === "City Gross" ? "selected" : ""}>City Gross</option></select>`;
+  return `<label for="obPostcode">Postnummer</label><div class="location-row"><input id="obPostcode" value="${escapeHtml(state.postnummer)}" inputmode="numeric" maxlength="5"><button type="button" id="obLocateBtn">Hitta mig</button></div><p class="ob-error" id="obPostcodeError"></p><label for="obStore">Favoritbutik</label><select id="obStore"><option value="auto" ${state.butik === "auto" ? "selected" : ""}>Välj åt mig</option><option value="alla" ${state.butik === "alla" ? "selected" : ""}>Alla butiker</option><option value="ICA" ${state.butik === "ICA" ? "selected" : ""}>ICA</option><option value="Willys" ${state.butik === "Willys" ? "selected" : ""}>Willys</option><option value="Hemköp" ${state.butik === "Hemköp" ? "selected" : ""}>Hemköp</option><option value="City Gross" ${state.butik === "City Gross" ? "selected" : ""}>City Gross</option></select>`;
 }
 function wireOnboardingStep() {
   document.querySelectorAll("[data-ob-adj]").forEach(button => button.addEventListener("click", () => {

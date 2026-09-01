@@ -69,7 +69,8 @@
       "proteinrikt",
       "kyckling",
       "mealprep",
-      "familj"
+      "familj",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten",
@@ -328,7 +329,8 @@
       "proteinrikt",
       "kyckling",
       "mealprep",
-      "snabbt"
+      "snabbt",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten",
@@ -599,7 +601,8 @@
       "vegetariskt",
       "veganskt",
       "billigt",
-      "mealprep"
+      "mealprep",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten"
@@ -859,7 +862,8 @@
       "proteinrikt",
       "kyckling",
       "snabbt",
-      "mealprep"
+      "mealprep",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten",

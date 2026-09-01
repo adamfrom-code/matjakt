@@ -1490,7 +1490,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
                            else {"ok": False})
             return
         if parsed.path == "/api/health":
-            self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG), "recipeProviders": sorted(RECIPE_SERVICE.providers)}, cache_seconds=900)
+            # recipeCount: ett ensamt tal säger inget om produkten men låter
+            # driftverifiering bakom utvecklingslåset se att en deploy
+            # faktiskt synkade receptbanken.
+            self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG), "recipeProviders": sorted(RECIPE_SERVICE.providers),
+                                 "recipeCount": recipes_api.stats().get("total", 0)}, cache_seconds=900)
             return
         if parsed.path == "/api/admin/primat-status":
             # Never a regular user's endpoint - gated by a separate admin

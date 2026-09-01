@@ -163,6 +163,8 @@ def card(recipe: dict) -> dict:
 # published, and a shelf that would be empty is simply not returned.
 SHELVES = [
     {"key": "nytt", "title": "Nytt i Matjakt", "order": "newest"},
+    {"key": "husmanskost", "title": "Svensk husmanskost", "tags": ["husmanskost"]},
+    {"key": "vardagsmat", "title": "Enkel vardagsmat", "tags": ["vardagsmat"]},
     {"key": "barn", "title": "Barnens favoriter", "tags": ["barn"]},
     {"key": "snabbt", "title": "Under 20 minuter", "maxTime": 20},
     {"key": "billigt", "title": "Under 25 kr/portion", "tags": ["billigt"]},

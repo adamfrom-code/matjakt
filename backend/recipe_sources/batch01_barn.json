@@ -82,7 +82,8 @@
       "familj",
       "husmanskost",
       "kott",
-      "proteinrikt"
+      "proteinrikt",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten",
@@ -183,7 +184,9 @@
       "billigt",
       "kott",
       "proteinrikt",
-      "mealprep"
+      "mealprep",
+      "husmanskost",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten"
@@ -279,7 +282,8 @@
       "barn",
       "familj",
       "kott",
-      "proteinrikt"
+      "proteinrikt",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten",
@@ -358,7 +362,9 @@
       "barn",
       "familj",
       "billigt",
-      "vegetariskt"
+      "vegetariskt",
+      "husmanskost",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten",
@@ -438,7 +444,9 @@
       "barn",
       "familj",
       "billigt",
-      "mealprep"
+      "mealprep",
+      "husmanskost",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten",
@@ -528,7 +536,9 @@
       "familj",
       "billigt",
       "snabbt",
-      "mealprep"
+      "mealprep",
+      "husmanskost",
+      "vardagsmat"
     ],
     "allergens": [
       "gluten",
@@ -816,7 +826,8 @@
       "familj",
       "kyckling",
       "proteinrikt",
-      "mealprep"
+      "mealprep",
+      "vardagsmat"
     ],
     "allergens": [
       "laktos"

@@ -943,7 +943,8 @@
       "fisk",
       "helgmiddag",
       "mealprep",
-      "proteinrikt"
+      "proteinrikt",
+      "husmanskost"
     ],
     "allergens": [
       "fisk",
@@ -1991,7 +1992,8 @@
       "barn",
       "billigt",
       "kott",
-      "mealprep"
+      "mealprep",
+      "husmanskost"
     ],
     "allergens": [
       "gluten",
@@ -2073,7 +2075,8 @@
     "tags": [
       "barn",
       "billigt",
-      "kott"
+      "kott",
+      "husmanskost"
     ],
     "allergens": [
       "laktos"
@@ -2586,7 +2589,8 @@
       "barn",
       "kott",
       "mealprep",
-      "proteinrikt"
+      "proteinrikt",
+      "husmanskost"
     ],
     "allergens": [
       "gluten"
@@ -2928,7 +2932,8 @@
     "tags": [
       "billigt",
       "helgmiddag",
-      "kott"
+      "kott",
+      "husmanskost"
     ],
     "allergens": [
       "laktos"

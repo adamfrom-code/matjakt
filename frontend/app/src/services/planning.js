@@ -48,15 +48,19 @@ export function pickProtein(pool, affinityFn = () => 0) {
 // Cap the search space per generation by keeping the cheapest few recipes from
 // EVERY category (not just globally cheapest), so "balanced"/"protein" still have
 // real cross-category candidates regardless of how large the recipe catalog gets.
-export function limitCandidatePool(recipes, maxPerCategory = 6, maxTotal = 24, key = "proteinkalla", costKey = "inkopspris", minTotal = 0) {
+export function limitCandidatePool(recipes, maxPerCategory = 6, maxTotal = 24, key = "proteinkalla", costKey = "inkopspris", minTotal = 0, rank = () => 0) {
   if (recipes.length <= maxTotal) return recipes;
   const byCategory = {};
   recipes.forEach(recipe => { (byCategory[recipe[key]] ||= []).push(recipe); });
+  // rank före pris: den som anropar kan låta en receptklass (t.ex. enkel
+  // vardagsmat) överleva klippet - priset avgör fortfarande inom klassen,
+  // och budgetlogiken nedströms räknar på ärliga kostnader precis som förut.
+  const order = (a, b) => rank(a) - rank(b) || (a[costKey] || 0) - (b[costKey] || 0);
   let picked = [];
   Object.values(byCategory).forEach(group => {
-    picked.push(...[...group].sort((a, b) => (a[costKey] || 0) - (b[costKey] || 0)).slice(0, maxPerCategory));
+    picked.push(...[...group].sort(order).slice(0, maxPerCategory));
   });
-  if (picked.length > maxTotal) picked = picked.sort((a, b) => (a[costKey] || 0) - (b[costKey] || 0)).slice(0, maxTotal);
+  if (picked.length > maxTotal) picked = picked.sort(order).slice(0, maxTotal);
   // The cap must never starve the week itself. With every candidate sharing
   // one protein source, 6-per-category produced a pool of 6 for a 7-dinner
   // week - C(6,7) is no combos at all, and the planner fell over. Top up
