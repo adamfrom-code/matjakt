@@ -241,6 +241,36 @@ class AccountStore:
             raise AccountError("Ingen prenumeration hittades för det här kontot")
         return row["stripe_customer_id"]
 
+    # ---- Testarfeedback (anonym) -------------------------------------------
+    # Fri text + vilken skärm den skrevs från. INGEN användarkoppling, ingen
+    # IP, inget konto - fem testpersoner ska kunna säga vad som skaver utan
+    # att lämna personuppgifter.
+    MAX_FEEDBACK_CHARS = 2000
+
+    def add_feedback(self, screen: str, text: str):
+        text = (text or "").strip()[: self.MAX_FEEDBACK_CHARS]
+        if not text:
+            raise AccountError("Skriv något först")
+        self._connection.execute(
+            """CREATE TABLE IF NOT EXISTS feedback_notes (
+                   id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   created_at TEXT NOT NULL,
+                   screen TEXT,
+                   text TEXT NOT NULL)""")
+        self._connection.execute(
+            "INSERT INTO feedback_notes (created_at, screen, text) VALUES (?, ?, ?)",
+            (datetime.now(timezone.utc).isoformat(), (screen or "")[:40], text))
+        self._connection.commit()
+
+    def list_feedback(self, limit: int = 200) -> list[dict]:
+        try:
+            rows = self._connection.execute(
+                "SELECT created_at, screen, text FROM feedback_notes ORDER BY id DESC LIMIT ?",
+                (limit,)).fetchall()
+        except Exception:
+            return []
+        return [{"createdAt": r[0], "screen": r[1], "text": r[2]} for r in rows]
+
     def get_synced_state(self, token) -> str | None:
         row = self._session_user_row(token)
         if not row:

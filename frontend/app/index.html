@@ -37,12 +37,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=49">
+  <link rel="stylesheet" href="styles.css?v=50">
 </head>
 <body>
   <div class="phone-shell">
     <header class="topbar">
       <a class="wordmark" href="#" aria-label="Matjakt startsida">Matjakt<span>.</span></a>
+      <button class="feedback-btn" type="button" id="feedbackBtn" aria-label="Tyck till om Matjakt">💬</button>
       <button class="profile-btn" type="button" id="profileBtn" aria-label="Öppna profil och inställningar">MJ</button>
     </header>
 
@@ -292,6 +293,16 @@
   </div>
   <section class="recipe-page" id="recipePage" hidden></section>
 
+  <div class="week-sheet-backdrop" id="feedbackSheet" hidden role="dialog" aria-modal="true" aria-label="Tyck till">
+    <div class="week-sheet-card">
+      <div class="sheet-head"><strong>Tyck till</strong><button type="button" class="modal-close" id="feedbackClose" aria-label="Stäng">×</button></div>
+      <p class="screen-intro">Vad var krångligt, trasigt eller saknades? Skriv precis som du tänker - det skickas anonymt.</p>
+      <textarea id="feedbackText" rows="5" maxlength="2000" placeholder="Jag fattade inte hur man..."></textarea>
+      <button class="btn btn-primary sheet-done" id="feedbackSend">Skicka</button>
+      <p class="feedback-status" id="feedbackStatus" role="status"></p>
+    </div>
+  </div>
+
   <div class="account-modal" id="accountModal" hidden>
     <button class="account-modal-backdrop" type="button" data-account-close aria-label="Stäng"></button>
     <div class="account-modal-card" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
@@ -474,6 +485,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=91"></script>
+  <script type="module" src="app.js?v=92"></script>
 </body>
 </html>

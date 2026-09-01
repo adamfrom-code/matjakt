@@ -2659,6 +2659,29 @@ function refreshAfterSettingsChange() {
   else chooseMenu(false);
 }
 
+$("feedbackBtn").addEventListener("click", () => { $("feedbackSheet").hidden = false; $("feedbackStatus").textContent = ""; $("feedbackText").focus(); });
+$("feedbackClose").addEventListener("click", () => { $("feedbackSheet").hidden = true; });
+$("feedbackSheet").addEventListener("click", event => { if (event.target === $("feedbackSheet")) $("feedbackSheet").hidden = true; });
+$("feedbackSend").addEventListener("click", async () => {
+  const text = $("feedbackText").value.trim();
+  if (!text) { $("feedbackStatus").textContent = "Skriv något först."; return; }
+  $("feedbackSend").disabled = true;
+  try {
+    const screen = ($("top").className.match(/view-(\w+)/) || [])[1] || "";
+    const response = await fetch(`${API_BASE_URL}/feedback`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ screen, text }) });
+    if (!response.ok) throw new Error();
+    $("feedbackText").value = "";
+    $("feedbackStatus").textContent = "Tack! Din feedback är framme.";
+    setTimeout(() => { $("feedbackSheet").hidden = true; }, 1400);
+  } catch {
+    $("feedbackStatus").textContent = "Gick inte att skicka just nu - försök igen.";
+  } finally {
+    $("feedbackSend").disabled = false;
+  }
+});
+
 function openWeekSheet() { $("weekSheet").hidden = false; document.body.style.overflow = "hidden"; }
 function closeWeekSheet() { $("weekSheet").hidden = true; document.body.style.overflow = ""; }
 $("budgetCardBtn").addEventListener("click", openWeekSheet);
@@ -2764,7 +2787,9 @@ $("timeFilter").addEventListener("change", e => { state.maxTid = Number(e.target
 $("proteinFilter").addEventListener("change", e => { state.minProtein = Number(e.target.value); renderRecipes(); });
 $("kcalFilter").addEventListener("change", e => { state.maxKcal = Number(e.target.value); renderRecipes(); });
 $("favoriteFilter").addEventListener("change", e => { state.baraFavoriter = e.target.checked; renderRecipes(); });
-function setView(view) { $("top").className = `app view-${view}`; document.querySelectorAll(".bottom-nav-item").forEach(item => item.classList.toggle("active", item.dataset.view === view)); window.scrollTo({ top: 0, behavior: "smooth" }); }
+function setView(view) { $("top").className = `app view-${view}`;
+  // Grov tratt för testrundorna: en räknare per flikbesök, inget mer.
+  trackEvent(`view_${view}`); document.querySelectorAll(".bottom-nav-item").forEach(item => item.classList.toggle("active", item.dataset.view === view)); window.scrollTo({ top: 0, behavior: "smooth" }); }
 document.querySelectorAll("[data-view]").forEach(item => item.addEventListener("click", () => {
   // Från receptsidan ska ett tryck i menyn landa direkt i rätt flik - inte
   // kräva ett extra "tillbaka" först.

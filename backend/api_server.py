@@ -16,7 +16,7 @@ import os
 import re
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
@@ -107,6 +107,8 @@ ANALYTICS_ALLOWED_EVENTS = frozenset({
     "cta_testa_gratis", "cta_logga_in", "cta_se_hur_det_fungerar", "view_premium",
     "vecka_skapad", "fynd_tillagt", "lista_anvand", "recept_delat",
     "prisfel_rapporterat", "recept_bytt",
+    # Grov tratt: vilken flik nås - visar var testpersonerna stannar.
+    "view_home", "view_week", "view_recipes", "view_basket", "view_pantry",
 })
 CAMPAIGN_CAPABLE_CHAINS = ("Coop", "Hemköp")
 CAMPAIGN_SCAN_INGREDIENTS = ["Kycklingfilé", "Kycklinglårfilé", "Köttfärs", "Biff", "Fläskfilé", "Laxfilé", "Fryst torsk", "Räkor", "Kalvschnitzel", "Falukorv", "Halloumi"]
@@ -1539,6 +1541,23 @@ class ApiHandler(SimpleHTTPRequestHandler):
                                     "schedule": scheduler["schedule"]}
             self.send_json(200, summary, cache_seconds=60)
             return
+        if parsed.path == "/api/admin/testresultat":
+            # Allt Adam behöver se efter en testrunda: fri text-feedbacken
+            # och händelseräknarna, i ett svar. Admin-token, aldrig publikt.
+            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
+                self.send_json(403, {"error": "Admin-token krävs"})
+                return
+            counters = {}
+            for event in sorted(ANALYTICS_ALLOWED_EVENTS):
+                total = 0
+                for days_back in range(14):
+                    day = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%d")
+                    count, _ = KV_CACHE.get("analytics", f"{event}:{day}")
+                    total += count or 0
+                counters[event] = total
+            self.send_json(200, {"feedback": ACCOUNT_STORE.list_feedback(),
+                                 "events14Dagar": counters})
+            return
         if parsed.path == "/api/admin/grocery-import":
             if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
                 self.send_json(403, {"error": "Admin-token krävs"})
@@ -2002,6 +2021,18 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/analytics/event":
             self._handle_analytics_event(payload)
+            return
+        if parsed.path == "/api/feedback":
+            # Anonym testarfeedback. Rate-limitad så den inte blir en
+            # skrivbar soptunna, gated som allt annat under utvecklingen.
+            if self._rate_limit("feedback", self._client_ip()):
+                return
+            try:
+                ACCOUNT_STORE.add_feedback(str((payload or {}).get("screen") or ""),
+                                           str((payload or {}).get("text") or ""))
+                self.send_json(200, {"ok": True})
+            except AccountError as error:
+                self.send_json(400, {"error": str(error)})
             return
         self.send_json(404, {"error": "Okänd endpoint"})
 
