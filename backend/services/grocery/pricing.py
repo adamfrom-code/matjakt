@@ -123,6 +123,9 @@ SNACK_AISLE_INGREDIENTS = {
     # Tortilla chips for a taco bake are bought exactly where the crisps
     # live; that is not a matching error, it is where the shelf is.
     "tortillachips",
+    # Själva tortillabröden står på samma texmex-hylla ("Bröd, chips &
+    # skal") - chips-ordet i hyllnamnet är inte ett matchningsfel.
+    "tortillabrod", "tortilla", "tortillas", "wraps",
 }
 
 # Which departments an ingredient may legitimately come from. An ingredient
@@ -250,6 +253,9 @@ INGREDIENT_DEPARTMENTS = {
     # --- vegetarian
     # Tofu står hos flera kedjor i asiatiska skafferihyllan eller mejerikylen.
     "tofu": {"vegetarian", "pantry", "dairy"},
+    # Rostad lök är en skafferiburk, inte färsk lök - suffixet gissar annars
+    # grönsakshyllan och kryddhyllans burk avvisas.
+    "rostad lök": {"pantry", "produce"},
     "quorn": {"vegetarian", "frozen"},
 }
 
@@ -393,6 +399,9 @@ INGREDIENT_ALIASES = {
     # Butikerna säljer varan som "Kebab Grillad"/"Klassisk Kebab" - ordet
     # kebabkött förekommer knappt i produktnamn.
     "kebabkött": ["kebab"],
+    # Butikerna kallar kryddan "Taco Spice Mix"; tortillabröd-aliasen
+    # fanns redan längre ned.
+    "tacokrydda": ["taco spice mix", "taco spice"],
     "buljong": ["buljongtärning", "fond"],
     # Shelf singular/word-order forms found by probing the live catalogue.
     "rödlök": ["lök röd"],
@@ -577,6 +586,9 @@ INGREDIENT_RULES = {
     # Biff = a beef steak cut. Not roast beef, not the fat-cap trim, not a
     # grill patty, and never another animal.
     "biff": {"exclude": ["rostbiff", "skinka", "fläsk", "kyckling", "kalkon", "vego", "vegansk", "sallad"]},
+    # "Tortilla med/utan Lök" är spansk potatisomelett (färdigrätt) och
+    # tortillachips är snacks - brödet är brödet.
+    "tortillabröd": {"exclude": ["chips", "med lök", "utan lök", "dipp", "corn"]},
     # Bacon är fläsk. Kalkonbacon ligger i samma köttavdelning och vegobacon
     # bredvid - avdelningsspärren hjälper inte, bara namnregeln.
     "bacon": {"exclude": ["kalkon", "vego", "vegansk", "veggie", "tofu", "chips", "snacks", "smak", "krydda", "ost", "dressing"]},

@@ -1,0 +1,968 @@
+[
+  {
+    "id": "blodpudding-lingon",
+    "name": "Blodpudding med bacon och lingon",
+    "description": "Stekt blodpudding med knaprigt bacon, lingonsylt och riven morot. Sveriges billigaste mättande middag.",
+    "servings": 4,
+    "prepTime": 5,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 520,
+      "protein": 18,
+      "carbs": 48,
+      "fat": 28,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Blodpudding",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Bacon",
+        "amount": 140,
+        "unit": "g"
+      },
+      {
+        "name": "Lingonsylt",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Morötter",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Skiva blodpuddingen och stek den knaprig i smör, några minuter per sida.",
+      "Stek baconet knaprigt.",
+      "Riv morötterna grovt.",
+      "Servera blodpuddingen med bacon, riven morot och lingonsylt."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "billigt",
+      "snabbt"
+    ],
+    "allergens": [
+      "gluten"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/4637532/pexels-photo-4637532.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/raw-smoked-sausage-with-grapes-and-bacon-on-plate-4637532/",
+    "imageCredit": "Milan",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Blodpudding med bacon och lingon upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "korvgryta-curry",
+    "name": "Korvgryta med curry",
+    "description": "Snabb gryta på falukorv i mild currysås med ris - vardagsklassikern som räddat oräkneliga tisdagar.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 590,
+      "protein": 18,
+      "carbs": 56,
+      "fat": 33,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Falukorv",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 340,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Curry",
+        "amount": 1,
+        "unit": "msk"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 2.5,
+        "unit": "dl"
+      },
+      {
+        "name": "Tomatpuré",
+        "amount": 1,
+        "unit": "msk"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka riset enligt paketet.",
+      "Strimla falukorven och hacka löken. Stek dem i smör tills korven fått färg.",
+      "Rör i curry och tomatpuré och låt fräsa en minut.",
+      "Häll på grädden och sjud grytan 5-10 minuter. Smaka av och servera med riset."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "billigt",
+      "snabbt"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/5863612/pexels-photo-5863612.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+    "imageCredit": "Rachel Claire",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Korvgryta med curry upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "skink-ostpaj",
+    "name": "Skink- och ostpaj",
+    "description": "Klassisk matpaj med skinka, ost och äggstanning. Servera med en enkel grönsallad - middag och matlåda i ett.",
+    "servings": 4,
+    "prepTime": 20,
+    "cookTime": 35,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 610,
+      "protein": 26,
+      "carbs": 40,
+      "fat": 38,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Vetemjöl",
+        "amount": 3,
+        "unit": "dl"
+      },
+      {
+        "name": "Smör",
+        "amount": 125,
+        "unit": "g"
+      },
+      {
+        "name": "Skinka",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Ägg",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Isbergssallad",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Tomater",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 200 grader. Nyp ihop mjöl, smör och en nypa salt till en deg med ett par matskedar kallt vatten.",
+      "Tryck ut degen i en pajform och förgrädda 10 minuter.",
+      "Strimla skinkan och fördela den med osten i pajskalet.",
+      "Vispa ihop ägg, mjölk, salt och peppar och häll över.",
+      "Grädda cirka 25 minuter tills stanningen stannat och ytan är gyllene. Servera med sallad och tomat."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "vardagsmat",
+      "mealprep",
+      "billigt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/18889312/pexels-photo-18889312.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/blue-tongued-skink-lizard-18889312/",
+    "imageCredit": "Bruno Kraler",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Skink- och ostpaj upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "laxpudding",
+    "name": "Laxpudding med dill",
+    "description": "Klassisk laxpudding med varvad potatis, lax och dill under äggstanning. Serveras med smält smör.",
+    "servings": 4,
+    "prepTime": 20,
+    "cookTime": 45,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 560,
+      "protein": 32,
+      "carbs": 42,
+      "fat": 28,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Laxfilé",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 900,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Ägg",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 3,
+        "unit": "dl"
+      },
+      {
+        "name": "Dill",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Vitpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 200 grader. Koka potatisen nästan mjuk, låt svalna och skiva den.",
+      "Skiva löken och fräs den mjuk. Skär laxen i bitar.",
+      "Varva potatis, lax, lök och rikligt med dill i en smord form. Salta och peppra mellan varven.",
+      "Vispa ihop ägg och mjölk och häll över.",
+      "Grädda cirka 40 minuter tills stanningen stannat. Servera med smält smör och mer dill."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Fisk"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat"
+    ],
+    "allergens": [
+      "fisk",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "pescetariskt",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/14909203/pexels-photo-14909203.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/food-on-plate-14909203/",
+    "imageCredit": "Ömer Kayan",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Laxpudding med dill upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "kycklingcaesar",
+    "name": "Kycklingcaesarsallad",
+    "description": "Krispig romansallad, stekt kyckling, krutonger och parmesan i krämig dressing. Fredagsmiddag utan spis nästan.",
+    "servings": 4,
+    "prepTime": 20,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 540,
+      "protein": 42,
+      "carbs": 28,
+      "fat": 29,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Kycklingfilé",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Romansallad",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Bröd",
+        "amount": 4,
+        "unit": "st"
+      },
+      {
+        "name": "Parmesan",
+        "amount": 60,
+        "unit": "g"
+      },
+      {
+        "name": "Majonnäs",
+        "amount": 1,
+        "unit": "dl"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Citron",
+        "amount": 0.5,
+        "unit": "st"
+      },
+      {
+        "name": "Olivolja",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Tärna brödet, vänd med olja och salt och rosta det gyllene i ugn eller panna.",
+      "Krydda och stek kycklingen genomstekt, låt vila och skiva den.",
+      "Rör ihop majonnäs, pressad vitlök, citronsaft och hälften av parmesanen till dressing.",
+      "Blanda grovt skuren romansallad med dressingen.",
+      "Toppa med kyckling, krutonger och resten av parmesanen."
+    ],
+    "categories": [
+      "Kyckling"
+    ],
+    "tags": [
+      "vardagsmat",
+      "snabbt",
+      "helgmiddag"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg",
+      "fisk"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/36701454/pexels-photo-36701454.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/colorful-tropical-fruit-salad-in-blue-bowl-36701454/",
+    "imageCredit": "Anil  Sharma",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Kycklingcaesarsallad upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "flaskgryta-paprika",
+    "name": "Fläskgryta med paprika",
+    "description": "Mustig gryta på fläskkarré med paprika och en mild tomatig gräddsås. Serveras med ris eller potatis.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 40,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 620,
+      "protein": 33,
+      "carbs": 48,
+      "fat": 33,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Fläskkarré",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Paprika",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Krossade tomater",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Paprikapulver",
+        "amount": 1,
+        "unit": "msk"
+      },
+      {
+        "name": "Ris",
+        "amount": 340,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Tärna karrén och bryn den runt om i smör i en gryta.",
+      "Tillsätt strimlad lök och paprika och fräs några minuter. Rör i paprikapulvret.",
+      "Häll på krossade tomater och låt grytan sjuda under lock cirka 30 minuter.",
+      "Koka riset under tiden.",
+      "Rör i grädden, låt koka ihop och smaka av. Servera med riset."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "mealprep"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/5863612/pexels-photo-5863612.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+    "imageCredit": "Rachel Claire",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Fläskgryta med paprika upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "kottfarsgratang-mos",
+    "name": "Köttfärsgratäng med potatismos",
+    "description": "Kryddig köttfärssås under ett lock av gyllene potatismos och ost. Hela middagen i en form.",
+    "servings": 4,
+    "prepTime": 25,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 610,
+      "protein": 33,
+      "carbs": 50,
+      "fat": 30,
+      "fiber": 5
+    },
+    "ingredients": [
+      {
+        "name": "Nötfärs",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 900,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Morötter",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Krossade tomater",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 225 grader. Koka potatisen och mosa med smör och varm mjölk.",
+      "Bryn färsen med hackad lök och riven morot.",
+      "Tillsätt krossade tomater och låt såsen sjuda 10 minuter. Smaka av ordentligt.",
+      "Lägg färssåsen i en form, bred moset över och strö på osten.",
+      "Gratinera cirka 20 minuter tills ytan är gyllene."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/32039641/pexels-photo-32039641.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/cheesy-vegetable-baked-casserole-in-white-dish-32039641/",
+    "imageCredit": "Sylwester Ficek",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Köttfärsgratäng med potatismos upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "pitepalt",
+    "name": "Pitepalt med fläsk",
+    "description": "Norrländsk klassiker: paltbullar av riven potatis fyllda med rimmat fläsk, serverade med smör och lingon.",
+    "servings": 4,
+    "prepTime": 40,
+    "cookTime": 45,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 640,
+      "protein": 19,
+      "carbs": 78,
+      "fat": 28,
+      "fiber": 6
+    },
+    "ingredients": [
+      {
+        "name": "Potatis",
+        "amount": 1200,
+        "unit": "g"
+      },
+      {
+        "name": "Vetemjöl",
+        "amount": 4,
+        "unit": "dl"
+      },
+      {
+        "name": "Kornmjöl",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Sidfläsk",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Lingonsylt",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Riv den skalade råa potatisen grovt och krama ur vätskan i en handduk.",
+      "Blanda potatisen med mjölsorterna och salt till en fast deg.",
+      "Tärna fläsket. Forma degen till bullar med en klick fläsk i mitten av varje.",
+      "Sjud paltarna i saltat vatten cirka 40 minuter - de är klara när de flutit upp och fått sjuda en stund till.",
+      "Servera rykande varma med smör och lingonsylt."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "helgmiddag",
+      "billigt"
+    ],
+    "allergens": [
+      "gluten"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ]
+  },
+  {
+    "id": "broccoligratang-skinka",
+    "name": "Broccoligratäng med skinka",
+    "description": "Krämig gratäng med broccoli, skinka och ost - barnens smygväg till grönsaker. Serveras med kokt potatis.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 540,
+      "protein": 30,
+      "carbs": 38,
+      "fat": 30,
+      "fiber": 6
+    },
+    "ingredients": [
+      {
+        "name": "Broccoli",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Skinka",
+        "amount": 250,
+        "unit": "g"
+      },
+      {
+        "name": "Crème fraiche",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 1,
+        "unit": "dl"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 200 grader. Koka potatisen.",
+      "Dela broccolin i buketter och förväll dem 2 minuter i saltat vatten.",
+      "Lägg broccoli och strimlad skinka i en smord form.",
+      "Rör ihop crème fraiche och mjölk, häll över och toppa med osten.",
+      "Gratinera cirka 20 minuter tills osten är gyllene. Servera med potatisen."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "vardagsmat",
+      "barn",
+      "snabbt"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/2337842/pexels-photo-2337842.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/baked-lasagna-2337842/",
+    "imageCredit": "Vidal Balielo Jr.",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Broccoligratäng med skinka upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "kottsoppa",
+    "name": "Köttsoppa med rotfrukter",
+    "description": "Klassisk klar köttsoppa på högrev med potatis, morötter och kålrot. Blir bara godare dagen efter.",
+    "servings": 6,
+    "prepTime": 20,
+    "cookTime": 90,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 420,
+      "protein": 32,
+      "carbs": 38,
+      "fat": 15,
+      "fiber": 6
+    },
+    "ingredients": [
+      {
+        "name": "Högrev",
+        "amount": 700,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Morötter",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Kålrot",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Buljong",
+        "amount": 1.5,
+        "unit": "l"
+      },
+      {
+        "name": "Persilja",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Kryddpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Tärna högreven och lägg den i en stor gryta med buljongen. Koka upp och skumma av.",
+      "Tillsätt hela kryddpepparkorn och låt köttet sjuda under lock cirka 1 timme.",
+      "Tärna rotfrukterna och löken, lägg i dem och sjud ytterligare 20-30 minuter tills allt är mjukt.",
+      "Smaka av med salt och toppa med hackad persilja. Servera med bröd."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Soppa"
+    ],
+    "tags": [
+      "husmanskost",
+      "mealprep",
+      "billigt"
+    ],
+    "allergens": [],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt",
+      "laktosfritt"
+    ],
+    "image": "https://images.pexels.com/photos/39019921/pexels-photo-39019921.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-homemade-vegetable-soup-in-bowl-39019921/",
+    "imageCredit": "DΛVΞ GΛRCIΛ",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Köttsoppa med rotfrukter upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "kassler-ananas-gratang",
+    "name": "Kasslergratäng med ananas och ris",
+    "description": "Retroklassikern som vägrar dö: kassler och ananas i currygrädde, gratinerad med ost och serverad med ris.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 640,
+      "protein": 32,
+      "carbs": 58,
+      "fat": 31,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Kassler",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Ananas",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Ris",
+        "amount": 340,
+        "unit": "g"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 3,
+        "unit": "dl"
+      },
+      {
+        "name": "Curry",
+        "amount": 1,
+        "unit": "msk"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 225 grader. Koka riset.",
+      "Skiva kasslern och lägg den i en ugnsform med ananasbitarna.",
+      "Vispa grädden lätt med curry, salt och peppar och bred den över.",
+      "Strö på osten och gratinera cirka 20 minuter tills ytan fått fin färg.",
+      "Servera med riset."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ],
+    "image": "https://images.pexels.com/photos/32039641/pexels-photo-32039641.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/cheesy-vegetable-baked-casserole-in-white-dish-32039641/",
+    "imageCredit": "Sylwester Ficek",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Kasslergratäng med ananas och ris upplagd på tallrik",
+    "imageStatus": "ok"
+  }
+]

@@ -1494,7 +1494,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # driftverifiering bakom utvecklingslåset se att en deploy
             # faktiskt synkade receptbanken.
             self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG), "recipeProviders": sorted(RECIPE_SERVICE.providers),
-                                 "recipeCount": recipes_api.stats().get("total", 0)}, cache_seconds=900)
+                                 "recipeCount": recipes_api.stats().get("total", 0),
+                                 "productCount": grocery_api.database_summary().get("totalProducts", 0)}, cache_seconds=900)
             return
         if parsed.path == "/api/admin/primat-status":
             # Never a regular user's endpoint - gated by a separate admin

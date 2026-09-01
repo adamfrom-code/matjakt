@@ -1,0 +1,1033 @@
+[
+  {
+    "id": "kottfars-tacos",
+    "name": "Tacos med köttfärs",
+    "description": "Fredagsklassikern: kryddig köttfärs, mjuka tortillabröd och skålar med grönsaker som alla fyller själva.",
+    "servings": 4,
+    "prepTime": 15,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 620,
+      "protein": 32,
+      "carbs": 52,
+      "fat": 31,
+      "fiber": 6
+    },
+    "ingredients": [
+      {
+        "name": "Nötfärs",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Tacokrydda",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Tortillabröd",
+        "amount": 8,
+        "unit": "st"
+      },
+      {
+        "name": "Tomater",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Gurka",
+        "amount": 0.5,
+        "unit": "st"
+      },
+      {
+        "name": "Isbergssallad",
+        "amount": 0.5,
+        "unit": "st"
+      },
+      {
+        "name": "Majs",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Crème fraiche",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Olivolja",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Bryn färsen i olja tills den fått fin färg.",
+      "Rör i tacokryddan och en skvätt vatten och låt sjuda några minuter.",
+      "Tärna tomater och gurka, strimla salladen och riv osten om den inte redan är riven.",
+      "Värm tortillabröden enligt paketet.",
+      "Ställ fram allt i skålar och låt var och en bygga sina egna tacos med crème fraiche och majs."
+    ],
+    "categories": [
+      "Helg"
+    ],
+    "tags": [
+      "vardagsmat",
+      "barn",
+      "helgmiddag",
+      "snabbt",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/28895976/pexels-photo-28895976.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-tacos-with-assorted-fillings-and-sauce-28895976/",
+    "imageCredit": "Nano Erdozain",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Tacos med köttfärs upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "kottfarslasagne",
+    "name": "Klassisk köttfärslasagne",
+    "description": "Lasagne med köttfärssås och krämig ostsås mellan pastaplattorna. Görs gärna i dubbel sats - den blir bara bättre dagen efter.",
+    "servings": 6,
+    "prepTime": 30,
+    "cookTime": 35,
+    "difficulty": "medel",
+    "nutrition": {
+      "kcal": 590,
+      "protein": 32,
+      "carbs": 48,
+      "fat": 30,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Nötfärs",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Lasagneplattor",
+        "amount": 250,
+        "unit": "g"
+      },
+      {
+        "name": "Krossade tomater",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Tomatpuré",
+        "amount": 2,
+        "unit": "msk"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 6,
+        "unit": "dl"
+      },
+      {
+        "name": "Vetemjöl",
+        "amount": 3,
+        "unit": "msk"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 200 grader. Bryn färsen med hackad lök och vitlök.",
+      "Tillsätt tomatpuré och krossade tomater och låt köttfärssåsen sjuda 15 minuter. Smaka av.",
+      "Smält smör, vispa i mjöl och späd med mjölk till en slät vit sås. Rör i hälften av osten.",
+      "Varva köttfärssås, lasagneplattor och ostsås i en form. Avsluta med ostsås och resten av osten.",
+      "Grädda cirka 35 minuter tills ytan är gyllene och plattorna mjuka. Låt vila 10 minuter före servering."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Pasta"
+    ],
+    "tags": [
+      "vardagsmat",
+      "barn",
+      "mealprep",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/8023752/pexels-photo-8023752.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/delicious-lasagna-slice-on-a-ceramic-plate-8023752/",
+    "imageCredit": "Mateusz Feliksik",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Klassisk köttfärslasagne upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "korv-med-mos",
+    "name": "Korv med hemlagat potatismos",
+    "description": "Stekt grillkorv med fluffigt hemlagat potatismos och rostad lök. Gatuköksklassikern hemma i köket.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 560,
+      "protein": 17,
+      "carbs": 52,
+      "fat": 32,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Grillkorv",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 900,
+        "unit": "g"
+      },
+      {
+        "name": "Mjölk",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Rostad lök",
+        "amount": 50,
+        "unit": "g"
+      },
+      {
+        "name": "Senap",
+        "amount": 2,
+        "unit": "msk"
+      },
+      {
+        "name": "Ketchup",
+        "amount": 2,
+        "unit": "msk"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Skala och koka potatisen mjuk i saltat vatten.",
+      "Mosa potatisen med smör och varm mjölk till ett fluffigt mos. Smaka av med salt.",
+      "Stek korvarna runt om i lite smör tills de fått fin färg.",
+      "Servera korven på moset med rostad lök, senap och ketchup."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "billigt",
+      "snabbt"
+    ],
+    "allergens": [
+      "laktos",
+      "senap"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ]
+  },
+  {
+    "id": "biff-lindstrom",
+    "name": "Biff à la Lindström",
+    "description": "Färsbiffar med rödbetor, kapris och lök - syrliga, saftiga och klassiska. Serveras med kokt potatis och en stekt ägggula om man vill.",
+    "servings": 4,
+    "prepTime": 20,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 560,
+      "protein": 32,
+      "carbs": 42,
+      "fat": 28,
+      "fiber": 5
+    },
+    "ingredients": [
+      {
+        "name": "Nötfärs",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Rödbetor",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Kapris",
+        "amount": 2,
+        "unit": "msk"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Ägg",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka potatisen mjuk i saltat vatten.",
+      "Finhacka rödbetor, kapris och lök. Blanda med färs, ägg, salt och peppar.",
+      "Forma fyra biffar och stek dem i smör, cirka 3 minuter per sida.",
+      "Servera biffarna med potatis och gärna steksmöret från pannan."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat"
+    ],
+    "allergens": [
+      "ägg",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ]
+  },
+  {
+    "id": "bruna-bonor-flask",
+    "name": "Bruna bönor med stekt fläsk",
+    "description": "Söta och syrliga bruna bönor med knaperstekt rimmat fläsk. En riktig klassiker som kostar väldigt lite.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 30,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 610,
+      "protein": 25,
+      "carbs": 55,
+      "fat": 33,
+      "fiber": 12
+    },
+    "ingredients": [
+      {
+        "name": "Bruna bönor",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Sidfläsk",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Sirap",
+        "amount": 2,
+        "unit": "msk"
+      },
+      {
+        "name": "Ättika",
+        "amount": 1,
+        "unit": "msk"
+      },
+      {
+        "name": "Potatis",
+        "amount": 600,
+        "unit": "g"
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Värm de bruna bönorna i en kastrull och smaka av med sirap och ättika till en söt-syrlig balans.",
+      "Koka potatisen mjuk.",
+      "Skiva fläsket och stek det knaprigt i en torr panna.",
+      "Servera bönorna med fläsket och potatisen."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "billigt"
+    ],
+    "allergens": [],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt",
+      "laktosfritt"
+    ]
+  },
+  {
+    "id": "flaskkotlett-artor",
+    "name": "Stekt fläskkotlett med potatis och ärtor",
+    "description": "Gyllene fläskkotletter med kokt potatis, smörslungade ärtor och steksky. Enkel mat som alltid fungerar.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 580,
+      "protein": 38,
+      "carbs": 42,
+      "fat": 28,
+      "fiber": 6
+    },
+    "ingredients": [
+      {
+        "name": "Fläskkotlett",
+        "amount": 700,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Frysta ärtor",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 1,
+        "unit": "dl"
+      },
+      {
+        "name": "Soja",
+        "amount": 1,
+        "unit": "tsk"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka potatisen mjuk i saltat vatten.",
+      "Salta och peppra kotletterna. Stek dem i smör 3-4 minuter per sida tills de är gyllene och genomstekta.",
+      "Koka upp ärtorna och rör i en klick smör.",
+      "Vispa ur pannan med grädden och sojan till en snabb sky.",
+      "Servera kotletterna med potatis, ärtor och skyn."
+    ],
+    "categories": [
+      "Husmanskost"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "snabbt",
+      "billigt"
+    ],
+    "allergens": [
+      "laktos",
+      "soja"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ]
+  },
+  {
+    "id": "kycklingklubbor-klyftpotatis",
+    "name": "Kycklingklubbor i ugn med klyftpotatis",
+    "description": "Kryddiga kycklingklubbor och klyftpotatis på samma plåt. Billigt, enkelt och något att gnaga på för hela familjen.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 45,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 620,
+      "protein": 38,
+      "carbs": 45,
+      "fat": 31,
+      "fiber": 5
+    },
+    "ingredients": [
+      {
+        "name": "Kycklingklubbor",
+        "amount": 1000,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Paprikapulver",
+        "amount": 1,
+        "unit": "msk"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Crème fraiche",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Gräslök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Olivolja",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Sätt ugnen på 200 grader. Klyfta potatisen.",
+      "Vänd klubbor och potatisklyftor med olja, paprikapulver, pressad vitlök, salt och peppar på en plåt.",
+      "Rosta i ugnen cirka 45 minuter tills kycklingen är genomstekt och potatisen gyllene.",
+      "Rör ihop crème fraiche med hackad gräslök och en nypa salt till en snabb dipp.",
+      "Servera direkt från plåten med dippen."
+    ],
+    "categories": [
+      "Kyckling"
+    ],
+    "tags": [
+      "vardagsmat",
+      "barn",
+      "billigt",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt"
+    ]
+  },
+  {
+    "id": "pasta-carbonara",
+    "name": "Pasta carbonara på svenskt vis",
+    "description": "Krämig carbonara som den lagas i svenska vardagskök - med bacon, grädde och parmesan. Klar på en kvart.",
+    "servings": 4,
+    "prepTime": 5,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 650,
+      "protein": 26,
+      "carbs": 62,
+      "fat": 33,
+      "fiber": 3
+    },
+    "ingredients": [
+      {
+        "name": "Spaghetti",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Bacon",
+        "amount": 280,
+        "unit": "g"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Ägg",
+        "amount": 2,
+        "unit": "st"
+      },
+      {
+        "name": "Parmesan",
+        "amount": 60,
+        "unit": "g"
+      },
+      {
+        "name": "Vitlök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka spaghettin al dente i saltat vatten.",
+      "Strimla och stek baconet knaprigt. Tillsätt pressad vitlök sista minuten.",
+      "Sänk värmen, häll i grädden och låt sjuda ihop någon minut.",
+      "Ta pannan från värmen. Vänd ner pastan, äggulorna och riven parmesan och rör snabbt till en krämig sås.",
+      "Toppa med rikligt av svartpeppar och mer parmesan."
+    ],
+    "categories": [
+      "Pasta"
+    ],
+    "tags": [
+      "vardagsmat",
+      "snabbt",
+      "barn",
+      "Familjefavorit"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "ägg"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/5640045/pexels-photo-5640045.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/pasta-with-green-leaf-and-brown-bread-on-white-ceramic-plate-5640045/",
+    "imageCredit": "Shameel mukkath",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Pasta carbonara på svenskt vis upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "pasta-skinksas",
+    "name": "Pasta med krämig skinksås",
+    "description": "Snabbaste vardagsräddaren: strimlad skinka i gräddig sås med ärtor, serverad över nykokt pasta.",
+    "servings": 4,
+    "prepTime": 5,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 580,
+      "protein": 27,
+      "carbs": 60,
+      "fat": 26,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Pasta",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Skinka",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 2.5,
+        "unit": "dl"
+      },
+      {
+        "name": "Frysta ärtor",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Gul lök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Riven ost",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka pastan enligt paketet.",
+      "Fräs hackad lök mjuk i smör. Strimla skinkan och låt den följa med en minut.",
+      "Häll i grädden, tillsätt ärtorna och låt såsen sjuda några minuter.",
+      "Rör i osten, smaka av med salt och peppar och vänd ner pastan."
+    ],
+    "categories": [
+      "Pasta"
+    ],
+    "tags": [
+      "vardagsmat",
+      "snabbt",
+      "barn",
+      "billigt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos"
+    ],
+    "dietFlags": [
+      "blandkost"
+    ],
+    "image": "https://images.pexels.com/photos/1438672/pexels-photo-1438672.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/food-photography-of-pasta-1438672/",
+    "imageCredit": "Engin Akyurt",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Pasta med krämig skinksås upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "tonfiskpasta",
+    "name": "Tonfiskpasta med citron",
+    "description": "Skafferiklassikern: pasta med tonfisk, crème fraiche och citron. Middag på kvarten av det som redan finns hemma.",
+    "servings": 4,
+    "prepTime": 5,
+    "cookTime": 15,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 520,
+      "protein": 30,
+      "carbs": 58,
+      "fat": 18,
+      "fiber": 4
+    },
+    "ingredients": [
+      {
+        "name": "Pasta",
+        "amount": 400,
+        "unit": "g"
+      },
+      {
+        "name": "Tonfisk",
+        "amount": 300,
+        "unit": "g"
+      },
+      {
+        "name": "Crème fraiche",
+        "amount": 2,
+        "unit": "dl"
+      },
+      {
+        "name": "Citron",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Rödlök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Frysta ärtor",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Olivolja",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka pastan enligt paketet, lägg i ärtorna sista minuten.",
+      "Fräs finhackad rödlök mjuk i olja.",
+      "Rör i crème fraiche, avrunnen tonfisk och rivet citronskal. Värm försiktigt.",
+      "Vänd ner pasta och ärtor, smaka av med citronsaft, salt och peppar."
+    ],
+    "categories": [
+      "Pasta",
+      "Fisk"
+    ],
+    "tags": [
+      "vardagsmat",
+      "snabbt",
+      "billigt"
+    ],
+    "allergens": [
+      "gluten",
+      "laktos",
+      "fisk"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "pescetariskt"
+    ],
+    "image": "https://images.pexels.com/photos/5864362/pexels-photo-5864362.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/spaghetti-on-blue-ceramic-plate-5864362/",
+    "imageCredit": "Rachel Claire",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Tonfiskpasta med citron upplagd på tallrik",
+    "imageStatus": "ok"
+  },
+  {
+    "id": "fiskbullar-dillsas",
+    "name": "Fiskbullar i dillsås med potatis",
+    "description": "Fiskbullar i len dillsås med kokt potatis och ärtor - snäll, billig och snabb barndomsklassiker.",
+    "servings": 4,
+    "prepTime": 5,
+    "cookTime": 20,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 470,
+      "protein": 24,
+      "carbs": 50,
+      "fat": 18,
+      "fiber": 5
+    },
+    "ingredients": [
+      {
+        "name": "Fiskbullar",
+        "amount": 750,
+        "unit": "g"
+      },
+      {
+        "name": "Potatis",
+        "amount": 800,
+        "unit": "g"
+      },
+      {
+        "name": "Frysta ärtor",
+        "amount": 200,
+        "unit": "g"
+      },
+      {
+        "name": "Vispgrädde",
+        "amount": 1,
+        "unit": "dl"
+      },
+      {
+        "name": "Dill",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Smör",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Vitpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Koka potatisen mjuk i saltat vatten.",
+      "Värm fiskbullarna i sin sås i en kastrull, rör i grädden och låt sjuda försiktigt.",
+      "Koka upp ärtorna.",
+      "Smaka av såsen med hackad dill, salt och vitpeppar och servera med potatis och ärtor."
+    ],
+    "categories": [
+      "Husmanskost",
+      "Fisk"
+    ],
+    "tags": [
+      "husmanskost",
+      "vardagsmat",
+      "barn",
+      "billigt",
+      "snabbt"
+    ],
+    "allergens": [
+      "fisk",
+      "laktos",
+      "gluten"
+    ],
+    "dietFlags": [
+      "blandkost",
+      "pescetariskt"
+    ]
+  },
+  {
+    "id": "kycklingsoppa-ris",
+    "name": "Kycklingsoppa med ris och grönsaker",
+    "description": "Mild, matig kycklingsoppa med ris, morötter och purjolök. Tröstmat när vädret eller humöret är grått.",
+    "servings": 4,
+    "prepTime": 10,
+    "cookTime": 25,
+    "difficulty": "lätt",
+    "nutrition": {
+      "kcal": 450,
+      "protein": 34,
+      "carbs": 48,
+      "fat": 12,
+      "fiber": 5
+    },
+    "ingredients": [
+      {
+        "name": "Kycklingfilé",
+        "amount": 500,
+        "unit": "g"
+      },
+      {
+        "name": "Ris",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Morötter",
+        "amount": 3,
+        "unit": "st"
+      },
+      {
+        "name": "Purjolök",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Buljong",
+        "amount": 1.2,
+        "unit": "l"
+      },
+      {
+        "name": "Persilja",
+        "amount": 1,
+        "unit": "st"
+      },
+      {
+        "name": "Olivolja",
+        "pantryStaple": true
+      },
+      {
+        "name": "Salt",
+        "pantryStaple": true
+      },
+      {
+        "name": "Svartpeppar",
+        "pantryStaple": true
+      }
+    ],
+    "instructions": [
+      "Tärna kycklingen och skär morötter och purjolök i skivor.",
+      "Fräs grönsakerna mjuka i olja i en stor kastrull.",
+      "Häll på buljongen, tillsätt riset och koka 10 minuter.",
+      "Lägg i kycklingen och sjud ytterligare 8-10 minuter tills allt är klart.",
+      "Smaka av med salt och peppar och toppa med hackad persilja."
+    ],
+    "categories": [
+      "Kyckling",
+      "Soppa"
+    ],
+    "tags": [
+      "vardagsmat",
+      "barn",
+      "billigt"
+    ],
+    "allergens": [],
+    "dietFlags": [
+      "blandkost",
+      "glutenfritt",
+      "laktosfritt"
+    ],
+    "image": "https://images.pexels.com/photos/8696571/pexels-photo-8696571.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/soup-in-white-ceramic-bowl-8696571/",
+    "imageCredit": "Farhad Ibrahimzade",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Kycklingsoppa med ris och grönsaker upplagd på tallrik",
+    "imageStatus": "ok"
+  }
+]

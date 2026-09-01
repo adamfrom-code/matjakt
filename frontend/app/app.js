@@ -397,7 +397,45 @@ function recipeAffinity(recipe) {
   if (!fb) return 0;
   return (fb.liked ? 3 : 0) + Math.min(fb.cooked || 0, 3) * 1.5 - Math.min(fb.skipped || 0, 3);
 }
-const comboAffinity = combo => combo.reduce((sum, recipe) => sum + recipeAffinity(recipe), 0);
+// Vilken sorts rätt ett recept ÄR, för variationsräkningen. Grov och
+// medveten indelning: korv, pasta, soppa, gratäng, gröt/pannkaka - resten
+// faller tillbaka på proteinkällan. Grovheten är poängen: två korvrätter är
+// "samma sorts middag" för en familj oavsett om den ena är gryta.
+function dishFamily(recipe) {
+  const name = (recipe.namn || "").toLowerCase();
+  const cats = (recipe.kategorier || recipe.categories || []).map(c => String(c).toLowerCase());
+  if (/korv|falukorv|isterband/.test(name)) return "korv";
+  if (/pasta|makaron|spaghetti|lasagne|carbonara/.test(name) || cats.includes("pasta")) return "pasta";
+  if (/soppa/.test(name) || cats.includes("soppa")) return "soppa";
+  if (/gratäng|pudding|låda/.test(name)) return "gratäng";
+  if (/pannkak|gröt|plätt|raggmunk|palt|kroppkak|våffl/.test(name)) return "pannkaka";
+  if (/tacos|fajitas|burrito|quesadilla/.test(name)) return "tacos";
+  return recipe.proteinkalla || "övrigt";
+}
+
+// Variation i veckan: en normal familjevecka ska inte bli fyra korvrätter
+// eller samma protein varje dag. Straffet växer kvadratiskt med varje
+// UPPREPNING utöver den andra av samma sorts rätt eller protein - två
+// pastarätter i veckan är vardag, fyra är tjat. Priserna röras aldrig:
+// detta viktar bara VALET mellan kombinationer vars kostnader förblir
+// ärliga.
+function comboVarietyPenalty(combo) {
+  const families = {};
+  const proteins = {};
+  combo.forEach(recipe => {
+    const family = dishFamily(recipe);
+    families[family] = (families[family] || 0) + 1;
+    const protein = recipe.proteinkalla || "övrigt";
+    proteins[protein] = (proteins[protein] || 0) + 1;
+  });
+  let penalty = 0;
+  Object.values(families).forEach(n => { if (n > 2) penalty += (n - 2) ** 2 * 4; });
+  Object.values(proteins).forEach(n => { if (n > 2) penalty += (n - 2) ** 2 * 3; });
+  return penalty;
+}
+
+const comboAffinity = combo => combo.reduce((sum, recipe) => sum + recipeAffinity(recipe), 0)
+  - comboVarietyPenalty(combo);
 // combinations() is C(pool, count), so a fixed pool size makes the search
 // blow up as the week gets longer: with the previous fixed pool of 24 a
 // 7-dinner week evaluated 346,104 combos against 10,626 for 4 - measured at
@@ -431,7 +469,12 @@ function evaluateCombos(recipes, count, branch) {
   // får vara med och tävla.
   const everydayRank = recipe => {
     const tags = recipe.taggar || recipe.tags || [];
-    return tags.includes("vardagsmat") || tags.includes("husmanskost") ? 0 : 1;
+    // Heltalsdelen är klassen (vardagsmat före övrigt); decimalen är slump
+    // INOM klassen. Utan den var urvalet helt deterministiskt - "Skapa ny
+    // vecka" gav exakt samma vecka varje gång. Slumpen väljer bara vilka
+    // kandidater av samma klass som får tävla; budget och kostnader räknas
+    // oförändrat på riktiga priser nedströms.
+    return (tags.includes("vardagsmat") || tags.includes("husmanskost") ? 0 : 10) + Math.random();
   };
   const pool = limitCandidatePool(recipes, 6, CANDIDATE_POOL_FOR_COUNT[count] || 24,
                                   "proteinkalla", "inkopspris", count + 1, everydayRank);

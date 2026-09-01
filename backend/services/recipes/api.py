@@ -105,6 +105,26 @@ def bootstrap_if_empty() -> int:
         store.set_meta("source_fingerprint", fingerprint)
     finally:
         store.close()
+    # BESKÄRNING: källfilerna är sanningen även om vad som INTE finns. Ett
+    # recept som tagits bort ur källorna (t.ex. en upptäckt dublett) ska
+    # lämna banken - annars ligger det kvar i produktionens databas för
+    # alltid, eftersom synken bara upsertar.
+    source_ids = set()
+    for path in sorted(RECIPE_SOURCE_DIR.glob("*.json")):
+        try:
+            for recipe in _json.loads(path.read_text(encoding="utf-8")):
+                if recipe.get("id"):
+                    source_ids.add(recipe["id"])
+        except (OSError, ValueError):
+            continue
+    if source_ids:
+        store = open_store()
+        try:
+            for row in store.connection.execute("SELECT id FROM recipes"):
+                if row["id"] not in source_ids:
+                    store.delete(row["id"])
+        finally:
+            store.close()
     clear_cache()
     return imported
 

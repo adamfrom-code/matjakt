@@ -9,11 +9,11 @@
     "cookTime": 35,
     "totalTime": 40,
     "nutrition": {
-      "kcal": 316.0,
-      "protein": 34.0,
-      "carbs": 31.0,
-      "fat": 4.0,
-      "fiber": null
+      "kcal": 540,
+      "protein": 38,
+      "carbs": 34,
+      "fat": 28,
+      "fiber": 6
     },
     "ingredients": [
       {
@@ -863,103 +863,6 @@
     "imageCredit": "Anthony Rahayel",
     "imageLicense": "Pexels License",
     "imageAlt": "Fetagryta med kikärtor upplagd på tallrik",
-    "imageStatus": "ok"
-  },
-  {
-    "id": "fiskgratang",
-    "slug": "fiskgratang-med-rakor-och-dill",
-    "name": "Fiskgratäng med räkor och dill",
-    "description": "Torsk och räkor under krämigt dilltäcke, gratinerad gyllene. Serveras med potatis.",
-    "servings": 4,
-    "prepTime": 10,
-    "cookTime": 25,
-    "totalTime": 45,
-    "nutrition": {
-      "kcal": 220.0,
-      "protein": 33.0,
-      "carbs": 2.0,
-      "fat": 8.0,
-      "fiber": null
-    },
-    "ingredients": [
-      {
-        "name": "Fryst torsk",
-        "amount": 500.0,
-        "unit": "g",
-        "normalizedId": "fryst-torsk"
-      },
-      {
-        "name": "Räkor",
-        "amount": 200.0,
-        "unit": "g",
-        "normalizedId": "rakor"
-      },
-      {
-        "name": "Dill",
-        "amount": 1.0,
-        "unit": "st",
-        "normalizedId": "dill"
-      },
-      {
-        "name": "Grädde",
-        "amount": 200.0,
-        "unit": "g",
-        "normalizedId": "gradde"
-      },
-      {
-        "name": "Smör",
-        "normalizedId": "smor",
-        "pantryStaple": true
-      },
-      {
-        "name": "Citron",
-        "normalizedId": "citron",
-        "pantryStaple": true
-      },
-      {
-        "name": "Salt",
-        "normalizedId": "salt",
-        "pantryStaple": true
-      },
-      {
-        "name": "Peppar",
-        "normalizedId": "peppar",
-        "pantryStaple": true
-      }
-    ],
-    "instructions": [
-      "Sätt ugnen på 200 grader.",
-      "Lägg den tinade torsken i en smord form. Salta.",
-      "Rör ihop grädde och hackad dill och häll över fisken.",
-      "Gratinera i 20-25 minuter tills fisken är genomkokt.",
-      "Strö över räkorna de sista minuterna så de bara blir varma.",
-      "Servera med kokt potatis och citron."
-    ],
-    "categories": [
-      "Fisk"
-    ],
-    "tags": [
-      "barn",
-      "fisk",
-      "helgmiddag",
-      "mealprep",
-      "proteinrikt",
-      "husmanskost"
-    ],
-    "allergens": [
-      "fisk",
-      "laktos",
-      "skaldjur"
-    ],
-    "dietFlags": [
-      "pescetariskt"
-    ],
-    "image": "https://images.pexels.com/photos/2337842/pexels-photo-2337842.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-    "imageSource": "Pexels",
-    "imageSourceUrl": "https://www.pexels.com/photo/baked-lasagna-2337842/",
-    "imageCredit": "Vidal Balielo Jr.",
-    "imageLicense": "Pexels License",
-    "imageAlt": "Fiskgratäng med räkor och dill upplagd på tallrik",
     "imageStatus": "ok"
   },
   {
@@ -4056,85 +3959,6 @@
     "imageLicense": "Pexels License",
     "imageAlt": "Ugnsbakad fetaost-pasta upplagd på tallrik",
     "imageStatus": "ok"
-  },
-  {
-    "id": "lax",
-    "slug": "ugnsbakad-lax-med-potatis",
-    "name": "Ugnsbakad lax med potatis",
-    "description": "Ugnsbakad lax med kokt potatis, citron och dill. Enklaste vägen till en riktig fiskmiddag.",
-    "servings": 4,
-    "prepTime": 10,
-    "cookTime": 20,
-    "totalTime": 35,
-    "nutrition": {
-      "kcal": 488.0,
-      "protein": 34.0,
-      "carbs": 36.0,
-      "fat": 22.0,
-      "fiber": null
-    },
-    "ingredients": [
-      {
-        "name": "Laxfilé",
-        "amount": 600.0,
-        "unit": "g",
-        "normalizedId": "laxfile"
-      },
-      {
-        "name": "Potatis",
-        "amount": 800.0,
-        "unit": "g",
-        "normalizedId": "potatis"
-      },
-      {
-        "name": "Citron",
-        "amount": 1.0,
-        "unit": "st",
-        "normalizedId": "citron"
-      },
-      {
-        "name": "Dill",
-        "amount": 1.0,
-        "unit": "st",
-        "normalizedId": "dill"
-      },
-      {
-        "name": "Salt",
-        "normalizedId": "salt",
-        "pantryStaple": true
-      },
-      {
-        "name": "Olja",
-        "normalizedId": "olja",
-        "pantryStaple": true
-      }
-    ],
-    "instructions": [
-      "Sätt ugnen på 175 grader och koka potatisen.",
-      "Lägg laxen i en form, salta och lägg citronskivor över.",
-      "Baka i 18-22 minuter tills laxen precis går isär.",
-      "Servera med potatis, hackad dill och en citronklyfta."
-    ],
-    "categories": [
-      "Fisk"
-    ],
-    "tags": [
-      "fisk",
-      "proteinrikt"
-    ],
-    "allergens": [
-      "fisk"
-    ],
-    "dietFlags": [
-      "pescetariskt"
-    ],
-    "imageAlt": "Ugnsbakad lax med potatis upplagd på tallrik",
-    "imageStatus": "ok",
-    "image": "https://images.pexels.com/photos/14542171/pexels-photo-14542171.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-    "imageSource": "Pexels",
-    "imageSourceUrl": "https://www.pexels.com/photo/salmon-14542171/",
-    "imageCredit": "Jacob  Yavin",
-    "imageLicense": "Pexels License"
   },
   {
     "id": "ugnstorsk",
