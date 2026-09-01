@@ -2454,7 +2454,6 @@ function showUndoToast(message, onUndo) {
 function updateSummary() {
   $("summaryPeople").textContent = plural(state.personer, "person", "personer");
   $("summaryMeals").textContent = plural(state.middagar, "middag", "middagar");
-  $("summaryBudgetInline").textContent = money(state.budget);
   const hasWeek = selectedRecipes().length > 0;
   $("generateBtnLabel").textContent = hasWeek ? "Öppna veckan" : "Skapa min vecka";
   $("newWeekBtn").hidden = !hasWeek;
