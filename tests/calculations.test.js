@@ -68,3 +68,26 @@ test("skafferi och paket räknar i samma basenheter", () => {
   // Allt hemma: 0 paket
   assert.equal(packagesFor(item, { "Grädde": 500 }), 0);
 });
+
+// ---- RELEASE GATE (2026-09-02): 224 g fiskpinnar blev 224 paket ------------
+// Vikt/volym utan känd förpackning får ALDRIG räknas som styck. null betyder
+// "antal osäkert" - raden hålls utanför summor och certain-räknaren.
+test("vikt utan paketinfo ger null - aldrig gram-som-paket", () => {
+  const item = { namn: "Fiskpinnar", total: 224, unit: "g", baseAmount: 224, family: "vikt" };
+  assert.equal(packagesFor(item, {}), null);
+  const live = calculateLiveShoppingTotal([item], { Fiskpinnar: { pris_kr: 29.29 } }, {});
+  assert.equal(live.cost, 0, "6 561 kr-buggen: osäker rad får inte kosta");
+  assert.equal(live.certain, 0, "osäker rad är inte 'säkert pris'");
+  assert.equal(live.matched, 1, "produkten är ändå identifierad");
+});
+
+test("styck utan paketinfo räknas fortfarande (1 vara = 1 st)", () => {
+  const item = { namn: "Gurka", total: 2, unit: "st", baseAmount: 2, family: "styck:st" };
+  assert.equal(packagesFor(item, {}), 2);
+});
+
+test("persilja 10 g mot 50 g-paket är 1 förpackning", () => {
+  const item = { namn: "Persilja", total: 10, unit: "g", baseAmount: 10,
+                 family: "vikt", package: { amount: 50, unit: "g" } };
+  assert.equal(packagesFor(item, {}), 1);
+});

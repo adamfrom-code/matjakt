@@ -1835,6 +1835,8 @@ function chainShoppingListMarkup(data, branch = null) {
       ? `<small class="chain-item-compare">${item.packages} × ${money(item.unitPrice)}</small>` : "";
     const priceBlock = missing
       ? `<small class="chain-item-compare">Pris saknas</small>`
+      : item.totalCost == null
+      ? `<small class="chain-item-compare">Antal osäkert · ${item.unitPrice != null ? `${money(item.unitPrice)}/förp` : "pris per förpackning okänt"}</small>`
       : `<strong>${money(item.totalCost)}</strong>${perUnit}${onCampaign
           ? `<small class="chain-item-campaign">Kampanj ${money(item.campaignPrice)}/st</small><small class="chain-item-was">Ord. ${money(item.regularPrice)}/st</small>`
           : item.regularPrice != null ? `<small class="chain-item-compare">${money(item.regularPrice)}/st</small>` : ""}${
@@ -1999,7 +2001,7 @@ function databaseShoppingItemMarkup(item, match) {
   // storlekar jämförbara - hyllkantens viktigaste siffra.
   const comparePrice = match.comparisonPrice != null ? `${money(match.comparisonPrice)}/${/l|ml|dl/.test(match.packageUnit || "") ? "l" : "kg"}` : "";
   const meta = escapeHtml([match.brand, neededText, countText, comparePrice].filter(Boolean).join(" · ") || "1 st");
-  return `<label class="shopping-item ${checked ? "checked" : ""}"><input type="checkbox" data-shopping="${escapeHtml(item.namn)}" ${checked ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${escapeHtml(match.productName)}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong>${money(match.totalCost)}</strong>${inexact}</span><button type="button" class="shopping-remove" data-remove-item="${escapeHtml(item.namn)}" aria-label="Ta bort ${escapeHtml(item.namn)} från listan">×</button></label>`;
+  return `<label class="shopping-item ${checked ? "checked" : ""}"><input type="checkbox" data-shopping="${escapeHtml(item.namn)}" ${checked ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${escapeHtml(match.productName)}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong>${match.totalCost != null ? money(match.totalCost) : ""}</strong>${inexact}</span><button type="button" class="shopping-remove" data-remove-item="${escapeHtml(item.namn)}" aria-label="Ta bort ${escapeHtml(item.namn)} från listan">×</button></label>`;
 }
 
 function shoppingItemMarkup(item) {

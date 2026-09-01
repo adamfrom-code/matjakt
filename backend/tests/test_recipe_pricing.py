@@ -269,15 +269,28 @@ class PricingEngineTest(unittest.TestCase):
         self.assertEqual(result["totalCheckoutCost"], 0)
         self.assertEqual(result["coveragePercent"], 0)
 
-    def test_incomparable_units_are_flagged_not_silently_wrong(self):
-        """Recipe in 'st', package in 'g': we still price one package, but the
-        result says the packaging maths wasn't exact."""
+    def test_piece_weights_make_st_against_grams_exact(self):
+        """RELEASE GATE 2026-09-02: "2 st citroner" mot ett 100 g-paket räknas
+        numera EXAKT via styckvikttabellen (citron 120 g/st -> 240 g -> 3
+        paket) - beslutad köksstandard, inte gissning per produkt."""
         self._add("Citron Klass 1", 5.0, 100, "g")
         result = self.engine.price_list(
             [{"name": "Citron", "amount": 2, "unit": "st"}], "Willys", self.store.id)
         item = result["matchedItems"][0]
+        self.assertTrue(item["exactPackaging"])
+        self.assertEqual(item["packages"], 3)
+        self.assertEqual(item["totalCost"], 15.0)
+
+    def test_st_outside_the_piece_table_stays_an_estimate(self):
+        """Ingredienser UTAN styckvikt förblir ärliga estimat - utanför
+        säkra totaler, aldrig gram-som-paket."""
+        self._add("Halloumi 200g", 30.0, 200, "g")
+        result = self.engine.price_list(
+            [{"name": "Halloumi", "amount": 1, "unit": "st"}], "Willys", self.store.id)
+        item = result["matchedItems"][0]
         self.assertFalse(item["exactPackaging"])
         self.assertEqual(item["packages"], 1)
+        self.assertIsNone(item.get("totalCost"), "osäker rad får ingen radtotal")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,482 @@
+recept	ingrediens	behov	enhet	kedja	produkt	kategori	paket	paketenhet	antal	exakt	radpris	flagga
+aggrora-bacon-bonor	Smör	20.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+aggrora-bacon-bonor	Smör	20.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+aggrora-bacon-bonor	Smör	20.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+artsoppa-vegetarisk	Buljongtärning	3.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+artsoppa-vegetarisk	Buljongtärning	3.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+artsoppa-vegetarisk	Buljongtärning	3.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+bankebiff	Smör	100.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+bankebiff	Smör	100.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+bankebiff	Smör	100.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+bankebiff	Romansallad	1.0	st	Willys	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.9	estimat 
+bankebiff	Romansallad	1.0	st	Hemköp	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.95	estimat 
+bankebiff	Romansallad	1.0	st	City Gross	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	18.95	estimat 
+biff-bearnaise-vardag	Majonnäs	1.5	dl	Willys	Gurkmajonnäs Amerikansk Dressing	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	240.0	g	1	False	16.5	estimat 
+biff-bearnaise-vardag	Majonnäs	1.5	dl	Hemköp	Lättmajonnäs	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	275.0	g	1	False	17.93	estimat 
+biff-bearnaise-vardag	Dragon	10.0	g	Willys	Dragon Citron Lätt Crème Fraiche 11%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.5	estimat 
+biff-bearnaise-vardag	Dragon	10.0	g	Hemköp	Dragon Citron Lätt Crème Fraiche 11%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	18.38	estimat 
+biff-bearnaise-vardag	Dragon	10.0	g	City Gross	Dragon Citron Lätt Crème Fraiche 11%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.95	estimat 
+biff-rodvinssas	Buljongtärning	1.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+biff-rodvinssas	Buljongtärning	1.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+biff-rodvinssas	Buljongtärning	1.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+biff-sotpotatis	Smör	60.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+biff-sotpotatis	Smör	60.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+biff-sotpotatis	Smör	60.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+biffgraddtimjan	Timjan	1.0	st	Willys	Timjan	Frukt & Grönt > Kryddor & smaksättare > Kryddor & örter	15.0	g	1	False	13.9	estimat 
+biffgraddtimjan	Timjan	1.0	st	Hemköp	Timjan	Frukt & Grönt > Kryddor & smaksättare > Kryddor & örter	15.0	g	1	False	15.09	estimat 
+biffgryta-rotter	Buljongtärning	2.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+biffgryta-rotter	Buljongtärning	2.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+biffgryta-rotter	Buljongtärning	2.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+bonburgare	Romansallad	1.0	st	Willys	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.9	estimat 
+bonburgare	Romansallad	1.0	st	Hemköp	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.95	estimat 
+bonburgare	Romansallad	1.0	st	City Gross	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	18.95	estimat 
+bonburgare	Majonnäs	1.0	dl	Willys	Gurkmajonnäs Amerikansk Dressing	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	240.0	g	1	False	16.5	estimat 
+bonburgare	Majonnäs	1.0	dl	Hemköp	Lättmajonnäs	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	275.0	g	1	False	17.93	estimat 
+broccolisoppa	Buljongtärning	2.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+broccolisoppa	Buljongtärning	2.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+broccolisoppa	Buljongtärning	2.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+carbonara	Parmesan	100.0	g	Willys	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.5	estimat 
+carbonara	Parmesan	100.0	g	Hemköp	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	18.38	estimat 
+carbonara	Parmesan	100.0	g	City Gross	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.95	estimat 
+chevrasallad-ronnbar	Romansallad	1.0	st	Willys	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.9	estimat 
+chevrasallad-ronnbar	Romansallad	1.0	st	Hemköp	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.95	estimat 
+chevrasallad-ronnbar	Romansallad	1.0	st	City Gross	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	18.95	estimat 
+citronflaskfile	Timjan	1.0	st	Willys	Timjan	Frukt & Grönt > Kryddor & smaksättare > Kryddor & örter	15.0	g	1	False	13.9	estimat 
+citronflaskfile	Timjan	1.0	st	Hemköp	Timjan	Frukt & Grönt > Kryddor & smaksättare > Kryddor & örter	15.0	g	1	False	15.09	estimat 
+citronkyckling	Timjan	1.0	st	Willys	Timjan	Frukt & Grönt > Kryddor & smaksättare > Kryddor & örter	15.0	g	1	False	13.9	estimat 
+citronkyckling	Timjan	1.0	st	Hemköp	Timjan	Frukt & Grönt > Kryddor & smaksättare > Kryddor & örter	15.0	g	1	False	15.09	estimat 
+falafel-pitabrod	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	estimat 
+falafel-pitabrod	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	smakords_misstanke 
+falafel-pitabrod	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	estimat 
+falafel-pitabrod	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	smakords_misstanke 
+falafel-pitabrod	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	estimat 
+falafel-pitabrod	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	smakords_misstanke 
+fetagryta	Basilika	1.0	st	Willys	Basilika Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	8.9	estimat 
+fetagryta	Basilika	1.0	st	Hemköp	Basilika Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	11.3	estimat 
+fetapasta	Pasta	300.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+fetapasta	Pasta	300.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+fetapasta	Pasta	300.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+fishtacos	Majonnäs	1.0	dl	Willys	Gurkmajonnäs Amerikansk Dressing	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	240.0	g	1	False	16.5	estimat 
+fishtacos	Majonnäs	1.0	dl	Hemköp	Lättmajonnäs	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	275.0	g	1	False	17.93	estimat 
+fishtacos	Grekisk yoghurt	1.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	estimat 
+fishtacos	Grekisk yoghurt	1.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	smakords_misstanke 
+fishtacos	Grekisk yoghurt	1.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	estimat 
+fishtacos	Grekisk yoghurt	1.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	smakords_misstanke 
+fishtacos	Grekisk yoghurt	1.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	estimat 
+fishtacos	Grekisk yoghurt	1.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	smakords_misstanke 
+fiskbullar-dillsas	Dill	1.0	st	Willys	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	8.9	estimat 
+fiskbullar-dillsas	Dill	1.0	st	Hemköp	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	11.3	estimat 
+fiskpasta	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+fiskpasta	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+fiskpasta	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+fiskpasta	Crème fraiche	200.0	g	Willys	Crème Fraiche 32%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	11.5	estimat 
+fiskpasta	Crème fraiche	200.0	g	Hemköp	Crème Fraiche 32%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	13.39	estimat 
+fiskpasta	Crème fraiche	200.0	g	City Gross	Crème Fraiche 32%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	10.95	estimat 
+fisksoppa-saffran	Buljongtärning	2.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+fisksoppa-saffran	Buljongtärning	2.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+fisksoppa-saffran	Buljongtärning	2.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+flaskfilerotmos	Timjan	1.0	st	Willys	Timjan	Frukt & Grönt > Kryddor & smaksättare > Kryddor & örter	15.0	g	1	False	13.9	estimat 
+flaskfilerotmos	Timjan	1.0	st	Hemköp	Timjan	Frukt & Grönt > Kryddor & smaksättare > Kryddor & örter	15.0	g	1	False	15.09	estimat 
+flaskpannkaka	Vetemjöl	3.0	dl	Willys	Vetemjöl	Skafferi > Bakning > Mjöl	1.0	kg	1	False	13.15	estimat 
+flaskpannkaka	Vetemjöl	3.0	dl	Hemköp	Vetemjöl	Skafferi > Bakning > Mjöl	2.0	kg	1	False	16.98	estimat 
+flaskpannkaka	Vetemjöl	3.0	dl	City Gross	Vetemjöl	Skafferi > Bakning > Mjöl	1.0	kg	1	False	14.1	estimat 
+flasktomatpasta	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+flasktomatpasta	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+flasktomatpasta	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+flasktomatpasta	Basilika	1.0	st	Willys	Basilika Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	8.9	estimat 
+flasktomatpasta	Basilika	1.0	st	Hemköp	Basilika Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	11.3	estimat 
+flygande-jakob	Chilisås	1.0	dl	Willys	Chilisås Vitlök	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	305.0	g	1	False	19.9	estimat 
+flygande-jakob	Chilisås	1.0	dl	Hemköp	Chilisås Vitlök	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	305.0	g	1	False	21.72	estimat 
+flygande-jakob	Chilisås	1.0	dl	City Gross	Chilisås Hot	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	330.0	g	1	False	23.6	estimat 
+gronsakspaj	Smör	125.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+gronsakspaj	Smör	125.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+gronsakspaj	Smör	125.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+gronsakspaj	Romansallad	1.0	st	Willys	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.9	estimat 
+gronsakspaj	Romansallad	1.0	st	Hemköp	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.95	estimat 
+gronsakspaj	Romansallad	1.0	st	City Gross	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	18.95	estimat 
+gronsakssoppa-med-pasta	Pasta	150.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+gronsakssoppa-med-pasta	Pasta	150.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+gronsakssoppa-med-pasta	Pasta	150.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+gronsakssoppa-med-pasta	Buljongtärning	2.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+gronsakssoppa-med-pasta	Buljongtärning	2.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+gronsakssoppa-med-pasta	Buljongtärning	2.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+gronsakssoppa-med-pasta	Parmesan	40.0	g	Willys	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.5	estimat 
+gronsakssoppa-med-pasta	Parmesan	40.0	g	Hemköp	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	18.38	estimat 
+gronsakssoppa-med-pasta	Parmesan	40.0	g	City Gross	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.95	estimat 
+halloumibowl	Yoghurt	200.0	g	Willys	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
+halloumibowl	Yoghurt	200.0	g	Hemköp	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	17.85	smakords_misstanke 
+halloumibowl	Yoghurt	200.0	g	City Gross	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
+halloumiburgare	Majonnäs	1.0	dl	Willys	Gurkmajonnäs Amerikansk Dressing	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	240.0	g	1	False	16.5	estimat 
+halloumiburgare	Majonnäs	1.0	dl	Hemköp	Lättmajonnäs	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	275.0	g	1	False	17.93	estimat 
+halloumiburgare	Romansallad	1.0	st	Willys	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.9	estimat 
+halloumiburgare	Romansallad	1.0	st	Hemköp	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.95	estimat 
+halloumiburgare	Romansallad	1.0	st	City Gross	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	18.95	estimat 
+halloumipasta	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+halloumipasta	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+halloumipasta	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+halloumipasta	Basilika	1.0	st	Willys	Basilika Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	8.9	estimat 
+halloumipasta	Basilika	1.0	st	Hemköp	Basilika Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	11.3	estimat 
+hamburgare-klyftpotatis	Hamburgerbröd	4.0	st	Willys	Hamburgerbröd 6-pack	Bröd & Kakor > Fastfoodbröd > Hamburgerbröd	300.0	g	1	False	17.9	estimat 
+hamburgare-klyftpotatis	Hamburgerbröd	4.0	st	Hemköp	Hamburgerbröd 4-pack	Bröd & kakor > Bröd > Färskt bröd	344.0	g	1	False	18.88	estimat 
+hamburgare-klyftpotatis	Hamburgerbröd	4.0	st	City Gross	Hamburgerbröd 6-pack	Bröd & Kakor > Fastfoodbröd > Hamburgerbröd	300.0	g	1	False	18.85	estimat 
+hamburgare-klyftpotatis	Isbergssallad	1.0	st	Hemköp	Isbergssallad Eko Klass 1	Frukt & grönt > Grönsaker > Sallader & salladspåsar	250.0	g	1	False	47.5	estimat 
+hamburgare-klyftpotatis	Ketchup	4.0	msk	Willys	Ketchup	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	560.0	g	1	False	18.83	estimat 
+hamburgare-klyftpotatis	Ketchup	4.0	msk	Hemköp	Ketchup	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	560.0	g	1	False	18.88	estimat 
+hamburgare-klyftpotatis	Ketchup	4.0	msk	City Gross	Ketchup Original	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	500.0	g	1	False	23.6	estimat 
+hamburgare-klyftpotatis	Majonnäs	4.0	msk	Willys	Gurkmajonnäs Amerikansk Dressing	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	240.0	g	1	False	16.5	estimat 
+hamburgare-klyftpotatis	Majonnäs	4.0	msk	Hemköp	Lättmajonnäs	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	275.0	g	1	False	17.93	estimat 
+helstekt-kyckling-rotfrukter	Kyckling hel	1.0	st	Willys	Kyckling Hel Färsk Sverige	Kött, chark & fågel > Fågel > Färsk fågel	1.35	kg	1	False	57.9	estimat 
+helstekt-kyckling-rotfrukter	Kyckling hel	1.0	st	Hemköp	Kyckling Hel Färsk Sverige	Kött, chark & fågel > Fågel > Färsk fågel	1.35	kg	1	False	58.3	estimat 
+helstekt-kyckling-rotfrukter	Kyckling hel	1.0	st	City Gross	Kyckling Hel Färsk Sverige	Kött, chark & fågel > Fågel > Färsk fågel	1.35	kg	1	False	58.95	estimat 
+hemmagjord-pizza	Vetemjöl	6.0	dl	Willys	Vetemjöl	Skafferi > Bakning > Mjöl	1.0	kg	1	False	13.15	estimat 
+hemmagjord-pizza	Vetemjöl	6.0	dl	Hemköp	Vetemjöl	Skafferi > Bakning > Mjöl	2.0	kg	1	False	16.98	estimat 
+hemmagjord-pizza	Vetemjöl	6.0	dl	City Gross	Vetemjöl	Skafferi > Bakning > Mjöl	1.0	kg	1	False	14.1	estimat 
+isterband-dillstuvad	Isterband	4.0	st	Willys	Isterband	Kött, chark & fågel > Korv > Kött- & fläskkorv mm	300.0	g	1	False	22.61	estimat 
+isterband-dillstuvad	Isterband	4.0	st	Hemköp	Isterband	Kött, chark & fågel > Korv > Kött- & fläskkorv mm	300.0	g	1	False	23.61	estimat 
+isterband-dillstuvad	Dill	1.0	st	Willys	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	8.9	estimat 
+isterband-dillstuvad	Dill	1.0	st	Hemköp	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	11.3	estimat 
+kaldolmar	Vitkål	1.0	st	Willys	Vitkål Sverige Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	2.0	kg	1	False	9.9	estimat 
+kaldolmar	Vitkål	1.0	st	Hemköp	Vitkål Sverige Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	2.0	kg	1	False	17.98	estimat 
+kalpudding	Smör	40.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+kalpudding	Smör	40.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+kalpudding	Smör	40.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+kassler-ananas-gratang	Ananas	1.0	st	Willys	Ananas	Frukt & Grönt > Frukt > Exotisk frukt	1.0	kg	1	False	26.9	estimat 
+kassler-ananas-gratang	Ananas	1.0	st	Hemköp	Ananas	Frukt & Grönt > Frukt > Exotisk frukt	1.0	kg	1	False	26.95	estimat 
+kassler-ananas-gratang	Ananas	1.0	st	City Gross	Ananas	Frukt & Grönt > Frukt > Exotisk frukt	1.0	kg	1	False	29.95	estimat 
+kebabgryta	Kebabkött	400.0	g	Willys	Kebab Mild Sås	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	335.0	ml	1	False	28.29	estimat 
+kebabgryta	Kebabkött	400.0	g	Hemköp	Kebab Mild Sås	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	335.0	ml	1	False	32.13	estimat 
+kikartscurry-protein	Currypasta	2.0	msk	Hemköp	Red Curry Paste Currypasta	Skafferi > Asien > Övrigt asien	50.0	g	1	True	14.14	smakords_misstanke 
+korvgratang	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+korvgratang	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+korvgratang	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+korvgryta-krossade-tomater	Pasta	400.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+korvgryta-krossade-tomater	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+korvgryta-krossade-tomater	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+kottbullar-potatismos	Smör	40.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+kottbullar-potatismos	Smör	40.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+kottbullar-potatismos	Smör	40.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+kottfars-tacos	Tacokrydda	1.0	st	Willys	Spice Mix Taco	Skafferi > Texmex > Kryddmix	40.0	g	1	False	7.47	estimat 
+kottfars-tacos	Tacokrydda	1.0	st	Hemköp	Spice Mix Taco	Skafferi > Texmex > Kryddmix	40.0	g	1	False	8.95	estimat 
+kottfars-tacos	Tacokrydda	1.0	st	City Gross	Taco Spice Mix Hot Cayenne	Skafferi > Texmex > Kryddmix	28.0	g	1	False	13.2	estimat 
+kottfars-tacos	Tortillabröd	8.0	st	Willys	Tortilla 8-pack	Skafferi > Texmex > Bröd, chips & skal	320.0	g	1	False	11.26	estimat 
+kottfars-tacos	Tortillabröd	8.0	st	Hemköp	Tortilla 8-pack	Skafferi > Texmex > Bröd, chips & skal	320.0	g	1	False	13.2	estimat 
+kottfars-tacos	Tortillabröd	8.0	st	City Gross	Tortilla 8-pack	Skafferi > Texmex > Bröd, chips & skal	320.0	g	1	False	11.5	estimat 
+kottfars-tacos	Isbergssallad	0.5	st	Hemköp	Isbergssallad Eko Klass 1	Frukt & grönt > Grönsaker > Sallader & salladspåsar	250.0	g	1	False	47.5	estimat 
+kottfarssas	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+kottfarssas	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+kottfarssas	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+kottfarssas	Basilika	1.0	st	Willys	Basilika Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	8.9	estimat 
+kottfarssas	Basilika	1.0	st	Hemköp	Basilika Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	11.3	estimat 
+kottfarssoppa	Buljongtärning	2.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+kottfarssoppa	Buljongtärning	2.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+kottfarssoppa	Buljongtärning	2.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+kottsoppa	Persilja	1.0	st	Willys	Persilja Finhackad Fryst	Fryst > Grönsaker & kryddor > Kryddor	50.0	g	1	False	8.9	estimat 
+kottsoppa	Persilja	1.0	st	Hemköp	Persilja Finhackad Fryst	Fryst > Grönsaker & kryddor > Kryddor	50.0	g	1	False	11.3	estimat 
+kraftig-omelett-lunch	Romansallad	1.0	st	Willys	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.9	estimat 
+kraftig-omelett-lunch	Romansallad	1.0	st	Hemköp	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.95	estimat 
+kraftig-omelett-lunch	Romansallad	1.0	st	City Gross	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	18.95	estimat 
+kramig-kycklingpasta	Pasta	350.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+kramig-kycklingpasta	Pasta	350.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+kramig-kycklingpasta	Pasta	350.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+kramig-kycklingpasta	Parmesan	50.0	g	Willys	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.5	estimat 
+kramig-kycklingpasta	Parmesan	50.0	g	Hemköp	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	18.38	estimat 
+kramig-kycklingpasta	Parmesan	50.0	g	City Gross	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.95	estimat 
+krogarens-makaroner	Ketchup	0.5	dl	Willys	Ketchup	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	560.0	g	1	False	18.83	estimat 
+krogarens-makaroner	Ketchup	0.5	dl	Hemköp	Ketchup	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	560.0	g	1	False	18.88	estimat 
+krogarens-makaroner	Ketchup	0.5	dl	City Gross	Ketchup Original	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	500.0	g	1	False	23.6	estimat 
+kroppkakor	Vetemjöl	3.0	dl	Willys	Vetemjöl	Skafferi > Bakning > Mjöl	1.0	kg	1	False	13.15	estimat 
+kroppkakor	Vetemjöl	3.0	dl	Hemköp	Vetemjöl	Skafferi > Bakning > Mjöl	2.0	kg	1	False	16.98	estimat 
+kroppkakor	Vetemjöl	3.0	dl	City Gross	Vetemjöl	Skafferi > Bakning > Mjöl	1.0	kg	1	False	14.1	estimat 
+krämig-svampasta	Pasta	400.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+krämig-svampasta	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+krämig-svampasta	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+krämig-svampasta	Parmesan	60.0	g	Willys	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.5	estimat 
+krämig-svampasta	Parmesan	60.0	g	Hemköp	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	18.38	estimat 
+krämig-svampasta	Parmesan	60.0	g	City Gross	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.95	estimat 
+kyckling-caesarsallad	Romansallad	2.0	st	Willys	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.9	estimat 
+kyckling-caesarsallad	Romansallad	2.0	st	Hemköp	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.95	estimat 
+kyckling-caesarsallad	Romansallad	2.0	st	City Gross	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	18.95	estimat 
+kyckling-caesarsallad	Parmesan	60.0	g	Willys	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.5	estimat 
+kyckling-caesarsallad	Parmesan	60.0	g	Hemköp	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	18.38	estimat 
+kyckling-caesarsallad	Parmesan	60.0	g	City Gross	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.95	estimat 
+kyckling-caesarsallad	Majonnäs	1.0	dl	Willys	Gurkmajonnäs Amerikansk Dressing	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	240.0	g	1	False	16.5	estimat 
+kyckling-caesarsallad	Majonnäs	1.0	dl	Hemköp	Lättmajonnäs	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	275.0	g	1	False	17.93	estimat 
+kyckling-currysas-ris	Äpple	1.0	st	Willys	Äpple Röda Klass 1	Frukt & Grönt > Frukt > Äpplen	None	None	1	False	15.9	estimat 
+kyckling-currysas-ris	Äpple	1.0	st	Willys	Äpple Röda Klass 1	Frukt & Grönt > Frukt > Äpplen	None	None	1	False	15.9	otolkad_paketstorlek 
+kyckling-currysas-ris	Äpple	1.0	st	Hemköp	Äpple Röda Klass 1	Frukt & Grönt > Frukt > Äpplen	None	None	1	False	16.04	estimat 
+kyckling-currysas-ris	Äpple	1.0	st	Hemköp	Äpple Röda Klass 1	Frukt & Grönt > Frukt > Äpplen	None	None	1	False	16.04	otolkad_paketstorlek 
+kyckling-gnocchipanna	Parmesan	50.0	g	Willys	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.5	estimat 
+kyckling-gnocchipanna	Parmesan	50.0	g	Hemköp	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	18.38	estimat 
+kyckling-gnocchipanna	Parmesan	50.0	g	City Gross	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.95	estimat 
+kyckling-parmesan-pasta-bulk	Pasta	450.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+kyckling-parmesan-pasta-bulk	Pasta	450.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+kyckling-parmesan-pasta-bulk	Pasta	450.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+kyckling-parmesan-pasta-bulk	Parmesan	80.0	g	Willys	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.5	estimat 
+kyckling-parmesan-pasta-bulk	Parmesan	80.0	g	Hemköp	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	18.38	estimat 
+kyckling-parmesan-pasta-bulk	Parmesan	80.0	g	City Gross	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.95	estimat 
+kyckling-parmesan-pasta-bulk	Buljongtärning	1.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+kyckling-parmesan-pasta-bulk	Buljongtärning	1.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+kyckling-parmesan-pasta-bulk	Buljongtärning	1.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+kyckling-pesto-pasta	Pasta	400.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+kyckling-pesto-pasta	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+kyckling-pesto-pasta	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+kyckling-pesto-pasta	Parmesan	50.0	g	Willys	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.5	estimat 
+kyckling-pesto-pasta	Parmesan	50.0	g	Hemköp	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	18.38	estimat 
+kyckling-pesto-pasta	Parmesan	50.0	g	City Gross	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.95	estimat 
+kyckling-rod-curry	Röd currypasta	40.0	g	Hemköp	Red Curry Paste Currypasta	Skafferi > Asien > Övrigt asien	50.0	g	1	True	14.14	smakords_misstanke 
+kyckling-shawarma-bowl	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	estimat 
+kyckling-shawarma-bowl	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	smakords_misstanke 
+kyckling-shawarma-bowl	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	estimat 
+kyckling-shawarma-bowl	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	smakords_misstanke 
+kyckling-shawarma-bowl	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	estimat 
+kyckling-shawarma-bowl	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	smakords_misstanke 
+kyckling-tikka	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	estimat 
+kyckling-tikka	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	smakords_misstanke 
+kyckling-tikka	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	estimat 
+kyckling-tikka	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	smakords_misstanke 
+kyckling-tikka	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	estimat 
+kyckling-tikka	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	smakords_misstanke 
+kycklingcaesar	Romansallad	2.0	st	Willys	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.9	estimat 
+kycklingcaesar	Romansallad	2.0	st	Hemköp	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.95	estimat 
+kycklingcaesar	Romansallad	2.0	st	City Gross	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	18.95	estimat 
+kycklingcaesar	Bröd	4.0	st	Willys	Majsbröd Glutenfri	Skafferi > Glutenfritt > Glutenfria bröd, kex & kakor	70.0	g	1	False	5.5	estimat 
+kycklingcaesar	Bröd	4.0	st	Hemköp	Majsbröd Glutenfri	Skafferi > Glutenfritt > Glutenfria bröd, kex & kakor	70.0	g	1	False	6.15	estimat 
+kycklingcaesar	Bröd	4.0	st	City Gross	Majsbröd Glutenfri	Skafferi > Glutenfritt > Glutenfria bröd, kex & kakor	70.0	g	1	False	5.6	estimat 
+kycklingcaesar	Parmesan	60.0	g	Willys	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.5	estimat 
+kycklingcaesar	Parmesan	60.0	g	Hemköp	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	18.38	estimat 
+kycklingcaesar	Parmesan	60.0	g	City Gross	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.95	estimat 
+kycklingcaesar	Majonnäs	1.0	dl	Willys	Gurkmajonnäs Amerikansk Dressing	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	240.0	g	1	False	16.5	estimat 
+kycklingcaesar	Majonnäs	1.0	dl	Hemköp	Lättmajonnäs	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	275.0	g	1	False	17.93	estimat 
+kycklingklubbor-bbq	Ketchup	1.0	dl	Willys	Ketchup	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	560.0	g	1	False	18.83	estimat 
+kycklingklubbor-bbq	Ketchup	1.0	dl	Hemköp	Ketchup	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	560.0	g	1	False	18.88	estimat 
+kycklingklubbor-bbq	Ketchup	1.0	dl	City Gross	Ketchup Original	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	500.0	g	1	False	23.6	estimat 
+kycklingklubbor-bbq	Romansallad	1.0	st	Willys	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.9	estimat 
+kycklingklubbor-bbq	Romansallad	1.0	st	Hemköp	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.95	estimat 
+kycklingklubbor-bbq	Romansallad	1.0	st	City Gross	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	18.95	estimat 
+kycklingklubbor-klyftpotatis	Gräslök	1.0	st	Willys	Gräslök Finhackad Fryst	Fryst > Grönsaker & kryddor > Kryddor	50.0	g	1	False	8.9	estimat 
+kycklingklubbor-klyftpotatis	Gräslök	1.0	st	Hemköp	Gräslök Finhackad Fryst	Fryst > Grönsaker & kryddor > Kryddor	50.0	g	1	False	11.3	estimat 
+kycklingklubbor-klyftpotatis	Gräslök	1.0	st	City Gross	Gräslök Finhackad Fryst	Fryst > Grönsaker & kryddor > Kryddor	50.0	g	1	False	9.25	estimat 
+kycklingmatvete	Yoghurt	200.0	g	Willys	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
+kycklingmatvete	Yoghurt	200.0	g	Hemköp	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	17.85	smakords_misstanke 
+kycklingmatvete	Yoghurt	200.0	g	City Gross	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
+kycklingsoppa-nudlar	Buljongtärning	3.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+kycklingsoppa-nudlar	Buljongtärning	3.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+kycklingsoppa-nudlar	Buljongtärning	3.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+kycklingsoppa-ris	Persilja	1.0	st	Willys	Persilja Finhackad Fryst	Fryst > Grönsaker & kryddor > Kryddor	50.0	g	1	False	8.9	estimat 
+kycklingsoppa-ris	Persilja	1.0	st	Hemköp	Persilja Finhackad Fryst	Fryst > Grönsaker & kryddor > Kryddor	50.0	g	1	False	11.3	estimat 
+kycklingwraps-lunch	Romansallad	1.0	st	Willys	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.9	estimat 
+kycklingwraps-lunch	Romansallad	1.0	st	Hemköp	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.95	estimat 
+kycklingwraps-lunch	Romansallad	1.0	st	City Gross	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	18.95	estimat 
+kycklingwraps-lunch	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	estimat 
+kycklingwraps-lunch	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	smakords_misstanke 
+kycklingwraps-lunch	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	estimat 
+kycklingwraps-lunch	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	smakords_misstanke 
+kycklingwraps-lunch	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	estimat 
+kycklingwraps-lunch	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	smakords_misstanke 
+lammfarsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	estimat 
+lammfarsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	smakords_misstanke 
+lammfarsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	estimat 
+lammfarsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	smakords_misstanke 
+lammfarsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	estimat 
+lammfarsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	smakords_misstanke 
+lantlig-potatissoppa-purjolok	Buljongtärning	2.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+lantlig-potatissoppa-purjolok	Buljongtärning	2.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+lantlig-potatissoppa-purjolok	Buljongtärning	2.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+lasagne-klassisk	Smör	50.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+lasagne-klassisk	Smör	50.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+lasagne-klassisk	Smör	50.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+lax-kall-dillsas	Dill	1.0	st	Willys	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	8.9	estimat 
+lax-kall-dillsas	Dill	1.0	st	Hemköp	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	11.3	estimat 
+lax-pasta-bulk	Pasta	450.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+lax-pasta-bulk	Pasta	450.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+lax-pasta-bulk	Pasta	450.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+laxfile-quinoa	Crème fraiche	150.0	g	Willys	Crème Fraiche 32%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	11.5	estimat 
+laxfile-quinoa	Crème fraiche	150.0	g	Hemköp	Crème Fraiche 32%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	13.39	estimat 
+laxfile-quinoa	Crème fraiche	150.0	g	City Gross	Crème Fraiche 32%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	10.95	estimat 
+laxpoke	Majonnäs	0.5	dl	Willys	Gurkmajonnäs Amerikansk Dressing	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	240.0	g	1	False	16.5	estimat 
+laxpoke	Majonnäs	0.5	dl	Hemköp	Lättmajonnäs	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	275.0	g	1	False	17.93	estimat 
+laxpudding	Dill	1.0	st	Willys	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	8.9	estimat 
+laxpudding	Dill	1.0	st	Hemköp	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	11.3	estimat 
+laxsallad	Dill	1.0	st	Willys	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	8.9	estimat 
+laxsallad	Dill	1.0	st	Hemköp	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	11.3	estimat 
+linsbolognese	Buljongtärning	2.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+linsbolognese	Buljongtärning	2.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+linsbolognese	Buljongtärning	2.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+linsbolognese-proteinrik	Pasta	400.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+linsbolognese-proteinrik	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+linsbolognese-proteinrik	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+makaroner-kottbullar	Ketchup	6.0	msk	Willys	Ketchup	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	560.0	g	1	False	18.83	estimat 
+makaroner-kottbullar	Ketchup	6.0	msk	Hemköp	Ketchup	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	560.0	g	1	False	18.88	estimat 
+makaroner-kottbullar	Ketchup	6.0	msk	City Gross	Ketchup Original	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	500.0	g	1	False	23.6	estimat 
+morotsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	estimat 
+morotsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	smakords_misstanke 
+morotsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	estimat 
+morotsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	smakords_misstanke 
+morotsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	estimat 
+morotsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	smakords_misstanke 
+morotssoppa-ingefara	Buljongtärning	2.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+morotssoppa-ingefara	Buljongtärning	2.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+morotssoppa-ingefara	Buljongtärning	2.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+panerad-flundra-ugn	Parmesan	50.0	g	Willys	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.5	estimat 
+panerad-flundra-ugn	Parmesan	50.0	g	Hemköp	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	18.38	estimat 
+panerad-flundra-ugn	Parmesan	50.0	g	City Gross	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.95	estimat 
+pannkakor	Smör	50.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+pannkakor	Smör	50.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+pannkakor	Smör	50.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+pasta-carbonara	Parmesan	60.0	g	Willys	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.5	estimat 
+pasta-carbonara	Parmesan	60.0	g	Hemköp	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	18.38	estimat 
+pasta-carbonara	Parmesan	60.0	g	City Gross	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.95	estimat 
+pasta-skinksas	Pasta	400.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+pasta-skinksas	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+pasta-skinksas	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+pasta-tomatsas-vitlok	Pasta	400.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+pasta-tomatsas-vitlok	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+pasta-tomatsas-vitlok	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+pastagratang	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+pastagratang	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+pastagratang	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+pastasallad-kyckling-lunch	Pasta	350.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+pastasallad-kyckling-lunch	Pasta	350.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+pastasallad-kyckling-lunch	Pasta	350.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+pitepalt	Vetemjöl	4.0	dl	Willys	Vetemjöl	Skafferi > Bakning > Mjöl	1.0	kg	1	False	13.15	estimat 
+pitepalt	Vetemjöl	4.0	dl	Hemköp	Vetemjöl	Skafferi > Bakning > Mjöl	2.0	kg	1	False	16.98	estimat 
+pitepalt	Vetemjöl	4.0	dl	City Gross	Vetemjöl	Skafferi > Bakning > Mjöl	1.0	kg	1	False	14.1	estimat 
+pitepalt	Kornmjöl	2.0	dl	Willys	Kornmjöl	Skafferi > Bakning > Mjöl	1.5	kg	1	False	19.9	estimat 
+pitepalt	Kornmjöl	2.0	dl	Hemköp	Kornmjöl	Skafferi > Bakning > Mjöl	1.5	kg	1	False	28.34	estimat 
+pitepalt	Kornmjöl	2.0	dl	City Gross	Kornmjöl	Skafferi > Bakning > Mjöl	1.5	kg	1	False	24.55	estimat 
+potatisgratang-skinka	Smör	20.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+potatisgratang-skinka	Smör	20.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+potatisgratang-skinka	Smör	20.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+pulled-chicken-tacos	Ketchup	1.0	dl	Willys	Ketchup	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	560.0	g	1	False	18.83	estimat 
+pulled-chicken-tacos	Ketchup	1.0	dl	Hemköp	Ketchup	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	560.0	g	1	False	18.88	estimat 
+pulled-chicken-tacos	Ketchup	1.0	dl	City Gross	Ketchup Original	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	500.0	g	1	False	23.6	estimat 
+pyttipanna	Smör	40.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+pyttipanna	Smör	40.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+pyttipanna	Smör	40.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+rakpasta-vitlok	Chili	1.0	st	Willys	Chili Cheese Pan Pizza Fryst	Fryst > Färdigmat > Pizza, paj & piroger	170.0	g	1	False	12.2	estimat 
+rakpasta-vitlok	Chili	1.0	st	Hemköp	Chili Cheese Pan Pizza Fryst	Fryst > Färdigmat > Pizza, paj & piroger	170.0	g	1	False	12.25	estimat 
+rakpasta-vitlok	Chili	1.0	st	City Gross	Chili Mayo med Paprika	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	300.0	ml	1	False	24.55	estimat 
+raksallad	Dill	1.0	st	Willys	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	8.9	estimat 
+raksallad	Dill	1.0	st	Hemköp	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	11.3	estimat 
+raksallad-avokado	Romansallad	1.0	st	Willys	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.9	estimat 
+raksallad-avokado	Romansallad	1.0	st	Hemköp	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	14.95	estimat 
+raksallad-avokado	Romansallad	1.0	st	City Gross	Romansallad Klass 1	Frukt & Grönt > Grönsaker > Sallad & Kål	200.0	g	1	False	18.95	estimat 
+raksallad-avokado	Majonnäs	1.0	dl	Willys	Gurkmajonnäs Amerikansk Dressing	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	240.0	g	1	False	16.5	estimat 
+raksallad-avokado	Majonnäs	1.0	dl	Hemköp	Lättmajonnäs	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	275.0	g	1	False	17.93	estimat 
+raksallad-avokado	Chilisås	0.5	dl	Willys	Chilisås Vitlök	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	305.0	g	1	False	19.9	estimat 
+raksallad-avokado	Chilisås	0.5	dl	Hemköp	Chilisås Vitlök	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	305.0	g	1	False	21.72	estimat 
+raksallad-avokado	Chilisås	0.5	dl	City Gross	Chilisås Hot	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	330.0	g	1	False	23.6	estimat 
+risgrynsgrot-lordag	Äpple	3.0	st	Willys	Äpple Röda Klass 1	Frukt & Grönt > Frukt > Äpplen	None	None	1	False	15.9	estimat 
+risgrynsgrot-lordag	Äpple	3.0	st	Willys	Äpple Röda Klass 1	Frukt & Grönt > Frukt > Äpplen	None	None	1	False	15.9	otolkad_paketstorlek 
+risgrynsgrot-lordag	Äpple	3.0	st	Hemköp	Äpple Röda Klass 1	Frukt & Grönt > Frukt > Äpplen	None	None	1	False	16.04	estimat 
+risgrynsgrot-lordag	Äpple	3.0	st	Hemköp	Äpple Röda Klass 1	Frukt & Grönt > Frukt > Äpplen	None	None	1	False	16.04	otolkad_paketstorlek 
+rostbiff-potatissallad	Rostbiff	400.0	g	Willys	Rostbiff i Skivor Sverige	Kött, chark & fågel > Kött > Nöt & kalv	350.0	g	2	True	538.0	rad_over_500 538.0 kr
+rostbiff-potatissallad	Rostbiff	400.0	g	City Gross	Rostbiff Grillad	Manuell delikatess > Chark > CHARK LÖSVIKT, ROSTBIFF GRILLAD	150.0	g	3	True	1125.0	rad_over_1000 1125.0 kr
+rostbiff-potatissallad	Majonnäs	0.5	dl	Willys	Gurkmajonnäs Amerikansk Dressing	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	240.0	g	1	False	16.5	estimat 
+rostbiff-potatissallad	Majonnäs	0.5	dl	Hemköp	Lättmajonnäs	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	275.0	g	1	False	17.93	estimat 
+scampi	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+scampi	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+scampi	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+sjomansbiff	Persilja	1.0	st	Willys	Persilja Finhackad Fryst	Fryst > Grönsaker & kryddor > Kryddor	50.0	g	1	False	8.9	estimat 
+sjomansbiff	Persilja	1.0	st	Hemköp	Persilja Finhackad Fryst	Fryst > Grönsaker & kryddor > Kryddor	50.0	g	1	False	11.3	estimat 
+skink-ostpaj	Vetemjöl	3.0	dl	Willys	Vetemjöl	Skafferi > Bakning > Mjöl	1.0	kg	1	False	13.15	estimat 
+skink-ostpaj	Vetemjöl	3.0	dl	Hemköp	Vetemjöl	Skafferi > Bakning > Mjöl	2.0	kg	1	False	16.98	estimat 
+skink-ostpaj	Vetemjöl	3.0	dl	City Gross	Vetemjöl	Skafferi > Bakning > Mjöl	1.0	kg	1	False	14.1	estimat 
+skink-ostpaj	Smör	125.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+skink-ostpaj	Smör	125.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+skink-ostpaj	Smör	125.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+skink-ostpaj	Isbergssallad	1.0	st	Hemköp	Isbergssallad Eko Klass 1	Frukt & grönt > Grönsaker > Sallader & salladspåsar	250.0	g	1	False	47.5	estimat 
+sotpotatis-bulk-bowl	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	estimat 
+sotpotatis-bulk-bowl	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	14.9	smakords_misstanke 
+sotpotatis-bulk-bowl	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	estimat 
+sotpotatis-bulk-bowl	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	False	19.34	smakords_misstanke 
+sotpotatis-bulk-bowl	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	estimat 
+sotpotatis-bulk-bowl	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	False	24.5	smakords_misstanke 
+sotpotatissoppa	Röd currypasta	30.0	g	Hemköp	Red Curry Paste Currypasta	Skafferi > Asien > Övrigt asien	50.0	g	1	True	14.14	smakords_misstanke 
+sotpotatissoppa	Buljongtärning	2.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+sotpotatissoppa	Buljongtärning	2.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+sotpotatissoppa	Buljongtärning	2.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+sparrispastacitron	Sparris	300.0	g	Willys	Sparris Varma Koppen Soppa Pulver/3 Port	Skafferi > Soppor & krämer > Soppa	6.0	dl	1	False	13.72	estimat 
+sparrispastacitron	Sparris	300.0	g	Hemköp	Sparris Varma Koppen Soppa Pulver/3 Port	Skafferi > Soppor & krämer > Soppa	6.0	dl	1	False	16.04	estimat 
+sparrispastacitron	Sparris	300.0	g	City Gross	Sparris Varma Koppen Soppa Pulver/3 Port	Skafferi > Soppor & krämer > Soppa	6.0	dl	1	False	14.75	estimat 
+sparrispastacitron	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+sparrispastacitron	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+sparrispastacitron	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+spenatsoppa-agg	Buljongtärning	2.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+spenatsoppa-agg	Buljongtärning	2.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+spenatsoppa-agg	Buljongtärning	2.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+stekt-sej-remoulad	Majonnäs	1.0	dl	Willys	Gurkmajonnäs Amerikansk Dressing	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	240.0	g	1	False	16.5	estimat 
+stekt-sej-remoulad	Majonnäs	1.0	dl	Hemköp	Lättmajonnäs	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	275.0	g	1	False	17.93	estimat 
+stekt-strommingsflundra	Smör	100.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+stekt-strommingsflundra	Smör	100.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+stekt-strommingsflundra	Smör	100.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+svamprisotto	Parmesan	80.0	g	Willys	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.5	estimat 
+svamprisotto	Parmesan	80.0	g	Hemköp	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	18.38	estimat 
+svamprisotto	Parmesan	80.0	g	City Gross	Parmesan Lätt Crème Fraiche 12%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	15.95	estimat 
+svamprisotto	Buljongtärning	2.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+svamprisotto	Buljongtärning	2.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+svamprisotto	Buljongtärning	2.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+svamprisotto	Smör	50.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+svamprisotto	Smör	50.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+svamprisotto	Smör	50.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+tacogratang	Tortillachips	150.0	g	Willys	Tortillachips Ost	Skafferi > Texmex > Bröd, chips & skal	200.0	g	1	True	11.26	smakords_misstanke 
+tacogratang	Tortillachips	150.0	g	Hemköp	Tortillachips Ost	Skafferi > Texmex > Bröd, chips & skal	200.0	g	1	True	14.14	smakords_misstanke 
+tacogratang	Tortillachips	150.0	g	City Gross	Tortillachips Ost	Skafferi > Texmex > Bröd, chips & skal	200.0	g	1	True	12.75	smakords_misstanke 
+tacos-kottfars	Tortilla	8.0	st	Willys	Tortilla 8-pack	Skafferi > Texmex > Bröd, chips & skal	320.0	g	1	False	11.26	estimat 
+tacos-kottfars	Tortilla	8.0	st	Hemköp	Tortilla 8-pack	Skafferi > Texmex > Bröd, chips & skal	320.0	g	1	False	13.2	estimat 
+tacos-kottfars	Tortilla	8.0	st	City Gross	Tortilla 8-pack	Skafferi > Texmex > Bröd, chips & skal	320.0	g	1	False	11.5	estimat 
+tacos-kottfars	Crème fraiche	200.0	g	Willys	Crème Fraiche 32%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	11.5	estimat 
+tacos-kottfars	Crème fraiche	200.0	g	Hemköp	Crème Fraiche 32%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	13.39	estimat 
+tacos-kottfars	Crème fraiche	200.0	g	City Gross	Crème Fraiche 32%	Mejeri, ost & ägg > Matlagning > Gräddfil & creme fraiche	2.0	dl	1	False	10.95	estimat 
+tandoorikyckling	Yoghurt	200.0	g	Willys	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
+tandoorikyckling	Yoghurt	200.0	g	Hemköp	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	17.85	smakords_misstanke 
+tandoorikyckling	Yoghurt	200.0	g	City Gross	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
+toast-skagen	Majonnäs	1.0	dl	Willys	Gurkmajonnäs Amerikansk Dressing	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	240.0	g	1	False	16.5	estimat 
+toast-skagen	Majonnäs	1.0	dl	Hemköp	Lättmajonnäs	Skafferi > Kryddor & smaksättare > Sås, dressing & majonnäs	275.0	g	1	False	17.93	estimat 
+tomatsoppa	Basilika	1.0	st	Willys	Basilika Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	8.9	estimat 
+tomatsoppa	Basilika	1.0	st	Hemköp	Basilika Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	11.3	estimat 
+tomatsoppa-grillost	Bröd	8.0	st	Willys	Majsbröd Glutenfri	Skafferi > Glutenfritt > Glutenfria bröd, kex & kakor	70.0	g	1	False	5.5	estimat 
+tomatsoppa-grillost	Bröd	8.0	st	Hemköp	Majsbröd Glutenfri	Skafferi > Glutenfritt > Glutenfria bröd, kex & kakor	70.0	g	1	False	6.15	estimat 
+tomatsoppa-grillost	Bröd	8.0	st	City Gross	Majsbröd Glutenfri	Skafferi > Glutenfritt > Glutenfria bröd, kex & kakor	70.0	g	1	False	5.6	estimat 
+tomatsoppa-grillost	Smör	40.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+tomatsoppa-grillost	Smör	40.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+tomatsoppa-grillost	Smör	40.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+tonfiskpasta	Pasta	400.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+tonfiskpasta	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+tonfiskpasta	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+tonfiskpasta-citron	Pasta	400.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+tonfiskpasta-citron	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+tonfiskpasta-citron	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+torsk-aggsas	Dill	1.0	st	Willys	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	8.9	estimat 
+torsk-aggsas	Dill	1.0	st	Hemköp	Dill Finhackad Fryst	Fryst > Grönsaker & kryddor > Wok	50.0	g	1	False	11.3	estimat 
+torsk-brynt-smor-agg	Smör	100.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+torsk-brynt-smor-agg	Smör	100.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+torsk-brynt-smor-agg	Smör	100.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+torsk-potatismos	Smör	40.0	g	Willys	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.9	estimat 
+torsk-potatismos	Smör	40.0	g	Hemköp	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	24.5	estimat 
+torsk-potatismos	Smör	40.0	g	City Gross	Smör-&rapsolja Flytande Original 80%	Mejeri, ost & ägg > Smör, margarin & jäst > Matfett	5.0	dl	1	False	22.95	estimat 
+ugnskorv-potatismos-appel	Äpple	2.0	st	Willys	Äpple Röda Klass 1	Frukt & Grönt > Frukt > Äpplen	None	None	1	False	15.9	estimat 
+ugnskorv-potatismos-appel	Äpple	2.0	st	Willys	Äpple Röda Klass 1	Frukt & Grönt > Frukt > Äpplen	None	None	1	False	15.9	otolkad_paketstorlek 
+ugnskorv-potatismos-appel	Äpple	2.0	st	Hemköp	Äpple Röda Klass 1	Frukt & Grönt > Frukt > Äpplen	None	None	1	False	16.04	estimat 
+ugnskorv-potatismos-appel	Äpple	2.0	st	Hemköp	Äpple Röda Klass 1	Frukt & Grönt > Frukt > Äpplen	None	None	1	False	16.04	otolkad_paketstorlek 
+ugnstorsk	Sparris	300.0	g	Willys	Sparris Varma Koppen Soppa Pulver/3 Port	Skafferi > Soppor & krämer > Soppa	6.0	dl	1	False	13.72	estimat 
+ugnstorsk	Sparris	300.0	g	Hemköp	Sparris Varma Koppen Soppa Pulver/3 Port	Skafferi > Soppor & krämer > Soppa	6.0	dl	1	False	16.04	estimat 
+ugnstorsk	Sparris	300.0	g	City Gross	Sparris Varma Koppen Soppa Pulver/3 Port	Skafferi > Soppor & krämer > Soppa	6.0	dl	1	False	14.75	estimat 
+varmkorv-gourmet	Ketchup	0.5	dl	Willys	Ketchup	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	560.0	g	1	False	18.83	estimat 
+varmkorv-gourmet	Ketchup	0.5	dl	Hemköp	Ketchup	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	560.0	g	1	False	18.88	estimat 
+varmkorv-gourmet	Ketchup	0.5	dl	City Gross	Ketchup Original	Skafferi > Kryddor & smaksättare > Ketchup & chilisås	500.0	g	1	False	23.6	estimat 
+vegansk-bolognese-vegofars	Buljongtärning	1.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+vegansk-bolognese-vegofars	Buljongtärning	1.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+vegansk-bolognese-vegofars	Buljongtärning	1.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+vegobolognese	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+vegobolognese	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+vegobolognese	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+vegofars-pastagratang	Pasta	500.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+vegofars-pastagratang	Pasta	500.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+vegofars-pastagratang	Pasta	500.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+vitkalssoppa-fars	Buljongtärning	3.0	st	Willys	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	11.83	estimat 
+vitkalssoppa-fars	Buljongtärning	3.0	st	Hemköp	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	13.72	estimat 
+vitkalssoppa-fars	Buljongtärning	3.0	st	City Gross	Svampbuljong Tärningar	Skafferi > Kryddor & smaksättare > Buljong	3.0	l	1	False	12.75	estimat 
+zucchinipastafeta	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
+zucchinipastafeta	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
+zucchinipastafeta	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 

@@ -253,6 +253,20 @@ INGREDIENT_DEPARTMENTS = {
     # --- vegetarian
     # Tofu står hos flera kedjor i asiatiska skafferihyllan eller mejerikylen.
     "tofu": {"vegetarian", "pantry", "dairy"},
+    # TORRA KRYDDOR bor i skafferiet. Utan avdelningskrav vann produkter som
+    # bara SMAKAR av kryddan: "Kanel Veteknäcke Runt" (Bröd & Kakor)
+    # prissatte ingrediensen kanel i produktion. Frysta örter är en annan
+    # sak (persilja/dill har redan sina regler) - det här är burkkryddorna.
+    "kanel": {"pantry"},
+    "kardemumma": {"pantry"},
+    "muskot": {"pantry"},
+    "muskotnöt": {"pantry"},
+    "nejlikor": {"pantry"},
+    "spiskummin": {"pantry"},
+    "gurkmeja": {"pantry"},
+    "chilipulver": {"pantry"},
+    "kummin": {"pantry"},
+    "curry": {"pantry"},
     # Rostad lök är en skafferiburk, inte färsk lök - suffixet gissar annars
     # grönsakshyllan och kryddhyllans burk avvisas.
     "rostad lök": {"pantry", "produce"},
@@ -564,6 +578,11 @@ INGREDIENT_RULES = {
     # "Honung Grillkrydda" är en kryddblandning, "Honung Glazer" en glaze -
     # inte honung. Två av tre kedjor svarade med fel vara.
     "honung": {"exclude": ["krydda", "glaze", "glazer", "senap", "marinad", "dressing", "sås", "yoghurt", "rostad"]},
+    # Kryddan är kryddan - aldrig bakverket som smakar av den. Kanel mot
+    # "Kanel Veteknäcke" var produktionsfelet; kardemumma mot bullar är
+    # samma fälla.
+    "kanel": {"exclude": ["knäcke", "bröd", "bulle", "bullar", "kaka", "kakor", "skorpa", "skorpor", "müsli", "musli", "gröt", "te", "snäcka", "snäckor", "längd"]},
+    "kardemumma": {"exclude": ["knäcke", "bröd", "bulle", "bullar", "kaka", "kakor", "skorpa", "längd", "te", "vetekrans"]},
     # "Dill Gräslök Majskakor" är riskakor. Örten är örten.
     "dill": {"exclude": ["majskakor", "kaka", "kakor", "chips", "sås", "dressing", "dipp", "sill", "lax"]},
     "gräslök": {"exclude": ["majskakor", "kaka", "kakor", "chips", "sås", "dressing", "färskost"]},
@@ -658,12 +677,80 @@ def convert_amount(amount: float | None, from_unit: str | None, to_unit: str | N
     if amount is None or not from_unit or not to_unit:
         return None
     source, target = _fold(from_unit), _fold(to_unit)
+    # Styckfamiljen: st, förp, p, pack, pk är samma räknesort - "Ägg 6p"
+    # mot receptets "3 st" är exakt jämförbart, inte ett estimat.
+    count_units = {"st", "forp", "frp", "p", "pack", "pk", "styck"}
+    if source in count_units and target in count_units:
+        return float(amount)
     if source == target:
         return float(amount)
     for table in (_MASS, _VOLUME):
         if source in table and target in table:
             return float(amount) * table[source] / table[target]
     return None
+
+
+# Size-texter som importen inte hann tolka ("CA 175G", "ca: 750g",
+# "400/240g", "2x120g", "6pack", "15-p") - tolkas VID PRISSÄTTNING så att
+# redan insamlad data läker utan omimport. Detta var estimatbergets rot:
+# 2 051 av 4 614 auditrader saknade tolkad förpackning och föll till
+# gissat antal, som fail-closed sedan (korrekt) höll utanför totalerna.
+_SIZE_MASS_VOL_RE = re.compile(
+    r"(?:(\d+(?:[.,]\d+)?)\s*[xX]\s*)?(\d+(?:[.,]\d+)?)\s*(kg|hg|g|l|dl|cl|ml)\b",
+    re.IGNORECASE)
+_SIZE_COUNT_RE = re.compile(r"(\d+)\s*[-]?\s*(?:pack|pk|p|st)\b", re.IGNORECASE)
+
+
+# Ett "2 st tomater"-recept mot en 200 g-förpackning behöver en VIKT per
+# styck för att räknas exakt. Detta är kökets standardvikter (samma tabell
+# som varje matkasseleverantör använder), en BESLUTAD regel - inte en
+# per-produkt-gissning. Finns ingredienser inte här förblir st-mot-gram
+# ett ärligt estimat.
+STYCK_VIKT_G = {
+    "tomat": 125, "tomater": 125, "gul lok": 150, "lok": 150, "rodlok": 120,
+    "citron": 120, "lime": 70, "apelsin": 200, "apple": 180, "paron": 170,
+    "banan": 120, "potatis": 90, "morot": 80, "morotter": 80, "palsternacka": 120,
+    "paprika": 180, "gurka": 350, "zucchini": 300, "aubergine": 320,
+    "avokado": 200, "vitlok": 70, "schalottenlok": 40, "purjolok": 250,
+    "agg": 60, "champinjon": 20, "broccoli": 350, "blomkal": 800,
+    "sotpotatis": 250, "kalrot": 700, "fankal": 300,
+}
+
+
+def styck_vikt_for(ingredient: str) -> float | None:
+    return STYCK_VIKT_G.get(_fold(ingredient))
+
+
+def effective_package(product) -> tuple[float | None, str | None]:
+    """Förpackningens (mängd, enhet) - importens tolkning först, annars en
+    försiktig läsning av size-texten och namnet.
+
+    "400/240g" läses som 240 g (avrunnen vikt - det är maten, inte lagen).
+    "2x120g" blir 240 g. "CA 750G" blir 750 g - cirkavikt på en bit är
+    rätt modell för antalet, och priset är per styck. Hittas bara ett
+    styckantal ("Ägg 6p") blir det N st. Hittas inget alls: (None, None),
+    och raden förblir ärligt osäker."""
+    if product.quantity:
+        return product.quantity, product.unit
+    for text in (product.size or "", product.name or ""):
+        matches = _SIZE_MASS_VOL_RE.findall(text)
+        if matches:
+            multiplier, amount, unit = matches[-1]
+            try:
+                value = float(amount.replace(",", "."))
+                if multiplier:
+                    value *= float(multiplier.replace(",", "."))
+                return value, unit.lower()
+            except ValueError:
+                pass
+    for text in (product.size or "", product.name or ""):
+        match = _SIZE_COUNT_RE.search(text)
+        if match:
+            try:
+                return float(match.group(1)), "st"
+            except ValueError:
+                pass
+    return None, None
 
 
 def packages_needed(required_amount: float, required_unit: str | None,
@@ -1055,14 +1142,45 @@ class RecipePricingEngine:
             unit_cost = effective_price(price)
             if unit_cost is None:
                 continue
-            count = packages_needed(amount, unit, product.quantity, product.unit)
+            package_amount, package_unit = effective_package(product)
+            effective_amount, effective_unit = amount, unit
+            # Styckrecept mot gramvara: väg om via styckvikttabellen.
+            if (_fold(unit) in ("st", "styck") and package_unit
+                    and _fold(package_unit) in _MASS):
+                per_piece = styck_vikt_for(ingredient)
+                if per_piece:
+                    effective_amount, effective_unit = amount * per_piece, "g"
+            count = packages_needed(effective_amount, effective_unit, package_amount, package_unit)
+            per_kg_cost = None
+            if count is None and package_amount is None:
+                unit_price = getattr(price, "unit_price", None)
+                regular = getattr(price, "regular_price", None)
+                required_g = convert_amount(effective_amount, effective_unit, "g")
+                if (required_g and unit_price and regular
+                        and abs(unit_price - regular) < 0.01):
+                    # Lösviktssignaturen: pris == jämförpris betyder att
+                    # priset ÄR per kilo. Kostnaden är exakt: kr/kg × behov.
+                    # (Utan denna modell blev en grillad rostbiff-bit
+                    # "1 paket × 1 125 kr".)
+                    per_kg_cost = unit_price * required_g / 1000.0
+                    count, exact = 1, True
             if count is None:
-                # Units not comparable (e.g. recipe in "st", package in "g").
-                # Fall back to one package - honest, and flagged below.
-                count, exact = 1, False
+                # BESTÄMD REGEL, inte gissning: ett kryddmått (max 2 msk =
+                # 30 ml) mot en förpackning på minst 15 g är ALLTID en
+                # förpackning - ingen torr krydda väger mer än ~1 g/ml, så
+                # 30 ml ryms alltid i 15 g+. Allt annat okonverterbart
+                # förblir estimat och hålls utanför säkra totaler.
+                folded_unit = _fold(unit)
+                required_ml = (_VOLUME.get(folded_unit, 0) or 0) * amount
+                package_grams = ((_MASS.get(_fold(package_unit or ""), 0) or 0)
+                                 * (package_amount or 0))
+                if 0 < required_ml <= 30 and package_grams >= 15:
+                    count, exact = 1, True
+                else:
+                    count, exact = 1, False
             else:
                 exact = True
-            total = count * unit_cost
+            total = per_kg_cost if per_kg_cost is not None else count * unit_cost
             if best is None or total < best["totalCost"]:
                 best = {
                     "productId": product.id,
@@ -1073,8 +1191,11 @@ class RecipePricingEngine:
                     "category": product.category,
                     "imageUrl": product.image_url,
                     "packageSize": product.size,
-                    "packageAmount": product.quantity,
-                    "packageUnit": product.unit,
+                    "packageAmount": package_amount,
+                    "packageUnit": package_unit,
+                    # Lösviktsmodellen: kostnaden är kr/kg × behov, inte
+                    # paket × styckpris. Sant och märkt.
+                    "perKg": per_kg_cost is not None,
                     "packages": count,
                     "unitPrice": unit_cost,
                     "totalCost": round(total, 2),
@@ -1138,8 +1259,17 @@ class RecipePricingEngine:
             if best is None:
                 missing.append({"name": name, "amount": needed, "unit": unit})
                 continue
-            matched.append({"name": name, "neededAmount": needed, "neededUnit": unit, **best})
-            total += best["totalCost"]
+            row = {"name": name, "neededAmount": needed, "neededUnit": unit, **best}
+            if best.get("exactPackaging", True):
+                total += best["totalCost"]
+            else:
+                # SÄKRA TOTALER. Ett gissat paketantal får inte in i butikens
+                # totalsumma - raden behåller produkt och styckpris men dess
+                # radtotal är ärligt okänd, och en osäker rad kan aldrig
+                # avgöra vilken butik som är billigast.
+                row["totalCost"] = None
+                row["rowUncertain"] = True
+            matched.append(row)
 
         requested = len(matched) + len(missing)
         return {
