@@ -36,7 +36,7 @@ import { extraLineTotal, extraUnitPrice, extrasTotal, newExtraItem, removeExtra,
 import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
 import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
-import { changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, startTrial, storeToken, verifyEmail } from "./src/api/auth.js";
+import { changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
 
@@ -2548,7 +2548,6 @@ function renderAccount() {
     const hasSubscription = ["active", "trialing", "past_due", "canceled", "unpaid"].includes(state.user.subscriptionStatus);
     $("accountPremiumStatus").textContent = daysLeft ? `✓ Provperiod aktiv - ${plural(daysLeft, "dag", "dagar")} kvar (ingen betalning krävs)` : state.user.premium ? "✓ Premium aktiverat" : "Inget Premium ännu";
     $("premiumPitch").hidden = state.user.premium;
-    $("startTrialBtn").hidden = true; // trialen finns inte i affärsmodellen
     $("subscriptionPanel").hidden = !hasSubscription;
     if (hasSubscription) {
       const periodEnd = state.user.subscriptionPeriodEnd ? new Date(state.user.subscriptionPeriodEnd).toLocaleDateString("sv-SE") : "okänt datum";
@@ -3142,7 +3141,6 @@ async function beginCheckout(plan) {
 }
 
 function openPremiumPitch() { openPaywall(); }
-$("startTrialBtn").addEventListener("click", () => openPaywall());
 let selectedPlan = "monthly";
 document.querySelectorAll("[data-price-tab]").forEach(tab => tab.addEventListener("click", () => { selectedPlan = tab.dataset.plan; document.querySelectorAll("[data-price-tab]").forEach(t => t.classList.toggle("active", t === tab)); }));
 $("subscribeBtn").addEventListener("click", async () => {

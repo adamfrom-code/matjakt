@@ -218,21 +218,10 @@ class AccountStore:
         self._connection.commit()
         return self._to_public(self._session_user_row(token))
 
-    def start_trial(self, token: str) -> dict:
-        row = self._session_user_row(token)
-        if not row:
-            raise AccountError("Du måste vara inloggad")
-        if row["premium"]:
-            raise AccountError("Du har redan Premium")
-        if row["trial_used"]:
-            raise AccountError("Du har redan använt din gratis provperiod")
-        trial_ends_at = (datetime.now(timezone.utc) + timedelta(days=14)).isoformat()
-        self._connection.execute(
-            "UPDATE users SET trial_ends_at = ?, trial_used = 1 WHERE id = ?", (trial_ends_at, row["id"])
-        )
-        self._connection.commit()
-        return self._to_public(self._session_user_row(token))
-
+    # start_trial är borttagen (affärsmodell 2026-08-31: Free / 59 kr/mån /
+    # 399 kr/år, INGEN provperiod). Kolumnerna trial_ends_at/trial_used finns
+    # kvar enbart för grandfathering av redan utdelade trials - läsvägen ovan
+    # respekterar dem tills de löpt ut, men ingenting kan bevilja nya.
     def billing_identity_for_token(self, token):
         """Returns (user_id, email, existing_stripe_customer_id_or_None) for a session token."""
         row = self._session_user_row(token)

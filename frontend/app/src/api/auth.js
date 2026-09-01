@@ -60,13 +60,6 @@ export function redeemPremium(token, code) {
   }).then(parseJsonResponse);
 }
 
-export function startTrial(token) {
-  return fetch(`${API_BASE_URL}/auth/start-trial`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  }).then(parseJsonResponse);
-}
-
 export function startCheckout(token, plan) {
   return fetch(`${API_BASE_URL}/billing/checkout`, {
     method: "POST",

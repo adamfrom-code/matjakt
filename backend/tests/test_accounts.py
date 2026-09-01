@@ -82,29 +82,6 @@ class AccountStoreTest(unittest.TestCase):
         with self.assertRaises(AccountError):
             self.store.redeem_premium("okant-token", "hemlig-kod", expected_code="hemlig-kod")
 
-    def test_start_trial_grants_premium_with_end_date(self):
-        token, _ = self.store.register("ada@example.com", "hemligt123")
-        user = self.store.start_trial(token)
-        self.assertTrue(user["premium"])
-        self.assertIsNotNone(user["trialEndsAt"])
-        self.assertTrue(user["trialUsed"])
-
-    def test_start_trial_rejects_second_trial(self):
-        token, _ = self.store.register("ada@example.com", "hemligt123")
-        self.store.start_trial(token)
-        with self.assertRaises(AccountError):
-            self.store.start_trial(token)
-
-    def test_start_trial_rejects_existing_premium(self):
-        token, _ = self.store.register("ada@example.com", "hemligt123")
-        self.store.redeem_premium(token, "hemlig-kod", expected_code="hemlig-kod")
-        with self.assertRaises(AccountError):
-            self.store.start_trial(token)
-
-    def test_start_trial_requires_login(self):
-        with self.assertRaises(AccountError):
-            self.store.start_trial("okant-token")
-
     def test_verify_email_marks_account_verified(self):
         self.store.register("ada@example.com", "hemligt123")
         token = self.store.create_verification_token_for_email("ada@example.com")
