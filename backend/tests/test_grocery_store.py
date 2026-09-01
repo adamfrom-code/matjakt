@@ -365,3 +365,46 @@ class InterruptedRunTest(unittest.TestCase):
         run = self.store.start_collector_run(chain="Willys")
         self.store.reconcile_interrupted_runs()
         self.assertNotEqual(self._status(run.id), "success")
+
+
+class PriceSanityTest(unittest.TestCase):
+    """Ett pris <= 0 eller absurt är ett importfel, inte ett pris - inskrivet
+    vinner det varje billigast-jämförelse."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        self.store = GroceryStore(Path(tempfile.mkdtemp()) / "sanity.db")
+        self.store_row = self.store.upsert_store(chain="Willys", external_store_id="1", name="Test")
+        self.product = self.store.find_or_create_product(raw(name="Mjölk"))
+
+    def tearDown(self):
+        self.store.close()
+
+    def test_zero_and_negative_prices_are_refused(self):
+        for bad in (0, -5, 999999):
+            with self.assertRaises(ValueError):
+                self.store.upsert_current_price(
+                    product_id=self.product.id, store_id=self.store_row.id, regular_price=bad)
+
+    def test_bad_update_keeps_the_existing_good_price(self):
+        self.store.upsert_current_price(product_id=self.product.id,
+                                        store_id=self.store_row.id, regular_price=18.90)
+        price, changed = self.store.upsert_current_price(
+            product_id=self.product.id, store_id=self.store_row.id, regular_price=-1)
+        self.assertFalse(changed)
+        self.assertEqual(price.regular_price, 18.90)
+
+    def test_a_campaign_not_below_regular_is_not_a_campaign(self):
+        price, _ = self.store.upsert_current_price(
+            product_id=self.product.id, store_id=self.store_row.id,
+            regular_price=20.0, campaign_price=25.0)
+        self.assertIsNone(price.campaign_price)
+
+    def test_effective_price_refuses_stored_zero(self):
+        from services.grocery.pricing import effective_price
+
+        class Row:
+            campaign_price = 0
+            regular_price = -3
+        self.assertIsNone(effective_price(Row()))

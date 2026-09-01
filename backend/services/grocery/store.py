@@ -396,6 +396,38 @@ class GroceryStore:
         exactly as it was - see spec section 7, "om en collector misslyckas:
         radera inte gamla priser"."""
         now = fetched_at if fetched_at is not None else time.time()
+
+        # PRISSANERING VID KÄLLAN. Ett pris <= 0 eller absurt högt är ett
+        # importfel, inte ett pris - inskrivet skulle det vinna varje
+        # billigast-jämförelse (0 kr slår allt). Regeln är att VÄGRA värdet,
+        # aldrig gissa ett annat: raden behåller sitt gamla pris, precis som
+        # när en collector inte kunde hämta något alls. 30 000 kr täcker
+        # dyraste legitima matvara med bred marginal.
+        def _sane(value):
+            if value is None:
+                return None
+            try:
+                value = float(value)
+            except (TypeError, ValueError):
+                return None
+            return value if 0 < value <= 30000 else None
+
+        regular_price = _sane(regular_price)
+        campaign_price = _sane(campaign_price)
+        member_price = _sane(member_price)
+        multibuy_price = _sane(multibuy_price)
+        unit_price = _sane(unit_price)
+        # En "kampanj" som inte är billigare än ordinarie är ingen kampanj.
+        if campaign_price is not None and regular_price is not None and campaign_price >= regular_price:
+            campaign_price = None
+        if regular_price is None and campaign_price is None:
+            existing_row = self._connection.execute(
+                "SELECT * FROM grocery_current_prices WHERE product_id = ? AND store_id = ?",
+                (product_id, store_id)).fetchone()
+            if existing_row is not None:
+                return CurrentPrice(**{key: existing_row[key] for key in existing_row.keys()}), False
+            raise ValueError("Ogiltigt pris - raden skrivs inte")
+
         existing = self._connection.execute(
             "SELECT * FROM grocery_current_prices WHERE product_id = ? AND store_id = ?",
             (product_id, store_id),

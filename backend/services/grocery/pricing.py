@@ -855,6 +855,11 @@ def effective_price(price) -> float | None:
         return None
     campaign = getattr(price, "campaign_price", None)
     regular = getattr(price, "regular_price", None)
+    # Samma sanering som vid import - hängslen för rader som skrevs innan
+    # importvakten fanns. 0 kr vinner annars varje jämförelse.
+    def _sane(value):
+        return value if value is not None and 0 < value <= 30000 else None
+    campaign, regular = _sane(campaign), _sane(regular)
     if campaign is not None and regular is not None:
         return min(campaign, regular)
     return campaign if campaign is not None else regular

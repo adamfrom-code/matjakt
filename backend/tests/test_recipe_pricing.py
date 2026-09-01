@@ -213,8 +213,10 @@ class PricingEngineTest(unittest.TestCase):
         self.assertEqual(result["totalCheckoutCost"], 79.90)
 
     def test_product_without_a_price_counts_as_missing(self):
-        product = self.db.find_or_create_product(raw("Willys", "np", "Kycklingfilé Utan Pris", quantity=700, unit="g"))
-        self.db.upsert_current_price(product_id=product.id, store_id=self.store.id, regular_price=None)
+        # Prissaneringen (2026-09-01) vägrar numera skriva en prislös rad
+        # över huvud taget - "utan pris" är därför exakt detta: produkten
+        # finns, prisraden finns inte.
+        self.db.find_or_create_product(raw("Willys", "np", "Kycklingfilé Utan Pris", quantity=700, unit="g"))
         result = self.engine.price_list(
             [{"name": "Kycklingfilé", "amount": 600, "unit": "g"}], "Willys", self.store.id)
         self.assertEqual(result["realPriceItems"], 0)

@@ -2397,6 +2397,11 @@ if __name__ == "__main__":
         logger.exception("Kunde inte starta receptprissättningen")
 
     GROCERY_SCHEDULER.start()
+    # Nattliga, verifierade säkerhetskopior av alla databaser. Persistens är
+    # inte backup - se services/backup.py för de ärliga gränserna och
+    # återställningsinstruktionen.
+    from services import backup as backup_service
+    backup_service.start_nightly(DATA_DIR)
     try:
         ThreadingHTTPServer((HOST, PORT), ApiHandler).serve_forever()
     finally:

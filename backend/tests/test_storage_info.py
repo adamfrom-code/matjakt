@@ -96,3 +96,36 @@ class DataDirTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BackupServiceTest(unittest.TestCase):
+    """Backup är bara backup om kopian är verifierad och återställningsbar."""
+
+    def test_backup_copies_verifies_and_prunes(self):
+        import sqlite3
+        import tempfile
+        from pathlib import Path
+        from services import backup
+
+        data_dir = Path(tempfile.mkdtemp())
+        db = sqlite3.connect(data_dir / "konton.db")
+        db.execute("CREATE TABLE t (x)"); db.execute("INSERT INTO t VALUES (42)")
+        db.commit(); db.close()
+
+        report = backup.take_backup(data_dir)
+        self.assertEqual(report["copied"], ["konton.db"])
+        self.assertEqual(report["failed"], [])
+
+        # Återställningen: kopiera tillbaka filen, datat finns.
+        newest = backup.newest_set(data_dir)
+        restored = sqlite3.connect(newest / "konton.db")
+        self.assertEqual(restored.execute("SELECT x FROM t").fetchone()[0], 42)
+        restored.close()
+        self.assertIsNotNone(backup.newest_age_seconds(data_dir))
+
+        # Rotationen behåller de KEEP senaste.
+        for i in range(backup.KEEP + 2):
+            (backup.backup_dir(data_dir) / f"20200101T00000{i}Z").mkdir()
+        backup.take_backup(data_dir)
+        remaining = [d for d in backup.backup_dir(data_dir).iterdir() if d.is_dir()]
+        self.assertLessEqual(len(remaining), backup.KEEP)
