@@ -46,7 +46,13 @@ import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTag
 // everything below reads it exactly as it did before.
 const RECEPT = [];
 
-const recipePhoto = recipe => recipe.bild ? `<img class="recipe-photo" src="${recipe.bild}" alt="${recipe.namn}" loading="lazy">` : `<span class="recipe-photo recipe-fallback" role="img" aria-label="Ingen matbild tillgänglig"><svg viewBox="0 0 64 64"><path d="M14 48h36M18 44a14 14 0 0 1 28 0M32 20v10M27 20h10"/></svg><small>Matjakt</small></span>`;
+// Kort och rader ritar bilden i som mest ~400 px - att ladda 940px-varianten
+// där är 3x bandbredd för ingenting (85 kB -> 27 kB per kort, mätt).
+// Pexels CDN skalar via query-parametrar; receptdetaljen behåller originalet.
+const cardImageUrl = url => typeof url === "string" && url.includes("images.pexels.com")
+  ? url.replace(/([?&])h=\d+&w=\d+/, "$1h=330&w=480")
+  : url;
+const recipePhoto = recipe => recipe.bild ? `<img class="recipe-photo" src="${cardImageUrl(recipe.bild)}" alt="${recipe.namn}" loading="lazy" decoding="async">` : `<span class="recipe-photo recipe-fallback" role="img" aria-label="Ingen matbild tillgänglig"><svg viewBox="0 0 64 64"><path d="M14 48h36M18 44a14 14 0 0 1 28 0M32 20v10M27 20h10"/></svg><small>Matjakt</small></span>`;
 // A photo URL that 404s or is blocked must degrade into the same calm icon
 // as "no photo at all". Without this the card showed the browser's
 // broken-image glyph with the alt text spilled across it - which reads as a
@@ -3005,6 +3011,9 @@ let ownCampaignDeals = [];
 async function renderOwnCampaigns() {
   if (ownCampaignFetchKey === "done") return;
   ownCampaignFetchKey = "done";
+  // Ett lugnt laddläge - utan det står rubriken över en tom rad i upp till
+  // 15 sekunder innan hämtningen svarar.
+  $("campaignList").innerHTML = `<p class="live-loading">Hämtar veckans fynd…</p>`;
   try {
     const response = await fetch(`${API_BASE_URL}/grocery/campaigns`, { signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -3040,8 +3049,6 @@ async function renderOwnCampaigns() {
 }
 
 async function renderCampaignSection() {
-  $("campaignLocked").hidden = true;
-  $("campaignStoreLabel").hidden = true;
   renderOwnCampaigns();
 }
 

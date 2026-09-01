@@ -126,7 +126,7 @@ def campaign_deals(per_chain: int = 10) -> dict:
                     ORDER BY 1.0 - (cp.campaign_price / cp.regular_price) DESC
                     LIMIT ?
                     """,
-                    (chain, per_chain * 3),
+                    (chain, time.time() - MAX_CAMPAIGN_AGE_SECONDS, per_chain * 3),
                 ).fetchall()
                 seen, chain_deals = set(), []
                 for row in rows:
