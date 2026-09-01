@@ -93,7 +93,7 @@ function removeFromWeekPlan(id) { state.weekPlan = state.weekPlan.filter(existin
 // swapping "this day" rather than clearing and re-picking the week.
 function swapWeekPlanDay(dayIndex, newId) { state.weekPlan = state.weekPlan.map((id, index) => index === dayIndex ? newId : id); state.valda = new Set(state.weekPlan); }
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, dbLockedChains: [], extraItems: savedState.extraItems || [], extraMatches: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
+const state = { budget: savedState.budget || 800, personer: savedState.personer || 2, middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), removedItems: new Set(savedState.removedItems || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, dbLockedChains: [], extraItems: savedState.extraItems || [], extraMatches: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null,
   // The week's recipe ids in day order (index 0 = Måndag) - the actual
   // source of truth for "which day has which recipe", now that a day swap
   // has to replace exactly one day's recipe in place. state.valda (a Set)
@@ -103,7 +103,7 @@ const state = { budget: savedState.budget || 800, personer: savedState.personer 
   // never valda's own iteration order (a Set has none tied to day position).
   weekPlan: Array.isArray(savedState.weekPlan) ? savedState.weekPlan : [...(savedState.valda || [])] };
 function buildSyncPayload() {
-  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan, extraItems: state.extraItems,
+  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], removedItems: [...state.removedItems], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan, extraItems: state.extraItems,
     // The last real pricing snapshot. Painted immediately on next visit with
     // its own timestamp while a fresh fetch runs - the difference between
     // "pris hämtas…" for seconds on every open and prices that are simply
@@ -122,6 +122,7 @@ function applySyncBlob(blob) {
   if (blob.favoriter !== undefined) state.favoriter = new Set(blob.favoriter);
   if (blob.valda !== undefined) state.valda = new Set(blob.valda);
   if (blob.avklarade !== undefined) state.avklarade = new Set(blob.avklarade);
+  if (blob.removedItems !== undefined) state.removedItems = new Set(blob.removedItems);
   if (blob.apiRecipes !== undefined) state.apiRecipes = blob.apiRecipes;
   if (blob.extraItems !== undefined) state.extraItems = blob.extraItems;
   if (blob.dbChainTotals) { state.dbChainTotals = blob.dbChainTotals; state.dbComparison = blob.dbComparison || null; state.dbPricedAt = blob.dbPricedAt || null; }
@@ -683,6 +684,7 @@ function chooseMenu(shouldScroll = true) {
   // week could show ingredients as "already bought" just because an item with
   // the same name was checked off last week.
   state.avklarade.clear();
+  state.removedItems.clear();
   state.livePriser = {};
   state.liveBranchTotals = {};
   saveState();
@@ -939,6 +941,10 @@ function weekPricingBody(shoppingItems) {
     && (!Array.isArray(recipe.ingredients) || recipe.ingredients.length || recipe.slug));
   const recipeIds = bankRecipes.map(recipe => recipe.id);
   const body = { people: state.personer, pantry: pantryAmounts(state.pantry || {}) };
+  // Borttagna varor måste följa med: recipeIds-vägen aggregerar om veckan på
+  // servern, och utan denna lista skulle butiksjämförelsen fortsätta prissätta
+  // varor användaren tagit bort.
+  if (state.removedItems.size) body.excludeItems = [...state.removedItems].sort();
   if (recipeIds.length) body.recipeIds = recipeIds;
   else body.items = shoppingItems.map(item => ({ name: item.namn, amount: item.total, unit: item.unit }));
   return body;
@@ -1750,7 +1756,7 @@ function databaseShoppingItemMarkup(item, match) {
   const inexact = match.priceStatus === "estimated"
     ? '<small class="item-status estimated">Antal osäkert</small>' : "";
   const meta = escapeHtml([match.brand, neededText, countText].filter(Boolean).join(" · ") || "1 st");
-  return `<label class="shopping-item ${checked ? "checked" : ""}"><input type="checkbox" data-shopping="${escapeHtml(item.namn)}" ${checked ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${escapeHtml(match.productName)}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong>${money(match.totalCost)}</strong>${inexact}</span></label>`;
+  return `<label class="shopping-item ${checked ? "checked" : ""}"><input type="checkbox" data-shopping="${escapeHtml(item.namn)}" ${checked ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${escapeHtml(match.productName)}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong>${money(match.totalCost)}</strong>${inexact}</span><button type="button" class="shopping-remove" data-remove-item="${escapeHtml(item.namn)}" aria-label="Ta bort ${escapeHtml(item.namn)} från listan">×</button></label>`;
 }
 
 function shoppingItemMarkup(item) {
@@ -1803,7 +1809,9 @@ function shoppingItemMarkup(item) {
   const campaign = live?.kampanj?.text ? `<small class="shopping-item-campaign">🏷️ ${escapeHtml(live.kampanj.text)}</small>` : "";
   const status = stillFetching ? '<small class="item-status loading">pris hämtas…</small>' : "";
   const photo = live?.bild ? `<img class="shopping-item-image has-image" src="${live.bild}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(item.namn));
-  return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${displayName}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong class="${priceLabel === "Pris saknas" ? "price-missing" : ""}">${priceLabel}</strong>${status}</span></label>`;
+  // Checkboxen betyder "jag har handlat den". X betyder "ut ur listan" -
+  // finns hemma, redan köpt, köps någon annanstans. Två olika beteenden.
+  return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${item.namn}" ${state.avklarade.has(item.namn) ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${displayName}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong class="${priceLabel === "Pris saknas" ? "price-missing" : ""}">${priceLabel}</strong>${status}</span><button type="button" class="shopping-remove" data-remove-item="${item.namn}" aria-label="Ta bort ${item.namn} från listan">×</button></label>`;
 }
 function amountLabel(amount, unit) {
   // Pieces are bought whole - "Behöver 0.5 st citron" is true in the pot
@@ -1989,8 +1997,25 @@ function renderBasket() {
     : currentResult && currentResult.source !== "estimate"
       ? currentResult.cost + extrasCost : null;
   const groups = shoppingItems.reduce((result, item) => { const category = itemCategory(item.namn); (result[category] ||= []).push(item); return result; }, {});
-  $("shoppingList").innerHTML = shoppingItems.length ? Object.entries(groups).map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingItemMarkup).join("")}</section>`).join("") : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
+  // Tom lista av två helt olika skäl: ingen meny finns, eller användaren
+  // har tagit bort varenda rad själv. Samma tomtillstånd för båda vore en
+  // lögn om det första.
+  const emptyState = state.removedItems.size
+    ? `<div class="pantry-empty"><h2>Allt är borttaget ur listan</h2><p>Du har markerat varje vara som borttagen. Återställ dem nedan om du ångrar dig.</p></div>`
+    : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
+  $("shoppingList").innerHTML = shoppingItems.length ? Object.entries(groups).map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingItemMarkup).join("")}</section>`).join("") : emptyState;
+  if (state.removedItems.size) {
+    $("shoppingList").insertAdjacentHTML("beforeend",
+      `<button type="button" class="restore-removed" id="restoreRemovedBtn">${plural(state.removedItems.size, "borttagen vara", "borttagna varor")} · Återställ alla</button>`);
+    $("restoreRemovedBtn").addEventListener("click", () => { state.removedItems.clear(); saveState(); render(); });
+  }
   document.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => { input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping); saveState(); renderBasket(); }));
+  document.querySelectorAll("[data-remove-item]").forEach(button => button.addEventListener("click", event => {
+    // Knappen bor i en <label> - utan detta togglar klicket också checkboxen.
+    event.preventDefault();
+    event.stopPropagation();
+    removeShoppingItem(button.dataset.removeItem);
+  }));
   const completed = shoppingItems.filter(item => state.avklarade.has(item.namn)).length, itemsLeft = shoppingItems.length - completed, progress = shoppingItems.length ? completed / shoppingItems.length * 100 : 0;
   // No mention of how many items happen to have a live-fetched price, and no
   // fetch timestamp - that's internal plumbing, not something a shopper needs
@@ -2176,7 +2201,56 @@ function ensureWeekRecipeDetails() {
 }
 
 function aggregateShopping(selected) {
-  return aggregateIngredients(selected.filter(recipe => recipe.priceStatus !== "unavailable"), RECIPE_QUANTITIES, PACKAGE_INFO, state.personer);
+  // The removal filter lives HERE, at the single choke point every consumer
+  // reads from: the Handla list, the totals, the budget, the store
+  // comparison, coverage and the per-store carts all recompute from this
+  // one function - so a removed item cannot linger in any of them. (The
+  // recipeIds pricing path re-aggregates server side and honours the same
+  // removals via excludeItems in weekPricingBody.)
+  const everything = aggregateIngredients(selected.filter(recipe => recipe.priceStatus !== "unavailable"), RECIPE_QUANTITIES, PACKAGE_INFO, state.personer);
+  // Ett receptBYTE kan stryka ingredienser vars namn ligger kvar i
+  // removedItems - spöknamn som får "Återställ alla" att ljuga om antalet.
+  // Beskär mot det verkliga aggregatet - men bara när det finns ett: under
+  // uppstart är listan tom för att recepten inte laddats än, inte för att
+  // borttagningarna blivit ogiltiga.
+  if (everything.length && state.removedItems.size) {
+    const names = new Set(everything.map(item => item.namn));
+    for (const name of [...state.removedItems]) {
+      if (!names.has(name)) state.removedItems.delete(name);
+    }
+  }
+  return everything.filter(item => !state.removedItems.has(item.namn));
+}
+
+function removeShoppingItem(name) {
+  state.removedItems.add(name);
+  // A removed item is not a BOUGHT item - it left the list entirely.
+  state.avklarade.delete(name);
+  // Cached live totals priced the removed item; painting them once more
+  // would show the OLD sum next to the new list. Drop them and let the
+  // refetch fill honest numbers in.
+  state.liveBranchTotals = {};
+  saveState();
+  render();
+  showUndoToast(`${name} borttagen`, () => {
+    state.removedItems.delete(name);
+    state.liveBranchTotals = {};
+    saveState();
+    render();
+  });
+}
+
+// En enda toast åt gången: en ny borttagning ersätter den förra i stället
+// för att stapla remsor över navigeringen.
+let undoToastTimer = null;
+function showUndoToast(message, onUndo) {
+  const toast = $("undoToast");
+  toast.querySelector("span").textContent = message;
+  toast.hidden = false;
+  const button = toast.querySelector("button");
+  button.onclick = () => { clearTimeout(undoToastTimer); toast.hidden = true; onUndo(); };
+  clearTimeout(undoToastTimer);
+  undoToastTimer = setTimeout(() => { toast.hidden = true; }, 6000);
 }
 
 function updateSummary() {
@@ -2626,6 +2700,10 @@ function openPlanComparison() {
     state.swapsThisWeek = 0;
     setWeekPlan(plan.combo.map(recipe => recipe.id));
     state.avklarade.clear();
+    // Samma regel som i chooseMenu: en ny vecka är en ny lista, och förra
+    // veckans "finns hemma"-borttagningar får inte tyst filtrera bort samma
+    // ingrediensnamn ur den nya.
+    state.removedItems.clear();
     state.livePriser = {};
     state.liveBranchTotals = {};
     saveState(); render(); closePlanModal(); setView("week");

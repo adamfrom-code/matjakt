@@ -1951,6 +1951,19 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 amount = 0.0
             unit = clean_text(str(entry.get("unit") or entry.get("enhet") or "st")) or "st"
             items.append({"name": name, "amount": amount, "unit": unit})
+        # Varor användaren aktivt tagit bort ur sin lista ("finns hemma",
+        # "redan köpt"). The recipeIds path re-aggregates the week server
+        # side, so a client-side removal MUST be honoured here - otherwise
+        # the store comparison keeps pricing food the user isn't buying.
+        excluded = payload.get("excludeItems")
+        if isinstance(excluded, list) and excluded:
+            drop = {clean_text(str(name)).casefold()
+                    for name in excluded[:self.MAX_PRICING_ITEMS] if isinstance(name, str)}
+            kept = [item for item in items if item["name"].casefold() not in drop]
+            if kept != items:
+                # Everything removed is a valid list, not an error: the
+                # comparison layer already answers an empty week honestly.
+                return kept, None
         if not items:
             return None, "Inga giltiga varor"
         return items, None

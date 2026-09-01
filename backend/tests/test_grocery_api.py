@@ -219,3 +219,38 @@ class CoverageInvariant(unittest.TestCase):
             self.assertEqual(result["totalItems"], len(items))
         finally:
             store.close()
+
+
+class ExcludeItemsRespectRemovals(unittest.TestCase):
+    """En vara användaren tagit bort ur listan ("finns hemma", "redan köpt")
+    får inte fortsätta prissättas via recipeIds-vägen, som annars aggregerar
+    om hela veckan på servern och ignorerar borttagningen."""
+
+    def _handler(self):
+        import api_server
+        handler = api_server.ApiHandler.__new__(api_server.ApiHandler)
+        return handler
+
+    def test_excluded_names_are_dropped_case_insensitively(self):
+        handler = self._handler()
+        items, error = handler._pricing_items({
+            "items": [{"name": "Falukorv", "amount": 800, "unit": "g"},
+                      {"name": "Mjölk", "amount": 1, "unit": "l"}],
+            "excludeItems": ["falukorv"]})
+        self.assertIsNone(error)
+        self.assertEqual([i["name"] for i in items], ["Mjölk"])
+
+    def test_removing_everything_is_a_valid_empty_list_not_an_error(self):
+        handler = self._handler()
+        items, error = handler._pricing_items({
+            "items": [{"name": "Falukorv", "amount": 800, "unit": "g"}],
+            "excludeItems": ["Falukorv"]})
+        self.assertIsNone(error)
+        self.assertEqual(items, [])
+
+    def test_no_exclusions_changes_nothing(self):
+        handler = self._handler()
+        items, error = handler._pricing_items({
+            "items": [{"name": "Falukorv", "amount": 800, "unit": "g"}]})
+        self.assertIsNone(error)
+        self.assertEqual(len(items), 1)

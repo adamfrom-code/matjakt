@@ -311,3 +311,17 @@ button.campaign-deal{cursor:pointer;font:inherit}
 .sheet-head strong{font-size:18px}
 .sheet-plan-btn{width:100%}
 .sheet-done{width:100%}
+
+
+/* ---- Ta bort produkt ur listan ------------------------------------------ */
+.shopping-item{position:relative}
+.shopping-remove{flex:none;align-self:center;width:30px;height:30px;margin-left:2px;border:0;border-radius:50%;background:transparent;color:#a9b1aa;font-size:19px;line-height:1;cursor:pointer;transition:background .2s var(--ease),color .2s var(--ease),transform .2s var(--ease-spring)}
+.shopping-remove:active{transform:scale(.85)}
+.shopping-remove:hover{background:rgba(191,54,54,.08);color:#bf3636}
+.restore-removed{display:block;width:100%;margin-top:10px;padding:11px;border:1px dashed var(--border);border-radius:13px;background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+.restore-removed:hover{color:var(--primary)}
+.undo-toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;display:flex;align-items:center;gap:14px;max-width:calc(100% - 32px);padding:12px 16px;border-radius:14px;background:var(--primary);color:#fff;font-size:14px;box-shadow:0 12px 32px rgba(23,59,42,.35);animation:screen-in .25s var(--ease)}
+.undo-toast[hidden]{display:none}
+.undo-toast span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.undo-toast button{border:0;background:transparent;color:var(--accent);font:inherit;font-weight:700;cursor:pointer;padding:2px 4px}
+@media(min-width:481px){.undo-toast{bottom:calc(86px + 28px)}}
