@@ -1622,4 +1622,55 @@ class DevelopmentGateTest(unittest.TestCase):
         handler._rate_limit = lambda *a: False
         handler._client_ip = lambda: "1.2.3.4"
         handler._handle_gate_login({"username": "Adam From", "code": ""})
-        self.assertEqual(handler.sent[-1][0], 401)
+        # Stängt förblir det - men med rätt användarnamn får ägaren en
+        # diagnos (503) i stället för ett olösbart "fel kod".
+        self.assertEqual(handler.sent[-1][0], 503)
+        self.assertNotIn("gateToken", handler.sent[-1][1])
+
+
+class GateUnsetCodeDiagnosis(unittest.TestCase):
+    """Rätt användarnamn mot en server utan konfigurerad kod ska säga VAD som
+    är fel - annars är "Fel användarnamn eller kod" olösbart för ägaren."""
+
+    def _handler(self):
+        handler = api_server.ApiHandler.__new__(api_server.ApiHandler)
+        handler.headers = {}
+        handler.sent = []
+        handler.send_json = lambda status, payload, **kw: handler.sent.append((status, payload))
+        handler._rate_limit = lambda *a: False
+        handler._client_ip = lambda: "1.2.3.4"
+        return handler
+
+    def test_right_username_no_code_gets_the_diagnosis(self):
+        original = api_server.PREMIUM_CODE
+        api_server.PREMIUM_CODE = ""
+        try:
+            handler = self._handler()
+            handler._handle_gate_login({"username": "Adam From", "code": "vad-som-helst"})
+            status, payload = handler.sent[-1]
+            self.assertEqual(status, 503)
+            self.assertIn("MATJAKT_PREMIUM_CODE", payload["error"])
+        finally:
+            api_server.PREMIUM_CODE = original
+
+    def test_wrong_username_never_gets_the_diagnosis(self):
+        original = api_server.PREMIUM_CODE
+        api_server.PREMIUM_CODE = ""
+        try:
+            handler = self._handler()
+            handler._handle_gate_login({"username": "någon annan", "code": "x"})
+            self.assertEqual(handler.sent[-1][0], 401)
+        finally:
+            api_server.PREMIUM_CODE = original
+
+    def test_surrounding_whitespace_in_env_or_input_is_forgiven(self):
+        original = api_server.PREMIUM_CODE
+        api_server.PREMIUM_CODE = "  koden-med-luft \n"
+        try:
+            handler = self._handler()
+            handler._handle_gate_login({"username": "Adam From", "code": "koden-med-luft  "})
+            status, payload = handler.sent[-1]
+            self.assertEqual(status, 200)
+            self.assertIn("gateToken", payload)
+        finally:
+            api_server.PREMIUM_CODE = original

@@ -1732,12 +1732,22 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(429, {"error": "För många försök. Vänta en stund."})
             return
         username = " ".join(str((payload or {}).get("username") or "").split()).casefold()
-        code = str((payload or {}).get("code") or "")
-        username_ok = hmac.compare_digest(username, GATE_USERNAME)
-        code_ok = bool(PREMIUM_CODE) and hmac.compare_digest(code, PREMIUM_CODE)
+        # strip() på båda sidor: en miljövariabel inklistrad i en dashboard
+        # bär gärna ett osynligt radslut eller mellanslag med sig, och ett
+        # lösenord som "nästan stämmer" på grund av det är olösbart utifrån.
+        code = str((payload or {}).get("code") or "").strip()
+        expected_code = PREMIUM_CODE.strip()
+        username_ok = hmac.compare_digest(username.encode("utf-8"), GATE_USERNAME.encode("utf-8"))
+        if username_ok and not expected_code:
+            # Rätt användarnamn men ingen kod konfigurerad: säg det som det
+            # är. Det hjälper bara den som ändå inte kan släppas in - utan
+            # konfigurerad kod finns ingenting att gissa sig till.
+            logger.error("Gate-inloggning: MATJAKT_PREMIUM_CODE är inte satt i miljön")
+            self.send_json(503, {"error": "Ingen kod är konfigurerad på servern. "
+                                          "Sätt MATJAKT_PREMIUM_CODE i Render och försök igen."})
+            return
+        code_ok = bool(expected_code) and hmac.compare_digest(code.encode("utf-8"), expected_code.encode("utf-8"))
         if not (username_ok and code_ok):
-            if not PREMIUM_CODE:
-                logger.error("Gate-inloggning nekad: MATJAKT_PREMIUM_CODE är inte satt i miljön")
             self.send_json(401, {"error": "Fel användarnamn eller kod"})
             return
         expiry = int(time.time()) + GATE_TOKEN_TTL_SECONDS
