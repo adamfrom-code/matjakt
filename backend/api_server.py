@@ -1746,7 +1746,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(503, {"error": "Ingen kod är konfigurerad på servern. "
                                           "Sätt MATJAKT_PREMIUM_CODE i Render och försök igen."})
             return
-        code_ok = bool(expected_code) and hmac.compare_digest(code.encode("utf-8"), expected_code.encode("utf-8"))
+        # Versaler förlåts: det här är ägarens egen nyckel till förhands-
+        # visningen, inte en kod med krav på exakt skiftläge - "Matjakt2026"
+        # och "matjakt2026" är samma avsikt.
+        code_ok = bool(expected_code) and hmac.compare_digest(
+            code.casefold().encode("utf-8"), expected_code.casefold().encode("utf-8"))
         if not (username_ok and code_ok):
             self.send_json(401, {"error": "Fel användarnamn eller kod"})
             return
