@@ -215,6 +215,16 @@ class GroceryStore:
             self._connection.execute(
                 "INSERT OR IGNORE INTO grocery_partner_plans (code, name, monthly_price_sek, billing_model, active, updated_at) "
                 "VALUES ('matjakt_butik', 'Matjakt Butik', 1495, 'PER_STORE', 1, ?)", (now,))
+        # Kedjetabellen speglar konfigurationen i register.py och ska finnas i
+        # varje miljö - även en som aldrig registersynkats (kedjepartner slår
+        # upp via den). Lat import: lagret ska aldrig kunna hindras från att
+        # öppna en databas av ett konfigurationsfel.
+        try:
+            from .register import ensure_chains
+            ensure_chains(self)
+        except Exception:  # pragma: no cover - loggas, blockerar aldrig
+            import logging
+            logging.getLogger("matjakt.grocery.store").exception("Kunde inte seeda kedjetabellen")
 
     @property
     def connection(self):
