@@ -40,6 +40,7 @@ API-endpoints inkluderar:
 - `GET /api/campaigns?butik=Coop&zip=80252` — Premium-funktion: skannar en liten uppsättning vanliga ingredienser efter kampanjpriser hos Coop/Hemköp (enda butikerna med tydlig kampanjmärkning i sökresultaten). Cachas 1 timme.
 - `GET /api/geocode?zip=41118` — postnummer → ort/lat/lon via zippopotam.us, används för riktig avståndsberäkning till butiksprofilerna.
 - `GET /api/stores?zip=80252` — riktiga butiker (namn, koordinater, avstånd) nära postnumret för alla fyra kedjor: Willys/Hemköp via Axfoods öppna butiks-REST-API, ICA via samma butiksuppslag som `/api/products`, Coop via en Playwright-driven sökning (deras API kräver en riktig browsersession). Cachas 24h (ICA 1h). Ersätter den tidigare hårdkodade Gävle/Stockholm/Göteborg-listan.
+- `GET /api/v1/shared/meta`, `GET /api/v1/shared/recipes`, `GET /api/v1/shared/recipes/{id}`, `GET /api/v1/shared/ingredients`, `POST /api/v1/shared/recipe-match` — **delat läs-API för andra appar**. Ett versionerat kontrakt, inte Matjakts interna API: read-only, utan priser, och med matchning av skafferi mot recept i backend. Första konsumenten är [Ät Upp](https://github.com/adamfrom-code/at-upp). Åtkomst med `X-Shared-Key` (se `MATJAKT_SHARED_API_KEYS`), som bara öppnar det prefixet. Kontraktet: [docs/SHARED_API.md](docs/SHARED_API.md).
 - `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/redeem` — konton och Premium-inlösen, se `backend/services/accounts/`.
 
 Recept-API:t använder ett providerlager under `backend/services/recipe_providers/`. Frontend får alltid normaliserad titel, bild, ingredienser och instruktioner från samma providerresultat och känner inte till leverantörens externa API.
@@ -54,6 +55,7 @@ Se `.env.example`. Kopiera den till `.env` och fyll i värden — `backend/api_s
 | `MATJAKT_PORT` | `8000` | Backendens port |
 | `MATJAKT_FRONTEND_ORIGIN` | `http://localhost:5500` | Tillåten CORS-origin |
 | `MATJAKT_API_URL` | `/api` i frontend | Dokumenterat runtime-värde för meta-taggen |
+| `MATJAKT_SHARED_API_KEYS` | tomt | Kommaseparerade app-nycklar till `/api/v1/shared/`. Tomt = stängt |
 
 Inga API-nycklar krävs och `.env` ignoreras av Git.
 

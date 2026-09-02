@@ -55,6 +55,7 @@ from services.grocery import importer as grocery_importer  # noqa: E402
 from services.grocery.scheduler import SCHEDULER as GROCERY_SCHEDULER  # noqa: E402
 from services.pricing import CHAIN_TO_PRIMAT, KeyValueCacheStore, OpenFoodFactsError, PRIMAT_ATTRIBUTION, PriceCacheStore, PrimatError, image_url_for_gtin, nearby_stores as primat_nearby_stores, primat_account_status, resolve_stores as primat_resolve_stores, search_products as primat_search_products, to_matjakt_product as primat_to_matjakt_product
 from services.recipe_providers import RecipeService, TheMealDbProvider
+from services.shared import api as shared_api  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("matjakt.api")
@@ -161,6 +162,26 @@ def gate_token_valid(token: str) -> bool:
 # read-only diagnostic would be more machinery than the need warrants). When
 # unset, the endpoint refuses every request rather than falling open.
 ADMIN_TOKEN = os.environ.get("MATJAKT_ADMIN_TOKEN", "")
+
+# Nycklar som släpper in en ANNAN APP på /api/v1/shared/ medan
+# utvecklingslåset är på. Ät Upp är den första; kontraktet ligger i
+# services/shared/ och docs/SHARED_API.md.
+#
+# En egen hemlighet, inte gate-token och inte admin-token: gate-token är
+# personens inloggning i Matjakt och admin-token öppnar driftvägar. En app
+# som bara ska läsa recept ska inte behöva någon av dem, och en läckt
+# app-nyckel ska inte kunna göra något annat än att läsa recept - därför
+# kollas den BARA för det prefixet.
+#
+# Fail-closed: utan variabel finns ingen nyckel, och då släpps ingen in.
+# Tom sträng i listan filtreras bort, annars hade "MATJAKT_SHARED_API_KEYS="
+# gjort en tom header till en giltig nyckel.
+SHARED_API_KEYS = tuple(
+    key for key in
+    (part.strip() for part in os.environ.get("MATJAKT_SHARED_API_KEYS", "").split(","))
+    if key
+)
+SHARED_API_PREFIX = "/api/v1/shared/"
 PRIMAT_API_KEY = os.environ.get("PRIMAT_API_KEY", "")
 PRIMAT_STORE_CACHE_TTL_SECONDS = 86400
 PRIMAT_CIRCUIT_COOLDOWN_SECONDS = 60
@@ -1420,7 +1441,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", self._cors_origin())
         self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Gate-Token")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Gate-Token, X-Shared-Key")
         self.send_header("Access-Control-Max-Age", "600")
         self.end_headers()
 
@@ -1526,10 +1547,27 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return False
         if ADMIN_TOKEN and hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
             return False
+        if self._shared_key_valid(parsed):
+            return False
         if gate_token_valid(self.headers.get("X-Gate-Token", "")):
             return False
         self.send_json(401, {"error": "Matjakt är inte öppet ännu", "gate": True})
         return True
+
+    def _shared_key_valid(self, parsed) -> bool:
+        """En annan app med giltig nyckel, på det delade prefixet.
+
+        Prefixkontrollen först och alltid: nyckeln får öppna /api/v1/shared/
+        och ingenting annat. Utan den hade en app-nyckel i en annan
+        kodbas - som per definition deployas av någon annan, vid någon annan
+        tidpunkt - varit en generalnyckel till konton, priser och drift.
+
+        compare_digest, inte ==: nyckeljämförelse i konstant tid är samma
+        regel som gäller admin-token två rader upp."""
+        if not SHARED_API_KEYS or not parsed.path.startswith(SHARED_API_PREFIX):
+            return False
+        presented = self.headers.get("X-Shared-Key", "")
+        return any(hmac.compare_digest(presented, key) for key in SHARED_API_KEYS)
 
     def do_GET(self):
         self._json_response = False
@@ -1692,6 +1730,54 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(404, {"error": "Receptet finns inte"})
                 return
             self.send_json(200, {"recipe": recipe}, cache_seconds=300)
+            return
+        # ---- Delat läs-API (/api/v1/shared/) -----------------------------
+        # Kontraktet andra appar läser Matjakt genom. Se services/shared/
+        # och docs/SHARED_API.md. Allt här är läsning, ingenting bär pris.
+        if parsed.path == "/api/v1/shared/meta":
+            self.send_json(200, shared_api.meta(), cache_seconds=60)
+            return
+        if parsed.path == "/api/v1/shared/ingredients":
+            # Lång cache: vokabulären ändras bara när recept publiceras, och
+            # en app hämtar den vid start för sin autocomplete.
+            self.send_json(200, shared_api.ingredients(), cache_seconds=900)
+            return
+        if parsed.path == "/api/v1/shared/recipes":
+            params = parse_qs(parsed.query)
+
+            def shared_number(name):
+                raw = params.get(name, [""])[0]
+                try:
+                    return int(raw) if raw else None
+                except ValueError:
+                    return None
+
+            tags = [tag for value in params.get("tag", []) for tag in value.split(",") if tag]
+            self.send_json(200, shared_api.recipes(
+                tags=tags or None,
+                max_time=shared_number("maxTime"),
+                min_protein=shared_number("minProtein"),
+                max_kcal=shared_number("maxKcal"),
+                query=clean_text(params.get("q", [""])[0]) or None,
+                limit=shared_number("limit") or 60,
+                offset=shared_number("offset") or 0,
+            ), cache_seconds=120)
+            return
+        shared_recipe_prefix = "/api/v1/shared/recipes/"
+        if parsed.path.startswith(shared_recipe_prefix):
+            recipe_id = clean_text(unquote(parsed.path[len(shared_recipe_prefix):]))
+            # ?servings=2 ger receptet skalat. Ogiltigt värde skalar inte,
+            # i stället för att svara 400: en trasig parameter ska inte ta
+            # bort receptet.
+            try:
+                servings = int(parse_qs(parsed.query).get("servings", [""])[0] or 0) or None
+            except ValueError:
+                servings = None
+            found = shared_api.recipe(recipe_id, servings) if recipe_id else None
+            if not found:
+                self.send_json(404, {"error": "Receptet finns inte"})
+                return
+            self.send_json(200, {"recipe": found}, cache_seconds=300)
             return
         if parsed.path == "/api/v1/recipes/search":
             query = clean_text(parse_qs(parsed.query).get("q", [""])[0])
@@ -2058,6 +2144,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(200, {"url": url})
             except (AccountError, StripeError) as error:
                 self.send_json(400, {"error": str(error)})
+            return
+        if parsed.path == "/api/v1/shared/recipe-match":
+            self._handle_shared_recipe_match(payload)
             return
         if parsed.path == "/api/products/batch":
             self._handle_products_batch(payload)
@@ -2543,6 +2632,64 @@ class ApiHandler(SimpleHTTPRequestHandler):
             else:
                 self.send_json(502, {"error": "Butikens webbsida kunde inte läsas"})
 
+    # Tak för ett skafferi i EN begäran. Ett riktigt kylskåp rymmer inte
+    # hundra olika varor, och varje extra rad kostar en jämförelse mot varje
+    # ingrediens i varje recept. Utan tak är en lista med 50 000 poster en
+    # gratis CPU-brand på samma 512MB-instans som MAX_JSON_BODY_BYTES
+    # skyddar minnet på.
+    MAX_PANTRY_ITEMS = 100
+
+    def _handle_shared_recipe_match(self, payload):
+        """Skafferi in, matchade recept ut. Lagrets enda beräkning.
+
+        POST och inte GET trots att ingenting skrivs: ett skafferi är en
+        lista, och listor i query-strängar blir trunkerade, dubbelkodade
+        och loggade. Svaret är ändå cachebart av klienten - det beror bara
+        på indata."""
+        items = payload.get("items")
+        if not isinstance(items, list) or not items:
+            self.send_json(400, {"error": "Ange minst en ingrediens i items"})
+            return
+        seen, pantry = set(), []
+        for raw in items:
+            # Ett skafferi kan komma som strängar eller som objekt med
+            # mängd och bäst före - Ät Upp har båda. Bara namnet betyder
+            # något för matchningen; resten är den andra appens sak.
+            name = raw.get("name") if isinstance(raw, dict) else raw
+            name = clean_text(str(name or ""))[:80]
+            if name and name.lower() not in seen:
+                seen.add(name.lower())
+                pantry.append(name)
+        if not pantry:
+            self.send_json(400, {"error": "Inga giltiga ingrediensnamn angavs"})
+            return
+
+        def names(key):
+            value = payload.get(key)
+            return [clean_text(str(item))[:80] for item in value if str(item or "").strip()] \
+                if isinstance(value, list) else []
+
+        def bounded(key, default, low, high):
+            try:
+                return min(max(int(payload.get(key, default)), low), high)
+            except (TypeError, ValueError):
+                return default
+
+        try:
+            result = shared_api.recipe_match(
+                pantry[:self.MAX_PANTRY_ITEMS],
+                extra_staples=names("extraStaples"),
+                not_staples=names("notStaples"),
+                max_missing=(bounded("maxMissing", 0, 0, 20)
+                             if payload.get("maxMissing") is not None else None),
+                limit=bounded("limit", 60, 1, 200),
+            )
+        except Exception:
+            logger.exception("Shared recipe match failed for %r", pantry[:10])
+            self.send_json(502, {"error": "Receptmatchningen svarar inte just nu"})
+            return
+        self.send_json(200, result)
+
     def _handle_products_batch(self, payload):
         chain = payload.get("butik")
         zip_code = clean_text(str(payload.get("zip") or DEFAULT_ZIP)) or DEFAULT_ZIP
@@ -2688,6 +2835,10 @@ if __name__ == "__main__":
         imported = recipes_api.bootstrap_if_empty()
         if imported:
             logger.warning("Byggde receptbanken från källfilerna: %d recept", imported)
+            # Det delade lagret har ett eget index över banken. Utan detta
+            # matchar en delad app mot den bank som fanns innan synken, i
+            # upp till index-TTL:en efter en deploy som lade till recept.
+            shared_api.clear_cache()
     except Exception:
         logger.exception("Kunde inte bygga receptbanken")
     # Portion prices on the cards come from the price database, so they are
