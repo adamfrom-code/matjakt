@@ -684,7 +684,10 @@ async function syncNearbyBranches() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (state.postnummer !== zip) return;
-    state.branches = (data.butiker || []).map(store => ({ kedja: store.kedja, namn: store.namn, lat: store.lat, lon: store.lon, avstandKm: store.avstandKm, prisfaktor: 1, primatKey: store.primatKey || "" }));
+    state.branches = (data.butiker || []).map(store => ({ kedja: store.kedja, namn: store.namn, ort: store.ort || "", lat: store.lat, lon: store.lon, avstandKm: store.avstandKm, prisfaktor: 1, primatKey: store.primatKey || "",
+      // Nationella butiksmodellen: butikens eget id + hur kedjan prissätter
+      // (nationellt/per butik) + om den här butikens priser går att få.
+      externalStoreId: store.externalStoreId || "", pricingScope: store.pricingScope || "", prisbar: store.prisbar !== false }));
     state.liveBranchTotals = {};
     // Only auto-pick a week here when the user doesn't already have one (same
     // guard as the startup call below) - this resolves on every single app
@@ -1141,6 +1144,22 @@ function pricingHeaders() {
   return { "Content-Type": "application/json",
            ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 }
+function storeSelectionForPricing() {
+  // Användarens butiker till prissättningen: närmaste butik per kedja (listan
+  // är avståndssorterad från servern), pinnad butik vinner över närmaste.
+  // Servern gör resten ärligt: nationellt prissatta kedjor etiketteras med
+  // butiken, butiksspecifika prissätts BARA om just den butikens katalog
+  // finns - annars rapporteras kedjan som otillgänglig i stället för att en
+  // annan butiks priser visas under fel namn.
+  const selection = {};
+  for (const branch of nearbyBranches()) {
+    if (branch.externalStoreId && !selection[branch.kedja]) selection[branch.kedja] = branch.externalStoreId;
+  }
+  const pinned = state.pinnedBranch;
+  if (pinned?.externalStoreId && pinned.kedja) selection[pinned.kedja] = pinned.externalStoreId;
+  return selection;
+}
+
 function weekPricingBody(shoppingItems) {
   const selected = selectedRecipes();
   const bankRecipes = selected.filter(recipe => recipe.priceStatus !== "unavailable"
@@ -1153,6 +1172,8 @@ function weekPricingBody(shoppingItems) {
   if (state.removedItems.size) body.excludeItems = [...state.removedItems].sort();
   if (recipeIds.length) body.recipeIds = recipeIds;
   else body.items = shoppingItems.map(item => ({ name: item.namn, amount: item.total, unit: item.unit }));
+  const stores = storeSelectionForPricing();
+  if (Object.keys(stores).length) body.stores = stores;
   return body;
 }
 async function syncDatabasePricing(shoppingItems) {
@@ -1374,8 +1395,12 @@ function storeCardMarkup(entry) {
   if (unavailable) {
     return `<div class="store-card unavailable"><strong>${escapeHtml(chain)}</strong><span>Pris ej tillgängligt – för få varor prissatta</span></div>`;
   }
+  // Butiksnamnet när servern vet vilken butik priset gäller ("Willys
+  // Älvsjö", inte bara "Willys") - nationell tjänst, användarens butik.
+  const storeLabel = entry.storeName && entry.storeName !== chain
+    ? `<small class="store-card-store">${escapeHtml(entry.storeName)}</small>` : "";
   return `<button type="button" class="store-card ${active ? "active" : ""}" data-store-card="${escapeHtml(chain)}">
-    <strong>${escapeHtml(chain)}</strong><span>${money(total)}</span>${cheapest ? '<em class="store-card-badge">Billigast</em>' : ""}</button>`;
+    <strong>${escapeHtml(chain)}</strong>${storeLabel}<span>${money(total)}</span>${cheapest ? '<em class="store-card-badge">Billigast</em>' : ""}</button>`;
 }
 
 function renderStoreCards() {
@@ -1398,6 +1423,7 @@ function renderStoreCards() {
       // kanoniska matkorgen utan extras. Extras i sorteringen lät ett kort
       // utan kronan lägga sig först och motsäga badgen.
       total: result.totalCheckoutCost,
+      storeName: result.store?.name || "",
       cheapest: result.chain === cheapestChain,
       active: result.chain === chain,
     }))
@@ -1672,7 +1698,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
     // store than the one tapped.
     const branch = shown[Number(button.dataset.pickBranch)].branch;
     const alreadyPinned = state.pinnedBranch && state.pinnedBranch.primatKey === branch.primatKey;
-    state.pinnedBranch = alreadyPinned ? null : { kedja: branch.kedja, namn: branch.namn, primatKey: branch.primatKey };
+    state.pinnedBranch = alreadyPinned ? null : { kedja: branch.kedja, namn: branch.namn, primatKey: branch.primatKey, externalStoreId: branch.externalStoreId || "" };
     state.butik = branch.kedja;
     state.livePriser = {};
     state.liveBranchTotals = {};
@@ -3066,7 +3092,8 @@ async function syncPlanPricing(plans) {
       const response = await fetch(pricingWeekApiUrl(), {
         method: "POST",
         headers: pricingHeaders(),
-        body: JSON.stringify({ recipeIds, people: state.personer, pantry: pantryAmounts(state.pantry || {}) }),
+        body: JSON.stringify({ recipeIds, people: state.personer, pantry: pantryAmounts(state.pantry || {}),
+          ...(Object.keys(storeSelectionForPricing()).length ? { stores: storeSelectionForPricing() } : {}) }),
         signal: AbortSignal.timeout(20000),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);

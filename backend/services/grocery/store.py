@@ -53,6 +53,21 @@ class GroceryStore:
         self._connection.execute("PRAGMA journal_mode=WAL")
         self._connection.execute("PRAGMA foreign_keys=ON")
         self._init_schema()
+        self._migrate_schema()
+
+    def _migrate_schema(self):
+        """Additiva kolumner på befintliga databaser. CREATE TABLE IF NOT
+        EXISTS rör aldrig en tabell som redan finns, så nya kolumner måste
+        läggas till här - idempotent, styrt av vad tabellen faktiskt har."""
+        existing = {row[1] for row in self._connection.execute(
+            "PRAGMA table_info(grocery_stores)")}
+        with self._connection:
+            if "provider" not in existing:
+                self._connection.execute(
+                    "ALTER TABLE grocery_stores ADD COLUMN provider TEXT")
+            if "pricing_scope" not in existing:
+                self._connection.execute(
+                    "ALTER TABLE grocery_stores ADD COLUMN pricing_scope TEXT")
 
     @property
     def connection(self):
@@ -177,21 +192,28 @@ class GroceryStore:
     def upsert_store(self, *, chain: str, external_store_id: str, name: str, city: str | None = None,
                       postal_code: str | None = None, address: str | None = None,
                       latitude: float | None = None, longitude: float | None = None,
-                      active: bool = True) -> Store:
+                      active: bool = True, provider: str | None = None,
+                      pricing_scope: str | None = None) -> Store:
         now = time.time()
         with self._connection:
             self._connection.execute(
                 """
                 INSERT INTO grocery_stores (chain, external_store_id, name, city, postal_code, address,
-                                             latitude, longitude, active, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                             latitude, longitude, active, created_at, updated_at,
+                                             provider, pricing_scope)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(chain, external_store_id) DO UPDATE SET
                     name = excluded.name, city = excluded.city, postal_code = excluded.postal_code,
                     address = excluded.address, latitude = excluded.latitude, longitude = excluded.longitude,
-                    active = excluded.active, updated_at = excluded.updated_at
+                    active = excluded.active, updated_at = excluded.updated_at,
+                    -- COALESCE: en anropare som inte känner provider/scope
+                    -- (t.ex. en gammal kedje-provider) får inte RADERA vad
+                    -- registersynken redan vet om butiken.
+                    provider = COALESCE(excluded.provider, grocery_stores.provider),
+                    pricing_scope = COALESCE(excluded.pricing_scope, grocery_stores.pricing_scope)
                 """,
                 (chain, external_store_id, name, city, postal_code, address, latitude, longitude,
-                 int(active), now, now),
+                 int(active), now, now, provider, pricing_scope),
             )
         return self.get_store(chain=chain, external_store_id=external_store_id)
 
@@ -222,11 +244,14 @@ class GroceryStore:
 
     @staticmethod
     def _row_to_store(row) -> Store:
+        keys = row.keys()
         return Store(
             id=row["id"], chain=row["chain"], external_store_id=row["external_store_id"], name=row["name"],
             city=row["city"], postal_code=row["postal_code"], address=row["address"],
             latitude=row["latitude"], longitude=row["longitude"], active=bool(row["active"]),
             created_at=row["created_at"], updated_at=row["updated_at"],
+            provider=row["provider"] if "provider" in keys else None,
+            pricing_scope=row["pricing_scope"] if "pricing_scope" in keys else None,
         )
 
     # ---- Products / matching -----------------------------------------

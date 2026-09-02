@@ -103,21 +103,29 @@ class NormalizeProduct(unittest.TestCase):
 
 
 class Stores(unittest.TestCase):
-    def test_offers_only_stores_are_inactive(self):
+    def test_offers_only_stores_are_inactive_and_register_is_national(self):
         provider = PrimatProvider("ICA", api_key="test-nyckel")
-        resolve = {"stores": [
-            {"chain": "ica", "store_id": "1158001", "key": "ica:1158001",
-             "name": "Maxi Brynäs", "city": "Gävle", "tier": "full"},
-            {"chain": "ica", "store_id": "1048012", "key": "ica:1048012",
-             "name": "Nära Stortorget", "city": "Gävle", "tier": "offers_only"},
-            {"chain": "coop", "store_id": "206403", "key": "coop:206403",
-             "name": "Coop Eken", "city": "Gävle", "tier": "full"},
+        register = {"data": [
+            {"chain": "ica", "store_id": "1158001", "name": "Maxi Brynäs",
+             "city": "Gävle", "postcode": "802 91", "address": "Väg 1",
+             "coordinates": {"latitude": 60.66, "longitude": 17.16}, "tier": "full"},
+            {"chain": "ica", "store_id": "1048012", "name": "Nära Stortorget",
+             "city": "Gävle", "postcode": "80320", "tier": "offers_only"},
+            {"chain": "ica", "store_id": "1000123", "name": "Maxi Lindhagen",
+             "city": "Stockholm", "postcode": "11250", "tier": "full"},
+            {"chain": "coop", "store_id": "206403", "name": "Coop Eken",
+             "city": "Gävle", "tier": "full"},
         ]}
-        with patch.object(PrimatProvider, "_call", return_value=resolve):
+        with patch.object(PrimatProvider, "_call", return_value=register):
             stores = provider.get_stores()
-        self.assertEqual([s.external_store_id for s in stores], ["1158001", "1048012"])
+        # Nationellt: Stockholmsbutiken är med, Coop-raden är det inte.
+        self.assertEqual([s.external_store_id for s in stores],
+                         ["1158001", "1048012", "1000123"])
         self.assertTrue(stores[0].active)
         self.assertFalse(stores[1].active)  # offers_only duger inte till en matkorg
+        self.assertEqual(stores[0].postal_code, "80291")  # mellanslag städas
+        self.assertEqual(stores[0].latitude, 60.66)
+        self.assertEqual(stores[2].city, "Stockholm")
 
 
 class ProductsPagination(unittest.TestCase):

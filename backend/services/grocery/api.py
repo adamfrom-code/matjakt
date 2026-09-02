@@ -280,22 +280,26 @@ PROVIDER_STATUS = {
                 "HTTP 429. En delvis import är normalt, inte ett fel.",
     },
     "ICA": {
-        "status": "working_but_rate_limited", "recurringImportVerified": False,
-        "pricingScope": "store", "collectable": False,
-        "note": "AWS WAF-challenge vid upprepad hämtning. Vi kringgår den inte. "
-                "ICA visar senast hämtade data tills officiell åtkomst är löst.",
+        "status": "working_via_primat", "recurringImportVerified": False,
+        "pricingScope": "store", "collectable": True,
+        "note": "Butiksspecifika priser via Primat-API:t (providers/primat.py) - "
+                "bevisat olika priser mellan butiker. Direktvägen är stängd (WAF + "
+                "villkor) och kringgås inte. Bakom RELEASED_CHAINS tills full "
+                "katalog klarat kvalitetsgaten.",
     },
     "Coop": {
-        "status": "blocked_requires_vendor_credential", "recurringImportVerified": False,
-        "pricingScope": None, "collectable": False,
-        "note": "All produktdata kräver Coops egen Azure APIM-nyckel. Vi autentiserar "
-                "oss inte med någon annans credential.",
+        "status": "working_via_primat", "recurringImportVerified": False,
+        "pricingScope": "store", "collectable": True,
+        "note": "Butiksscopade priser via Primat. Coops egen API-portal är låst till "
+                "deras interna Azure AD - vi autentiserar oss inte med någon annans "
+                "credential. Bakom RELEASED_CHAINS tills kvalitetsgaten passerats.",
     },
     "Lidl": {
-        "status": "not_available_no_public_prices", "recurringImportVerified": False,
-        "pricingScope": None, "collectable": False,
-        "note": "Strukturellt, inte en blockering: Lidl Sverige publicerar inga "
-                "per-produkt-priser alls. Går inte att lösa tekniskt och ska inte fejkas.",
+        "status": "partial_via_primat", "recurringImportVerified": False,
+        "pricingScope": "national", "collectable": True,
+        "note": "Lidl publicerar inga egna per-produkt-priser; Primats Lidl-feed är "
+                "rikspriser men liten (~200-400 varor) - för tunn för en hel matkorg. "
+                "Bakom RELEASED_CHAINS; ingen Lidl-total ska fejkas fram.",
     },
 }
 
@@ -377,11 +381,150 @@ def priceable_chains() -> list[str]:
             if entry["products"] > 0 and entry["chain"] in RELEASED_CHAINS]
 
 
-def _store_row_for(store: GroceryStore, chain: str):
+def stores_near(latitude: float, longitude: float,
+                max_km: float = 50.0, per_chain: int = 6) -> list[dict]:
+    """Närliggande butiker ur det nationella registret, sorterade på avstånd.
+
+    Helt ur egen databas - inga API-anrop per uppslag. max_km=50 är medvetet
+    generöst: i glesbygd är fem mil till butiken verklighet, och en tom lista
+    hjälper ingen. per_chain håller stadslistor hanterliga (Stockholm har
+    hundratals butiker inom fem mil).
+
+    Varje rad bär prisbar: kan den här butikens priser finnas hos Matjakt?
+    NATIONAL-kedja = ja så fort kedjans katalog finns; STORE_SPECIFIC = bara
+    om butikens egen katalog importerats (harPriser) eller åtminstone KAN
+    importeras (active, dvs. full täckning hos källan). UI:t ska kunna visa
+    skillnaden ärligt i stället för att låtsas att allt går att prissätta."""
+    import math
+
+    from .register import CHAIN_PRICING_SCOPE
+
+    store = open_store()
+    try:
+        rows = store.connection.execute(
+            """
+            SELECT s.chain, s.external_store_id, s.name, s.city, s.postal_code,
+                   s.address, s.latitude, s.longitude, s.active, s.pricing_scope,
+                   EXISTS(SELECT 1 FROM grocery_current_prices cp
+                          WHERE cp.store_id = s.id) AS har_priser
+            FROM grocery_stores s
+            WHERE s.latitude IS NOT NULL AND s.longitude IS NOT NULL
+            """).fetchall()
+        chains_with_catalog = set(priceable_chains())
+    finally:
+        store.close()
+
+    lat_rad = math.radians(latitude)
+    results: dict[str, list[dict]] = {}
+    for row in rows:
+        # Haversine räcker gott för butiksavstånd.
+        d_lat = math.radians(row["latitude"] - latitude)
+        d_lng = math.radians(row["longitude"] - longitude)
+        a = (math.sin(d_lat / 2) ** 2
+             + math.cos(lat_rad) * math.cos(math.radians(row["latitude"]))
+             * math.sin(d_lng / 2) ** 2)
+        km = 6371.0 * 2 * math.asin(math.sqrt(a))
+        if km > max_km:
+            continue
+        chain = row["chain"]
+        scope = row["pricing_scope"] or CHAIN_PRICING_SCOPE.get(chain)
+        if scope == "NATIONAL":
+            prisbar = chain in chains_with_catalog
+        else:
+            prisbar = bool(row["har_priser"]) or bool(row["active"])
+        results.setdefault(chain, []).append({
+            "kedja": chain,
+            "namn": row["name"],
+            "ort": row["city"],
+            "adress": row["address"],
+            "postnummer": row["postal_code"],
+            "avstandKm": round(km, 1),
+            "externalStoreId": row["external_store_id"],
+            "pricingScope": scope,
+            "prisbar": prisbar,
+            "harPriser": bool(row["har_priser"]),
+            "lat": row["latitude"], "lon": row["longitude"],
+        })
+
+    flattened = []
+    for chain, chain_rows in results.items():
+        chain_rows.sort(key=lambda r: r["avstandKm"])
+        flattened.extend(chain_rows[:per_chain])
+    flattened.sort(key=lambda r: r["avstandKm"])
+    return flattened
+
+
+def store_register_count() -> int:
+    """Hur många butiker registret håller - 0 betyder att registersynken
+    aldrig körts i den här miljön (då får /api/stores falla tillbaka på den
+    gamla uppslagsvägen)."""
+    store = open_store()
+    try:
+        return store.connection.execute(
+            "SELECT COUNT(*) FROM grocery_stores WHERE latitude IS NOT NULL"
+        ).fetchone()[0]
+    finally:
+        store.close()
+
+
+def _store_row_for(store: GroceryStore, chain: str, external_store_id: str | None = None):
+    """Butiksraden att prissätta mot.
+
+    Med external_store_id: exakt den butiken (användarens val). Utan: kedjans
+    KATALOGBUTIK - raden som faktiskt bär priser. Det gamla "ORDER BY id
+    LIMIT 1" var Gävle-låsningen i förklädnad: när det nationella
+    butiksregistret fyllt tabellen med ~2 800 rader hade första-raden-per-id
+    kunnat bli vilken prislösa registerbutik som helst."""
+    if external_store_id is not None:
+        return store.connection.execute(
+            "SELECT id, name, external_store_id, city, pricing_scope FROM grocery_stores "
+            "WHERE chain = ? AND external_store_id = ?", (chain, str(external_store_id))
+        ).fetchone()
     return store.connection.execute(
-        "SELECT id, name, external_store_id, city FROM grocery_stores "
-        "WHERE chain = ? ORDER BY id LIMIT 1", (chain,)
+        "SELECT id, name, external_store_id, city, pricing_scope FROM grocery_stores "
+        "WHERE chain = ? "
+        "ORDER BY EXISTS(SELECT 1 FROM grocery_current_prices cp WHERE cp.store_id = grocery_stores.id) DESC, id "
+        "LIMIT 1", (chain,)
     ).fetchone()
+
+
+def _store_has_prices(store: GroceryStore, store_row) -> bool:
+    if store_row is None:
+        return False
+    return store.connection.execute(
+        "SELECT EXISTS(SELECT 1 FROM grocery_current_prices WHERE store_id = ?)",
+        (store_row["id"],)).fetchone()[0] == 1
+
+
+def resolve_pricing_store(store: GroceryStore, chain: str,
+                          external_store_id: str | None = None):
+    """(katalogbutik, etikettbutik, orsak) för en kedja + ev. användarval.
+
+    Kedjor prissätts olika på riktigt (se register.CHAIN_PRICING_SCOPE):
+      NATIONAL       - kedjans katalog gäller varje butik: prissätt mot
+                       katalogbutiken, ETIKETTERA med användarens valda
+                       butik. Willys Älvsjö visar Willys-priser och det är
+                       sant i Älvsjö.
+      STORE_SPECIFIC - bara butiker vars egen katalog importerats får
+                       prissättas. Användarens ICA utan importerad katalog
+                       ger (None, butiken, "no_data_for_store") - ALDRIG en
+                       annan butiks priser under fel namn.
+    Utan användarval: katalogbutiken för både pris och etikett (samma
+    beteende som före nationella modellen)."""
+    from .register import CHAIN_PRICING_SCOPE
+    catalog_row = _store_row_for(store, chain)
+    if not _store_has_prices(store, catalog_row):
+        return None, None, "no_data_for_chain"
+    if external_store_id is None:
+        return catalog_row, catalog_row, None
+    chosen = _store_row_for(store, chain, external_store_id)
+    if chosen is None:
+        return None, None, "unknown_store"
+    if CHAIN_PRICING_SCOPE.get(chain) == "NATIONAL":
+        return catalog_row, chosen, None
+    if _store_has_prices(store, chosen):
+        return chosen, chosen, None
+    return None, chosen, "no_data_for_store"
 
 
 def _store_id_for(store: GroceryStore, chain: str):
@@ -390,19 +533,28 @@ def _store_id_for(store: GroceryStore, chain: str):
 
 
 def price_week(items: list[dict], chains: list[str] | None = None,
-               pantry: dict | None = None) -> dict:
+               pantry: dict | None = None,
+               store_selection: dict[str, str] | None = None) -> dict:
     """Prices one week's summed ingredient list against every chain.
 
     items are already week-aggregated: [{"name","amount","unit"}, ...].
-    Returns one result per chain plus a comparison that is allowed to stay
-    undecided - see compare_chains."""
+    store_selection ({kedja: external_store_id}) är användarens valda
+    butiker: nationellt prissatta kedjor etiketteras med den valda butiken,
+    butiksspecifika kedjor prissätts BARA om just den butikens katalog är
+    importerad - annars rapporteras kedjan ärligt som otillgänglig i stället
+    för att visa en annan butiks priser. Returns one result per chain plus a
+    comparison that is allowed to stay undecided - see compare_chains."""
     available = priceable_chains()
     chains = [chain for chain in (chains or available) if chain in available]
+    store_selection = {str(k): str(v) for k, v in (store_selection or {}).items()}
 
     key = None
     try:
+        # Butiksvalet MÅSTE in i cachenyckeln - utan det delade en
+        # Stockholmsanvändares jämförelse cache med en Gävleanvändares.
         key = repr((sorted((i.get("name"), i.get("amount"), i.get("unit")) for i in items),
-                    tuple(sorted(chains)), tuple(sorted((pantry or {}).items()))))
+                    tuple(sorted(chains)), tuple(sorted((pantry or {}).items())),
+                    tuple(sorted(store_selection.items()))))
     except TypeError:
         key = None  # unhashable input - price it, just don't cache it
     if key:
@@ -411,15 +563,24 @@ def price_week(items: list[dict], chains: list[str] | None = None,
             return cached
 
     store = open_store()
+    unavailable = []
     try:
         engine = RecipePricingEngine(store)
         raw_results, store_rows = [], {}
         for chain in chains:
-            store_row = _store_row_for(store, chain)
-            if store_row is None:
+            catalog_row, label_row, reason = resolve_pricing_store(
+                store, chain, store_selection.get(chain))
+            if catalog_row is None:
+                if reason == "no_data_for_store" and label_row is not None:
+                    # Användarens butik finns men saknar importerad katalog:
+                    # säg det, hitta inte på en total från en annan butik.
+                    unavailable.append({
+                        "chain": chain, "reason": reason,
+                        "storeName": label_row["name"],
+                        "externalStoreId": label_row["external_store_id"]})
                 continue
-            store_rows[chain] = store_row
-            result = engine.price_list(items, chain, store_row["id"], pantry=pantry)
+            store_rows[chain] = label_row
+            result = engine.price_list(items, chain, catalog_row["id"], pantry=pantry)
             result["dataAgeSeconds"] = _chain_age_seconds(store, chain)
             raw_results.append(result)
     finally:
@@ -431,7 +592,8 @@ def price_week(items: list[dict], chains: list[str] | None = None,
     comparison = compare_chains(raw_results)
     results = [format_chain_result(result, store_rows.get(result["chain"]), comparison)
                for result in raw_results]
-    payload = {"results": results, "comparison": comparison}
+    payload = {"results": results, "comparison": comparison,
+               "unavailableChains": unavailable}
     if key:
         _cache_set(key, payload)
     return payload
@@ -616,23 +778,31 @@ def compare_chains(results: list[dict]) -> dict:
     }
 
 
-def shopping_list(items: list[dict], chain: str, pantry: dict | None = None) -> dict:
+def shopping_list(items: list[dict], chain: str, pantry: dict | None = None,
+                  external_store_id: str | None = None) -> dict:
     """One chain's store-specific shopping list: the real products to put in
     the basket, with image, pack size, package count and price - plus what we
-    could NOT price, which stays visible rather than quietly disappearing."""
+    could NOT price, which stays visible rather than quietly disappearing.
+
+    external_store_id är användarens valda butik - samma upplösningsregler
+    som price_week (nationell katalog etiketteras om, butiksspecifik kedja
+    vägrar hellre än att visa fel butiks priser)."""
     store = open_store()
     try:
-        store_row = _store_row_for(store, chain)
-        if store_row is None:
+        catalog_row, label_row, reason = resolve_pricing_store(store, chain, external_store_id)
+        if catalog_row is None:
             # Not an empty list - an empty list would price the week at 0 kr
             # and read as the cheapest shop in Sweden.
-            return {"chain": chain, "error": "no_data_for_chain",
-                    "store": {"chain": chain, "name": None},
+            return {"chain": chain, "error": reason or "no_data_for_chain",
+                    "store": {"chain": chain,
+                              "name": label_row["name"] if label_row else None,
+                              "externalStoreId": label_row["external_store_id"] if label_row else None,
+                              "city": label_row["city"] if label_row else None},
                     "totalCheckoutCost": None, "coveragePercent": 0,
                     "realPriceItems": 0, "estimatedItems": 0,
                     "missingItems": len(items or []), "items": []}
-        result = RecipePricingEngine(store).price_list(items, chain, store_row["id"], pantry=pantry)
+        result = RecipePricingEngine(store).price_list(items, chain, catalog_row["id"], pantry=pantry)
         result["dataAgeSeconds"] = _chain_age_seconds(store, chain)
-        return format_chain_result(result, store_row)
+        return format_chain_result(result, label_row)
     finally:
         store.close()

@@ -996,6 +996,44 @@ def store_key_param(raw):
     return value if STORE_KEY_PATTERN.fullmatch(value) else None
 
 
+def _register_stores_response(rows):
+    """Registerbutiker i samma form som gamla nearby_stores-svaret (kedja,
+    namn, ort, avstandKm, primatKey) plus de nya nationella fälten
+    (externalStoreId, pricingScope, prisbar, harPriser) - frontendens
+    befintliga mappning fortsätter fungera och kan plocka upp de nya fälten
+    i sin egen takt."""
+    from services.grocery.register import PRIMAT_TO_CHAIN
+    chain_to_primat = {chain: key for key, chain in PRIMAT_TO_CHAIN.items()}
+    response = []
+    for row in rows:
+        primat_chain = chain_to_primat.get(row["kedja"])
+        response.append({**row,
+                         "primatKey": f"{primat_chain}:{row['externalStoreId']}"
+                         if primat_chain else ""})
+    return response
+
+
+_STORE_SELECTION_ID = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
+
+
+def _store_selection_param(payload) -> dict[str, str]:
+    """Användarens valda butiker ur en pricing-payload: {"stores": {kedja:
+    externt butiks-id}}. Valideras hårt innan något litas på - kedjenamn
+    måste vara kända, id:n måste se ut som butiks-id:n (Lidl har
+    bokstavsprefix: SE0128), och max en handfull poster. Ogiltiga poster
+    släpps tyst i stället för att fälla hela prissättningen."""
+    raw = payload.get("stores") if isinstance(payload, dict) else None
+    if not isinstance(raw, dict):
+        return {}
+    selection = {}
+    for chain, store_id in list(raw.items())[:12]:
+        chain = clean_text(str(chain))
+        store_id = clean_text(str(store_id))
+        if chain in grocery_api.PROVIDER_STATUS and _STORE_SELECTION_ID.fullmatch(store_id):
+            selection[chain] = store_id
+    return selection
+
+
 def cache_scope(zip_code, store_key):
     """A specific pinned store's prices must never share a cache entry with
     the chain's default door for this zip - two Coop locations can genuinely
@@ -1711,13 +1749,27 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": "Ange ett giltigt postnummer (5 siffror)"})
                 return
             try:
+                # NATIONELLT: butikslistan kommer ur det egna butiksregistret
+                # (alla svenska butiker, synkade via Primats /stores) - ett
+                # geocode-uppslag och sedan ren databasgeometri, oavsett om
+                # användaren står i Gävle, Malmö eller en småort. Faller
+                # tillbaka på den gamla per-uppslag-vägen bara när registret
+                # ännu inte synkats i miljön.
+                butiker = None
+                if grocery_api.store_register_count() > 0:
+                    place = geocode_postcode(zip_code)
+                    if place and place.get("lat") is not None:
+                        butiker = _register_stores_response(
+                            grocery_api.stores_near(float(place["lat"]), float(place["lon"])))
+                if butiker is None:
+                    butiker = nearby_stores(zip_code)
                 # The SERVER keeps its day-long cache - that is where the
                 # expensive geocoding and store lookups are. The RESPONSE
                 # must not, though: a 24h Cache-Control meant a browser kept
                 # serving a day-old store list, so a chain we started
                 # carrying (City Gross) stayed invisible for a day and a user
                 # who moved kept seeing the old town's shops.
-                self.send_json(200, {"butiker": nearby_stores(zip_code)},
+                self.send_json(200, {"butiker": butiker},
                                cache_seconds=STORE_LIST_RESPONSE_CACHE_SECONDS)
             except Exception:
                 logger.exception("Failed to compute nearby stores for zip %s", zip_code)
@@ -2003,6 +2055,30 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/pricing/list":
             self._handle_pricing_list(payload)
             return
+        if parsed.path == "/api/admin/store-register-sync":
+            # Nationella butiksregistret: alla svenska butiker (sex kedjor,
+            # ~2 800 rader) in i grocery_stores i en körning. Veckosyssla,
+            # inte nattlig - butiker byter inte adress varje dag, och
+            # körningen kostar ~2 800 rader av Primat-dygnskvoten.
+            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
+                self.send_json(403, {"error": "Admin-token krävs"})
+                return
+            if not PRIMAT_API_KEY:
+                self.send_json(503, {"error": "PRIMAT_API_KEY är inte satt"})
+                return
+            try:
+                from services.grocery.register import sync_store_register
+                db = grocery_api.open_store()
+                try:
+                    summary = sync_store_register(db, PRIMAT_API_KEY)
+                finally:
+                    db.close()
+                grocery_api.clear_cache()
+                self.send_json(200, summary)
+            except Exception as error:
+                logger.exception("Butiksregistersynken misslyckades")
+                self.send_json(502, {"error": str(error)[:200]})
+            return
         if parsed.path == "/api/admin/grocery-import":
             if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
                 self.send_json(403, {"error": "Admin-token krävs"})
@@ -2163,8 +2239,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
         chains = payload.get("chains") or payload.get("butiker")
         chains = [clean_text(str(c)) for c in chains if str(c).strip()] if isinstance(chains, list) else None
         pantry = payload.get("pantry") if isinstance(payload.get("pantry"), dict) else None
+        store_selection = _store_selection_param(payload)
         try:
-            result = grocery_api.price_week(items, chains, pantry)
+            result = grocery_api.price_week(items, chains, pantry,
+                                            store_selection=store_selection)
             user = ACCOUNT_STORE.user_for_token(self._bearer_token())
             plan = plan_features.plan_for_user(user)
             if not plan_features.allowed(plan, "all_store_prices"):
@@ -2188,12 +2266,14 @@ class ApiHandler(SimpleHTTPRequestHandler):
         pantry = payload.get("pantry") if isinstance(payload.get("pantry"), dict) else None
         user = ACCOUNT_STORE.user_for_token(self._bearer_token())
         plan = plan_features.plan_for_user(user)
+        store_selection = _store_selection_param(payload)
         if not plan_features.allowed(plan, "all_store_baskets"):
             # Which chain is Free allowed? The cheapest qualified one for
             # THIS list - decided by the same real comparison, server-side.
             # Anything else answers with a lock, not with data: a paywall
             # that only hides pixels is not a paywall.
-            week = grocery_api.price_week(items, None, pantry)
+            week = grocery_api.price_week(items, None, pantry,
+                                          store_selection=store_selection)
             allowed_chain = _free_chain_for(week)
             if chain != allowed_chain:
                 self.send_json(403, {"locked": True, "feature": "all_store_baskets",
@@ -2201,7 +2281,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
                                      "freeChain": allowed_chain})
                 return
         try:
-            self.send_json(200, grocery_api.shopping_list(items, chain, pantry))
+            self.send_json(200, grocery_api.shopping_list(
+                items, chain, pantry,
+                external_store_id=store_selection.get(chain) if store_selection else None))
         except Exception:
             logger.exception("Inköpslista misslyckades för %s", chain)
             self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})

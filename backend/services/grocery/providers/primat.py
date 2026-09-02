@@ -68,9 +68,9 @@ CHAIN_KEYS = {
     "City Gross": "citygross",
 }
 
-# Gävle är första lanseringsorten - butikslistan hämtas per postnummer via
-# Primats resolve (som också talar om täckningsnivån per butik).
-DEFAULT_POSTCODE = "80311"
+# Matjakt är nationell - butikslistan är HELA svenska registret (GET /stores,
+# ~2 800 butiker i ett anrop), aldrig ett postnummeruppslag. Vilka butiker som
+# faktiskt importeras väljs av anroparen (efterfrågestyrt per användarort).
 
 # Gratisnivåns tak är 200 rader/anrop; ett högre limit-värde skadar inte
 # (servern klipper själv) men 200 håller sidorna förutsägbara.
@@ -96,7 +96,7 @@ class PrimatProvider(GroceryProvider):
     name = "primat"
 
     def __init__(self, chain: str, api_key: str | None = None,
-                 postcode: str = DEFAULT_POSTCODE, max_rows: int | None = None):
+                 max_rows: int | None = None):
         if chain not in CHAIN_KEYS:
             raise ValueError(f"Primat täcker inte kedjan {chain!r}")
         if max_rows is None:
@@ -107,7 +107,6 @@ class PrimatProvider(GroceryProvider):
         self.chain = chain
         self._primat_chain = CHAIN_KEYS[chain]
         self._api_key = api_key or os.environ.get("PRIMAT_API_KEY") or None
-        self._postcode = postcode
         # Tak för hur många datarader (prisrader + batchsvar) en körning får
         # kosta av dagskvoten. Nås taket avbryts hämtningen ÄRLIGT - det
         # hämtade behålls och körningen rapporteras "blocked", se
@@ -128,23 +127,30 @@ class PrimatProvider(GroceryProvider):
 
     # ---------------------------------------------------------------- stores
     def get_stores(self) -> list[Store]:
-        """Kedjans butiker kring lanseringsorten, via Primats resolve.
+        """Kedjans ALLA svenska butiker, ur Primats nationella register
+        (GET /stores - hela landet i ett anrop, med adress, postnummer, ort
+        och koordinater).
 
         Butiker med täckningsnivån "offers_only" (bara kampanjrader, inga
         ordinarie priser) markeras active=False: de duger inte till att
         prissätta en matkorg, och att importera dem vore att bygga en
         katalog där nästan varje rad saknar pris."""
-        result = self._call("GET", "/stores/resolve", params={"postcode": self._postcode})
+        result = self._call("GET", "/stores")
         stores = []
-        for row in result.get("stores", []):
-            if row.get("chain") != self._primat_chain:
+        for row in result.get("data", []):
+            if row.get("chain") != self._primat_chain or not row.get("store_id"):
                 continue
+            coordinates = row.get("coordinates") or {}
             stores.append(Store(
                 id=0, chain=self.chain,
-                external_store_id=str(row.get("store_id") or (row.get("key") or "").split(":", 1)[-1]),
+                external_store_id=str(row["store_id"]),
                 name=row.get("name") or "", city=row.get("city"),
-                postal_code=None, address=None, latitude=None, longitude=None,
-                active=(row.get("tier") == "full")))
+                postal_code=(row.get("postcode") or "").replace(" ", "") or None,
+                address=row.get("address"),
+                latitude=coordinates.get("latitude"),
+                longitude=coordinates.get("longitude"),
+                active=(row.get("tier") == "full"),
+                provider="primat"))
         return stores
 
     # -------------------------------------------------------------- products

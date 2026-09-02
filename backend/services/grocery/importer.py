@@ -30,13 +30,19 @@ from .errors import ProviderBlockedError
 
 logger = logging.getLogger("matjakt.grocery.importer")
 
-# Store used for attribution per chain. Prices at Willys/Hemköp are national
-# (verified - the endpoint accepts but ignores storeId), so this identifies
-# the run, it does not scope the price.
+# NATTJOBBETS standardbutiker - INTE en produktbegränsning: start() tar
+# store_id som parameter, så vilken svensk butik som helst kan importeras
+# (butiksregistret i register.py listar alla ~2 800). Willys/Hemköp är
+# nationellt prissatta (verifierat - endpointen ignorerar storeId), så deras
+# rad identifierar bara körningen. City Gross prissätter PER BUTIK och 3209
+# är TESTMARKNADEN GÄVLES butik - fler CG-butiker importeras efterfrågestyrt
+# per användarort när kedjans butiksval släpps i UI:t (prissättningen vägrar
+# redan ärligt att visa Gävle-priser under en annan butiks namn, se
+# resolve_pricing_store).
 DEFAULT_STORES = {
-    "Willys": "2132",      # Willys Gävle Gestrike
-    "Hemköp": "4256",      # Hemköp Uppsala Svava C - nearest online store
-    "City Gross": "3209",  # City Gross Gävle (storeNumber, not id/siteId)
+    "Willys": "2132",      # Willys Gävle Gestrike (nationellt pris)
+    "Hemköp": "4256",      # Hemköp Uppsala Svava C (nationellt pris)
+    "City Gross": "3209",  # City Gross Gävle - testmarknadens butik
 }
 
 # ICA can be imported, but ONLY when a person asks for it. Repeated automatic
@@ -51,6 +57,8 @@ DEFAULT_STORES = {
 # ordinarie priser). Manuella tills de klarat samma kvalitetsgate som de tre
 # befintliga kedjorna - schemaläggaren når dem medvetet inte, och de syns
 # inte i appens jämförelse förrän det beslutet fattas separat.
+# Även dessa är TESTMARKNADSDEFAULTS, inte begränsningar: admin-endpointen
+# tar store_id och Primat-providern listar hela landets butiker.
 MANUAL_ONLY_STORES = {
     "ICA": "1003987",      # Maxi ICA Stormarknad Gävle (full täckning hos Primat)
     "Coop": "206403",      # Coop Eken Gävle (full täckning hos Primat)
@@ -158,10 +166,13 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
             store = next((s for s in stores if s.external_store_id == str(store_id)), None)
             if store is None:
                 raise ValueError(f"Butik {store_id!r} finns inte hos {chain}")
+            from .register import CHAIN_PRICE_PROVIDER, CHAIN_PRICING_SCOPE
             db_store = db.upsert_store(
                 chain=chain, external_store_id=store.external_store_id, name=store.name,
                 city=store.city, postal_code=store.postal_code, address=store.address,
-                latitude=store.latitude, longitude=store.longitude, active=store.active)
+                latitude=store.latitude, longitude=store.longitude, active=store.active,
+                provider=CHAIN_PRICE_PROVIDER.get(chain),
+                pricing_scope=CHAIN_PRICING_SCOPE.get(chain))
 
             found = 0
 

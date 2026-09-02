@@ -131,6 +131,15 @@ class Store:
     active: bool = True
     created_at: float = 0.0
     updated_at: float = 0.0
+    # Nationella butiksmodellen (2026-09-02): vilken datakälla som känner
+    # butiken ("axfood"/"citygross"/"primat") och hur kedjans priser gäller -
+    # "NATIONAL" (samma pris i hela landet, en katalog räcker),
+    # "STORE_SPECIFIC" (varje butik har egna priser; bara butiker vars
+    # katalog faktiskt importerats får prissättas) eller "REGIONAL"
+    # (reserverad). Kedjor är olika på riktigt - modellen ska inte låtsas
+    # något annat.
+    provider: str | None = None
+    pricing_scope: str | None = None
 
     def to_dict(self):
         value = asdict(self)
