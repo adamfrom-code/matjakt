@@ -1,15 +1,15 @@
-:root{--bg:#f6f3ea;--surface:#fff;--primary:#173b2a;--primary-2:#24563e;--primary-soft:#e7efe9;--accent:#f28c28;--accent-2:#d96a1c;--accent-3:#a34e0d;--accent-soft:#fff0df;--text:#162019;--muted:#5c665d;--border:rgba(22,32,25,.1);--r-md:18px;--r-lg:24px;--shadow:0 12px 32px rgba(23,59,42,.08)}
+:root{--bg:#f6f7f4;--surface:#fff;--primary:#146c43;--primary-2:#0f5233;--primary-soft:#e4efe7;--accent:#146c43;--accent-2:#0f5233;--accent-3:#0f5233;--accent-soft:#e4efe7;--text:#17211b;--muted:#6b756e;--border:#e6e9e6;--r-md:16px;--r-lg:20px;--shadow:none}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:"DM Sans",system-ui,sans-serif;line-height:1.55}
-h1,h2,h3{font-family:"Fraunces",serif;font-weight:700;color:var(--primary);line-height:1.15;margin:0 0 .5em}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Manrope",system-ui,sans-serif;line-height:1.55}
+h1,h2,h3{font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-weight:700;color:var(--primary);line-height:1.15;margin:0 0 .5em}
 a{color:inherit}
 ul,ol{margin:0;padding:0;list-style:none}
 main{max-width:1080px;margin:0 auto;padding:0 20px}
 section{margin:64px auto;scroll-margin-top:84px}
 a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent-2);outline-offset:2px;border-radius:4px}
 
-.site-topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;background:rgba(246,243,234,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)}
-.site-wordmark{font-family:"Fraunces",serif;font-weight:700;font-size:22px;color:var(--primary);text-decoration:none}
+.site-topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;background:rgba(246,247,244,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)}
+.site-wordmark{font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-weight:700;font-size:22px;color:var(--primary);text-decoration:none}
 .site-wordmark span{color:var(--accent)}
 .site-nav{display:none;gap:24px;font-size:14px;font-weight:500}
 .site-nav a{text-decoration:none;color:var(--text);opacity:.8}
@@ -53,7 +53,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visi
 .site-feature-card p{color:var(--muted);font-size:14px;margin:0}
 
 .site-steps-list{display:grid;grid-template-columns:1fr;gap:24px;counter-reset:step}
-.site-step-number{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;font-family:"Fraunces",serif;font-weight:700;font-size:15px}
+.site-step-number{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-weight:700;font-size:15px}
 .site-steps-list h3{font-size:17px;margin:12px 0 4px}
 .site-steps-list p{color:var(--muted);font-size:14px;margin:0}
 
@@ -62,8 +62,8 @@ a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visi
 .site-plan-card ul{display:flex;flex-direction:column;gap:10px;margin:18px 0 0;font-size:14px;color:var(--text)}
 .site-plan-card li{padding-left:22px;position:relative}
 .site-plan-card li::before{content:"✓";position:absolute;left:0;color:var(--primary-2);font-weight:700}
-.site-plan-price{font-family:"Fraunces",serif;font-size:26px;color:var(--primary);margin:4px 0 0}
-.site-plan-price small{font-family:"DM Sans",sans-serif;font-size:13px;color:var(--muted);font-weight:400}
+.site-plan-price{font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-size:26px;color:var(--primary);margin:4px 0 0}
+.site-plan-price small{font-family:"Manrope",sans-serif;font-size:13px;color:var(--muted);font-weight:400}
 .site-plan-featured{border-color:var(--accent);position:relative}
 .site-plan-badge{display:inline-block;background:var(--accent-soft);color:var(--accent-3);font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;margin:0 0 6px}
 .site-plan-featured .site-btn{margin-top:20px;width:100%}
@@ -79,7 +79,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visi
 
 .site-footer{border-top:1px solid var(--border);padding:28px 20px;margin-top:80px}
 .site-footer-inner{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center;font-size:13px;color:var(--muted)}
-.site-footer-inner>span{font-family:"Fraunces",serif;font-weight:700;color:var(--primary);font-size:16px}
+.site-footer-inner>span{font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-weight:700;color:var(--primary);font-size:16px}
 .site-footer-dot{color:var(--accent)}
 .site-footer nav{display:flex;flex-wrap:wrap;gap:16px;justify-content:center}
 .site-footer nav a{text-decoration:none;color:var(--muted)}
@@ -133,14 +133,14 @@ a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visi
 .site-film-copy{position:absolute;left:22px;right:22px;bottom:22px;color:#fff}
 .site-film-copy h3{color:#fff;font-size:25px;margin:10px 0 6px;text-shadow:0 2px 18px rgba(0,0,0,.4)}
 .site-film-copy p{margin:0;color:rgba(255,255,255,.88);font-size:15px}
-.site-film-step{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 9px;border-radius:99px;background:var(--accent);color:#2b1a08;font-family:"Fraunces",serif;font-weight:700;font-size:14px}
+.site-film-step{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 9px;border-radius:99px;background:var(--accent);color:#2b1a08;font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-weight:700;font-size:14px}
 .site-film-credit{margin:8px 4px 0;font-size:11px;color:var(--muted)}
 .site-film-credit a{color:var(--muted)}
 .site-film-scene-plain .site-film-copy{position:static;color:var(--text);padding:26px;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow)}
 .site-film-scene-plain h3{color:var(--primary);text-shadow:none}
 .site-film-scene-plain p{color:var(--muted)}
 .site-film-closing{margin-top:36px;padding:36px 20px;background:var(--primary);background-image:linear-gradient(155deg,var(--primary-2),var(--primary) 65%);border-radius:var(--r-lg);color:#fff}
-.site-film-closing-line{font-family:"Fraunces",serif;font-size:27px;font-weight:700;margin:0 0 20px}
+.site-film-closing-line{font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-size:27px;font-weight:700;margin:0 0 20px}
 
 /* A scene lifts into place as it arrives. Purely decorative, so it is off
    entirely for anyone who asked for less motion - and the starting state is
