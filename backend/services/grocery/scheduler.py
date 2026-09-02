@@ -67,8 +67,11 @@ CHECK_INTERVAL_SECONDS = 60
 # Veckodag + klockslag (Europe/Stockholm, strftime "%a %H:%M") för den
 # nationella butiksregistersynken.
 REGISTER_SYNC_AT = "Sun 01:00"
-# Nattligt nyförsök när registret saknas (Primat-kvoten nollställs per dygn).
-REGISTER_RETRY_AT = "01:30"
+# Nattligt nyförsök när registret saknas. Primats dygnskvot nollställs vid
+# midnatt UTC = 02:00 svensk sommartid, så försöket ligger EFTER det -
+# annars faller det på gårdagens förbrukning (verifierat 2026-09-02: 429
+# daily_row_budget_exceeded fram till resetten).
+REGISTER_RETRY_AT = "03:15"
 # Nattlig självläkning av referensnivån, efter prisjobben (02-04) och före
 # Dabas-berikningen (05:00).
 REFERENCE_HEAL_AT = "04:45"
