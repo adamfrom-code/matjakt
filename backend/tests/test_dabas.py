@@ -82,7 +82,8 @@ class Client(unittest.TestCase):
         self.assertEqual(product.package.kind, "VOLYM")
         self.assertEqual(product.allergens[0]["allergen"], "Mjölk")
         self.assertEqual(product.nutrition[0]["values"][0]["name"], "Energi")
-        self.assertIn("/V2/article/gtin/7310865093530/JSON", calls[0])
+        # GTIN-14 med inledande nolla - Dabas svarar 404 på 13-siffrig form.
+        self.assertIn("/V2/article/gtin/07310865093530/JSON", calls[0])
 
     def test_xml_is_parsed_like_json(self):
         xml = b"""<?xml version="1.0"?><ArticleModel><GTIN>7310865093530</GTIN><Produktnamn>Standardmj\xc3\xb6lk 3%</Produktnamn>

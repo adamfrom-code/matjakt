@@ -437,7 +437,9 @@ class DabasClient:
         code = normalize_gtin14(gtin)
         if not code:
             raise DabasNotFound("ogiltigt GTIN")
-        return self._get(f"/V2/article/gtin/{code.lstrip('0') or code}/{self._format}")
+        # Dabas kanoniska form är GTIN-14 MED inledande nolla: 07310865093530
+        # svarar 200, 7310865093530 svarar 404 (verifierat live 2026-09-02).
+        return self._get(f"/V2/article/gtin/{code}/{self._format}")
 
     def get_product(self, gtin: str) -> DabasProduct | None:
         return normalize_article(self.get_article(gtin))
@@ -446,7 +448,7 @@ class DabasClient:
         code = normalize_gtin14(gtin)
         if not code:
             raise DabasNotFound("ogiltigt GTIN")
-        return self._get(f"/V2/completearticlehierarchy/gtin/{code.lstrip('0') or code}/{self._format}")
+        return self._get(f"/V2/completearticlehierarchy/gtin/{code}/{self._format}")
 
     def changed_since(self, when: str) -> dict:
         return self._get(f"/V2/articles/datetime/{urllib.parse.quote(when)}/{self._format}")
