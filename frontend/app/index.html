@@ -37,7 +37,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=57">
+  <link rel="stylesheet" href="styles.css?v=58">
 </head>
 <body>
   <div class="phone-shell">
@@ -229,16 +229,15 @@
       <section class="screen shopping-screen" aria-labelledby="shoppingTitle">
         <header class="screen-header"><p class="eyebrow">Din lista</p><h1 id="shoppingTitle">Handla</h1></header>
         <p class="price-source-note" id="priceSourceNote" hidden></p>
-        <section class="shopping-progress"><div><strong id="shoppingProgress">0 varor kvar</strong><span id="shoppingCost">0 / 0 kr</span></div><div class="progress-track"><i id="shoppingProgressBar"></i></div></section>
-        <div class="shopping-complete" id="shoppingComplete" hidden><strong>Allt handlat!</strong><p>Redo att planera nästa veckas meny?</p><button type="button" class="btn btn-primary" id="startNewWeekBtn"><span>Skapa nästa vecka</span><span aria-hidden="true">→</span></button></div>
-        <h3 class="shopping-section-title" id="weekListTitle" hidden>Din matvecka</h3>
-        <div class="shopping-list" id="shoppingList"></div>
-        <!-- Butiksjämförelsen är ett STÖD till listan, inte sidans huvudsak:
-             först ser du vad du ska handla, sedan var det blir billigast. -->
+        <!-- Butiksvalet överst: först var det blir billigast, sedan listan. -->
         <h3 class="shopping-section-title" id="storeCompareTitle">Var blir det billigast?</h3>
         <div class="store-cards" id="storeCards"></div>
         <p class="store-spread-teaser" id="storeSpreadTeaser" hidden></p>
         <div id="basketStoreCompare" hidden></div>
+        <section class="shopping-progress"><div><strong id="shoppingProgress">0 varor kvar</strong><span id="shoppingCost">0 / 0 kr</span></div><div class="progress-track"><i id="shoppingProgressBar"></i></div></section>
+        <div class="shopping-complete" id="shoppingComplete" hidden><strong>Allt handlat!</strong><p>Redo att planera nästa veckas meny?</p><button type="button" class="btn btn-primary" id="startNewWeekBtn"><span>Skapa nästa vecka</span><span aria-hidden="true">→</span></button></div>
+        <h3 class="shopping-section-title" id="weekListTitle" hidden>Din matvecka</h3>
+        <div class="shopping-list" id="shoppingList"></div>
         <section class="extra-items" id="extraItemsSection" hidden>
           <h3 class="shopping-section-title">Extra du lagt till</h3>
           <div id="extraItemsList"></div>
@@ -500,6 +499,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=98"></script>
+  <script type="module" src="app.js?v=99"></script>
 </body>
 </html>
