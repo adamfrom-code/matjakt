@@ -67,6 +67,8 @@ CHECK_INTERVAL_SECONDS = 60
 # Veckodag + klockslag (Europe/Stockholm, strftime "%a %H:%M") för den
 # nationella butiksregistersynken.
 REGISTER_SYNC_AT = "Sun 01:00"
+# Nattligt nyförsök när registret saknas (Primat-kvoten nollställs per dygn).
+REGISTER_RETRY_AT = "01:30"
 
 # Dabas-berikning, efter att prisjobben (02-04) hunnit publicera nya GTIN.
 DABAS_ENRICHMENT_AT = "05:00"
@@ -287,6 +289,15 @@ class GroceryScheduler:
             grocery_api.clear_cache()
         logger.info("Dabas-berikning (nattjobb): %s", summary)
 
+    def _sync_register_if_missing(self):
+        try:
+            from . import api as grocery_api
+            if grocery_api.store_register_count() >= 100 or not os.environ.get("PRIMAT_API_KEY"):
+                return
+            self._sync_register("nattligt nyförsök")
+        except Exception:
+            logger.exception("Registersynkens nyförsök misslyckades - försöker i morgon")
+
     def _sync_register(self, why: str):
         api_key = os.environ.get("PRIMAT_API_KEY")
         if not api_key:
@@ -350,6 +361,14 @@ class GroceryScheduler:
             self._last_fired["__register__"] = stamp
             threading.Thread(target=self._sync_register, args=("veckosynk",),
                              name="grocery-register-sync", daemon=True).start()
+        # Saknas registret helt (första synken föll t.ex. på dagens Primat-
+        # kvot) görs ett nytt försök varje natt tills det sitter - utan att
+        # vänta på nästa deploy eller söndag.
+        if (now.strftime("%H:%M") == REGISTER_RETRY_AT
+                and self._last_fired.get("__register_retry__") != stamp):
+            self._last_fired["__register_retry__"] = stamp
+            threading.Thread(target=self._sync_register_if_missing,
+                             name="grocery-register-retry", daemon=True).start()
         # Dabas-berikning efter nattens prisjobb: nya GTIN får masterdata,
         # gamla omprövas i sitt fönster. Bara när den uttryckligen är
         # aktiverad (nyckel + MATJAKT_DABAS_ENRICHMENT_ENABLED=1).
