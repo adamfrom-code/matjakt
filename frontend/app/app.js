@@ -1390,10 +1390,10 @@ function storeCardMarkup(entry) {
   const { chain, total, locked, cheapest, active, unavailable } = entry;
   if (locked) {
     return `<button type="button" class="store-card locked" data-store-card-paywall="${escapeHtml(chain)}">
-      <strong>${escapeHtml(chain)}</strong><span>🔒 Se pris med Premium</span></button>`;
+      ${chainMarkMarkup(chain)}<strong>${escapeHtml(chain)}</strong><span>🔒 Se pris med Premium</span></button>`;
   }
   if (unavailable) {
-    return `<div class="store-card unavailable"><strong>${escapeHtml(chain)}</strong><span>Pris ej tillgängligt – för få varor prissatta</span></div>`;
+    return `<div class="store-card unavailable">${chainMarkMarkup(chain)}<strong>${escapeHtml(chain)}</strong><span>Pris ej tillgängligt – för få varor prissatta</span></div>`;
   }
   // Butiksnamnet när servern vet vilken butik priset gäller ("Willys
   // Älvsjö", inte bara "Willys") - nationell tjänst, användarens butik.
@@ -1404,7 +1404,7 @@ function storeCardMarkup(entry) {
   const tierLabel = entry.priceLabel
     ? `<small class="store-card-tier${entry.verified ? " verified" : ""}">${entry.verified ? "✓ " : ""}${escapeHtml(entry.priceLabel)}</small>` : "";
   return `<button type="button" class="store-card ${active ? "active" : ""}" data-store-card="${escapeHtml(chain)}">
-    <strong>${escapeHtml(chain)}</strong>${storeLabel}<span>${money(total)}</span>${tierLabel}${cheapest ? '<em class="store-card-badge">Billigast</em>' : ""}</button>`;
+    ${chainMarkMarkup(chain)}<strong>${escapeHtml(chain)}</strong>${storeLabel}<span>${money(total)}</span>${tierLabel}${cheapest ? '<em class="store-card-badge">Billigast</em>' : ""}</button>`;
 }
 
 function renderStoreCards() {
@@ -1740,6 +1740,13 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
 // anything - it just draws in the app's own accent colour. The store
 // comparison is driven by the DATA, never by this map.
 const CHAIN_COLORS = { ICA: "#E2231A", Willys: "#171717", Coop: "#00953B", "Hemköp": "#E4032E", "City Gross": "#C8102E" };
+// Kedjemärke i kedjans färg - igenkänning utan att skeppa deras logotyper
+// (varumärken). Byts mot riktiga loggor i assets/chains/ om Adam tar in dem.
+function chainMarkMarkup(chain, size = "") {
+  const color = CHAIN_COLORS[chain] || "#146c43";
+  const label = chain === "ICA" ? "ICA" : chain === "City Gross" ? "CG" : (chain || "?").slice(0, 1).toUpperCase();
+  return `<span class="chain-mark${size ? ` chain-mark-${size}` : ""}" style="background:${color}" aria-hidden="true">${escapeHtml(label)}</span>`;
+}
 function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
   // null means "no comparable shop to measure against", which is different
   // from "the saving is zero".
@@ -1765,7 +1772,7 @@ function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
   const attrs = openable
     ? ` type="button" data-open-chain="${escapeHtml(result.branch.kedja)}"`
     : "";
-  return `<${tag} class="comparison-store-card ${isCheapest && coverageOk ? "cheapest" : ""}${openable ? " openable" : ""}"${attrs}><div class="comparison-store-main"><span class="comparison-store-name" style="color:${color}">${escapeHtml(result.branch.kedja)}</span><small class="comparison-store-coverage">${coverageNote}</small></div><div class="comparison-store-price">${isCheapest && coverageOk ? '<span class="comparison-billigast">Billigast</span>' : ""}${coverageOk ? `<strong>${money(result.cost)}</strong>${savings != null && savings > 1 ? `<small class="comparison-savings">Du sparar ${money(savings)}</small>` : ""}` : `<small class="comparison-savings">${!hasUsablePrice(result) ? "Inga priser hittades" : "För få aktuella priser för en jämförelse"}</small>`}</div>${openable ? '<span class="comparison-store-arrow" aria-hidden="true">›</span>' : ""}</${tag}>`;
+  return `<${tag} class="comparison-store-card ${isCheapest && coverageOk ? "cheapest" : ""}${openable ? " openable" : ""}"${attrs}><div class="comparison-store-main">${chainMarkMarkup(result.branch.kedja, "sm")}<span class="comparison-store-name" style="color:${color}">${escapeHtml(result.branch.kedja)}</span><small class="comparison-store-coverage">${coverageNote}</small></div><div class="comparison-store-price">${isCheapest && coverageOk ? '<span class="comparison-billigast">Billigast</span>' : ""}${coverageOk ? `<strong>${money(result.cost)}</strong>${savings != null && savings > 1 ? `<small class="comparison-savings">Du sparar ${money(savings)}</small>` : ""}` : `<small class="comparison-savings">${!hasUsablePrice(result) ? "Inga priser hittades" : "För få aktuella priser för en jämförelse"}</small>`}</div>${openable ? '<span class="comparison-store-arrow" aria-hidden="true">›</span>' : ""}</${tag}>`;
 }
 // =============================================================================
 // ONE CHAIN'S REAL SHOPPING LIST
@@ -2484,7 +2491,7 @@ function renderWeekStoreTabs() {
   const current = [...tabs.querySelectorAll("[data-week-store]")].map(b => b.dataset.weekStore);
   if (current.join("|") !== wanted.join("|")) {
     tabs.innerHTML = wanted.map(value =>
-      `<button type="button" data-week-store="${escapeHtml(value)}">${escapeHtml(value === "auto" ? "Auto" : value === "alla" ? "Alla" : value)}</button>`
+      `<button type="button" data-week-store="${escapeHtml(value)}">${fixed.includes(value) ? "" : chainMarkMarkup(value, "sm")}${escapeHtml(value === "auto" ? "Auto" : value === "alla" ? "Alla" : value)}</button>`
     ).join("");
     tabs.querySelectorAll("[data-week-store]").forEach(button =>
       button.addEventListener("click", () => switchWeekStore(button.dataset.weekStore)));
