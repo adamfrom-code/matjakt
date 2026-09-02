@@ -2320,7 +2320,7 @@ function renderGreeting() {
   // digit-heavy just falls back to the plain time greeting.
   const rawName = state.user?.email?.split("@")[0] || "";
   const name = rawName.length <= 18 && !/\d{4,}/.test(rawName) ? rawName : "";
-  $("homeGreeting").innerHTML = `${escapeHtml(name ? `${timeGreeting}, ${name}!` : `${timeGreeting}!`)} <span aria-hidden="true">👋</span>`;
+  $("homeGreeting").textContent = name ? `${timeGreeting}, ${name}` : timeGreeting;
 }
 function renderBasket() {
   const selected = selectedRecipes();
@@ -2375,6 +2375,12 @@ function renderBasket() {
   // fetch timestamp - that's internal plumbing, not something a shopper needs
   // to see. Only the plain, calm facts: what's left, and what it costs.
   $("shoppingProgress").textContent = shoppingItems.length ? plural(itemsLeft, "vara kvar", "varor kvar") : "";
+  // Hem's Handla-siffra: samma itemsLeft som Handla-vyn, aldrig en egen räkning.
+  const homeCheapest = state.dbComparison?.cheapestChain && !state.dbComparison.locked ? state.dbComparison.cheapestChain : null;
+  $("homeShoppingCount").textContent = shoppingItems.length ? plural(itemsLeft, "vara", "varor") : "–";
+  $("homeShoppingStore").textContent = shoppingItems.length
+    ? (homeCheapest ? `kvar · billigast hos ${homeCheapest}` : "kvar att plocka")
+    : "Skapa en vecka först";
   // Var priserna kommer ifrån och hur färska de är - förtroende byggs av
   // att säga det, inte av att låta användaren gissa.
   // SAMMA prioritetskedja som raderna (databaseItemFor) - annars kan noten
@@ -3223,6 +3229,7 @@ function renderStats() {
   }
 }
 $("openStatsBtn").addEventListener("click", () => { renderStats(); setView("stats"); });
+$("homeShoppingStat").addEventListener("click", () => setView("basket"));
 
 const DISLIKE_SUGGESTIONS = ["Lök", "Svamp", "Fisk", "Skaldjur", "Nötter", "Inälvsmat", "Stark mat", "Kokosmjölk"];
 // Fyra steg, inte sju. En förstagångare ska svara på det Matjakt inte kan
