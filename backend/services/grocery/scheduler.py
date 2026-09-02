@@ -68,6 +68,9 @@ CHECK_INTERVAL_SECONDS = 60
 # nationella butiksregistersynken.
 REGISTER_SYNC_AT = "Sun 01:00"
 
+# Dabas-berikning, efter att prisjobben (02-04) hunnit publicera nya GTIN.
+DABAS_ENRICHMENT_AT = "05:00"
+
 # Which chain fills an empty database first. Willys: the largest verified
 # catalogue (10 842 products, 100 % with category), plain HTTP with no
 # browser, and the chain most likely to be near any given user.
@@ -249,12 +252,16 @@ class GroceryScheduler:
             from .publish import backfill_reference_prices
             store = grocery_api.open_store()
             try:
-                has_prices = store.connection.execute(
-                    "SELECT EXISTS(SELECT 1 FROM grocery_current_prices)").fetchone()[0]
-                has_reference = store.connection.execute(
-                    "SELECT EXISTS(SELECT 1 FROM grocery_reference_prices)").fetchone()[0]
-                if has_prices and not has_reference:
-                    logger.warning("Referenstabellen är tom - första referenspubliceringen körs")
+                verified = store.connection.execute(
+                    "SELECT COUNT(*) FROM grocery_current_prices").fetchone()[0]
+                reference = store.connection.execute(
+                    "SELECT COUNT(*) FROM grocery_reference_prices").fetchone()[0]
+                # Självläkande: en avbruten backfill (processen startades om
+                # mitt i) lämnar en halvfylld tabell - då körs den om, inte
+                # bara när tabellen är tom. Backfillen är idempotent.
+                if verified and reference < verified * 0.5:
+                    logger.warning("Referenstabellen har %d rader mot %d verifierade - "
+                                   "referenspubliceringen körs", reference, verified)
                     backfill_reference_prices(store)
                     grocery_api.clear_cache()
                 registered = store.connection.execute(
@@ -265,6 +272,20 @@ class GroceryScheduler:
                 self._sync_register("första registersynken")
         except Exception:
             logger.exception("Plattformsaktiveringen misslyckades - nattjobbet fortsätter ändå")
+
+    def _run_dabas_enrichment(self):
+        from . import api as grocery_api
+        from .enrichment import enrichment_enabled, run_enrichment
+        if not enrichment_enabled():
+            return
+        store = grocery_api.open_store()
+        try:
+            summary = run_enrichment(store)
+        finally:
+            store.close()
+        if summary.get("ok"):
+            grocery_api.clear_cache()
+        logger.info("Dabas-berikning (nattjobb): %s", summary)
 
     def _sync_register(self, why: str):
         api_key = os.environ.get("PRIMAT_API_KEY")
@@ -329,6 +350,14 @@ class GroceryScheduler:
             self._last_fired["__register__"] = stamp
             threading.Thread(target=self._sync_register, args=("veckosynk",),
                              name="grocery-register-sync", daemon=True).start()
+        # Dabas-berikning efter nattens prisjobb: nya GTIN får masterdata,
+        # gamla omprövas i sitt fönster. Bara när den uttryckligen är
+        # aktiverad (nyckel + MATJAKT_DABAS_ENRICHMENT_ENABLED=1).
+        if (now.strftime("%H:%M") == DABAS_ENRICHMENT_AT
+                and self._last_fired.get("__dabas__") != stamp):
+            self._last_fired["__dabas__"] = stamp
+            threading.Thread(target=self._run_dabas_enrichment,
+                             name="grocery-dabas-enrichment", daemon=True).start()
         for chain, when in self.schedule.items():
             if now.strftime("%H:%M") != when or self._last_fired.get(chain) == stamp:
                 continue

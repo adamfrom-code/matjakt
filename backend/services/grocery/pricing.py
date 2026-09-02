@@ -862,11 +862,17 @@ def effective_package(product) -> tuple[float | None, str | None]:
     """Förpackningens (mängd, enhet) - importens tolkning först, annars en
     försiktig läsning av size-texten och namnet.
 
+    PAKETKONFLIKT (Dabas säger en mängd, providern en annan): då vet vi
+    inte, och en mängd vi inte vet får inte räkna paket. Raden blir
+    osäker och hålls utanför säkra totaler - fail closed.
+
     "400/240g" läses som 240 g (avrunnen vikt - det är maten, inte lagen).
     "2x120g" blir 240 g. "CA 750G" blir 750 g - cirkavikt på en bit är
     rätt modell för antalet, och priset är per styck. Hittas bara ett
     styckantal ("Ägg 6p") blir det N st. Hittas inget alls: (None, None),
     och raden förblir ärligt osäker."""
+    if getattr(product, "package_conflict", None):
+        return None, None
     if product.quantity:
         return product.quantity, product.unit
     for text in (product.size or "", product.name or ""):
@@ -963,6 +969,52 @@ def _exclusion_hit(text: str, words: set[str], bad: str) -> bool:
         or (word.endswith(folded_bad)
             and not any(word.endswith(longer) for longer in suffix_overrides))
         for word in words)
+
+
+def _dabas_category_allows(product, ingredient: str) -> bool:
+    """Dabas-kategorin som EXTRA avvisningssignal: samma avdelningsvakt som
+    kedjornas egna kategorier (category_allows_ingredient), prövad på
+    produktens verifierade masterdata-kategori. "Kanel" mot Dabas-kategori
+    "Knäckebröd" faller oavsett produktnamn. Saknas Dabas-kategori händer
+    inget - Dabas stärker reglerna, ersätter dem aldrig."""
+    dabas_category = getattr(product, "dabas_category", None)
+    if not dabas_category:
+        return True
+    return category_allows_ingredient(_dabas_category_as_path(dabas_category), ingredient)
+
+
+# Dabas artikelkategori (T0018) är ett ENSAMT begrepp ("Knäckebröd",
+# "Kryddor", "Mjölk"), inte en kedjas hyllsökväg. Avdelningsvakten talar
+# sökvägsdialekt, så begreppet översätts till den sökväg vakten redan
+# förstår. Okänt begrepp -> ingen översättning -> vakten kliver åt sidan
+# (namnreglerna avgör ensamma), aldrig ett falskt avslag.
+DABAS_CATEGORY_TERMS = {
+    "brod & kakor": ["knackebrod", "brod", "kex", "kakor", "kaka", "bulle", "bullar",
+                     "skorpor", "bageri", "tunnbrod", "frallor"],
+    "skafferi": ["krydd", "skafferi", "konserv", "pasta", "ris ", "mjol", "socker",
+                 "olja", "vinager", "sas", "buljong", "nudlar", "musli", "flingor"],
+    "mejeri": ["mjolk", "filmjolk", "fil ", "yoghurt", "ost", "smor", "gradde",
+               "kvarg", "agg", "margarin", "creme fraiche"],
+    "kott & fagel": ["kott", "fagel", "kyckling", "chark", "korv", "fars", "biff",
+                     "flask", "not", "lamm", "vilt"],
+    "fisk & skaldjur": ["fisk", "skaldjur", "lax", "torsk", "rakor", "sill"],
+    "frukt & gront": ["frukt", "gronsak", "gront", "potatis", "rotfrukt", "sallad",
+                      "bar ", "svamp", "lok"],
+    "fryst": ["fryst", "frys", "djupfryst"],
+    "dryck": ["dryck", "lask", "juice", "kaffe", "te ", "vatten", "ol ", "vin "],
+    "godis": ["godis", "snacks", "choklad", "chips", "tuggummi", "popcorn", "glass"],
+    "djur": ["djurmat", "hundmat", "kattmat", "husdjur"],
+    "barnmat": ["barnmat", "valling", "ersattning", "spadbarn"],
+}
+
+
+def _dabas_category_as_path(term: str) -> str:
+    folded = _fold(term) + " "
+    hits = [path for path, needles in DABAS_CATEGORY_TERMS.items()
+            if any(needle in folded for needle in needles)]
+    # Frysta varor: "Fryst fisk" ska både vara fryst och fisk - båda
+    # segmenten med, som en kedjesökväg hade haft det.
+    return " > ".join(hits) if hits else ""
 
 
 def _violates_own_rules(product, ingredient: str) -> bool:
@@ -1296,7 +1348,8 @@ class RecipePricingEngine:
             seen.add(product.id)
             candidates.append(product)
         matched = [p for p in candidates
-                   if product_matches_ingredient(p.name, ingredient, p.brand, p.category)]
+                   if product_matches_ingredient(p.name, ingredient, p.brand, p.category)
+                   and _dabas_category_allows(p, ingredient)]
         # The shelf's own names COMPETE with the recipe's word - they do not
         # merely stand in when it finds nothing. "Pasta" literally matched
         # exactly one product (organic chickpea pasta, 118 kr/kg), so the
@@ -1321,6 +1374,8 @@ class RecipePricingEngine:
                 # the requirement's forbidden forms. An alias may widen the
                 # NAME, never the requirement.
                 if _violates_own_rules(product, ingredient):
+                    continue
+                if not _dabas_category_allows(product, ingredient):
                     continue
                 matched_ids.add(product.id)
                 matched.append(product)

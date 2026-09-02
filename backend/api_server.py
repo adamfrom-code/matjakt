@@ -2097,6 +2097,46 @@ class ApiHandler(SimpleHTTPRequestHandler):
             finally:
                 db.close()
             return
+        if parsed.path in ("/api/admin/dabas-enrich", "/api/admin/dabas-lookup"):
+            # Dabas-masterdata. enrich: kör kön nu (begränsat antal).
+            # lookup: ett GTIN - provider-rad, Dabas-svar och Matjakts
+            # normaliserade produkt sida vid sida, för testprodukterna.
+            # Nyckeln finns bara i miljön och når aldrig svaret.
+            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
+                self.send_json(403, {"error": "Admin-token krävs"})
+                return
+            from services.grocery import enrichment as dabas_enrichment
+            from services.grocery.providers.dabas import DabasClient, DabasError
+            client = DabasClient()
+            if not client.configured:
+                self.send_json(503, {"error": "DABAS_API_KEY är inte satt i miljön"})
+                return
+            db = grocery_api.open_store()
+            try:
+                if parsed.path == "/api/admin/dabas-enrich":
+                    limit = int((payload or {}).get("limit") or 50)
+                    summary = dabas_enrichment.run_enrichment(db, client, limit=min(limit, 500))
+                    grocery_api.clear_cache()
+                    self.send_json(200, summary)
+                    return
+                gtin = str((payload or {}).get("gtin") or "")
+                try:
+                    dabas_product = client.get_product(gtin)
+                except DabasError as error:
+                    self.send_json(200, {"gtin": gtin, "dabas": None, "error": str(error)[:200]})
+                    return
+                existing = db._find_product_by_gtin(dabas_product.gtin) if dabas_product else None
+                merged = (dabas_enrichment.merge_fields(existing, dabas_product)
+                          if existing and dabas_product else None)
+                self.send_json(200, {
+                    "gtin": gtin,
+                    "provider": existing.to_dict() if existing else None,
+                    "dabas": json.loads(dabas_product.to_json()) if dabas_product else None,
+                    "normalized": {k: v for k, v in (merged or {}).items() if k != "dabas_data"},
+                })
+            finally:
+                db.close()
+            return
         if parsed.path == "/api/admin/platform-activate":
             # Hela aktiveringen i ett anrop: registersynk + första referens-
             # publicering + (valfritt) nattjobben för de släppta kedjorna nu.

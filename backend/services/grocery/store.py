@@ -59,6 +59,18 @@ class GroceryStore:
     # tabell som redan finns, så nya kolumner läggs till här - idempotent,
     # styrt av vad tabellen faktiskt har. Ordningen i listan spelar ingen roll.
     _COLUMN_MIGRATIONS = {
+        "grocery_products": [
+            # Dabas-masterdata + paketverifiering (se providers/dabas.py,
+            # enrichment.py). Ingen av dessa rör produktens pris.
+            ("manufacturer", "TEXT"), ("dabas_name", "TEXT"), ("dabas_category", "TEXT"),
+            ("dabas_gpc", "TEXT"), ("ingredients", "TEXT"), ("allergens", "TEXT"),
+            ("nutrition", "TEXT"), ("dabas_data", "TEXT"),
+            ("dabas_status", "TEXT"), ("dabas_last_checked", "REAL"),
+            ("dabas_last_success", "REAL"), ("dabas_error", "TEXT"),
+            ("dabas_source_version", "TEXT"),
+            ("package_source", "TEXT"), ("package_confidence", "TEXT"),
+            ("package_conflict", "TEXT"),
+        ],
         "grocery_stores": [
             ("provider", "TEXT"), ("pricing_scope", "TEXT"),
             # Nationell prisplattform + butikspartner (2026-09-02)
@@ -561,12 +573,65 @@ class GroceryStore:
 
     @staticmethod
     def _row_to_product(row) -> Product:
+        keys = row.keys()
+        extra = {name: (row[name] if name in keys else None) for name in (
+            "manufacturer", "dabas_status", "dabas_category", "package_source",
+            "package_confidence", "package_conflict")}
         return Product(
             id=row["id"], gtin=row["gtin"], ean=row["ean"], name=row["name"], brand=row["brand"],
             description=row["description"], size=row["size"], quantity=row["quantity"], unit=row["unit"],
             category=row["category"], image_url=row["image_url"], image_source_url=row["image_source_url"],
-            created_at=row["created_at"], updated_at=row["updated_at"],
+            created_at=row["created_at"], updated_at=row["updated_at"], **extra,
         )
+
+    # ---- Dabas-masterdata -----------------------------------------------
+
+    def products_needing_dabas(self, limit: int = 200, recheck_after_seconds: float = 30 * 86400,
+                              retry_error_after_seconds: float = 6 * 3600) -> list:
+        """Produkter med GTIN som aldrig slagits upp, vars uppslag gav fel för
+        ett tag sedan, eller vars masterdata är äldre än omprövningsfönstret.
+        'not_found' omprövas bara i det längre fönstret - ett GTIN som inte
+        finns i Dabas i dag finns sällan där i morgon."""
+        now = time.time()
+        rows = self._connection.execute(
+            """
+            SELECT * FROM grocery_products
+            WHERE gtin IS NOT NULL AND gtin != ''
+              AND (dabas_status IS NULL
+                   OR (dabas_status = 'error' AND COALESCE(dabas_last_checked, 0) < ?)
+                   OR (dabas_status IN ('ok', 'not_found') AND COALESCE(dabas_last_checked, 0) < ?))
+            ORDER BY COALESCE(dabas_last_checked, 0), id
+            LIMIT ?
+            """, (now - retry_error_after_seconds, now - recheck_after_seconds, limit)).fetchall()
+        return rows
+
+    def record_dabas_check(self, product_id: int, *, status: str, error: str | None = None,
+                           source_version: str | None = None):
+        now = time.time()
+        with self._connection:
+            self._connection.execute(
+                "UPDATE grocery_products SET dabas_status = ?, dabas_last_checked = ?, dabas_error = ?, "
+                "dabas_last_success = CASE WHEN ? = 'ok' THEN ? ELSE dabas_last_success END, "
+                "dabas_source_version = COALESCE(?, dabas_source_version) WHERE id = ?",
+                (status, now, error, status, now, source_version, product_id))
+
+    def apply_product_fields(self, product_id: int, fields: dict):
+        """Fältvis uppdatering - bara nycklarna som skickas rörs. Merge-
+        besluten (Dabas > provider > fallback, men aldrig null över bra
+        data) fattas i enrichment.py; lagret skriver det som bestämts."""
+        if not fields:
+            return
+        allowed = {"name", "brand", "manufacturer", "description", "size", "quantity", "unit", "category",
+                   "dabas_name", "dabas_category", "dabas_gpc", "ingredients", "allergens", "nutrition",
+                   "dabas_data", "package_source", "package_confidence", "package_conflict"}
+        updates = {k: v for k, v in fields.items() if k in allowed}
+        if not updates:
+            return
+        updates["updated_at"] = time.time()
+        assignments = ", ".join(f"{k} = ?" for k in updates)
+        with self._connection:
+            self._connection.execute(
+                f"UPDATE grocery_products SET {assignments} WHERE id = ?", (*updates.values(), product_id))
 
     # ---- Prices --------------------------------------------------------
 

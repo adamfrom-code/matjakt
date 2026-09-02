@@ -97,6 +97,20 @@ class Product:
     image_source_url: str | None = None
     created_at: float = 0.0
     updated_at: float = 0.0
+    # DABAS-MASTERDATA (2026-09-02). Dabas säger vad produkten ÄR; prisprovidern
+    # vad den KOSTAR. dabas_category är en extra REJECT-signal i kanoniska
+    # matchningen; package_* säger hur säker paketmängden är:
+    #   package_source     DABAS_VERIFIED / PROVIDER_DATA / NORMALIZED_FALLBACK
+    #   package_confidence high (Dabas och provider eniga, eller bara Dabas)
+    #                      / provider / conflict / none
+    #   package_conflict   texten som beskriver konflikten - och då används
+    #                      mängden INTE (fail closed i effective_package)
+    manufacturer: str | None = None
+    dabas_status: str | None = None
+    dabas_category: str | None = None
+    package_source: str | None = None
+    package_confidence: str | None = None
+    package_conflict: str | None = None
 
     def to_dict(self):
         value = asdict(self)

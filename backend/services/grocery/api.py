@@ -497,7 +497,13 @@ def platform_status() -> dict:
                 "status": row["status"], "finishedAt": row["finished_at"],
                 "gatePercent": row["gate_percent"], "published": row["published"],
                 "pricesUpdated": row["prices_updated"], "message": row["gate_message"]}
+        dabas = {row[0] or "none": row[1] for row in store.connection.execute(
+            "SELECT dabas_status, COUNT(*) FROM grocery_products WHERE gtin IS NOT NULL GROUP BY dabas_status")}
+        package = {row[0] or "provider_or_none": row[1] for row in store.connection.execute(
+            "SELECT package_confidence, COUNT(*) FROM grocery_products GROUP BY package_confidence")}
         totals = {
+            "dabas": dabas,
+            "packageConfidence": package,
             "stores": store.connection.execute("SELECT COUNT(*) FROM grocery_stores").fetchone()[0],
             "products": store.connection.execute("SELECT COUNT(*) FROM grocery_products").fetchone()[0],
             "verifiedStorePrices": store.connection.execute("SELECT COUNT(*) FROM grocery_current_prices").fetchone()[0],
