@@ -658,3 +658,35 @@ button{color:inherit}
 .store-cards{margin-bottom:6px}
 .store-card span{color:var(--text)}
 .week-today-info strong,.week-plan-name,.week-plan-row-main,.hem-recipe-card,.hero-meal-open,.recipe-shelf-card,.recipe-details,.swap-option,.cook-match,.pantry-pick{color:var(--text)}
+
+/* ---- Vecka: veckoblocket ---------------------------------------------- */
+.week-day-tabs{gap:6px;margin-bottom:14px}
+.week-day-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:60px;padding:0 2px;border:1px solid var(--border);border-radius:16px;background:var(--surface);color:var(--text);box-shadow:none}
+.week-day-tab-name{font-size:12px;font-weight:700;line-height:1}
+.week-day-tab-price{font-size:10px;font-weight:700;line-height:1;color:var(--muted);white-space:nowrap}
+.week-day-tab.active{border-color:var(--primary);background:var(--primary);color:#fff;box-shadow:none}
+.week-day-tab.active .week-day-tab-price{color:rgba(255,255,255,.8)}
+.week-day-tab.empty:not(.active){opacity:1;color:var(--muted)}
+.week-today-card{flex-direction:column;align-items:stretch;gap:0;padding:0;margin-bottom:22px;overflow:hidden;border-radius:22px;box-shadow:none}
+.week-today-photo{width:100%;height:180px;border-radius:0;background:var(--surface-2)}
+.week-today-photo .recipe-fallback{padding:0;justify-content:center}
+.week-today-info{padding:14px 16px 16px;gap:6px}
+.week-today-day{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--primary)}
+.week-today-info strong{font-size:22px;line-height:1.15}
+.week-today-badge{background:var(--surface-2);color:var(--text)}
+.week-today-meta{flex-wrap:wrap;gap:12px;color:var(--muted);font-size:13px;font-weight:600}
+.week-today-arrow{display:none}
+.week-today-flag{top:12px;right:12px;background:var(--text)}
+.week-today-empty{border:1px dashed #cfd5d0;background:var(--surface)}
+.week-today-empty p{color:var(--muted)}
+.week-plan-row{padding:8px 8px 8px 12px;border-radius:18px}
+.week-plan-row.active{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary)}
+.week-plan-row-main{grid-template-columns:34px 44px 1fr auto;gap:10px}
+.week-plan-photo{width:44px;height:44px;border-radius:12px;background:var(--surface-2)}
+.week-plan-name{font-size:15px}
+.week-plan-price{color:var(--text);font-weight:700}
+.week-plan-menu[open] summary{background:var(--surface-2);color:var(--text)}
+.week-plan-menu-options{border-radius:14px;box-shadow:0 12px 30px -12px rgba(0,0,0,.3)}
+.week-plan-menu-options button:active,.week-plan-swap-btn:active{background:var(--primary-soft)}
+
+.week-overview .week-store-status,.week-screen .week-store-status{display:none!important}

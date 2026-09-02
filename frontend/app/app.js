@@ -2162,8 +2162,10 @@ function metaIconItem(icon, text) { return `<span class="meta-icon-item">${icon}
 function weekTodayCardMarkup(recipe) {
   const fb = recipeFeedback(recipe.id);
   const badge = recipe.typ && recipe.typ !== "Provider-recept" ? `<span class="week-today-badge">${escapeHtml(recipe.typ)}</span>` : "";
-  const meta = [recipe.tid ? metaIconItem(CLOCK_ICON, `${recipe.tid} min`) : "", metaIconItem(PORTIONS_ICON, `${state.personer} port`)].filter(Boolean).join("");
-  return `<button type="button" class="week-today-card" data-week-details="${escapeHtml(recipe.id)}"><span class="week-today-photo">${recipePhoto(recipe)}</span><span class="week-today-info"><strong>${escapeHtml(recipe.namn)}</strong>${badge}<span class="week-today-meta">${meta}</span></span><span class="week-today-arrow" aria-hidden="true">›</span>${fb.cooked ? '<span class="week-today-flag" title="Lagade den här">✓</span>' : ""}</button>`;
+  const portion = recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? `${money(recipe.portionspris)}/portion` : "";
+  const meta = [recipe.tid ? metaIconItem(CLOCK_ICON, `${recipe.tid} min`) : "", metaIconItem(PORTIONS_ICON, `${state.personer} port`), portion ? metaIconItem(PRICE_TAG_ICON, portion) : ""].filter(Boolean).join("");
+  const dayName = DAYS_LONG[weekOverviewDay] || DAYS[weekOverviewDay] || "";
+  return `<button type="button" class="week-today-card" data-week-details="${escapeHtml(recipe.id)}"><span class="week-today-photo">${recipePhoto(recipe)}</span><span class="week-today-info"><span class="week-today-day">${escapeHtml(dayName)}</span><strong>${escapeHtml(recipe.namn)}</strong>${badge}<span class="week-today-meta">${meta}</span></span><span class="week-today-arrow" aria-hidden="true">›</span>${fb.cooked ? '<span class="week-today-flag" title="Lagade den här">✓</span>' : ""}</button>`;
 }
 function weekEmptyDayMarkup() {
   // data-week-add-meal, not an id - this markup can end up on screen twice at
@@ -2244,7 +2246,13 @@ function renderWeekOverview(selected, shoppingItems, total) {
     weekDayAutoPicked = true;
     if (!selected[weekOverviewDay]) weekOverviewDay = firstPlannedDayFrom(selected, weekOverviewDay);
   }
-  $("weekDayTabs").innerHTML = DAYS.map((day, index) => `<button type="button" class="week-day-tab ${index === weekOverviewDay ? "active" : ""} ${selected[index] ? "" : "empty"}" data-week-day="${index}" role="tab" aria-selected="${index === weekOverviewDay}">${day}</button>`).join("");
+  // Dagfliken bär portionspriset: veckan läses som en rad siffror utan att
+  // öppna varje dag. Tom dag visar en punkt, saknat pris ett streck.
+  $("weekDayTabs").innerHTML = DAYS.map((day, index) => {
+    const recipe = selected[index];
+    const price = !recipe ? "·" : recipe.priceStatus === "unavailable" ? "–" : recipe.portionspris ? money(recipe.portionspris) : "–";
+    return `<button type="button" class="week-day-tab ${index === weekOverviewDay ? "active" : ""} ${recipe ? "" : "empty"}" data-week-day="${index}" role="tab" aria-selected="${index === weekOverviewDay}"><span class="week-day-tab-name">${day}</span><small class="week-day-tab-price">${escapeHtml(price)}</small></button>`;
+  }).join("");
 
   const todayRecipe = selected[weekOverviewDay];
   $("weekTodayCard").innerHTML = todayRecipe ? weekTodayCardMarkup(todayRecipe) : weekEmptyDayMarkup();
