@@ -22,6 +22,7 @@ if __name__ == "__main__":
     # The directory is in the OS temp area either way.
     with tempfile.TemporaryDirectory(prefix="matjakt-tests-", ignore_cleanup_errors=True) as tmp:
         os.environ["MATJAKT_DATA_DIR"] = tmp
+        os.environ["MATJAKT_TEST_MODE"] = "1"  # spärren i services/data_guard.py
         here = Path(__file__).resolve().parent
         sys.path.insert(0, str(here.parent))
         tests = unittest.defaultTestLoader.discover(str(here), top_level_dir=str(here))

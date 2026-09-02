@@ -15,12 +15,16 @@ import sqlite3
 import time
 from pathlib import Path
 
+from ..data_guard import guard_database_path
+
 PRUNE_PROBABILITY = 0.02
 PRUNE_MAX_AGE_SECONDS = 7 * 86400
 
 
 class PriceCacheStore:
     def __init__(self, db_path: Path):
+        # Testläge får aldrig nå en riktig databas - se services/data_guard.py.
+        guard_database_path(db_path, purpose="priscachen")
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = sqlite3.connect(db_path, check_same_thread=False)
         self._connection.execute("PRAGMA journal_mode=WAL")

@@ -366,6 +366,11 @@ FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 # machine that just made the app slow for a while; pointed at a deployed data
 # directory it would throw away real cached state on every CI run.
 DATA_DIR = Path(os.environ.get("MATJAKT_DATA_DIR") or (Path(__file__).resolve().parent / "data"))
+# En testkörning som importerar api_server utan att först ha pekat
+# MATJAKT_DATA_DIR på en tempkatalog stoppas här, innan katalogen skapas
+# och innan matjakt.db/prices.db öppnas nedan - se services/data_guard.py.
+from services.data_guard import guard_database_path  # noqa: E402
+guard_database_path(DATA_DIR, purpose="datakatalogen")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 def _free_chain_for(week_result: dict) -> str | None:

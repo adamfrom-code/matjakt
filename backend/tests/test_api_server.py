@@ -17,6 +17,8 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from services.data_guard import isolated_test_data_dir  # noqa: E402
+isolated_test_data_dir()  # MATJAKT_DATA_DIR -> tempkatalog INNAN api_server importeras
 import api_server  # noqa: E402
 from services.accounts import ratelimit  # noqa: E402
 from api_server import clean_text, parse_price, parse_willys_price  # noqa: E402

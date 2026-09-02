@@ -66,6 +66,15 @@ npm run check
 
 Testerna täcker portionsskalning, ingredienssummering, budget, shoppingtotal, persistent state, receptsökning samt backendens prisparsning.
 
+**Tester rör aldrig riktig data.** `backend/services/data_guard.py` stoppar varje
+försök att öppna en databas utanför OS:ets tempkatalog så fort en testkörning
+pågår (`python -m unittest`, pytest, `tests/run.py` eller `MATJAKT_TEST_MODE=1`),
+innan filen eller katalogen skapas. Ett test som glömmer peka om `DB_PATH`
+kraschar alltså med `ProductionDatabaseInTestError` i stället för att skriva i
+`backend/data/*.db`. Nya databastester: `tempfile.TemporaryDirectory` + explicit
+sökväg + `addCleanup`; tester som importerar `api_server` anropar
+`isolated_test_data_dir()` före importen. Regressionstest: `tests/test_db_guard.py`.
+
 ## Arkitektur
 
 ```text

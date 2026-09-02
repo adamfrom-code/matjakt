@@ -22,6 +22,8 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from ..data_guard import guard_database_path
+
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 SESSION_TTL_DAYS = 30
 PBKDF2_ITERATIONS = 200_000
@@ -54,6 +56,8 @@ def _session_key(token: str) -> str:
 
 class AccountStore:
     def __init__(self, db_path: Path):
+        # Testläge får aldrig nå en riktig databas - se services/data_guard.py.
+        guard_database_path(db_path, purpose="kontodatabasen")
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = sqlite3.connect(db_path, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row

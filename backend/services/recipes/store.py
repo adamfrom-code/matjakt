@@ -36,6 +36,8 @@ import time
 import unicodedata
 from pathlib import Path
 
+from ..data_guard import guard_database_path
+
 
 def normalize_ingredient_id(name: str) -> str:
     """The stable key that links a recipe ingredient to grocery matching.
@@ -65,6 +67,8 @@ def _row_get(row, key):
 
 class RecipeStore:
     def __init__(self, db_path: Path):
+        # Testläge får aldrig nå en riktig databas - se services/data_guard.py.
+        guard_database_path(db_path, purpose="receptdatabasen")
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = sqlite3.connect(db_path, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
