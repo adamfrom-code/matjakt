@@ -357,11 +357,24 @@ def provider_status() -> list[dict]:
     return panel
 
 
+# Kedjor som är SLÄPPTA mot användare. ICA, Coop och Lidl har en färdig
+# provider (Primat, se providers/primat.py) och kan importeras manuellt, men
+# de får inte dyka upp i jämförelsen förrän de klarat samma kvalitetsgate som
+# de tre befintliga: kanonisk matchning, paketmatte, fail-closed, full audit
+# på full katalog. En partiell katalog i databasen får ALDRIG räcka för att
+# en kedja ska börja kröna "Billigast" - därav uttrycklig lista i stället
+# för "allt som råkar ha rader".
+RELEASED_CHAINS = ("Willys", "Hemköp", "City Gross")
+
+
 def priceable_chains() -> list[str]:
-    """Chains that actually have data to price against. A chain with no rows
-    must not appear in a comparison at all - an empty chain would otherwise
-    show up as the cheapest, at 0 kr."""
-    return [entry["chain"] for entry in database_summary()["chains"] if entry["products"] > 0]
+    """Chains that actually have data to price against - and that have been
+    RELEASED (see RELEASED_CHAINS). A chain with no rows must not appear in
+    a comparison at all - an empty chain would otherwise show up as the
+    cheapest, at 0 kr - and an unreleased chain's half-imported catalog
+    must not either."""
+    return [entry["chain"] for entry in database_summary()["chains"]
+            if entry["products"] > 0 and entry["chain"] in RELEASED_CHAINS]
 
 
 def _store_row_for(store: GroceryStore, chain: str):

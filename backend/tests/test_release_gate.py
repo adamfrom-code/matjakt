@@ -172,6 +172,43 @@ class VocabularyAliasesStayHonest(unittest.TestCase):
             "Skafferi > Bakning > Baktillbehör"))
 
 
+class NewChainCatalogsStayHonest(unittest.TestCase):
+    """De fyra råvarubyten som ICA/Coop/Lidl-katalogerna (via Primat)
+    blottade 2026-09-02. Sammansättningssuffixet gör att fel råvara kan
+    SLUTA på ingrediensordet - varje fall låses här, plus att äkta varan
+    fortsätter matcha."""
+
+    def test_agg_is_never_a_pork_cut(self):
+        self.assertFalse(product_matches_ingredient("Fläsklägg Rimmad", "Ägg", None, None))
+        self.assertFalse(product_matches_ingredient("Grislägg Färsk", "Ägg", None, None))
+        self.assertTrue(product_matches_ingredient(
+            "Ägg 12-pack Frigående", "Ägg", None, "Mejeri, ost & ägg"))
+
+    def test_mjolk_is_cow_milk_not_goat_plant_or_fil(self):
+        for wrong in ("Getmjölk 1,7%", "Filmjölk 3%", "Havremjölk Barista",
+                      "Kokosmjölk", "Chokladmjölk 1,6%"):
+            self.assertFalse(product_matches_ingredient(wrong, "Mjölk", None, None),
+                             f"{wrong!r} är inte komjölk")
+        self.assertTrue(product_matches_ingredient(
+            "Mellanmjölk 1,5% 1l", "Mjölk", None, "Mejeri, ost & ägg > Mjölk"))
+        self.assertTrue(product_matches_ingredient(
+            "Lättmjölk 0,5%", "Mjölk", None, "Mejeri, ost & ägg > Mjölk"))
+
+    def test_potatis_is_not_sotpotatis(self):
+        self.assertFalse(product_matches_ingredient("Sötpotatis", "Potatis", None,
+                                                    "Frukt & grönt > Rotfrukter"))
+        self.assertTrue(product_matches_ingredient(
+            "Potatis Fast ca 100g tvättad Klass 1", "Potatis", None,
+            "Frukt & grönt > Rotfrukter"))
+
+    def test_pasta_is_not_a_paste(self):
+        for wrong in ("Kryddpasta", "Röd Currypasta", "Tomatpasta Dubbelkoncentrerad"):
+            self.assertFalse(product_matches_ingredient(wrong, "Pasta", None, None),
+                             f"{wrong!r} är en smaksättare, inte pasta")
+        self.assertTrue(product_matches_ingredient(
+            "Penne Rigate 500g", "penne", None, "Skafferi > Pasta"))
+
+
 class PackageMathInvariants(unittest.TestCase):
     """packages = ceil(behov / paket) i RÄTT enhet - för varje familj."""
 

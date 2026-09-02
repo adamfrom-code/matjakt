@@ -569,7 +569,18 @@ INGREDIENT_RULES = {
     "grädde": {"exclude": ["glass", "kaka", "bakelse", "tårta", "vaniljsås", "sås", "pulver", "havre", "soja", "kokos", "ärt", "vegansk"]},
     # 3-letter ingredients collide in head position too - these are the
     # collisions seen in real Willys/Hemköp data, not hypothetical ones.
-    "ägg": {"exclude": ["choklad", "godis", "påsk", "nudel", "kaka"]},
+    # "lägg" stoppar fläsklägg/grislägg/skinklägg - Coops "Fläsklägg Rimmad"
+    # prissatte ingrediensen ägg via sammansättningssuffixet (fläskLÄGG
+    # slutar på -ägg). Styckdetaljen är inte ett ägg.
+    "ägg": {"exclude": ["choklad", "godis", "påsk", "nudel", "kaka", "lägg"]},
+    # Mjölk är komjölk från mejerihyllan. Allt som bara SLUTAR på -mjölk men
+    # är en annan råvara (get, växtdrycker, fil, choklad) får inte prissätta
+    # den - "Getmjölk 1,7%" vann hos Coop innan regeln fanns.
+    "mjölk": {"exclude": ["getmjölk", "filmjölk", "kokosmjölk", "havremjölk",
+                          "sojamjölk", "mandelmjölk", "rismjölk", "chokladmjölk",
+                          "torrmjölk", "kondenserad", "bröstmjölk"]},
+    # Sötpotatis är en egen råvara, inte potatis.
+    "potatis": {"exclude": ["sötpotatis"]},
     # ---- CANONICAL CONSTRAINTS (cross-store fairness) -----------------------
     # The same requirement is priced at every chain; these rules make sure a
     # chain can only answer with the SAME raw material. Brand and pack may
@@ -595,7 +606,12 @@ INGREDIENT_RULES = {
     # Generic pasta requirements mean ordinary wheat pasta. Corn/gluten-free/
     # legume pasta is a legitimate product and an illegitimate SUBSTITUTE -
     # if the recipe wants it, the recipe says so.
-    "pasta": {"exclude": ["majs", "glutenfri", "kikärt", "lins", "bön", "proteinpasta"]},
+    # ...och pastor som är PASTOR (kryddpasta, currypasta) är smaksättare,
+    # inte pastan i grytan - Lidls "Kryddpasta" prissatte middagens penne.
+    "pasta": {"exclude": ["majs", "glutenfri", "kikärt", "lins", "bön", "proteinpasta",
+                          "kryddpasta", "currypasta", "tomatpasta", "misopasta",
+                          "chilipasta", "mandelpasta", "sesampasta", "vitlökspasta",
+                          "fiskpasta", "räkpasta"]},
     "spaghetti": {"exclude": ["majs", "glutenfri", "kikärt", "lins", "bön"]},
     "makaroner": {"exclude": ["majs", "glutenfri", "kikärt", "lins", "bön"]},
     # A recipe that wants light dairy says "lätt". Generic crème fraiche is

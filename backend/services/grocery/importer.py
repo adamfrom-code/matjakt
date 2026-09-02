@@ -45,8 +45,16 @@ DEFAULT_STORES = {
 # from anything the scheduler can reach) and lives here instead. A run is
 # expected to be challenged partway through; the partial import is kept, and
 # the previous prices are never deleted.
+#
+# Coop och Lidl importeras via Primat-providern (se providers/primat.py för
+# hela utredningen: Coops portal är stängd för externa, Lidl publicerar inga
+# ordinarie priser). Manuella tills de klarat samma kvalitetsgate som de tre
+# befintliga kedjorna - schemaläggaren når dem medvetet inte, och de syns
+# inte i appens jämförelse förrän det beslutet fattas separat.
 MANUAL_ONLY_STORES = {
-    "ICA": "1003987",      # Maxi ICA Stormarknad Gävle
+    "ICA": "1003987",      # Maxi ICA Stormarknad Gävle (full täckning hos Primat)
+    "Coop": "206403",      # Coop Eken Gävle (full täckning hos Primat)
+    "Lidl": "SE0128",      # Lidl Gävle Stiglund (full täckning hos Primat)
 }
 
 ALL_STORES = {**DEFAULT_STORES, **MANUAL_ONLY_STORES}
@@ -81,7 +89,22 @@ def _set(**fields):
 
 
 def _provider_for(chain: str):
+    import os
+    if chain in ("Coop", "Lidl"):
+        # Ingen direktväg finns (Coops portal stängd för externa, Lidl utan
+        # publicerade ordinarie priser) - Primat är den utredda och tillåtna
+        # källan. Utan nyckel finns ingen väg alls: säg det, gissa inte.
+        from .providers.primat import PrimatProvider
+        if not os.environ.get("PRIMAT_API_KEY"):
+            raise ValueError(f"{chain} importeras via Primat och kräver PRIMAT_API_KEY i miljön")
+        return PrimatProvider(chain)
     if chain == "ICA":
+        # Primat föredras när nyckeln finns: butiksspecifika priser med GTIN
+        # utan att gå i närheten av ICAs WAF. Den gamla skrap-providern
+        # lämnas orörd som manuell fallback för miljöer utan nyckel.
+        if os.environ.get("PRIMAT_API_KEY"):
+            from .providers.primat import PrimatProvider
+            return PrimatProvider("ICA")
         from .providers.ica import IcaProvider
         # Butiksuppslag kräver ett postnummer; MANUAL_ONLY_STORES pekar på
         # ICA Kvantum Gävle, så dess postnummer är rätt default. Utan
