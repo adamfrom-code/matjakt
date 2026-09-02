@@ -2165,7 +2165,9 @@ function weekTodayCardMarkup(recipe) {
   const portion = recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? `${money(recipe.portionspris)}/portion` : "";
   const meta = [recipe.tid ? metaIconItem(CLOCK_ICON, `${recipe.tid} min`) : "", metaIconItem(PORTIONS_ICON, `${state.personer} port`), portion ? metaIconItem(PRICE_TAG_ICON, portion) : ""].filter(Boolean).join("");
   const dayName = DAYS_LONG[weekOverviewDay] || DAYS[weekOverviewDay] || "";
-  return `<button type="button" class="week-today-card" data-week-details="${escapeHtml(recipe.id)}"><span class="week-today-photo">${recipePhoto(recipe)}</span><span class="week-today-info"><span class="week-today-day">${escapeHtml(dayName)}</span><strong>${escapeHtml(recipe.namn)}</strong>${badge}<span class="week-today-meta">${meta}</span></span><span class="week-today-arrow" aria-hidden="true">›</span>${fb.cooked ? '<span class="week-today-flag" title="Lagade den här">✓</span>' : ""}</button>`;
+  // Byt ligger som syskon ovanpå kortet (inte knapp-i-knapp) - listan
+  // "Veckans plan" som bar den förut är dold.
+  return `<div class="week-today-wrap"><button type="button" class="week-today-swap" data-week-swap="${escapeHtml(recipe.id)}">Byt</button><button type="button" class="week-today-card" data-week-details="${escapeHtml(recipe.id)}"><span class="week-today-photo">${recipePhoto(recipe)}</span><span class="week-today-info"><span class="week-today-day">${escapeHtml(dayName)}</span><strong>${escapeHtml(recipe.namn)}</strong>${badge}<span class="week-today-meta">${meta}</span></span><span class="week-today-arrow" aria-hidden="true">›</span>${fb.cooked ? '<span class="week-today-flag" title="Lagade den här">✓</span>' : ""}</button></div>`;
 }
 function weekEmptyDayMarkup() {
   // data-week-add-meal, not an id - this markup can end up on screen twice at
