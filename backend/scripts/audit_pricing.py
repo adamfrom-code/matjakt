@@ -17,7 +17,8 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 from services.grocery import api as gapi  # noqa: E402
 from services.grocery.pricing import (  # noqa: E402
-    RecipePricingEngine, _MASS, _VOLUME, _fold)
+    RecipePricingEngine, _MASS, _VOLUME, _fold,
+    baking_grams, dairy_gram_ml_equivalent)
 from services.recipes import api as rapi  # noqa: E402
 
 FLAVOR_SUSPECTS = ["knäcke", "bulle", "kaka", "skorpa", "müsli", "godis",
@@ -71,9 +72,25 @@ def main() -> int:
                 exact = row.get("exactPackaging", True)
 
                 if not exact:
-                    flag("estimat", recipe, ing, chain, row)
-                if row.get("perKg"):
-                    pass  # lösvikt per kilo: exakt modell, ingen flagga
+                    # ORSAK: varför blev raden ett estimat?
+                    from services.grocery.pricing import styck_vikt_for
+                    fu = _fold(unit)
+                    pu = _fold(row.get("packageUnit") or "")
+                    if not row.get("packageAmount"):
+                        reason = "saknad_forpackningsstorlek"
+                    elif fu in ("st", "styck") and pu in _MASS:
+                        reason = "styckvikt_saknas" if not styck_vikt_for(ing["name"]) else "styckvikt_annan"
+                    elif fu in _MASS and pu in ("st", "styck", "p", "pack", "forp"):
+                        reason = "vikt_mot_styckvara"
+                    elif fu in _VOLUME and pu in _MASS:
+                        reason = "volym_mot_vikt"
+                    elif fu in _MASS and pu in _VOLUME:
+                        reason = "vikt_mot_volym"
+                    else:
+                        reason = f"annan({unit}->{row.get('packageUnit')})"
+                    flag("estimat", recipe, ing, chain, row, reason)
+                if row.get("perKg") or dairy_gram_ml_equivalent(ing["name"])                         or baking_grams(ing["name"], 1, "dl") is not None:
+                    pass  # lösvikt/mejeri/bakvara: beslutade exakta modeller
                 elif folded_unit in _MASS and package_unit not in _MASS and exact:
                     flag("gram_som_styck", recipe, ing, chain, row,
                          f"behov i {unit} men paket i {row.get('packageUnit')}")
@@ -90,7 +107,8 @@ def main() -> int:
                 elif total is not None and total > 500:
                     flag("rad_over_500", recipe, ing, chain, row, f"{total} kr")
                 if not row.get("packageAmount") and not row.get("perKg"):
-                    flag("otolkad_paketstorlek", recipe, ing, chain, row)
+                    flag("otolkad_paketstorlek", recipe, ing, chain, row,
+                         f"size={row.get('packageSize')!r}")
                 name_folded = _fold(row.get("productName") or "")
                 if any(word in name_folded for word in FLAVOR_SUSPECTS):
                     flag("smakords_misstanke", recipe, ing, chain, row)
@@ -104,6 +122,16 @@ def main() -> int:
             print(f"      {hit[0][:22]} | {hit[1][:16]} | {hit[2]} | {str(hit[3])[:34]} {hit[4]}")
         if len(hits) > 6:
             print(f"      ... +{len(hits)-6} till (se audit_flags.tsv)")
+    from collections import Counter
+    reasons = Counter(hit[4] for hit in flags["estimat"])
+    per_chain = Counter(hit[2] for hit in flags["estimat"])
+    print(); print("ESTIMAT PER ORSAK:")
+    for reason, n in reasons.most_common():
+        print(f"  {reason:<30} {n}")
+    print("ESTIMAT PER KEDJA:")
+    for chain, n in per_chain.most_common():
+        print(f"  {chain:<12} {n}")
+    exact_rows = rows_checked and None
     gs.close(); rs.close()
     return 0
 

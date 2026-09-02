@@ -611,6 +611,13 @@ INGREDIENT_RULES = {
     # Bacon är fläsk. Kalkonbacon ligger i samma köttavdelning och vegobacon
     # bredvid - avdelningsspärren hjälper inte, bara namnregeln.
     "bacon": {"exclude": ["kalkon", "vego", "vegansk", "veggie", "tofu", "chips", "snacks", "smak", "krydda", "ost", "dressing"]},
+    # Avslöjade av estimat-nedbrytningen: sås är inte kött, pulversoppa är
+    # inte sparris, och crème fraiche-röror är varken dragon eller parmesan.
+    "kebabkött": {"exclude": ["sås", "dressing", "krydda", "bröd", "pizza"]},
+    "sparris": {"exclude": ["soppa", "pulver", "koppen", "kräm"]},
+    "chili": {"exclude": ["pizza", "mayo", "majonnäs", "sås", "cheese", "krydda", "kryddmix", "mix", "flakes", "pulver", "nötter", "carne", "gryta", "soppa"]},
+    "dragon": {"exclude": ["fraiche", "creme", "senap", "sås", "dressing"]},
+    "parmesan": {"exclude": ["fraiche", "creme", "dressing", "sås", "chips"]},
     "halloumi": {"exclude": ["panerad", "sticks", "snacks", "burgare", "krydda"]},
 }
 
@@ -670,6 +677,24 @@ _FOLDED_ALIASES = {_fold(key): value for key, value in INGREDIENT_ALIASES.items(
 _FOLDED_CATEGORY_KEYWORDS = {_fold(key): value for key, value in INGREDIENT_CATEGORY_KEYWORDS.items()}
 
 
+# Mejerifamiljen där 1 g = 1 ml är KÖKSSTANDARD (densitet 0,96-1,04):
+# recept i dl mot burkar märkta i gram (crème fraiche 2 dl mot 200 g) är
+# exakt samma mängd. En beslutad lista - inget annat får korsa familjer.
+DAIRY_DENSITY_ONE = {
+    "gradde", "vispgradde", "matlagningsgradde", "creme fraiche", "creme",
+    "graddfil", "filmjolk", "yoghurt", "grekisk yoghurt", "mjolk", "kvarg",
+    "kesella", "keso",
+    # Släta såser med vattendensitet - msk-recept mot gramflaskor.
+    "ketchup", "senap", "majonnas", "chilisas", "sriracha", "sweet chili",
+    "bbq-sas", "hp-sas",
+}
+
+
+def dairy_gram_ml_equivalent(ingredient: str) -> bool:
+    folded = _fold(ingredient)
+    return any(folded == name or folded.endswith(name) for name in DAIRY_DENSITY_ONE)
+
+
 def convert_amount(amount: float | None, from_unit: str | None, to_unit: str | None) -> float | None:
     """Converts between mass units, or between volume units. Returns None when
     the two units aren't comparable (e.g. 'st' vs 'g') rather than assuming a
@@ -711,14 +736,60 @@ STYCK_VIKT_G = {
     "citron": 120, "lime": 70, "apelsin": 200, "apple": 180, "paron": 170,
     "banan": 120, "potatis": 90, "morot": 80, "morotter": 80, "palsternacka": 120,
     "paprika": 180, "gurka": 350, "zucchini": 300, "aubergine": 320,
-    "avokado": 200, "vitlok": 70, "schalottenlok": 40, "purjolok": 250,
+    "avokado": 200, "vitlok": 70, "schalottenlok": 40, "chili": 15, "purjolok": 250,
     "agg": 60, "champinjon": 20, "broccoli": 350, "blomkal": 800,
     "sotpotatis": 250, "kalrot": 700, "fankal": 300,
+    # Salladshuvuden, bröd och helfågel - kökets standardvikter.
+    "romansallad": 300, "isbergssallad": 400, "vitkal": 1200, "spetskal": 800,
+    "kyckling hel": 1400, "hel kyckling": 1400, "ananas": 1000,
+    "tortilla": 40, "tortillabrod": 40, "hamburgerbrod": 60, "brod": 35, "brodskiva": 35,
+    # "Bröd N st" i ett recept är SKIVOR (varma mackor, toast) - en skiva
+    # väger ~35 g. Hela limpor anges i gram i recepten.
+    "pitabrod": 75, "korvbrod": 30, "isterband": 75, "korv": 60, "prinskorv": 15, "baguette": 250, "tacokrydda": 28,
+    # En ÖRTKRUKA eller ett knippe ger ~20 g användbar ört - det är måttet
+    # recepten menar med "1 st dill".
+    "dill": 20, "persilja": 20, "basilika": 20, "graslok": 20, "koriander": 20,
+    "timjan": 10, "rosmarin": 10, "mynta": 20, "salvia": 10, "oregano": 10,
 }
 
 
 def styck_vikt_for(ingredient: str) -> float | None:
     return STYCK_VIKT_G.get(_fold(ingredient))
+
+
+# Buljong säljs som tärningar (paket märkta i liter färdig buljong),
+# pulver och flytande fond - recepten säger dl vatten eller st tärningar.
+# Normaliseringen är svensk standard: EN tärning ger EN HALV liter.
+BULJONG_FAMILY = {"buljong", "buljongtarning", "hansbuljong", "gronsaksbuljong",
+                  "kycklingbuljong", "kottbuljong", "fiskbuljong", "svampbuljong", "fond"}
+LITER_PER_BULJONGTARNING = 0.5
+
+
+# Bakvarornas dl->gram enligt svensk kökstabell (varje recepthäfte bär
+# samma siffror): 1 dl vetemjöl väger 60 g, strösocker 85 g, osv.
+BAKING_GRAMS_PER_DL = {
+    "vetemjol": 60, "mjol": 60, "rågmjol": 55, "grahamsmjol": 55,
+    "socker": 85, "strosocker": 85, "florsocker": 55, "farinsocker": 80,
+    "strobrod": 40, "havregryn": 35, "kokos": 40, "kakao": 40,
+    "potatismjol": 80, "majsstarkelse": 70, "mannagryn": 70, "kornmjol": 55,
+}
+
+
+def baking_grams(ingredient: str, amount: float, unit: str) -> float | None:
+    per_dl = BAKING_GRAMS_PER_DL.get(_fold(ingredient))
+    if not per_dl:
+        return None
+    ml = convert_amount(amount, unit, "ml")
+    return (ml / 100.0) * per_dl if ml is not None else None
+
+
+def buljong_liters(ingredient: str, amount: float, unit: str) -> float | None:
+    if _fold(ingredient) not in BULJONG_FAMILY:
+        return None
+    folded = _fold(unit)
+    if folded in ("st", "styck", "forp"):
+        return amount * LITER_PER_BULJONGTARNING
+    return convert_amount(amount, unit, "l")
 
 
 def effective_package(product) -> tuple[float | None, str | None]:
@@ -1136,6 +1207,7 @@ class RecipePricingEngine:
         big package can beat three small ones, so the comparison has to be on
         total cost, not unit price."""
         best = None
+        best_rank = None
         prices = self._prices_for(store_id)
         for product in self._candidates(ingredient, chain):
             price = prices.get(product.id)
@@ -1144,6 +1216,25 @@ class RecipePricingEngine:
                 continue
             package_amount, package_unit = effective_package(product)
             effective_amount, effective_unit = amount, unit
+            # Buljong: räkna allt i liter färdig buljong.
+            liters = buljong_liters(ingredient, amount, unit)
+            if liters is not None and package_unit and _fold(package_unit) in _VOLUME:
+                effective_amount, effective_unit = liters, "l"
+            # Bakvaror: dl-recept mot gram-paket via kökstabellen. (Walrus i
+            # villkoret: ett sant-men-tomt if åt tidigare upp mejeri-elif:en
+            # och lämnade grekisk yoghurt som estimat.)
+            elif (_fold(unit) in _VOLUME and package_unit
+                    and _fold(package_unit) in _MASS
+                    and (grams := baking_grams(ingredient, amount, unit)) is not None):
+                effective_amount, effective_unit = grams, "g"
+            # Mejeri och släta såser: 1 g = 1 ml enligt köksstandard.
+            elif dairy_gram_ml_equivalent(ingredient) and package_unit:
+                pf = _fold(package_unit)
+                uf = _fold(unit)
+                if uf in _VOLUME and pf in _MASS:
+                    effective_amount, effective_unit = convert_amount(amount, unit, "ml"), "g"
+                elif uf in _MASS and pf in _VOLUME:
+                    effective_amount, effective_unit = convert_amount(amount, unit, "g"), "ml"
             # Styckrecept mot gramvara: väg om via styckvikttabellen.
             if (_fold(unit) in ("st", "styck") and package_unit
                     and _fold(package_unit) in _MASS):
@@ -1181,7 +1272,14 @@ class RecipePricingEngine:
             else:
                 exact = True
             total = per_kg_cost if per_kg_cost is not None else count * unit_cost
-            if best is None or total < best["totalCost"]:
+            # EXAKT SLÅR ESTIMAT i kandidatvalet. En gissad "1 förpackning"
+            # ser billig ut och vann annars över korrekt räknade varor - det
+            # var så "Smör-&rapsolja Flytande" (ml, gissat antal) slog
+            # riktigt smör (g, exakt) för ett smörbehov i gram. Priset
+            # avgör först INOM samma exakthetsklass.
+            candidate_rank = (0 if exact else 1, total)
+            if best is None or candidate_rank < best_rank:
+                best_rank = candidate_rank
                 best = {
                     "productId": product.id,
                     "productName": product.name,
@@ -1275,7 +1373,12 @@ class RecipePricingEngine:
         return {
             "chain": chain,
             "storeId": store_id,
-            "totalCheckoutCost": round(total, 2),
+            # En tom eller skafferitäckt lista kostar ärligt 0 kr. Men finns
+            # matchade rader där INGEN är säker är totalsumman okänd - "0 kr"
+            # vore ett pris, och det vore fel.
+            "totalCheckoutCost": (None if matched and not any(
+                row.get("totalCost") is not None for row in matched)
+                else round(total, 2)),
             "matchedItems": matched,
             "missingItems": missing,
             # Ett paketantal som GISSADES till 1 (enheterna gick inte att
