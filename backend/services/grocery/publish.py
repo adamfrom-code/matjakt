@@ -103,8 +103,11 @@ def backfill_reference_prices(db, chains: list[str] | None = None) -> dict:
     blir inte referens heller."""
     from .register import CHAIN_PRICING_SCOPE, CHAIN_REFERENCE_STORE
 
+    import sqlite3
+
     chains = chains or list(CHAIN_PRICING_SCOPE)
     summary = {}
+    skipped = 0
     for chain in chains:
         scope = CHAIN_PRICING_SCOPE.get(chain)
         if scope == "NATIONAL":
@@ -132,16 +135,28 @@ def backfill_reference_prices(db, chains: list[str] | None = None) -> dict:
                     continue
                 source = (price["source"] if "source" in keys and price["source"]
                           else f"{chain.lower()}:{store_row['external_store_id']}")
-                if db.upsert_reference_price(
-                        product_id=price["product_id"], chain=chain,
-                        regular_price=cleaned["regular_price"], campaign_price=cleaned["campaign_price"],
-                        member_price=cleaned["member_price"], multibuy_price=cleaned["multibuy_price"],
-                        unit_price=cleaned["unit_price"], currency=price["currency"] or "SEK",
-                        source=source, valid_to=price["valid_to"] if "valid_to" in keys else None,
-                        verified_at=(price["verified_at"] if "verified_at" in keys and price["verified_at"]
-                                     else price["fetched_at"])):
-                    published += 1
+                try:
+                    if db.upsert_reference_price(
+                            product_id=price["product_id"], chain=chain,
+                            regular_price=cleaned["regular_price"], campaign_price=cleaned["campaign_price"],
+                            member_price=cleaned["member_price"], multibuy_price=cleaned["multibuy_price"],
+                            unit_price=cleaned["unit_price"], currency=price["currency"] or "SEK",
+                            source=source, valid_to=price["valid_to"] if "valid_to" in keys else None,
+                            verified_at=(price["verified_at"] if "verified_at" in keys and price["verified_at"]
+                                         else price["fetched_at"])):
+                        published += 1
+                except (sqlite3.Error, ValueError, TypeError) as error:
+                    # EN dålig rad (t.ex. en gammal prisrad vars produkt inte
+                    # längre finns - FK-fel) får aldrig döda hela backfillen.
+                    # Produktion stannade på exakt 2 862 rader två gånger
+                    # innan detta fanns.
+                    skipped += 1
+                    if skipped <= 5:
+                        logger.warning("Backfill hoppade över produkt %s (%s): %s",
+                                       price["product_id"], chain, error)
         summary[chain] = published
+    if skipped:
+        summary["skipped"] = skipped
     logger.info("Referenspriser backfillade: %s", summary)
     return summary
 
@@ -232,9 +247,13 @@ def publish_run(db, run_id: int, store_id: int, chain: str, *, source: str,
                         source=row["source"] or source, valid_to=row["valid_to"],
                         verified_at=row["fetched_at"] or now):
                     reference_published += 1
-        except ValueError:
+        except (ValueError, TypeError) as error:
             # upsert_current_price vägrade (dubbelt hängslen mot ett pris som
             # slank igenom radgaten) - raden hoppas över, inget gissas.
+            logger.warning("Rad för produkt %s hoppades över vid publicering: %s", row["product_id"], error)
+            continue
+        except Exception as error:  # sqlite3.Error m.fl. - en rad, inte körningen
+            logger.warning("Rad för produkt %s kunde inte publiceras: %s", row["product_id"], error)
             continue
 
     if blocked:

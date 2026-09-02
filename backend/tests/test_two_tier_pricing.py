@@ -208,6 +208,28 @@ class QualityGateNeverLetsBadDataLive(_Base):
         self.assertEqual(self.db.get_current_price(products[0].id, maxi.id).regular_price, 11.0)
         self.assertEqual(self.db.price_count_for_store(maxi.id), 10)  # inget raderat
 
+    def test_backfill_survives_an_orphaned_price_row(self):
+        """Produktion stannade två gånger på exakt 2 862 rader: en gammal
+        prisrad vars produkt inte finns kastar FK-fel - det får kosta EN
+        rad, aldrig resten av backfillen."""
+        from services.grocery.publish import backfill_reference_prices
+        first = self.milk_product("Willys", "2132")
+        gestrike = self.store("Willys", "2132", "Willys Gestrike")
+        self.store_price(first.id, gestrike.id, 12.0, source="axfood:2132")
+        # Föräldralös prisrad: skriven med FK avstängt, som gammal data kan vara.
+        self.db.connection.execute("PRAGMA foreign_keys=OFF")
+        self.db.connection.execute(
+            "INSERT INTO grocery_current_prices (product_id, store_id, regular_price, currency, fetched_at, updated_at) "
+            "VALUES (999999, ?, 9.0, 'SEK', ?, ?)", (gestrike.id, time.time(), time.time()))
+        self.db.connection.commit()
+        self.db.connection.execute("PRAGMA foreign_keys=ON")
+        second = self.db.find_or_create_product(_raw("Willys", "2132", name="Gouda", gtin="07340083443893", price=50))
+        self.store_price(second.id, gestrike.id, 50.0, source="axfood:2132")
+        summary = backfill_reference_prices(self.db, ["Willys"])
+        self.assertEqual(summary["Willys"], 2)
+        self.assertEqual(summary.get("skipped"), 1)
+        self.assertEqual(self.db.reference_price_count("Willys"), 2)
+
     def test_backfill_never_lifts_partner_prices_to_reference(self):
         """Hittat i E2E: en NATIONAL-kedjas partnerbutik fick sina (dyrare)
         priser lyfta till kedjans referens av backfillen. Aldrig."""
