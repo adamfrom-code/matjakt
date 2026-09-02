@@ -230,6 +230,23 @@ class QualityGateNeverLetsBadDataLive(_Base):
         self.assertEqual(summary.get("skipped"), 1)
         self.assertEqual(self.db.reference_price_count("Willys"), 2)
 
+    def test_self_healing_is_per_chain(self):
+        """Två fulla kedjor får aldrig dölja en tom tredje - produktion hade
+        Willys+Hemköp fulla och City Gross tom efter en omstart mitt i."""
+        from services.grocery.publish import (
+            backfill_reference_prices, chains_needing_reference_backfill)
+        product = self.milk_product("Willys", "2132")
+        self.milk_product("City Gross", "3209")
+        willys = self.store("Willys", "2132", "Willys Gestrike")
+        cg = self.store("City Gross", "3209", "City Gross Gävle")
+        self.store_price(product.id, willys.id, 12.0, source="axfood:2132")
+        self.store_price(product.id, cg.id, 14.0, source="citygross:3209")
+        self.assertEqual(set(chains_needing_reference_backfill(self.db)), {"Willys", "City Gross"})
+        backfill_reference_prices(self.db, ["Willys"])
+        self.assertEqual(chains_needing_reference_backfill(self.db), ["City Gross"])
+        backfill_reference_prices(self.db, ["City Gross"])
+        self.assertEqual(chains_needing_reference_backfill(self.db), [])
+
     def test_backfill_never_lifts_partner_prices_to_reference(self):
         """Hittat i E2E: en NATIONAL-kedjas partnerbutik fick sina (dyrare)
         priser lyfta till kedjans referens av backfillen. Aldrig."""

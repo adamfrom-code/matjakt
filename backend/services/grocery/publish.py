@@ -92,6 +92,35 @@ def gate_row(row: dict, product_name: str | None) -> tuple[bool, str | None, dic
     }
 
 
+REFERENCE_HEAL_RATIO = 0.9
+
+
+def chains_needing_reference_backfill(db) -> list[str]:
+    """Kedjor vars referensnivå släpar efter sina verifierade priser (t.ex.
+    en backfill som avbröts av en omstart mitt i City Gross). Per kedja,
+    inte totalen: två fulla kedjor får aldrig dölja en tom tredje."""
+    from .register import CHAIN_PRICING_SCOPE, CHAIN_REFERENCE_STORE
+
+    needing = []
+    for chain, scope in CHAIN_PRICING_SCOPE.items():
+        if scope == "NATIONAL":
+            verified = db.connection.execute(
+                "SELECT COUNT(*) FROM grocery_current_prices cp JOIN grocery_stores s ON s.id = cp.store_id "
+                "WHERE s.chain = ? AND COALESCE(cp.source, '') NOT LIKE 'partner:%'", (chain,)).fetchone()[0]
+        else:
+            reference_id = CHAIN_REFERENCE_STORE.get(chain)
+            verified = db.connection.execute(
+                "SELECT COUNT(*) FROM grocery_current_prices cp JOIN grocery_stores s ON s.id = cp.store_id "
+                "WHERE s.chain = ? AND s.external_store_id = ? AND COALESCE(cp.source, '') NOT LIKE 'partner:%'",
+                (chain, reference_id)).fetchone()[0] if reference_id else 0
+        if not verified:
+            continue
+        reference = db.reference_price_count(chain)
+        if reference < verified * REFERENCE_HEAL_RATIO:
+            needing.append(chain)
+    return needing
+
+
 def backfill_reference_prices(db, chains: list[str] | None = None) -> dict:
     """FÖRSTA REFERENSPUBLICERINGEN ur redan verifierad data.
 

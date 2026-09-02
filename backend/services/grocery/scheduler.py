@@ -251,20 +251,18 @@ class GroceryScheduler:
             return
         try:
             from . import api as grocery_api
-            from .publish import backfill_reference_prices
+            from .publish import backfill_reference_prices, chains_needing_reference_backfill
             store = grocery_api.open_store()
             try:
-                verified = store.connection.execute(
-                    "SELECT COUNT(*) FROM grocery_current_prices").fetchone()[0]
-                reference = store.connection.execute(
-                    "SELECT COUNT(*) FROM grocery_reference_prices").fetchone()[0]
-                # Självläkande: en avbruten backfill (processen startades om
-                # mitt i) lämnar en halvfylld tabell - då körs den om, inte
-                # bara när tabellen är tom. Backfillen är idempotent.
-                if verified and reference < verified * 0.5:
-                    logger.warning("Referenstabellen har %d rader mot %d verifierade - "
-                                   "referenspubliceringen körs", reference, verified)
-                    backfill_reference_prices(store)
+                # Självläkande PER KEDJA: en backfill som avbröts av en omstart
+                # (deploy mitt i City Gross) lämnar en kedja tom medan totalen
+                # ser rimlig ut. Varje kedja vars referens släpar fylls.
+                # Backfillen är idempotent.
+                needing = chains_needing_reference_backfill(store)
+                if needing:
+                    logger.warning("Referensnivån släpar för %s - referenspubliceringen körs",
+                                   ", ".join(needing))
+                    backfill_reference_prices(store, needing)
                     grocery_api.clear_cache()
                 registered = store.connection.execute(
                     "SELECT COUNT(*) FROM grocery_stores WHERE latitude IS NOT NULL").fetchone()[0]
