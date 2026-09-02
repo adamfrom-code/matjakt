@@ -342,11 +342,47 @@ class EnrichmentPipeline(_DbCase):
         client = dabas.DabasClient(api_key=KEY, opener=opener_for(lambda url: _Response(json.dumps(article()).encode())))
         self.assertEqual(enrichment.enrich_product(self.db, wrong, client), "error")
 
-    def test_enrichment_is_off_without_explicit_activation(self):
+    def test_enrichment_is_on_with_key_and_off_by_optout(self):
         with patch.dict("os.environ", {"DABAS_API_KEY": KEY, "MATJAKT_DABAS_ENRICHMENT_ENABLED": "0"}):
             self.assertFalse(enrichment.enrichment_enabled())
-        with patch.dict("os.environ", {"DABAS_API_KEY": KEY, "MATJAKT_DABAS_ENRICHMENT_ENABLED": "1"}):
-            self.assertTrue(enrichment.enrichment_enabled())
+        with patch.dict("os.environ", {"DABAS_API_KEY": KEY}, clear=False):
+            import os
+            os.environ.pop("MATJAKT_DABAS_ENRICHMENT_ENABLED", None)
+            self.assertTrue(enrichment.enrichment_enabled())  # standard PÅ med nyckel
+        with patch.dict("os.environ", {}, clear=False):
+            import os
+            os.environ.pop("DABAS_API_KEY", None)
+            self.assertFalse(enrichment.enrichment_enabled())  # aldrig utan nyckel
+
+    def test_package_source_tiers_exist_without_dabas(self):
+        """Varje produkt bär sin nivå: PROVIDER_VERIFIED (mängd+enhet från
+        kedjan), NORMALIZED (tolkad ur text), NONE (inget). Dabas saknad
+        träff får aldrig skapa ett hål - nivån står kvar."""
+        verified = self.product(name="Mjölk", gtin=MILK, size="1000 ml", quantity=1000.0, unit="ml")
+        normalized = self.product(name="Torskfilé 400g", gtin="07315632004009", size=None, quantity=None, unit=None)
+        nothing = self.product(name="Persilja kruka", gtin="07311042001768", size=None, quantity=None, unit=None)
+        counts = enrichment.classify_package_sources(self.db)
+        self.assertEqual(counts, {"PROVIDER_VERIFIED": 1, "NORMALIZED": 1, "NONE": 1})
+        self.assertEqual(self.db.get_product(verified.id).package_source, "PROVIDER_VERIFIED")
+        self.assertEqual(self.db.get_product(normalized.id).package_source, "NORMALIZED")
+        self.assertEqual(self.db.get_product(nothing.id).package_source, "NONE")
+        # Dabas utan mängd -> providerns nivå orörd.
+        verdict = enrichment.package_verdict(self.db.get_product(verified.id),
+                                             dabas.normalize_article(article(Nettoinnehall=[])))
+        self.assertEqual(verdict["package_source"], "PROVIDER_VERIFIED")
+        self.assertIsNone(verdict["package_conflict"])
+        self.assertEqual(enrichment.classify_package_sources(self.db), {})  # idempotent
+
+    def test_coverage_report_per_chain_and_brand_type(self):
+        a = self.product(name="Arla mjölk", gtin=MILK, brand="Arla")
+        b = self.product(name="Garant mjölk", gtin="07340083443893", brand="Garant")
+        self.db.record_dabas_check(a.id, status="ok")
+        self.db.record_dabas_check(b.id, status="not_found")
+        report = enrichment.coverage_report(self.db)
+        self.assertEqual(report["totalt"], {"uppslagna": 2, "traff": 1, "procent": 50.0})
+        self.assertEqual(report["perVarumarkestyp"]["märkesvara"]["procent"], 100.0)
+        self.assertEqual(report["perVarumarkestyp"]["private label"]["procent"], 0.0)
+        self.assertEqual(report["perKedja"]["Willys"]["uppslagna"], 2)
 
 
 if __name__ == "__main__":

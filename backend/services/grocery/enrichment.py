@@ -11,7 +11,7 @@
       7. Spara + statusmetadata           -> dabas_status/last_checked/...
 
 MERGEREGLER (prioritet för verifierad masterdata):
-    DABAS_VERIFIED  >  PROVIDER_DATA  >  NORMALIZED_FALLBACK
+    DABAS_VERIFIED  >  PROVIDER_VERIFIED  >  NORMALIZED  (>  NONE)
 men ett fält Dabas SAKNAR (null/tomt) rör aldrig fungerande befintlig data.
 Produktens visningsnamn (name) är fortsatt kedjans hyllnamn - det är vad
 kunden ser i butiken och vad den kanoniska matchningen är kalibrerad på;
@@ -24,7 +24,7 @@ PAKETDATA - HÖG PRIORITET (grammen, styckena, multipacken har bitit oss):
     provider 450 g  + Dabas 500 g   -> CONFLICT: mängden används inte,
                                        raden blir osäker i prismotorn
                                        (effective_package returnerar okänt)
-    provider 450 g  + Dabas saknar  -> provider, PROVIDER_DATA (som förut)
+    provider 450 g  + Dabas saknar  -> PROVIDER_VERIFIED/NORMALIZED oförändrat
     Dabas variabelmått/lösvikt      -> providerns cirkavikt får stå, märkt
 Tolerans 2 % för avrundning (ca-vikt 750 vs 745).
 
@@ -33,9 +33,10 @@ prismotorn som en extra REJECT-signal genom samma avdelningsvakt som
 kedjornas kategorier - "Kanel" mot Dabas-kategori "Knäckebröd" faller,
 oavsett produktnamn. Dabas stärker reglerna, ersätter dem inte.
 
-AKTIVERING: körs bara när DABAS_API_KEY finns OCH
-MATJAKT_DABAS_ENRICHMENT_ENABLED=1 - villkor/rate limits ska vara
-verifierade innan produktion (docs/DABAS.md).
+AKTIVERING (2026-09-02, Adam): PÅ så snart DABAS_API_KEY finns - text,
+paket och kategori. Bilder är avstängda i koden oavsett flagga.
+MATJAKT_DABAS_ENRICHMENT_ENABLED=0 stänger av. Rate limit observerad:
+~300 ms/anrop, inga 429 vid 0,3 s takt (docs/DABAS.md).
 """
 
 import json
@@ -50,12 +51,24 @@ from .providers.dabas import (
 logger = logging.getLogger("matjakt.grocery.enrichment")
 
 PACKAGE_TOLERANCE = 0.02
-MAX_PER_RUN = int(os.environ.get("MATJAKT_DABAS_MAX_PER_RUN", "300"))
+# 4 000 uppslag per pass vid ~0,3 s/anrop = ~20 min; hela katalogen (15 600
+# GTIN) på tre-fyra pass, sedan bara nya och omprövade GTIN per natt.
+MAX_PER_RUN = int(os.environ.get("MATJAKT_DABAS_MAX_PER_RUN", "4000"))
+
+# Källnivåer för paketdata (Adams tre nivåer, 2026-09-02):
+SOURCE_DABAS = "DABAS_VERIFIED"          # Dabas och provider eniga, eller bara Dabas
+SOURCE_PROVIDER = "PROVIDER_VERIFIED"    # providern gav mängd + enhet explicit
+SOURCE_NORMALIZED = "NORMALIZED"         # bara tolkat ur size-/namntext
+SOURCE_NONE = "NONE"                     # ingen mängd - raden förblir osäker
 
 
 def enrichment_enabled() -> bool:
-    return bool(os.environ.get("DABAS_API_KEY")) and str(
-        os.environ.get("MATJAKT_DABAS_ENRICHMENT_ENABLED", "0")).strip().lower() in {"1", "true", "yes", "on"}
+    """PÅ så snart DABAS_API_KEY finns (Adam aktiverade text/paket/kategori
+    2026-09-02); MATJAKT_DABAS_ENRICHMENT_ENABLED=0 stänger av. Bilder
+    berörs aldrig av den här flaggan - de är avstängda i koden."""
+    if not os.environ.get("DABAS_API_KEY"):
+        return False
+    return str(os.environ.get("MATJAKT_DABAS_ENRICHMENT_ENABLED", "1")).strip().lower() not in {"0", "false", "no", "off"}
 
 
 def _same_amount(a: float, b: float) -> bool:
@@ -89,30 +102,113 @@ def _provider_package(product):
     return None, None
 
 
+def provider_source(product) -> str:
+    """Vilken nivå providerns paketdata har, utan Dabas inblandat:
+    explicit mängd+enhet från kedjans API = PROVIDER_VERIFIED, bara tolkad
+    ur text = NORMALIZED, inget = NONE."""
+    if product.quantity and product.unit:
+        return SOURCE_PROVIDER
+    from .pricing import effective_package
+    try:
+        quantity, unit = effective_package(product)
+    except Exception:
+        quantity = None
+    return SOURCE_NORMALIZED if quantity else SOURCE_NONE
+
+
+def classify_package_sources(db, limit: int | None = None) -> dict:
+    """Sätter package_source på produkter som saknar den - så varje rad bär
+    sin nivå även utan Dabas-uppslag. Idempotent, rör aldrig Dabas-satta
+    rader och aldrig priser."""
+    rows = db.connection.execute(
+        "SELECT * FROM grocery_products WHERE package_source IS NULL"
+        + (f" LIMIT {int(limit)}" if limit else "")).fetchall()
+    counts = {}
+    for row in rows:
+        product = db._row_to_product(row)
+        source = provider_source(product)
+        confidence = ("provider" if source == SOURCE_PROVIDER
+                      else "normalized" if source == SOURCE_NORMALIZED else "none")
+        db.apply_product_fields(product.id, {"package_source": source, "package_confidence": confidence})
+        counts[source] = counts.get(source, 0) + 1
+    return counts
+
+
+# Private label per kedja - för täckningsrapporten "per varumärkestyp".
+PRIVATE_LABELS = {"garant", "eldorado", "ica", "ica basic", "ica selection", "ica i love eco", "coop", "änglamark",
+                  "xtra", "x-tra", "favorit", "hemköp", "willys", "city gross", "prime", "milbona", "pilos", "freshona",
+                  "combino", "solevita", "cien", "dulano", "bellarom", "vemondo", "chef select", "kania"}
+
+
+def brand_type(brand: str | None) -> str:
+    if not brand or not str(brand).strip():
+        return "utan varumärke"
+    folded = str(brand).strip().lower()
+    if folded in PRIVATE_LABELS or folded.startswith(("ica ", "coop ", "garant ")):
+        return "private label"
+    return "märkesvara"
+
+
+def coverage_report(db) -> dict:
+    """Faktisk Dabas-träffgrad per kedja och varumärkestyp, över de GTIN som
+    faktiskt slagits upp (dabas_status satt). Ren aggregering i SQL - den
+    körs i /api/health och får inte kosta sekunder."""
+    total_row = db.connection.execute(
+        "SELECT COUNT(*) AS n, SUM(dabas_status = 'ok') AS ok, SUM(dabas_status IN ('ok', 'not_found')) AS looked "
+        "FROM grocery_products WHERE gtin IS NOT NULL AND gtin != ''").fetchone()
+    per_chain = {}
+    for row in db.connection.execute(
+            "SELECT x.chain, SUM(p.dabas_status IN ('ok', 'not_found')) AS looked, SUM(p.dabas_status = 'ok') AS ok "
+            "FROM grocery_product_external_ids x JOIN grocery_products p ON p.id = x.product_id "
+            "WHERE p.gtin IS NOT NULL AND p.gtin != '' GROUP BY x.chain"):
+        per_chain[row["chain"]] = {"uppslagna": row["looked"] or 0, "traff": row["ok"] or 0}
+    per_brand = {}
+    for row in db.connection.execute(
+            "SELECT brand, SUM(dabas_status IN ('ok', 'not_found')) AS looked, SUM(dabas_status = 'ok') AS ok "
+            "FROM grocery_products WHERE gtin IS NOT NULL AND gtin != '' AND dabas_status IS NOT NULL GROUP BY brand"):
+        b = per_brand.setdefault(brand_type(row["brand"]), {"uppslagna": 0, "traff": 0})
+        b["uppslagna"] += row["looked"] or 0
+        b["traff"] += row["ok"] or 0
+    sources = {row[0] or "NULL": row[1] for row in db.connection.execute(
+        "SELECT package_source, COUNT(*) FROM grocery_products WHERE gtin IS NOT NULL AND gtin != '' GROUP BY package_source")}
+    confidence = {row[0] or "NULL": row[1] for row in db.connection.execute(
+        "SELECT package_confidence, COUNT(*) FROM grocery_products WHERE gtin IS NOT NULL AND gtin != '' GROUP BY package_confidence")}
+
+    def pct(b):
+        return round(100 * b["traff"] / b["uppslagna"], 1) if b["uppslagna"] else None
+
+    total = {"uppslagna": total_row["looked"] or 0, "traff": total_row["ok"] or 0}
+    return {
+        "totalt": {**total, "procent": pct(total)},
+        "perKedja": {k: {**v, "procent": pct(v)} for k, v in sorted(per_chain.items())},
+        "perVarumarkestyp": {k: {**v, "procent": pct(v)} for k, v in sorted(per_brand.items())},
+        "packageSource": sources, "packageConfidence": confidence,
+        "gtinTotalt": total_row["n"] or 0,
+    }
+
+
 def package_verdict(product, dabas: DabasProduct) -> dict:
     """Fälten package_source/package_confidence/package_conflict + ev. ny
     quantity/unit/size, utifrån provider mot Dabas."""
     p_qty, p_unit = _provider_package(product)
     d = dabas.package
-    if d.variable_measure:
-        return {"package_source": "PROVIDER_DATA" if p_qty else "NORMALIZED_FALLBACK",
-                "package_confidence": "provider" if p_qty else "none",
-                "package_conflict": None}
-    if d.quantity is None or d.unit is None:
-        return {"package_source": "PROVIDER_DATA" if p_qty else "NORMALIZED_FALLBACK",
+    if d.variable_measure or d.quantity is None or d.unit is None:
+        # Dabas har ingen fast mängd att verifiera mot: providerns nivå
+        # står kvar oförändrad - hål skapas aldrig av att Dabas saknar data.
+        return {"package_source": provider_source(product),
                 "package_confidence": "provider" if p_qty else "none",
                 "package_conflict": None}
     if p_qty is None:
-        return {"package_source": "DABAS_VERIFIED", "package_confidence": "high",
+        return {"package_source": SOURCE_DABAS, "package_confidence": "high",
                 "package_conflict": None,
                 "quantity": d.quantity, "unit": d.unit,
                 "size": f"{d.quantity:g} {d.unit}"}
     if p_unit == d.unit and _same_amount(p_qty, d.quantity):
-        return {"package_source": "DABAS_VERIFIED", "package_confidence": "high",
+        return {"package_source": SOURCE_DABAS, "package_confidence": "high",
                 "package_conflict": None, "quantity": d.quantity, "unit": d.unit}
     # Multipack: provider 6x120 g = 720 g mot Dabas 720 g hanteras redan av
     # effective_package. Kvarstående skillnad = konflikt.
-    return {"package_source": "PROVIDER_DATA", "package_confidence": "conflict",
+    return {"package_source": provider_source(product), "package_confidence": "conflict",
             "package_conflict": f"provider {p_qty:g} {p_unit} / Dabas {d.quantity:g} {d.unit} ({d.kind})"}
 
 

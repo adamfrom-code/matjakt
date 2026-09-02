@@ -77,7 +77,7 @@ TIMEOUT_SECONDS = 10
 RETRY_DELAYS = (0.5, 1.5, 4.0)
 # Rate limits är inte dokumenterade i specen. Tills de är kända håller vi en
 # konservativ takt och backar av på 429 utan att bråka.
-MIN_SECONDS_BETWEEN_CALLS = 0.25
+MIN_SECONDS_BETWEEN_CALLS = 0.3
 
 
 class DabasError(Exception):

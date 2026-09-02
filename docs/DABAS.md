@@ -55,9 +55,9 @@ Providerns tolkning (`effective_package`) jämförs med Dabas nettoinnehåll
 |---|---|---|---|---|
 | 450 g | 450 g | `DABAS_VERIFIED` | `high` | mängd bekräftad |
 | saknas | 450 g | `DABAS_VERIFIED` | `high` | luckan fylls |
-| 450 g | 500 g | `PROVIDER_DATA` | `conflict` + `package_conflict`-text | **mängden används inte** — `effective_package` → okänt → raden osäker, aldrig i säkra totaler |
-| 450 g | saknas | `PROVIDER_DATA` | `provider` | som förut |
-| ca 750 g | variabelmått | `PROVIDER_DATA` | `provider` | lösvikt — cirkavikten får stå |
+| 450 g | 500 g | providerns nivå | `conflict` + `package_conflict`-text | **mängden används inte** — `effective_package` → okänt → raden osäker, aldrig i säkra totaler |
+| 450 g | saknas | `PROVIDER_VERIFIED` (eller `NORMALIZED` om bara texttolkad) | `provider` | som förut — Dabas saknad träff skapar aldrig hål |
+| ca 750 g | variabelmått | providerns nivå | `provider` | lösvikt — cirkavikten får stå |
 
 ## 4. Kanonisk matchning
 
@@ -77,7 +77,7 @@ alla befintliga regressionstester (release gate, kanonisk matris) passerar oför
 4. svar → `normalize_article` → validering (GTIN måste stämma) → fältvis merge → `apply_product_fields`
 5. metadata: `dabas_status` (ok/not_found/error), `dabas_last_checked`, `dabas_last_success`, `dabas_error`, `dabas_source_version`
 
-Aktivering kräver **både** `DABAS_API_KEY` och `MATJAKT_DABAS_ENRICHMENT_ENABLED=1`.
+**Aktivering (2026-09-02):** PÅ så snart `DABAS_API_KEY` finns i miljön — text/paket/kategori, aldrig bilder. `MATJAKT_DABAS_ENRICHMENT_ENABLED=0` stänger av. Körs som bakgrundspass vid boot och nattligt 05:00 (4 000 uppslag/pass, 0,3 s takt); appen väntar aldrig.
 Nyckeln läses bara ur miljön; `_redact()` tar bort den ur felmeddelanden; testerna
 låser att den aldrig syns i fel eller produktdata. `.env` är gitignorerad.
 
@@ -150,3 +150,8 @@ på fråga 5 ovan. Open Food Facts-fallbacken är kvar för bilder.
 - [ ] tester gröna (`backend/tests/test_dabas.py`)
 - [ ] `MATJAKT_DABAS_ENRICHMENT_ENABLED=1` i Render → nattjobb 05:00
 - [ ] källangivelse "Produktinformation från Dabas" där masterdata visas
+
+
+## 11. Källnivåer på varje produkt
+
+`package_source` sätts på **alla** produkter (`classify_package_sources`, vid boot): `DABAS_VERIFIED` (Dabas bekräftat), `PROVIDER_VERIFIED` (mängd + enhet från kedjans API), `NORMALIZED` (tolkad ur size-/namntext), `NONE` (ingen mängd — raden förblir osäker). Ingen Dabas-träff lämnar providerns nivå orörd. Täckningsrapport per kedja och varumärkestyp: `/api/health` → `platform.totals.dabasCoverage`.

@@ -276,6 +276,21 @@ class GroceryScheduler:
                 store.close()
             if registered < 100 and os.environ.get("PRIMAT_API_KEY"):
                 self._sync_register("första registersynken")
+            # Paketkällnivå på varje produkt (PROVIDER_VERIFIED/NORMALIZED/NONE)
+            # så att raderna bär sin nivå även utan Dabas. Idempotent.
+            from .enrichment import classify_package_sources, enrichment_enabled
+            store = grocery_api.open_store()
+            try:
+                classified = classify_package_sources(store)
+            finally:
+                store.close()
+            if classified:
+                logger.info("Paketkällor klassade: %s", classified)
+            # Dabas-berikning i bakgrunden direkt vid boot (text/paket/kategori,
+            # aldrig bilder) - appen väntar aldrig på den.
+            if enrichment_enabled():
+                threading.Thread(target=self._run_dabas_enrichment,
+                                 name="grocery-dabas-boot", daemon=True).start()
         except Exception:
             logger.exception("Plattformsaktiveringen misslyckades - nattjobbet fortsätter ändå")
 

@@ -459,11 +459,26 @@ def stores_near(latitude: float, longitude: float,
     return flattened
 
 
+_PLATFORM_STATUS_CACHE = {"at": 0.0, "value": None}
+PLATFORM_STATUS_TTL_SECONDS = 60
+
+
 def platform_status() -> dict:
     """Den nationella prisplattformens tillstånd i siffror - per kedja:
     butiker i registret, produkter, verifierade prisrader, referenspriser,
     senaste verifiering, senaste körning med gate. Inga priser, inga
-    användare: får ligga öppet i /api/health."""
+    användare: får ligga öppet i /api/health. Cachad en minut i processen:
+    /api/health är Renders hälsokontroll och får inte kosta en fråga per
+    tabell varje gång."""
+    cached = _PLATFORM_STATUS_CACHE
+    if cached["value"] is not None and time.time() - cached["at"] < PLATFORM_STATUS_TTL_SECONDS:
+        return cached["value"]
+    value = _platform_status_uncached()
+    cached["at"], cached["value"] = time.time(), value
+    return value
+
+
+def _platform_status_uncached() -> dict:
     store = open_store()
     try:
         chains = {}
@@ -501,8 +516,14 @@ def platform_status() -> dict:
             "SELECT dabas_status, COUNT(*) FROM grocery_products WHERE gtin IS NOT NULL GROUP BY dabas_status")}
         package = {row[0] or "provider_or_none": row[1] for row in store.connection.execute(
             "SELECT package_confidence, COUNT(*) FROM grocery_products GROUP BY package_confidence")}
+        try:
+            from .enrichment import coverage_report
+            dabas_coverage = coverage_report(store)
+        except Exception:
+            dabas_coverage = None
         totals = {
             "dabas": dabas,
+            "dabasCoverage": dabas_coverage,
             "packageConfidence": package,
             "stores": store.connection.execute("SELECT COUNT(*) FROM grocery_stores").fetchone()[0],
             "products": store.connection.execute("SELECT COUNT(*) FROM grocery_products").fetchone()[0],
