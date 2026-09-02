@@ -1,13 +1,13 @@
 recept	ingrediens	behov	enhet	kedja	produkt	kategori	paket	paketenhet	antal	exakt	radpris	flagga
 falafel-pitabrod	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	14.9	smakords_misstanke 
 falafel-pitabrod	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	19.34	smakords_misstanke 
-falafel-pitabrod	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	True	24.5	smakords_misstanke 
+falafel-pitabrod	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	16.95	smakords_misstanke 
 fetapasta	Pasta	300.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 fetapasta	Pasta	300.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 fetapasta	Pasta	300.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
 fishtacos	Grekisk yoghurt	1.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	14.9	smakords_misstanke 
 fishtacos	Grekisk yoghurt	1.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	19.34	smakords_misstanke 
-fishtacos	Grekisk yoghurt	1.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	True	24.5	smakords_misstanke 
+fishtacos	Grekisk yoghurt	1.0	dl	City Gross	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	16.95	smakords_misstanke 
 fiskpasta	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 fiskpasta	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 fiskpasta	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
@@ -48,19 +48,19 @@ kyckling-pesto-pasta	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Past
 kyckling-rod-curry	Röd currypasta	40.0	g	Hemköp	Red Curry Paste Currypasta	Skafferi > Asien > Övrigt asien	50.0	g	1	True	14.14	smakords_misstanke 
 kyckling-shawarma-bowl	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	14.9	smakords_misstanke 
 kyckling-shawarma-bowl	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	19.34	smakords_misstanke 
-kyckling-shawarma-bowl	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	True	24.5	smakords_misstanke 
+kyckling-shawarma-bowl	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	16.95	smakords_misstanke 
 kyckling-tikka	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	14.9	smakords_misstanke 
 kyckling-tikka	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	19.34	smakords_misstanke 
-kyckling-tikka	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	True	24.5	smakords_misstanke 
+kyckling-tikka	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	16.95	smakords_misstanke 
 kycklingmatvete	Yoghurt	200.0	g	Willys	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
 kycklingmatvete	Yoghurt	200.0	g	Hemköp	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	17.85	smakords_misstanke 
 kycklingmatvete	Yoghurt	200.0	g	City Gross	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
 kycklingwraps-lunch	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	14.9	smakords_misstanke 
 kycklingwraps-lunch	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	19.34	smakords_misstanke 
-kycklingwraps-lunch	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	True	24.5	smakords_misstanke 
+kycklingwraps-lunch	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	16.95	smakords_misstanke 
 lammfarsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	14.9	smakords_misstanke 
 lammfarsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	19.34	smakords_misstanke 
-lammfarsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	True	24.5	smakords_misstanke 
+lammfarsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	City Gross	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	16.95	smakords_misstanke 
 lax-pasta-bulk	Pasta	450.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 lax-pasta-bulk	Pasta	450.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 lax-pasta-bulk	Pasta	450.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
@@ -69,7 +69,7 @@ linsbolognese-proteinrik	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pas
 linsbolognese-proteinrik	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
 morotsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	14.9	smakords_misstanke 
 morotsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	19.34	smakords_misstanke 
-morotsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	True	24.5	smakords_misstanke 
+morotsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	City Gross	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	16.95	smakords_misstanke 
 pasta-skinksas	Pasta	400.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 pasta-skinksas	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 pasta-skinksas	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
@@ -83,13 +83,12 @@ pastasallad-kyckling-lunch	Pasta	350.0	g	Willys	Penne Rigate Pasta	Skafferi > Pa
 pastasallad-kyckling-lunch	Pasta	350.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 pastasallad-kyckling-lunch	Pasta	350.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
 rostbiff-potatissallad	Rostbiff	400.0	g	Willys	Rostbiff i Skivor Sverige	Kött, chark & fågel > Kött > Nöt & kalv	350.0	g	2	True	538.0	rad_over_500 538.0 kr
-rostbiff-potatissallad	Rostbiff	400.0	g	City Gross	Rostbiff Grillad	Manuell delikatess > Chark > CHARK LÖSVIKT, ROSTBIFF GRILLAD	150.0	g	3	True	1125.0	rad_over_1000 1125.0 kr
 scampi	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 scampi	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 scampi	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
 sotpotatis-bulk-bowl	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	14.9	smakords_misstanke 
 sotpotatis-bulk-bowl	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	19.34	smakords_misstanke 
-sotpotatis-bulk-bowl	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Naturell Yoghurt	Mejeri, ost & ägg > Yoghurt > Naturell yoghurt	1.0	KG	1	True	24.5	smakords_misstanke 
+sotpotatis-bulk-bowl	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	16.95	smakords_misstanke 
 sotpotatissoppa	Röd currypasta	30.0	g	Hemköp	Red Curry Paste Currypasta	Skafferi > Asien > Övrigt asien	50.0	g	1	True	14.14	smakords_misstanke 
 sparrispastacitron	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 sparrispastacitron	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 

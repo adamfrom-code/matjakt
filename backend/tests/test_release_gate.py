@@ -111,6 +111,66 @@ class TheThreeProductionErrors(unittest.TestCase):
         self.assertTrue(product_matches_ingredient(
             "Kanel Malen Påse", "Kanel", None, "Skafferi > Kryddor & smaksättare"))
 
+    def test_soltorkade_tomater_live_in_the_pantry_not_produce(self):
+        """Utan egen avdelningspost ärvde "soltorkade tomater" ordet
+        "tomater" och krävde frukt & grönt - varenda äkta burk hos City
+        Gross (Skafferi > Oliver & delikatess) avvisades. Skafferivaran är
+        skafferivaran; färdigmat som LEDER med orden avvisas fortfarande."""
+        self.assertTrue(product_matches_ingredient(
+            "Tomater Soltorkade Bitar", "Soltorkade tomater", None,
+            "Skafferi > Oliver & delikatess"))
+        self.assertFalse(product_matches_ingredient(
+            "Soltorkad Tomat Ätklar Kyckling Skivad", "Soltorkade tomater",
+            None, "Kött, chark & fågel > Fågel > Kyckling"))
+        # Färsk tomat ska INTE ha vidgats av posten.
+        self.assertFalse(product_matches_ingredient(
+            "Tomater Soltorkade Bitar", "Tomater", None,
+            "Skafferi > Oliver & delikatess"))
+
+
+class VocabularyAliasesStayHonest(unittest.TestCase):
+    """Handelsnamn-aliasen från CG-separationen (2026-09-02): varje alias
+    breddar bara NAMNET, aldrig råvaran. Här låses både att äkta varan
+    matchar och att grannfällan inte gör det."""
+
+    def test_kvarg_naturell_matches_but_flavoured_does_not(self):
+        self.assertTrue(product_matches_ingredient(
+            "Naturell Kvarg 0,3%", "naturell kvarg", "Eldorado",
+            "Mejeri, ost & ägg > Kvarg & Cottage Cheese"))
+        for flavoured in ("Päron Kvarg 0,2%", "Jordgubb Hallon Fruktkvarg",
+                          "Vanilj Mild Kvarg 0,2%"):
+            self.assertFalse(product_matches_ingredient(
+                flavoured, "Kvarg", None, "Mejeri, ost & ägg"),
+                f"{flavoured!r} är smaksatt och får inte prissätta ren kvarg")
+
+    def test_sallad_is_lettuce_never_a_composed_ready_salad(self):
+        self.assertFalse(product_matches_ingredient(
+            "Potatissallad Original", "Sallad", None, None))
+        self.assertFalse(product_matches_ingredient(
+            "Fruktsallad Färsk", "Sallad", None, "Frukt & Grönt > Frukt"))
+        self.assertTrue(product_matches_ingredient(
+            "Sallad Isberg Klass 1", "sallad isberg", None,
+            "Frukt & Grönt > Grönsaker > Sallad"))
+        # Frisé är en annan sallad - isberg-aliaset får inte svälja den.
+        self.assertFalse(product_matches_ingredient(
+            "Isberg Frisé Klass 1", "isberg", None,
+            "Frukt & Grönt > Grönsaker > Sallad"))
+
+    def test_seed_kernels_are_the_seeds_but_bread_is_not(self):
+        self.assertTrue(product_matches_ingredient(
+            "Solroskärnor Skalade", "solroskärnor", None,
+            "Skafferi > Torra baljväxter > Fröer"))
+        self.assertTrue(product_matches_ingredient(
+            "Pumpakärnor Naturell Skalade", "pumpakärnor", None,
+            "Glass, godis & snacks > Nyttiga snacks"))
+        self.assertFalse(product_matches_ingredient(
+            "Rågbröd Solros & Pumpa 6-pack", "Solrosfrön", None,
+            "Bröd & Kakor > Bröd > Matbröd"))
+        # Jordnötssmör är inte jordnötter - CG:s lucka ska förbli en lucka.
+        self.assertFalse(product_matches_ingredient(
+            "Jordnötssmör Creamy", "Jordnötter", None,
+            "Skafferi > Bakning > Baktillbehör"))
+
 
 class PackageMathInvariants(unittest.TestCase):
     """packages = ceil(behov / paket) i RÄTT enhet - för varje familj."""

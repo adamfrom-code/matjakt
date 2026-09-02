@@ -120,6 +120,9 @@ SNACK_AISLE_INGREDIENTS = {
     "jordnotter", "cashewnotter", "mandel", "hasselnotter", "valnotter",
     "pistagenotter", "notter", "solrosfron", "pumpafron", "sesamfron",
     "russin", "jordnotssmor",
+    # Kärn-aliasen prövas under sitt eget namn i kategorivakten, så de
+    # behöver samma snackshylle-undantag som fröna de är alias för.
+    "solroskarnor", "pumpakarnor",
     # Tortilla chips for a taco bake are bought exactly where the crisps
     # live; that is not a matching error, it is where the shelf is.
     "tortillachips",
@@ -200,8 +203,18 @@ INGREDIENT_DEPARTMENTS = {
     "morot": {"produce"},
     "morötter": {"produce"},
     "paprika": {"produce"},
+    # Grönsallad kommer från grönsakshyllan - aldrig färdigrätten
+    # (potatissallad i charken) som bara SLUTAR på ordet.
+    "sallad": {"produce"},
+    "isberg": {"produce"},
+    "isbergssallad": {"produce"},
+    "romansallad": {"produce"},
     "tomat": {"produce"},
     "tomater": {"produce"},
+    # Soltorkade tomater är en skafferivara (burk/ask hos delikatesserna) -
+    # utan egen post ärvde de ordet "tomater" och krävde frukt & grönt,
+    # vilket avvisade varenda äkta produkt hos City Gross.
+    "soltorkade tomater": {"pantry", "deli"},
     "gurka": {"produce"},
     "citron": {"produce"},
     "lime": {"produce"},
@@ -385,7 +398,20 @@ INGREDIENT_ALIASES = {
     "potatis": ["potatis fast", "potatis mjölig"],
     "tomater": ["tomat", "kvisttomater"],
     "körsbärstomater": ["cocktailtomater", "körsbärstomat"],
-    "sallad": ["isbergssallad", "romansallad"],
+    "sallad": ["isbergssallad", "romansallad", "isberg", "sallad isberg"],
+    # Butikerna säljer isbergssallad som "Isberg Klass 1" (strimlad påse)
+    # och HUVUDET som "Sallad Isberg Klass 1" - sammansättningen finns inte
+    # i produktnamnen, så båda handelsformerna behöver alias. Billigaste
+    # exakta vinner sedan som vanligt (huvudet, inte fyra påsar). Frisé är
+    # en annan sallad och stoppas av regeln nedan.
+    "isbergssallad": ["isberg", "sallad isberg"],
+    # Butikernas handelsnamn för fröna är "kärnor" (skalade frön) - samma
+    # råvara, annat ord. Utan aliasen stod City Gross utan pris trots fyra
+    # äkta produkter på hyllan.
+    "solrosfrön": ["solroskärnor"],
+    "pumpafrön": ["pumpakärnor"],
+    # Naan säljs under sitt engelska namn ("Naan Bread Original").
+    "naanbröd": ["naan"],
     "lök": ["gul lök"],
     "morötter": ["morot"],
     "vitlök": ["vitlok"],
@@ -393,6 +419,10 @@ INGREDIENT_ALIASES = {
     "paprika": ["paprika röd", "röd paprika"],
     "grädde": ["vispgrädde", "matlagningsgrädde"],
     "yoghurt": ["naturell yoghurt", "yoghurt naturell"],
+    # Samma mönster som yoghurt: ren kvarg heter "Naturell Kvarg" i hyllan
+    # och leder därmed med beskrivningen, inte varan. Smaksatta varianter
+    # (Päron Kvarg, Fruktkvarg) avvisas fortfarande av huvudordsregeln.
+    "kvarg": ["naturell kvarg", "kvarg naturell"],
     "fetaost": ["feta"],
     "mozzarella": ["mozzarella färsk"],
     "bacon": ["bacon skivat"],
@@ -583,6 +613,23 @@ INGREDIENT_RULES = {
     # samma fälla.
     "kanel": {"exclude": ["knäcke", "bröd", "bulle", "bullar", "kaka", "kakor", "skorpa", "skorpor", "müsli", "musli", "gröt", "te", "snäcka", "snäckor", "längd"]},
     "kardemumma": {"exclude": ["knäcke", "bröd", "bulle", "bullar", "kaka", "kakor", "skorpa", "längd", "te", "vetekrans"]},
+    # Frisé är en annan sallad än isberg - "Isberg Frisé Klass 1" får inte
+    # prissätta isbergssallad via isberg-aliaset. Regeln ärvs av aliaset.
+    "isbergssallad": {"exclude": ["frise", "frisé"]},
+    # ...och samma regel på aliasnamnet, så även en direkt kontroll under
+    # "isberg" avvisar frisén - inte bara motorns arvsväg.
+    "isberg": {"exclude": ["frise", "frisé"]},
+    # "Sallad" i ett recept är grönsallad. Sammansättningsregeln (huvudet
+    # sist) gör att färdiga rätter som SLUTAR på -sallad annars matchar:
+    # "Potatissallad Original" prissatte grönsallad. Färdigsalladerna ut.
+    "sallad": {"exclude": ["potatissallad", "pastasallad", "rissallad",
+                           "couscoussallad", "bulgursallad", "kycklingsallad",
+                           "raksallad", "räksallad", "skagen", "tonfisksallad",
+                           "fruktsallad", "melonsallad", "vitkalssallad",
+                           "vitkålssallad", "rodkalssallad", "rödkålssallad",
+                           "morotssallad", "pizzasallad", "bonsallad",
+                           "bönsallad", "quinoasallad", "matvetesallad",
+                           "dressing", "sås", "frise", "frisé"]},
     # "Dill Gräslök Majskakor" är riskakor. Örten är örten.
     "dill": {"exclude": ["majskakor", "kaka", "kakor", "chips", "sås", "dressing", "dipp", "sill", "lax"]},
     "gräslök": {"exclude": ["majskakor", "kaka", "kakor", "chips", "sås", "dressing", "färskost"]},
@@ -743,6 +790,8 @@ STYCK_VIKT_G = {
     "romansallad": 300, "isbergssallad": 400, "vitkal": 1200, "spetskal": 800,
     "kyckling hel": 1400, "hel kyckling": 1400, "ananas": 1000,
     "tortilla": 40, "tortillabrod": 40, "hamburgerbrod": 60, "brod": 35, "brodskiva": 35,
+    # Naan säljs i 260 g-påsar om två bröd - 130 g styck är hyllstandarden.
+    "naan": 130, "naanbrod": 130,
     # "Bröd N st" i ett recept är SKIVOR (varma mackor, toast) - en skiva
     # väger ~35 g. Hela limpor anges i gram i recepten.
     "pitabrod": 75, "korvbrod": 30, "isterband": 75, "korv": 60, "prinskorv": 15, "baguette": 250, "tacokrydda": 28,
