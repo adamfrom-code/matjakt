@@ -1540,9 +1540,18 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # recipeCount: ett ensamt tal säger inget om produkten men låter
             # driftverifiering bakom utvecklingslåset se att en deploy
             # faktiskt synkade receptbanken.
+            # platform: aggregerade driftsiffror (inga priser, inga
+            # användare) så den nationella prisplattformens tillstånd kan
+            # verifieras i produktion utan hemligheter.
+            try:
+                platform = grocery_api.platform_status()
+            except Exception:
+                logger.exception("Kunde inte läsa plattformsstatus")
+                platform = None
             self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG), "recipeProviders": sorted(RECIPE_SERVICE.providers),
                                  "recipeCount": recipes_api.stats().get("total", 0),
-                                 "productCount": grocery_api.database_summary().get("totalProducts", 0)}, cache_seconds=900)
+                                 "productCount": grocery_api.database_summary().get("totalProducts", 0),
+                                 "platform": platform}, cache_seconds=60)
             return
         if parsed.path == "/api/admin/primat-status":
             # Never a regular user's endpoint - gated by a separate admin
@@ -2087,6 +2096,33 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(200, result)
             finally:
                 db.close()
+            return
+        if parsed.path == "/api/admin/platform-activate":
+            # Hela aktiveringen i ett anrop: registersynk + första referens-
+            # publicering + (valfritt) nattjobben för de släppta kedjorna nu.
+            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
+                self.send_json(403, {"error": "Admin-token krävs"})
+                return
+            from services.grocery.publish import backfill_reference_prices
+            from services.grocery.register import sync_store_register
+            result = {}
+            db = grocery_api.open_store()
+            try:
+                if PRIMAT_API_KEY and (payload or {}).get("registerSync", True):
+                    try:
+                        result["registerSync"] = sync_store_register(db, PRIMAT_API_KEY)
+                    except Exception as error:
+                        result["registerSync"] = {"error": str(error)[:200]}
+                result["referenceBackfill"] = backfill_reference_prices(db)
+            finally:
+                db.close()
+            grocery_api.clear_cache()
+            if (payload or {}).get("startImports"):
+                started = []
+                for chain in ("Willys", "Hemköp", "City Gross"):
+                    started.append({chain: grocery_importer.start(chain)})
+                result["imports"] = started
+            self.send_json(200, result)
             return
         if parsed.path == "/api/admin/store-register-sync":
             # Nationella butiksregistret: alla svenska butiker (sex kedjor,

@@ -64,6 +64,10 @@ SCHEDULABLE_CHAINS = frozenset(DEFAULT_SCHEDULE)
 
 CHECK_INTERVAL_SECONDS = 60
 
+# Veckodag + klockslag (Europe/Stockholm, strftime "%a %H:%M") för den
+# nationella butiksregistersynken.
+REGISTER_SYNC_AT = "Sun 01:00"
+
 # Which chain fills an empty database first. Willys: the largest verified
 # catalogue (10 842 products, 100 % with category), plain HTTP with no
 # browser, and the chain most likely to be near any given user.
@@ -222,7 +226,59 @@ class GroceryScheduler:
         # failed deploy).
         threading.Thread(target=self.bootstrap_if_empty, name="grocery-bootstrap",
                          daemon=True).start()
+        threading.Thread(target=self.activate_platform, name="grocery-platform-activate",
+                         daemon=True).start()
         return True
+
+    def activate_platform(self):
+        """Den nationella prisplattformen aktiverar sig själv vid deploy:
+
+          1. REFERENSPRISER: finns verifierade butikspriser men ingen
+             referensrad ännu, lyfts de en gång (backfill) - appen behöver
+             inte vänta på nattjobbet för att få "<Kedja> referenspris".
+          2. BUTIKSREGISTRET: saknar databasen ett nationellt register och
+             finns en Primat-nyckel, synkas registret (2 800 rader, en gång;
+             därefter veckovis via _tick).
+
+        Bägge är idempotenta och guardade så en omstart aldrig kostar en
+        ny kvotrunda i onödan."""
+        if not self.enabled:
+            return
+        try:
+            from . import api as grocery_api
+            from .publish import backfill_reference_prices
+            store = grocery_api.open_store()
+            try:
+                has_prices = store.connection.execute(
+                    "SELECT EXISTS(SELECT 1 FROM grocery_current_prices)").fetchone()[0]
+                has_reference = store.connection.execute(
+                    "SELECT EXISTS(SELECT 1 FROM grocery_reference_prices)").fetchone()[0]
+                if has_prices and not has_reference:
+                    logger.warning("Referenstabellen är tom - första referenspubliceringen körs")
+                    backfill_reference_prices(store)
+                    grocery_api.clear_cache()
+                registered = store.connection.execute(
+                    "SELECT COUNT(*) FROM grocery_stores WHERE latitude IS NOT NULL").fetchone()[0]
+            finally:
+                store.close()
+            if registered < 100 and os.environ.get("PRIMAT_API_KEY"):
+                self._sync_register("första registersynken")
+        except Exception:
+            logger.exception("Plattformsaktiveringen misslyckades - nattjobbet fortsätter ändå")
+
+    def _sync_register(self, why: str):
+        api_key = os.environ.get("PRIMAT_API_KEY")
+        if not api_key:
+            return
+        from . import api as grocery_api
+        from .register import sync_store_register
+        store = grocery_api.open_store()
+        try:
+            summary = sync_store_register(store, api_key)
+            logger.info("Butiksregistret synkat (%s): %s", why, summary)
+        finally:
+            store.close()
+        grocery_api.clear_cache()
 
     def stop(self):
         self._stop.set()
@@ -245,10 +301,11 @@ class GroceryScheduler:
             # nightly job, instead of leaving a blank that reads as an
             # oversight.
             "notScheduled": {
-                "ICA": "AWS WAF-challenge vid upprepad hämtning - uppdateras manuellt",
-                "Coop": "Kräver Coops egen API-nyckel",
-                "Lidl": "Publicerar inga per-produkt-priser",
+                "ICA": "Bakom feature gate: referenskatalog via Primat kräver App-nivå för full nattsynk",
+                "Coop": "Bakom feature gate: samma som ICA",
+                "Lidl": "Bakom feature gate: Primats Lidl-feed är för liten för en hel matkorg",
             },
+            "registerSyncAt": REGISTER_SYNC_AT,
         }
 
     def _loop(self):
@@ -264,6 +321,14 @@ class GroceryScheduler:
     def _tick(self, now=None):
         now = now or _now()
         stamp = now.strftime("%Y-%m-%d %H:%M")
+        # Butiksregistret: veckovis (söndag 01:00), separat från prisjobben -
+        # butiker byter inte adress varje natt och synken kostar ~2 800 rader
+        # av Primat-kvoten.
+        if (now.strftime("%a %H:%M") == REGISTER_SYNC_AT
+                and self._last_fired.get("__register__") != stamp):
+            self._last_fired["__register__"] = stamp
+            threading.Thread(target=self._sync_register, args=("veckosynk",),
+                             name="grocery-register-sync", daemon=True).start()
         for chain, when in self.schedule.items():
             if now.strftime("%H:%M") != when or self._last_fired.get(chain) == stamp:
                 continue

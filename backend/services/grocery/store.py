@@ -497,6 +497,14 @@ class GroceryStore:
         to fill gaps, not let a later, possibly lower-quality source
         clobber a good existing value."""
         updates, params = [], []
+        # Samma luckfyllnad för namn och storlek: en produkt som skapades
+        # namnlös (eller utan paketstorlek) får dem från nästa källa som vet.
+        if raw.name and not (product.name or "").strip():
+            updates.append("name = ?")
+            params.append(raw.name)
+        if raw.size and not product.size:
+            updates.append("size = ?")
+            params.append(raw.size)
         if raw.gtin and not product.gtin:
             updates.append("gtin = ?")
             params.append(raw.gtin)
@@ -998,7 +1006,11 @@ class GroceryStore:
             SELECT (SELECT COUNT(*) FROM grocery_products),
                    (SELECT COUNT(*) FROM grocery_current_prices),
                    (SELECT MAX(id) FROM grocery_collector_runs
-                     WHERE status IS NOT NULL AND status != 'running')
+                     WHERE status IS NOT NULL AND status != 'running'),
+                   -- Referensnivån och partnerstatus ändrar också vad
+                   -- kunderna ser (backfill, paus som raderar priser).
+                   (SELECT CAST(COALESCE(MAX(updated_at), 0) AS INTEGER) FROM grocery_reference_prices),
+                   (SELECT CAST(COALESCE(MAX(updated_at), 0) AS INTEGER) FROM grocery_partners)
             """
         ).fetchone()
         return "-".join(str(value or 0) for value in row)

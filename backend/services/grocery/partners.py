@@ -156,11 +156,23 @@ def ingest_feed(db, *, partner_id: int, store_id: int, format: str, payload) -> 
     source = f"partner:{partner_id}:{store.external_store_id}"
     run = db.start_collector_run(chain=store.chain, store_id=store.id)
     staged = 0
+    row_errors = list(parsed.errors)
     for row in parsed.rows:
+        name = row.name
+        if not name and row.gtin:
+            # Namnlös rad med känd GTIN: katalogens namn gäller. Okänd GTIN
+            # utan namn får ALDRIG skapa en namnlös produkt - raden fälls
+            # med besked så butiken kan rätta filen.
+            known = db._find_product_by_gtin(row.gtin)
+            name = known.name if known else ""
+        if not name:
+            from .partner_feed import FeedError
+            row_errors.append(FeedError(row.line_number, "produktnamn saknas och GTIN är okänd för Matjakt"))
+            continue
         raw = RawProduct(
             chain=store.chain,
             external_product_id=row.external_product_id or (f"gtin:{row.gtin}" if row.gtin else f"feed:{row.line_number}"),
-            name=row.name, store_id=store.external_store_id, store_name=store.name,
+            name=name, store_id=store.external_store_id, store_name=store.name,
             gtin=row.gtin, brand=row.brand, size=row.package, category=row.category,
             regular_price=row.regular_price, campaign_price=row.campaign_price,
             member_price=row.member_price, campaign_valid_to=row.campaign_valid_to,
@@ -176,11 +188,15 @@ def ingest_feed(db, *, partner_id: int, store_id: int, format: str, payload) -> 
             logger.exception("Partnerrad %s kunde inte stageas", row.line_number)
 
     # Partnerpriser är ett påstående om EN butik - aldrig kedjans referens.
+    # partial=True: en feed är per kontrakt en LEVERANS som slås ihop med
+    # tidigare (delfiler, dagens ändringar, en avdelning i taget) - få rader
+    # är förväntat, inte tecken på trasig katalog. Radgaten och 95 %-kravet
+    # gäller fullt ut ändå.
     outcome = publish_run(db, run.id, store.id, store.chain, source=source,
-                          blocked=False, publish_reference=False)
+                          blocked=False, partial=True, publish_reference=False)
     db.finish_collector_run(run.id, status="success" if outcome["published_ok"] else "failed",
                             products_found=len(parsed.rows), prices_updated=outcome["published"],
-                            errors=len(parsed.errors) + (0 if outcome["published_ok"] else 1),
+                            errors=len(row_errors) + (0 if outcome["published_ok"] else 1),
                             error_message=outcome["message"])
     db.record_partner_feed(partner_id=partner_id, store_id=store.id, format=format,
                            status="published" if outcome["published_ok"] else "rejected",
@@ -190,7 +206,7 @@ def ingest_feed(db, *, partner_id: int, store_id: int, format: str, payload) -> 
         "received": parsed.total_lines, "parsed": len(parsed.rows), "staged": staged,
         "published": outcome["published"], "gatePercent": outcome["gatePercent"],
         "publishedOk": outcome["published_ok"], "message": outcome["message"],
-        "rowErrors": [{"line": e.line_number, "reason": e.reason} for e in parsed.errors[:50]],
+        "rowErrors": [{"line": e.line_number, "reason": e.reason} for e in row_errors[:50]],
     }
 
 

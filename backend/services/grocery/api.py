@@ -85,9 +85,14 @@ def _cache_set(key, value):
 
 def clear_cache():
     """Called after an import, so newly collected prices are visible at once
-    instead of after the TTL."""
+    instead of after the TTL. Tömmer även motorns prisbild/ordindex: en
+    partnerpaus som raderar priser eller en referensbackfill ändrar vad
+    kunden ska se utan att någon körning avslutats."""
     with _LOCK:
         _CACHE.clear()
+    from . import pricing
+    pricing._PRICE_CACHE.clear()
+    pricing._INDEX_CACHE.clear()
 
 
 def open_store() -> GroceryStore:
@@ -452,6 +457,58 @@ def stores_near(latitude: float, longitude: float,
         flattened.extend(chain_rows[:per_chain])
     flattened.sort(key=lambda r: r["avstandKm"])
     return flattened
+
+
+def platform_status() -> dict:
+    """Den nationella prisplattformens tillstånd i siffror - per kedja:
+    butiker i registret, produkter, verifierade prisrader, referenspriser,
+    senaste verifiering, senaste körning med gate. Inga priser, inga
+    användare: får ligga öppet i /api/health."""
+    store = open_store()
+    try:
+        chains = {}
+        for row in store.connection.execute(
+                "SELECT chain, COUNT(*) AS stores, SUM(CASE WHEN latitude IS NOT NULL THEN 1 ELSE 0 END) AS geo, "
+                "SUM(CASE WHEN partner_status = 'ACTIVE' THEN 1 ELSE 0 END) AS partners "
+                "FROM grocery_stores GROUP BY chain"):
+            chains[row["chain"]] = {"stores": row["stores"], "storesWithCoordinates": row["geo"],
+                                    "activePartnerStores": row["partners"]}
+        for row in store.connection.execute(
+                "SELECT chain, COUNT(DISTINCT product_id) AS products FROM grocery_product_external_ids GROUP BY chain"):
+            chains.setdefault(row["chain"], {})["products"] = row["products"]
+        for row in store.connection.execute(
+                "SELECT s.chain, COUNT(*) AS prices, COUNT(DISTINCT cp.store_id) AS priced_stores, "
+                "MAX(COALESCE(cp.verified_at, cp.fetched_at)) AS last_verified, "
+                "SUM(CASE WHEN cp.source IS NOT NULL THEN 1 ELSE 0 END) AS with_source "
+                "FROM grocery_current_prices cp JOIN grocery_stores s ON s.id = cp.store_id GROUP BY s.chain"):
+            chains.setdefault(row["chain"], {}).update({
+                "verifiedStorePrices": row["prices"], "storesWithPrices": row["priced_stores"],
+                "lastVerifiedAt": row["last_verified"], "pricesWithSource": row["with_source"]})
+        for row in store.connection.execute(
+                "SELECT chain, COUNT(*) AS n, MAX(verified_at) AS last, MIN(source) AS sample_source "
+                "FROM grocery_reference_prices GROUP BY chain"):
+            chains.setdefault(row["chain"], {}).update({
+                "referencePrices": row["n"], "referenceLastVerifiedAt": row["last"],
+                "referenceSource": row["sample_source"]})
+        for row in store.connection.execute(
+                "SELECT chain, status, finished_at, gate_percent, published, prices_updated, gate_message "
+                "FROM grocery_collector_runs WHERE id IN (SELECT MAX(id) FROM grocery_collector_runs GROUP BY chain)"):
+            chains.setdefault(row["chain"], {})["lastRun"] = {
+                "status": row["status"], "finishedAt": row["finished_at"],
+                "gatePercent": row["gate_percent"], "published": row["published"],
+                "pricesUpdated": row["prices_updated"], "message": row["gate_message"]}
+        totals = {
+            "stores": store.connection.execute("SELECT COUNT(*) FROM grocery_stores").fetchone()[0],
+            "products": store.connection.execute("SELECT COUNT(*) FROM grocery_products").fetchone()[0],
+            "verifiedStorePrices": store.connection.execute("SELECT COUNT(*) FROM grocery_current_prices").fetchone()[0],
+            "referencePrices": store.connection.execute("SELECT COUNT(*) FROM grocery_reference_prices").fetchone()[0],
+            "activePartners": store.connection.execute(
+                "SELECT COUNT(*) FROM grocery_partners WHERE status = 'ACTIVE'").fetchone()[0],
+        }
+        return {"totals": totals, "chains": chains, "releasedChains": list(RELEASED_CHAINS),
+                "active": totals["referencePrices"] > 0 and totals["stores"] >= 100}
+    finally:
+        store.close()
 
 
 def store_register_count() -> int:

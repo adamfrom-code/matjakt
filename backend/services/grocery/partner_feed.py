@@ -65,7 +65,9 @@ _MAX_XLSX_PART_BYTES = 200 * 1024 * 1024
 _COLUMN_ALIASES = {
     "gtin": ("gtin", "ean", "streckkod"),
     "external_product_id": ("artikelnummer", "external_product_id", "sku", "artnr"),
-    "name": ("namn", "name", "produkt", "product", "benämning"),
+    # "Produktnamn" är den rubrik en butik skriver först - den måste tas.
+    "name": ("namn", "name", "produkt", "product", "benämning", "produktnamn",
+             "varunamn", "artikelnamn", "product_name"),
     "brand": ("märke", "brand", "varumärke"),
     "package": ("storlek", "package", "förpackning", "size", "pack"),
     "regular_price": ("pris", "regular_price", "ordinarie", "ordinarie_pris", "price"),

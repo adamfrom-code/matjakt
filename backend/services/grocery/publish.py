@@ -92,6 +92,60 @@ def gate_row(row: dict, product_name: str | None) -> tuple[bool, str | None, dic
     }
 
 
+def backfill_reference_prices(db, chains: list[str] | None = None) -> dict:
+    """FÖRSTA REFERENSPUBLICERINGEN ur redan verifierad data.
+
+    Innan referenstabellen fanns låg kedjornas priser bara som butikspriser
+    på importbutiken. Den här backfillen lyfter dem till referensnivån EN
+    gång enligt samma regel som nattjobbet: NATIONAL-kedjornas importerade
+    katalog och STORE_SPECIFIC-kedjornas utsedda referensbutik. Idempotent
+    (upsert) och saneringen är densamma - ett pris som inte klarar gaten
+    blir inte referens heller."""
+    from .register import CHAIN_PRICING_SCOPE, CHAIN_REFERENCE_STORE
+
+    chains = chains or list(CHAIN_PRICING_SCOPE)
+    summary = {}
+    for chain in chains:
+        scope = CHAIN_PRICING_SCOPE.get(chain)
+        if scope == "NATIONAL":
+            stores = db.connection.execute(
+                "SELECT DISTINCT s.id, s.external_store_id FROM grocery_stores s "
+                "JOIN grocery_current_prices cp ON cp.store_id = s.id WHERE s.chain = ?",
+                (chain,)).fetchall()
+        else:
+            reference_id = CHAIN_REFERENCE_STORE.get(chain)
+            stores = db.connection.execute(
+                "SELECT id, external_store_id FROM grocery_stores WHERE chain = ? AND external_store_id = ?",
+                (chain, reference_id)).fetchall() if reference_id else []
+        published = 0
+        for store_row in stores:
+            for price in db.connection.execute(
+                    "SELECT * FROM grocery_current_prices WHERE store_id = ?", (store_row["id"],)):
+                keys = price.keys()
+                # PARTNERPRISER BLIR ALDRIG REFERENS - de är ett påstående om
+                # EN butik. Utan filtret lyfte backfillen en partnerbutiks
+                # priser till hela kedjans referensnivå (hittat i E2E).
+                if "source" in keys and (price["source"] or "").startswith("partner:"):
+                    continue
+                ok, _, cleaned = gate_row(dict(price), "x")
+                if not ok:
+                    continue
+                source = (price["source"] if "source" in keys and price["source"]
+                          else f"{chain.lower()}:{store_row['external_store_id']}")
+                if db.upsert_reference_price(
+                        product_id=price["product_id"], chain=chain,
+                        regular_price=cleaned["regular_price"], campaign_price=cleaned["campaign_price"],
+                        member_price=cleaned["member_price"], multibuy_price=cleaned["multibuy_price"],
+                        unit_price=cleaned["unit_price"], currency=price["currency"] or "SEK",
+                        source=source, valid_to=price["valid_to"] if "valid_to" in keys else None,
+                        verified_at=(price["verified_at"] if "verified_at" in keys and price["verified_at"]
+                                     else price["fetched_at"])):
+                    published += 1
+        summary[chain] = published
+    logger.info("Referenspriser backfillade: %s", summary)
+    return summary
+
+
 def publish_run(db, run_id: int, store_id: int, chain: str, *, source: str,
                 blocked: bool = False, partial: bool = False,
                 publish_reference: bool | None = None) -> dict:

@@ -1253,7 +1253,11 @@ class RecipePricingEngine:
         if override is not None:
             return override(store_id)
         cache = self.__dict__.setdefault("_price_cache", {})
-        key = (store_id, chain)
+        # Dagen i nyckeln: färskhetsgränsen (MAX_STORE_PRICE_AGE_SECONDS)
+        # avgörs när prisbilden byggs, och utan dagsstämpel skulle en varm
+        # cache kunna hålla ett butikspris "färskt" långt efter fyra dygn i
+        # en miljö där inget nattjobb rör dataversionen.
+        key = (store_id, chain, time.strftime("%Y-%m-%d"))
         cached = cache.get(key)
         if cached is not None:
             return cached

@@ -208,6 +208,20 @@ class QualityGateNeverLetsBadDataLive(_Base):
         self.assertEqual(self.db.get_current_price(products[0].id, maxi.id).regular_price, 11.0)
         self.assertEqual(self.db.price_count_for_store(maxi.id), 10)  # inget raderat
 
+    def test_backfill_never_lifts_partner_prices_to_reference(self):
+        """Hittat i E2E: en NATIONAL-kedjas partnerbutik fick sina (dyrare)
+        priser lyfta till kedjans referens av backfillen. Aldrig."""
+        from services.grocery.publish import backfill_reference_prices
+        product = self.milk_product("Willys", "2132")
+        gestrike = self.store("Willys", "2132", "Willys Gestrike")
+        partner_store = self.store("Willys", "TEST-1", "Partnerbutik")
+        self.store_price(product.id, gestrike.id, 12.0, source="axfood:2132")
+        self.store_price(product.id, partner_store.id, 15.0, source="partner:9:TEST-1")
+        backfill_reference_prices(self.db, ["Willys"])
+        reference = self.db.reference_prices_for_chain("Willys")[product.id]
+        self.assertEqual(reference.regular_price, 12.0)
+        self.assertEqual(reference.source, "axfood:2132")
+
     def test_reference_is_published_from_national_and_reference_stores_only(self):
         product = self.milk_product("Willys", "2132")
         willys = self.store("Willys", "2132", "Willys Gestrike")
@@ -312,6 +326,26 @@ class PartnersNeverBuyTheRanking(_Base):
                              ("ACTIVE", chain_partner["partnerId"]))
         partners.set_status(self.db, chain_partner["partnerId"], "CANCELLED")
         self.assertEqual(partners.effective_partner_status(self.db, w2.id)[0], "CANCELLED")
+
+    def test_csv_with_produktnamn_header_and_unknown_nameless_gtin(self):
+        """Butikens fil (docs/exempel/partnerfeed.csv-form) med rubriken
+        "Produktnamn" ska tas; en namnlös rad med okänd GTIN får aldrig
+        skapa en namnlös produkt utan fälls med besked."""
+        maxi = self.store("ICA", "1003987", "Maxi Gävle")
+        created = partners.create_partner(self.db, kind="PER_STORE", name="X", chain="ICA",
+                                          store_external_ids=["1003987"])
+        partners.set_status(self.db, created["partnerId"], "ACTIVE")
+        csv = ("GTIN;Produktnamn;Storlek;Ordinarie pris;Kampanjpris;Giltig till\n"
+               "7310865093530;Standardmjölk 3%;1000 ml;18,90;;\n"
+               "7310865001115;Färsk lättmjölk 0,5%;1000 ml;16,90;14,90;2026-12-31\n"
+               "7300156486318;;1000 ml;11,20;;\n")
+        outcome = partners.ingest_feed(self.db, partner_id=created["partnerId"], store_id=maxi.id,
+                                       format="CSV", payload=csv)
+        self.assertTrue(outcome["publishedOk"], outcome)
+        self.assertEqual(outcome["published"], 2)
+        self.assertEqual([e["line"] for e in outcome["rowErrors"]], [3])
+        self.assertEqual(self.db.connection.execute(
+            "SELECT COUNT(*) FROM grocery_products WHERE name = ''").fetchone()[0], 0)
 
     def test_plan_price_is_data_not_code(self):
         plan = self.db.connection.execute(
