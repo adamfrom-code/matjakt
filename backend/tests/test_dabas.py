@@ -259,6 +259,57 @@ class PackageVerification(_DbCase):
         self.assertEqual(verdict["package_source"], "DABAS_VERIFIED")
         self.assertEqual((verdict["quantity"], verdict["unit"]), (1000.0, "ml"))
 
+    def test_liquid_weight_in_grams_is_not_a_conflict(self):
+        """Dabas anger nettovikt i gram även för mjölk: 1 500 ml = 1 500 g."""
+        product = self.product(size="1,5l", quantity=1.5, unit="l")
+        verdict = enrichment.package_verdict(product, dabas.normalize_article(article(
+            Nettoinnehall=[{"Mängd": 1500, "EnhetKod": "GRM", "Typ": "Nettovikt"}])))
+        self.assertEqual(verdict["package_confidence"], "high")
+        self.assertIsNone(verdict["package_conflict"])
+
+    def test_drained_weight_choice_agrees_with_dabas_net_weight(self):
+        """"370/240g": providern valde avrunnen 240 g, Dabas säger 370 g
+        nettovikt - samma paket, ingen konflikt, avrunnen-regeln står."""
+        product = self.product(name="Smörgåsgurka", size="370/240g", quantity=None, unit=None)
+        verdict = enrichment.package_verdict(product, dabas.normalize_article(article(
+            Nettoinnehall=[{"Mängd": 370, "EnhetKod": "GRM", "Typ": "Nettovikt"}])))
+        self.assertEqual(verdict["package_confidence"], "high")
+        self.assertNotIn("quantity", verdict)  # 240 g (avrunnen) förblir mängden
+
+    def test_dry_goods_with_prepared_volume_dabas_wins(self):
+        """"800g/6l": providern tolkade 6 l, Dabas säger 800 g - Dabas
+        pekar ut förpackningen och vinner (providerns var en texttolkning)."""
+        product = self.product(name="Baby Semp 4 Mjölkdryck", size="800g/6l", quantity=None, unit=None)
+        self.assertEqual(effective_package(product), (6.0, "l"))  # providerns feltolkning
+        verdict = enrichment.package_verdict(product, dabas.normalize_article(article(
+            Nettoinnehall=[{"Mängd": 800, "EnhetKod": "GRM", "Typ": "Nettovikt"}])))
+        self.assertEqual(verdict["package_source"], "DABAS_VERIFIED")
+        self.assertEqual((verdict["quantity"], verdict["unit"]), (800.0, "g"))
+
+    def test_count_versus_weight_is_not_a_conflict(self):
+        product = self.product(name="Skärgårdskaka 18-pack", size="750g", quantity=750.0, unit="g")
+        verdict = enrichment.package_verdict(product, dabas.normalize_article(article(
+            Nettoinnehall=[{"Mängd": 18, "EnhetKod": "H87", "Typ": "Antal"}])))
+        self.assertIsNone(verdict["package_conflict"])
+        self.assertEqual(verdict["package_source"], "PROVIDER_VERIFIED")
+
+    def test_explicit_disagreement_in_same_family_is_a_real_conflict(self):
+        product = self.product(name="Vallmolevain", size="560g", quantity=560.0, unit="g")
+        verdict = enrichment.package_verdict(product, dabas.normalize_article(article(
+            Nettoinnehall=[{"Mängd": 500, "EnhetKod": "GRM", "Typ": "Nettovikt"}])))
+        self.assertEqual(verdict["package_confidence"], "conflict")
+
+    def test_recompute_verdicts_from_snapshot_without_api(self):
+        product = self.product(size="1,5l", quantity=1.5, unit="l")
+        d = dabas.normalize_article(article(Nettoinnehall=[{"Mängd": 1500, "EnhetKod": "GRM", "Typ": "Nettovikt"}]))
+        fields = enrichment.merge_fields(product, d)
+        self.db.apply_product_fields(product.id, {**fields, "package_confidence": "conflict",
+                                                  "package_conflict": "gammal regel"})
+        self.db.record_dabas_check(product.id, status="ok")
+        counts = enrichment.recompute_verdicts(self.db)
+        self.assertEqual(counts, {"high": 1})
+        self.assertIsNone(self.db.get_product(product.id).package_conflict)
+
     def test_rounding_within_tolerance_is_agreement(self):
         product = self.product(size="ca 750 g", quantity=745.0, unit="g")
         verdict = enrichment.package_verdict(product, dabas.normalize_article(article(

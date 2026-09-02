@@ -187,29 +187,125 @@ def coverage_report(db) -> dict:
     }
 
 
+def _amounts_in_text(text: str | None) -> list[tuple[float, str]]:
+    """Alla mängder i en size-/namntext, i kanonisk enhet: "370/240g" ->
+    [(370, g), (240, g)], "800g/6l" -> [(800, g), (6000, ml)]."""
+    import re
+    found = []
+    for amount, unit in re.findall(r"(\d+(?:[.,]\d+)?)\s*(kg|g|gram|ml|cl|dl|l)\b", (text or "").lower()):
+        try:
+            value = float(amount.replace(",", "."))
+        except ValueError:
+            continue
+        factor = {"kg": (1000, "g"), "g": (1, "g"), "gram": (1, "g"), "ml": (1, "ml"), "cl": (10, "ml"),
+                  "dl": (100, "ml"), "l": (1000, "ml")}[unit]
+        found.append((value * factor[0], factor[1]))
+    # "370/240g": det första talet ärver enheten från det andra.
+    for first, second, unit in re.findall(r"(\d+(?:[.,]\d+)?)\s*/\s*(\d+(?:[.,]\d+)?)\s*(kg|g|ml|cl|dl|l)\b", (text or "").lower()):
+        factor = {"kg": (1000, "g"), "g": (1, "g"), "ml": (1, "ml"), "cl": (10, "ml"), "dl": (100, "ml"), "l": (1000, "ml")}[unit]
+        try:
+            found.append((float(first.replace(",", ".")) * factor[0], factor[1]))
+        except ValueError:
+            pass
+    return found
+
+
+def _equivalent(p_qty, p_unit, d_qty, d_unit) -> bool:
+    """Samma mängd, med gram och milliliter likvärdiga: Dabas anger
+    nettovikt i gram även för vätskor (1 500 ml mjölk = 1 500 g) och det
+    är ingen konflikt - det är densitet ~1, samma köksstandard som
+    prismotorn redan använder för mejeri."""
+    if p_qty is None or d_qty is None:
+        return False
+    same_family = p_unit == d_unit or {p_unit, d_unit} <= {"g", "ml"}
+    return same_family and _same_amount(p_qty, d_qty)
+
+
 def package_verdict(product, dabas: DabasProduct) -> dict:
     """Fälten package_source/package_confidence/package_conflict + ev. ny
-    quantity/unit/size, utifrån provider mot Dabas."""
+    quantity/unit/size, utifrån provider mot Dabas.
+
+    Verkliga konflikter (samma mängdfamilj, olika tal, providern explicit)
+    faller stängt. Falska larm - som första produktionsmätningen var full
+    av - gör det inte:
+      - vätska: provider 1 500 ml, Dabas 1 500 g nettovikt -> eniga
+      - avrunnen vikt: provider 240 g ur "370/240g", Dabas 370 g -> eniga
+        (Dabas talet står i providerns text; motorns avrunnen-regel gäller)
+      - torrvara + tillagad volym: provider tolkade "800g/6l" som 6 l,
+        Dabas 800 g -> Dabas vinner (talet finns i texten, providerns var
+        en texttolkning, inte en explicit mängd)
+      - antal mot vikt: Dabas 18 st, provider 750 g -> ingen konflikt,
+        providerns vikt står, antalet noteras som multipack"""
     p_qty, p_unit = _provider_package(product)
     d = dabas.package
+    base_source = provider_source(product)
+    base_conf = "provider" if p_qty else "none"
+
     if d.variable_measure or d.quantity is None or d.unit is None:
         # Dabas har ingen fast mängd att verifiera mot: providerns nivå
         # står kvar oförändrad - hål skapas aldrig av att Dabas saknar data.
-        return {"package_source": provider_source(product),
-                "package_confidence": "provider" if p_qty else "none",
-                "package_conflict": None}
+        return {"package_source": base_source, "package_confidence": base_conf, "package_conflict": None}
+
     if p_qty is None:
-        return {"package_source": SOURCE_DABAS, "package_confidence": "high",
-                "package_conflict": None,
-                "quantity": d.quantity, "unit": d.unit,
-                "size": f"{d.quantity:g} {d.unit}"}
-    if p_unit == d.unit and _same_amount(p_qty, d.quantity):
-        return {"package_source": SOURCE_DABAS, "package_confidence": "high",
-                "package_conflict": None, "quantity": d.quantity, "unit": d.unit}
-    # Multipack: provider 6x120 g = 720 g mot Dabas 720 g hanteras redan av
-    # effective_package. Kvarstående skillnad = konflikt.
-    return {"package_source": provider_source(product), "package_confidence": "conflict",
+        return {"package_source": SOURCE_DABAS, "package_confidence": "high", "package_conflict": None,
+                "quantity": d.quantity, "unit": d.unit, "size": f"{d.quantity:g} {d.unit}"}
+
+    explicit = bool(product.quantity and product.unit)
+    dabas_amounts = [(d.quantity, d.unit)] + (
+        [(d.drained_quantity, d.drained_unit)] if d.drained_quantity else [])
+    if any(_equivalent(p_qty, p_unit, dq, du) for dq, du in dabas_amounts):
+        verdict = {"package_source": SOURCE_DABAS, "package_confidence": "high", "package_conflict": None}
+        if not explicit:
+            # Providern hade bara en texttolkning; nu är mängden verifierad -
+            # skriv den som explicit mängd (samma tal, Dabas enhet).
+            verdict.update({"quantity": d.quantity, "unit": d.unit})
+        return verdict
+
+    # Antal mot vikt/volym är två olika sanningar om samma paket, inte en
+    # konflikt: "18-pack" och "750 g" stämmer båda.
+    if (d.unit == "st") != (p_unit == "st"):
+        return {"package_source": base_source, "package_confidence": base_conf, "package_conflict": None}
+
+    text_amounts = _amounts_in_text(f"{product.size or ''} {product.name or ''}")
+    dabas_in_text = any(_equivalent(tq, tu, d.quantity, d.unit) for tq, tu in text_amounts)
+    # EXAKT samma enhet (g mot g): nettovikt/avrunnen-paret. Olika familj
+    # (ml mot g) är torrvara/tillagad-paret och hanteras nedan.
+    if dabas_in_text and p_unit == d.unit:
+        # "370/240g": nettovikt och avrunnen vikt i samma text. Providern
+        # (motorns regel) valde den avrunna - det är maten, inte lagen -
+        # och Dabas nettovikt står i samma text. Eniga, inget byte.
+        return {"package_source": SOURCE_DABAS, "package_confidence": "high", "package_conflict": None}
+    if dabas_in_text and not explicit:
+        # "800g/6l": torrvara och tillagad volym i samma text - providerns
+        # tolkning tog volymen, Dabas pekar ut förpackningen. Dabas vinner.
+        return {"package_source": SOURCE_DABAS, "package_confidence": "high", "package_conflict": None,
+                "quantity": d.quantity, "unit": d.unit, "size": product.size or f"{d.quantity:g} {d.unit}"}
+
+    return {"package_source": base_source, "package_confidence": "conflict",
             "package_conflict": f"provider {p_qty:g} {p_unit} / Dabas {d.quantity:g} {d.unit} ({d.kind})"}
+
+
+def recompute_verdicts(db) -> dict:
+    """Räknar om paketverdiktet för alla Dabas-berikade produkter ur den
+    sparade dabas_data-ögonblicksbilden - inga nya API-anrop. Körs efter en
+    regeländring i package_verdict så gamla falska konflikter försvinner."""
+    from .providers.dabas import DabasPackage, DabasProduct as _DP
+    rows = db.connection.execute(
+        "SELECT * FROM grocery_products WHERE dabas_status = 'ok' AND dabas_data IS NOT NULL").fetchall()
+    counts = {}
+    for row in rows:
+        product = db._row_to_product(row)
+        try:
+            snap = json.loads(row["dabas_data"])
+            snap["package"] = DabasPackage(**{k: v for k, v in (snap.get("package") or {}).items()
+                                             if k in DabasPackage.__dataclass_fields__})
+            dabas = _DP(**{k: v for k, v in snap.items() if k in _DP.__dataclass_fields__})
+        except Exception:
+            continue
+        verdict = package_verdict(product, dabas)
+        db.apply_product_fields(product.id, verdict)
+        counts[verdict["package_confidence"]] = counts.get(verdict["package_confidence"], 0) + 1
+    return counts
 
 
 def merge_fields(product, dabas: DabasProduct) -> dict:

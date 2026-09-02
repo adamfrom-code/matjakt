@@ -278,14 +278,22 @@ class GroceryScheduler:
                 self._sync_register("första registersynken")
             # Paketkällnivå på varje produkt (PROVIDER_VERIFIED/NORMALIZED/NONE)
             # så att raderna bär sin nivå även utan Dabas. Idempotent.
-            from .enrichment import classify_package_sources, enrichment_enabled
+            from .enrichment import classify_package_sources, enrichment_enabled, recompute_verdicts
             store = grocery_api.open_store()
             try:
                 classified = classify_package_sources(store)
+                # Paketverdikten räknas om ur sparade Dabas-ögonblicksbilder
+                # vid varje boot (inga API-anrop): en regeländring i
+                # package_verdict slår igenom direkt, gamla falska
+                # konflikter försvinner utan att vänta på 30-dagarsomprövningen.
+                recomputed = recompute_verdicts(store)
             finally:
                 store.close()
             if classified:
                 logger.info("Paketkällor klassade: %s", classified)
+            if recomputed:
+                logger.info("Paketverdikt omräknade: %s", recomputed)
+                grocery_api.clear_cache()
             # Dabas-berikning i bakgrunden direkt vid boot (text/paket/kategori,
             # aldrig bilder) - appen väntar aldrig på den.
             if enrichment_enabled():
