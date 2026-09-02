@@ -52,6 +52,8 @@ LIMITS = {
     "resend_verification": (5, 3600),
     # Fri text från vem som helst behöver ett lock.
     "feedback": (10, 3600),
+    # Partnerfeeds: en butik behöver sällan mer än några leveranser i timmen.
+    "partner_feed": (60, 3600),
 }
 
 # A single dict of key -> [timestamps]. Pruned as it goes, and hard-capped so

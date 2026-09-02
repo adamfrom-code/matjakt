@@ -312,4 +312,6 @@ class PrimatProvider(GroceryProvider):
             unit_price=comparison.get("price"),
             source_url=urls.get("source"),
             fetched_at=_epoch(detail.get("confirmed_at") or price_row.get("changed_at")),
+            campaign_valid_to=_epoch(price_row.get("offer_valid_to") or price_row.get("offer_valid_until"))
+            if campaign is not None else None,
         )

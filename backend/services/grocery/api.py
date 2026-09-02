@@ -496,35 +496,61 @@ def _store_has_prices(store: GroceryStore, store_row) -> bool:
         (store_row["id"],)).fetchone()[0] == 1
 
 
-def resolve_pricing_store(store: GroceryStore, chain: str,
-                          external_store_id: str | None = None):
-    """(katalogbutik, etikettbutik, orsak) för en kedja + ev. användarval.
+class PricingTarget:
+    """Vad en kedja ska prissättas mot för EN användare.
 
-    Kedjor prissätts olika på riktigt (se register.CHAIN_PRICING_SCOPE):
-      NATIONAL       - kedjans katalog gäller varje butik: prissätt mot
-                       katalogbutiken, ETIKETTERA med användarens valda
-                       butik. Willys Älvsjö visar Willys-priser och det är
-                       sant i Älvsjö.
-      STORE_SPECIFIC - bara butiker vars egen katalog importerats får
-                       prissättas. Användarens ICA utan importerad katalog
-                       ger (None, butiken, "no_data_for_store") - ALDRIG en
-                       annan butiks priser under fel namn.
-    Utan användarval: katalogbutiken för både pris och etikett (samma
-    beteende som före nationella modellen)."""
-    from .register import CHAIN_PRICING_SCOPE
+    store_id: butiken vars VERIFIERADE priser läggs ovanpå kedjans
+              referenspriser i motorn (None = bara referenspriser).
+    label_row: butiken som visas för användaren (None = kedjan som helhet,
+              "ICA referenspris").
+    reason:   None, eller varför kedjan inte kan prissättas alls."""
+    __slots__ = ("store_id", "label_row", "reason")
+
+    def __init__(self, store_id=None, label_row=None, reason=None):
+        self.store_id, self.label_row, self.reason = store_id, label_row, reason
+
+
+def resolve_pricing_store(store: GroceryStore, chain: str,
+                          external_store_id: str | None = None) -> PricingTarget:
+    """TVÅ PRISNIVÅER i upplösningen:
+
+      VERIFIED_STORE_PRICE  användarens valda butik har egen importerad/
+                            partnerlevererad katalog -> dess priser, färska,
+                            går först (motorn lägger dem ovanpå referensen)
+      REFERENCE_PRICE       annars kedjans referenspris - tydligt märkt,
+                            aldrig ett påstående om just den butiken
+      PRICE_MISSING         varken butikspris eller referens -> kedjan
+                            prissätts inte alls. Ingen gissning.
+
+    Utan användarval prissätts kedjan mot sin katalogbutik (den som bär
+    priser) som förut - dess rader är verifierade för DEN butiken och
+    kedjans referens för alla andra."""
+    reference_available = (hasattr(store, "reference_price_count")
+                           and store.reference_price_count(chain) > 0)
     catalog_row = _store_row_for(store, chain)
-    if not _store_has_prices(store, catalog_row):
-        return None, None, "no_data_for_chain"
+    catalog_has_prices = _store_has_prices(store, catalog_row)
+
     if external_store_id is None:
-        return catalog_row, catalog_row, None
+        if catalog_has_prices:
+            return PricingTarget(catalog_row["id"], catalog_row, None)
+        if reference_available:
+            return PricingTarget(None, None, None)
+        return PricingTarget(None, None, "no_data_for_chain")
+
     chosen = _store_row_for(store, chain, external_store_id)
     if chosen is None:
-        return None, None, "unknown_store"
-    if CHAIN_PRICING_SCOPE.get(chain) == "NATIONAL":
-        return catalog_row, chosen, None
-    if _store_has_prices(store, chosen):
-        return chosen, chosen, None
-    return None, chosen, "no_data_for_store"
+        return PricingTarget(None, None, "unknown_store")
+    if _store_has_prices(store, chosen) or reference_available:
+        return PricingTarget(chosen["id"], chosen, None)
+    if catalog_has_prices:
+        # Ingen referens publicerad ännu men kedjan har en prissatt katalog-
+        # butik: kedjans pris finns, bara inte som referensrad. Etikettera
+        # ärligt med användarens butik men prissätt ur katalogen - samma
+        # beteende som nationella modellen hade före referenstabellen.
+        from .register import CHAIN_PRICING_SCOPE
+        if CHAIN_PRICING_SCOPE.get(chain) == "NATIONAL":
+            return PricingTarget(catalog_row["id"], chosen, None)
+    return PricingTarget(None, chosen, "no_data_for_store")
 
 
 def _store_id_for(store: GroceryStore, chain: str):
@@ -568,28 +594,45 @@ def price_week(items: list[dict], chains: list[str] | None = None,
         engine = RecipePricingEngine(store)
         raw_results, store_rows = [], {}
         for chain in chains:
-            catalog_row, label_row, reason = resolve_pricing_store(
-                store, chain, store_selection.get(chain))
-            if catalog_row is None:
-                if reason == "no_data_for_store" and label_row is not None:
-                    # Användarens butik finns men saknar importerad katalog:
-                    # säg det, hitta inte på en total från en annan butik.
+            target = resolve_pricing_store(store, chain, store_selection.get(chain))
+            if target.reason is not None:
+                if target.reason == "no_data_for_store" and target.label_row is not None:
+                    # Användarens butik finns men varken butikspris eller
+                    # referenspris: säg det, hitta inte på en total.
                     unavailable.append({
-                        "chain": chain, "reason": reason,
-                        "storeName": label_row["name"],
-                        "externalStoreId": label_row["external_store_id"]})
+                        "chain": chain, "reason": target.reason,
+                        "storeName": target.label_row["name"],
+                        "externalStoreId": target.label_row["external_store_id"]})
                 continue
-            store_rows[chain] = label_row
-            result = engine.price_list(items, chain, catalog_row["id"], pantry=pantry)
-            result["dataAgeSeconds"] = _chain_age_seconds(store, chain)
+            store_rows[chain] = target.label_row
+            result = engine.price_list(items, chain, target.store_id, pantry=pantry)
+            result["dataAgeSeconds"] = _chain_age_seconds(store, chain, target.store_id)
             raw_results.append(result)
+
+        # Anonym partnerstatistik: butiken jämfördes. Räknas per butik och
+        # dag, aldrig per användare - och ALDRIG med i rankingen.
+        from . import partners as partner_api
+        for chain, label_row in store_rows.items():
+            if label_row is not None:
+                partner_api.record_stat(store, label_row["id"], "store_compared")
     finally:
         store.close()
 
     # The comparison is decided on the raw results, THEN handed to the
     # formatter - so a chain's "savings" can never be a number the comparison
-    # itself refused to stand behind.
+    # itself refused to stand behind. Partnerstatus, betalning och prisnivå
+    # ingår inte i underlaget: bara totaler och täckning.
     comparison = compare_chains(raw_results)
+    comparison.update(_comparison_basis(raw_results, comparison))
+    if comparison.get("cheapestChain"):
+        crowned = store_rows.get(comparison["cheapestChain"])
+        if crowned is not None:
+            stat_store = open_store()
+            try:
+                from . import partners as partner_api
+                partner_api.record_stat(stat_store, crowned["id"], "store_cheapest")
+            finally:
+                stat_store.close()
     results = [format_chain_result(result, store_rows.get(result["chain"]), comparison)
                for result in raw_results]
     payload = {"results": results, "comparison": comparison,
@@ -599,18 +642,57 @@ def price_week(items: list[dict], chains: list[str] | None = None,
     return payload
 
 
-def _chain_age_seconds(store: GroceryStore, chain: str):
-    # st.chain, inte external_ids: prisradens egen butik avgör vems ålder
-    # det är (se database_summary för hela historien).
+BASIS_LABELS = {
+    "verified": "Billigast bland dina valda butiker",
+    "reference": "Billigast enligt aktuella referenspriser",
+    "mixed": "Billigast bland dina valda butiker (delvis referenspriser)",
+}
+
+
+def _comparison_basis(raw_results: list[dict], comparison: dict) -> dict:
+    """Vad kröningen vilar på - så konsumenten förstår skillnaden mellan
+    referenspris och verifierat lokalt pris utan att behöva läsa fältnamn."""
+    compared = [r for r in raw_results if r.get("pricingBasis")]
+    if not compared:
+        return {"basis": None, "basisLabel": None}
+    bases = {r["pricingBasis"] for r in compared}
+    if bases == {"VERIFIED"}:
+        basis = "verified"
+    elif bases == {"REFERENCE"}:
+        basis = "reference"
+    else:
+        basis = "mixed"
+    return {"basis": basis, "basisLabel": BASIS_LABELS[basis] if comparison.get("cheapestChain") else None}
+
+
+def _chain_age_seconds(store: GroceryStore, chain: str, store_id: int | None = None):
+    """Färskheten på det som faktiskt prissattes: butikens senaste verifiering
+    om en butik är vald, annars kedjans referens- eller katalogpriser."""
+    stamps = []
+    if store_id is not None:
+        row = store.connection.execute(
+            "SELECT MAX(COALESCE(cp.verified_at, cp.fetched_at)) FROM grocery_current_prices cp "
+            "WHERE cp.store_id = ?", (store_id,)).fetchone()
+        if row and row[0]:
+            stamps.append(row[0])
     row = store.connection.execute(
-        """
-        SELECT MAX(cp.fetched_at) FROM grocery_current_prices cp
-        JOIN grocery_stores st ON st.id = cp.store_id
-        WHERE st.chain = ?
-        """,
-        (chain,),
-    ).fetchone()
-    return (time.time() - row[0]) if row and row[0] else None
+        "SELECT MAX(verified_at) FROM grocery_reference_prices WHERE chain = ?", (chain,)).fetchone()
+    if row and row[0]:
+        stamps.append(row[0])
+    if not stamps:
+        # st.chain, inte external_ids: prisradens egen butik avgör vems ålder
+        # det är (se database_summary för hela historien).
+        row = store.connection.execute(
+            """
+            SELECT MAX(cp.fetched_at) FROM grocery_current_prices cp
+            JOIN grocery_stores st ON st.id = cp.store_id
+            WHERE st.chain = ?
+            """,
+            (chain,),
+        ).fetchone()
+        if row and row[0]:
+            stamps.append(row[0])
+    return (time.time() - max(stamps)) if stamps else None
 
 
 # Three genuinely different states, and collapsing any two of them would
@@ -666,6 +748,9 @@ def format_chain_result(result: dict, store_row=None, comparison: dict | None = 
             "memberPrice": match.get("memberPrice"),
             "comparisonPrice": match.get("comparisonPrice"),
             "fetchedAt": match.get("fetchedAt"),
+            # Prisnivån per rad: verifierat i butiken eller kedjans referens.
+            "priceTier": match.get("priceTier"),
+            "verifiedAt": match.get("verifiedAt"),
         })
     for missing in result.get("missingItems", []):
         items.append({
@@ -692,6 +777,17 @@ def format_chain_result(result: dict, store_row=None, comparison: dict | None = 
     # collected in Gävle is a Gävle price - presenting it under a Stockholm
     # branch's name without saying so would be a quiet lie.
     scope = (PROVIDER_STATUS.get(chain) or {}).get("pricingScope")
+    basis = result.get("pricingBasis")
+    # Konsumentens etikett - aldrig "centrallagerpris", aldrig ett butiks-
+    # påstående utan verifiering.
+    if basis == "VERIFIED":
+        price_label = "Verifierat lokalt pris"
+    elif basis == "MIXED":
+        price_label = "Delvis verifierade lokala priser"
+    elif basis == "REFERENCE":
+        price_label = f"{chain} referenspris"
+    else:
+        price_label = None
     return {
         "store": {
             "chain": chain,
@@ -700,6 +796,9 @@ def format_chain_result(result: dict, store_row=None, comparison: dict | None = 
             "city": store_row["city"] if store_row else None,
         },
         "pricingScope": scope,
+        "pricingBasis": basis,
+        "priceTiers": result.get("priceTiers"),
+        "priceLabel": price_label,
         "chain": chain,
         "totalCheckoutCost": result.get("totalCheckoutCost"),
         "coveragePercent": result.get("coveragePercent"),
@@ -789,11 +888,12 @@ def shopping_list(items: list[dict], chain: str, pantry: dict | None = None,
     vägrar hellre än att visa fel butiks priser)."""
     store = open_store()
     try:
-        catalog_row, label_row, reason = resolve_pricing_store(store, chain, external_store_id)
-        if catalog_row is None:
+        target = resolve_pricing_store(store, chain, external_store_id)
+        label_row = target.label_row
+        if target.reason is not None:
             # Not an empty list - an empty list would price the week at 0 kr
             # and read as the cheapest shop in Sweden.
-            return {"chain": chain, "error": reason or "no_data_for_chain",
+            return {"chain": chain, "error": target.reason,
                     "store": {"chain": chain,
                               "name": label_row["name"] if label_row else None,
                               "externalStoreId": label_row["external_store_id"] if label_row else None,
@@ -801,8 +901,8 @@ def shopping_list(items: list[dict], chain: str, pantry: dict | None = None,
                     "totalCheckoutCost": None, "coveragePercent": 0,
                     "realPriceItems": 0, "estimatedItems": 0,
                     "missingItems": len(items or []), "items": []}
-        result = RecipePricingEngine(store).price_list(items, chain, catalog_row["id"], pantry=pantry)
-        result["dataAgeSeconds"] = _chain_age_seconds(store, chain)
+        result = RecipePricingEngine(store).price_list(items, chain, target.store_id, pantry=pantry)
+        result["dataAgeSeconds"] = _chain_age_seconds(store, chain, target.store_id)
         return format_chain_result(result, label_row)
     finally:
         store.close()

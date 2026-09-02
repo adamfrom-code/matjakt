@@ -2055,6 +2055,39 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/pricing/list":
             self._handle_pricing_list(payload)
             return
+        if parsed.path.startswith("/api/admin/partner"):
+            self._handle_admin_partner(parsed.path, payload)
+            return
+        if parsed.path == "/api/partner/feed":
+            # Partnerbutikens egen prisleverans. Autentiseras med partnerns
+            # API-nyckel (bara hashen finns hos oss) och går sedan genom
+            # EXAKT samma staging/gate/publicering som kedje-API:erna.
+            from services.grocery import partners as partner_api
+            if self._rate_limit("partner_feed", self._client_ip()):
+                return
+            db = grocery_api.open_store()
+            try:
+                partner = partner_api.authenticate_partner(db, self.headers.get("X-Partner-Key", ""))
+                if partner is None:
+                    self.send_json(401, {"error": "Ogiltig partnernyckel"})
+                    return
+                store_id = (payload or {}).get("storeId")
+                feed_format = str((payload or {}).get("format") or "API").upper()
+                try:
+                    result = partner_api.ingest_feed(
+                        db, partner_id=partner["id"], store_id=int(store_id),
+                        format=feed_format, payload=(payload or {}).get("rows") or (payload or {}).get("payload"))
+                except PermissionError as error:
+                    self.send_json(403, {"error": str(error)})
+                    return
+                except (ValueError, TypeError) as error:
+                    self.send_json(400, {"error": str(error)[:200]})
+                    return
+                grocery_api.clear_cache()
+                self.send_json(200, result)
+            finally:
+                db.close()
+            return
         if parsed.path == "/api/admin/store-register-sync":
             # Nationella butiksregistret: alla svenska butiker (sex kedjor,
             # ~2 800 rader) in i grocery_stores i en körning. Veckosyssla,
@@ -2223,6 +2256,67 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if not items:
             return None, "Inga giltiga varor"
         return items, None
+
+    def _handle_admin_partner(self, path, payload):
+        """Internt adminlager för butikspartner - översikt, teckning,
+        aktivering/paus/uppsägning, feedinmatning och statistik. Admin-
+        token, aldrig publikt. Betalning påverkar aldrig rankingen: det
+        här lagret styr LEVERANSRÄTT, inte prisresultat."""
+        if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
+            self.send_json(403, {"error": "Admin-token krävs"})
+            return
+        from services.grocery import partners as partner_api
+        payload = payload or {}
+        db = grocery_api.open_store()
+        try:
+            if path == "/api/admin/partner-overview":
+                self.send_json(200, {"stores": partner_api.admin_overview(db),
+                                     "partners": [dict(row) for row in db.list_partners()]})
+                return
+            if path == "/api/admin/partner":
+                action = str(payload.get("action") or "")
+                if action == "create":
+                    result = partner_api.create_partner(
+                        db, kind=str(payload.get("kind") or "PER_STORE"),
+                        name=clean_text(str(payload.get("name") or "")),
+                        chain=payload.get("chain"),
+                        store_external_ids=[str(s) for s in (payload.get("storeIds") or [])],
+                        plan_code=str(payload.get("planCode") or "matjakt_butik"),
+                        contact_email=payload.get("contactEmail"))
+                elif action in ("activate", "pause", "cancel", "pending"):
+                    status = {"activate": "ACTIVE", "pause": "PAUSED",
+                              "cancel": "CANCELLED", "pending": "PENDING"}[action]
+                    result = partner_api.set_status(db, int(payload.get("partnerId")), status)
+                else:
+                    self.send_json(400, {"error": "action måste vara create/activate/pause/cancel/pending"})
+                    return
+                grocery_api.clear_cache()
+                self.send_json(200, result)
+                return
+            if path == "/api/admin/partner-feed":
+                result = partner_api.ingest_feed(
+                    db, partner_id=int(payload.get("partnerId")), store_id=int(payload.get("storeId")),
+                    format=str(payload.get("format") or "JSON").upper(),
+                    payload=payload.get("rows") if payload.get("rows") is not None else payload.get("payload"))
+                grocery_api.clear_cache()
+                self.send_json(200, result)
+                return
+            if path == "/api/admin/partner-stats":
+                store_id = int(payload.get("storeId"))
+                self.send_json(200, {"storeId": store_id,
+                                     "days": int(payload.get("days") or 30),
+                                     "stats": db.partner_stats(store_id, int(payload.get("days") or 30))})
+                return
+            self.send_json(404, {"error": "Okänd partner-endpoint"})
+        except PermissionError as error:
+            self.send_json(403, {"error": str(error)})
+        except (ValueError, TypeError, KeyError) as error:
+            self.send_json(400, {"error": str(error)[:200]})
+        except Exception:
+            logger.exception("Partneradmin misslyckades")
+            self.send_json(500, {"error": "Partneradmin misslyckades"})
+        finally:
+            db.close()
 
     def _handle_pricing_week(self, payload):
         """Real checkout cost for a week's list, per chain, from Matjakt's own

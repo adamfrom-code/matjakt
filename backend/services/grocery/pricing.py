@@ -44,6 +44,7 @@ silent wrong prices. Treat coverage as a first-class part of any total.
 
 import math
 import re
+import time
 import unicodedata
 from functools import lru_cache
 
@@ -1086,6 +1087,29 @@ def product_matches_ingredient(product_name: str, ingredient: str, brand: str | 
     return True
 
 
+# Hur gammalt ett VERIFIERAT butikspris får vara innan kedjans referenspris
+# tar över. Fyra dygn täcker en missad nattsynk och en helg - därefter är
+# "verifierat lokalt pris" inte längre ett sant påstående.
+MAX_STORE_PRICE_AGE_SECONDS = 4 * 24 * 3600
+
+PRICING_BASIS_VERIFIED = "VERIFIED"
+PRICING_BASIS_REFERENCE = "REFERENCE"
+PRICING_BASIS_MIXED = "MIXED"
+
+
+def _pricing_basis(matched_rows: list) -> str | None:
+    """VERIFIED när varje prissatt rad är butiksverifierad, REFERENCE när
+    varje rad är referenspris, MIXED däremellan, None utan rader."""
+    tiers = {row.get("priceTier") for row in matched_rows}
+    if not tiers:
+        return None
+    if tiers == {"VERIFIED_STORE_PRICE"}:
+        return PRICING_BASIS_VERIFIED
+    if tiers == {"REFERENCE_PRICE"}:
+        return PRICING_BASIS_REFERENCE
+    return PRICING_BASIS_MIXED
+
+
 def effective_price(price) -> float | None:
     """What a normal shopper actually pays today: the campaign price when one
     is running, otherwise the ordinary price. Member and multibuy prices are
@@ -1102,6 +1126,12 @@ def effective_price(price) -> float | None:
     def _sane(value):
         return value if value is not None and 0 < value <= 30000 else None
     campaign, regular = _sane(campaign), _sane(regular)
+    # KAMPANJDATUM: en kampanj vars sista dag passerat är inget pris längre.
+    # Utan datum gäller den tills källan säger annat (nattsynken tar bort
+    # den); med passerat datum faller vi tillbaka på ordinarie.
+    valid_to = getattr(price, "valid_to", None)
+    if campaign is not None and valid_to is not None and valid_to < time.time():
+        campaign = None
     if campaign is not None and regular is not None:
         return min(campaign, regular)
     return campaign if campaign is not None else regular
@@ -1204,14 +1234,41 @@ class RecipePricingEngine:
 
         Shared across engines on the same data version, like the word index,
         because prices only change when an import writes them."""
-        cached = self._price_cache.get(store_id)
+        return self._prices_for_tiered(store_id, None)
+
+    def _prices_for_tiered(self, store_id, chain: str | None) -> dict:
+        """TVÅ PRISNIVÅER, en dict. Kedjans referenspriser i botten, butikens
+        verifierade priser ovanpå - så varje produkt får det bästa vi vet:
+
+            VERIFIED_STORE_PRICE (färskt)  ->  annars REFERENCE_PRICE
+            ->  annars saknas produkten ur prisbilden helt.
+
+        Ett verifierat butikspris äldre än MAX_STORE_PRICE_AGE_SECONDS
+        används inte: hellre kedjans aktuella referenspris än ett lokalt
+        pris ingen sett på en vecka. store_id None = bara referenspriser
+        (användaren har ingen vald butik, eller kedjan bara referens)."""
+        # En instansnivå-stub av _prices_for (tester som bygger motorn med
+        # __new__ och byter ut prisuppslaget) respekteras: den ÄR prisbilden.
+        override = self.__dict__.get("_prices_for")
+        if override is not None:
+            return override(store_id)
+        cache = self.__dict__.setdefault("_price_cache", {})
+        key = (store_id, chain)
+        cached = cache.get(key)
         if cached is not None:
             return cached
         prices = {}
-        for row in self.store.connection.execute(
-                "SELECT * FROM grocery_current_prices WHERE store_id = ?", (store_id,)):
-            prices[row["product_id"]] = self.store._row_to_current_price(row)
-        self._price_cache[store_id] = prices
+        if chain and hasattr(self.store, "reference_prices_for_chain"):
+            prices.update(self.store.reference_prices_for_chain(chain))
+        if store_id is not None:
+            cutoff = time.time() - MAX_STORE_PRICE_AGE_SECONDS
+            for row in self.store.connection.execute(
+                    "SELECT * FROM grocery_current_prices WHERE store_id = ?", (store_id,)):
+                stamp = row["verified_at"] if "verified_at" in row.keys() and row["verified_at"] else row["fetched_at"]
+                if stamp is not None and stamp < cutoff and chain:
+                    continue  # för gammalt att gå i god för - referens tar över
+                prices[row["product_id"]] = self.store._row_to_current_price(row)
+        self._price_cache[key] = prices
         return prices
 
     def _candidates(self, ingredient: str, chain: str) -> list:
@@ -1273,7 +1330,7 @@ class RecipePricingEngine:
         total cost, not unit price."""
         best = None
         best_rank = None
-        prices = self._prices_for(store_id)
+        prices = self._prices_for_tiered(store_id, chain)
         for product in self._candidates(ingredient, chain):
             price = prices.get(product.id)
             unit_cost = effective_price(price)
@@ -1368,6 +1425,11 @@ class RecipePricingEngine:
                     "comparisonPrice": getattr(price, "unit_price", None),
                     "fetchedAt": getattr(price, "fetched_at", None),
                     "exactPackaging": exact,
+                    # Vilken NIVÅ priset är: verifierat i just den här butiken
+                    # eller kedjans referenspris. Går hela vägen till UI:t.
+                    "priceTier": getattr(price, "tier", "VERIFIED_STORE_PRICE"),
+                    "priceSource": getattr(price, "source", None),
+                    "verifiedAt": getattr(price, "verified_at", None) or getattr(price, "fetched_at", None),
                 }
         return best
 
@@ -1456,4 +1518,14 @@ class RecipePricingEngine:
             "totalItems": requested,
             "coveragePercent": (round(100 * sum(1 for item in matched if item.get("exactPackaging", True)) / requested)
                                 if requested else 0),
+            # Prisnivåerna bakom totalen. pricingBasis säger vad jämförelsen
+            # vilar på: VERIFIED (alla rader butiksverifierade), REFERENCE
+            # (bara kedjans referenspriser) eller MIXED - så UI:t kan säga
+            # "Billigast bland dina valda butiker" respektive "Billigast
+            # enligt aktuella referenspriser" utan att gissa.
+            "priceTiers": {
+                "verified": sum(1 for item in matched if item.get("priceTier") == "VERIFIED_STORE_PRICE"),
+                "reference": sum(1 for item in matched if item.get("priceTier") == "REFERENCE_PRICE"),
+            },
+            "pricingBasis": _pricing_basis(matched),
         }

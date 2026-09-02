@@ -175,29 +175,32 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
                 pricing_scope=CHAIN_PRICING_SCOPE.get(chain))
 
             found = 0
+            source = f"{getattr(provider, 'name', chain.lower())}:{store.external_store_id}"
 
             def save_batch(batch):
-                """Writes one category's products immediately.
+                """Stagear one category's products immediately.
 
-                Saving as we go, rather than accumulating the whole
-                catalogue and writing it at the end, is what keeps a crash
-                from costing the entire run - and what stops the
-                empty-database bootstrap from starting the same walk over
-                again after that crash."""
+                STAGING, INTE PRODUKTION: raderna landar i staging-tabellen
+                och når grocery_current_prices först när hela körningen
+                passerat quality gaten (se publish.py). Stagea löpande, inte
+                allt på slutet: en krasch mitt i kostar då bara resten av
+                körningen, och produktkatalogen (namn/paket/GTIN) är redan
+                försonad när publiceringen sker."""
                 nonlocal saved, found
                 found += len(batch)
                 for raw in batch:
                     try:
                         product = db.find_or_create_product(raw)
-                        db.upsert_current_price(
-                            product_id=product.id, store_id=db_store.id,
+                        db.stage_price(
+                            run_id=run_record.id, store_id=db_store.id, product_id=product.id,
                             regular_price=raw.regular_price, campaign_price=raw.campaign_price,
                             member_price=raw.member_price, multibuy_price=raw.multibuy_price,
                             unit_price=raw.unit_price, currency=raw.currency,
-                            source_url=raw.source_url, fetched_at=raw.fetched_at)
+                            source_url=raw.source_url, source=source,
+                            valid_to=raw.campaign_valid_to, fetched_at=raw.fetched_at)
                         saved += 1
                     except Exception:
-                        logger.exception("Kunde inte spara %r", raw.name)
+                        logger.exception("Kunde inte stagea %r", raw.name)
                 _set(productsSaved=saved)
 
             try:
@@ -215,10 +218,26 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
             if leftover:
                 save_batch(leftover)
 
-            status_text = "blocked" if blocked_message else ("success" if saved else "empty")
+            # QUALITY GATE + ATOMISK PUBLICERING. Klarar körningen inte gaten
+            # behålls senaste godkända priser och körningen märks failed med
+            # orsaken - hellre "uppdaterat igår" än fel pris.
+            from .publish import publish_run
+            outcome = publish_run(db, run_record.id, db_store.id, chain,
+                                  source=source, blocked=bool(blocked_message),
+                                  partial=limit_per_category is not None)
+            saved = outcome["published"]
+            if not outcome["published_ok"]:
+                status_text = "failed"
+                gate_message = outcome["message"]
+            else:
+                status_text = "blocked" if blocked_message else ("success" if saved else "empty")
+                gate_message = blocked_message
             db.finish_collector_run(run_record.id, status=status_text,
                                     products_found=found, prices_updated=saved,
-                                    errors=0, error_message=blocked_message)
+                                    errors=0 if outcome["published_ok"] else 1,
+                                    error_message=gate_message)
+            if not outcome["published_ok"]:
+                blocked_message = gate_message
         except Exception as error:
             # Utan denna hoppade varje oväntad krasch (get_stores-fel, okänd
             # butik, providerbugg) över finish_collector_run och lämnade

@@ -55,19 +55,166 @@ class GroceryStore:
         self._init_schema()
         self._migrate_schema()
 
+    # Additiva kolumner per tabell. CREATE TABLE IF NOT EXISTS rör aldrig en
+    # tabell som redan finns, så nya kolumner läggs till här - idempotent,
+    # styrt av vad tabellen faktiskt har. Ordningen i listan spelar ingen roll.
+    _COLUMN_MIGRATIONS = {
+        "grocery_stores": [
+            ("provider", "TEXT"), ("pricing_scope", "TEXT"),
+            # Nationell prisplattform + butikspartner (2026-09-02)
+            ("ownership_type", "TEXT"),            # FRANCHISE/COOPERATIVE/CENTRAL
+            ("partner_status", "TEXT NOT NULL DEFAULT 'NONE'"),
+            ("partner_id", "INTEGER"),
+        ],
+        "grocery_current_prices": [
+            # Radens ursprung och färskhet: vem sa det, när, och hur länge
+            # kampanjen gäller. Alla rader här är VERIFIED_STORE_PRICE -
+            # referenspriser bor i grocery_reference_prices.
+            ("source", "TEXT"), ("verified_at", "REAL"),
+            ("valid_from", "REAL"), ("valid_to", "REAL"),
+        ],
+        "grocery_collector_runs": [
+            ("rows_staged", "INTEGER"), ("gate_percent", "REAL"),
+            ("published", "INTEGER"), ("gate_message", "TEXT"),
+        ],
+    }
+
     def _migrate_schema(self):
-        """Additiva kolumner på befintliga databaser. CREATE TABLE IF NOT
-        EXISTS rör aldrig en tabell som redan finns, så nya kolumner måste
-        läggas till här - idempotent, styrt av vad tabellen faktiskt har."""
-        existing = {row[1] for row in self._connection.execute(
-            "PRAGMA table_info(grocery_stores)")}
+        for table, columns in self._COLUMN_MIGRATIONS.items():
+            existing = {row[1] for row in self._connection.execute(f"PRAGMA table_info({table})")}
+            with self._connection:
+                for name, decl in columns:
+                    if name not in existing:
+                        self._connection.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+
+        self._connection.executescript(
+            """
+            -- KEDJOR: hur varje kedja prissätter och hur partnerskap tecknas.
+            -- pricing_model: NATIONAL/REGIONAL/STORE_SPECIFIC.
+            -- partner_model: PER_STORE (handlarägt), PER_GROUP (förening),
+            -- PER_CHAIN (centralt avtal). chain_partner_id aktiverar alla
+            -- kedjans butiker på en gång.
+            CREATE TABLE IF NOT EXISTS grocery_chains (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                pricing_model TEXT NOT NULL,
+                reference_price_available INTEGER NOT NULL DEFAULT 0,
+                reference_source TEXT,
+                reference_store_external_id TEXT,
+                partner_model TEXT NOT NULL DEFAULT 'PER_STORE',
+                chain_partner_id INTEGER,
+                created_at REAL NOT NULL,
+                updated_at REAL NOT NULL
+            );
+
+            -- REFERENSPRISER: kedjans pris, en rad per produkt och kedja.
+            -- Får användas nationellt, tydligt märkt "<Kedja> referenspris" -
+            -- aldrig som påstående om en specifik butik.
+            CREATE TABLE IF NOT EXISTS grocery_reference_prices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL REFERENCES grocery_products(id),
+                chain TEXT NOT NULL,
+                regular_price REAL,
+                campaign_price REAL,
+                member_price REAL,
+                multibuy_price REAL,
+                unit_price REAL,
+                currency TEXT NOT NULL DEFAULT 'SEK',
+                valid_from REAL,
+                valid_to REAL,
+                source TEXT,
+                verified_at REAL NOT NULL,
+                updated_at REAL NOT NULL,
+                UNIQUE(product_id, chain)
+            );
+            CREATE INDEX IF NOT EXISTS idx_grocery_reference_prices_chain
+                ON grocery_reference_prices(chain);
+
+            -- STAGING: nattens import landar här först. Ingenting når
+            -- grocery_current_prices förrän raderna passerat sanering och
+            -- quality gate och körningen publicerats atomiskt.
+            CREATE TABLE IF NOT EXISTS grocery_price_staging (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id INTEGER NOT NULL,
+                store_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+                regular_price REAL,
+                campaign_price REAL,
+                member_price REAL,
+                multibuy_price REAL,
+                unit_price REAL,
+                currency TEXT NOT NULL DEFAULT 'SEK',
+                source_url TEXT,
+                source TEXT,
+                valid_to REAL,
+                fetched_at REAL,
+                gate_status TEXT,
+                gate_reason TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_grocery_price_staging_run
+                ON grocery_price_staging(run_id);
+
+            -- BUTIKSPARTNER. Betalning påverkar ALDRIG rankingen - partner-
+            -- tabellerna ger rätten att LEVERERA verifierade lokala priser,
+            -- ingenting annat.
+            CREATE TABLE IF NOT EXISTS grocery_partner_plans (
+                code TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                monthly_price_sek REAL NOT NULL,
+                billing_model TEXT NOT NULL,
+                active INTEGER NOT NULL DEFAULT 1,
+                updated_at REAL NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS grocery_partners (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                kind TEXT NOT NULL,                  -- PER_STORE/PER_GROUP/PER_CHAIN
+                name TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                plan_code TEXT REFERENCES grocery_partner_plans(code),
+                monthly_price_sek REAL,
+                chain TEXT,
+                contact_email TEXT,
+                api_key_hash TEXT,
+                started_at REAL,
+                ended_at REAL,
+                created_at REAL NOT NULL,
+                updated_at REAL NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS grocery_partner_stores (
+                partner_id INTEGER NOT NULL REFERENCES grocery_partners(id),
+                store_id INTEGER NOT NULL REFERENCES grocery_stores(id),
+                PRIMARY KEY (partner_id, store_id)
+            );
+            CREATE TABLE IF NOT EXISTS grocery_partner_feeds (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                partner_id INTEGER NOT NULL REFERENCES grocery_partners(id),
+                store_id INTEGER NOT NULL REFERENCES grocery_stores(id),
+                format TEXT NOT NULL,
+                status TEXT NOT NULL,
+                rows_received INTEGER NOT NULL DEFAULT 0,
+                rows_published INTEGER NOT NULL DEFAULT 0,
+                gate_percent REAL,
+                message TEXT,
+                received_at REAL NOT NULL
+            );
+            -- Anonym aggregerad partnerstatistik: räknare per butik och dag,
+            -- aldrig per användare.
+            CREATE TABLE IF NOT EXISTS grocery_partner_stats (
+                store_id INTEGER NOT NULL,
+                day TEXT NOT NULL,
+                event TEXT NOT NULL,
+                count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (store_id, day, event)
+            );
+            """)
+
+        now = time.time()
         with self._connection:
-            if "provider" not in existing:
-                self._connection.execute(
-                    "ALTER TABLE grocery_stores ADD COLUMN provider TEXT")
-            if "pricing_scope" not in existing:
-                self._connection.execute(
-                    "ALTER TABLE grocery_stores ADD COLUMN pricing_scope TEXT")
+            # Första kommersiella erbjudandet - konfigurerbart, inte hårdkodat
+            # i någon kärnlogik: ändra raden, inte koden.
+            self._connection.execute(
+                "INSERT OR IGNORE INTO grocery_partner_plans (code, name, monthly_price_sek, billing_model, active, updated_at) "
+                "VALUES ('matjakt_butik', 'Matjakt Butik', 1495, 'PER_STORE', 1, ?)", (now,))
 
     @property
     def connection(self):
@@ -409,7 +556,8 @@ class GroceryStore:
                               campaign_price: float | None = None, member_price: float | None = None,
                               multibuy_price: float | None = None, unit_price: float | None = None,
                               currency: str = "SEK", source_url: str | None = None,
-                              fetched_at: float | None = None) -> tuple[CurrentPrice, bool]:
+                              fetched_at: float | None = None, source: str | None = None,
+                              valid_to: float | None = None) -> tuple[CurrentPrice, bool]:
         """Updates CURRENT_PRICES and, only if a price fact actually changed,
         appends a row to PRICE_HISTORY (see spec section 11 - no duplicate
         history rows for an unchanged nightly re-check). Returns
@@ -472,17 +620,28 @@ class GroceryStore:
                 """
                 INSERT INTO grocery_current_prices (product_id, store_id, regular_price, campaign_price,
                                                       member_price, multibuy_price, unit_price, currency,
-                                                      source_url, fetched_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                                      source_url, fetched_at, updated_at,
+                                                      source, verified_at, valid_from, valid_to)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(product_id, store_id) DO UPDATE SET
                     regular_price = excluded.regular_price, campaign_price = excluded.campaign_price,
                     member_price = excluded.member_price, multibuy_price = excluded.multibuy_price,
                     unit_price = excluded.unit_price, currency = excluded.currency,
                     source_url = excluded.source_url, fetched_at = excluded.fetched_at,
-                    updated_at = excluded.updated_at
+                    updated_at = excluded.updated_at,
+                    source = COALESCE(excluded.source, grocery_current_prices.source),
+                    verified_at = excluded.verified_at,
+                    -- valid_from = när DETTA pris började gälla: behålls om
+                    -- priset är oförändrat, nytt datum bara vid ändring.
+                    valid_from = CASE WHEN grocery_current_prices.regular_price IS excluded.regular_price
+                                       AND grocery_current_prices.campaign_price IS excluded.campaign_price
+                                      THEN COALESCE(grocery_current_prices.valid_from, excluded.valid_from)
+                                      ELSE excluded.valid_from END,
+                    valid_to = excluded.valid_to
                 """,
                 (product_id, store_id, regular_price, campaign_price, member_price, multibuy_price,
-                 unit_price, currency, source_url, now, now),
+                 unit_price, currency, source_url, now, now, source, now, now,
+                 valid_to if campaign_price is not None else None),
             )
             if changed:
                 self._connection.execute(
@@ -516,14 +675,238 @@ class GroceryStore:
         return [self._row_to_current_price(row) for row in rows]
 
     @staticmethod
-    def _row_to_current_price(row) -> CurrentPrice:
+    def _row_to_current_price(row, tier: str = "VERIFIED_STORE_PRICE") -> CurrentPrice:
+        keys = row.keys()
         return CurrentPrice(
             id=row["id"], product_id=row["product_id"], store_id=row["store_id"],
             regular_price=row["regular_price"], campaign_price=row["campaign_price"],
             member_price=row["member_price"], multibuy_price=row["multibuy_price"],
             unit_price=row["unit_price"], currency=row["currency"], source_url=row["source_url"],
             fetched_at=row["fetched_at"], updated_at=row["updated_at"],
+            tier=tier,
+            source=row["source"] if "source" in keys else None,
+            verified_at=row["verified_at"] if "verified_at" in keys else None,
+            valid_from=row["valid_from"] if "valid_from" in keys else None,
+            valid_to=row["valid_to"] if "valid_to" in keys else None,
         )
+
+    # ---- Referenspriser (nivå B: kedjans pris, nationellt användbart) ----
+
+    def upsert_reference_price(self, *, product_id: int, chain: str, regular_price, campaign_price=None,
+                               member_price=None, multibuy_price=None, unit_price=None,
+                               currency: str = "SEK", source: str | None = None,
+                               valid_to: float | None = None, verified_at: float | None = None):
+        """Samma sanering som butikspriser: ett pris <= 0 eller absurt är ett
+        importfel och skrivs aldrig - raden behåller sitt gamla värde."""
+        def _sane(value):
+            try:
+                value = float(value) if value is not None else None
+            except (TypeError, ValueError):
+                return None
+            return value if value is not None and 0 < value <= 30000 else None
+        regular_price, campaign_price = _sane(regular_price), _sane(campaign_price)
+        member_price, multibuy_price, unit_price = _sane(member_price), _sane(multibuy_price), _sane(unit_price)
+        if campaign_price is not None and regular_price is not None and campaign_price >= regular_price:
+            campaign_price = None
+        if regular_price is None and campaign_price is None:
+            return False
+        now = time.time()
+        with self._connection:
+            self._connection.execute(
+                """
+                INSERT INTO grocery_reference_prices (product_id, chain, regular_price, campaign_price,
+                    member_price, multibuy_price, unit_price, currency, valid_from, valid_to, source,
+                    verified_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(product_id, chain) DO UPDATE SET
+                    regular_price = excluded.regular_price, campaign_price = excluded.campaign_price,
+                    member_price = excluded.member_price, multibuy_price = excluded.multibuy_price,
+                    unit_price = excluded.unit_price, currency = excluded.currency,
+                    valid_from = CASE WHEN grocery_reference_prices.regular_price IS excluded.regular_price
+                                       AND grocery_reference_prices.campaign_price IS excluded.campaign_price
+                                      THEN COALESCE(grocery_reference_prices.valid_from, excluded.valid_from)
+                                      ELSE excluded.valid_from END,
+                    valid_to = excluded.valid_to, source = excluded.source,
+                    verified_at = excluded.verified_at, updated_at = excluded.updated_at
+                """,
+                (product_id, chain, regular_price, campaign_price, member_price, multibuy_price,
+                 unit_price, currency, now, valid_to if campaign_price is not None else None,
+                 source, verified_at if verified_at is not None else now, now))
+        return True
+
+    def reference_prices_for_chain(self, chain: str) -> dict[int, CurrentPrice]:
+        """product_id -> referenspris för kedjan, som CurrentPrice med
+        tier=REFERENCE_PRICE och store_id=0 (inget butikspåstående)."""
+        prices = {}
+        for row in self._connection.execute(
+                "SELECT id, product_id, 0 AS store_id, regular_price, campaign_price, member_price, "
+                "multibuy_price, unit_price, currency, NULL AS source_url, verified_at AS fetched_at, "
+                "updated_at, source, verified_at, valid_from, valid_to "
+                "FROM grocery_reference_prices WHERE chain = ?", (chain,)):
+            prices[row["product_id"]] = self._row_to_current_price(row, tier="REFERENCE_PRICE")
+        return prices
+
+    def reference_price_count(self, chain: str) -> int:
+        return self._connection.execute(
+            "SELECT COUNT(*) FROM grocery_reference_prices WHERE chain = ?", (chain,)).fetchone()[0]
+
+    # ---- Staging: importen landar här innan publicering ----------------
+
+    def stage_price(self, *, run_id: int, store_id: int, product_id: int, regular_price=None,
+                    campaign_price=None, member_price=None, multibuy_price=None, unit_price=None,
+                    currency: str = "SEK", source_url: str | None = None, source: str | None = None,
+                    valid_to: float | None = None, fetched_at: float | None = None):
+        with self._connection:
+            self._connection.execute(
+                "INSERT INTO grocery_price_staging (run_id, store_id, product_id, regular_price, "
+                "campaign_price, member_price, multibuy_price, unit_price, currency, source_url, "
+                "source, valid_to, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (run_id, store_id, product_id, regular_price, campaign_price, member_price,
+                 multibuy_price, unit_price, currency, source_url, source, valid_to, fetched_at))
+
+    def staged_rows(self, run_id: int) -> list:
+        return self._connection.execute(
+            "SELECT * FROM grocery_price_staging WHERE run_id = ? ORDER BY id", (run_id,)).fetchall()
+
+    def mark_staged(self, staging_id: int, status: str, reason: str | None = None):
+        self._connection.execute(
+            "UPDATE grocery_price_staging SET gate_status = ?, gate_reason = ? WHERE id = ?",
+            (status, reason, staging_id))
+
+    def clear_staging(self, run_id: int):
+        with self._connection:
+            self._connection.execute("DELETE FROM grocery_price_staging WHERE run_id = ?", (run_id,))
+
+    def record_run_gate(self, run_id: int, *, rows_staged: int, gate_percent: float | None,
+                        published: bool, message: str | None = None):
+        with self._connection:
+            self._connection.execute(
+                "UPDATE grocery_collector_runs SET rows_staged = ?, gate_percent = ?, published = ?, "
+                "gate_message = ? WHERE id = ?",
+                (rows_staged, gate_percent, int(published), message, run_id))
+
+    def price_count_for_store(self, store_id: int) -> int:
+        return self._connection.execute(
+            "SELECT COUNT(*) FROM grocery_current_prices WHERE store_id = ?", (store_id,)).fetchone()[0]
+
+    # ---- Kedjor och partner --------------------------------------------
+
+    def upsert_chain(self, *, name: str, pricing_model: str, reference_price_available: bool = False,
+                     reference_source: str | None = None, reference_store_external_id: str | None = None,
+                     partner_model: str = "PER_STORE"):
+        now = time.time()
+        with self._connection:
+            self._connection.execute(
+                """
+                INSERT INTO grocery_chains (name, pricing_model, reference_price_available, reference_source,
+                    reference_store_external_id, partner_model, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(name) DO UPDATE SET
+                    pricing_model = excluded.pricing_model,
+                    reference_price_available = excluded.reference_price_available,
+                    reference_source = excluded.reference_source,
+                    reference_store_external_id = excluded.reference_store_external_id,
+                    partner_model = excluded.partner_model, updated_at = excluded.updated_at
+                """,
+                (name, pricing_model, int(reference_price_available), reference_source,
+                 reference_store_external_id, partner_model, now, now))
+
+    def get_chain(self, name: str):
+        return self._connection.execute(
+            "SELECT * FROM grocery_chains WHERE name = ?", (name,)).fetchone()
+
+    def set_chain_partner(self, chain: str, partner_id: int | None):
+        with self._connection:
+            self._connection.execute(
+                "UPDATE grocery_chains SET chain_partner_id = ?, updated_at = ? WHERE name = ?",
+                (partner_id, time.time(), chain))
+
+    def create_partner(self, *, kind: str, name: str, plan_code: str | None = "matjakt_butik",
+                       chain: str | None = None, contact_email: str | None = None,
+                       api_key_hash: str | None = None, monthly_price_sek: float | None = None) -> int:
+        """Partnern skapas PENDING. Priset kopieras från planen vid skapandet
+        så en senare planändring inte tyst ändrar befintliga avtal."""
+        now = time.time()
+        if monthly_price_sek is None and plan_code:
+            plan = self._connection.execute(
+                "SELECT monthly_price_sek FROM grocery_partner_plans WHERE code = ?", (plan_code,)).fetchone()
+            monthly_price_sek = plan["monthly_price_sek"] if plan else None
+        with self._connection:
+            cursor = self._connection.execute(
+                "INSERT INTO grocery_partners (kind, name, status, plan_code, monthly_price_sek, chain, "
+                "contact_email, api_key_hash, created_at, updated_at) VALUES (?, ?, 'PENDING', ?, ?, ?, ?, ?, ?, ?)",
+                (kind, name, plan_code, monthly_price_sek, chain, contact_email, api_key_hash, now, now))
+        return cursor.lastrowid
+
+    def get_partner(self, partner_id: int):
+        return self._connection.execute(
+            "SELECT * FROM grocery_partners WHERE id = ?", (partner_id,)).fetchone()
+
+    def partner_by_key_hash(self, api_key_hash: str):
+        return self._connection.execute(
+            "SELECT * FROM grocery_partners WHERE api_key_hash = ?", (api_key_hash,)).fetchone()
+
+    def set_partner_status(self, partner_id: int, status: str):
+        now = time.time()
+        with self._connection:
+            self._connection.execute(
+                "UPDATE grocery_partners SET status = ?, updated_at = ?, "
+                "started_at = CASE WHEN ? = 'ACTIVE' AND started_at IS NULL THEN ? ELSE started_at END, "
+                "ended_at = CASE WHEN ? IN ('CANCELLED') THEN ? ELSE ended_at END WHERE id = ?",
+                (status, now, status, now, status, now, partner_id))
+
+    def link_partner_store(self, partner_id: int, store_id: int):
+        with self._connection:
+            self._connection.execute(
+                "INSERT OR IGNORE INTO grocery_partner_stores (partner_id, store_id) VALUES (?, ?)",
+                (partner_id, store_id))
+            self._connection.execute(
+                "UPDATE grocery_stores SET partner_id = ?, updated_at = ? WHERE id = ?",
+                (partner_id, time.time(), store_id))
+
+    def partner_store_ids(self, partner_id: int) -> list[int]:
+        return [row[0] for row in self._connection.execute(
+            "SELECT store_id FROM grocery_partner_stores WHERE partner_id = ?", (partner_id,))]
+
+    def list_partners(self) -> list:
+        return self._connection.execute(
+            "SELECT * FROM grocery_partners ORDER BY id").fetchall()
+
+    def record_partner_feed(self, *, partner_id: int, store_id: int, format: str, status: str,
+                            rows_received: int, rows_published: int, gate_percent: float | None,
+                            message: str | None = None):
+        with self._connection:
+            self._connection.execute(
+                "INSERT INTO grocery_partner_feeds (partner_id, store_id, format, status, rows_received, "
+                "rows_published, gate_percent, message, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (partner_id, store_id, format, status, rows_received, rows_published, gate_percent,
+                 message, time.time()))
+
+    def latest_partner_feed(self, store_id: int):
+        return self._connection.execute(
+            "SELECT * FROM grocery_partner_feeds WHERE store_id = ? ORDER BY id DESC LIMIT 1",
+            (store_id,)).fetchone()
+
+    def delete_prices_from_source(self, source_prefix: str) -> int:
+        """Partnerns priser försvinner när partnern inte längre är ACTIVE:
+        utan aktiv leverantör finns ingen som går i god för dem."""
+        with self._connection:
+            cursor = self._connection.execute(
+                "DELETE FROM grocery_current_prices WHERE source LIKE ?", (source_prefix + "%",))
+        return cursor.rowcount
+
+    def bump_partner_stat(self, store_id: int, event: str, day: str, amount: int = 1):
+        with self._connection:
+            self._connection.execute(
+                "INSERT INTO grocery_partner_stats (store_id, day, event, count) VALUES (?, ?, ?, ?) "
+                "ON CONFLICT(store_id, day, event) DO UPDATE SET count = count + excluded.count",
+                (store_id, day, event, amount))
+
+    def partner_stats(self, store_id: int, days: int = 30) -> dict[str, int]:
+        rows = self._connection.execute(
+            "SELECT event, SUM(count) FROM grocery_partner_stats WHERE store_id = ? "
+            "AND day >= date('now', ?) GROUP BY event", (store_id, f"-{int(days)} days")).fetchall()
+        return {row[0]: row[1] for row in rows}
 
     def get_price_history(self, product_id: int, store_id: int | None = None,
                            since: float | None = None) -> list[PriceHistoryEntry]:

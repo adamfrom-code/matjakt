@@ -195,10 +195,11 @@ class PricingStoreResolution(_DbTestCase):
             db.upsert_store(chain="Willys", external_store_id="9999",
                             name="Willys Älvsjö", city="Stockholm",
                             pricing_scope="NATIONAL")
-            catalog, label, reason = grocery_api.resolve_pricing_store(db, "Willys", "9999")
-            self.assertIsNone(reason)
-            self.assertEqual(catalog["name"], "Willys Gävle Gestrike")  # priser härifrån
-            self.assertEqual(label["name"], "Willys Älvsjö")            # etikett hit
+            target = grocery_api.resolve_pricing_store(db, "Willys", "9999")
+            self.assertIsNone(target.reason)
+            catalog = db.get_store_by_id(target.store_id)
+            self.assertEqual(catalog.name, "Willys Gävle Gestrike")      # priser härifrån
+            self.assertEqual(target.label_row["name"], "Willys Älvsjö")  # etikett hit
         finally:
             db.close()
 
@@ -210,15 +211,25 @@ class PricingStoreResolution(_DbTestCase):
             db.upsert_store(chain="City Gross", external_store_id="3203",
                             name="City Gross Malmö", city="Arlöv",
                             pricing_scope="STORE_SPECIFIC")
-            catalog, label, reason = grocery_api.resolve_pricing_store(
-                db, "City Gross", "3203")
-            self.assertIsNone(catalog)  # ALDRIG Gävlepriser under Malmös namn
-            self.assertEqual(reason, "no_data_for_store")
-            self.assertEqual(label["name"], "City Gross Malmö")
+            # Ingen referens publicerad och Malmöbutiken saknar egen katalog:
+            # ALDRIG Gävlepriser under Malmös namn - kedjan blir otillgänglig
+            # för den butiken tills ett referenspris eller butikspris finns.
+            target = grocery_api.resolve_pricing_store(db, "City Gross", "3203")
+            self.assertIsNone(target.store_id)
+            self.assertEqual(target.reason, "no_data_for_store")
+            self.assertEqual(target.label_row["name"], "City Gross Malmö")
             # ...men utan användarval gäller katalogbutiken som förut.
-            catalog, label, reason = grocery_api.resolve_pricing_store(db, "City Gross")
-            self.assertEqual(catalog["name"], "City Gross Gävle")
-            self.assertIsNone(reason)
+            target = grocery_api.resolve_pricing_store(db, "City Gross")
+            self.assertEqual(db.get_store_by_id(target.store_id).name, "City Gross Gävle")
+            self.assertIsNone(target.reason)
+            # Med ett publicerat referenspris får Malmö "City Gross referens-
+            # pris" - tydligt märkt, aldrig ett butikspåstående.
+            product = db.connection.execute("SELECT id FROM grocery_products LIMIT 1").fetchone()[0]
+            db.upsert_reference_price(product_id=product, chain="City Gross", regular_price=14.0,
+                                      source="citygross:3209")
+            target = grocery_api.resolve_pricing_store(db, "City Gross", "3203")
+            self.assertIsNone(target.reason)
+            self.assertEqual(target.label_row["name"], "City Gross Malmö")
         finally:
             db.close()
 

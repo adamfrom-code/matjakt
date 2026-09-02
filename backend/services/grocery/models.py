@@ -45,6 +45,9 @@ class RawProduct:
     currency: str = "SEK"
     source_url: str | None = None
     fetched_at: float | None = None
+    # Kampanjens sista giltighetsdag (epok). Ett kampanjpris utan datum gäller
+    # tills källan säger annat; ett med passerat datum får inte användas.
+    campaign_valid_to: float | None = None
 
     def to_dict(self):
         value = asdict(self)
@@ -177,6 +180,18 @@ class CurrentPrice:
     source_url: str | None
     fetched_at: float
     updated_at: float
+    # TVÅ PRISNIVÅER (2026-09-02). tier säger vad raden ÄR:
+    #   VERIFIED_STORE_PRICE - ett verkligt pris i en specifik butik (egen
+    #                          import av just den butiken, eller partnerfeed)
+    #   REFERENCE_PRICE      - kedjans referenspris, får användas nationellt
+    #                          men är ALDRIG ett påstående om en viss butik
+    # source ("axfood:2132", "primat:ica:1158001", "partner:7") och
+    # verified_at säger varifrån och när. valid_to är kampanjens sista dag.
+    tier: str = "VERIFIED_STORE_PRICE"
+    source: str | None = None
+    verified_at: float | None = None
+    valid_from: float | None = None
+    valid_to: float | None = None
 
     def to_dict(self):
         value = asdict(self)

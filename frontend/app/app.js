@@ -1399,8 +1399,12 @@ function storeCardMarkup(entry) {
   // Älvsjö", inte bara "Willys") - nationell tjänst, användarens butik.
   const storeLabel = entry.storeName && entry.storeName !== chain
     ? `<small class="store-card-store">${escapeHtml(entry.storeName)}</small>` : "";
+  // Prisnivån är konsumentens skydd: "Verifierat lokalt pris" eller
+  // "<Kedja> referenspris" - servern sätter texten, vi visar den.
+  const tierLabel = entry.priceLabel
+    ? `<small class="store-card-tier${entry.verified ? " verified" : ""}">${entry.verified ? "✓ " : ""}${escapeHtml(entry.priceLabel)}</small>` : "";
   return `<button type="button" class="store-card ${active ? "active" : ""}" data-store-card="${escapeHtml(chain)}">
-    <strong>${escapeHtml(chain)}</strong>${storeLabel}<span>${money(total)}</span>${cheapest ? '<em class="store-card-badge">Billigast</em>' : ""}</button>`;
+    <strong>${escapeHtml(chain)}</strong>${storeLabel}<span>${money(total)}</span>${tierLabel}${cheapest ? '<em class="store-card-badge">Billigast</em>' : ""}</button>`;
 }
 
 function renderStoreCards() {
@@ -1424,6 +1428,8 @@ function renderStoreCards() {
       // utan kronan lägga sig först och motsäga badgen.
       total: result.totalCheckoutCost,
       storeName: result.store?.name || "",
+      priceLabel: result.priceLabel || "",
+      verified: result.pricingBasis === "VERIFIED",
       cheapest: result.chain === cheapestChain,
       active: result.chain === chain,
     }))
@@ -1436,7 +1442,12 @@ function renderStoreCards() {
     lockedEntry.hasData && lockedEntry.comparable
       ? { chain: lockedEntry.chain, locked: true }
       : { chain: lockedEntry.chain, unavailable: true }));
-  container.innerHTML = entries.map(storeCardMarkup).join("");
+  // Vad kröningen vilar på: "Billigast enligt aktuella referenspriser"
+  // eller "Billigast bland dina valda butiker" - enkelt för konsumenten,
+  // och aldrig ett starkare påstående än datan bär.
+  const basisLabel = state.dbComparison?.basisLabel;
+  container.innerHTML = entries.map(storeCardMarkup).join("")
+    + (basisLabel ? `<p class="store-basis">${escapeHtml(basisLabel)}</p>` : "");
   container.querySelectorAll("[data-store-card]").forEach(card => card.addEventListener("click", () => {
     if (card.dataset.storeCard === chosenStore()) return;
     // switchWeekStore, inte bara state.butik: livepriserna är nyckelsatta på

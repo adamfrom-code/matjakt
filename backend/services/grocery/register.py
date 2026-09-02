@@ -59,6 +59,51 @@ CHAIN_PRICE_PROVIDER = {
     "Lidl": "primat",
 }
 
+# REFERENSPRISETS BAS för butiksspecifika kedjor: den utsedda referens-
+# butikens katalog publiceras som "<Kedja> referenspris". Det är ett ärligt
+# märkt kedjepris från bästa verifierade källa - aldrig ett påstående om
+# användarens egen butik (som får VERIFIED_STORE_PRICE först när just den
+# butikens katalog importerats eller butiken är partner). NATIONAL-kedjor
+# behöver ingen utsedd butik: varje importerad katalog är kedjans pris.
+CHAIN_REFERENCE_STORE = {
+    "ICA": "1003987",       # Maxi ICA Stormarknad Gävle (full täckning)
+    "Coop": "206403",       # Coop Eken Gävle (full täckning)
+    "City Gross": "3209",   # City Gross Gävle
+}
+
+# Ägarform styr hur partnerskap tecknas: handlarägda butiker (ICA, delar av
+# Hemköp, Tempo/Handlar'n/Matöppet) tecknar per butik; Coop per förening
+# (en partner - många store_ids); centralt ägda kedjor per kedjeavtal.
+CHAIN_OWNERSHIP = {
+    "ICA": "FRANCHISE",
+    "Hemköp": "MIXED",
+    "Coop": "COOPERATIVE",
+    "Willys": "CENTRAL",
+    "Lidl": "CENTRAL",
+    "City Gross": "CENTRAL",
+}
+
+CHAIN_PARTNER_MODEL = {
+    "ICA": "PER_STORE",
+    "Hemköp": "PER_STORE",
+    "Coop": "PER_GROUP",
+    "Willys": "PER_CHAIN",
+    "Lidl": "PER_CHAIN",
+    "City Gross": "PER_CHAIN",
+}
+
+
+def ensure_chains(db) -> None:
+    """Kedjetabellen speglar konfigurationen ovan - idempotent, körs vid
+    uppstart och efter registersynk så att nya databaser får raderna."""
+    for chain, scope in CHAIN_PRICING_SCOPE.items():
+        db.upsert_chain(
+            name=chain, pricing_model=scope,
+            reference_price_available=True,
+            reference_source=CHAIN_PRICE_PROVIDER.get(chain),
+            reference_store_external_id=CHAIN_REFERENCE_STORE.get(chain),
+            partner_model=CHAIN_PARTNER_MODEL.get(chain, "PER_STORE"))
+
 
 def fetch_national_register(api_key: str) -> list[dict]:
     """Primats hela svenska butiksregister, mappat till Matjakts kedjenamn.
@@ -101,6 +146,7 @@ def sync_store_register(db, api_key: str) -> dict:
     tre släppta kedjornas importbutiker) berikas med adress/koordinater
     via samma upsert - deras priser och katalogkoppling påverkas inte."""
     rows = fetch_national_register(api_key)
+    ensure_chains(db)
     per_chain: dict[str, int] = {}
     for row in rows:
         chain = row["chain"]
@@ -113,5 +159,10 @@ def sync_store_register(db, api_key: str) -> dict:
             active=active, provider=CHAIN_PRICE_PROVIDER.get(chain),
             pricing_scope=scope)
         per_chain[chain] = per_chain.get(chain, 0) + 1
+    with db.connection:
+        for chain, ownership in CHAIN_OWNERSHIP.items():
+            db.connection.execute(
+                "UPDATE grocery_stores SET ownership_type = ? WHERE chain = ? AND ownership_type IS NULL",
+                (ownership, chain))
     logger.info("Butiksregistret synkat: %s", per_chain)
     return {"totalt": sum(per_chain.values()), "perKedja": per_chain}
