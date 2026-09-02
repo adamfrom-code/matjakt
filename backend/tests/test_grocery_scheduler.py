@@ -10,6 +10,9 @@ any of them.
 """
 
 import sys
+import tempfile
+import threading
+import time
 import unittest
 from datetime import datetime
 from pathlib import Path
@@ -258,9 +261,26 @@ class CrashedImportEndsItsRun(unittest.TestCase):
     evig 'running' - då visar adminpanelen en fantomimport och lastRun löses
     aldrig."""
 
-    def test_unexpected_crash_marks_the_run_failed(self):
+    def setUp(self):
+        # Importern öppnar databasen via grocery_api.open_store(), som läser
+        # DB_PATH vid anropet. Utan omdirigering lämnar varje testkörning en
+        # 'failed'-rad i backend/data/grocery.db (id 30-35 sågs 2026-09-02).
+        # Tester får aldrig skriva i produktionsdatabasen - samma mönster som
+        # test_national_stores och test_two_tier_pricing.
         from services.grocery import api as grocery_api
+        self.grocery_api = grocery_api
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.db_path = Path(self._tmp.name) / "grocery.db"
+        self._real = grocery_api.DB_PATH
+        grocery_api.DB_PATH = self.db_path
+        self.addCleanup(lambda: setattr(grocery_api, "DB_PATH", self._real))
+        grocery_api.clear_cache()
+        self.addCleanup(grocery_api.clear_cache)
+
+    def test_unexpected_crash_marks_the_run_failed(self):
         from services.grocery import importer
+        grocery_api = self.grocery_api
 
         class ExplodingProvider:
             name = "Willys"
@@ -271,11 +291,18 @@ class CrashedImportEndsItsRun(unittest.TestCase):
         importer._provider_for = lambda chain: ExplodingProvider()
         try:
             importer.start("Willys")
-            import time as _t
             for _ in range(200):
                 if not importer.status().get("running"):
                     break
-                _t.sleep(0.05)
+                time.sleep(0.05)
+            # Felvägen sätter running=False innan db.close() hunnit köras.
+            # Vänta in importtråden så att den inte håller temp-databasen
+            # öppen när katalogen städas (Windows vägrar ta bort öppna filer).
+            for thread in threading.enumerate():
+                if thread.name == "grocery-import-Willys":
+                    thread.join(timeout=10)
+            self.assertTrue(self.db_path.exists(),
+                            "körningen skulle ha landat i temp-databasen")
             store = grocery_api.open_store()
             try:
                 run = store.connection.execute(
