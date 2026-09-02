@@ -22,6 +22,26 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 from urllib.request import Request, urlopen
 
+# .env läses FÖRE service-importerna: services.grocery.api räknar ut DB_PATH
+# vid import, så en MATJAKT_DATA_DIR i .env ignorerades tyst när filen
+# lästes först efteråt - backend startade mot en tom databas.
+def load_dotenv(path):
+    """Minimal .env loader: fills unset env vars only, never overrides values
+    already set by the shell. Avoids adding python-dotenv as a dependency."""
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if key and key not in os.environ:
+            os.environ[key] = value.strip()
+
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
 from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature
@@ -40,22 +60,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("matjakt.api")
 
 
-def load_dotenv(path):
-    """Minimal .env loader: fills unset env vars only, never overrides values
-    already set by the shell. Avoids adding python-dotenv as a dependency."""
-    if not path.exists():
-        return
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        key = key.strip()
-        if key and key not in os.environ:
-            os.environ[key] = value.strip()
-
-
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 HOST = os.environ.get("MATJAKT_HOST", "127.0.0.1")
 PORT = int(os.environ.get("MATJAKT_PORT", os.environ.get("PORT", "8000")))

@@ -2279,9 +2279,14 @@ function renderWeekOverview(selected, shoppingItems, total) {
   // "800 kr kvar · 0%" som fakta.
   const totalKnown = total != null;
   const percentUsed = totalKnown && state.budget ? Math.min(100, Math.round(total / state.budget * 100)) : 0;
-  $("summaryBudgetRemaining").textContent = totalKnown ? money(Math.max(0, heroRemaining)) : "–";
-  $("summaryBudgetTotal").textContent = money(state.budget);
-  $("summaryBudgetPercent").textContent = totalKnown ? `${percentUsed}%` : "hämtas…";
+  // Ingen vecka alls: siffran är budgeten själv ("800 kr veckobudget"),
+  // inte ett streck - strecket betyder "pris hämtas" och finns bara när
+  // det faktiskt finns en vecka att prissätta.
+  const nothingPlanned = !selected.length;
+  $("summaryBudgetRemaining").textContent = nothingPlanned ? money(state.budget) : totalKnown ? money(Math.max(0, heroRemaining)) : "–";
+  $("summaryBudgetPrefix").textContent = nothingPlanned ? "veckobudget" : "kvar av";
+  $("summaryBudgetTotal").textContent = nothingPlanned ? "" : money(state.budget);
+  $("summaryBudgetPercent").textContent = nothingPlanned ? "" : totalKnown ? `${percentUsed}%` : "hämtas…";
   $("summaryBudgetBar").style.width = `${percentUsed}%`;
   $("summaryBudgetBar").classList.toggle("over-budget", heroRemaining < 0);
 

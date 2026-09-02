@@ -20,7 +20,7 @@
        a real header (see api_server.end_headers). -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0f120f">
+  <meta name="theme-color" content="#f6f7f4">
   <meta name="description" content="Matjakt hjälper dig planera billigare middagar efter din budget.">
   <!-- Sätt content till en driftsatt backend-URL (t.ex. https://matjakt-backend.onrender.com/api) för GitHub Pages
        och innan Android-appen byggs/synkas - utan detta anropar sidan sin egen origin istället för en riktig
@@ -36,14 +36,14 @@
   <meta name="apple-mobile-web-app-title" content="Matjakt">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=56">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=57">
 </head>
 <body>
   <div class="phone-shell">
     <header class="topbar">
       <a class="wordmark" href="#" aria-label="Matjakt startsida">Matjakt<span>.</span></a>
-      <button class="feedback-btn" type="button" id="feedbackBtn" aria-label="Tyck till om Matjakt">💬</button>
+      <button class="feedback-btn" type="button" id="feedbackBtn" aria-label="Tyck till om Matjakt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5v-8Z"/></svg></button>
       <button class="profile-btn" type="button" id="profileBtn" aria-label="Öppna profil och inställningar">MJ</button>
     </header>
 
@@ -67,7 +67,7 @@
             <button type="button" class="week-sheet-plus week-sheet-plus-corner" id="weekSheetOpen" aria-haspopup="dialog" aria-controls="weekSheet" aria-label="Justera personer, middagar och budget">＋</button>
           </div>
           <button type="button" class="week-budget-row" id="budgetCardBtn">
-            <span class="week-budget-text"><strong id="summaryBudgetRemaining">800 kr</strong> kvar av <span id="summaryBudgetTotal">800 kr</span><b id="summaryBudgetPercent">0%</b></span>
+            <span class="week-budget-text"><strong id="summaryBudgetRemaining">800 kr</strong><span id="summaryBudgetPrefix">kvar av</span> <span id="summaryBudgetTotal">800 kr</span><b id="summaryBudgetPercent">0%</b></span>
             <span class="progress-track"><i id="summaryBudgetBar"></i></span>
           </button>
           <p class="nutrition-warning" id="nutritionWarning" hidden></p>
@@ -230,7 +230,7 @@
         <header class="screen-header"><p class="eyebrow">Din lista</p><h1 id="shoppingTitle">Handla</h1></header>
         <p class="price-source-note" id="priceSourceNote" hidden></p>
         <section class="shopping-progress"><div><strong id="shoppingProgress">0 varor kvar</strong><span id="shoppingCost">0 / 0 kr</span></div><div class="progress-track"><i id="shoppingProgressBar"></i></div></section>
-        <div class="shopping-complete" id="shoppingComplete" hidden><strong>🎉 Allt handlat!</strong><p>Redo att planera nästa veckas meny?</p><button type="button" class="btn btn-primary" id="startNewWeekBtn"><span>Skapa nästa vecka</span><span aria-hidden="true">→</span></button></div>
+        <div class="shopping-complete" id="shoppingComplete" hidden><strong>Allt handlat!</strong><p>Redo att planera nästa veckas meny?</p><button type="button" class="btn btn-primary" id="startNewWeekBtn"><span>Skapa nästa vecka</span><span aria-hidden="true">→</span></button></div>
         <h3 class="shopping-section-title" id="weekListTitle" hidden>Din matvecka</h3>
         <div class="shopping-list" id="shoppingList"></div>
         <!-- Butiksjämförelsen är ett STÖD till listan, inte sidans huvudsak:
@@ -256,7 +256,7 @@
         <section class="pantry-hero"><span>Varor hemma</span><strong id="pantryCount">0</strong><p>Matjakt räknar bort det du redan har.</p></section>
         <div class="segmented" role="tablist" id="pantryTabs"><button class="active" type="button" data-pantry-tab="skafferi">Skafferi</button><button type="button" data-pantry-tab="kyl">Kyl</button><button type="button" data-pantry-tab="frys">Frys</button></div>
         <button class="add-pantry-btn" id="addPantryBtn" type="button"><span>＋</span> Lägg till vara</button>
-        <button class="btn btn-primary cook-from-pantry-btn" id="cookFromPantryBtn" type="button"><span>🍳 Laga med det jag har</span></button>
+        <button class="btn btn-primary cook-from-pantry-btn" id="cookFromPantryBtn" type="button"><span>Laga med det jag har</span></button>
         <div class="pantry-list" id="pantryList"></div>
         <section class="followed-section" id="followedSection" hidden>
           <h3 class="shopping-section-title">Varor du följer</h3>
@@ -500,6 +500,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=97"></script>
+  <script type="module" src="app.js?v=98"></script>
 </body>
 </html>
