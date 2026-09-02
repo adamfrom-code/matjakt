@@ -151,19 +151,32 @@ def backfill_reference_prices(db, chains: list[str] | None = None) -> dict:
                 (chain, reference_id)).fetchall() if reference_id else []
         published = 0
         for store_row in stores:
-            for price in db.connection.execute(
-                    "SELECT * FROM grocery_current_prices WHERE store_id = ?", (store_row["id"],)):
-                keys = price.keys()
-                # PARTNERPRISER BLIR ALDRIG REFERENS - de är ett påstående om
-                # EN butik. Utan filtret lyfte backfillen en partnerbutiks
-                # priser till hela kedjans referensnivå (hittat i E2E).
-                if "source" in keys and (price["source"] or "").startswith("partner:"):
+            # fetchall FÖRST: inga skrivningar medan en läscursor är öppen på
+            # samma anslutning - produktionens backfill stannade tyst mitt i
+            # (2 862, sedan 270 rader) och en avbruten cursor är den enda
+            # förklaring som inte lämnar spår i loggen.
+            rows = db.connection.execute(
+                "SELECT * FROM grocery_current_prices WHERE store_id = ?", (store_row["id"],)).fetchall()
+            for index, price in enumerate(rows, 1):
+                try:
+                    keys = price.keys()
+                    # PARTNERPRISER BLIR ALDRIG REFERENS - de är ett påstående
+                    # om EN butik. Utan filtret lyfte backfillen en partner-
+                    # butiks priser till hela kedjans referensnivå.
+                    if "source" in keys and (price["source"] or "").startswith("partner:"):
+                        continue
+                    ok, _, cleaned = gate_row(dict(price), "x")
+                    if not ok:
+                        continue
+                    source = (price["source"] if "source" in keys and price["source"]
+                              else f"{chain.lower()}:{store_row['external_store_id']}")
+                except Exception as error:  # en rad, aldrig körningen
+                    skipped += 1
+                    if skipped <= 5:
+                        logger.warning("Backfill hoppade över rad %s (%s): %s", index, chain, error)
                     continue
-                ok, _, cleaned = gate_row(dict(price), "x")
-                if not ok:
-                    continue
-                source = (price["source"] if "source" in keys and price["source"]
-                          else f"{chain.lower()}:{store_row['external_store_id']}")
+                if index % 2000 == 0:
+                    logger.info("Backfill %s: %d/%d rader lästa, %d publicerade", chain, index, len(rows), published)
                 try:
                     if db.upsert_reference_price(
                             product_id=price["product_id"], chain=chain,
@@ -174,7 +187,7 @@ def backfill_reference_prices(db, chains: list[str] | None = None) -> dict:
                             verified_at=(price["verified_at"] if "verified_at" in keys and price["verified_at"]
                                          else price["fetched_at"])):
                         published += 1
-                except (sqlite3.Error, ValueError, TypeError) as error:
+                except Exception as error:
                     # EN dålig rad (t.ex. en gammal prisrad vars produkt inte
                     # längre finns - FK-fel) får aldrig döda hela backfillen.
                     # Produktion stannade på exakt 2 862 rader två gånger

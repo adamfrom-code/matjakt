@@ -69,6 +69,9 @@ CHECK_INTERVAL_SECONDS = 60
 REGISTER_SYNC_AT = "Sun 01:00"
 # Nattligt nyförsök när registret saknas (Primat-kvoten nollställs per dygn).
 REGISTER_RETRY_AT = "01:30"
+# Nattlig självläkning av referensnivån, efter prisjobben (02-04) och före
+# Dabas-berikningen (05:00).
+REFERENCE_HEAL_AT = "04:45"
 
 # Dabas-berikning, efter att prisjobben (02-04) hunnit publicera nya GTIN.
 DABAS_ENRICHMENT_AT = "05:00"
@@ -367,6 +370,13 @@ class GroceryScheduler:
             self._last_fired["__register_retry__"] = stamp
             threading.Thread(target=self._sync_register_if_missing,
                              name="grocery-register-retry", daemon=True).start()
+        # Referensnivån läks varje natt efter prisjobben, inte bara vid boot:
+        # en kedja vars referens släpar efter sina verifierade priser fylls.
+        if (now.strftime("%H:%M") == REFERENCE_HEAL_AT
+                and self._last_fired.get("__reference_heal__") != stamp):
+            self._last_fired["__reference_heal__"] = stamp
+            threading.Thread(target=self.activate_platform,
+                             name="grocery-reference-heal", daemon=True).start()
         # Dabas-berikning efter nattens prisjobb: nya GTIN får masterdata,
         # gamla omprövas i sitt fönster. Bara när den uttryckligen är
         # aktiverad (nyckel + MATJAKT_DABAS_ENRICHMENT_ENABLED=1).
