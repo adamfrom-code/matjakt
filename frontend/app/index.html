@@ -37,7 +37,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=59">
+  <link rel="stylesheet" href="styles.css?v=60">
 </head>
 <body>
   <div class="phone-shell">
@@ -200,7 +200,9 @@
           <div id="storeCompare"></div>
           <div class="week-day-tabs" id="weekDayTabs" role="tablist" aria-label="Välj dag"></div>
           <div id="weekTodayCard"></div>
-          <div class="week-overview-section">
+          <!-- Dold: dagflikarna + dagens kort ÄR veckan. Listan dubblerade dem.
+               Elementen finns kvar för renderWeekOverview, men visas aldrig. -->
+          <div class="week-overview-section week-plan-section" hidden>
             <div class="section-heading"><h2>Veckans plan</h2></div>
             <div class="week-plan-list" id="weekPlanList"></div>
             <button type="button" class="btn-ghost week-overview-toggle" id="weekPlanToggle" hidden></button>
@@ -499,6 +501,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=100"></script>
+  <script type="module" src="app.js?v=101"></script>
 </body>
 </html>

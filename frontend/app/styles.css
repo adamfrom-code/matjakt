@@ -690,3 +690,8 @@ button{color:inherit}
 .week-plan-menu-options button:active,.week-plan-swap-btn:active{background:var(--primary-soft)}
 
 .week-overview .week-store-status,.week-screen .week-store-status{display:none!important}
+.week-plan-section[hidden]{display:none!important}
+.week-today-wrap{position:relative;margin-bottom:22px}
+.week-today-wrap .week-today-card{margin-bottom:0}
+.week-today-swap{position:absolute;top:12px;right:12px;z-index:2;min-height:36px;padding:0 16px;border:0;border-radius:999px;background:rgba(255,255,255,.94);color:var(--text);font:inherit;font-size:13px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.14);cursor:pointer}
+.week-today-flag{top:auto;bottom:14px;right:14px}
