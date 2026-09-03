@@ -158,9 +158,12 @@ def coverage_report(db) -> dict:
         "FROM grocery_products WHERE gtin IS NOT NULL AND gtin != ''").fetchone()
     per_chain = {}
     for row in db.connection.execute(
-            "SELECT x.chain, SUM(p.dabas_status IN ('ok', 'not_found')) AS looked, SUM(p.dabas_status = 'ok') AS ok "
-            "FROM grocery_product_external_ids x JOIN grocery_products p ON p.id = x.product_id "
-            "WHERE p.gtin IS NOT NULL AND p.gtin != '' GROUP BY x.chain"):
+            # DISTINCT produkter per kedja - en produkt kan ha flera externa
+            # id:n i samma kedja (Willys räknades 21 736 gånger på 10 854 varor).
+            "SELECT chain, SUM(looked) AS looked, SUM(ok) AS ok FROM ("
+            "  SELECT x.chain, p.id, MAX(p.dabas_status IN ('ok', 'not_found')) AS looked, MAX(p.dabas_status = 'ok') AS ok "
+            "  FROM grocery_product_external_ids x JOIN grocery_products p ON p.id = x.product_id "
+            "  WHERE p.gtin IS NOT NULL AND p.gtin != '' GROUP BY x.chain, p.id) GROUP BY chain"):
         per_chain[row["chain"]] = {"uppslagna": row["looked"] or 0, "traff": row["ok"] or 0}
     per_brand = {}
     for row in db.connection.execute(
