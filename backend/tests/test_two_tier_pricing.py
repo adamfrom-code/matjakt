@@ -396,6 +396,37 @@ class PartnersNeverBuyTheRanking(_Base):
         self.assertEqual(self.db.get_partner(created["partnerId"])["monthly_price_sek"], 1295)
 
 
+class StoreSpecificChainsNeverBorrowAnotherStoresName(_Base):
+    def test_malmo_user_with_only_gavle_city_gross_gets_reference_without_store_label(self):
+        """Steg 3 i releasepasset: bara Gävles City Gross-katalog finns.
+        En Malmöanvändare får "City Gross referenspris" - aldrig
+        VERIFIED_STORE_PRICE och aldrig Malmöbutikens namn på Gävles siffror."""
+        product = self.milk_product("City Gross", "3209")
+        gavle = self.store("City Gross", "3209", "City Gross Gävle")
+        self.store("City Gross", "3203", "City Gross Malmö", city="Arlöv")
+        self.store_price(product.id, gavle.id, 14.0, source="citygross:3209")
+        self.reference("City Gross", product.id, 14.0)
+
+        target = grocery_api.resolve_pricing_store(self.db, "City Gross", "3203")
+        self.assertIsNone(target.reason)
+        self.assertIsNone(target.store_id)      # bara referens, ingen butiksöverlagring
+        self.assertIsNone(target.label_row)     # ingen "City Gross Malmö"-etikett
+
+        payload = grocery_api.price_week([{"name": "Mjölk", "amount": 1, "unit": "l"}],
+                                         store_selection={"City Gross": "3203"})
+        cg = next(r for r in payload["results"] if r["chain"] == "City Gross")
+        self.assertEqual(cg["pricingBasis"], "REFERENCE")
+        self.assertEqual(cg["priceLabel"], "City Gross referenspris")
+        self.assertIsNone(cg["store"]["name"])
+        self.assertEqual(cg["priceTiers"]["verified"], 0)
+        # ...och Gävleanvändaren själv får sin verifierade butik som förut.
+        payload = grocery_api.price_week([{"name": "Mjölk", "amount": 1, "unit": "l"}],
+                                         store_selection={"City Gross": "3209"})
+        cg = next(r for r in payload["results"] if r["chain"] == "City Gross")
+        self.assertEqual(cg["pricingBasis"], "VERIFIED")
+        self.assertEqual(cg["store"]["name"], "City Gross Gävle")
+
+
 class ComparisonBasisLabels(_Base):
     def test_reference_only_comparison_says_so(self):
         product = self.milk_product("Willys", "2132")

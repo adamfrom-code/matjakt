@@ -2141,6 +2141,21 @@ class ApiHandler(SimpleHTTPRequestHandler):
             finally:
                 db.close()
             return
+        if parsed.path == "/api/admin/pricing-audit":
+            # Releasegatens audit mot PRODUKTIONENS databas: alla recept x
+            # ingredienser x släppta kedjor. Tar ~30-90 s. Admin-token.
+            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
+                self.send_json(403, {"error": "Admin-token krävs"})
+                return
+            from services.grocery.audit import run_pricing_audit
+            chains = (payload or {}).get("chains") or list(grocery_api.RELEASED_CHAINS)
+            db = grocery_api.open_store()
+            rs = recipes_api.open_store()
+            try:
+                self.send_json(200, run_pricing_audit(db, rs, [c for c in chains if c in grocery_api.PROVIDER_STATUS]))
+            finally:
+                db.close(); rs.close()
+            return
         if parsed.path == "/api/admin/platform-activate":
             # Hela aktiveringen i ett anrop: registersynk + första referens-
             # publicering + (valfritt) nattjobben för de släppta kedjorna nu.

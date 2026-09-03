@@ -624,16 +624,26 @@ def resolve_pricing_store(store: GroceryStore, chain: str,
     chosen = _store_row_for(store, chain, external_store_id)
     if chosen is None:
         return PricingTarget(None, None, "unknown_store")
-    if _store_has_prices(store, chosen) or reference_available:
+    from .register import CHAIN_PRICING_SCOPE
+    scope = CHAIN_PRICING_SCOPE.get(chain)
+    if _store_has_prices(store, chosen):
         return PricingTarget(chosen["id"], chosen, None)
-    if catalog_has_prices:
+    if reference_available:
+        if scope == "NATIONAL":
+            # Nationellt pris: referensen gäller i användarens butik - butiken
+            # får stå på etiketten (Willys Älvsjö visar Willys pris, sant).
+            return PricingTarget(chosen["id"], chosen, None)
+        # BUTIKSSPECIFIK kedja utan egen katalog för just den här butiken:
+        # kedjans referenspris, men ALDRIG under butikens namn. En
+        # Malmöanvändare ser "City Gross referenspris", inte "City Gross
+        # Malmö" med Gävles siffror - tills Malmös katalog finns.
+        return PricingTarget(None, None, None)
+    if catalog_has_prices and scope == "NATIONAL":
         # Ingen referens publicerad ännu men kedjan har en prissatt katalog-
         # butik: kedjans pris finns, bara inte som referensrad. Etikettera
         # ärligt med användarens butik men prissätt ur katalogen - samma
         # beteende som nationella modellen hade före referenstabellen.
-        from .register import CHAIN_PRICING_SCOPE
-        if CHAIN_PRICING_SCOPE.get(chain) == "NATIONAL":
-            return PricingTarget(catalog_row["id"], chosen, None)
+        return PricingTarget(catalog_row["id"], chosen, None)
     return PricingTarget(None, chosen, "no_data_for_store")
 
 

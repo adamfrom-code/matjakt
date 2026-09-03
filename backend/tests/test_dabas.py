@@ -378,6 +378,26 @@ class PackageVerification(_DbCase):
         self.assertEqual(verdict["package_source"], "PROVIDER_VERIFIED")
         self.assertEqual((verdict["quantity"], verdict["unit"]), (250.0, "ml"))
 
+    def test_liquid_in_grams_from_dabas_never_breaks_a_tablespoon_recipe(self):
+        """Steg 2 i releasepasset: Dabas anger vätskor i gram. Efter berikning
+        av en 176 ml sojasås måste ett recept med 2 msk fortfarande ge en
+        EXAKT rad (inte estimat "volym mot vikt")."""
+        product = self.product(name="Sojasås Japansk 176ml", size="176ml", quantity=None, unit=None,
+                               category="Skafferi > Asien")
+        store = self.db.upsert_store(chain="Willys", external_store_id="2132", name="Willys")
+        self.db.upsert_current_price(product_id=product.id, store_id=store.id, regular_price=24.9)
+        d = dabas.normalize_article(article(GTIN="7310865093530", Artikelkategori="Sojasås",
+                                            Nettoinnehall=[{"Mängd": 176, "EnhetKod": "GRM", "Typ": "Nettovikt"}]))
+        self.db.apply_product_fields(product.id, enrichment.merge_fields(product, d))
+        enriched = self.db.get_product(product.id)
+        self.assertEqual((enriched.quantity, enriched.unit), (176.0, "ml"))  # köksenheten kvar
+        from services.grocery import pricing
+        pricing._INDEX_CACHE.clear(); pricing._PRICE_CACHE.clear()
+        row = RecipePricingEngine(self.db).price_item("Sojasås", 2, "msk", "Willys", store.id)
+        self.assertIsNotNone(row)
+        self.assertTrue(row["exactPackaging"], row)
+        self.assertEqual(row["packages"], 1)
+
     def test_rounding_within_tolerance_is_agreement(self):
         product = self.product(size="ca 750 g", quantity=745.0, unit="g")
         verdict = enrichment.package_verdict(product, dabas.normalize_article(article(
