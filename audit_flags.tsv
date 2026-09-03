@@ -1,4 +1,7 @@
 recept	ingrediens	behov	enhet	kedja	produkt	kategori	paket	paketenhet	antal	exakt	radpris	flagga
+aggwok-ris	Sojasås	0.75	dl	Willys	Sojasås Japansk Vegan	Skafferi > Kryddor & smaksättare > Soja	176.0	g	1	False	31.13	estimat volym_mot_vikt
+biffbowl-teriyaki	Sojasås	1.0	dl	Willys	Sojasås Japansk Vegan	Skafferi > Kryddor & smaksättare > Soja	176.0	g	1	False	31.13	estimat volym_mot_vikt
+bulk-kyckling-jattebowl	Sojasås	0.5	dl	Willys	Sojasås Japansk Vegan	Skafferi > Kryddor & smaksättare > Soja	176.0	g	1	False	31.13	estimat volym_mot_vikt
 falafel-pitabrod	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	14.9	smakords_misstanke 
 falafel-pitabrod	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	19.34	smakords_misstanke 
 falafel-pitabrod	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	16.95	smakords_misstanke 
@@ -17,12 +20,13 @@ flasktomatpasta	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ri
 gronsakssoppa-med-pasta	Pasta	150.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 gronsakssoppa-med-pasta	Pasta	150.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 gronsakssoppa-med-pasta	Pasta	150.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
-halloumibowl	Yoghurt	200.0	g	Willys	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
-halloumibowl	Yoghurt	200.0	g	Hemköp	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	17.85	smakords_misstanke 
-halloumibowl	Yoghurt	200.0	g	City Gross	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
+halloumibowl	Yoghurt	200.0	g	Willys	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1000.0	g	1	True	16.5	smakords_misstanke 
+halloumibowl	Yoghurt	200.0	g	Hemköp	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1000.0	g	1	True	17.85	smakords_misstanke 
+halloumibowl	Yoghurt	200.0	g	City Gross	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1000.0	g	1	True	16.5	smakords_misstanke 
 halloumipasta	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 halloumipasta	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 halloumipasta	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+hoisin-flask-ris	Sojasås	0.75	dl	Willys	Sojasås Japansk Vegan	Skafferi > Kryddor & smaksättare > Soja	176.0	g	1	False	31.13	estimat volym_mot_vikt
 kikartscurry-protein	Currypasta	2.0	msk	Hemköp	Red Curry Paste Currypasta	Skafferi > Asien > Övrigt asien	50.0	g	1	True	14.14	smakords_misstanke 
 korvgratang	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 korvgratang	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
@@ -36,6 +40,8 @@ kottfarssas	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & 
 kramig-kycklingpasta	Pasta	350.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 kramig-kycklingpasta	Pasta	350.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 kramig-kycklingpasta	Pasta	350.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+krispig-kyckling-nudelwok	Sojasås	0.5	dl	Willys	Sojasås Japansk Vegan	Skafferi > Kryddor & smaksättare > Soja	176.0	g	1	False	31.13	estimat volym_mot_vikt
+krispig-tofu-ris-bulk	Sojasås	0.75	dl	Willys	Sojasås Japansk Vegan	Skafferi > Kryddor & smaksättare > Soja	176.0	g	1	False	31.13	estimat volym_mot_vikt
 krämig-svampasta	Pasta	400.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 krämig-svampasta	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 krämig-svampasta	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
@@ -45,6 +51,7 @@ kyckling-parmesan-pasta-bulk	Pasta	450.0	g	City Gross	Penne Rigate Pasta	Skaffer
 kyckling-pesto-pasta	Pasta	400.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 kyckling-pesto-pasta	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 kyckling-pesto-pasta	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+kyckling-ris-broccoli	Soja	3.0	msk	Willys	Sojasås Japansk Vegan	Skafferi > Kryddor & smaksättare > Soja	176.0	g	1	False	31.13	estimat volym_mot_vikt
 kyckling-rod-curry	Röd currypasta	40.0	g	Hemköp	Red Curry Paste Currypasta	Skafferi > Asien > Övrigt asien	50.0	g	1	True	14.14	smakords_misstanke 
 kyckling-shawarma-bowl	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	14.9	smakords_misstanke 
 kyckling-shawarma-bowl	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	19.34	smakords_misstanke 
@@ -52,9 +59,11 @@ kyckling-shawarma-bowl	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Matyoghurt 10% 
 kyckling-tikka	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	14.9	smakords_misstanke 
 kyckling-tikka	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	19.34	smakords_misstanke 
 kyckling-tikka	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	16.95	smakords_misstanke 
-kycklingmatvete	Yoghurt	200.0	g	Willys	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
-kycklingmatvete	Yoghurt	200.0	g	Hemköp	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	17.85	smakords_misstanke 
-kycklingmatvete	Yoghurt	200.0	g	City Gross	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
+kycklingmatvete	Yoghurt	200.0	g	Willys	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1000.0	g	1	True	16.5	smakords_misstanke 
+kycklingmatvete	Yoghurt	200.0	g	Hemköp	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1000.0	g	1	True	17.85	smakords_misstanke 
+kycklingmatvete	Yoghurt	200.0	g	City Gross	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1000.0	g	1	True	16.5	smakords_misstanke 
+kycklingspett-jordnot	Sojasås	0.5	dl	Willys	Sojasås Japansk Vegan	Skafferi > Kryddor & smaksättare > Soja	176.0	g	1	False	31.13	estimat volym_mot_vikt
+kycklingwok-nudlar-protein	Soja	4.0	msk	Willys	Sojasås Japansk Vegan	Skafferi > Kryddor & smaksättare > Soja	176.0	g	1	False	31.13	estimat volym_mot_vikt
 kycklingwraps-lunch	Grekisk yoghurt	2.0	dl	Willys	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	14.9	smakords_misstanke 
 kycklingwraps-lunch	Grekisk yoghurt	2.0	dl	Hemköp	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	19.34	smakords_misstanke 
 kycklingwraps-lunch	Grekisk yoghurt	2.0	dl	City Gross	Grekisk Matyoghurt 10% Familjefavoriter	Mejeri, ost & ägg > Matlagning > Matlagningsyoghurt	500.0	g	1	True	16.95	smakords_misstanke 
@@ -64,6 +73,8 @@ lammfarsbiffar-tzatziki	Grekisk yoghurt	3.0	dl	City Gross	Grekisk Matyoghurt 10%
 lax-pasta-bulk	Pasta	450.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 lax-pasta-bulk	Pasta	450.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 lax-pasta-bulk	Pasta	450.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+lax-teriyaki	Sojasås	1.0	dl	Willys	Sojasås Japansk Vegan	Skafferi > Kryddor & smaksättare > Soja	176.0	g	1	False	31.13	estimat volym_mot_vikt
+laxpoke	Sojasås	0.5	dl	Willys	Sojasås Japansk Vegan	Skafferi > Kryddor & smaksättare > Soja	176.0	g	1	False	31.13	estimat volym_mot_vikt
 linsbolognese-proteinrik	Pasta	400.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 linsbolognese-proteinrik	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 linsbolognese-proteinrik	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
@@ -93,12 +104,14 @@ sotpotatissoppa	Röd currypasta	30.0	g	Hemköp	Red Curry Paste Currypasta	Skaffe
 sparrispastacitron	Pasta	250.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 sparrispastacitron	Pasta	250.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 sparrispastacitron	Pasta	250.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 
+strimlad-flaskkarre-ris	Sojasås	0.75	dl	Willys	Sojasås Japansk Vegan	Skafferi > Kryddor & smaksättare > Soja	176.0	g	1	False	31.13	estimat volym_mot_vikt
 tacogratang	Tortillachips	150.0	g	Willys	Tortillachips Ost	Skafferi > Texmex > Bröd, chips & skal	200.0	g	1	True	11.26	smakords_misstanke 
 tacogratang	Tortillachips	150.0	g	Hemköp	Tortillachips Ost	Skafferi > Texmex > Bröd, chips & skal	200.0	g	1	True	14.14	smakords_misstanke 
 tacogratang	Tortillachips	150.0	g	City Gross	Tortillachips Ost	Skafferi > Texmex > Bröd, chips & skal	200.0	g	1	True	12.75	smakords_misstanke 
-tandoorikyckling	Yoghurt	200.0	g	Willys	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
-tandoorikyckling	Yoghurt	200.0	g	Hemköp	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	17.85	smakords_misstanke 
-tandoorikyckling	Yoghurt	200.0	g	City Gross	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1.0	kg	1	True	16.5	smakords_misstanke 
+tandoorikyckling	Yoghurt	200.0	g	Willys	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1000.0	g	1	True	16.5	smakords_misstanke 
+tandoorikyckling	Yoghurt	200.0	g	Hemköp	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1000.0	g	1	True	17.85	smakords_misstanke 
+tandoorikyckling	Yoghurt	200.0	g	City Gross	Naturell Yoghurt Syrlig 3%	Mejeri, ost & ägg > Filmjölk & Yoghurt > Naturell yoghurt	1000.0	g	1	True	16.5	smakords_misstanke 
+tofuwok-jordnot	Sojasås	0.5	dl	Willys	Sojasås Japansk Vegan	Skafferi > Kryddor & smaksättare > Soja	176.0	g	1	False	31.13	estimat volym_mot_vikt
 tonfiskpasta	Pasta	400.0	g	Willys	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	7.9	smakords_misstanke 
 tonfiskpasta	Pasta	400.0	g	Hemköp	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	9.41	smakords_misstanke 
 tonfiskpasta	Pasta	400.0	g	City Gross	Penne Rigate Pasta	Skafferi > Pasta, ris & matgryn > Pasta > Kort pasta	500.0	g	1	True	8.5	smakords_misstanke 

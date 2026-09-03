@@ -358,6 +358,26 @@ class PackageVerification(_DbCase):
         healed = self.db.get_product(product.id)
         self.assertEqual((healed.quantity, healed.unit, healed.size), (560.0, "g", "560g"))
 
+    def test_agreement_keeps_the_providers_unit_family(self):
+        """Sojasås: providern tolkade "176ml" ur texten, Dabas säger 176 g.
+        Eniga - men enheten som skrivs är providerns (ml), annars blir varje
+        msk-recept "volym mot vikt" och raden osäker."""
+        product = self.product(name="Sojasås Japansk Vegan 176ml", size=None, quantity=None, unit=None)
+        verdict = enrichment.package_verdict(product, dabas.normalize_article(article(
+            Nettoinnehall=[{"Mängd": 176, "EnhetKod": "GRM", "Typ": "Nettovikt"}])))
+        self.assertEqual(verdict["package_confidence"], "high")
+        self.assertEqual((verdict["quantity"], verdict["unit"]), (176.0, "ml"))
+
+    def test_cross_family_disagreement_is_unverifiable_not_a_conflict(self):
+        """250 ml sojasås mot Dabas 293 g: densitet, inte fel. Ingen flagga,
+        providerns värde och nivå står - Dabas skapar inga hål."""
+        product = self.product(name="Sojasås 250ml Kikkoman", size="250ml", quantity=250.0, unit="ml")
+        verdict = enrichment.package_verdict(product, dabas.normalize_article(article(
+            Nettoinnehall=[{"Mängd": 293, "EnhetKod": "GRM", "Typ": "Nettovikt"}])))
+        self.assertIsNone(verdict["package_conflict"])
+        self.assertEqual(verdict["package_source"], "PROVIDER_VERIFIED")
+        self.assertEqual((verdict["quantity"], verdict["unit"]), (250.0, "ml"))
+
     def test_rounding_within_tolerance_is_agreement(self):
         product = self.product(size="ca 750 g", quantity=745.0, unit="g")
         verdict = enrichment.package_verdict(product, dabas.normalize_article(article(

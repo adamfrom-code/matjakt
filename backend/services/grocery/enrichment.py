@@ -303,8 +303,11 @@ def package_verdict(product, dabas: DabasProduct) -> dict:
         verdict = {"package_source": SOURCE_DABAS, "package_confidence": "high", "package_conflict": None, **restore}
         if not explicit:
             # Providern hade bara en texttolkning; nu är mängden verifierad -
-            # skriv den som explicit mängd (samma tal, Dabas enhet).
-            verdict.update({"quantity": d.quantity, "unit": d.unit})
+            # skriv den som explicit mängd i PROVIDERNS enhetsfamilj. Dabas
+            # anger vätskor i gram; en sojasås som blev "176 g" gjorde varje
+            # msk-recept osäkert (volym mot vikt). Talet är verifierat,
+            # enheten är kökets.
+            verdict.update({"quantity": p_qty, "unit": p_unit})
         return verdict
 
     # Antal mot vikt/volym är två olika sanningar om samma paket, inte en
@@ -327,8 +330,16 @@ def package_verdict(product, dabas: DabasProduct) -> dict:
         return {"package_source": SOURCE_DABAS, "package_confidence": "high", "package_conflict": None,
                 "quantity": d.quantity, "unit": d.unit, "size": view.size or f"{d.quantity:g} {d.unit}"}
 
-    # ÄKTA KONFLIKT: flaggas, och de upplösta fälten återställs till
-    # providerns - Dabas skriver aldrig över ett explicit providervärde.
+    if p_unit != d.unit:
+        # Olika mängdfamiljer med olika tal (250 ml mot 293 g sojasås, 1 l
+        # iste mot 50 g koncentrat): går inte att verifiera utan densitet -
+        # det är INTE en konflikt, och Dabas får inte skapa ett hål där
+        # providern har fungerande data. Providerns nivå står.
+        return {"package_source": base_source, "package_confidence": base_conf, "package_conflict": None, **restore}
+
+    # ÄKTA KONFLIKT (samma enhet, olika tal): flaggas, och de upplösta
+    # fälten återställs till providerns - Dabas skriver aldrig över ett
+    # explicit providervärde.
     return {"package_source": base_source, "package_confidence": "conflict",
             "package_conflict": f"provider {p_qty:g} {p_unit} / Dabas {d.quantity:g} {d.unit} ({d.kind})", **restore}
 
