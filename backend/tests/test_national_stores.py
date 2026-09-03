@@ -223,13 +223,15 @@ class PricingStoreResolution(_DbTestCase):
             self.assertEqual(db.get_store_by_id(target.store_id).name, "City Gross Gävle")
             self.assertIsNone(target.reason)
             # Med ett publicerat referenspris får Malmö "City Gross referens-
-            # pris" - tydligt märkt, aldrig ett butikspåstående.
+            # pris" - tydligt märkt, aldrig ett butikspåstående: ingen
+            # butiksöverlagring och INGEN Malmö-etikett på Gävles siffror.
             product = db.connection.execute("SELECT id FROM grocery_products LIMIT 1").fetchone()[0]
             db.upsert_reference_price(product_id=product, chain="City Gross", regular_price=14.0,
                                       source="citygross:3209")
             target = grocery_api.resolve_pricing_store(db, "City Gross", "3203")
             self.assertIsNone(target.reason)
-            self.assertEqual(target.label_row["name"], "City Gross Malmö")
+            self.assertIsNone(target.store_id)
+            self.assertIsNone(target.label_row)
         finally:
             db.close()
 
