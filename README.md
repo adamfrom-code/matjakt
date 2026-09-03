@@ -66,6 +66,15 @@ npm run check
 
 Testerna täcker portionsskalning, ingredienssummering, budget, shoppingtotal, persistent state, receptsökning samt backendens prisparsning.
 
+**Tester rör aldrig riktig data.** `backend/services/data_guard.py` stoppar varje
+försök att öppna en databas utanför OS:ets tempkatalog så fort en testkörning
+pågår (`python -m unittest`, pytest, `tests/run.py` eller `MATJAKT_TEST_MODE=1`),
+innan filen eller katalogen skapas. Ett test som glömmer peka om `DB_PATH`
+kraschar alltså med `ProductionDatabaseInTestError` i stället för att skriva i
+`backend/data/*.db`. Nya databastester: `tempfile.TemporaryDirectory` + explicit
+sökväg + `addCleanup`; tester som importerar `api_server` anropar
+`isolated_test_data_dir()` före importen. Regressionstest: `tests/test_db_guard.py`.
+
 ## Arkitektur
 
 ```text
@@ -93,7 +102,7 @@ Domänroten (`https://matjakt.store/`) visar landningssidan (`frontend/index.htm
 
 **Anonym statistik** (landningssidan, `frontend/index.html`):
 - **Sidvisningar** via [Cloudflare Web Analytics](https://www.cloudflare.com/web-analytics/) (gratis, kakfri, ingen fingeravtrycksspårning). Aktivera: skapa ett gratis Cloudflare-konto → Web Analytics → lägg till webbplatsen `matjakt.store` → klistra in det genererade site-token i `<meta name="cf-beacon-token" content="...">` i `frontend/index.html`. Detta token är inte hemligt (det är en publik sididentifierare inbäddad i HTML, samma kategori som ett Google Analytics-ID) och är säkert att committa. Tomt värde = ingen analytics-kod laddas alls.
-- **Egna produkthändelser** (klick på "Testa gratis", "Logga in", "Se hur det fungerar", samt visning av prissektionen) skickas till `POST /api/analytics/event` med enbart `{"event": "<namn>"}` - ingen cookie, inget konto-id, ingen plats. Backend räknar bara upp en daglig siffra per händelsenamn (`ANALYTICS_ALLOWED_EVENTS` i `backend/api_server.py`); allt annat avvisas. Anropet är "fire and forget" (`fetch(...).catch(() => {})`) och kan aldrig hindra en knapp från att fungera, även om anropet blockeras av en annonsblockerare eller CORS ännu inte tillåter den nya domänen.
+- **Egna produkthändelser** (klick på "Logga in" på gate-sidan m.fl. - landningssidan är i dag en inloggnings-/gate-sida utan prissektion) skickas till `POST /api/analytics/event` med enbart `{"event": "<namn>"}` - ingen cookie, inget konto-id, ingen plats. Backend räknar bara upp en daglig siffra per händelsenamn (`ANALYTICS_ALLOWED_EVENTS` i `backend/api_server.py`); allt annat avvisas. Anropet är "fire and forget" (`fetch(...).catch(() => {})`) och kan aldrig hindra en knapp från att fungera, även om anropet blockeras av en annonsblockerare eller CORS ännu inte tillåter den nya domänen.
 - Ingen hemlig nyckel krävs för själva händelseräknaren - den är öppen och validerar bara mot en fast lista av tillåtna händelsenamn.
 
 ## Kända begränsningar
@@ -105,4 +114,4 @@ Domänroten (`https://matjakt.store/`) visar landningssidan (`frontend/index.htm
 - Postnummer geokodas via `GET /api/geocode` (gratis, nyckelfritt uppslag mot zippopotam.us) och `/api/stores` hittar riktiga butiker var som helst i Sverige — första uppslaget för ett nytt postnummer kan ta upp till någon minut (Coop-sökningen driver en riktig webbläsarsession), därefter är det cachat 24h.
 - Android-appen (Capacitor, `webDir: frontend/app`) laddas inte same-origin med backend som webbfrontenden gör. Sätt `<meta name="matjakt-api-url">` i `frontend/app/index.html` till en driftsatt backend-URL och kör `npx cap sync android` innan en Android-build används mot något annat än en lokal utvecklingsmiljö.
 - Recepten har riktiga näringsvärden beräknade från Livsmedelsverkets öppna näringsdatabas (`backend/scripts/compute_recipe_nutrition.py`), men bara för de kvantifierade ingredienserna i receptet. Tillagningsfett (olja/smör under "Hemma") är inte kvantifierat och räknas inte in, så särskilt fettvärdet kan vara något lägre än verkligheten.
-- Premium är kontobaserat (riktig inloggning, se `backend/services/accounts/`) men inte betalningsbaserat ännu — Premium låses upp med en kod (`MATJAKT_PREMIUM_CODE`) tills en riktig betallösning kopplas på.
+- Premium är kontobaserat (riktig inloggning, se `backend/services/accounts/`) och säljs via Stripe: 59 kr/mån eller 399 kr/år, ingen provperiod (`STRIPE_*` i `.env.example`). `MATJAKT_PREMIUM_CODE` är enbart en komp-väg för att låsa upp Premium utan betalning.

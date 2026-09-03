@@ -547,7 +547,17 @@ function distanceKm(lat1, lon1, lat2, lon2) {
 // and renders locks from it. Until the answer arrives we assume FREE - a
 // paywall that flashes open is annoying, Premium data leaking to Free is a
 // broken business model.
-const FREE_ENTITLEMENTS = { plan: "free", isPremium: false, maxDinners: 4, features: {}, pricing: null };
+// Speglar Free-svaret i backend/services/accounts/features.py. Om
+// /api/entitlements inte kan nås gäller detta - inte "allt öppet".
+const FREE_FEATURES = {
+  standard_week: true, family_week: false, budget_week: false, training_week: false,
+  bulk_week: false, quick_week: false, vegetarian_week: false, balanced_week: false,
+  seven_dinners: false, cheapest_store_price: true, cheapest_store_basket: true,
+  all_store_prices: false, all_store_baskets: false, store_comparison: false,
+  recipe_search: true, advanced_nutrition: false, meal_prep: false,
+  basic_pantry: true, full_pantry: false, favorites: true,
+};
+const FREE_ENTITLEMENTS = { plan: "free", isPremium: false, maxDinners: 4, features: FREE_FEATURES, pricing: null };
 let entitlements = FREE_ENTITLEMENTS;
 // Starts as "free" (the boot assumption), so a premium user's first fetch
 // counts as a plan CHANGE and clears any persisted free-masked snapshot.
@@ -2410,6 +2420,14 @@ function renderBasket() {
   const sourceResult = state.dbChainTotals[chosenStore()]
     || state.dbChainTotals[selectedBranch()?.kedja]
     || Object.values(state.dbChainTotals)[0];
+  // Dabas villkor: källan ska anges. Diskret, bara här och bara när
+  // minst en rad faktiskt bygger på Dabas-verifierad förpackningsdata.
+  const dabasNote = $("dabasNote");
+  if (dabasNote) {
+    const fromDabas = shoppingItems.some(item => databaseItemFor(item.namn)?.packageSource === "DABAS_VERIFIED");
+    dabasNote.hidden = !fromDabas;
+    dabasNote.textContent = fromDabas ? "Produktinformation från Dabas" : "";
+  }
   const sourceNote = $("priceSourceNote");
   if (sourceNote) {
     if (sourceResult?.updatedAt) {
@@ -2711,9 +2729,29 @@ function renderHemRecipePreview() {
 }
 function render() { renderGreeting(); renderRecipes(); renderHemRecipePreview(); renderBasket(); updateSummary(); renderStats(); renderCampaignSection(); }
 function step(key, delta, min, max) { state[key] = Math.min(max, Math.max(min, state[key] + delta)); $(`${key === "personer" ? "people" : "meals"}Value`).textContent = state[key]; saveState(); render(); }
+const DISLIKE_SUGGESTIONS = ["Lök", "Svamp", "Fisk", "Skaldjur", "Nötter", "Inälvsmat", "Stark mat", "Kokosmjölk"];
+function renderDislikeChips() {
+  // "Något ni hellre slipper" bodde i onboardingen; sedan den kortades
+  // till fyra steg är detta den enda platsen där state.ogillar kan sättas.
+  const chips = $("dislikeChips");
+  if (!chips) return;
+  chips.innerHTML = DISLIKE_SUGGESTIONS.map(term => `<label><input type="checkbox" value="${term}" ${state.ogillar.has(term) ? "checked" : ""}> ${term}</label>`).join("");
+  const custom = [...state.ogillar].filter(term => !DISLIKE_SUGGESTIONS.includes(term));
+  $("dislikeTags").innerHTML = custom.map(term => `<span class="ob-tag">${escapeHtml(term)}<button type="button" data-remove-dislike="${escapeHtml(term)}" aria-label="Ta bort ${escapeHtml(term)}">×</button></span>`).join("");
+  chips.querySelectorAll("input").forEach(box => box.addEventListener("change", () => { box.checked ? state.ogillar.add(box.value) : state.ogillar.delete(box.value); onDislikesChanged(); }));
+  document.querySelectorAll("[data-remove-dislike]").forEach(button => button.addEventListener("click", () => { state.ogillar.delete(button.dataset.removeDislike); onDislikesChanged(); }));
+}
+function onDislikesChanged() { saveState(); renderDislikeChips(); refreshAfterSettingsChange(); }
+$("dislikeCustom")?.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  const value = e.target.value.trim();
+  if (value) { state.ogillar.add(value); e.target.value = ""; onDislikesChanged(); }
+});
 function syncSettingsInputs() {
   $("budgetInput").value = state.budget; $("peopleValue").textContent = state.personer; $("mealsValue").textContent = state.middagar; $("storeInput").value = state.butik; $("postcodeInput").value = state.postnummer;
   $("kosttypInput").value = state.kost.kosttyp;
+  renderDislikeChips();
   document.querySelectorAll("#allergenChips input").forEach(box => { box.checked = state.kost.avoidAllergens.has(box.value);   const timeFilter = $("timeFilter");
   if (timeFilter) timeFilter.value = String(state.maxTid || "");
 });
@@ -3253,11 +3291,10 @@ function renderStats() {
 $("openStatsBtn").addEventListener("click", () => { renderStats(); setView("stats"); });
 $("homeShoppingStat").addEventListener("click", () => setView("basket"));
 
-const DISLIKE_SUGGESTIONS = ["Lök", "Svamp", "Fisk", "Skaldjur", "Nötter", "Inälvsmat", "Stark mat", "Kokosmjölk"];
 // Fyra steg, inte sju. En förstagångare ska svara på det Matjakt inte kan
 // gissa - vilka ni är, vad ni vill lägga, vad ni inte äter, var ni handlar -
-// och sedan SE sin vecka. Tidsfiltret bor i Recept-fliken och kalorier/makron
-// är en Premium-inställning i "Justera veckan"; mitt i onboardingen var de
+// och sedan SE sin vecka. Tidsfiltret bor i Recept-fliken, "något ni hellre
+// slipper" och kalorier/makron i "Justera veckan"; mitt i onboardingen var de
 // bara friktion (och ett Premium-formulär för någon som inte ens sett appen).
 const ONBOARDING_STEPS = [
   { title: "Vilka är ni hemma?", render: renderObHushall },
@@ -3274,18 +3311,6 @@ function renderObBudget() {
 }
 function renderObKost() {
   return `<label for="obKosttyp">Kosttyp</label><select id="obKosttyp"><option value="" ${!state.kost.kosttyp ? "selected" : ""}>Vanlig, allt</option><option value="vegetariskt" ${state.kost.kosttyp === "vegetariskt" ? "selected" : ""}>Vegetariskt</option><option value="veganskt" ${state.kost.kosttyp === "veganskt" ? "selected" : ""}>Veganskt</option></select><label>Allergier att undvika</label><div class="protein-source-chips" id="obAllergenChips">${ALLERGENS.map(a => `<label><input type="checkbox" value="${a}" ${state.kost.avoidAllergens.has(a) ? "checked" : ""}> ${a[0].toUpperCase() + a.slice(1)}</label>`).join("")}</div>`;
-}
-function renderObOgillar() {
-  const chips = DISLIKE_SUGGESTIONS.map(term => `<label><input type="checkbox" value="${term}" ${state.ogillar.has(term) ? "checked" : ""}> ${term}</label>`).join("");
-  const tags = state.ogillar.size ? `<div class="ob-tag-list">${[...state.ogillar].filter(term => !DISLIKE_SUGGESTIONS.includes(term)).map(term => `<span class="ob-tag">${escapeHtml(term)}<button type="button" data-ob-remove-dislike="${escapeHtml(term)}" aria-label="Ta bort ${escapeHtml(term)}">×</button></span>`).join("")}</div>` : "";
-  return `<label>Vanliga saker att slippa</label><div class="protein-source-chips" id="obDislikeChips">${chips}</div><label for="obDislikeCustom">Något annat? Skriv och tryck Enter</label><input id="obDislikeCustom" type="text" placeholder="t.ex. oliver">${tags}`;
-}
-function renderObTid() {
-  return `<label for="obMaxTid">Hur lång tid vill ni lägga på matlagning?</label><select id="obMaxTid"><option value="0" ${!state.maxTid ? "selected" : ""}>Ingen gräns</option><option value="20" ${state.maxTid === 20 ? "selected" : ""}>Max 20 min</option><option value="30" ${state.maxTid === 30 ? "selected" : ""}>Max 30 min</option><option value="45" ${state.maxTid === 45 ? "selected" : ""}>Max 45 min</option></select>`;
-}
-function renderObNaring() {
-  const premium = hasPremium();
-  return `<p class="ob-teaser">${premium ? `Du har redan Premium - ställ in exakta mål för kalorier, protein, kolhydrater och fett under "Justera veckan" på Hem.` : `Med Premium kan Matjakt styra veckan efter kalorier, protein, kolhydrater, fett och proteinkälla per måltid - inte bara pris. Du kan sätta det senare under "Justera veckan".`}</p>${premium ? "" : `<div class="ob-premium-badge">59 kr/mån · Premium</div>`}`;
 }
 function renderObButik() {
   return `<label for="obPostcode">Postnummer</label><div class="location-row"><input id="obPostcode" value="${escapeHtml(state.postnummer)}" inputmode="numeric" maxlength="5"><button type="button" id="obLocateBtn">Hitta mig</button></div><p class="ob-error" id="obPostcodeError"></p><label for="obStore">Favoritbutik</label><select id="obStore"><option value="auto" ${state.butik === "auto" ? "selected" : ""}>Välj åt mig</option><option value="alla" ${state.butik === "alla" ? "selected" : ""}>Alla butiker</option><option value="ICA" ${state.butik === "ICA" ? "selected" : ""}>ICA</option><option value="Willys" ${state.butik === "Willys" ? "selected" : ""}>Willys</option><option value="Hemköp" ${state.butik === "Hemköp" ? "selected" : ""}>Hemköp</option><option value="City Gross" ${state.butik === "City Gross" ? "selected" : ""}>City Gross</option></select>`;
@@ -3304,11 +3329,6 @@ function wireOnboardingStep() {
   }));
   $("obKosttyp")?.addEventListener("change", e => { state.kost.kosttyp = e.target.value; saveState(); });
   document.querySelectorAll("#obAllergenChips input").forEach(box => box.addEventListener("change", () => { state.kost.avoidAllergens = new Set([...document.querySelectorAll("#obAllergenChips input:checked")].map(b => b.value)); saveState(); }));
-  document.querySelectorAll("#obDislikeChips input").forEach(box => box.addEventListener("change", () => { box.checked ? state.ogillar.add(box.value) : state.ogillar.delete(box.value); saveState(); renderOnboardingStep(); }));
-  const customDislike = $("obDislikeCustom");
-  customDislike?.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); const value = customDislike.value.trim(); if (value) { state.ogillar.add(value); saveState(); renderOnboardingStep(); } } });
-  document.querySelectorAll("[data-ob-remove-dislike]").forEach(button => button.addEventListener("click", () => { state.ogillar.delete(button.dataset.obRemoveDislike); saveState(); renderOnboardingStep(); }));
-  $("obMaxTid")?.addEventListener("change", e => { state.maxTid = Number(e.target.value); saveState(); });
   $("obPostcode")?.addEventListener("input", e => {
     const previous = state.postnummer;
     state.postnummer = e.target.value.replace(/\D/g, "").slice(0, 5);
@@ -3355,6 +3375,13 @@ function showAccountForm(name) {
 document.querySelectorAll("[data-account-tab]").forEach(tab => tab.addEventListener("click", () => showAccountForm(tab.dataset.accountTab)));
 $("forgotPasswordLink").addEventListener("click", () => showAccountForm("forgot"));
 $("backToLoginLink").addEventListener("click", () => showAccountForm("login"));
+// Servern skickar en maskinläsbar kod när mejl inte kan gå iväg - texten
+// här lovar aldrig ett mejl som inte skickats.
+function mailErrorText(error) {
+  if (error.code === "MAIL_NOT_CONFIGURED") return "E-postutskick är inte aktiverat på servern ännu. Kontakta support så hjälper vi dig.";
+  if (error.code === "MAIL_SEND_FAILED") return "Mejlservern svarar inte just nu. Försök igen om en stund.";
+  return error.message;
+}
 $("forgotPasswordForm").addEventListener("submit", async event => {
   event.preventDefault();
   $("forgotError").textContent = ""; $("forgotSuccess").hidden = true;
@@ -3362,7 +3389,7 @@ $("forgotPasswordForm").addEventListener("submit", async event => {
     await requestPasswordReset($("forgotEmail").value);
     $("forgotSuccess").hidden = false;
     event.target.reset();
-  } catch (error) { $("forgotError").textContent = error.message; }
+  } catch (error) { $("forgotError").textContent = mailErrorText(error); }
 });
 let pendingResetToken = new URLSearchParams(location.search).get("reset");
 $("resetPasswordForm").addEventListener("submit", async event => {
@@ -3381,8 +3408,8 @@ $("resendVerificationBtn").addEventListener("click", async () => {
   $("verifyError").textContent = "";
   try {
     await resendVerification(state.authToken);
-    $("verifyError").textContent = "Skickat! Kolla din inkorg.";
-  } catch (error) { $("verifyError").textContent = error.message; }
+    $("verifyError").textContent = "Skickat! Kolla din inkorg (och skräpposten).";
+  } catch (error) { $("verifyError").textContent = mailErrorText(error); }
 });
 $("deleteAccountBtn").addEventListener("click", async () => {
   $("deleteError").textContent = "";
@@ -3494,10 +3521,18 @@ $("accountRegisterForm").addEventListener("submit", async event => {
   event.preventDefault();
   $("registerError").textContent = "";
   try {
-    const { token, user } = await register($("registerEmail").value, $("registerPassword").value);
+    const { token, user, verificationMail } = await register($("registerEmail").value, $("registerPassword").value);
     state.authToken = token; state.user = user; storeToken(token);
     await pullAccountState();
-    event.target.reset(); renderAccount(); closeAccountModal();
+    event.target.reset(); renderAccount();
+    if (verificationMail && verificationMail !== "sent") {
+      // Kontot finns, men mejlet gick inte iväg - säg det, stäng inte tyst.
+      $("verifyError").textContent = verificationMail === "failed"
+        ? "Kontot är skapat, men verifieringsmejlet kunde inte skickas. Prova \"Skicka verifieringsmejl igen\" om en stund."
+        : "Kontot är skapat. E-postverifiering är inte aktiverad på servern ännu - du kan använda Matjakt som vanligt.";
+    } else {
+      closeAccountModal();
+    }
   } catch (error) { $("registerError").textContent = error.message; }
 });
 $("accountRedeemForm").addEventListener("submit", async event => {
@@ -3741,7 +3776,11 @@ if (pendingVerifyToken) {
     history.replaceState(null, "", location.pathname);
     renderAccount();
     openAccountModal();
-  }).catch(() => { history.replaceState(null, "", location.pathname); });
+  }).catch(() => {
+    history.replaceState(null, "", location.pathname);
+    openAccountModal();
+    (state.user ? $("verifyError") : $("loginError")).textContent = "Verifieringslänken är ogiltig eller redan använd. Begär en ny under Ditt konto.";
+  });
 }
 // Fill the recipe bank, then draw. Everything that reads RECEPT runs after
 // this resolves; an empty bank (network gone, file missing) leaves the app

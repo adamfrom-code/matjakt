@@ -9,6 +9,7 @@ and verify webhook signatures.
 import hashlib
 import hmac
 import json
+import socket
 import time
 import urllib.error
 import urllib.parse
@@ -39,6 +40,12 @@ def _request(secret_key, method, path, data=None):
         except Exception:
             detail = str(error)
         raise StripeError(detail)
+    except (urllib.error.URLError, socket.timeout, TimeoutError, OSError) as error:
+        # Nätfel/timeout är inte en 500 i vår server - det är "Stripe svarar
+        # inte just nu", och anroparen svarar 503/400 med det beskedet.
+        raise StripeError(f"Stripe svarar inte just nu ({error.__class__.__name__})")
+    except ValueError as error:
+        raise StripeError(f"Oväntat svar från Stripe: {error}")
 
 
 def create_customer(secret_key, email, user_id):
@@ -64,7 +71,42 @@ def create_checkout_session(secret_key, customer_id, price_id, success_url, canc
 def cancel_subscription(secret_key, subscription_id):
     if not subscription_id:
         return
-    _request(secret_key, "DELETE", f"/subscriptions/{subscription_id}")
+    try:
+        _request(secret_key, "DELETE", f"/subscriptions/{subscription_id}")
+    except StripeError as error:
+        # Redan uppsagd eller borta hos Stripe = målet är uppnått. Att
+        # kasta här skulle t.ex. stoppa en kontoradering i onödan.
+        text = str(error).lower()
+        if "no such subscription" in text or "canceled subscription" in text or "already been canceled" in text:
+            return
+        raise
+
+
+def delete_customer(secret_key, customer_id):
+    """GDPR: kunden hos Stripe följer med när kontot raderas. Best effort -
+    anroparen loggar men blockerar inte raderingen på detta."""
+    if not customer_id:
+        return
+    try:
+        _request(secret_key, "DELETE", f"/customers/{customer_id}")
+    except StripeError as error:
+        if "no such customer" in str(error).lower():
+            return
+        raise
+
+
+def subscription_period_end(subscription: dict):
+    """Unix-tid för periodens slut. Stripe flyttade fältet från
+    prenumerationen till dess items i API-version 2025-03-31.basil - läs
+    båda så period_end inte tyst blir null efter en versionsuppgradering."""
+    value = subscription.get("current_period_end")
+    if value:
+        return value
+    items = ((subscription.get("items") or {}).get("data")) or []
+    for item in items:
+        if isinstance(item, dict) and item.get("current_period_end"):
+            return item["current_period_end"]
+    return None
 
 
 def create_portal_session(secret_key, customer_id, return_url):
@@ -86,15 +128,25 @@ def verify_webhook_signature(payload_bytes, sig_header, webhook_secret, toleranc
         raise StripeError("Stripe webhook är inte konfigurerat på servern ännu")
     if not sig_header:
         raise StripeError("Saknar Stripe-signatur")
-    parts = dict(item.split("=", 1) for item in sig_header.split(",") if "=" in item)
-    timestamp, signature = parts.get("t"), parts.get("v1")
-    if not timestamp or not signature:
+    # Flera v1-signaturer förekommer under hemlighetsrotation - en räcker.
+    timestamp, signatures = None, []
+    for item in sig_header.split(","):
+        key, _, value = item.strip().partition("=")
+        if key == "t":
+            timestamp = value
+        elif key == "v1" and value:
+            signatures.append(value)
+    if not timestamp or not signatures:
         raise StripeError("Ogiltig Stripe-signatur")
-    if abs(time.time() - int(timestamp)) > tolerance_seconds:
+    try:
+        timestamp_value = int(timestamp)
+    except ValueError:
+        raise StripeError("Ogiltig Stripe-signatur")
+    if abs(time.time() - timestamp_value) > tolerance_seconds:
         raise StripeError("Stripe-signaturen är för gammal")
     signed_payload = f"{timestamp}.{payload_bytes.decode('utf-8')}"
     expected = hmac.new(webhook_secret.encode("utf-8"), signed_payload.encode("utf-8"), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(expected, signature):
+    if not any(hmac.compare_digest(expected, signature) for signature in signatures):
         raise StripeError("Stripe-signaturen matchar inte")
 
 

@@ -830,6 +830,7 @@ def format_chain_result(result: dict, store_row=None, comparison: dict | None = 
             "imageUrl": match.get("imageUrl"),
             "category": match.get("category"),
             "packageSize": match.get("packageSize"),
+            "packageSource": match.get("packageSource"),
             "packageAmount": match.get("packageAmount"),
             "packageUnit": match.get("packageUnit"),
             "packages": match.get("packages"),

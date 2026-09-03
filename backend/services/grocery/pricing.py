@@ -1470,6 +1470,10 @@ class RecipePricingEngine:
                     "category": product.category,
                     "imageUrl": product.image_url,
                     "packageSize": product.size,
+                    # Varifrån förpackningsuppgiften kommer (DABAS_VERIFIED /
+                    # PROVIDER_VERIFIED / NORMALIZED) - UI:t anger Dabas som
+                    # källa när den faktiskt använts, aldrig annars.
+                    "packageSource": product.package_source,
                     "packageAmount": package_amount,
                     "packageUnit": package_unit,
                     # Lösviktsmodellen: kostnaden är kr/kg × behov, inte

@@ -44,8 +44,8 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
-from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature
-from services.email import MailError, is_configured as mail_is_configured, send_email
+from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end
+from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.grocery import api as grocery_api  # noqa: E402
 from services.recipes import api as recipes_api
@@ -370,6 +370,11 @@ FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 # machine that just made the app slow for a while; pointed at a deployed data
 # directory it would throw away real cached state on every CI run.
 DATA_DIR = Path(os.environ.get("MATJAKT_DATA_DIR") or (Path(__file__).resolve().parent / "data"))
+# En testkörning som importerar api_server utan att först ha pekat
+# MATJAKT_DATA_DIR på en tempkatalog stoppas här, innan katalogen skapas
+# och innan matjakt.db/prices.db öppnas nedan - se services/data_guard.py.
+from services.data_guard import guard_database_path  # noqa: E402
+guard_database_path(DATA_DIR, purpose="datakatalogen")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 def _free_chain_for(week_result: dict) -> str | None:
@@ -1499,23 +1504,35 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(400, {"error": "Ogiltig JSON"})
             return
         event_type = event.get("type", "")
-        data = event.get("data", {}).get("object", {})
+        event_id = event.get("id")
+        event_created = event.get("created")
+        # Idempotens: Stripe levererar samma event igen vid timeout/retry.
+        # Ett redan sett event-id bekräftas (200) men appliceras inte igen.
+        if event_id and not ACCOUNT_STORE.record_stripe_event(event_id, event_created):
+            self.send_json(200, {"received": True, "duplicate": True})
+            return
+        data = (event.get("data") or {}).get("object") or {}
         if event_type in ("customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"):
             customer_id = data.get("customer")
-            period_end = data.get("current_period_end")
+            period_end = subscription_period_end(data)
             period_end_iso = datetime.fromtimestamp(period_end, tz=timezone.utc).isoformat() if period_end else None
-            items = data.get("items", {}).get("data", [])
-            price_id = items[0]["price"]["id"] if items else None
+            items = ((data.get("items") or {}).get("data")) or []
+            price_id = ((items[0] or {}).get("price") or {}).get("id") if items else None
             plan = "yearly" if price_id == STRIPE_PRICE_YEARLY else "monthly" if price_id == STRIPE_PRICE_MONTHLY else price_id
-            ACCOUNT_STORE.apply_subscription_event(
+            applied = ACCOUNT_STORE.apply_subscription_event(
                 customer_id, data.get("id"), data.get("status"), period_end_iso,
-                bool(data.get("cancel_at_period_end")), plan,
+                bool(data.get("cancel_at_period_end")), plan, event_created=event_created,
             )
+            if not applied:
+                logger.info("Stripe event %s (%s) not applied for %s: unknown customer or older than last applied event",
+                            event_id, event_type, customer_id)
         self.send_json(200, {"received": True})
 
     # Vägar som fungerar utan gate-token. Login förstås; health för Renders
     # egen övervakning; analytics-beacon (räknar bara namngivna events).
-    GATE_EXEMPT = ("/api/gate/", "/api/health", "/api/analytics/event")
+    # Stripes webhook har ingen gate-token - den bär sin egen HMAC-signatur.
+    # Utan undantaget svarar utvecklingslåset 401 och Premium aktiveras aldrig.
+    GATE_EXEMPT = ("/api/gate/", "/api/health", "/api/analytics/event", "/api/billing/webhook")
 
     def _gate_blocked(self, parsed) -> bool:
         """True när utvecklingslåset stoppar denna begäran (svaret är då
@@ -1552,7 +1569,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             except Exception:
                 logger.exception("Kunde inte läsa plattformsstatus")
                 platform = None
-            self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG), "recipeProviders": sorted(RECIPE_SERVICE.providers),
+            self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG), "mail": mail_is_configured(MAIL_CONFIG), "recipeProviders": sorted(RECIPE_SERVICE.providers),
                                  "recipeCount": recipes_api.stats().get("total", 0),
                                  "productCount": grocery_api.database_summary().get("totalProducts", 0),
                                  "platform": platform}, cache_seconds=60)
@@ -1896,15 +1913,23 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 return
             try:
                 token, user = ACCOUNT_STORE.register(payload.get("email"), payload.get("password"))
+                # Ärligt om verifieringsmejlet: "sent", "not_configured" eller
+                # "failed". UI:t får aldrig påstå att ett mejl gått iväg när
+                # inget gjorde det.
+                mail_status = "sent"
                 try:
                     verify_token = ACCOUNT_STORE.create_verification_token_for_email(user["email"])
                     send_email(
                         MAIL_CONFIG, user["email"], "Verifiera din e-postadress - Matjakt",
                         f"Välkommen till Matjakt!\n\nKlicka här för att verifiera din e-postadress:\n{APP_URL}/?verify={verify_token}\n\nOm du inte skapade det här kontot kan du ignorera mejlet.",
                     )
+                except MailNotConfigured:
+                    mail_status = "not_configured"
+                    logger.info("Verification email skipped for %s: mail not configured", user["email"])
                 except (AccountError, MailError):
-                    logger.info("Could not send verification email for %s (email not configured or send failed)", user["email"])
-                self.send_json(201, {"token": token, "user": user})
+                    mail_status = "failed"
+                    logger.exception("Verification email failed for %s", user["email"])
+                self.send_json(201, {"token": token, "user": user, "verificationMail": mail_status})
             except AccountError as error:
                 self.send_json(400, {"error": str(error)})
             return
@@ -1957,14 +1982,20 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(410, {"error": "Provperioden finns inte längre - Matjakt är gratis att använda, och Premium kostar 59 kr/mån eller 399 kr/år"})
             return
         if parsed.path == "/api/auth/request-password-reset":
+            # Serverfakta FÖRE kontouppslaget och identiskt för varje adress -
+            # "inte konfigurerat" respektive "mejlservern svarar inte" läcker
+            # inga konton. Tidigare svarade vi "ok" och användaren väntade på
+            # ett mejl som aldrig hade en chans att skickas.
+            if not mail_is_configured(MAIL_CONFIG):
+                self.send_json(503, {"error": "Mejl är inte konfigurerat på servern ännu. Kontakta support på adamfrom@icloud.com.",
+                                     "code": "MAIL_NOT_CONFIGURED"})
+                return
             if self._rate_limit("password_reset", str(payload.get("email") or "").strip().lower()):
                 return
-            if not mail_is_configured(MAIL_CONFIG):
-                # Sägs INNAN kontouppslaget och identiskt för varje adress -
-                # ett serverfaktum läcker inga konton. Tidigare svarade vi
-                # "ok" och användaren väntade på ett mejl som aldrig hade
-                # en chans att skickas.
-                self.send_json(503, {"error": "Mejl är inte konfigurerat på servern ännu. Kontakta support på adamfrom@icloud.com."})
+            try:
+                check_mail_transport(MAIL_CONFIG)
+            except MailError as error:
+                self.send_json(503, {"error": str(error), "code": error.code})
                 return
             reset_token = ACCOUNT_STORE.request_password_reset(payload.get("email"))
             if reset_token:
@@ -2009,16 +2040,27 @@ class ApiHandler(SimpleHTTPRequestHandler):
             except AccountError as error:
                 self.send_json(400, {"error": str(error)})
             except MailError as error:
-                self.send_json(503, {"error": str(error)})
+                self.send_json(503, {"error": str(error), "code": error.code})
             return
         if parsed.path == "/api/auth/delete-account":
             try:
-                stripe_customer_id, stripe_subscription_id = ACCOUNT_STORE.delete_account(self._bearer_token())
-                if stripe_subscription_id and STRIPE_SECRET_KEY:
+                # Prenumerationen avslutas FÖRE kontot raderas. Tvärtom kunde
+                # Stripe fortsätta debitera ett konto som inte längre finns.
+                customer_id, subscription_id = ACCOUNT_STORE.stripe_ids_for_token(self._bearer_token())
+                if subscription_id and STRIPE_SECRET_KEY:
                     try:
-                        cancel_subscription(STRIPE_SECRET_KEY, stripe_subscription_id)
+                        cancel_subscription(STRIPE_SECRET_KEY, subscription_id)
                     except StripeError:
-                        logger.exception("Failed to cancel Stripe subscription %s during account deletion", stripe_subscription_id)
+                        logger.exception("Could not cancel Stripe subscription %s before account deletion", subscription_id)
+                        self.send_json(503, {"error": "Prenumerationen kunde inte avslutas hos Stripe just nu, så kontot är kvar. Försök igen om en stund.",
+                                             "code": "STRIPE_UNAVAILABLE"})
+                        return
+                ACCOUNT_STORE.delete_account(self._bearer_token())
+                if customer_id and STRIPE_SECRET_KEY:
+                    try:
+                        delete_customer(STRIPE_SECRET_KEY, customer_id)
+                    except StripeError:
+                        logger.exception("Could not delete Stripe customer %s after account deletion", customer_id)
                 self.send_json(200, {"ok": True})
             except AccountError as error:
                 self.send_json(400, {"error": str(error)})
@@ -2039,6 +2081,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 if not price_id:
                     raise StripeError("Stripe-priser är inte konfigurerade på servern ännu")
                 user_id, email, customer_id = ACCOUNT_STORE.billing_identity_for_token(self._bearer_token())
+                current = ACCOUNT_STORE.user_for_token(self._bearer_token()) or {}
+                if current.get("subscriptionStatus") in ("active", "trialing", "past_due"):
+                    # En andra Checkout ger två prenumerationer. Planbyte
+                    # och uppsägning sker i Stripes portal.
+                    self.send_json(409, {"error": "Du har redan en prenumeration. Byt plan eller säg upp under Hantera prenumeration.",
+                                         "code": "ALREADY_SUBSCRIBED"})
+                    return
                 if not customer_id:
                     customer_id = create_customer(STRIPE_SECRET_KEY, email, user_id)
                     ACCOUNT_STORE.set_stripe_customer_id(user_id, customer_id)

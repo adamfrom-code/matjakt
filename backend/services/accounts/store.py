@@ -22,6 +22,8 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from ..data_guard import guard_database_path
+
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 SESSION_TTL_DAYS = 30
 PBKDF2_ITERATIONS = 200_000
@@ -54,6 +56,8 @@ def _session_key(token: str) -> str:
 
 class AccountStore:
     def __init__(self, db_path: Path):
+        # Testläge får aldrig nå en riktig databas - se services/data_guard.py.
+        guard_database_path(db_path, purpose="kontodatabasen")
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = sqlite3.connect(db_path, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
@@ -78,6 +82,10 @@ class AccountStore:
             );
             """
         )
+        # Idempotens för Stripe-webhooks: samma event-id appliceras en gång.
+        self._connection.execute(
+            "CREATE TABLE IF NOT EXISTS stripe_events (event_id TEXT PRIMARY KEY, created INTEGER, received_at TEXT NOT NULL)"
+        )
         # Added after the initial release - ALTER TABLE guarded with try/except since
         # sqlite3 has no "ADD COLUMN IF NOT EXISTS" and this file has no migration runner.
         for column, definition in (
@@ -88,6 +96,8 @@ class AccountStore:
             ("synced_state", "TEXT"),
             ("email_verified", "INTEGER NOT NULL DEFAULT 0"), ("verification_token", "TEXT"),
             ("reset_token", "TEXT"), ("reset_token_expires_at", "TEXT"),
+            # Ordning på Stripe-händelser: bara nyare än senast applicerade.
+            ("stripe_event_created", "INTEGER"),
         ):
             try:
                 self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
@@ -292,13 +302,46 @@ class AccountStore:
         self._connection.execute("UPDATE users SET synced_state = ? WHERE id = ?", (state_json, row["id"]))
         self._connection.commit()
 
-    def apply_subscription_event(self, customer_id, subscription_id, status, period_end_iso, cancel_at_period_end, plan):
-        self._connection.execute(
-            """UPDATE users SET stripe_subscription_id = ?, subscription_status = ?, subscription_period_end = ?,
-               subscription_cancel_at_period_end = ?, subscription_plan = ? WHERE stripe_customer_id = ?""",
-            (subscription_id, status, period_end_iso, int(cancel_at_period_end), plan, customer_id),
+    def apply_subscription_event(self, customer_id, subscription_id, status, period_end_iso,
+                                 cancel_at_period_end, plan, event_created=None) -> bool:
+        """Skriver prenumerationsläget. Med `event_created` (Stripes
+        event.created) appliceras bara händelser som är minst lika nya som
+        den senast applicerade - Stripe garanterar ingen leveransordning,
+        och en försenad "active" får inte skriva över en färskare
+        "canceled". Returnerar True när en rad uppdaterades."""
+        if event_created is None:
+            cursor = self._connection.execute(
+                """UPDATE users SET stripe_subscription_id = ?, subscription_status = ?, subscription_period_end = ?,
+                   subscription_cancel_at_period_end = ?, subscription_plan = ? WHERE stripe_customer_id = ?""",
+                (subscription_id, status, period_end_iso, int(cancel_at_period_end), plan, customer_id),
+            )
+        else:
+            created = int(event_created)
+            cursor = self._connection.execute(
+                """UPDATE users SET stripe_subscription_id = ?, subscription_status = ?, subscription_period_end = ?,
+                   subscription_cancel_at_period_end = ?, subscription_plan = ?, stripe_event_created = ?
+                   WHERE stripe_customer_id = ? AND (stripe_event_created IS NULL OR stripe_event_created <= ?)""",
+                (subscription_id, status, period_end_iso, int(cancel_at_period_end), plan, created, customer_id, created),
+            )
+        self._connection.commit()
+        return cursor.rowcount > 0
+
+    def record_stripe_event(self, event_id, created) -> bool:
+        """True första gången ett event-id ses, False vid omleverans."""
+        cursor = self._connection.execute(
+            "INSERT OR IGNORE INTO stripe_events (event_id, created, received_at) VALUES (?, ?, ?)",
+            (event_id, int(created) if created else None, datetime.now(timezone.utc).isoformat()),
         )
         self._connection.commit()
+        return cursor.rowcount > 0
+
+    def stripe_ids_for_token(self, token):
+        """(stripe_customer_id, stripe_subscription_id) för inloggad användare -
+        läses FÖRE en kontoradering så prenumerationen kan avslutas först."""
+        row = self._session_user_row(token)
+        if not row:
+            raise AccountError("Du måste vara inloggad")
+        return row["stripe_customer_id"], row["stripe_subscription_id"]
 
     def _create_verification_token(self, user_id) -> str:
         token = secrets.token_urlsafe(24)

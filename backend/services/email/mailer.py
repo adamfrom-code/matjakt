@@ -11,7 +11,27 @@ from email.mime.text import MIMEText
 
 
 class MailError(Exception):
-    """Raised for both "not configured" and real SMTP delivery errors."""
+    """Base for both "not configured" and real SMTP delivery errors. `code`
+    är maskinläsbart så UI:t kan skilja fallen åt utan att tolka text."""
+
+    code = "MAIL_ERROR"
+
+
+class MailNotConfigured(MailError):
+    """SMTP saknas på servern - ett serverfaktum, lika för alla adresser."""
+
+    code = "MAIL_NOT_CONFIGURED"
+
+
+class MailSendFailed(MailError):
+    """SMTP finns men leveransen gick fel. Användarsäker text utåt, den
+    råa SMTP-texten i `detail` för loggen."""
+
+    code = "MAIL_SEND_FAILED"
+
+    def __init__(self, detail: str):
+        super().__init__("Mejlservern svarar inte just nu. Försök igen om en stund.")
+        self.detail = detail
 
 
 def is_configured(config) -> bool:
@@ -26,7 +46,7 @@ def send_email(config, to_email, subject, body_text):
     host = config.get("host")
     from_email = config.get("from_email")
     if not host or not from_email:
-        raise MailError("E-post är inte konfigurerat på servern ännu")
+        raise MailNotConfigured("E-post är inte konfigurerat på servern ännu")
     message = MIMEText(body_text, "plain", "utf-8")
     message["Subject"] = subject
     message["From"] = from_email
@@ -38,4 +58,20 @@ def send_email(config, to_email, subject, body_text):
                 smtp.login(config["user"], config["password"])
             smtp.sendmail(from_email, [to_email], message.as_string())
     except (smtplib.SMTPException, OSError) as error:
-        raise MailError(f"Kunde inte skicka e-post: {error}")
+        raise MailSendFailed(f"Kunde inte skicka e-post: {error}")
+
+
+def check_transport(config):
+    """Anslut + STARTTLS + inloggning + NOOP - inget mejl. Låter en endpoint
+    säga "mejlservern svarar inte" FÖRE kontouppslaget, identiskt för varje
+    adress, i stället för att lova ett mejl som aldrig går iväg."""
+    if not is_configured(config):
+        raise MailNotConfigured("E-post är inte konfigurerat på servern ännu")
+    try:
+        with smtplib.SMTP(config["host"], int(config.get("port") or 587), timeout=10) as smtp:
+            smtp.starttls()
+            if config.get("user") and config.get("password"):
+                smtp.login(config["user"], config["password"])
+            smtp.noop()
+    except (smtplib.SMTPException, OSError) as error:
+        raise MailSendFailed(f"SMTP-kontroll misslyckades: {error}")

@@ -19,6 +19,8 @@ import sqlite3
 import time
 from pathlib import Path
 
+from ..data_guard import guard_database_path
+
 from .models import CollectorRun, CurrentPrice, PriceHistoryEntry, Product, RawProduct, Store
 
 
@@ -42,6 +44,8 @@ def _normalized_key(brand: str | None, name: str, size: str | None) -> str:
 
 class GroceryStore:
     def __init__(self, db_path: Path):
+        # Testläge får aldrig nå en riktig databas - se services/data_guard.py.
+        guard_database_path(db_path, purpose="grocery-databasen")
         db_path.parent.mkdir(parents=True, exist_ok=True)
         # Kept so process-global caches can key on WHICH database they
         # describe. Without it, two different databases whose contents happen

@@ -1,0 +1,47 @@
+{
+ "recept": 241,
+ "kedjor": [
+  "Willys",
+  "Hemköp",
+  "City Gross"
+ ],
+ "kontroller": 4614,
+ "flaggor": {
+  "gram_som_styck": 0,
+  "volym_som_styck": 0,
+  "paket_over_10": 0,
+  "paket_over_50": 0,
+  "rad_over_500": 1,
+  "rad_over_1000": 0,
+  "otolkad_paketstorlek": 0,
+  "estimat": 13,
+  "smakords_misstanke": 114,
+  "saknade": 12
+ },
+ "exempel": {
+  "rad_over_500": [
+   "rostbiff-potatissallad | Rostbiff | Willys | Rostbiff i Skivor Sverige 538.0 kr"
+  ],
+  "estimat": [
+   "aggwok-ris | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)",
+   "biffbowl-teriyaki | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)",
+   "bulk-kyckling-jattebowl | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)",
+   "hoisin-flask-ris | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)",
+   "krispig-kyckling-nudelwok | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)",
+   "krispig-tofu-ris-bulk | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)",
+   "kyckling-ris-broccoli | Soja | Willys | Sojasås Japansk Vegan (msk->g)",
+   "kycklingspett-jordnot | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)"
+  ],
+  "smakords_misstanke": [
+   "falafel-pitabrod | Grekisk yoghurt | Willys | Grekisk Matyoghurt 10% Familjefavoriter",
+   "falafel-pitabrod | Grekisk yoghurt | Hemköp | Grekisk Matyoghurt 10% Familjefavoriter",
+   "falafel-pitabrod | Grekisk yoghurt | City Gross | Grekisk Matyoghurt 10% Familjefavoriter",
+   "fetapasta | Pasta | Willys | Penne Rigate Pasta",
+   "fetapasta | Pasta | Hemköp | Penne Rigate Pasta",
+   "fetapasta | Pasta | City Gross | Penne Rigate Pasta",
+   "fishtacos | Grekisk yoghurt | Willys | Grekisk Matyoghurt 10% Familjefavoriter",
+   "fishtacos | Grekisk yoghurt | Hemköp | Grekisk Matyoghurt 10% Familjefavoriter"
+  ]
+ },
+ "gate": "RÖD"
+}

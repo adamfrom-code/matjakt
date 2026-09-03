@@ -17,7 +17,11 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import api_server  # noqa: E402
+from services.data_guard import isolated_test_data_dir  # noqa: E402
+isolated_test_data_dir()  # MATJAKT_DATA_DIR -> tempkatalog INNAN api_server importeras
+import api_server
+from services.billing import StripeError  # noqa: E402
+from services.email import MailSendFailed  # noqa: E402  # noqa: E402
 from services.accounts import ratelimit  # noqa: E402
 from api_server import clean_text, parse_price, parse_willys_price  # noqa: E402
 from services.accounts import AccountStore  # noqa: E402
@@ -1233,8 +1237,11 @@ class AuthHttpTest(unittest.TestCase):
         original = dict(api_server.MAIL_CONFIG)
         api_server.MAIL_CONFIG.update(host="smtp.test.local", from_email="noreply@matjakt.store")
         sent = []
-        original_send = api_server.send_email
+        original_send, original_check = api_server.send_email, api_server.check_mail_transport
         api_server.send_email = lambda *a, **k: sent.append(a)
+        # Transportkontrollen (connect/STARTTLS/NOOP) skulle annars försöka nå
+        # den påhittade värden - den har egna tester.
+        api_server.check_mail_transport = lambda config: None
         try:
             status, payload = self.post("/api/auth/request-password-reset", {"email": email})
             self.assertEqual(status, 200)
@@ -1243,7 +1250,7 @@ class AuthHttpTest(unittest.TestCase):
             self.assertEqual(len(sent), 1, "bara den riktiga adressen får mejl")
         finally:
             api_server.MAIL_CONFIG.clear(); api_server.MAIL_CONFIG.update(original)
-            api_server.send_email = original_send
+            api_server.send_email, api_server.check_mail_transport = original_send, original_check
 
     def test_request_password_reset_is_honest_when_mail_is_unconfigured(self):
         """Användaren ska ALDRIG vänta på ett mejl som aldrig kunde skickas.
@@ -1384,6 +1391,222 @@ class AuthHttpTest(unittest.TestCase):
             self.assertEqual(payload["user"]["subscriptionStatus"], "active")
         finally:
             api_server.STRIPE_WEBHOOK_SECRET = original_secret
+
+    # ---- Stripe: webhook genom gaten, idempotens, ordning, årsplan, radering ----
+    def _post_webhook(self, event, secret="whsec_test"):
+        body = json.dumps(event).encode("utf-8")
+        timestamp = int(time.time())
+        signature = hmac.new(secret.encode("utf-8"), f"{timestamp}.{body.decode('utf-8')}".encode("utf-8"), hashlib.sha256).hexdigest()
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            conn.request("POST", "/api/billing/webhook", body=body, headers={
+                "Content-Type": "application/json", "Stripe-Signature": f"t={timestamp},v1={signature}",
+            })
+            response = conn.getresponse()
+            raw = response.read()
+            return response.status, json.loads(raw) if raw else None
+        finally:
+            conn.close()
+
+    def _subscription_event(self, event_id, created, status, customer="cus_evt", price="price_month", **extra):
+        obj = {"id": "sub_evt", "customer": customer, "status": status,
+               "current_period_end": int(time.time()) + 30 * 86400, "cancel_at_period_end": False,
+               "items": {"data": [{"price": {"id": price}}]}}
+        obj.update(extra)
+        return {"id": event_id, "created": created, "type": "customer.subscription.updated", "data": {"object": obj}}
+
+    def _customer(self, customer_id):
+        email = self._email()
+        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        token = payload["token"]
+        user_id, _, _ = api_server.ACCOUNT_STORE.billing_identity_for_token(token)
+        api_server.ACCOUNT_STORE.set_stripe_customer_id(user_id, customer_id)
+        return token
+
+    def test_webhook_passes_the_dev_gate(self):
+        """Utvecklingslåset får aldrig stoppa Stripe - webhooken bär sin egen
+        HMAC-signatur. Utan undantaget aktiverades Premium aldrig i prod."""
+        original_secret, original_gate = api_server.STRIPE_WEBHOOK_SECRET, api_server.GATE_ENABLED
+        api_server.STRIPE_WEBHOOK_SECRET = "whsec_test"
+        try:
+            token = self._customer("cus_gate")   # registreras innan låset slås på
+            api_server.GATE_ENABLED = True
+            status, payload = self._post_webhook(self._subscription_event("evt_gate_1", int(time.time()), "active", customer="cus_gate"))
+            self.assertEqual(status, 200, payload)
+            api_server.GATE_ENABLED = original_gate
+            status, payload = self.get("/api/auth/me", token=token)
+            self.assertTrue(payload["user"]["premium"])
+        finally:
+            api_server.STRIPE_WEBHOOK_SECRET, api_server.GATE_ENABLED = original_secret, original_gate
+
+    def test_webhook_is_idempotent_and_ignores_older_events(self):
+        original_secret = api_server.STRIPE_WEBHOOK_SECRET
+        api_server.STRIPE_WEBHOOK_SECRET = "whsec_test"
+        try:
+            token = self._customer("cus_order")
+            now = int(time.time())
+            status, _ = self._post_webhook(self._subscription_event("evt_1", now, "active", customer="cus_order"))
+            self.assertEqual(status, 200)
+            self.assertTrue(self.get("/api/auth/me", token=token)[1]["user"]["premium"])
+            # Samma event-id igen (Stripe retry) med annat innehåll: bekräftas men appliceras inte.
+            status, payload = self._post_webhook(self._subscription_event("evt_1", now, "canceled", customer="cus_order"))
+            self.assertEqual(status, 200)
+            self.assertTrue(payload.get("duplicate"))
+            self.assertTrue(self.get("/api/auth/me", token=token)[1]["user"]["premium"])
+            # Ett ÄLDRE event (försenad leverans) får inte skriva över nyare läge.
+            status, _ = self._post_webhook(self._subscription_event("evt_0", now - 100, "canceled", customer="cus_order"))
+            self.assertEqual(status, 200)
+            self.assertTrue(self.get("/api/auth/me", token=token)[1]["user"]["premium"])
+            # Ett nyare "deleted" avslutar Premium.
+            deleted = self._subscription_event("evt_2", now + 10, "canceled", customer="cus_order")
+            deleted["type"] = "customer.subscription.deleted"
+            status, _ = self._post_webhook(deleted)
+            self.assertEqual(status, 200)
+            me = self.get("/api/auth/me", token=token)[1]["user"]
+            self.assertFalse(me["premium"])
+            self.assertEqual(me["subscriptionStatus"], "canceled")
+            # Okänd händelsetyp: 200 utan effekt.
+            status, _ = self._post_webhook({"id": "evt_3", "created": now + 20, "type": "invoice.paid", "data": {"object": {}}})
+            self.assertEqual(status, 200)
+        finally:
+            api_server.STRIPE_WEBHOOK_SECRET = original_secret
+
+    def test_webhook_reads_yearly_plan_cancel_flag_and_period_end_from_items(self):
+        original_secret, original_yearly = api_server.STRIPE_WEBHOOK_SECRET, api_server.STRIPE_PRICE_YEARLY
+        api_server.STRIPE_WEBHOOK_SECRET, api_server.STRIPE_PRICE_YEARLY = "whsec_test", "price_year"
+        try:
+            token = self._customer("cus_year")
+            period_end = int(time.time()) + 300 * 86400
+            event = self._subscription_event("evt_year", int(time.time()), "active", customer="cus_year",
+                                             price="price_year", cancel_at_period_end=True)
+            # API-version 2025-03-31.basil: fältet ligger på items, inte prenumerationen.
+            event["data"]["object"].pop("current_period_end")
+            event["data"]["object"]["items"]["data"][0]["current_period_end"] = period_end
+            status, _ = self._post_webhook(event)
+            self.assertEqual(status, 200)
+            me = self.get("/api/auth/me", token=token)[1]["user"]
+            self.assertTrue(me["premium"])
+            self.assertEqual(me["plan"], "premium_yearly")
+            row = api_server.ACCOUNT_STORE._connection.execute(
+                "SELECT subscription_period_end, subscription_cancel_at_period_end FROM users WHERE stripe_customer_id = ?",
+                ("cus_year",)).fetchone()
+            self.assertIsNotNone(row[0])
+            self.assertEqual(row[1], 1)
+        finally:
+            api_server.STRIPE_WEBHOOK_SECRET, api_server.STRIPE_PRICE_YEARLY = original_secret, original_yearly
+
+    def test_checkout_yearly_uses_yearly_price_and_refuses_double_subscription(self):
+        originals = (api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY, api_server.STRIPE_SECRET_KEY,
+                     api_server.create_customer, api_server.create_checkout_session)
+        api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY, api_server.STRIPE_SECRET_KEY = "price_month", "price_year", "sk_test_fake"
+        api_server.create_customer = lambda secret_key, email, user_id: "cus_double"
+        api_server.create_checkout_session = lambda secret_key, customer_id, price_id, success_url, cancel_url: f"https://checkout.stripe.com/fake/{price_id}"
+        try:
+            email = self._email()
+            _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+            token = payload["token"]
+            status, payload = self.post("/api/billing/checkout", {"plan": "yearly"}, token=token)
+            self.assertEqual(status, 200)
+            self.assertTrue(payload["url"].endswith("/price_year"))
+            api_server.ACCOUNT_STORE.apply_subscription_event("cus_double", "sub_1", "active", None, False, "yearly")
+            status, payload = self.post("/api/billing/checkout", {"plan": "monthly"}, token=token)
+            self.assertEqual(status, 409)
+            self.assertEqual(payload["code"], "ALREADY_SUBSCRIBED")
+        finally:
+            (api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY, api_server.STRIPE_SECRET_KEY,
+             api_server.create_customer, api_server.create_checkout_session) = originals
+
+    def test_checkout_survives_stripe_network_error(self):
+        originals = (api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_SECRET_KEY, api_server.create_customer)
+        api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_SECRET_KEY = "price_month", "sk_test_fake"
+
+        def down(secret_key, email, user_id):
+            raise StripeError("Stripe svarar inte just nu (URLError)")
+        api_server.create_customer = down
+        try:
+            email = self._email()
+            _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+            status, payload = self.post("/api/billing/checkout", {"plan": "monthly"}, token=payload["token"])
+            self.assertEqual(status, 400)
+            self.assertIn("Stripe svarar inte", payload["error"])
+        finally:
+            api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_SECRET_KEY, api_server.create_customer = originals
+
+    def test_delete_account_cancels_subscription_first_and_keeps_account_when_stripe_is_down(self):
+        originals = (api_server.STRIPE_SECRET_KEY, api_server.cancel_subscription, api_server.delete_customer)
+        api_server.STRIPE_SECRET_KEY = "sk_test_fake"
+        calls = []
+
+        def failing_cancel(secret_key, subscription_id):
+            calls.append(("cancel", subscription_id))
+            raise StripeError("Stripe svarar inte just nu")
+        api_server.cancel_subscription = failing_cancel
+        api_server.delete_customer = lambda secret_key, customer_id: calls.append(("delete_customer", customer_id))
+        try:
+            token = self._customer("cus_delete")
+            api_server.ACCOUNT_STORE.apply_subscription_event("cus_delete", "sub_delete", "active", None, False, "monthly")
+            status, payload = self.post("/api/auth/delete-account", {}, token=token)
+            self.assertEqual(status, 503)
+            self.assertEqual(payload["code"], "STRIPE_UNAVAILABLE")
+            self.assertEqual(self.get("/api/auth/me", token=token)[0], 200)  # kontot är kvar
+            api_server.cancel_subscription = lambda secret_key, subscription_id: calls.append(("cancel_ok", subscription_id))
+            status, payload = self.post("/api/auth/delete-account", {}, token=token)
+            self.assertEqual(status, 200)
+            self.assertEqual(self.get("/api/auth/me", token=token)[0], 401)
+            self.assertIn(("cancel_ok", "sub_delete"), calls)
+            self.assertIn(("delete_customer", "cus_delete"), calls)
+            self.assertLess(calls.index(("cancel_ok", "sub_delete")), calls.index(("delete_customer", "cus_delete")))
+        finally:
+            api_server.STRIPE_SECRET_KEY, api_server.cancel_subscription, api_server.delete_customer = originals
+
+    # ---- Mejl: aldrig "skickat" när inget gick iväg ----
+    def test_register_reports_verification_mail_status_honestly(self):
+        original_send, original_config = api_server.send_email, api_server.MAIL_CONFIG
+        try:
+            api_server.MAIL_CONFIG = {}
+            _, payload = self.post("/api/auth/register", {"email": self._email(), "password": "hemligt123"})
+            self.assertEqual(payload["verificationMail"], "not_configured")
+
+            api_server.MAIL_CONFIG = {"host": "smtp.example", "from_email": "noreply@example"}
+
+            def broken(config, to_email, subject, body):
+                raise MailSendFailed("SMTP 451 try later")
+            api_server.send_email = broken
+            _, payload = self.post("/api/auth/register", {"email": self._email(), "password": "hemligt123"})
+            self.assertEqual(payload["verificationMail"], "failed")
+
+            api_server.send_email = lambda config, to_email, subject, body: None
+            _, payload = self.post("/api/auth/register", {"email": self._email(), "password": "hemligt123"})
+            self.assertEqual(payload["verificationMail"], "sent")
+        finally:
+            api_server.send_email, api_server.MAIL_CONFIG = original_send, original_config
+
+    def test_password_reset_reports_transport_state_with_a_code(self):
+        original_check, original_config = api_server.check_mail_transport, api_server.MAIL_CONFIG
+        try:
+            api_server.MAIL_CONFIG = {}
+            status, payload = self.post("/api/auth/request-password-reset", {"email": "x@example.se"})
+            self.assertEqual(status, 503)
+            self.assertEqual(payload["code"], "MAIL_NOT_CONFIGURED")
+
+            api_server.MAIL_CONFIG = {"host": "smtp.example", "from_email": "noreply@example"}
+
+            def down(config):
+                raise MailSendFailed("connection refused")
+            api_server.check_mail_transport = down
+            status, payload = self.post("/api/auth/request-password-reset", {"email": "y@example.se"})
+            self.assertEqual(status, 503)
+            self.assertEqual(payload["code"], "MAIL_SEND_FAILED")
+            self.assertNotIn("refused", payload["error"])  # rå SMTP-text stannar i loggen
+        finally:
+            api_server.check_mail_transport, api_server.MAIL_CONFIG = original_check, original_config
+
+    def test_health_says_whether_mail_is_configured_without_secrets(self):
+        status, payload = self.get("/api/health")
+        self.assertEqual(status, 200)
+        self.assertIn("mail", payload)
+        self.assertIsInstance(payload["mail"], bool)
+        self.assertNotIn("smtp", json.dumps(payload).lower())
 
     def test_redeem_premium_with_correct_code(self):
         email = self._email()

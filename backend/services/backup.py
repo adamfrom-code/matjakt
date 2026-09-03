@@ -32,6 +32,8 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .data_guard import guard_database_path
+
 logger = logging.getLogger("matjakt.backup")
 
 KEEP = 7
@@ -64,6 +66,7 @@ def newest_age_seconds(data_dir: Path) -> float | None:
 def take_backup(data_dir: Path) -> dict:
     """One complete, verified, pruned backup set. Returns a small report."""
     data_dir = Path(data_dir)
+    guard_database_path(data_dir, purpose="datakatalogen (backup)")
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     target = backup_dir(data_dir) / stamp
     target.mkdir(parents=True, exist_ok=True)
@@ -107,6 +110,8 @@ def take_backup(data_dir: Path) -> dict:
 def start_nightly(data_dir: Path) -> threading.Thread:
     """Daemon-tråd: ett verifierat backupset per dygn, första direkt om det
     saknas eller är gammalt. En krasch i en cykel dödar inte tråden."""
+    guard_database_path(data_dir, purpose="datakatalogen (backup)")
+
     def run():
         while True:
             try:

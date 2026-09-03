@@ -15,6 +15,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from services.data_guard import isolated_test_data_dir  # noqa: E402
+isolated_test_data_dir()  # MATJAKT_DATA_DIR -> tempkatalog INNAN api_server importeras
 import api_server  # noqa: E402
 
 

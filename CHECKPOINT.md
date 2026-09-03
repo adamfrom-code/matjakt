@@ -60,7 +60,12 @@ kedja; osäker match = rad utan pris. Extras synkas via kontostaten.
 ## Tester
 
 `npm test` = node --test (frontend) + `python backend/tests/run.py`
-(temp-datadir så riktiga databaser aldrig röres). ~672 tester.
+(temp-datadir så riktiga databaser aldrig röres). ~795 tester.
+Spärr i `backend/services/data_guard.py` (2026-09-02): i testläge får ingen
+butiksklass, backup eller api_server öppna en databas utanför tempkatalogen -
+hard fail med `ProductionDatabaseInTestError`, oavsett om testet satt `DB_PATH`.
+Bevisat i `tests/test_db_guard.py`; riktig `backend/data/*.db` innehållsmässigt
+oförändrad av hela sviten (tabellräkningar + hashar före/efter).
 Prod-E2E: `backend/tests/auth_e2e.py`, `backend/tests/prod_persistence_e2e.py`
 (--before/--after runt en deploy).
 

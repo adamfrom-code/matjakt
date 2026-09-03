@@ -115,6 +115,10 @@
                   <label><input type="checkbox" value="ägg"> Ägg</label>
                   <label><input type="checkbox" value="soja"> Soja</label>
                 </div>
+                <label for="dislikeCustom">Något ni hellre slipper</label>
+                <div class="protein-source-chips" id="dislikeChips"></div>
+                <input id="dislikeCustom" type="text" placeholder="Något annat? Skriv och tryck Enter" autocomplete="off">
+                <div class="ob-tag-list" id="dislikeTags"></div>
               </div>
 
               <div class="nutrition-goals">
@@ -219,7 +223,7 @@
         <header class="screen-header"><h1 id="recipesHeading">Recept</h1></header>
         <div class="recipe-search"><label class="sr-only" for="recipeSearch">Sök recept</label><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="recipeSearch" type="search" placeholder="Sök recept eller ingrediens" autocomplete="off"></div>
         <div class="recipe-tag-filters" id="recipeTagFilters" role="group" aria-label="Filtrera recept"></div>
-        <div class="recipe-filters"><select id="timeFilter" aria-label="Tid"><option value="0">Alla tider</option><option value="30">Max 30 min</option><option value="20">Max 20 min</option></select><select id="proteinFilter" aria-label="Protein"><option value="0">Allt protein</option><option value="25">Minst 25 g</option><option value="35">Minst 35 g</option></select><select id="kcalFilter" aria-label="Kalorier"><option value="0">Alla kalorier</option><option value="500">Max 500 kcal</option><option value="700">Max 700 kcal</option></select><label class="favorite-filter"><input id="favoriteFilter" type="checkbox"> Favoriter</label></div>
+        <div class="recipe-filters"><select id="timeFilter" aria-label="Tid"><option value="0">Alla tider</option><option value="45">Max 45 min</option><option value="30">Max 30 min</option><option value="20">Max 20 min</option></select><select id="proteinFilter" aria-label="Protein"><option value="0">Allt protein</option><option value="25">Minst 25 g</option><option value="35">Minst 35 g</option></select><select id="kcalFilter" aria-label="Kalorier"><option value="0">Alla kalorier</option><option value="500">Max 500 kcal</option><option value="700">Max 700 kcal</option></select><label class="favorite-filter"><input id="favoriteFilter" type="checkbox"> Favoriter</label></div>
         <div class="live-products" id="liveProducts"></div><p class="section-help" id="menuSummary"></p>
         <!-- Shelves when nothing is filtered, a flat result list when
              something is. Browsing and searching are different activities and
@@ -231,6 +235,7 @@
       <section class="screen shopping-screen" aria-labelledby="shoppingTitle">
         <header class="screen-header"><p class="eyebrow">Din lista</p><h1 id="shoppingTitle">Handla</h1></header>
         <p class="price-source-note" id="priceSourceNote" hidden></p>
+        <p class="price-source-note" id="dabasNote" hidden></p>
         <!-- Butiksvalet överst: först var det blir billigast, sedan listan. -->
         <h3 class="shopping-section-title" id="storeCompareTitle">Var blir det billigast?</h3>
         <div class="store-cards" id="storeCards"></div>
@@ -413,7 +418,7 @@
           </div>
           <button class="btn btn-primary" type="button" id="subscribeBtn"><span>Prenumerera</span></button>
           <p class="account-error" id="checkoutError"></p>
-          <p class="premium-pitch-note">Ingen kortuppgift krävs för provperioden - den avslutas automatiskt till gratisversionen om du inte prenumererar. Har du en kod?</p>
+          <p class="premium-pitch-note">Har du en Premium-kod?</p>
           <form id="accountRedeemForm" class="account-form">
             <label class="sr-only" for="premiumCode">Premium-kod</label>
             <input id="premiumCode" type="text" placeholder="Premium-kod" autocomplete="off">

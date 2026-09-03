@@ -19,7 +19,8 @@ export function storeToken(token, storage = localStorage) {
 
 async function parseJsonResponse(response) {
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+  // status + code följer med så UI:t kan växla på orsak, inte på text.
+  if (!response.ok) throw Object.assign(new Error(data.error || `HTTP ${response.status}`), { status: response.status, code: data.code });
   return data;
 }
 
