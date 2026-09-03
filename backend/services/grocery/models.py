@@ -111,6 +111,14 @@ class Product:
     package_source: str | None = None
     package_confidence: str | None = None
     package_conflict: str | None = None
+    # PROVIDERNS EGNA paketvärden, uppdaterade vid varje import och ALDRIG
+    # rörda av Dabas. size/quantity/unit ovan är de UPPLÖSTA värdena
+    # (provider, eller Dabas när providern saknade). Utan den här
+    # separationen skrev en omräkning över Vallmolevains 560 g med Dabas
+    # 500 g - en äkta konflikt som försvann i stället för att falla stängt.
+    provider_size: str | None = None
+    provider_quantity: float | None = None
+    provider_unit: str | None = None
 
     def to_dict(self):
         value = asdict(self)

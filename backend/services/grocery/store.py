@@ -70,6 +70,7 @@ class GroceryStore:
             ("dabas_source_version", "TEXT"),
             ("package_source", "TEXT"), ("package_confidence", "TEXT"),
             ("package_conflict", "TEXT"),
+            ("provider_size", "TEXT"), ("provider_quantity", "REAL"), ("provider_unit", "TEXT"),
         ],
         "grocery_stores": [
             ("provider", "TEXT"), ("pricing_scope", "TEXT"),
@@ -492,12 +493,14 @@ class GroceryStore:
                 """
                 INSERT INTO grocery_products (gtin, ean, name, brand, description, size, quantity, unit,
                                                category, image_url, image_source_url, normalized_key,
-                                               created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                               created_at, updated_at,
+                                               provider_size, provider_quantity, provider_unit)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (raw.gtin, raw.ean, raw.name, raw.brand, raw.description, raw.size, raw.quantity, raw.unit,
                  raw.category, raw.image_url, raw.source_url if raw.image_url else None,
-                 _normalized_key(raw.brand, raw.name, raw.size), now, now),
+                 _normalized_key(raw.brand, raw.name, raw.size), now, now,
+                 raw.size, raw.quantity, raw.unit),
             )
         return self.get_product(cursor.lastrowid)
 
@@ -509,6 +512,20 @@ class GroceryStore:
         to fill gaps, not let a later, possibly lower-quality source
         clobber a good existing value."""
         updates, params = [], []
+        # PROVIDERNS EGNA paketvärden uppdateras vid VARJE import - de är
+        # sanningen om vad kedjan säger, oberoende av Dabas. En partnerfeed
+        # utan mängd (bara size-text) får inte nolla en kedjas explicita
+        # mängd: bara riktiga värden skrivs.
+        if raw.size or raw.quantity:
+            if raw.size and raw.size != getattr(product, "provider_size", None):
+                updates.append("provider_size = ?")
+                params.append(raw.size)
+            if raw.quantity and (raw.quantity != getattr(product, "provider_quantity", None)
+                                 or raw.unit != getattr(product, "provider_unit", None)):
+                updates.append("provider_quantity = ?")
+                params.append(raw.quantity)
+                updates.append("provider_unit = ?")
+                params.append(raw.unit)
         # Samma luckfyllnad för namn och storlek: en produkt som skapades
         # namnlös (eller utan paketstorlek) får dem från nästa källa som vet.
         if raw.name and not (product.name or "").strip():
@@ -576,7 +593,8 @@ class GroceryStore:
         keys = row.keys()
         extra = {name: (row[name] if name in keys else None) for name in (
             "manufacturer", "dabas_status", "dabas_category", "package_source",
-            "package_confidence", "package_conflict")}
+            "package_confidence", "package_conflict",
+            "provider_size", "provider_quantity", "provider_unit")}
         return Product(
             id=row["id"], gtin=row["gtin"], ean=row["ean"], name=row["name"], brand=row["brand"],
             description=row["description"], size=row["size"], quantity=row["quantity"], unit=row["unit"],
@@ -623,7 +641,8 @@ class GroceryStore:
             return
         allowed = {"name", "brand", "manufacturer", "description", "size", "quantity", "unit", "category",
                    "dabas_name", "dabas_category", "dabas_gpc", "ingredients", "allergens", "nutrition",
-                   "dabas_data", "package_source", "package_confidence", "package_conflict"}
+                   "dabas_data", "package_source", "package_confidence", "package_conflict",
+                   "provider_size", "provider_quantity", "provider_unit"}
         updates = {k: v for k, v in fields.items() if k in allowed}
         if not updates:
             return

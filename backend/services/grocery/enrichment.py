@@ -75,11 +75,28 @@ def _same_amount(a: float, b: float) -> bool:
     return abs(a - b) <= max(a, b) * PACKAGE_TOLERANCE
 
 
+def provider_view(product):
+    """Produkten sedd som PROVIDERN levererade den: provider_* i stället för
+    de upplösta fälten, och utan konfliktflaggan (den får prismotorn att
+    svara "okänt" - det är fail closed för prissättningen, men för
+    verdiktet betyder det inte att providern saknar mängd). Saknas
+    provider_* (rad från före kolumnerna) används de upplösta fälten -
+    utom när Dabas redan skrivit dem: då är providerns värde okänt."""
+    import dataclasses
+    has_provider = bool(getattr(product, "provider_size", None) or getattr(product, "provider_quantity", None))
+    if has_provider:
+        return dataclasses.replace(product, size=product.provider_size, quantity=product.provider_quantity,
+                                   unit=product.provider_unit, package_conflict=None)
+    if getattr(product, "package_source", None) == SOURCE_DABAS:
+        return dataclasses.replace(product, size=None, quantity=None, unit=None, package_conflict=None)
+    return dataclasses.replace(product, package_conflict=None)
+
+
 def _provider_package(product):
     """Providerns tolkning i kanonisk enhet, via prismotorns egen läsning."""
     from .pricing import effective_package
     try:
-        quantity, unit = effective_package(product)
+        quantity, unit = effective_package(provider_view(product))
     except Exception:
         return None, None
     if quantity is None or unit is None:
@@ -106,14 +123,29 @@ def provider_source(product) -> str:
     """Vilken nivå providerns paketdata har, utan Dabas inblandat:
     explicit mängd+enhet från kedjans API = PROVIDER_VERIFIED, bara tolkad
     ur text = NORMALIZED, inget = NONE."""
-    if product.quantity and product.unit:
+    view = provider_view(product)
+    if view.quantity and view.unit:
         return SOURCE_PROVIDER
     from .pricing import effective_package
     try:
-        quantity, unit = effective_package(product)
+        quantity, unit = effective_package(view)
     except Exception:
         quantity = None
     return SOURCE_NORMALIZED if quantity else SOURCE_NONE
+
+
+def backfill_provider_fields(db) -> int:
+    """Rader från före provider_*-kolumnerna: kopiera de upplösta värdena
+    dit - de ÄR providerns, så länge Dabas inte skrivit dem. Rader som
+    Dabas redan fyllt lämnas tomma tills nästa import levererar providerns
+    värde (nattjobben för Willys/Hemköp/City Gross gör det automatiskt)."""
+    with db.connection:
+        cursor = db.connection.execute(
+            "UPDATE grocery_products SET provider_size = size, provider_quantity = quantity, provider_unit = unit "
+            "WHERE provider_size IS NULL AND provider_quantity IS NULL "
+            "AND (size IS NOT NULL OR quantity IS NOT NULL) "
+            "AND COALESCE(package_source, '') != 'DABAS_VERIFIED'")
+    return cursor.rowcount
 
 
 def classify_package_sources(db, limit: int | None = None) -> dict:
@@ -243,21 +275,32 @@ def package_verdict(product, dabas: DabasProduct) -> dict:
     d = dabas.package
     base_source = provider_source(product)
     base_conf = "provider" if p_qty else "none"
+    view = provider_view(product)
+    # Providerns egna värden - de UPPLÖSTA fälten återställs till dem i
+    # varje utfall som inte uttryckligen låter Dabas fylla/vinna, så att en
+    # tidigare (felaktig) överskrivning hälar när providern är känd.
+    restore = ({"size": view.size, "quantity": view.quantity, "unit": view.unit}
+               if (view.size or view.quantity) else {})
 
     if d.variable_measure or d.quantity is None or d.unit is None:
         # Dabas har ingen fast mängd att verifiera mot: providerns nivå
         # står kvar oförändrad - hål skapas aldrig av att Dabas saknar data.
-        return {"package_source": base_source, "package_confidence": base_conf, "package_conflict": None}
+        return {"package_source": base_source, "package_confidence": base_conf, "package_conflict": None, **restore}
 
     if p_qty is None:
+        if getattr(product, "package_source", None) == SOURCE_DABAS and not (view.size or view.quantity):
+            # Providerns värde är okänt (raden fylldes av Dabas innan
+            # provider_* fanns): rör ingenting förrän nästa import säger
+            # vad providern har. Ingen ny fyllning över okända värden.
+            return {"package_source": SOURCE_DABAS, "package_confidence": "high", "package_conflict": None}
         return {"package_source": SOURCE_DABAS, "package_confidence": "high", "package_conflict": None,
                 "quantity": d.quantity, "unit": d.unit, "size": f"{d.quantity:g} {d.unit}"}
 
-    explicit = bool(product.quantity and product.unit)
+    explicit = bool(view.quantity and view.unit)
     dabas_amounts = [(d.quantity, d.unit)] + (
         [(d.drained_quantity, d.drained_unit)] if d.drained_quantity else [])
     if any(_equivalent(p_qty, p_unit, dq, du) for dq, du in dabas_amounts):
-        verdict = {"package_source": SOURCE_DABAS, "package_confidence": "high", "package_conflict": None}
+        verdict = {"package_source": SOURCE_DABAS, "package_confidence": "high", "package_conflict": None, **restore}
         if not explicit:
             # Providern hade bara en texttolkning; nu är mängden verifierad -
             # skriv den som explicit mängd (samma tal, Dabas enhet).
@@ -267,9 +310,9 @@ def package_verdict(product, dabas: DabasProduct) -> dict:
     # Antal mot vikt/volym är två olika sanningar om samma paket, inte en
     # konflikt: "18-pack" och "750 g" stämmer båda.
     if (d.unit == "st") != (p_unit == "st"):
-        return {"package_source": base_source, "package_confidence": base_conf, "package_conflict": None}
+        return {"package_source": base_source, "package_confidence": base_conf, "package_conflict": None, **restore}
 
-    text_amounts = _amounts_in_text(f"{product.size or ''} {product.name or ''}")
+    text_amounts = _amounts_in_text(f"{view.size or ''} {product.name or ''}")
     dabas_in_text = any(_equivalent(tq, tu, d.quantity, d.unit) for tq, tu in text_amounts)
     # EXAKT samma enhet (g mot g): nettovikt/avrunnen-paret. Olika familj
     # (ml mot g) är torrvara/tillagad-paret och hanteras nedan.
@@ -277,15 +320,17 @@ def package_verdict(product, dabas: DabasProduct) -> dict:
         # "370/240g": nettovikt och avrunnen vikt i samma text. Providern
         # (motorns regel) valde den avrunna - det är maten, inte lagen -
         # och Dabas nettovikt står i samma text. Eniga, inget byte.
-        return {"package_source": SOURCE_DABAS, "package_confidence": "high", "package_conflict": None}
+        return {"package_source": SOURCE_DABAS, "package_confidence": "high", "package_conflict": None, **restore}
     if dabas_in_text and not explicit:
         # "800g/6l": torrvara och tillagad volym i samma text - providerns
         # tolkning tog volymen, Dabas pekar ut förpackningen. Dabas vinner.
         return {"package_source": SOURCE_DABAS, "package_confidence": "high", "package_conflict": None,
-                "quantity": d.quantity, "unit": d.unit, "size": product.size or f"{d.quantity:g} {d.unit}"}
+                "quantity": d.quantity, "unit": d.unit, "size": view.size or f"{d.quantity:g} {d.unit}"}
 
+    # ÄKTA KONFLIKT: flaggas, och de upplösta fälten återställs till
+    # providerns - Dabas skriver aldrig över ett explicit providervärde.
     return {"package_source": base_source, "package_confidence": "conflict",
-            "package_conflict": f"provider {p_qty:g} {p_unit} / Dabas {d.quantity:g} {d.unit} ({d.kind})"}
+            "package_conflict": f"provider {p_qty:g} {p_unit} / Dabas {d.quantity:g} {d.unit} ({d.kind})", **restore}
 
 
 def recompute_verdicts(db) -> dict:

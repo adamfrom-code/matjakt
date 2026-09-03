@@ -274,7 +274,10 @@ class PackageVerification(_DbCase):
         verdict = enrichment.package_verdict(product, dabas.normalize_article(article(
             Nettoinnehall=[{"Mängd": 370, "EnhetKod": "GRM", "Typ": "Nettovikt"}])))
         self.assertEqual(verdict["package_confidence"], "high")
-        self.assertNotIn("quantity", verdict)  # 240 g (avrunnen) förblir mängden
+        # 240 g (avrunnen) förblir mängden: ingen explicit mängd skrivs,
+        # providerns size-text står (None = tolkas ur "370/240g" som förut).
+        self.assertIsNone(verdict.get("quantity"))
+        self.assertEqual(verdict.get("size"), "370/240g")
 
     def test_dry_goods_with_prepared_volume_dabas_wins(self):
         """"800g/6l": providern tolkade 6 l, Dabas säger 800 g - Dabas
@@ -309,6 +312,51 @@ class PackageVerification(_DbCase):
         counts = enrichment.recompute_verdicts(self.db)
         self.assertEqual(counts, {"high": 1})
         self.assertIsNone(self.db.get_product(product.id).package_conflict)
+
+    def test_conflict_never_overwrites_provider_and_recompute_keeps_it(self):
+        """Produktion: Vallmolevain 560 g (provider) mot 500 g (Dabas) blev
+        DABAS_VERIFIED 500 g efter omräkning - konfliktflaggan fick motorn
+        att säga "okänt" och omräkningen lät Dabas fylla. Aldrig igen."""
+        product = self.product(name="Vallmolevain", size="560g", quantity=560.0, unit="g")
+        d = dabas.normalize_article(article(Nettoinnehall=[{"Mängd": 500, "EnhetKod": "GRM", "Typ": "Nettovikt"}]))
+        fields = enrichment.merge_fields(product, d)
+        self.assertEqual(fields["package_confidence"], "conflict")
+        self.db.apply_product_fields(product.id, fields)
+        self.db.record_dabas_check(product.id, status="ok")
+        flagged = self.db.get_product(product.id)
+        self.assertEqual((flagged.quantity, flagged.unit, flagged.size), (560.0, "g", "560g"))
+        self.assertEqual(effective_package(flagged), (None, None))  # fail closed i motorn
+        # Omräkning ur snapshot: konflikten står kvar, providerns värde orört.
+        counts = enrichment.recompute_verdicts(self.db)
+        self.assertEqual(counts, {"conflict": 1})
+        after = self.db.get_product(product.id)
+        self.assertEqual((after.quantity, after.unit), (560.0, "g"))
+        self.assertIsNotNone(after.package_conflict)
+
+    def test_provider_fields_follow_every_import_and_heal_overwritten_rows(self):
+        """provider_* uppdateras vid varje import; en rad som (felaktigt)
+        fått Dabas-värden i de upplösta fälten återställs när providern
+        levererar igen och verdiktet räknas om."""
+        product = self.product(name="Vallmolevain", size="560g", quantity=560.0, unit="g")
+        self.assertEqual(self.db.get_product(product.id).provider_quantity, 560.0)
+        # Simulera den gamla överskrivningen: upplösta fält = Dabas, provider_* okända.
+        self.db.apply_product_fields(product.id, {"size": "500 g", "quantity": 500.0, "unit": "g",
+                                                  "package_source": "DABAS_VERIFIED", "package_confidence": "high",
+                                                  "provider_size": None, "provider_quantity": None, "provider_unit": None})
+        d = dabas.normalize_article(article(Nettoinnehall=[{"Mängd": 500, "EnhetKod": "GRM", "Typ": "Nettovikt"}]))
+        self.db.apply_product_fields(product.id, {"dabas_data": d.to_json()})
+        self.db.record_dabas_check(product.id, status="ok")
+        # Utan providervärde: omräkningen rör ingenting.
+        enrichment.recompute_verdicts(self.db)
+        self.assertEqual(self.db.get_product(product.id).quantity, 500.0)
+        # Nästa import levererar providerns 560 g -> provider_* fylls, verdikt = konflikt, 560 återställt.
+        self.db.find_or_create_product(RawProduct(
+            chain="Willys", external_product_id="w-again", name="Vallmolevain", store_id="2132",
+            store_name="Willys", gtin=product.gtin, size="560g", quantity=560.0, unit="g"))
+        self.assertEqual(self.db.get_product(product.id).provider_quantity, 560.0)
+        self.assertEqual(enrichment.recompute_verdicts(self.db), {"conflict": 1})
+        healed = self.db.get_product(product.id)
+        self.assertEqual((healed.quantity, healed.unit, healed.size), (560.0, "g", "560g"))
 
     def test_rounding_within_tolerance_is_agreement(self):
         product = self.product(size="ca 750 g", quantity=745.0, unit="g")

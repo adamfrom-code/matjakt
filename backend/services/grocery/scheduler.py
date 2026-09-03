@@ -278,9 +278,11 @@ class GroceryScheduler:
                 self._sync_register("första registersynken")
             # Paketkällnivå på varje produkt (PROVIDER_VERIFIED/NORMALIZED/NONE)
             # så att raderna bär sin nivå även utan Dabas. Idempotent.
-            from .enrichment import classify_package_sources, enrichment_enabled, recompute_verdicts
+            from .enrichment import (backfill_provider_fields, classify_package_sources,
+                                     enrichment_enabled, recompute_verdicts)
             store = grocery_api.open_store()
             try:
+                backfill_provider_fields(store)
                 classified = classify_package_sources(store)
                 # Paketverdikten räknas om ur sparade Dabas-ögonblicksbilder
                 # vid varje boot (inga API-anrop): en regeländring i
