@@ -169,6 +169,49 @@ STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICE_MONTHLY = os.environ.get("STRIPE_PRICE_MONTHLY", "")
 STRIPE_PRICE_YEARLY = os.environ.get("STRIPE_PRICE_YEARLY", "")
+
+# Resultatet av uppstartens Stripe-kontroll (fylls av verify_stripe_prices).
+# Ett pris-id som inte finns märks annars först när en kund trycker
+# "Prenumerera" - och bara på just den planen. Innehåller aldrig id:n eller
+# nyckelmaterial, bara om det stämmer, så /api/health kan visa det öppet.
+STRIPE_PRICE_CHECK = {"checked": False}
+
+
+def verify_stripe_prices():
+    """Frågar Stripe om de konfigurerade priserna finns och stämmer
+    (59 kr/mån, 399 kr/år, ingen provperiod). Körs vid uppstart i bakgrunden
+    och får aldrig stoppa servern."""
+    if not STRIPE_SECRET_KEY:
+        STRIPE_PRICE_CHECK.update(checked=True, ok=None, reason="Stripe är inte konfigurerat")
+        return STRIPE_PRICE_CHECK
+    result = {"checked": True, "checkedAt": time.time(), "plans": {}}
+    for plan, price_id, amount, interval in (("monthly", STRIPE_PRICE_MONTHLY, 5900, "month"),
+                                             ("yearly", STRIPE_PRICE_YEARLY, 39900, "year")):
+        if not price_id:
+            result["plans"][plan] = "saknas i miljön"
+            continue
+        try:
+            price = fetch_stripe_price(STRIPE_SECRET_KEY, price_id)
+            recurring = price.get("recurring") or {}
+            if (price.get("unit_amount") == amount and (price.get("currency") or "").lower() == "sek"
+                    and recurring.get("interval") == interval and not recurring.get("trial_period_days")
+                    and price.get("active")):
+                result["plans"][plan] = "ok"
+            else:
+                result["plans"][plan] = (f"fel pris: {(price.get('unit_amount') or 0) / 100:.0f} "
+                                         f"{(price.get('currency') or '').upper()}/{recurring.get('interval')}")
+        except Exception as error:                       # nätfel, fel id, allt
+            # Kategori, inte råtext: /api/health är öppen och ska inte eka
+            # tillbaka konfigurationsvärden. Detaljen hamnar i loggen.
+            logger.exception("Stripe-priset för %s kunde inte hämtas", plan)
+            result["plans"][plan] = ("finns inte i Stripe-kontot" if "no such price" in str(error).lower()
+                                     else "kunde inte hämtas")
+    result["ok"] = all(value == "ok" for value in result["plans"].values())
+    STRIPE_PRICE_CHECK.clear()
+    STRIPE_PRICE_CHECK.update(result)
+    if not result["ok"]:
+        logger.error("Stripe-priserna stämmer inte: %s", result["plans"])
+    return STRIPE_PRICE_CHECK
 MAIL_CONFIG = {
     "host": os.environ.get("SMTP_HOST", ""),
     "port": os.environ.get("SMTP_PORT", "587"),
@@ -1618,7 +1661,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
                              "live" if STRIPE_SECRET_KEY.startswith("sk_live_") else "unknown")
                             if STRIPE_SECRET_KEY else None),
                    "webhook": bool(STRIPE_WEBHOOK_SECRET),
-                   "prices": {"monthly": bool(STRIPE_PRICE_MONTHLY), "yearly": bool(STRIPE_PRICE_YEARLY)}},
+                   "prices": {"monthly": bool(STRIPE_PRICE_MONTHLY), "yearly": bool(STRIPE_PRICE_YEARLY)},
+                   # Uppstartskontrollen mot Stripe: stämmer beloppen på
+                   # riktigt? Svarar på "är årspriset rätt i den här miljön?"
+                   # utan att någon behöver admin-token.
+                   "pricesVerified": STRIPE_PRICE_CHECK.get("ok"),
+                   "priceCheck": STRIPE_PRICE_CHECK.get("plans")},
         "recipeProviders": sorted(RECIPE_SERVICE.providers),
                                  "recipeCount": recipes_api.stats().get("total", 0),
                                  "productCount": grocery_api.database_summary().get("totalProducts", 0),
@@ -2903,6 +2951,12 @@ if __name__ == "__main__":
         except Exception:
             logger.exception("Förvärmningen misslyckades - första anropet betalar i stället")
     threading.Thread(target=_prewarm, name="matjakt-prewarm", daemon=True).start()
+
+    # Stripe-konfigurationen kontrolleras vid varje uppstart: ett pris-id som
+    # inte finns (fel värde i miljön, pris utbytt i Stripe) syns i loggen och
+    # i /api/health i stället för att upptäckas av den första kunden som
+    # försöker köpa just den planen.
+    threading.Thread(target=verify_stripe_prices, name="matjakt-stripe-check", daemon=True).start()
 
     # Nattliga, verifierade säkerhetskopior av alla databaser. Persistens är
     # inte backup - se services/backup.py för de ärliga gränserna och

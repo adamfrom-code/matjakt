@@ -1338,6 +1338,51 @@ class AuthHttpTest(unittest.TestCase):
         finally:
             api_server.ADMIN_TOKEN = original_token
 
+    def test_startup_check_reports_a_wrong_price_in_health_without_secrets(self):
+        """Fel STRIPE_PRICE_YEARLY märktes annars först när en kund tryckte
+        Prenumerera på årsplanen. Uppstartskontrollen säger det i /api/health,
+        så vem som helst med tillgång till hälsokontrollen ser det - utan
+        admin-token och utan att något hemligt visas."""
+        originals = (api_server.STRIPE_SECRET_KEY, api_server.STRIPE_PRICE_MONTHLY,
+                     api_server.STRIPE_PRICE_YEARLY, api_server.fetch_stripe_price,
+                     dict(api_server.STRIPE_PRICE_CHECK))
+        api_server.STRIPE_SECRET_KEY = "sk_test_hemlig"
+        api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY = "price_m", "price_saknas"
+
+        def fake_price(secret_key, price_id):
+            if price_id == "price_m":
+                return {"unit_amount": 5900, "currency": "sek", "active": True,
+                        "recurring": {"interval": "month"}}
+            raise StripeError(f"No such price: '{price_id}'")
+        api_server.fetch_stripe_price = fake_price
+        try:
+            api_server.verify_stripe_prices()
+            payload = self.get("/api/health")[1]
+            self.assertFalse(payload["stripe"]["pricesVerified"])
+            self.assertEqual(payload["stripe"]["priceCheck"]["monthly"], "ok")
+            self.assertEqual(payload["stripe"]["priceCheck"]["yearly"], "finns inte i Stripe-kontot")
+            self.assertNotIn("hemlig", json.dumps(payload))
+            self.assertNotIn("price_saknas", json.dumps(payload))
+
+            api_server.STRIPE_PRICE_YEARLY = "price_y"
+            api_server.fetch_stripe_price = lambda k, pid: (
+                {"unit_amount": 5900, "currency": "sek", "active": True, "recurring": {"interval": "month"}}
+                if pid == "price_m" else
+                {"unit_amount": 39900, "currency": "sek", "active": True, "recurring": {"interval": "year"}})
+            api_server.verify_stripe_prices()
+            payload = self.get("/api/health")[1]
+            self.assertTrue(payload["stripe"]["pricesVerified"])
+
+            # Utan nyckel är svaret "vet inte", inte "fel".
+            api_server.STRIPE_SECRET_KEY = ""
+            api_server.verify_stripe_prices()
+            self.assertIsNone(self.get("/api/health")[1]["stripe"]["pricesVerified"])
+        finally:
+            (api_server.STRIPE_SECRET_KEY, api_server.STRIPE_PRICE_MONTHLY,
+             api_server.STRIPE_PRICE_YEARLY, api_server.fetch_stripe_price, restore) = originals
+            api_server.STRIPE_PRICE_CHECK.clear()
+            api_server.STRIPE_PRICE_CHECK.update(restore)
+
     def test_stripe_check_catches_a_price_id_that_does_not_exist(self):
         """Produktionsfelet 2026-09-04: STRIPE_PRICE_YEARLY pekade på ett
         pris som inte fanns i kontot. Månadsköp fungerade, årsköp dog med
