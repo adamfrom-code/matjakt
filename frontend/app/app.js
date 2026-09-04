@@ -584,6 +584,9 @@ async function fetchEntitlements() {
     state.dbPricedAt = null; state.extraMatches = {}; extraMatchSync = {};
   }
   lastEntitlementPlan = entitlements.plan;
+  // Priserna kommer med svaret - rita om flikarna nu, annars står de kvar
+  // med reservvärdena tills något annat råkar rendera kontoarket.
+  renderPriceTabs();
   // A saved dinner count above the plan's cap quietly clamps for the NEXT
   // generated week. The already-chosen week is untouched - a paywall must
   // never eat food someone already planned.
@@ -600,9 +603,11 @@ function can(feature) {
 }
 function maxDinners() { return hasPremium() ? 7 : (entitlements.maxDinners || 4); }
 function premiumPricing() {
+  // Reservvärdet gäller bara innan /api/entitlements svarat. Det bär samma
+  // siffror som backend (features.PRICING) så flikarna aldrig visar tomt.
   return entitlements.pricing || {
-    monthly: { priceText: "59 kr/mån" },
-    yearly: { priceText: "399 kr/år", perMonthText: "≈ 33 kr/mån",
+    monthly: { priceText: "59 kr/mån", pricePerMonth: 59 },
+    yearly: { priceText: "399 kr/år", pricePerYear: 399, perMonthText: "≈ 33 kr/mån",
               savingsText: "Spara 309 kr jämfört med månadsbetalning", badge: "Bäst värde" },
   };
 }
@@ -2976,10 +2981,15 @@ function renderPriceTabs() {
   const pricing = premiumPricing();
   const month = document.querySelector('[data-price-tab="month"]');
   const year = document.querySelector('[data-price-tab="year"]');
-  if (month) month.innerHTML = `<span>Månad</span><strong>${escapeHtml(pricing.monthly?.priceText || "")}</strong><small>/mån</small>`;
+  // Beloppet i <strong>, villkoret i <small> - priceText bär redan "/mån"
+  // och skulle annars läsas som "59 kr/mån /mån".
+  const perMonth = pricing.monthly?.pricePerMonth;
+  const perYear = pricing.yearly?.pricePerYear;
+  if (month) month.innerHTML = `<span>Månad</span><strong>${escapeHtml(perMonth ? `${perMonth} kr` : (pricing.monthly?.priceText || ""))}</strong><small>/mån</small>`;
   if (year) {
-    const extra = [pricing.yearly?.perMonthText, pricing.yearly?.savingsText].filter(Boolean).join(" · ");
-    year.innerHTML = `<span>År · Bäst värde</span><strong>${escapeHtml(pricing.yearly?.priceText || "")}</strong><small>${escapeHtml(extra)}</small>`;
+    const savings = perMonth && perYear ? `spara ${perMonth * 12 - perYear} kr` : "";
+    const extra = ["/år", pricing.yearly?.perMonthText, savings].filter(Boolean).join(" · ");
+    year.innerHTML = `<span>År · Bäst värde</span><strong>${escapeHtml(perYear ? `${perYear} kr` : (pricing.yearly?.priceText || ""))}</strong><small>${escapeHtml(extra)}</small>`;
   }
 }
 let awaitingPremiumActivation = false;
