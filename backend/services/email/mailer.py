@@ -9,6 +9,8 @@ silently pretending an email went out.
 import smtplib
 from email.mime.text import MIMEText
 
+from ..data_guard import guard_outbound_call
+
 
 class MailError(Exception):
     """Base for both "not configured" and real SMTP delivery errors. `code`
@@ -47,6 +49,7 @@ def send_email(config, to_email, subject, body_text):
     from_email = config.get("from_email")
     if not host or not from_email:
         raise MailNotConfigured("E-post är inte konfigurerat på servern ännu")
+    guard_outbound_call("en SMTP-server")
     message = MIMEText(body_text, "plain", "utf-8")
     message["Subject"] = subject
     message["From"] = from_email
@@ -67,6 +70,7 @@ def check_transport(config):
     adress, i stället för att lova ett mejl som aldrig går iväg."""
     if not is_configured(config):
         raise MailNotConfigured("E-post är inte konfigurerat på servern ännu")
+    guard_outbound_call("en SMTP-server")
     try:
         with smtplib.SMTP(config["host"], int(config.get("port") or 587), timeout=10) as smtp:
             smtp.starttls()

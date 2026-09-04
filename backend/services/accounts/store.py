@@ -19,14 +19,36 @@ import hashlib
 import re
 import secrets
 import sqlite3
+import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from ..data_guard import guard_database_path
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# Statusar där Stripe anser prenumerationen levande nog att äga kontot.
+BILLING_LIVE_STATUSES = ("active", "trialing")
+BILLING_OWNING_STATUSES = ("active", "trialing", "past_due")
+# Premium hänger inte kvar för evigt om ett deleted-event tappas bort: efter
+# periodens slut plus den här respiten faller kontot till Free av sig självt.
+# Respiten täcker Stripes förnyelseförsök (en lyckad förnyelse skickar alltid
+# ett nytt updated-event med ny period), så ingen demoteras i förtid.
 SESSION_TTL_DAYS = 30
+SUBSCRIPTION_GRACE_SECONDS = 3 * 86400
 PBKDF2_ITERATIONS = 200_000
+
+
+def _period_expired(period_end_iso) -> bool:
+    """True när prenumerationsperioden (plus respit) ligger bakom oss."""
+    if not period_end_iso:
+        return False
+    try:
+        end = datetime.fromisoformat(str(period_end_iso))
+    except ValueError:
+        return False
+    if end.tzinfo is None:
+        end = end.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) > end + timedelta(seconds=SUBSCRIPTION_GRACE_SECONDS)
 
 
 class AccountError(Exception):
@@ -60,6 +82,9 @@ class AccountStore:
         guard_database_path(db_path, purpose="kontodatabasen")
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = sqlite3.connect(db_path, check_same_thread=False)
+        # Webhookar kan komma parallellt (ThreadingHTTPServer): läs-ändra-skriv
+        # i apply_stripe_event måste vara odelbar.
+        self._stripe_lock = threading.Lock()
         self._connection.row_factory = sqlite3.Row
         self._connection.execute("PRAGMA journal_mode=WAL")
         self._init_schema()
@@ -132,7 +157,12 @@ class AccountStore:
         trial_ends_at = row["trial_ends_at"] if "trial_ends_at" in keys else None
         trial_active = bool(trial_ends_at) and trial_ends_at > datetime.now(timezone.utc).isoformat()
         sub_status = row["subscription_status"] if "subscription_status" in keys else None
-        subscription_active = sub_status in ("active", "trialing")
+        period_end = row["subscription_period_end"] if "subscription_period_end" in keys else None
+        # FAIL CLOSED: "active" räcker inte i sig. Har perioden plus respiten
+        # passerat utan att Stripe hört av sig (tappat deleted-event, roterad
+        # webhook-hemlighet, nere längre än Stripes omleveransfönster) faller
+        # kontot till Free i stället för att ge bort Premium för evigt.
+        subscription_active = sub_status in BILLING_LIVE_STATUSES and not _period_expired(period_end)
         premium_active = bool(row["premium"]) or trial_active or subscription_active
         plan_raw = row["subscription_plan"] if "subscription_plan" in keys else None
         return {
@@ -325,6 +355,70 @@ class AccountStore:
             )
         self._connection.commit()
         return cursor.rowcount > 0
+
+    def apply_stripe_event(self, *, event_id, event_created, customer_id, subscription_id,
+                          status, period_end_iso, cancel_at_period_end, plan) -> str:
+        """Idempotens OCH applicering i EN transaktion.
+
+        Returnerar "applied", "duplicate", "ignored" eller "unknown_customer".
+        Kastar vidare vid databasfel efter rollback - då är event-id:t INTE
+        registrerat, så Stripes omleverans får en ny chans. (Att markera
+        eventet i en egen commit först innebar att ett fel i appliceringen
+        gjorde händelsen förlorad för alltid: nästa leverans svarades
+        "duplicate" utan att någonsin ha ändrat något.)
+
+        Ordning och ägarskap:
+        * Äldre event.created än det senast applicerade -> ignoreras.
+        * Samma sekund: en levande status (active/trialing) skrivs inte över
+          av en död - Stripe skickar created och updated inom samma sekund vid
+          en Checkout och garanterar ingen leveransordning.
+        * En händelse för en ANNAN prenumeration än den lagrade får bara ta
+          över om den själv är levande. Annars kunde en gammal, död
+          prenumerations sista händelse släcka Premium för en betald ny.
+        """
+        created = int(event_created) if event_created is not None else None
+        with self._stripe_lock:
+            try:
+                if event_id:
+                    seen = self._connection.execute(
+                        "INSERT OR IGNORE INTO stripe_events (event_id, created, received_at) VALUES (?, ?, ?)",
+                        (event_id, created, datetime.now(timezone.utc).isoformat()),
+                    )
+                    if seen.rowcount == 0:
+                        self._connection.commit()
+                        return "duplicate"
+                row = self._connection.execute(
+                    """SELECT id, stripe_subscription_id, subscription_status, stripe_event_created
+                       FROM users WHERE stripe_customer_id = ?""", (customer_id,)).fetchone()
+                if row is None:
+                    self._connection.commit()
+                    return "unknown_customer"
+                stored_created = row["stripe_event_created"]
+                stored_sub, stored_status = row["stripe_subscription_id"], row["subscription_status"]
+                outcome = "applied"
+                if created is not None and stored_created is not None:
+                    if created < stored_created:
+                        outcome = "ignored"
+                    elif (created == stored_created and stored_status in BILLING_LIVE_STATUSES
+                            and status not in BILLING_LIVE_STATUSES):
+                        outcome = "ignored"
+                if (outcome == "applied" and stored_sub and subscription_id and stored_sub != subscription_id
+                        and stored_status in BILLING_OWNING_STATUSES and status not in BILLING_LIVE_STATUSES):
+                    outcome = "ignored"
+                if outcome == "applied":
+                    self._connection.execute(
+                        """UPDATE users SET stripe_subscription_id = ?, subscription_status = ?,
+                           subscription_period_end = ?, subscription_cancel_at_period_end = ?,
+                           subscription_plan = ?, stripe_event_created = COALESCE(?, stripe_event_created)
+                           WHERE id = ?""",
+                        (subscription_id, status, period_end_iso, int(bool(cancel_at_period_end)),
+                         plan, created, row["id"]),
+                    )
+                self._connection.commit()
+                return outcome
+            except Exception:
+                self._connection.rollback()
+                raise
 
     def record_stripe_event(self, event_id, created) -> bool:
         """True första gången ett event-id ses, False vid omleverans."""

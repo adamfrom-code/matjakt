@@ -5,7 +5,8 @@ admin-endpointen. Releasegaten är grön först när produktionens siffror är
 0/0/0/0/0 (gram som styck, volym som styck, estimat, otolkade paket,
 kategorikonflikter)."""
 
-from .pricing import RecipePricingEngine, _MASS, _VOLUME, _fold, baking_grams, dairy_gram_ml_equivalent
+from .pricing import (RecipePricingEngine, _MASS, _VOLUME, _VARIABLE_WEIGHT_RE, _fold, baking_grams,
+                      convert_amount, dairy_gram_ml_equivalent)
 
 FLAVOR_SUSPECTS = ["knäcke", "bulle", "kaka", "skorpa", "müsli", "godis",
                    "glass", "te ", "dryck", "yoghurt", "gröt", "chips"]
@@ -21,7 +22,7 @@ def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: 
 
     counts = {k: 0 for k in ("gram_som_styck", "volym_som_styck", "paket_over_10", "paket_over_50",
                              "rad_over_500", "rad_over_1000", "otolkad_paketstorlek", "estimat",
-                             "smakords_misstanke", "saknade")}
+                             "kilopris_som_paketpris", "smakords_misstanke", "saknade")}
     examples: dict[str, list] = {k: [] for k in counts}
     checks = 0
 
@@ -65,8 +66,17 @@ def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: 
                     note("otolkad_paketstorlek", recipe, ing, chain, row, f"size={row.get('packageSize')!r}")
                 if any(word in _fold(row.get("productName") or "") for word in FLAVOR_SUSPECTS):
                     note("smakords_misstanke", recipe, ing, chain, row)
+                # Viktvara ("ca: 850g") vars radpris fortfarande ÄR kilopriset:
+                # 125 kr/kg visat som 125 kr paketet. Fel pris - gaten är röd.
+                size = row.get("packageSize") or ""
+                comparison, unit_cost = row.get("comparisonPrice"), row.get("unitPrice")
+                pack_g = convert_amount(row.get("packageAmount") or 0, row.get("packageUnit") or "g", "g") if package_unit in _MASS else None
+                if (_VARIABLE_WEIGHT_RE.match(size) and comparison and unit_cost and pack_g
+                        and abs(pack_g - 1000) > 1 and abs(unit_cost - comparison) < 0.01 and not row.get("weightPriced")):
+                    note("kilopris_som_paketpris", recipe, ing, chain, row, f"{unit_cost} kr = {comparison} kr/kg")
 
-    gate = all(counts[k] == 0 for k in ("gram_som_styck", "volym_som_styck", "estimat", "otolkad_paketstorlek"))
+    gate = all(counts[k] == 0 for k in ("gram_som_styck", "volym_som_styck", "estimat", "otolkad_paketstorlek",
+                                        "kilopris_som_paketpris"))
     return {"recept": len(recipes), "kedjor": list(store_rows), "kontroller": checks,
             "flaggor": counts, "exempel": {k: v for k, v in examples.items() if v},
             "gate": "GRÖN" if gate else "RÖD"}

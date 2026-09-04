@@ -151,5 +151,61 @@ class GuardIsPassiveInProduction(unittest.TestCase):
                     self.assertFalse(test_mode_active())
 
 
+class OutboundCallsAreBlockedInTests(unittest.TestCase):
+    """Sviten skapade riktiga Stripe-kunder så fort .env hade en nyckel.
+    Spärren är densamma som för databasen: fail closed i botten."""
+
+    def test_stripe_request_refuses_to_leave_the_machine(self):
+        from services.billing import stripe_client
+        from services.data_guard import OutboundCallInTestError
+        with self.assertRaises(OutboundCallInTestError):
+            stripe_client.create_customer("sk_test_riktig", "a@b.se", 1)
+        with self.assertRaises(OutboundCallInTestError):
+            stripe_client.fetch_price("sk_test_riktig", "price_x")
+
+    def test_sending_mail_refuses_to_leave_the_machine(self):
+        from services.data_guard import OutboundCallInTestError
+        from services.email import check_transport, send_email
+        config = {"host": "smtp.example.com", "from_email": "noreply@example.com"}
+        with self.assertRaises(OutboundCallInTestError):
+            send_email(config, "a@b.se", "Ämne", "Text")
+        with self.assertRaises(OutboundCallInTestError):
+            check_transport(config)
+
+    def test_a_test_that_mocks_the_transport_is_let_through(self):
+        from unittest.mock import patch
+        from services.billing import stripe_client
+        from services.data_guard import mocked_outbound
+
+        class _Response:
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+            def read(self): return b'{"id": "cus_mock"}'
+
+        with mocked_outbound(), patch.object(stripe_client.urllib.request, "urlopen", lambda *a, **k: _Response()):
+            self.assertEqual(stripe_client.create_customer("sk_test_x", "a@b.se", 1), "cus_mock")
+
+    def test_guard_is_passive_outside_test_mode(self):
+        import os
+        from services.data_guard import guard_outbound_call
+        original = os.environ.get("MATJAKT_TEST_MODE")
+        argv, main = sys.argv[:], sys.modules.get("__main__")
+        spec = getattr(main, "__spec__", None)
+        try:
+            os.environ["MATJAKT_TEST_MODE"] = "0"
+            sys.argv = ["matjakt-server"]
+            if main is not None:
+                main.__spec__ = None
+            guard_outbound_call("Stripe")      # kastar inte i skarp drift
+        finally:
+            if original is None:
+                os.environ.pop("MATJAKT_TEST_MODE", None)
+            else:
+                os.environ["MATJAKT_TEST_MODE"] = original
+            sys.argv = argv
+            if main is not None:
+                main.__spec__ = spec
+
+
 if __name__ == "__main__":
     unittest.main()

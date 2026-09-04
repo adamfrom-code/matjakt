@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 from services.billing import StripeError, verify_webhook_signature  # noqa: E402
 from services.billing import stripe_client  # noqa: E402
+from services.data_guard import mocked_outbound  # noqa: E402
 
 
 def _sign(payload_bytes, secret, timestamp=None):
@@ -72,17 +73,17 @@ class StripeWebhookSignatureTest(unittest.TestCase):
 
 class StripeClientTransport(unittest.TestCase):
     def test_network_error_becomes_stripe_error_not_500(self):
-        with patch.object(stripe_client.urllib.request, "urlopen", side_effect=urllib.error.URLError("dns")):
+        with mocked_outbound(), patch.object(stripe_client.urllib.request, "urlopen", side_effect=urllib.error.URLError("dns")):
             with self.assertRaises(StripeError):
                 stripe_client.create_customer("sk_test_x", "a@b.se", 1)
 
     def test_timeout_becomes_stripe_error(self):
-        with patch.object(stripe_client.urllib.request, "urlopen", side_effect=TimeoutError()):
+        with mocked_outbound(), patch.object(stripe_client.urllib.request, "urlopen", side_effect=TimeoutError()):
             with self.assertRaises(StripeError):
                 stripe_client.create_portal_session("sk_test_x", "cus_1", "https://x")
 
     def test_missing_secret_makes_no_network_call(self):
-        with patch.object(stripe_client.urllib.request, "urlopen") as urlopen:
+        with mocked_outbound(), patch.object(stripe_client.urllib.request, "urlopen") as urlopen:
             with self.assertRaises(StripeError):
                 stripe_client.create_customer("", "a@b.se", 1)
             urlopen.assert_not_called()
@@ -99,7 +100,7 @@ class StripeClientTransport(unittest.TestCase):
             captured["body"] = req.data.decode("utf-8")
             return _Response()
 
-        with patch.object(stripe_client.urllib.request, "urlopen", fake_urlopen):
+        with mocked_outbound(), patch.object(stripe_client.urllib.request, "urlopen", fake_urlopen):
             url = stripe_client.create_checkout_session("sk_test_x", "cus_1", "price_m", "https://ok", "https://cancel")
         self.assertEqual(url, "https://checkout.stripe.com/x")
         self.assertIn("mode=subscription", captured["body"])

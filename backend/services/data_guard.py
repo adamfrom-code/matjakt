@@ -25,6 +25,7 @@ Utanför testläge är spärren helt passiv: servern, skripten och kollektorerna
 
 from __future__ import annotations
 
+import contextlib
 import os
 import sys
 import tempfile
@@ -52,6 +53,41 @@ def test_mode_active() -> bool:
     if argv0.startswith("test_") or argv0 in ("pytest", "pytest.exe", "py.test"):
         return True
     return False
+
+
+class OutboundCallInTestError(RuntimeError):
+    """En testkörning försökte anropa en riktig extern tjänst."""
+
+
+_outbound_mocked = 0
+
+
+@contextlib.contextmanager
+def mocked_outbound():
+    """Används av tester som HAR ersatt transporten (urlopen, smtplib.SMTP)
+    och därför ska släppas förbi spärren. Glömmer man den blir anropet
+    stoppat - fail closed åt rätt håll."""
+    global _outbound_mocked
+    _outbound_mocked += 1
+    try:
+        yield
+    finally:
+        _outbound_mocked -= 1
+
+
+def guard_outbound_call(service: str) -> None:
+    """Fail closed: under en testkörning når vi aldrig ut på riktigt.
+
+    Nycklar i .env är riktiga - utan den här spärren skapade sviten skarpa
+    Stripe-kunder och kunde skicka riktiga mejl bara för att någon körde
+    testerna på en maskin där utvecklingsnycklarna låg."""
+    if _outbound_mocked:
+        return
+    if test_mode_active():
+        raise OutboundCallInTestError(
+            f"Testkörning försökte anropa {service} på riktigt. "
+            f"Mocka anropet och kör det i data_guard.mocked_outbound() - "
+            f"riktiga anrop är aldrig tillåtna i testläge.")
 
 
 def allowed_test_roots() -> list[Path]:

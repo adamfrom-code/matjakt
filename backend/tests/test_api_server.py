@@ -12,13 +12,15 @@ import unittest
 from unittest import mock
 import urllib.parse
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from services.data_guard import isolated_test_data_dir  # noqa: E402
 isolated_test_data_dir()  # MATJAKT_DATA_DIR -> tempkatalog INNAN api_server importeras
+import sqlite3
+
 import api_server
 from services.billing import StripeError  # noqa: E402
 from services.email import MailSendFailed  # noqa: E402  # noqa: E402
@@ -1136,10 +1138,12 @@ class AuthHttpTest(unittest.TestCase):
         finally:
             conn.close()
 
-    def get(self, path, token=None):
+    def get(self, path, token=None, headers=None):
         conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         try:
+            extra = headers or {}
             headers = {"Authorization": f"Bearer {token}"} if token else {}
+            headers.update(extra)
             conn.request("GET", path, headers=headers)
             response = conn.getresponse()
             body = response.read()
@@ -1302,12 +1306,113 @@ class AuthHttpTest(unittest.TestCase):
         status, payload = self.post("/api/auth/login", {"email": email, "password": "hemligt123"})
         self.assertEqual(status, 401)
 
+    def test_backup_download_needs_admin_token_and_streams_a_verified_set(self):
+        import gzip
+        import io as _io
+        import tarfile
+        from services import backup as backup_service
+        original_token = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "admin-hemlighet"
+        try:
+            status, payload = self.get("/api/admin/backup-download")
+            self.assertEqual(status, 404)                       # utan token: som om vägen inte fanns
+            status, _ = self.get("/api/admin/backup-download", headers={"X-Admin-Token": "fel"})
+            self.assertEqual(status, 404)                             # fel token: samma 404
+            report = backup_service.take_backup(api_server.DATA_DIR)   # DATA_DIR är sviten temp (data_guard)
+            self.assertTrue(report["copied"])
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+            try:
+                conn.request("GET", "/api/admin/backup-download", headers={"X-Admin-Token": "admin-hemlighet"})
+                response = conn.getresponse()
+                body = response.read()
+                self.assertEqual(response.status, 200)
+                self.assertEqual(response.getheader("Content-Type"), "application/gzip")
+                self.assertIn("matjakt-backup-", response.getheader("Content-Disposition"))
+            finally:
+                conn.close()
+            self.assertEqual(body[:2], b"\x1f\x8b")                  # gzip-magi
+            with tarfile.open(fileobj=_io.BytesIO(body), mode="r:gz") as archive:
+                names = archive.getnames()
+            self.assertTrue(any(name.endswith(".db") for name in names), names)
+            self.assertTrue(all("/" in name for name in names), "filerna ligger under <stämpel>/")
+        finally:
+            api_server.ADMIN_TOKEN = original_token
+
+    def test_stripe_check_catches_a_price_id_that_does_not_exist(self):
+        """Produktionsfelet 2026-09-04: STRIPE_PRICE_YEARLY pekade på ett
+        pris som inte fanns i kontot. Månadsköp fungerade, årsköp dog med
+        400 först när en kund tryckte "Prenumerera". Kontrollen frågar
+        Stripe i förväg - och läcker aldrig nyckelmaterial."""
+        originals = (api_server.ADMIN_TOKEN, api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET,
+                     api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY, api_server.fetch_stripe_price)
+        api_server.ADMIN_TOKEN = "admin-hemlighet"
+        api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET = "sk_test_x", "whsec_x"
+        api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY = "price_m", "price_saknas"
+
+        def fake_price(secret_key, price_id):
+            if price_id == "price_m":
+                return {"id": "price_m", "unit_amount": 5900, "currency": "sek", "active": True,
+                        "recurring": {"interval": "month", "trial_period_days": None}}
+            raise StripeError(f"No such price: '{price_id}'")
+        api_server.fetch_stripe_price = fake_price
+        try:
+            self.assertEqual(self.get("/api/admin/stripe-check")[0], 404)          # utan admin-token
+            status, payload = self.get("/api/admin/stripe-check", headers={"X-Admin-Token": "admin-hemlighet"})
+            self.assertEqual(status, 502)
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["mode"], "test")
+            self.assertTrue(payload["prices"]["monthly"]["matches"])
+            self.assertFalse(payload["prices"]["yearly"]["exists"])
+            self.assertIn("No such price", payload["prices"]["yearly"]["error"])
+            self.assertNotIn("sk_test_x", json.dumps(payload))
+            self.assertNotIn("whsec_x", json.dumps(payload))
+
+            # Rätt konfiguration: 59 + 399 kr, ingen provperiod -> ok.
+            api_server.STRIPE_PRICE_YEARLY = "price_y"
+
+            def both_ok(secret_key, price_id):
+                return ({"unit_amount": 5900, "currency": "sek", "active": True,
+                         "recurring": {"interval": "month"}} if price_id == "price_m" else
+                        {"unit_amount": 39900, "currency": "sek", "active": True,
+                         "recurring": {"interval": "year"}})
+            api_server.fetch_stripe_price = both_ok
+            status, payload = self.get("/api/admin/stripe-check", headers={"X-Admin-Token": "admin-hemlighet"})
+            self.assertEqual(status, 200)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["prices"]["yearly"]["amount"], 399.0)
+
+            # En provperiod på priset motsäger "ingen trial" -> underkänt.
+            api_server.fetch_stripe_price = lambda k, pid: {
+                "unit_amount": 5900 if pid == "price_m" else 39900, "currency": "sek", "active": True,
+                "recurring": {"interval": "month" if pid == "price_m" else "year", "trial_period_days": 14}}
+            status, payload = self.get("/api/admin/stripe-check", headers={"X-Admin-Token": "admin-hemlighet"})
+            self.assertEqual(status, 502)
+            self.assertFalse(payload["ok"])
+
+            # Live-nyckel syns i läget utan att nyckeln visas.
+            api_server.STRIPE_SECRET_KEY = "sk_live_hemlig"
+            status, payload = self.get("/api/admin/stripe-check", headers={"X-Admin-Token": "admin-hemlighet"})
+            self.assertEqual(payload["mode"], "live")
+            self.assertNotIn("hemlig", json.dumps(payload))
+        finally:
+            (api_server.ADMIN_TOKEN, api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET,
+             api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY, api_server.fetch_stripe_price) = originals
+
     def test_checkout_rejects_when_stripe_not_configured(self):
-        email = self._email()
-        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
-        status, payload = self.post("/api/billing/checkout", {"plan": "monthly"}, token=payload["token"])
-        self.assertEqual(status, 400)
-        self.assertIn("error", payload)
+        # Uttryckligen okonfigurerat: annars kunde en riktig nyckel i .env
+        # göra testet till ett skarpt Stripe-anrop (spärren i data_guard
+        # stoppar det numera, men testet ska stå på egna ben).
+        originals = (api_server.STRIPE_SECRET_KEY, api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY)
+        api_server.STRIPE_SECRET_KEY = api_server.STRIPE_PRICE_MONTHLY = api_server.STRIPE_PRICE_YEARLY = ""
+        try:
+            email = self._email()
+            _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+            status, payload = self.post("/api/billing/checkout", {"plan": "monthly"}, token=payload["token"])
+            self.assertEqual(status, 400)
+            self.assertIn("error", payload)
+        finally:
+            (api_server.STRIPE_SECRET_KEY, api_server.STRIPE_PRICE_MONTHLY,
+             api_server.STRIPE_PRICE_YEARLY) = originals
 
     def test_checkout_creates_customer_once_and_returns_url(self):
         original_price, original_key = api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_SECRET_KEY
@@ -1416,9 +1521,9 @@ class AuthHttpTest(unittest.TestCase):
         return {"id": event_id, "created": created, "type": "customer.subscription.updated", "data": {"object": obj}}
 
     def _customer(self, customer_id):
-        email = self._email()
-        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
-        token = payload["token"]
+        # Direkt mot butiken: HTTP-registrering förbrukar registreringsgränsen
+        # (per IP), och flera av testerna nedan behöver fler konton än så.
+        token, _ = api_server.ACCOUNT_STORE.register(self._email(), "hemligt123")
         user_id, _, _ = api_server.ACCOUNT_STORE.billing_identity_for_token(token)
         api_server.ACCOUNT_STORE.set_stripe_customer_id(user_id, customer_id)
         return token
@@ -1607,6 +1712,200 @@ class AuthHttpTest(unittest.TestCase):
         self.assertIn("mail", payload)
         self.assertIsInstance(payload["mail"], bool)
         self.assertNotIn("smtp", json.dumps(payload).lower())
+        # Stripe: läge (test/live) och vad som är satt - aldrig nyckeln.
+        original = (api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET)
+        api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET = "sk_test_abc123", "whsec_x"
+        try:
+            status, payload = self.get("/api/health")
+            self.assertEqual(payload["stripe"]["mode"], "test")
+            self.assertTrue(payload["stripe"]["configured"] and payload["stripe"]["webhook"])
+            self.assertNotIn("sk_test_abc123", json.dumps(payload))
+            self.assertNotIn("whsec", json.dumps(payload))
+        finally:
+            api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET = original
+
+    def test_no_status_except_active_grants_premium(self):
+        """Misslyckad eller pausad betalning får ALDRIG ge Premium."""
+        original = api_server.STRIPE_WEBHOOK_SECRET
+        api_server.STRIPE_WEBHOOK_SECRET = "whsec_test"
+        try:
+            for index, status in enumerate(("incomplete", "incomplete_expired", "past_due",
+                                            "unpaid", "paused", "canceled")):
+                token = self._customer(f"cus_status_{index}")
+                event = self._subscription_event(f"evt_status_{index}", int(time.time()), status,
+                                                 customer=f"cus_status_{index}")
+                self.assertEqual(self._post_webhook(event)[0], 200)
+                user = self.get("/api/auth/me", token=token)[1]["user"]
+                self.assertFalse(user["premium"], f"{status} gav Premium")
+                self.assertEqual(user["plan"], "free")
+                self.assertFalse(self.get("/api/entitlements", token=token)[1]["isPremium"])
+        finally:
+            api_server.STRIPE_WEBHOOK_SECRET = original
+
+    def test_a_dead_subscriptions_event_cannot_cancel_a_live_one(self):
+        """Kunden har två prenumerationer: den gamla dör, den nya är betald.
+        Den gamlas sista händelse fick tidigare släcka Premium eftersom
+        raden bara nycklades på KUND."""
+        original = api_server.STRIPE_WEBHOOK_SECRET
+        api_server.STRIPE_WEBHOOK_SECRET = "whsec_test"
+        try:
+            token = self._customer("cus_two_subs")
+            now = int(time.time())
+            live = self._subscription_event("evt_live", now, "active", customer="cus_two_subs")
+            live["data"]["object"]["id"] = "sub_new"
+            self.assertEqual(self._post_webhook(live)[0], 200)
+            self.assertTrue(self.get("/api/auth/me", token=token)[1]["user"]["premium"])
+
+            dead = self._subscription_event("evt_dead", now + 60, "canceled", customer="cus_two_subs")
+            dead["type"], dead["data"]["object"]["id"] = "customer.subscription.deleted", "sub_old"
+            status, payload = self._post_webhook(dead)
+            self.assertEqual(status, 200)
+            self.assertEqual(payload.get("outcome"), "ignored")
+            user = self.get("/api/auth/me", token=token)[1]["user"]
+            self.assertTrue(user["premium"], "en död prenumeration släckte den betalda")
+            self.assertEqual(user["subscriptionStatus"], "active")
+
+            # Den LEVANDE prenumerationens egen uppsägning gäller förstås.
+            ends = self._subscription_event("evt_live_end", now + 120, "canceled", customer="cus_two_subs")
+            ends["type"], ends["data"]["object"]["id"] = "customer.subscription.deleted", "sub_new"
+            self.assertEqual(self._post_webhook(ends)[0], 200)
+            self.assertFalse(self.get("/api/auth/me", token=token)[1]["user"]["premium"])
+        finally:
+            api_server.STRIPE_WEBHOOK_SECRET = original
+
+    def test_same_second_events_do_not_let_a_dead_status_win(self):
+        """Stripe skickar created och updated inom samma sekund vid en
+        Checkout och garanterar ingen ordning. En 'incomplete' som anländer
+        efter en 'active' med samma tidsstämpel får inte vinna."""
+        original = api_server.STRIPE_WEBHOOK_SECRET
+        api_server.STRIPE_WEBHOOK_SECRET = "whsec_test"
+        try:
+            token = self._customer("cus_same_second")
+            now = int(time.time())
+            self._post_webhook(self._subscription_event("evt_a", now, "active", customer="cus_same_second"))
+            self.assertTrue(self.get("/api/auth/me", token=token)[1]["user"]["premium"])
+            late = self._subscription_event("evt_b", now, "incomplete", customer="cus_same_second")
+            late["type"] = "customer.subscription.created"
+            status, payload = self._post_webhook(late)
+            self.assertEqual(status, 200)
+            self.assertEqual(payload.get("outcome"), "ignored")
+            self.assertTrue(self.get("/api/auth/me", token=token)[1]["user"]["premium"])
+        finally:
+            api_server.STRIPE_WEBHOOK_SECRET = original
+
+    def test_a_failed_apply_leaves_the_event_unrecorded_so_stripe_retries(self):
+        """Idempotensmarkeringen får inte överleva ett fel i appliceringen -
+        då svarades Stripes omleverans 'duplicate' och Premium aktiverades
+        aldrig."""
+        original_secret = api_server.STRIPE_WEBHOOK_SECRET
+        api_server.STRIPE_WEBHOOK_SECRET = "whsec_test"
+        store = api_server.ACCOUNT_STORE
+        real_connection = store._connection
+        token = self._customer("cus_retry")
+        event = self._subscription_event("evt_retry", int(time.time()), "active", customer="cus_retry")
+
+        class FlakyConnection:
+            """Låter allt gå fram utom den första UPDATE:en - som en låst
+            databas eller en deploy mitt i behandlingen."""
+
+            def __init__(self):
+                self.failed = False
+
+            def execute(self, sql, *args, **kwargs):
+                if sql.strip().startswith("UPDATE users SET stripe_subscription_id") and not self.failed:
+                    self.failed = True
+                    raise sqlite3.OperationalError("database is locked")
+                return real_connection.execute(sql, *args, **kwargs)
+
+            def __getattr__(self, name):
+                return getattr(real_connection, name)
+        try:
+            store._connection = FlakyConnection()
+            status, _ = self._post_webhook(event)
+            self.assertEqual(status, 500, "ett fel måste ge 500 så Stripe försöker igen")
+            store._connection = real_connection
+            self.assertFalse(self.get("/api/auth/me", token=token)[1]["user"]["premium"])
+            # Stripes omleverans av SAMMA event ska nu gå igenom på riktigt.
+            status, payload = self._post_webhook(event)
+            self.assertEqual(status, 200)
+            self.assertIsNone(payload.get("duplicate"))
+            self.assertTrue(self.get("/api/auth/me", token=token)[1]["user"]["premium"])
+        finally:
+            store._connection = real_connection
+            api_server.STRIPE_WEBHOOK_SECRET = original_secret
+
+    def test_premium_falls_back_to_free_when_the_paid_period_has_passed(self):
+        """Uteblivet deleted-event (webhooken nere, roterad hemlighet) fick
+        Premium att hänga kvar för evigt. Perioden plus respit avgör."""
+        token = self._customer("cus_expired")
+        old = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
+        api_server.ACCOUNT_STORE.apply_subscription_event("cus_expired", "sub_exp", "active", old, False, "monthly")
+        user = self.get("/api/auth/me", token=token)[1]["user"]
+        self.assertFalse(user["premium"], "perioden slut för 10 dagar sedan men Premium kvar")
+        self.assertEqual(user["plan"], "free")
+        # Inom respiten (Stripes förnyelseförsök) behålls Premium.
+        recent = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        api_server.ACCOUNT_STORE.apply_subscription_event("cus_expired", "sub_exp", "active", recent, False, "monthly")
+        self.assertTrue(self.get("/api/auth/me", token=token)[1]["user"]["premium"])
+
+    def test_unknown_price_id_is_not_sold_as_a_monthly_plan(self):
+        """Ett pris-id som inte matchar miljöns två lagrades rått och
+        kontosidan kallade det '59 kr/mån'."""
+        original = api_server.STRIPE_WEBHOOK_SECRET
+        api_server.STRIPE_WEBHOOK_SECRET = "whsec_test"
+        try:
+            token = self._customer("cus_unknown_price")
+            event = self._subscription_event("evt_unknown_price", int(time.time()), "active",
+                                             customer="cus_unknown_price", price="price_nagot_annat")
+            self.assertEqual(self._post_webhook(event)[0], 200)
+            user = self.get("/api/auth/me", token=token)[1]["user"]
+            self.assertTrue(user["premium"])                    # betalt är betalt
+            self.assertIsNone(user["subscriptionPlan"])         # men planen är okänd
+        finally:
+            api_server.STRIPE_WEBHOOK_SECRET = original
+
+    def test_broken_content_length_and_signature_are_answered_not_crashed(self):
+        """Oautentiserade kraschvägar: allt detta ska bli 400, aldrig en
+        traceback eller en tråd som hänger."""
+        original = api_server.STRIPE_WEBHOOK_SECRET
+        api_server.STRIPE_WEBHOOK_SECRET = "whsec_test"
+        try:
+            for headers, expected in (
+                ({"Content-Length": "abc"}, 400),
+                ({"Content-Length": "-1"}, 400),
+                ({"Stripe-Signature": "t=abc,v1=" + "a" * 64}, 400),
+                ({"Stripe-Signature": "t=99999999999999999999,v1=" + "a" * 64}, 400),
+                ({"Stripe-Signature": f"t={int(time.time())},v1=é"}, 400),
+                ({"Stripe-Signature": f"t={int(time.time())},v1=inte-hex"}, 400),
+                ({"Stripe-Signature": ""}, 400),
+            ):
+                conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+                try:
+                    request_headers = {"Content-Type": "application/json"}
+                    request_headers.update(headers)
+                    conn.request("POST", "/api/billing/webhook", body=b'{"type":"x"}', headers=request_headers)
+                    response = conn.getresponse()
+                    response.read()
+                    self.assertEqual(response.status, expected, headers)
+                finally:
+                    conn.close()
+        finally:
+            api_server.STRIPE_WEBHOOK_SECRET = original
+
+    def test_account_deletion_refuses_while_stripe_key_is_missing(self):
+        """Utan nyckel kan prenumerationen inte sägas upp - då raderas inte
+        kontot heller, annars fortsätter debiteringen utan konto."""
+        originals = (api_server.STRIPE_SECRET_KEY, api_server.cancel_subscription)
+        api_server.STRIPE_SECRET_KEY = ""
+        try:
+            token = self._customer("cus_no_key")
+            api_server.ACCOUNT_STORE.apply_subscription_event("cus_no_key", "sub_no_key", "active", None, False, "monthly")
+            status, payload = self.post("/api/auth/delete-account", {}, token=token)
+            self.assertEqual(status, 503)
+            self.assertEqual(payload["code"], "STRIPE_UNAVAILABLE")
+            self.assertEqual(self.get("/api/auth/me", token=token)[0], 200)
+        finally:
+            api_server.STRIPE_SECRET_KEY, api_server.cancel_subscription = originals
 
     def test_redeem_premium_with_correct_code(self):
         email = self._email()

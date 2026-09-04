@@ -858,6 +858,24 @@ def buljong_liters(ingredient: str, amount: float, unit: str) -> float | None:
     return convert_amount(amount, unit, "l")
 
 
+# Cirkavikt: "ca: 850g", "ca500g", "CA 175G", "ca 1.2kg". Butiken (Axfood,
+# City Gross) prissätter sådana varor PER KILO och skriver samma tal som
+# pris och jämförpris. Paketpriset är då kr/kg × cirkavikten - inte kilopriset.
+_VARIABLE_WEIGHT_RE = re.compile(r"^\s*ca(?:[\s:.]+|(?=\d))", re.IGNORECASE)
+
+
+def is_variable_weight(product) -> bool:
+    """Viktvara med cirkavikt i size-texten ("ca: 850g")."""
+    return bool(_VARIABLE_WEIGHT_RE.match(product.size or ""))
+
+
+def kilo_price_signature(price) -> bool:
+    """Pris == jämförpris (kr/kg): prisraden ÄR ett kilopris."""
+    unit_price = getattr(price, "unit_price", None)
+    regular = getattr(price, "regular_price", None)
+    return bool(unit_price and regular and abs(unit_price - regular) < 0.01)
+
+
 def effective_package(product) -> tuple[float | None, str | None]:
     """Förpackningens (mängd, enhet) - importens tolkning först, annars en
     försiktig läsning av size-texten och namnet.
@@ -868,7 +886,8 @@ def effective_package(product) -> tuple[float | None, str | None]:
 
     "400/240g" läses som 240 g (avrunnen vikt - det är maten, inte lagen).
     "2x120g" blir 240 g. "CA 750G" blir 750 g - cirkavikt på en bit är
-    rätt modell för antalet, och priset är per styck. Hittas bara ett
+    rätt modell för antalet; PRISET per paket blir kr/kg × cirkavikten när
+    prisraden bär kilopris-signaturen (se price_item). Hittas bara ett
     styckantal ("Ägg 6p") blir det N st. Hittas inget alls: (None, None),
     och raden förblir ärligt osäker."""
     if getattr(product, "package_conflict", None):
@@ -1162,6 +1181,13 @@ def _pricing_basis(matched_rows: list) -> str | None:
     return PRICING_BASIS_MIXED
 
 
+def _per_pack(value, pack_kg: float):
+    """Ett kilopris omräknat till paketpris för en viktvara; oförändrat annars."""
+    if value is None or pack_kg == 1.0:
+        return value
+    return round(value * pack_kg, 2)
+
+
 def effective_price(price) -> float | None:
     """What a normal shopper actually pays today: the campaign price when one
     is running, otherwise the ordinary price. Member and multibuy prices are
@@ -1396,6 +1422,17 @@ class RecipePricingEngine:
             if unit_cost is None:
                 continue
             package_amount, package_unit = effective_package(product)
+            # VIKTVARA MED KILOPRIS: "Kycklingfilé ca: 850g, 125 kr" är 125
+            # kr/KILO (Willys/Hemköp/City Gross skriver samma tal som pris
+            # och jämförpris). Paketet kostar kr/kg × cirkavikten - 106 kr,
+            # inte 125. Kampanjpris skalas likadant (det är också per kilo).
+            # Hela paket räknas som vanligt; en bit är en bit.
+            weight_priced, pack_kg = False, 1.0
+            if (package_amount and package_unit and _fold(package_unit) in _MASS
+                    and is_variable_weight(product) and kilo_price_signature(price)):
+                pack_kg = convert_amount(package_amount, package_unit, "g") / 1000.0
+                unit_cost = round(unit_cost * pack_kg, 2)
+                weight_priced = True
             effective_amount, effective_unit = amount, unit
             # Buljong: räkna allt i liter färdig buljong.
             liters = buljong_liters(ingredient, amount, unit)
@@ -1482,10 +1519,14 @@ class RecipePricingEngine:
                     "packages": count,
                     "unitPrice": unit_cost,
                     "totalCost": round(total, 2),
-                    "regularPrice": getattr(price, "regular_price", None),
-                    "campaignPrice": getattr(price, "campaign_price", None),
-                    "memberPrice": getattr(price, "member_price", None),
+                    # Viktvara: ordinarie/kampanj visas per PAKET (kr/kg ×
+                    # cirkavikt) så listan aldrig blandar kilopris och
+                    # paketpris i samma rad; kilopriset finns i comparisonPrice.
+                    "regularPrice": _per_pack(getattr(price, "regular_price", None), pack_kg),
+                    "campaignPrice": _per_pack(getattr(price, "campaign_price", None), pack_kg),
+                    "memberPrice": _per_pack(getattr(price, "member_price", None), pack_kg),
                     "comparisonPrice": getattr(price, "unit_price", None),
+                    "weightPriced": weight_priced,
                     "fetchedAt": getattr(price, "fetched_at", None),
                     "exactPackaging": exact,
                     # Vilken NIVÅ priset är: verifierat i just den här butiken

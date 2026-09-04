@@ -1,0 +1,35 @@
+<!--
+  Matjakt - tillägg till ios/App/App/Info.plist efter `npx cap add ios` (Mac).
+  Klistra in nycklarna nedan i <dict> i Info.plist (Xcode: Info-fliken).
+  Förberett på Windows 2026-09-03; kan inte verifieras utan Xcode.
+-->
+<key>CFBundleDisplayName</key>
+<string>Matjakt</string>
+
+<!-- Enda native-behörigheten appen behöver: "Hitta mig" (navigator.geolocation)
+     i onboardingen och i "Justera veckan". Ingen kamera, ingen streckkod. -->
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>Matjakt använder din plats för att hitta matbutiker nära dig.</string>
+
+<!-- Appen använder bara HTTPS (systemets TLS) - ingen egen kryptering, så
+     exportfrågan i App Store Connect behöver inte besvaras varje gång. -->
+<key>ITSAppUsesNonExemptEncryption</key>
+<false/>
+
+<!-- Enbart stående läge - layouten är byggd för mobil på höjden. -->
+<key>UISupportedInterfaceOrientations</key>
+<array>
+  <string>UIInterfaceOrientationPortrait</string>
+</array>
+<key>UISupportedInterfaceOrientations~ipad</key>
+<array>
+  <string>UIInterfaceOrientationPortrait</string>
+  <string>UIInterfaceOrientationPortraitUpsideDown</string>
+</array>
+
+<key>CFBundleLocalizations</key>
+<array>
+  <string>sv</string>
+</array>
+<key>CFBundleDevelopmentRegion</key>
+<string>sv</string>

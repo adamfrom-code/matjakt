@@ -12,7 +12,8 @@ services:
       sizeGB: 1
     envVars:
       - key: MATJAKT_FRONTEND_ORIGIN
-        value: https://matjakt.store,https://www.matjakt.store,https://adamfrom-code.github.io
+        # capacitor://localhost = iOS/Android-appens webview-origin (docs/IOS_RELEASE.md).
+        value: https://matjakt.store,https://www.matjakt.store,https://adamfrom-code.github.io,capacitor://localhost
       - key: MATJAKT_APP_URL
         value: https://matjakt.store/app
       - key: MATJAKT_PREMIUM_CODE

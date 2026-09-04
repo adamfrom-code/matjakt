@@ -23,6 +23,14 @@ if __name__ == "__main__":
     with tempfile.TemporaryDirectory(prefix="matjakt-tests-", ignore_cleanup_errors=True) as tmp:
         os.environ["MATJAKT_DATA_DIR"] = tmp
         os.environ["MATJAKT_TEST_MODE"] = "1"  # spärren i services/data_guard.py
+        # .env fyller bara TOMMA variabler, så genom att sätta dem här får
+        # sviten aldrig utvecklarens riktiga nycklar. (Utan detta gick
+        # checkout-testet ut till api.stripe.com och skapade riktiga kunder.)
+        for secret in ("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_MONTHLY",
+                       "STRIPE_PRICE_YEARLY", "SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD",
+                       "SMTP_FROM_EMAIL", "PRIMAT_API_KEY", "DABAS_API_KEY",
+                       "MATJAKT_ADMIN_TOKEN", "MATJAKT_PREMIUM_CODE"):
+            os.environ[secret] = ""
         here = Path(__file__).resolve().parent
         sys.path.insert(0, str(here.parent))
         tests = unittest.defaultTestLoader.discover(str(here), top_level_dir=str(here))

@@ -2966,6 +2966,38 @@ document.querySelector(".wordmark").addEventListener("click", event => {
   if (new URLSearchParams(location.search).get("recept")) { history.pushState(null, "", location.pathname); renderRecipePage(); }
   setView("home");
 });
+// Betalningen är klar hos Stripe, men Premium sätts av webhooken - den kommer
+// normalt inom sekunder och kan i värsta fall dröja. Att bara läsa kontot en
+// gång visade "Inget Premium ännu" med en Prenumerera-knapp som hade startat
+// ett andra köp. Vi säger vad som händer och läser om tills det är klart.
+// 59/399 bor på exakt ett ställe: backend (features.py -> /api/entitlements).
+// Flikarna i kontoarket var hårdkodad HTML och kunde tyst börja ljuga.
+function renderPriceTabs() {
+  const pricing = premiumPricing();
+  const month = document.querySelector('[data-price-tab="month"]');
+  const year = document.querySelector('[data-price-tab="year"]');
+  if (month) month.innerHTML = `<span>Månad</span><strong>${escapeHtml(pricing.monthly?.priceText || "")}</strong><small>/mån</small>`;
+  if (year) {
+    const extra = [pricing.yearly?.perMonthText, pricing.yearly?.savingsText].filter(Boolean).join(" · ");
+    year.innerHTML = `<span>År · Bäst värde</span><strong>${escapeHtml(pricing.yearly?.priceText || "")}</strong><small>${escapeHtml(extra)}</small>`;
+  }
+}
+let awaitingPremiumActivation = false;
+async function activatePremiumAfterCheckout() {
+  awaitingPremiumActivation = true;
+  openAccountModal();
+  renderAccount();
+  for (let attempt = 0; attempt < 15; attempt++) {
+    await refreshUser();
+    if (state.user?.premium) break;
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  awaitingPremiumActivation = false;
+  renderAccount();
+  if (!state.user?.premium) {
+    $("accountPremiumStatus").textContent = "Betalningen är mottagen, men Premium är inte aktiverat än. Ladda om sidan om en stund - hör av dig till supporten om det dröjer.";
+  }
+}
 function renderAccount() {
   const loggedIn = Boolean(state.user);
   $("accountLoggedOut").hidden = loggedIn;
@@ -2973,21 +3005,36 @@ function renderAccount() {
   $("profileBtn").textContent = loggedIn ? state.user.email.slice(0, 2).toUpperCase() : "MJ";
   $("profileBtn").classList.toggle("is-premium", hasPremium());
   syncSettingsInputs();
+  renderPriceTabs();
   if (loggedIn) {
     $("accountEmail").textContent = state.user.email;
     $("verifyEmailNotice").hidden = state.user.emailVerified;
     const daysLeft = state.user.trialEndsAt ? Math.max(1, Math.ceil((new Date(state.user.trialEndsAt) - Date.now()) / 86400000)) : 0;
     const hasSubscription = ["active", "trialing", "past_due", "canceled", "unpaid"].includes(state.user.subscriptionStatus);
-    $("accountPremiumStatus").textContent = daysLeft ? `✓ Provperiod aktiv - ${plural(daysLeft, "dag", "dagar")} kvar (ingen betalning krävs)` : state.user.premium ? "✓ Premium aktiverat" : "Inget Premium ännu";
-    $("premiumPitch").hidden = state.user.premium;
+    const pastDue = ["past_due", "unpaid", "incomplete"].includes(state.user.subscriptionStatus);
+    $("accountPremiumStatus").textContent = awaitingPremiumActivation && !state.user.premium
+      ? "Aktiverar Premium… (betalningen är mottagen)"
+      : daysLeft ? `✓ Provperiod aktiv - ${plural(daysLeft, "dag", "dagar")} kvar (ingen betalning krävs)`
+      : state.user.premium ? "✓ Premium aktiverat"
+      : pastDue ? "Premium är pausat tills betalningen gått igenom"
+      : "Inget Premium ännu";
+    // Köpknappen döljs medan vi väntar in webhooken och när det redan finns
+    // en prenumeration att fixa i portalen - servern nekar ändå ett andra köp.
+    $("premiumPitch").hidden = state.user.premium || awaitingPremiumActivation || pastDue;
     $("subscriptionPanel").hidden = !hasSubscription;
     if (hasSubscription) {
       const periodEnd = state.user.subscriptionPeriodEnd ? new Date(state.user.subscriptionPeriodEnd).toLocaleDateString("sv-SE") : "okänt datum";
-      const planLabel = state.user.subscriptionPlan === "yearly" ? "399 kr/år" : "59 kr/mån";
+      // Planetiketten kommer från samma källa som paywallen (backend), och
+      // en okänd plan påstår ingenting om priset.
+      const pricing = premiumPricing();
+      const planLabel = state.user.subscriptionPlan === "yearly" ? (pricing.yearly?.priceText || "399 kr/år")
+        : state.user.subscriptionPlan === "monthly" ? (pricing.monthly?.priceText || "59 kr/mån")
+        : "din plan";
       let line;
       if (state.user.subscriptionStatus === "active" && state.user.subscriptionCancelAtPeriodEnd) line = `Din prenumeration (${planLabel}) är uppsagd och gäller till ${periodEnd}, sedan återgår kontot till gratisversionen.`;
       else if (state.user.subscriptionStatus === "active") line = `Din prenumeration (${planLabel}) förnyas automatiskt ${periodEnd}.`;
-      else if (state.user.subscriptionStatus === "past_due") line = `Senaste betalningen (${planLabel}) gick inte igenom - uppdatera din betalmetod för att behålla Premium.`;
+      else if (["past_due", "unpaid"].includes(state.user.subscriptionStatus)) line = `Senaste betalningen (${planLabel}) gick inte igenom, så Premium är pausat. Uppdatera betalmetoden under Hantera prenumeration så aktiveras det igen.`;
+      else if (state.user.subscriptionStatus === "incomplete") line = `Betalningen är påbörjad men inte klar. Slutför den under Hantera prenumeration.`;
       else line = `Din prenumeration är avslutad. Prenumerera igen när du vill.`;
       $("subscriptionPanelLine").textContent = line;
     }
@@ -3766,7 +3813,7 @@ if (!state.onboardingComplete && !new URLSearchParams(location.search).get("rece
 const billingResult = new URLSearchParams(location.search).get("billing");
 if (billingResult) {
   history.replaceState(null, "", location.pathname);
-  if (billingResult === "success") { refreshUser().then(() => openAccountModal()); chooseMenu(false); }
+  if (billingResult === "success") { activatePremiumAfterCheckout(); chooseMenu(false); }
 }
 if (pendingResetToken) { openAccountModal(); showAccountForm("reset"); }
 const pendingVerifyToken = new URLSearchParams(location.search).get("verify");

@@ -9,28 +9,24 @@
  "flaggor": {
   "gram_som_styck": 0,
   "volym_som_styck": 0,
-  "paket_over_10": 0,
+  "paket_over_10": 6,
   "paket_over_50": 0,
-  "rad_over_500": 1,
+  "rad_over_500": 0,
   "rad_over_1000": 0,
   "otolkad_paketstorlek": 0,
-  "estimat": 13,
+  "estimat": 0,
+  "kilopris_som_paketpris": 0,
   "smakords_misstanke": 114,
   "saknade": 12
  },
  "exempel": {
-  "rad_over_500": [
-   "rostbiff-potatissallad | Rostbiff | Willys | Rostbiff i Skivor Sverige 538.0 kr"
-  ],
-  "estimat": [
-   "aggwok-ris | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)",
-   "biffbowl-teriyaki | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)",
-   "bulk-kyckling-jattebowl | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)",
-   "hoisin-flask-ris | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)",
-   "krispig-kyckling-nudelwok | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)",
-   "krispig-tofu-ris-bulk | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)",
-   "kyckling-ris-broccoli | Soja | Willys | Sojasås Japansk Vegan (msk->g)",
-   "kycklingspett-jordnot | Sojasås | Willys | Sojasås Japansk Vegan (dl->g)"
+  "paket_over_10": [
+   "flaskfile-svampsas | Champinjoner | City Gross | Champinjoner 13 paket",
+   "kassler-potatisgratang | Potatis | City Gross | Potatis Mjölig 13 paket",
+   "kroppkakor | Potatis | City Gross | Potatis Mjölig 13 paket",
+   "krämig-svampasta | Champinjoner | City Gross | Champinjoner 25 paket",
+   "potatisgratang-skinka | Potatis | City Gross | Potatis Mjölig 13 paket",
+   "svamprisotto | Champinjoner | City Gross | Champinjoner 20 paket"
   ],
   "smakords_misstanke": [
    "falafel-pitabrod | Grekisk yoghurt | Willys | Grekisk Matyoghurt 10% Familjefavoriter",
@@ -43,5 +39,5 @@
    "fishtacos | Grekisk yoghurt | Hemköp | Grekisk Matyoghurt 10% Familjefavoriter"
   ]
  },
- "gate": "RÖD"
+ "gate": "GRÖN"
 }

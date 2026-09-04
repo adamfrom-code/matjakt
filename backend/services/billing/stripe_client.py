@@ -9,13 +9,22 @@ and verify webhook signatures.
 import hashlib
 import hmac
 import json
+import re
 import socket
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 
+from ..data_guard import guard_outbound_call
+
 API_BASE = "https://api.stripe.com/v1"
+# Signaturfälten har fast form. Allt annat avvisas INNAN det jämförs - annars
+# kunde ett icke-ASCII-tecken i v1 (headers avkodas latin-1) eller ett
+# gigantiskt t få hmac/time att kasta TypeError/OverflowError, som handlern
+# inte fångade: en oautentiserad begäran gav traceback i stället för 400.
+_HEX64 = re.compile(r"^[0-9a-f]{64}$", re.IGNORECASE)
+_TIMESTAMP = re.compile(r"^\d{1,12}$")
 
 
 class StripeError(Exception):
@@ -23,8 +32,11 @@ class StripeError(Exception):
 
 
 def _request(secret_key, method, path, data=None):
+    # Konfigurationsfelet först: utan nyckel blir det ändå inget anrop, och
+    # anroparen ska få sitt vanliga StripeError - inte testspärren.
     if not secret_key:
         raise StripeError("Stripe är inte konfigurerat på servern ännu")
+    guard_outbound_call("Stripe")
     url = f"{API_BASE}{path}"
     body = urllib.parse.urlencode(data, doseq=True).encode("utf-8") if data else None
     req = urllib.request.Request(url, data=body, method=method)
@@ -109,6 +121,12 @@ def subscription_period_end(subscription: dict):
     return None
 
 
+def fetch_price(secret_key, price_id):
+    """Ett pris som Stripe ser det - för konfigurationskontrollen. Kastar
+    StripeError när id:t inte finns (typiskt: fel id inklistrat i miljön)."""
+    return _request(secret_key, "GET", f"/prices/{urllib.parse.quote(price_id)}")
+
+
 def create_portal_session(secret_key, customer_id, return_url):
     result = _request(secret_key, "POST", "/billing_portal/sessions", {
         "customer": customer_id,
@@ -136,17 +154,18 @@ def verify_webhook_signature(payload_bytes, sig_header, webhook_secret, toleranc
             timestamp = value
         elif key == "v1" and value:
             signatures.append(value)
-    if not timestamp or not signatures:
+    signatures = [value for value in signatures if _HEX64.match(value)]
+    if not timestamp or not signatures or not _TIMESTAMP.match(timestamp):
         raise StripeError("Ogiltig Stripe-signatur")
-    try:
-        timestamp_value = int(timestamp)
-    except ValueError:
-        raise StripeError("Ogiltig Stripe-signatur")
+    timestamp_value = int(timestamp)
     if abs(time.time() - timestamp_value) > tolerance_seconds:
         raise StripeError("Stripe-signaturen är för gammal")
-    signed_payload = f"{timestamp}.{payload_bytes.decode('utf-8')}"
+    try:
+        signed_payload = f"{timestamp}.{payload_bytes.decode('utf-8')}"
+    except UnicodeDecodeError:
+        raise StripeError("Kroppen är inte giltig UTF-8")
     expected = hmac.new(webhook_secret.encode("utf-8"), signed_payload.encode("utf-8"), hashlib.sha256).hexdigest()
-    if not any(hmac.compare_digest(expected, signature) for signature in signatures):
+    if not any(hmac.compare_digest(expected, signature.lower()) for signature in signatures):
         raise StripeError("Stripe-signaturen matchar inte")
 
 

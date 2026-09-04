@@ -44,7 +44,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
-from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end
+from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.grocery import api as grocery_api  # noqa: E402
@@ -1487,8 +1487,24 @@ class ApiHandler(SimpleHTTPRequestHandler):
             raise json.JSONDecodeError("JSON-kroppen måste vara ett objekt", raw.decode("utf-8", "replace")[:40], 0)
         return parsed
 
+    def _content_length(self):
+        """Kroppens längd, eller None när headern är trasig. Ett negativt tal
+        passerade tidigare storlekskontrollen och fick rfile.read(-1) att läsa
+        till EOF - en öppen anslutning band då tråden på obestämd tid."""
+        raw = self.headers.get("Content-Length", "")
+        if not raw:
+            return 0
+        try:
+            length = int(raw)
+        except ValueError:
+            return None
+        return length if length >= 0 else None
+
     def _handle_stripe_webhook(self):
-        length = int(self.headers.get("Content-Length", 0) or 0)
+        length = self._content_length()
+        if length is None:
+            self.send_json(400, {"error": "Ogiltig Content-Length"})
+            return
         if length > self.MAX_JSON_BODY_BYTES:
             self.send_json(413, {"error": "För stor begäran"})
             return
@@ -1506,27 +1522,51 @@ class ApiHandler(SimpleHTTPRequestHandler):
         event_type = event.get("type", "")
         event_id = event.get("id")
         event_created = event.get("created")
-        # Idempotens: Stripe levererar samma event igen vid timeout/retry.
-        # Ett redan sett event-id bekräftas (200) men appliceras inte igen.
-        if event_id and not ACCOUNT_STORE.record_stripe_event(event_id, event_created):
-            self.send_json(200, {"received": True, "duplicate": True})
-            return
         data = (event.get("data") or {}).get("object") or {}
-        if event_type in ("customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"):
-            customer_id = data.get("customer")
+        if event_type not in ("customer.subscription.created", "customer.subscription.updated",
+                              "customer.subscription.deleted"):
+            # Andra händelsetyper bekräftas utan att röra något - Stripe ska
+            # inte försöka igen för något vi medvetet inte hanterar.
+            self.send_json(200, {"received": True, "ignored": event_type})
+            return
+        try:
+            # customer kan vara ett id eller (vid expand) hela objektet.
+            customer = data.get("customer")
+            customer_id = customer.get("id") if isinstance(customer, dict) else customer
             period_end = subscription_period_end(data)
-            period_end_iso = datetime.fromtimestamp(period_end, tz=timezone.utc).isoformat() if period_end else None
+            period_end_iso = (datetime.fromtimestamp(period_end, tz=timezone.utc).isoformat()
+                              if isinstance(period_end, (int, float)) else None)
             items = ((data.get("items") or {}).get("data")) or []
-            price_id = ((items[0] or {}).get("price") or {}).get("id") if items else None
-            plan = "yearly" if price_id == STRIPE_PRICE_YEARLY else "monthly" if price_id == STRIPE_PRICE_MONTHLY else price_id
-            applied = ACCOUNT_STORE.apply_subscription_event(
-                customer_id, data.get("id"), data.get("status"), period_end_iso,
-                bool(data.get("cancel_at_period_end")), plan, event_created=event_created,
+            first = items[0] if items and isinstance(items[0], dict) else {}
+            price = first.get("price") if isinstance(first.get("price"), dict) else {}
+            price_id = price.get("id")
+            if price_id == STRIPE_PRICE_YEARLY:
+                plan = "yearly"
+            elif price_id == STRIPE_PRICE_MONTHLY:
+                plan = "monthly"
+            else:
+                # Ett okänt pris-id är en felkonfiguration (fel id i miljön,
+                # pris utbytt i Stripe). Att spara det rått fick kontosidan
+                # att kalla det "59 kr/mån". Säg "okänd plan" och LOGGA.
+                plan = None
+                if price_id:
+                    logger.warning("Stripe event %s: okänt pris-id %s - kontrollera STRIPE_PRICE_MONTHLY/YEARLY",
+                                   event_id, price_id)
+            outcome = ACCOUNT_STORE.apply_stripe_event(
+                event_id=event_id, event_created=event_created, customer_id=customer_id,
+                subscription_id=data.get("id"), status=data.get("status"), period_end_iso=period_end_iso,
+                cancel_at_period_end=bool(data.get("cancel_at_period_end")), plan=plan,
             )
-            if not applied:
-                logger.info("Stripe event %s (%s) not applied for %s: unknown customer or older than last applied event",
-                            event_id, event_type, customer_id)
-        self.send_json(200, {"received": True})
+        except Exception:
+            # Inget är sparat (transaktionen rullades tillbaka). 500 gör att
+            # Stripe försöker igen i stället för att händelsen tyst tappas.
+            logger.exception("Stripe-webhook %s (%s) kunde inte behandlas", event_id, event_type)
+            self.send_json(500, {"error": "Kunde inte behandla händelsen just nu"})
+            return
+        if outcome != "applied":
+            logger.info("Stripe event %s (%s) för %s: %s", event_id, event_type, customer_id, outcome)
+        self.send_json(200, {"received": True, **({"duplicate": True} if outcome == "duplicate" else {}),
+                             **({"outcome": outcome} if outcome not in ("applied", "duplicate") else {})})
 
     # Vägar som fungerar utan gate-token. Login förstås; health för Renders
     # egen övervakning; analytics-beacon (räknar bara namngivna events).
@@ -1569,10 +1609,97 @@ class ApiHandler(SimpleHTTPRequestHandler):
             except Exception:
                 logger.exception("Kunde inte läsa plattformsstatus")
                 platform = None
-            self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG), "mail": mail_is_configured(MAIL_CONFIG), "recipeProviders": sorted(RECIPE_SERVICE.providers),
+            self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG), "mail": mail_is_configured(MAIL_CONFIG),
+        # Stripe-läge utan hemligheter: bara om nyckeln är en TEST- eller
+        # LIVE-nyckel (prefix) och vilka delar som är satta. Svarar på
+        # "används inga live-nycklar?" utan att någonsin visa nyckeln.
+        "stripe": {"configured": bool(STRIPE_SECRET_KEY),
+                   "mode": (("test" if STRIPE_SECRET_KEY.startswith("sk_test_") else
+                             "live" if STRIPE_SECRET_KEY.startswith("sk_live_") else "unknown")
+                            if STRIPE_SECRET_KEY else None),
+                   "webhook": bool(STRIPE_WEBHOOK_SECRET),
+                   "prices": {"monthly": bool(STRIPE_PRICE_MONTHLY), "yearly": bool(STRIPE_PRICE_YEARLY)}},
+        "recipeProviders": sorted(RECIPE_SERVICE.providers),
                                  "recipeCount": recipes_api.stats().get("total", 0),
                                  "productCount": grocery_api.database_summary().get("totalProducts", 0),
                                  "platform": platform}, cache_seconds=60)
+            return
+        if parsed.path == "/api/admin/stripe-check":
+            # Fråga Stripe om konfigurationen VERKLIGEN stämmer: rätt läge,
+            # att båda pris-id:na finns, att de kostar 59 respektive 399 kr,
+            # att ingen provperiod ligger på dem. Ett pris-id som inte finns
+            # ger annars ett 400 först när en riktig kund trycker "Prenumerera".
+            # Svaret innehåller aldrig nyckelmaterial.
+            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
+                self.send_json(404, {"error": "Okänd endpoint"})
+                return
+            mode = (("test" if STRIPE_SECRET_KEY.startswith("sk_test_") else
+                     "live" if STRIPE_SECRET_KEY.startswith("sk_live_") else "unknown")
+                    if STRIPE_SECRET_KEY else None)
+            report = {"configured": bool(STRIPE_SECRET_KEY), "mode": mode,
+                      "webhookSecret": bool(STRIPE_WEBHOOK_SECRET), "prices": {}, "ok": False}
+            expected = {"monthly": (STRIPE_PRICE_MONTHLY, 5900, "month"),
+                        "yearly": (STRIPE_PRICE_YEARLY, 39900, "year")}
+            all_ok = bool(STRIPE_SECRET_KEY) and bool(STRIPE_WEBHOOK_SECRET)
+            for plan, (price_id, amount, interval) in expected.items():
+                entry = {"configured": bool(price_id), "exists": False, "matches": False}
+                if price_id:
+                    try:
+                        price = fetch_stripe_price(STRIPE_SECRET_KEY, price_id)
+                        recurring = price.get("recurring") or {}
+                        entry.update(
+                            exists=True, active=bool(price.get("active")),
+                            amount=(price.get("unit_amount") or 0) / 100,
+                            currency=(price.get("currency") or "").upper(),
+                            interval=recurring.get("interval"),
+                            trialDays=recurring.get("trial_period_days"),
+                        )
+                        entry["matches"] = (price.get("unit_amount") == amount
+                                            and (price.get("currency") or "").lower() == "sek"
+                                            and recurring.get("interval") == interval
+                                            and not recurring.get("trial_period_days")
+                                            and bool(price.get("active")))
+                    except StripeError as error:
+                        entry["error"] = str(error)
+                report["prices"][plan] = entry
+                all_ok = all_ok and entry["matches"]
+            report["ok"] = all_ok
+            self.send_json(200 if all_ok else 502, report)
+            return
+        if parsed.path == "/api/admin/backup-download":
+            # OFF-SITE-KOPIA UTAN TREDJE PART: admin hämtar senaste verifierade
+            # backupsetet (services/backup.py) som tar.gz och lägger det på en
+            # annan maskin - scripts/pull_backup.py gör det dagligen. Samma
+            # admin-hemlighet som övriga admin-vägar; 404 utan den. Innehållet
+            # är databaserna (hashade lösenord/tokens, inga nycklar).
+            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
+                self.send_json(404, {"error": "Okänd endpoint"})
+                return
+            from services import backup as backup_service
+            newest = backup_service.newest_set(DATA_DIR)
+            if newest is None:
+                self.send_json(404, {"error": "Ingen backup finns ännu"})
+                return
+            import tarfile
+            import tempfile as _tempfile
+            # Arkivet byggs på disk, inte i minnet - grocery.db är stor.
+            with _tempfile.TemporaryFile() as spool:
+                with tarfile.open(fileobj=spool, mode="w:gz") as archive:
+                    for db_file in sorted(newest.glob("*.db")):
+                        archive.add(db_file, arcname=f"{newest.name}/{db_file.name}")
+                size = spool.tell()
+                spool.seek(0)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/gzip")
+                self.send_header("Content-Disposition", f'attachment; filename="matjakt-backup-{newest.name}.tar.gz"')
+                self.send_header("Content-Length", str(size))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                while True:
+                    chunk = spool.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
             return
         if parsed.path == "/api/admin/primat-status":
             # Never a regular user's endpoint - gated by a separate admin
@@ -2047,7 +2174,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 # Prenumerationen avslutas FÖRE kontot raderas. Tvärtom kunde
                 # Stripe fortsätta debitera ett konto som inte längre finns.
                 customer_id, subscription_id = ACCOUNT_STORE.stripe_ids_for_token(self._bearer_token())
-                if subscription_id and STRIPE_SECRET_KEY:
+                # Fail closed även på KONFIGURATION: saknas nyckeln kan vi inte
+                # säga upp, och att radera kontot ändå skulle lämna en löpande
+                # debitering utan konto att säga upp den från.
+                if subscription_id:
                     try:
                         cancel_subscription(STRIPE_SECRET_KEY, subscription_id)
                     except StripeError:

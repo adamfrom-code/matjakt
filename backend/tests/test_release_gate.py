@@ -43,8 +43,8 @@ def _engine_with(products):
             size=spec.get("size"), quantity=spec["quantity"], unit=spec["unit"],
             category=spec.get("category")))
         db.upsert_current_price(product_id=product.id, store_id=store.id,
-                                regular_price=spec["price"], campaign_price=None,
-                                member_price=None, multibuy_price=None, unit_price=None,
+                                regular_price=spec["price"], campaign_price=spec.get("campaign"),
+                                member_price=None, multibuy_price=None, unit_price=spec.get("unit_price"),
                                 currency="SEK", source_url=None, fetched_at=None)
     engine = RecipePricingEngine(db)
     return engine, store.id, tmp, db
