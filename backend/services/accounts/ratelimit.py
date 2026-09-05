@@ -54,6 +54,15 @@ LIMITS = {
     "feedback": (10, 3600),
     # Partnerfeeds: en butik behöver sällan mer än några leveranser i timmen.
     "partner_feed": (60, 3600),
+    # Dyra eller öppna vägar: skydd mot missbruk, inte mot normal användning.
+    # Per IP, och generöst nog för familjer bakom operatörs-NAT på mobilen.
+    "pricing": (300, 60),          # pricing/week, pricing/list
+    "search": (120, 60),           # receptsök
+    "lookup": (120, 60),           # stores, geocode
+    "scrape": (30, 60),            # campaigns, products, products/batch -> Chromium
+    "analytics": (300, 60),        # beacon, förbi gaten
+    "verify_email": (20, 3600),
+    "delete_account": (5, 3600),
 }
 
 # A single dict of key -> [timestamps]. Pruned as it goes, and hard-capped so

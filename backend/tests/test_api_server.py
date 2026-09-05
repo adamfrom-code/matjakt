@@ -1952,6 +1952,155 @@ class AuthHttpTest(unittest.TestCase):
         finally:
             api_server.STRIPE_SECRET_KEY, api_server.cancel_subscription = originals
 
+    # ---- Härdning 2026-09-06: kontrollerade svar i stället för stängda anslutningar ----
+    def _raw(self, method, path, body=b"", headers=None):
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            conn.putrequest(method, path)
+            for key, value in {"Content-Type": "application/json", **(headers or {})}.items():
+                conn.putheader(key, value)
+            if "Content-Length" not in (headers or {}):
+                conn.putheader("Content-Length", str(len(body)))
+            conn.endheaders()
+            if body:
+                conn.send(body)
+            response = conn.getresponse()
+            raw = response.read()
+            return response.status, (json.loads(raw) if raw else None)
+        finally:
+            conn.close()
+
+    def test_broken_content_length_on_any_post_is_a_400_not_a_dropped_connection(self):
+        for path in ("/api/auth/login", "/api/pricing/week", "/api/feedback", "/api/analytics/event"):
+            status, payload = self._raw("POST", path, b"{}", {"Content-Length": "abc"})
+            self.assertEqual(status, 400, path)
+            self.assertIn("error", payload)
+            status, payload = self._raw("POST", path, b"{}", {"Content-Length": "-5"})
+            self.assertEqual(status, 400, path)
+
+    def test_an_unexpected_exception_becomes_a_calm_500_without_a_traceback(self):
+        original = api_server.ACCOUNT_STORE.user_for_token
+
+        def boom(token):
+            raise RuntimeError("sqlite3.OperationalError: database disk image is malformed")
+        api_server.ACCOUNT_STORE.user_for_token = boom
+        try:
+            status, payload = self.get("/api/auth/me", token="x")
+            self.assertEqual(status, 500)
+            self.assertEqual(payload["error"], "Något gick fel. Försök igen om en stund.")
+            self.assertNotIn("Traceback", json.dumps(payload))
+            self.assertNotIn("sqlite3", json.dumps(payload))
+        finally:
+            api_server.ACCOUNT_STORE.user_for_token = original
+
+    def test_login_does_the_same_work_for_unknown_and_known_email(self):
+        """Timing-orakel: okänd e-post svarade utan att köra PBKDF2. Nu
+        hashas alltid, så svarstiden säger inget om vilka konton som finns."""
+        from services.accounts import store as account_store
+        calls = {"n": 0}
+        real = account_store._hash_password
+
+        def counting(password, salt):
+            calls["n"] += 1
+            return real(password, salt)
+        account_store._hash_password = counting
+        try:
+            status, _ = self.post("/api/auth/login", {"email": "finns-inte@example.se", "password": "hemligt123"})
+            self.assertEqual(status, 401)
+            self.assertEqual(calls["n"], 1, "okänd e-post ska kosta en hashning")
+        finally:
+            account_store._hash_password = real
+
+    def test_expired_sessions_are_pruned_on_next_login(self):
+        email = self._email()
+        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        store = api_server.ACCOUNT_STORE
+        store._connection.execute("UPDATE sessions SET expires_at = '2000-01-01T00:00:00+00:00'")
+        store._connection.commit()
+        self.assertEqual(store._connection.execute("SELECT COUNT(*) FROM sessions").fetchone()[0], 1)
+        status, _ = self.post("/api/auth/login", {"email": email, "password": "hemligt123"})
+        self.assertEqual(status, 200)
+        self.assertEqual(store._connection.execute("SELECT COUNT(*) FROM sessions").fetchone()[0], 1,
+                         "den utgångna raden ska vara borta, bara den nya kvar")
+
+    def test_verification_and_reset_tokens_are_hashed_at_rest_and_verification_expires(self):
+        email = self._email()
+        self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        store = api_server.ACCOUNT_STORE
+        verify_token = store.create_verification_token_for_email(email)
+        reset_token = store.request_password_reset(email)
+        row = store._connection.execute("SELECT verification_token, reset_token, verification_token_expires_at FROM users WHERE email = ?", (email,)).fetchone()
+        self.assertNotEqual(row["verification_token"], verify_token)   # bara hashen i databasen
+        self.assertNotEqual(row["reset_token"], reset_token)
+        self.assertIsNotNone(row["verification_token_expires_at"])
+        # Gått ut -> avvisas; färsk -> går igenom och är engångs.
+        store._connection.execute("UPDATE users SET verification_token_expires_at = '2000-01-01T00:00:00+00:00' WHERE email = ?", (email,))
+        store._connection.commit()
+        status, payload = self.post("/api/auth/verify-email", {"token": verify_token})
+        self.assertEqual(status, 400)
+        self.assertIn("gått ut", payload["error"])
+        verify_token = store.create_verification_token_for_email(email)
+        self.assertEqual(self.post("/api/auth/verify-email", {"token": verify_token})[0], 200)
+        self.assertEqual(self.post("/api/auth/verify-email", {"token": verify_token})[0], 400)
+        # Reset-token fungerar fortfarande via hashen.
+        status, _ = self.post("/api/auth/reset-password", {"token": reset_token, "password": "nyttlosen123"})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.post("/api/auth/login", {"email": email, "password": "nyttlosen123"})[0], 200)
+
+    def test_admin_routes_answer_404_uniformly_without_token(self):
+        original = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "admin-hemlighet"
+        try:
+            for path in ("/api/admin/primat-status", "/api/admin/backup-download", "/api/admin/stripe-check"):
+                status, payload = self.get(path)
+                self.assertEqual(status, 404, path)
+                status, payload = self.get(path, headers={"X-Admin-Token": "fel"})
+                self.assertEqual(status, 404, path)
+            for path in ("/api/admin/pricing-audit", "/api/admin/platform-activate", "/api/admin/store-register-sync"):
+                self.assertEqual(self.post(path, {})[0], 404, path)
+        finally:
+            api_server.ADMIN_TOKEN = original
+
+    def test_hsts_only_when_the_trusted_proxy_says_https(self):
+        original = api_server.TRUST_PROXY_HEADERS
+        try:
+            api_server.TRUST_PROXY_HEADERS = True
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            conn.request("GET", "/api/health", headers={"X-Forwarded-Proto": "https"})
+            self.assertIn("max-age=31536000", conn.getresponse().getheader("Strict-Transport-Security", ""))
+            conn.close()
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            conn.request("GET", "/api/health")
+            self.assertIsNone(conn.getresponse().getheader("Strict-Transport-Security"))
+            conn.close()
+        finally:
+            api_server.TRUST_PROXY_HEADERS = original
+
+    def test_absurd_amounts_are_rejected_not_priced(self):
+        for amount in (1e308, -1, float("inf"), 10**9):
+            status, payload = self.post("/api/pricing/week", {"items": [{"name": "Mjölk", "amount": amount, "unit": "l"}], "chains": ["Willys"]})
+            self.assertEqual(status, 400, amount)
+            self.assertIn("Ogiltig mängd", payload["error"])
+
+    def test_expensive_and_open_routes_are_rate_limited(self):
+        from services.accounts import ratelimit
+        limit, _ = ratelimit.LIMITS["scrape"]
+        statuses = [self.get("/api/campaigns")[0] for _ in range(limit + 1)]
+        self.assertNotIn(429, statuses[:limit])
+        self.assertEqual(statuses[-1], 429)
+        ratelimit.reset()
+        limit, _ = ratelimit.LIMITS["analytics"]
+        for _ in range(limit):
+            self.post("/api/analytics/event", {"event": "view_home"})
+        self.assertEqual(self.post("/api/analytics/event", {"event": "view_home"})[0], 429)
+
+    def test_external_recipe_source_is_off_by_default(self):
+        status, payload = self.get("/api/health")
+        self.assertEqual(payload["recipeProviders"], [])
+        status, payload = self.get("/api/v1/recipes/search?q=chicken")
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["recipes"], [])
+
     def test_redeem_premium_with_correct_code(self):
         email = self._email()
         _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})

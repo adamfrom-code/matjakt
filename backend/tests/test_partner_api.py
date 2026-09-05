@@ -86,7 +86,7 @@ class PartnerApiTest(unittest.TestCase):
     def test_admin_token_is_required(self):
         status, _ = self.request("POST", "/api/admin/partner-overview", {},
                                  {"X-Admin-Token": "fel"})
-        self.assertEqual(status, 403)
+        self.assertEqual(status, 404)   # admin-ytan syns inte utan token
 
     def test_partner_lifecycle_over_http(self):
         status, created = self.admin("/api/admin/partner", {

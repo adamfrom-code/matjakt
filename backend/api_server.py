@@ -404,7 +404,11 @@ def run_on_scrape_thread(fn):
             pass
         stale_executor.shutdown(wait=False)
         raise
-RECIPE_SERVICE = RecipeService([TheMealDbProvider()])
+# Extern receptkälla (TheMealDB): engelska recept med översatta ingredienser,
+# tomt svar för svenska sökord. Matjakts egen receptbank är den enda sanningen
+# för användarna; den externa källan är avstängd tills den medvetet slås på.
+EXTERNAL_RECIPES_ENABLED = os.environ.get("MATJAKT_EXTERNAL_RECIPES", "").strip().lower() in {"1", "true", "yes", "on"}
+RECIPE_SERVICE = RecipeService([TheMealDbProvider()] if EXTERNAL_RECIPES_ENABLED else [])
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 # Where the persisted stores live. Overridable so a TEST RUN never touches
 # the real files: the suite calls KV_CACHE.clear() (documented "test-only")
@@ -1448,6 +1452,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("X-Frame-Options", "DENY")
             self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+            # HSTS bara när begäran bevisligen kom över HTTPS via en betrodd
+            # proxy (Render). Lokalt över http ska headern aldrig sättas.
+            if TRUST_PROXY_HEADERS and self.headers.get("X-Forwarded-Proto", "").lower() == "https":
+                self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 
         # Static files (frontend/*.js, *.css, ...) get no Cache-Control from
         # SimpleHTTPRequestHandler, so browsers fall back to heuristic caching
@@ -1517,7 +1525,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
         pass
 
     def _read_json_body(self):
-        length = int(self.headers.get("Content-Length", 0) or 0)
+        length = self._content_length()
+        if length is None:
+            raise json.JSONDecodeError("Ogiltig Content-Length", "", 0)
         if length > self.MAX_JSON_BODY_BYTES:
             raise self._BodyTooLarge(length)
         raw = self.rfile.read(length) if length else b""
@@ -1529,6 +1539,14 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if not isinstance(parsed, dict):
             raise json.JSONDecodeError("JSON-kroppen måste vara ett objekt", raw.decode("utf-8", "replace")[:40], 0)
         return parsed
+
+    def _admin_ok(self) -> bool:
+        """Admin-token i konstant tid. Vid fel: 404 som för en okänd väg -
+        admin-ytan ska inte ens synas utifrån. Skickar svaret själv."""
+        if ADMIN_TOKEN and hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
+            return True
+        self.send_json(404, {"error": "Okänd endpoint"})
+        return False
 
     def _content_length(self):
         """Kroppens längd, eller None när headern är trasig. Ett negativt tal
@@ -1632,6 +1650,28 @@ class ApiHandler(SimpleHTTPRequestHandler):
         return True
 
     def do_GET(self):
+        self._guarded(self._do_get)
+
+    def do_POST(self):
+        self._guarded(self._do_post)
+
+    def _guarded(self, handler):
+        """Sista skyddsnätet för varje route: ett oväntat undantag blir ett
+        kontrollerat 500 på enkel svenska - aldrig en stängd anslutning
+        eller en traceback till klienten. Loggen får hela stacken."""
+        try:
+            handler()
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            pass   # klienten försvann - ingen att svara
+        except Exception:
+            logger.exception("Ohanterat fel i %s %s", self.command, self.path.split("?")[0][:120])
+            if not getattr(self, "_json_response", False):
+                try:
+                    self.send_json(500, {"error": "Något gick fel. Försök igen om en stund."})
+                except OSError:
+                    pass
+
+    def _do_get(self):
         self._json_response = False
         parsed = urlparse(self.path)
         if self._gate_blocked(parsed):
@@ -1678,8 +1718,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # att ingen provperiod ligger på dem. Ett pris-id som inte finns
             # ger annars ett 400 först när en riktig kund trycker "Prenumerera".
             # Svaret innehåller aldrig nyckelmaterial.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(404, {"error": "Okänd endpoint"})
+            if not self._admin_ok():
                 return
             mode = (("test" if STRIPE_SECRET_KEY.startswith("sk_test_") else
                      "live" if STRIPE_SECRET_KEY.startswith("sk_live_") else "unknown")
@@ -1720,8 +1759,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # annan maskin - scripts/pull_backup.py gör det dagligen. Samma
             # admin-hemlighet som övriga admin-vägar; 404 utan den. Innehållet
             # är databaserna (hashade lösenord/tokens, inga nycklar).
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(404, {"error": "Okänd endpoint"})
+            if not self._admin_ok():
                 return
             from services import backup as backup_service
             newest = backup_service.newest_set(DATA_DIR)
@@ -1755,8 +1793,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # everything if the secret was never configured, rather than
             # falling open. The Primat API key itself is never included in
             # the response - only Primat's own usage numbers are.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(404, {"error": "Okänd endpoint"})
+            if not self._admin_ok():
                 return
             if not PRIMAT_API_KEY:
                 self.send_json(200, {"configured": False})
@@ -1787,8 +1824,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/admin/testresultat":
             # Allt Adam behöver se efter en testrunda: fri text-feedbacken
             # och händelseräknarna, i ett svar. Admin-token, aldrig publikt.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+            if not self._admin_ok():
                 return
             counters = {}
             for event in sorted(ANALYTICS_ALLOWED_EVENTS):
@@ -1802,8 +1838,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                                  "events14Dagar": counters})
             return
         if parsed.path == "/api/admin/grocery-import":
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+            if not self._admin_ok():
                 return
             self.send_json(200, {
                 "import": grocery_importer.status(),
@@ -1886,6 +1921,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(200, {"recipe": recipe}, cache_seconds=300)
             return
         if parsed.path == "/api/v1/recipes/search":
+            if self._rate_limit("search"):
+                return
             query = clean_text(parse_qs(parsed.query).get("q", [""])[0])
             if not 2 <= len(query) <= 100:
                 self.send_json(400, {"error": "Ange en receptsökning på 2–100 tecken"})
@@ -1898,6 +1935,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(502, {"error": "Receptkällan svarar inte just nu"})
             return
         if parsed.path == "/api/v1/recipes/by-pantry":
+            if self._rate_limit("search"):
+                return
             items = [clean_text(item) for item in parse_qs(parsed.query).get("items", [""])[0].split(",") if clean_text(item)]
             items = items[:30]
             if not items:
@@ -1931,6 +1970,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(502, {"error": "Receptkällan svarar inte just nu"})
             return
         if parsed.path == "/api/geocode":
+            if self._rate_limit("lookup"):
+                return
             zip_code = clean_text(parse_qs(parsed.query).get("zip", [""])[0])
             if not re.fullmatch(r"\d{5}", zip_code):
                 self.send_json(400, {"error": "Ange ett giltigt postnummer (5 siffror)"})
@@ -1946,9 +1987,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(502, {"error": "Postnummerslagningen svarar inte just nu"})
             return
         if parsed.path == "/api/campaigns":
+            if self._rate_limit("scrape"):
+                return
             self._handle_campaigns(parse_qs(parsed.query))
             return
         if parsed.path == "/api/stores":
+            if self._rate_limit("lookup"):
+                return
             zip_code = clean_text(parse_qs(parsed.query).get("zip", [""])[0])
             if not re.fullmatch(r"\d{5}", zip_code):
                 self.send_json(400, {"error": "Ange ett giltigt postnummer (5 siffror)"})
@@ -1979,6 +2024,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             except Exception:
                 logger.exception("Failed to compute nearby stores for zip %s", zip_code)
                 self.send_json(502, {"error": "Kunde inte hitta butiker just nu"})
+            return
+        if parsed.path == "/api/products" and self._rate_limit("scrape"):
             return
         if parsed.path != "/api/products":
             if parsed.path.startswith("/api/"):
@@ -2036,7 +2083,6 @@ class ApiHandler(SimpleHTTPRequestHandler):
         vare sig koden eller något att jämföra mot. Utan konfigurerad kod
         förblir låset stängt i stället för att falla öppet."""
         if self._rate_limit("gate", self._client_ip()):
-            self.send_json(429, {"error": "För många försök. Vänta en stund."})
             return
         username = " ".join(str((payload or {}).get("username") or "").split()).casefold()
         # strip() på båda sidor: en miljövariabel inklistrad i en dashboard
@@ -2064,7 +2110,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         expiry = int(time.time()) + GATE_TOKEN_TTL_SECONDS
         self.send_json(200, {"gateToken": _gate_sign(expiry), "expiresAt": expiry})
 
-    def do_POST(self):
+    def _do_post(self):
         self._json_response = False
         parsed = urlparse(self.path)
         if self._gate_blocked(parsed):
@@ -2195,6 +2241,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/auth/verify-email":
+            if self._rate_limit("verify_email"):
+                return
             try:
                 user = ACCOUNT_STORE.verify_email(payload.get("token"))
                 self.send_json(200, {"user": user})
@@ -2218,6 +2266,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(503, {"error": str(error), "code": error.code})
             return
         if parsed.path == "/api/auth/delete-account":
+            if self._rate_limit("delete_account"):
+                return
             try:
                 # Prenumerationen avslutas FÖRE kontot raderas. Tvärtom kunde
                 # Stripe fortsätta debitera ett konto som inte längre finns.
@@ -2287,12 +2337,18 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/products/batch":
+            if self._rate_limit("scrape"):
+                return
             self._handle_products_batch(payload)
             return
         if parsed.path == "/api/pricing/week":
+            if self._rate_limit("pricing"):
+                return
             self._handle_pricing_week(payload)
             return
         if parsed.path == "/api/pricing/list":
+            if self._rate_limit("pricing"):
+                return
             self._handle_pricing_list(payload)
             return
         if parsed.path.startswith("/api/admin/partner"):
@@ -2333,8 +2389,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # lookup: ett GTIN - provider-rad, Dabas-svar och Matjakts
             # normaliserade produkt sida vid sida, för testprodukterna.
             # Nyckeln finns bara i miljön och når aldrig svaret.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+            if not self._admin_ok():
                 return
             from services.grocery import enrichment as dabas_enrichment
             from services.grocery.providers.dabas import DabasClient, DabasError
@@ -2371,8 +2426,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/admin/pricing-audit":
             # Releasegatens audit mot PRODUKTIONENS databas: alla recept x
             # ingredienser x släppta kedjor. Tar ~30-90 s. Admin-token.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+            if not self._admin_ok():
                 return
             from services.grocery.audit import run_pricing_audit
             chains = (payload or {}).get("chains") or list(grocery_api.RELEASED_CHAINS)
@@ -2386,8 +2440,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/admin/platform-activate":
             # Hela aktiveringen i ett anrop: registersynk + första referens-
             # publicering + (valfritt) nattjobben för de släppta kedjorna nu.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+            if not self._admin_ok():
                 return
             from services.grocery.publish import backfill_reference_prices
             from services.grocery.register import sync_store_register
@@ -2415,8 +2468,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # ~2 800 rader) in i grocery_stores i en körning. Veckosyssla,
             # inte nattlig - butiker byter inte adress varje dag, och
             # körningen kostar ~2 800 rader av Primat-dygnskvoten.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+            if not self._admin_ok():
                 return
             if not PRIMAT_API_KEY:
                 self.send_json(503, {"error": "PRIMAT_API_KEY är inte satt"})
@@ -2435,8 +2487,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(502, {"error": str(error)[:200]})
             return
         if parsed.path == "/api/admin/grocery-import":
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+            if not self._admin_ok():
                 return
             chain = (payload or {}).get("chain")
             # ALL_STORES, not DEFAULT_STORES: an admin may refresh ICA by
@@ -2451,6 +2502,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 limit_per_category=(payload or {}).get("perCategory")))
             return
         if parsed.path == "/api/analytics/event":
+            if self._rate_limit("analytics"):
+                return
             self._handle_analytics_event(payload)
             return
         if parsed.path == "/api/feedback":
@@ -2552,7 +2605,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         for entry in raw_items:
             if not isinstance(entry, dict):
                 continue
-            name = clean_text(str(entry.get("name") or entry.get("namn") or ""))
+            name = clean_text(str(entry.get("name") or entry.get("namn") or ""))[:120]
             if not name:
                 continue
             try:
@@ -2560,7 +2613,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
                                else entry.get("total") or 0)
             except (TypeError, ValueError):
                 amount = 0.0
-            unit = clean_text(str(entry.get("unit") or entry.get("enhet") or "st")) or "st"
+            # Ändlig och rimlig, annars 400: 1e308 gick tidigare hela vägen in
+            # i motorn och kom ut som "Prisdatabasen är inte tillgänglig".
+            if not math.isfinite(amount) or amount < 0 or amount > 1_000_000:
+                return None, f"Ogiltig mängd för {name[:40]}"
+            unit = clean_text(str(entry.get("unit") or entry.get("enhet") or "st"))[:20] or "st"
             items.append({"name": name, "amount": amount, "unit": unit})
         # Varor användaren aktivt tagit bort ur sin lista ("finns hemma",
         # "redan köpt"). The recipeIds path re-aggregates the week server
@@ -2584,8 +2641,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         aktivering/paus/uppsägning, feedinmatning och statistik. Admin-
         token, aldrig publikt. Betalning påverkar aldrig rankingen: det
         här lagret styr LEVERANSRÄTT, inte prisresultat."""
-        if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-            self.send_json(403, {"error": "Admin-token krävs"})
+        if not self._admin_ok():
             return
         from services.grocery import partners as partner_api
         payload = payload or {}
