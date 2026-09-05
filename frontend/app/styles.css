@@ -703,3 +703,4 @@ button{color:inherit}
 .week-store-switch button{display:inline-flex;align-items:center}
 .comparison-store-main .chain-mark-sm{margin:0 0 4px}
 .store-card .chain-mark,.week-store-switch .chain-mark,.comparison-store-main .chain-mark{color:#fff}
+.update-note{position:fixed;left:50%;bottom:calc(72px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;padding:10px 16px;border:1px solid var(--line, #ddd);border-radius:10px;background:var(--surface, #fff);color:var(--text, #111);font:inherit;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.12)}
