@@ -1411,6 +1411,10 @@ def fetch_from_primat(chain, query, zip_code, store_key=None):
 
 
 class ApiHandler(SimpleHTTPRequestHandler):
+    # Inga versionsnummer i Server-headern: "SimpleHTTP/0.6 Python/3.10.12"
+    # är en gratis fingeravtryck för den som letar kända sårbarheter.
+    server_version = "Matjakt"
+    sys_version = ""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(FRONTEND_DIR), **kwargs)
 
@@ -1452,9 +1456,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("X-Frame-Options", "DENY")
             self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
-            # HSTS bara när begäran bevisligen kom över HTTPS via en betrodd
-            # proxy (Render). Lokalt över http ska headern aldrig sättas.
-            if TRUST_PROXY_HEADERS and self.headers.get("X-Forwarded-Proto", "").lower() == "https":
+            # HSTS när vi står bakom den betrodda proxyn (Render terminerar all
+            # trafik över HTTPS; MATJAKT_TRUST_PROXY sätts bara där). Lokalt över
+            # http ska headern aldrig sättas. Proxyn skickar inte
+            # X-Forwarded-Proto pålitligt - därför flaggan, inte headern.
+            if TRUST_PROXY_HEADERS or self.headers.get("X-Forwarded-Proto", "").lower() == "https":
                 self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 
         # Static files (frontend/*.js, *.css, ...) get no Cache-Control from

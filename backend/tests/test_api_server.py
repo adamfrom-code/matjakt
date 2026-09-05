@@ -2069,9 +2069,12 @@ class AuthHttpTest(unittest.TestCase):
             conn.request("GET", "/api/health", headers={"X-Forwarded-Proto": "https"})
             self.assertIn("max-age=31536000", conn.getresponse().getheader("Strict-Transport-Security", ""))
             conn.close()
+            api_server.TRUST_PROXY_HEADERS = False
             conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
             conn.request("GET", "/api/health")
-            self.assertIsNone(conn.getresponse().getheader("Strict-Transport-Security"))
+            response = conn.getresponse()
+            self.assertIsNone(response.getheader("Strict-Transport-Security"))
+            self.assertEqual(response.getheader("Server"), "Matjakt")     # inga versionsnummer
             conn.close()
         finally:
             api_server.TRUST_PROXY_HEADERS = original
