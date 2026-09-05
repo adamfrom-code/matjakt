@@ -2497,9 +2497,19 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": f"Okänd kedja. Välj en av "
                                               f"{sorted(grocery_importer.ALL_STORES)}"})
                 return
+            per_category = (payload or {}).get("perCategory")
+            if per_category is not None and (isinstance(per_category, bool) or not isinstance(per_category, int)
+                                             or not 1 <= per_category <= 500):
+                # 0 gjorde en full körning "partiell" och kringgick 30 %-regeln.
+                self.send_json(400, {"error": "perCategory måste vara ett heltal 1-500"})
+                return
+            store = (payload or {}).get("store")
+            if store is not None and (not isinstance(store, (str, int)) or len(str(store)) > 40):
+                self.send_json(400, {"error": "store måste vara ett butiks-id"})
+                return
             self.send_json(200, grocery_importer.start(
-                chain, store_id=(payload or {}).get("store"),
-                limit_per_category=(payload or {}).get("perCategory")))
+                chain, store_id=str(store) if store is not None else None,
+                limit_per_category=per_category))
             return
         if parsed.path == "/api/analytics/event":
             if self._rate_limit("analytics"):

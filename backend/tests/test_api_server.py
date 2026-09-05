@@ -2101,6 +2101,29 @@ class AuthHttpTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(payload["recipes"], [])
 
+    def test_grocery_import_validates_per_category(self):
+        original_token, original_start = api_server.ADMIN_TOKEN, api_server.grocery_importer.start
+        api_server.ADMIN_TOKEN = "admin-hemlighet"
+        api_server.grocery_importer.start = lambda chain, store_id=None, limit_per_category=None: {"started": False, "reason": "test"}
+        try:
+            headers = {"X-Admin-Token": "admin-hemlighet"}
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            for bad in (0, -1, 501, "5", True):
+                conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+                conn.request("POST", "/api/admin/grocery-import", body=json.dumps({"chain": "Willys", "perCategory": bad}).encode(),
+                             headers={"Content-Type": "application/json", **headers})
+                response = conn.getresponse(); response.read()
+                self.assertEqual(response.status, 400, bad)
+                conn.close()
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            conn.request("POST", "/api/admin/grocery-import", body=json.dumps({"chain": "Willys", "perCategory": 5}).encode(),
+                         headers={"Content-Type": "application/json", **headers})
+            response = conn.getresponse(); response.read()
+            self.assertEqual(response.status, 200)
+            conn.close()
+        finally:
+            api_server.ADMIN_TOKEN, api_server.grocery_importer.start = original_token, original_start
+
     def test_redeem_premium_with_correct_code(self):
         email = self._email()
         _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})

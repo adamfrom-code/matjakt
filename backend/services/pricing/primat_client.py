@@ -22,6 +22,7 @@ depend on Primat always being up.
 """
 
 import json
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -55,7 +56,42 @@ class PrimatError(Exception):
     never as a reason to fail the whole request."""
 
 
+# Omförsök: bara på fel som är värda ett nytt försök (5xx, 429, nätfel,
+# timeout). 4xx utöver 429 är ett svar, inte ett hinder. Backoff 1-2-4 s,
+# Retry-After respekteras upp till 30 s. Utan detta kastade en enda timeout
+# hela kvotdyra körningen.
+RETRY_STATUSES = {429, 500, 502, 503, 504}
+RETRY_ATTEMPTS = 3
+RETRY_BASE_SECONDS = 1.0
+
+
+def _retry_wait(error, delay):
+    header = getattr(error, "headers", None)
+    retry_after = header.get("Retry-After") if header else None
+    if retry_after and str(retry_after).strip().isdigit():
+        return min(float(retry_after), 30.0)
+    return delay
+
+
 def _request(method, path, api_key=None, params=None, body=None):
+    delay = RETRY_BASE_SECONDS
+    for attempt in range(1, RETRY_ATTEMPTS + 1):
+        try:
+            return _request_once(method, path, api_key=api_key, params=params, body=body)
+        except _Retryable as retryable:
+            if attempt == RETRY_ATTEMPTS:
+                raise PrimatError(retryable.message)
+            time.sleep(_retry_wait(retryable.error, delay))
+            delay *= 2
+
+
+class _Retryable(Exception):
+    def __init__(self, message, error=None):
+        super().__init__(message)
+        self.message, self.error = message, error
+
+
+def _request_once(method, path, api_key=None, params=None, body=None):
     url = f"{API_BASE}{path}"
     if params:
         url = f"{url}?{urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})}"
@@ -74,9 +110,11 @@ def _request(method, path, api_key=None, params=None, body=None):
             detail = json.load(error).get("error", {}).get("message", str(error))
         except Exception:
             detail = str(error)
+        if error.code in RETRY_STATUSES:
+            raise _Retryable(f"{error.code}: {detail}", error)
         raise PrimatError(f"{error.code}: {detail}")
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
-        raise PrimatError(str(error))
+        raise _Retryable(str(error), error)
 
 
 def _resolve_raw(zip_code, api_key=None):

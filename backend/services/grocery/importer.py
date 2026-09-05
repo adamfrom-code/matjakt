@@ -218,6 +218,17 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
             if leftover:
                 save_batch(leftover)
 
+            # En kategori som inte gick att hämta (3 misslyckade försök) gör
+            # körningen PARTIELL - inte "success med errors=0". Publiceringen
+            # slår ihop som vid en blockering: gamla rader behålls, 30 %-regeln
+            # (som ska fånga en tyst halverad katalog) gäller inte ett fel vi
+            # redan känner till.
+            failed_categories = list(getattr(provider, "failed_categories", None) or [])
+            if failed_categories and not blocked_message:
+                blocked_message = (f"{len(failed_categories)} kategori(er) kunde inte hämtas: "
+                                   f"{', '.join(failed_categories[:3])}{'…' if len(failed_categories) > 3 else ''}")
+                logger.warning("%s: %s", chain, blocked_message)
+
             # QUALITY GATE + ATOMISK PUBLICERING. Klarar körningen inte gaten
             # behålls senaste godkända priser och körningen märks failed med
             # orsaken - hellre "uppdaterat igår" än fel pris.
@@ -248,6 +259,10 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
             db.finish_collector_run(run_record.id, status="failed",
                                     products_found=0, prices_updated=saved,
                                     errors=1, error_message=str(error)[:300])
+            try:
+                db.clear_staging(run_record.id)   # staging städas även på kraschvägen
+            except Exception:
+                logger.exception("Kunde inte städa staging för körning %s", run_record.id)
             grocery_api.clear_cache()
             _set(running=False, finishedAt=time.time(), status="failed",
                  message=str(error)[:300])

@@ -270,33 +270,45 @@ def publish_run(db, run_id: int, store_id: int, chain: str, *, source: str,
     published = 0
     reference_published = 0
     now = time.time()
-    for row, cleaned in passed_rows:
-        try:
-            db.upsert_current_price(
-                product_id=row["product_id"], store_id=store_id,
-                regular_price=cleaned["regular_price"], campaign_price=cleaned["campaign_price"],
-                member_price=cleaned["member_price"], multibuy_price=cleaned["multibuy_price"],
-                unit_price=cleaned["unit_price"], currency=row["currency"] or "SEK",
-                source_url=row["source_url"], fetched_at=row["fetched_at"] or now,
-                source=row["source"] or source, valid_to=row["valid_to"])
-            published += 1
-            if publish_reference:
-                if db.upsert_reference_price(
-                        product_id=row["product_id"], chain=chain,
+    # ATOMISKT PÅ RIKTIGT: hela publiceringen är en transaktion. Ett radfel
+    # som sanering vägrar (ValueError/TypeError) hoppar över raden; allt
+    # annat (låst databas, disk full, processkrasch) rullar tillbaka ALLT
+    # och körningen märks failed - kunderna ser gårdagens hela dataset,
+    # aldrig ett halvt.
+    try:
+        with db.bulk_transaction():
+            for row, cleaned in passed_rows:
+                try:
+                    db.upsert_current_price(
+                        product_id=row["product_id"], store_id=store_id,
                         regular_price=cleaned["regular_price"], campaign_price=cleaned["campaign_price"],
                         member_price=cleaned["member_price"], multibuy_price=cleaned["multibuy_price"],
                         unit_price=cleaned["unit_price"], currency=row["currency"] or "SEK",
-                        source=row["source"] or source, valid_to=row["valid_to"],
-                        verified_at=row["fetched_at"] or now):
-                    reference_published += 1
-        except (ValueError, TypeError) as error:
-            # upsert_current_price vägrade (dubbelt hängslen mot ett pris som
-            # slank igenom radgaten) - raden hoppas över, inget gissas.
-            logger.warning("Rad för produkt %s hoppades över vid publicering: %s", row["product_id"], error)
-            continue
-        except Exception as error:  # sqlite3.Error m.fl. - en rad, inte körningen
-            logger.warning("Rad för produkt %s kunde inte publiceras: %s", row["product_id"], error)
-            continue
+                        source_url=row["source_url"], fetched_at=row["fetched_at"] or now,
+                        source=row["source"] or source, valid_to=row["valid_to"])
+                    published += 1
+                    if publish_reference:
+                        if db.upsert_reference_price(
+                                product_id=row["product_id"], chain=chain,
+                                regular_price=cleaned["regular_price"], campaign_price=cleaned["campaign_price"],
+                                member_price=cleaned["member_price"], multibuy_price=cleaned["multibuy_price"],
+                                unit_price=cleaned["unit_price"], currency=row["currency"] or "SEK",
+                                source=row["source"] or source, valid_to=row["valid_to"],
+                                verified_at=row["fetched_at"] or now):
+                            reference_published += 1
+                except (ValueError, TypeError) as error:
+                    # upsert vägrade (dubbelt hängslen mot ett pris som slank
+                    # igenom radgaten) - raden hoppas över, inget gissas.
+                    logger.warning("Rad för produkt %s hoppades över vid publicering: %s", row["product_id"], error)
+                    continue
+    except Exception:
+        message = "publiceringen avbröts - senaste godkända priser behålls"
+        logger.exception("Körning %s (%s/butik %s): %s", run_id, chain, store_id, message)
+        db.record_run_gate(run_id, rows_staged=staged, gate_percent=gate_percent,
+                           published=False, message=message)
+        db.clear_staging(run_id)
+        return {"staged": staged, "passed": len(passed_rows), "published": 0,
+                "gatePercent": gate_percent, "published_ok": False, "message": message}
 
     if blocked:
         message = f"partiell körning (källan avbröt): {published} rader publicerade"
