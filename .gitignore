@@ -18,3 +18,6 @@ android/app/build/
 # Renderad marknadsföringsvideo och dess arbetsfiler - byggs om med
 # backend/scripts/make_instagram_video.py, hör inte hemma i git (12 MB mp4).
 marketing/
+
+# Nattliga backupset (services/backup.py) - aldrig i repot.
+backend/data/backups/
