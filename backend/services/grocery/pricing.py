@@ -864,6 +864,11 @@ def buljong_liters(ingredient: str, amount: float, unit: str) -> float | None:
 _VARIABLE_WEIGHT_RE = re.compile(r"^\s*ca(?:[\s:.]+|(?=\d))", re.IGNORECASE)
 
 
+# Styckpris med cirkavikt under detta är lösvikt (en potatis, en champinjon,
+# en lök) - kunden väger, köper inte "N paket".
+LOOSE_PIECE_MAX_GRAMS = 150
+
+
 def is_variable_weight(product) -> bool:
     """Viktvara med cirkavikt i size-texten ("ca: 850g")."""
     return bool(_VARIABLE_WEIGHT_RE.match(product.size or ""))
@@ -1427,12 +1432,17 @@ class RecipePricingEngine:
             # och jämförpris). Paketet kostar kr/kg × cirkavikten - 106 kr,
             # inte 125. Kampanjpris skalas likadant (det är också per kilo).
             # Hela paket räknas som vanligt; en bit är en bit.
-            weight_priced, pack_kg = False, 1.0
+            weight_priced, pack_kg, loose_weight = False, 1.0, False
             if (package_amount and package_unit and _fold(package_unit) in _MASS
                     and is_variable_weight(product) and kilo_price_signature(price)):
                 pack_kg = convert_amount(package_amount, package_unit, "g") / 1000.0
-                unit_cost = round(unit_cost * pack_kg, 2)
-                weight_priced = True
+                if pack_kg * 1000 < LOOSE_PIECE_MAX_GRAMS:
+                    # En potatis på 80 g eller en champinjon på 20 g till
+                    # kilopris är LÖSVIKT, inte "10 paket": kr/kg × behov.
+                    loose_weight = True
+                else:
+                    unit_cost = round(unit_cost * pack_kg, 2)
+                    weight_priced = True
             effective_amount, effective_unit = amount, unit
             # Buljong: räkna allt i liter färdig buljong.
             liters = buljong_liters(ingredient, amount, unit)
@@ -1461,7 +1471,12 @@ class RecipePricingEngine:
                     effective_amount, effective_unit = amount * per_piece, "g"
             count = packages_needed(effective_amount, effective_unit, package_amount, package_unit)
             per_kg_cost = None
-            if count is None and package_amount is None:
+            if loose_weight:
+                required_g = convert_amount(effective_amount, effective_unit, "g")
+                if required_g:
+                    per_kg_cost = unit_cost * required_g / 1000.0
+                    count, exact = 1, True
+            if per_kg_cost is None and count is None and package_amount is None:
                 unit_price = getattr(price, "unit_price", None)
                 regular = getattr(price, "regular_price", None)
                 required_g = convert_amount(effective_amount, effective_unit, "g")
@@ -1473,7 +1488,9 @@ class RecipePricingEngine:
                     # "1 paket × 1 125 kr".)
                     per_kg_cost = unit_price * required_g / 1000.0
                     count, exact = 1, True
-            if count is None:
+            if per_kg_cost is not None:
+                exact = True
+            elif count is None:
                 # BESTÄMD REGEL, inte gissning: ett kryddmått (max 2 msk =
                 # 30 ml) mot en förpackning på minst 15 g är ALLTID en
                 # förpackning - ingen torr krydda väger mer än ~1 g/ml, så
