@@ -1,98 +1,79 @@
-# Checkpoint — 2026-09-01 (natt-skiftet)
+# Checkpoint — 2026-09-06 (master-audit)
 
 Skriven så nästa session kan fortsätta utan att bygga om något. Allt nedan
 är verifierat mot kod, tester eller live produktion — inget antaget för att
-koden "finns".
+koden "finns". Föregående checkpoint (2026-09-01) gäller i grunden; det här
+är vad som ändrats och vad som är sant nu.
 
 ## Läget i ett stycke
 
-Matjakt är live på **matjakt.store** (frontend GitHub Pages) mot
-**matjakt.onrender.com** (backend Render, persistent disk `/app/backend/data`,
-verifierad över deploys). 205 recept med instruktioner/näring/bilder,
-alla fullt prissatta mot riktiga butiksprodukter. Tre kedjor jämförs på
-riktigt: Willys, Hemköp, City Gross. Affärsmodellen är **Free för alltid /
-Premium 59 kr/mån / Premium 399 kr/år, ingen trial** — server-side entitlement
-med central feature-matris.
+Matjakt är live på **matjakt.store** (GitHub Pages) mot **matjakt.onrender.com**
+(Render, persistent disk). 241 recept, tre släppta kedjor (Willys, Hemköp,
+City Gross) med verifierade butikspriser och kedjereferenspriser; ICA, Coop och
+Lidl finns i registret men är gated (`RELEASED_CHAINS`) - och frontend speglar
+den listan (`test_frontend_contract.py`). Free/Premium 59/399 utan trial,
+Stripe i TEST-läge release-verifierat (28/28 skarpa kontroller, servern
+verifierar sina pris-id vid uppstart och rapporterar det i `/api/health`).
+SMTP är fortfarande osatt i Render (`mail: false`).
 
-## Arkitekturen (oförändrad i grunden)
+## Master-auditen 2026-09-06 - vad som gjordes
 
-- Backend: Python stdlib (`http.server`, sqlite3), inga ramverk.
-  `backend/api_server.py` + `backend/services/{accounts,billing,email,grocery,
-  pricing,recipes,recipe_providers,site}`.
-- Frontend: statisk ES-modul-app i `frontend/app/`, landningssida i
-  `frontend/`. Service worker versioneras ihop med `?v=`-queries
-  (`CACHE_NAME` i `sw.js` + `app.js?v=`/`styles.css?v=` i `index.html` —
-  bumpa ALLA tre vid varje UI-släpp).
-- Recept: källfilerna i `backend/recipe_sources/*.json` är sanningen
-  (INTE under `backend/data/` — Render-monteringen skuggar den sökvägen).
-  `bootstrap_if_empty()` synkar databasen när källornas sha256-fingeravtryck
-  ändras. Bilder exporteras tillbaka till källfilerna med
-  `backend/scripts/export_recipe_images.py` efter varje backfill.
-- Priser: nattimporter (Willys 02:00, Hemköp 03:00, City Gross 04:00
-  Europe/Stockholm) + bootstrap som fyller varje tom kedja vid start.
-  Recepten prissätts om (portionspriser i recipes.db) vid serverstart och
-  efter varje lyckad import. ICA endast manuell import (WAF), Coop aldrig
-  (kräver deras credential), Lidl aldrig (inga publika priser).
+Commits `bcd6957` … `6aade83` (elva stycken), alla pushade och deployade.
 
-## Free/Premium (beslutad 2026-08-31)
-
-- `backend/services/accounts/features.py` äger ALLT: planer, priser
-  (59/399/309-besparingen), feature-matrisen, `FREE_MAX_DINNERS = 4`.
-- `/api/entitlements` ger frontend kontraktet; frontend ritar lås,
-  servern bestämmer: `/api/pricing/week` maskas för Free
-  (`mask_pricing_for_free` i api_server) — full sanning för billigaste
-  kvalificerade kedjan, siluetter + riktigt prisspann för resten;
-  `/api/pricing/list` ger 403 på låsta butikskorgar.
-- Trial är BORTA: `/api/auth/start-trial` svarar 410. Gamla
-  premium-flaggan/koder grandfathras som premium_monthly.
-- StoreKit-produkt-id:n reserverade i PRICING-configen
-  (`se.matjakt.premium.monthly|yearly`) — ej kopplade ännu.
-
-## Handla-vyn
-
-Butikskort överst (dynamiska ur prisdatan, aldrig hårdkodade), Free ser
-billigaste butikens riktiga total + Billigast-märke, övriga 🔒/"Pris ej
-tillgängligt". "Din matvecka" + "Extra du lagt till": kampanjprodukter
-(+ Lägg i inköpslistan från Hem-raden) och manuella varor, med regeln i
-`frontend/app/src/services/extras.js`: kampanjpris gäller ENDAST sin egen
-kedja; osäker match = rad utan pris. Extras synkas via kontostaten.
+- **Critical rättat:** publiceringen av priser var inte atomisk - en krasch
+  mitt i lämnade ett halvt dataset synligt. Nu en transaktion
+  (`GroceryStore.bulk_transaction`), rullas tillbaka i sin helhet, körningen
+  märks failed.
+- **High rättade:** login-timingorakel (okänd e-post körde inte PBKDF2);
+  trasig Content-Length dödade varje POST; oväntade undantag stängde
+  anslutningen (nu 500 på svenska via `_guarded`); dyra/öppna vägar utan
+  rate limit; XSS-sinks i receptkort/receptsida/butiksnamn; refreshUser
+  loggade ut på nätfel; Primat utan omförsök och med fel verified_at;
+  perCategory=0 kringgick 30 %-regeln; trasig kategori räknades som komplett.
+- **Auth:** verifierings-/reset-token hashade, verifiering 7 dygn, utgångna
+  sessioner städas, admin-vägar enhetligt 404, HSTS bakom proxyn.
+- **Testsviten skapade riktiga Stripe-kunder** ur .env: central spärr
+  (`data_guard.guard_outbound_call`) + `tests/run.py` tömmer hemligheter.
+- **Frontend:** bara släppta kedjor valbara, ärlig Premium-pitch, inga
+  emoji-ikoner, SW-uppdateringsrad, versioner låsta på tre ställen,
+  onboarding-layout, tomt tidsfilter, bildfallback, TheMealDB avstängd
+  (`MATJAKT_EXTERNAL_RECIPES`), receptbilder -34 %.
+- **Drift:** `.github/workflows/ci.yml` (svit, node, secret_scan, versioner),
+  `docs/DISASTER_RECOVERY.md`, `docs/DATA_MAP.md`, `docs/RETENTION.md`,
+  `docs/RELEASE.md`, `docs/BACKUP.md` + `scripts/pull_backup.py`,
+  admin `GET /api/admin/backup-download`, `GET /api/admin/stripe-check`.
+- **Native:** Android-ikon/splash från `resources/`, `capacitor.config.json`
+  med iOS-sektion, `ios-prep/` (Info.plist, PrivacyInfo), `docs/IOS_RELEASE.md`.
 
 ## Tester
 
-`npm test` = node --test (frontend) + `python backend/tests/run.py`
-(temp-datadir så riktiga databaser aldrig röres). ~795 tester.
-Spärr i `backend/services/data_guard.py` (2026-09-02): i testläge får ingen
-butiksklass, backup eller api_server öppna en databas utanför tempkatalogen -
-hard fail med `ProductionDatabaseInTestError`, oavsett om testet satt `DB_PATH`.
-Bevisat i `tests/test_db_guard.py`; riktig `backend/data/*.db` innehållsmässigt
-oförändrad av hela sviten (tabellräkningar + hashar före/efter).
-Prod-E2E: `backend/tests/auth_e2e.py`, `backend/tests/prod_persistence_e2e.py`
-(--before/--after runt en deploy).
-
-## Backup
-
-`python backend/scripts/backup_data.py` (sqlite backup-API, 7 set,
-`--verify SENASTE`, `--list`). Recovery: stoppa servern, kopiera tillbaka
-filerna från `backups/<stämpel>/`, starta. Ladda ner senaste setet från
-Render Shell då och då — disken är persistens, inte katastrofskydd.
+`python backend/tests/run.py` → 865 tester gröna (isolerad tempkatalog,
+inga riktiga anrop). `node --test` → 63. Sviten körd två gånger i rad med
+sha256 på de riktiga databasfilerna före/efter (se slutrapporten 2026-09-06).
+Prisauditen lokalt: `gate: GRÖN` (0/0/0/0/0 + 0 kilopris-som-paketpris).
 
 ## Miljövariabler (Render)
 
-MATJAKT_DATA_DIR (implicit via disk), MATJAKT_GROCERY_SCHEDULE_ENABLED=1,
-MATJAKT_ADMIN_TOKEN, MATJAKT_PREMIUM_CODE, MATJAKT_TRUST_PROXY,
-PEXELS_API_KEY, PRIMAT_API_KEY, STRIPE_SECRET_KEY + STRIPE_PRICE_MONTHLY/
-YEARLY + STRIPE_WEBHOOK_SECRET, SMTP_HOST/PORT/USER/PASSWORD/FROM_EMAIL.
-Inga hemligheter i repo eller frontend (verifierat inkl. git-historik).
+Som i `render.yaml`. Satta: MATJAKT_PREMIUM_CODE, MATJAKT_ADMIN_TOKEN,
+PRIMAT_API_KEY, DABAS_API_KEY, STRIPE_SECRET_KEY (test), STRIPE_WEBHOOK_SECRET,
+STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY, MATJAKT_TRUST_PROXY=1,
+MATJAKT_GROCERY_SCHEDULE_ENABLED=1. **Osatta:** SMTP_HOST/USER/PASSWORD/
+FROM_EMAIL (Resend, domänen väntar på DNS hos Loopia).
 
 ## Kända öppna punkter
 
-- Juridiksidorna: [FÖRETAGSNAMN]/[ORGANISATIONSNUMMER]/[ÅNGERRÄTT] är
-  markerade fält som ADAM måste fylla i + juridisk slutgranskning.
-- Riktig betalning: Stripe-flödet är kopplat (checkout/portal/webhook) men
-  kräver att STRIPE_PRICE_* pekar på riktiga produkter (399/59); StoreKit
-  för iOS är enbart datamodell.
-- E-postleverans overifierad (SMTP-env-status i Render okänd); flödena är
-  enumeration-säkra och rate-limitade.
-- ICA i produktion: tom tills en manuell adminimport körs (instruktion i
-  nattrapporten). Rate-limitern är i-minne — Redis krävs vid >1 instans.
-- 22 recept har needs_image (hellre än fel bild).
+- Render deployar på push, inte på grön CI → stäng Auto-Deploy och koppla
+  deploy-hook från `ci.yml` (Adam, dashboarden).
+- SMTP: Resend-domänen ovärderad hos Loopia; tillfälligt
+  `SMTP_FROM_EMAIL=onboarding@resend.dev` fungerar bara till Adams adress.
+- Rate limit är per process - blir svag vid fler än en Render-instans.
+- Primat: cursorn sparas inte mellan körningar (partiella katalogen hämtar
+  samma sidor igen). Gated tills App-nivå/licens.
+- Receptbanken: `biff-lindstrom` och `biff-a-la-lindstrom` är samma rätt
+  (ingrediens-likhet 0,86); källa `backend/recipe_sources/*.json`.
+- Retention för inaktiva konton och feedback obeslutad (`docs/RETENTION.md`).
+- Juridik: platshållare i integritetspolicy/villkor; Apple IAP-beslut
+  (`docs/IOS_RELEASE.md`).
+- Ingen automatiserad browser-E2E; konsumentresan verifierades för hand
+  2026-09-06 (onboarding 4 steg → vecka → recept → Handla → skafferi →
+  konto → logga ut/in med bevarad vecka).
