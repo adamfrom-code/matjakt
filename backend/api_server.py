@@ -1415,6 +1415,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
     # är en gratis fingeravtryck för den som letar kända sårbarheter.
     server_version = "Matjakt"
     sys_version = ""
+
+    def version_string(self):
+        return "Matjakt"   # utan det efterföljande mellanslag stdlib annars lägger till
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(FRONTEND_DIR), **kwargs)
 
