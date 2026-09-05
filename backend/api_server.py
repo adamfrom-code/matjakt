@@ -44,6 +44,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
+from services.analytics import ANALYTICS_EVENTS, AnalyticsStore
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
@@ -99,21 +100,11 @@ MAX_CONCURRENT_SCRAPES = int(os.environ.get("MATJAKT_MAX_SCRAPES", "1"))
 MAX_BATCH_ITEMS = 20
 PANTRY_RECIPE_CACHE_TTL_SECONDS = 1800
 CAMPAIGN_CACHE_TTL_SECONDS = 3600
-# Anonymous, aggregate-only counters for the landing page (see
-# _handle_analytics_event) - a fixed allowlist, not free-text, so this can
-# never become a place to smuggle arbitrary or identifying data through. No
-# IP, user id, or timestamp finer than "today" is ever stored alongside a
-# count.
-# Kärnhändelserna som avgör om Matjakt fungerar: skapas veckor, används
-# fynden, bockas listan av, delas recept - och rapporteras prisfel.
-# Nedladdningar är fåfänga; återkommande veckor är sanningen.
-ANALYTICS_ALLOWED_EVENTS = frozenset({
-    "cta_testa_gratis", "cta_logga_in", "cta_se_hur_det_fungerar", "view_premium",
-    "vecka_skapad", "fynd_tillagt", "lista_anvand", "recept_delat",
-    "prisfel_rapporterat", "recept_bytt",
-    # Grov tratt: vilken flik nås - visar var testpersonerna stannar.
-    "view_home", "view_week", "view_recipes", "view_basket", "view_pantry",
-})
+# Produkthändelserna (se _handle_analytics_event) - en fast allowlist, inte
+# fritext, så vägen aldrig kan bli en plats att smuggla in godtycklig data
+# genom. Listan och lagringen bor i services/analytics; namnet här finns
+# kvar för äldre anrop och tester.
+ANALYTICS_ALLOWED_EVENTS = ANALYTICS_EVENTS
 CAMPAIGN_CAPABLE_CHAINS = ("Coop", "Hemköp")
 CAMPAIGN_SCAN_INGREDIENTS = ["Kycklingfilé", "Kycklinglårfilé", "Köttfärs", "Biff", "Fläskfilé", "Laxfilé", "Fryst torsk", "Räkor", "Kalvschnitzel", "Falukorv", "Halloumi"]
 GEOCODE_CACHE_TTL_SECONDS = 86400
@@ -543,6 +534,28 @@ PRICE_CACHE = PriceCacheStore(PRICE_CACHE_PATH)
 # deploy/restart. Persisting them here is what actually makes "senast
 # uppdaterad" survive a deploy.
 KV_CACHE = KeyValueCacheStore(PRICE_CACHE.connection)
+# Produktmätningen bor i KONTOdatabasen (samma anslutning som ACCOUNT_STORE)
+# så tratten kan joina users. De gamla räknarna låg i KV_CACHE, som rensar
+# allt äldre än sju dagar - flytten nedan räddar det som finns kvar där och
+# är ofarlig att köra vid varje uppstart (skriver bara dagar som saknas).
+ANALYTICS = AnalyticsStore(ACCOUNT_STORE.connection)
+ANALYTICS.import_legacy_counters(lambda event, day: KV_CACHE.get("analytics", f"{event}:{day}")[0])
+
+
+def insights_payload() -> dict:
+    """Kontrollrummets svar (GET /api/admin/insights): tratten per
+    registreringsvecka, händelserna dag för dag och fritextfeedbacken.
+    Premium avgörs av kontotjänstens egen regel så tratten och /auth/me
+    aldrig säger olika saker om samma konto."""
+    funnel = ANALYTICS.funnel(premium_of=lambda row: AccountStore._to_public(row)["premium"])
+    events = ANALYTICS.daily_events(14)
+    return {
+        "tratt": funnel,
+        "handelser": events,
+        # Gamla fältet från /testresultat: totalsumma per händelse.
+        "events14Dagar": {event: entry["total"] for event, entry in events["events"].items()},
+        "feedback": ACCOUNT_STORE.list_feedback(),
+    }
 
 
 def clean_text(value):
@@ -1492,7 +1505,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
             forwarded = self.headers.get("X-Forwarded-For", "")
             if forwarded:
                 return forwarded.split(",")[0].strip()[:64]
-        return (self.client_address[0] if self.client_address else "") or ""
+        # getattr: handlern instansieras utan socket i enhetstester av
+        # gate- och admin-logiken - då finns ingen adress, och ingen räknare.
+        address = getattr(self, "client_address", None)
+        return (address[0] if address else "") or ""
 
     def _rate_limit(self, action, *identifiers):
         """Returns True when the request must be refused. Sends the 429."""
@@ -1502,6 +1518,27 @@ class ApiHandler(SimpleHTTPRequestHandler):
         except ratelimit.RateLimited as limited:
             self.send_json(429, {"error": str(limited), "retryAfter": limited.retry_after})
             return True
+
+    def _admin_authorized(self, hidden=False) -> bool:
+        """The ONE admin check. True when the request carries the right
+        admin token. Otherwise the refusal is already sent - 403, or 404 for
+        paths that should not reveal they exist (hidden=True) - and the
+        attempt counts against the IP's guessing budget, exactly like a
+        password: the limiter runs BEFORE the comparison, so once the budget
+        is spent even the right token gets 429 until the window passes.
+        A correct token clears the counter, so the control room's own
+        polling never locks Adam out. Never configured = never authorized."""
+        if self._rate_limit("admin"):
+            return False
+        presented = self.headers.get("X-Admin-Token", "")
+        if ADMIN_TOKEN and hmac.compare_digest(presented, ADMIN_TOKEN):
+            ratelimit.clear_on_success("admin", self._client_ip())
+            return True
+        if hidden:
+            self.send_json(404, {"error": "Okänd endpoint"})
+        else:
+            self.send_json(403, {"error": "Admin-token krävs"})
+        return False
 
     def _bearer_token(self):
         header = self.headers.get("Authorization", "")
@@ -1624,8 +1661,19 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return False
         if any(parsed.path.startswith(prefix) for prefix in self.GATE_EXEMPT):
             return False
-        if ADMIN_TOKEN and hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-            return False
+        # Admin-token öppnar låset - men bara inom samma gissningsbudget som
+        # admin-vägarna (räknas enbart när en token faktiskt skickas med, så
+        # vanliga användare utan header rör aldrig räknaren). Utan detta gick
+        # hemligheten att gissa obegränsat mot vilken gated väg som helst.
+        presented_admin = self.headers.get("X-Admin-Token", "")
+        if presented_admin:
+            try:
+                ratelimit.check("admin", self._client_ip())
+            except ratelimit.RateLimited:
+                presented_admin = ""  # budgeten slut: som om ingen token skickats
+            if presented_admin and ADMIN_TOKEN and hmac.compare_digest(presented_admin, ADMIN_TOKEN):
+                ratelimit.clear_on_success("admin", self._client_ip())
+                return False
         if gate_token_valid(self.headers.get("X-Gate-Token", "")):
             return False
         self.send_json(401, {"error": "Matjakt är inte öppet ännu", "gate": True})
@@ -1678,8 +1726,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # att ingen provperiod ligger på dem. Ett pris-id som inte finns
             # ger annars ett 400 först när en riktig kund trycker "Prenumerera".
             # Svaret innehåller aldrig nyckelmaterial.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(404, {"error": "Okänd endpoint"})
+            if not self._admin_authorized(hidden=True):
                 return
             mode = (("test" if STRIPE_SECRET_KEY.startswith("sk_test_") else
                      "live" if STRIPE_SECRET_KEY.startswith("sk_live_") else "unknown")
@@ -1720,8 +1767,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # annan maskin - scripts/pull_backup.py gör det dagligen. Samma
             # admin-hemlighet som övriga admin-vägar; 404 utan den. Innehållet
             # är databaserna (hashade lösenord/tokens, inga nycklar).
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(404, {"error": "Okänd endpoint"})
+            if not self._admin_authorized(hidden=True):
                 return
             from services import backup as backup_service
             newest = backup_service.newest_set(DATA_DIR)
@@ -1755,8 +1801,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # everything if the secret was never configured, rather than
             # falling open. The Primat API key itself is never included in
             # the response - only Primat's own usage numbers are.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(404, {"error": "Okänd endpoint"})
+            if not self._admin_authorized(hidden=True):
                 return
             if not PRIMAT_API_KEY:
                 self.send_json(200, {"configured": False})
@@ -1784,26 +1829,16 @@ class ApiHandler(SimpleHTTPRequestHandler):
                                     "schedule": scheduler["schedule"]}
             self.send_json(200, summary, cache_seconds=60)
             return
-        if parsed.path == "/api/admin/testresultat":
-            # Allt Adam behöver se efter en testrunda: fri text-feedbacken
-            # och händelseräknarna, i ett svar. Admin-token, aldrig publikt.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+        if parsed.path in ("/api/admin/insights", "/api/admin/testresultat"):
+            # Kontrollrummet: tratten per registreringsvecka, händelserna
+            # dag för dag och fritextfeedbacken, i ett svar. Admin-token,
+            # aldrig publikt. /testresultat är det gamla namnet.
+            if not self._admin_authorized():
                 return
-            counters = {}
-            for event in sorted(ANALYTICS_ALLOWED_EVENTS):
-                total = 0
-                for days_back in range(14):
-                    day = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%d")
-                    count, _ = KV_CACHE.get("analytics", f"{event}:{day}")
-                    total += count or 0
-                counters[event] = total
-            self.send_json(200, {"feedback": ACCOUNT_STORE.list_feedback(),
-                                 "events14Dagar": counters})
+            self.send_json(200, insights_payload())
             return
         if parsed.path == "/api/admin/grocery-import":
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+            if not self._admin_authorized():
                 return
             self.send_json(200, {
                 "import": grocery_importer.status(),
@@ -2333,8 +2368,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # lookup: ett GTIN - provider-rad, Dabas-svar och Matjakts
             # normaliserade produkt sida vid sida, för testprodukterna.
             # Nyckeln finns bara i miljön och når aldrig svaret.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+            if not self._admin_authorized():
                 return
             from services.grocery import enrichment as dabas_enrichment
             from services.grocery.providers.dabas import DabasClient, DabasError
@@ -2371,8 +2405,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/admin/pricing-audit":
             # Releasegatens audit mot PRODUKTIONENS databas: alla recept x
             # ingredienser x släppta kedjor. Tar ~30-90 s. Admin-token.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+            if not self._admin_authorized():
                 return
             from services.grocery.audit import run_pricing_audit
             chains = (payload or {}).get("chains") or list(grocery_api.RELEASED_CHAINS)
@@ -2386,8 +2419,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/admin/platform-activate":
             # Hela aktiveringen i ett anrop: registersynk + första referens-
             # publicering + (valfritt) nattjobben för de släppta kedjorna nu.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+            if not self._admin_authorized():
                 return
             from services.grocery.publish import backfill_reference_prices
             from services.grocery.register import sync_store_register
@@ -2415,8 +2447,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # ~2 800 rader) in i grocery_stores i en körning. Veckosyssla,
             # inte nattlig - butiker byter inte adress varje dag, och
             # körningen kostar ~2 800 rader av Primat-dygnskvoten.
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+            if not self._admin_authorized():
                 return
             if not PRIMAT_API_KEY:
                 self.send_json(503, {"error": "PRIMAT_API_KEY är inte satt"})
@@ -2435,8 +2466,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(502, {"error": str(error)[:200]})
             return
         if parsed.path == "/api/admin/grocery-import":
-            if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-                self.send_json(403, {"error": "Admin-token krävs"})
+            if not self._admin_authorized():
                 return
             chain = (payload or {}).get("chain")
             # ALL_STORES, not DEFAULT_STORES: an admin may refresh ICA by
@@ -2584,8 +2614,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         aktivering/paus/uppsägning, feedinmatning och statistik. Admin-
         token, aldrig publikt. Betalning påverkar aldrig rankingen: det
         här lagret styr LEVERANSRÄTT, inte prisresultat."""
-        if not ADMIN_TOKEN or not hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-            self.send_json(403, {"error": "Admin-token krävs"})
+        if not self._admin_authorized():
             return
         from services.grocery import partners as partner_api
         payload = payload or {}
@@ -2705,21 +2734,28 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})
 
     def _handle_analytics_event(self, payload):
-        """Anonymous product-event counter for the landing page - a click on
-        a specific CTA increments a per-day counter, nothing else. No account,
-        no cookie, no IP address is recorded here (the OS/Render's own
-        infrastructure logs may still see the request like any other, but
-        this handler adds nothing identifying on top of that). Never allowed
-        to affect page functionality - the frontend always fires this as a
-        best-effort, catch-and-ignore call."""
+        """Product-event counter. A named event increments a per-day counter;
+        with a valid session it is ALSO counted per account and day, which
+        is what lets the funnel tell "23 people" from "one person, 23
+        clicks" and answer whether anyone comes back in week two. Never a
+        timestamp finer than the day, never an IP, never free text (the
+        OS/Render's own infrastructure logs may still see the request like
+        any other, but this handler adds nothing identifying on top of
+        that). Never allowed to affect page functionality - the frontend
+        always fires this as a best-effort, catch-and-ignore call."""
         event = payload.get("event") if isinstance(payload, dict) else None
         if event not in ANALYTICS_ALLOWED_EVENTS:
             self.send_json(400, {"error": "Okänt event"})
             return
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        key = f"{event}:{today}"
-        count, _ = KV_CACHE.get("analytics", key)
-        KV_CACHE.set("analytics", key, (count or 0) + 1)
+        user_id = None
+        try:
+            user_id = ACCOUNT_STORE.user_id_for_token(self._bearer_token())
+        except Exception:
+            logger.exception("Kunde inte slå upp kontot för en händelse")
+        try:
+            ANALYTICS.record(event, user_id=user_id)
+        except Exception:
+            logger.exception("Kunde inte räkna händelsen %s", event)
         self.send_json(200, {"ok": True})
 
     def _handle_campaigns(self, params):

@@ -20,6 +20,17 @@
       ],
       "port": 8000,
       "autoPort": false
+    },
+    {
+      "name": "kontrollrum",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": [
+        "-NoProfile",
+        "-Command",
+        "$env:MATJAKT_ADMIN_TOKEN='lokal-kontrollrum'; $env:MATJAKT_PORT='8010'; python backend/api_server.py"
+      ],
+      "port": 8010,
+      "autoPort": false
     }
   ]
 }

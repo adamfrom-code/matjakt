@@ -123,6 +123,9 @@ class AccountStore:
             ("reset_token", "TEXT"), ("reset_token_expires_at", "TEXT"),
             # Ordning på Stripe-händelser: bara nyare än senast applicerade.
             ("stripe_event_created", "INTEGER"),
+            # Senaste dag (aldrig klockslag) kontot användes - se
+            # _touch_activity. Grunden för "kom någon tillbaka vecka två?".
+            ("last_active_day", "TEXT"),
         ):
             try:
                 self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
@@ -233,7 +236,7 @@ class AccountStore:
     def _session_user_row(self, token: str):
         if not token:
             return None
-        return self._connection.execute(
+        row = self._connection.execute(
             """
             SELECT users.* FROM sessions
             JOIN users ON users.id = sessions.user_id
@@ -241,10 +244,38 @@ class AccountStore:
             """,
             (_session_key(token), datetime.now(timezone.utc).isoformat()),
         ).fetchone()
+        if row is not None:
+            self._touch_activity(row)
+        return row
+
+    def _touch_activity(self, row):
+        """Antecknar att kontot användes i dag - högst en skrivning per konto
+        och dag, och bara dagen. Inget klockslag, ingen IP, ingen sida: det
+        räcker för att se om folk kommer tillbaka, och det är allt vi vill
+        veta. Får aldrig fälla en inloggad begäran."""
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if "last_active_day" in row.keys() and row["last_active_day"] == today:
+            return
+        try:
+            self._connection.execute(
+                "UPDATE users SET last_active_day = ? WHERE id = ?", (today, row["id"]))
+            self._connection.commit()
+        except sqlite3.Error:
+            pass
+
+    @property
+    def connection(self) -> sqlite3.Connection:
+        """Delas med mätningen (services/analytics) så tratten kan joina
+        users utan en andra databasfil att deploya och säkerhetskopiera."""
+        return self._connection
 
     def user_for_token(self, token: str) -> dict | None:
         row = self._session_user_row(token)
         return self._to_public(row) if row else None
+
+    def user_id_for_token(self, token: str) -> int | None:
+        row = self._session_user_row(token)
+        return int(row["id"]) if row else None
 
     def redeem_premium(self, token: str, code: str, expected_code: str) -> dict:
         if not expected_code:
@@ -545,6 +576,12 @@ class AccountStore:
             raise AccountError("Du måste vara inloggad")
         stripe_customer_id, stripe_subscription_id = row["stripe_customer_id"], row["stripe_subscription_id"]
         self._connection.execute("DELETE FROM sessions WHERE user_id = ?", (row["id"],))
+        # Mätraderna (services/analytics) följer med kontot i graven: ett
+        # raderat konto lämnar inte ett spår av dagar efter sig.
+        try:
+            self._connection.execute("DELETE FROM analytics_user_days WHERE user_id = ?", (row["id"],))
+        except sqlite3.OperationalError:
+            pass  # tabellen finns inte i den här processen (t.ex. fristående test)
         self._connection.execute("DELETE FROM users WHERE id = ?", (row["id"],))
         self._connection.commit()
         return stripe_customer_id, stripe_subscription_id

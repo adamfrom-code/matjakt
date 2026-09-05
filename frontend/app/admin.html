@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Matjakt · Prisdatabas</title>
+<title>Matjakt · Kontrollrum</title>
 <style>
   :root { color-scheme: light dark; --bg:#f6f7f9; --surface:#fff; --text:#14181f; --muted:#5b6470; --line:#e3e6ea; }
   @media (prefers-color-scheme: dark) { :root { --bg:#14181f; --surface:#1d222b; --text:#eef1f5; --muted:#98a2b3; --line:#2c333e; } }
@@ -37,12 +37,21 @@
   }
   .note { color:var(--muted); font-size:.8rem; margin:.5rem 0 0; }
   progress { width:100%; height:.55rem; }
+  h2 { font-size:1rem; margin:1.6rem 0 .6rem; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(9rem, 1fr)); gap:.6rem; }
+  .stat { border:1px solid var(--line); border-radius:10px; padding:.6rem .75rem; }
+  .stat b { display:block; font-size:1.4rem; line-height:1.2; }
+  .stat span { color:var(--muted); font-size:.76rem; }
+  .bars { display:inline-flex; align-items:flex-end; gap:2px; height:1.1rem; vertical-align:middle; }
+  .bars i { display:inline-block; width:5px; background:#15803d; border-radius:1px; min-height:1px; opacity:.85; }
+  .quiet { color:var(--muted); }
+  .feedback li { margin:.35rem 0; white-space:normal; }
 </style>
 </head>
 <body>
 <main>
-  <h1>Matjakt · Prisdatabas</h1>
-  <p class="sub">Providerstatus, import och nattjobb. Kräver admin-token.</p>
+  <h1>Matjakt · Kontrollrum</h1>
+  <p class="sub">Tratt, händelser, feedback, providerstatus, import och nattjobb. Kräver admin-token.</p>
 
   <div class="card" id="authCard">
     <label for="token">Admin-token</label>
@@ -61,9 +70,42 @@
   <div id="panel" hidden>
     <div class="card">
       <div class="row" style="justify-content:space-between">
-        <strong>Pågående import</strong>
+        <strong>Människor</strong>
         <button id="refresh">Uppdatera</button>
       </div>
+      <div class="stats" id="totals" style="margin-top:.7rem"></div>
+      <p class="note">Aktiv = kontot användes någon dag i perioden. Bara dagen sparas, aldrig klockslag.</p>
+    </div>
+
+    <div class="card scroll">
+      <strong>Tratt per registreringsvecka</strong>
+      <table id="cohorts">
+        <thead><tr>
+          <th>Vecka</th><th>Registrerade</th><th>Skapade en vecka</th>
+          <th>Tillbaka efter 7 dagar</th><th>Premium</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="note" id="cohortNote"></p>
+    </div>
+
+    <div class="card scroll">
+      <strong>Händelser, senaste 14 dagarna</strong>
+      <table id="events">
+        <thead><tr><th>Händelse</th><th>Totalt</th><th>Personer</th><th>Dag för dag</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="note">Personer = unika inloggade konton. Totalt räknar även utloggade och landningssidan.</p>
+    </div>
+
+    <div class="card">
+      <strong>Feedback från appen</strong>
+      <ul class="feedback" id="feedback"></ul>
+    </div>
+
+    <h2>Prisdatabas</h2>
+    <div class="card">
+      <strong>Pågående import</strong>
       <div id="importStatus" class="note">—</div>
       <progress id="importProgress" hidden max="100" value="0"></progress>
     </div>
@@ -88,154 +130,6 @@
   </div>
 </main>
 
-<script type="module">
-const API = document.querySelector('meta[name="matjakt-api-url"]')?.content?.trim() || "/api";
-// In memory only, deliberately - see the note in the markup.
-let token = "";
-let timer = null;
-
-const $ = id => document.getElementById(id);
-const esc = value => String(value ?? "").replace(/[&<>"']/g, c =>
-  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-
-function ago(seconds) {
-  if (seconds == null) return "—";
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes} min sedan`;
-  const hours = Math.round(minutes / 60);
-  return hours < 48 ? `${hours} h sedan` : `${Math.round(hours / 24)} dygn sedan`;
-}
-
-function when(value) {
-  return value ? new Date(value * 1000).toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" }) : "—";
-}
-
-// Status is a claim about whether we can collect, not about whether the data
-// is good - a blocked chain can still be serving a perfectly good import from
-// two days ago, so the two are shown side by side rather than merged.
-const STATUS_CLASS = {
-  working: "ok",
-  working_but_unreliable: "warn",
-  working_but_rate_limited: "warn",
-  blocked_requires_vendor_credential: "bad",
-  not_available_no_public_prices: "off",
-};
-
-async function call(path, options = {}) {
-  const response = await fetch(`${API}${path}`, {
-    ...options,
-    headers: { "X-Admin-Token": token, "Content-Type": "application/json", ...(options.headers || {}) },
-  });
-  if (response.status === 403) throw new Error("Fel admin-token");
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
-}
-
-async function refresh() {
-  const data = await call("/admin/grocery-import");
-  renderImport(data.import);
-  renderChains(data.providers, data.scheduler);
-  renderScheduler(data.scheduler);
-}
-
-function renderImport(state) {
-  const busy = state.running;
-  if (busy) {
-    const done = state.categoriesDone, total = state.categoriesTotal;
-    $("importProgress").hidden = !total;
-    $("importProgress").max = total || 100;
-    $("importProgress").value = done || 0;
-    $("importStatus").innerHTML =
-      `<strong>${esc(state.chain)}</strong> kör &mdash; ${done}/${total || "?"} kategorier, ` +
-      `${state.productsSaved} produkter sparade, ${Math.round(state.elapsedSeconds || 0)} s.<br>` +
-      `<span style="color:var(--muted)">${esc(state.currentCategory || "")}</span>`;
-  } else {
-    $("importProgress").hidden = true;
-    $("importStatus").textContent = state.status === "idle"
-      ? "Ingen import kör."
-      : `Senaste: ${state.chain} — ${state.status}, ${state.productsSaved} produkter` +
-        (state.message ? ` (${state.message})` : "");
-  }
-  document.querySelectorAll("[data-import]").forEach(button => { button.disabled = busy; });
-}
-
-function renderChains(providers, scheduler) {
-  const next = Object.fromEntries((scheduler.schedule || []).map(entry => [entry.chain, entry]));
-  $("chains").querySelector("tbody").innerHTML = providers.map(provider => {
-    const nightly = next[provider.chain];
-    const blocked = scheduler.notScheduled?.[provider.chain];
-    const action = provider.collectable || provider.chain === "ICA"
-      ? `<button data-import="${esc(provider.chain)}">${provider.chain === "ICA" ? "Uppdatera manuellt" : "Starta import"}</button>`
-      : "—";
-    const last = provider.lastRun, success = provider.lastSuccessfulRun;
-    return `<tr>
-      <td><strong>${esc(provider.chain)}</strong></td>
-      <td><span class="pill ${STATUS_CLASS[provider.status] || "off"}">${esc(provider.status)}</span></td>
-      <td>${provider.products}</td>
-      <td>${provider.prices}</td>
-      <td>${provider.gtinPercent}%</td>
-      <td>${provider.imagePercent}%</td>
-      <td>${provider.categoryPercent}%</td>
-      <td>${success ? when(success.finishedAt) : "—"}</td>
-      <td>${last ? `${esc(last.status)} · ${when(last.finishedAt || last.startedAt)}` : "—"}</td>
-      <td>${nightly ? esc(nightly.time) : `<span style="color:var(--muted)">ingen</span>`}</td>
-      <td>${action}</td>
-    </tr>${last?.errorMessage ? `<tr><td colspan="11" class="wrap">⚠ ${esc(last.errorMessage)}</td></tr>` : ""}
-    ${blocked ? `<tr><td colspan="11" class="wrap">Ingen nattkörning: ${esc(blocked)}</td></tr>` : ""}`;
-  }).join("");
-
-  $("chainNotes").innerHTML = providers
-    .map(provider => `<p class="note"><strong>${esc(provider.chain)}:</strong> ${esc(provider.note)}</p>`)
-    .join("");
-
-  document.querySelectorAll("[data-import]").forEach(button =>
-    button.addEventListener("click", async () => {
-      button.disabled = true;
-      try {
-        const result = await call("/admin/grocery-import", {
-          method: "POST", body: JSON.stringify({ chain: button.dataset.import }),
-        });
-        // "already_running" is not an error - one import at a time is the
-        // design, so say so plainly instead of showing a failure.
-        if (!result.started) alert(result.reason === "already_running"
-          ? "En import kör redan. Bara en åt gången."
-          : `Kunde inte starta: ${result.reason}`);
-        await refresh();
-      } catch (error) {
-        alert(error.message);
-        button.disabled = false;
-      }
-    }));
-}
-
-function renderScheduler(scheduler) {
-  const rows = (scheduler.schedule || [])
-    .map(entry => `${esc(entry.chain)} kl. ${esc(entry.time)} (nästa ${when(Date.parse(entry.nextRunAt) / 1000)})`)
-    .join("<br>");
-  $("scheduler").innerHTML =
-    `<span class="pill ${scheduler.enabled ? "ok" : "off"}">${scheduler.enabled ? "på" : "av"}</span> ` +
-    `Tidszon ${esc(scheduler.timezone)}.<br>${rows || "Inget schema."}` +
-    `<p class="note">Slås på med <code>MATJAKT_GROCERY_SCHEDULE_ENABLED=1</code>, ` +
-    `tider via <code>MATJAKT_GROCERY_SCHEDULE</code>.</p>`;
-}
-
-$("connect").addEventListener("click", async () => {
-  token = $("token").value.trim();
-  $("authError").textContent = "";
-  try {
-    await refresh();
-    $("authCard").hidden = true;
-    $("panel").hidden = false;
-    // Poll while an import is running so progress is actually visible.
-    timer = setInterval(() => refresh().catch(() => {}), 5000);
-  } catch (error) {
-    token = "";
-    $("authError").textContent = error.message;
-  }
-});
-$("token").addEventListener("keydown", event => { if (event.key === "Enter") $("connect").click(); });
-$("refresh").addEventListener("click", () => refresh().catch(error => alert(error.message)));
-window.addEventListener("beforeunload", () => clearInterval(timer));
-</script>
+<script type="module" src="admin.js"></script>
 </body>
 </html>

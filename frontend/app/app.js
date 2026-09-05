@@ -2666,14 +2666,17 @@ function clearPriceSnapshots() {
   state.dbPricedAt = null;
 }
 
-// Anonym produkthändelseräknare - får aldrig blockera ett klick, aldrig
-// kasta. Räknar kärnhändelserna som avgör om Matjakt fungerar: skapade
-// veckor och använda listor, inte nedladdningar.
+// Produkthändelseräknare - får aldrig blockera ett klick, aldrig kasta.
+// Räknar kärnhändelserna som avgör om Matjakt fungerar: skapade veckor
+// och använda listor, inte nedladdningar. Inloggad skickas sessionen
+// med, så servern kan räkna PERSONER och inte klick (den sparar bara
+// konto + dag + händelsenamn, aldrig klockslag eller sida).
 function trackEvent(name) {
   try {
+    const token = getStoredToken();
     fetch(`${API_BASE_URL}/analytics/event`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ event: name }),
       keepalive: true,
     }).catch(() => {});
@@ -2999,12 +3002,14 @@ async function activatePremiumAfterCheckout() {
   renderAccount();
   for (let attempt = 0; attempt < 15; attempt++) {
     await refreshUser();
-    if (state.user?.premium) break;
+    // hasPremium() är den enda vägen till premiumflaggan (se tests/premium.test.js);
+    // på loopback kortsluter dev-luckan pollen, vilket är ofarligt där.
+    if (hasPremium()) break;
     await new Promise(resolve => setTimeout(resolve, 2000));
   }
   awaitingPremiumActivation = false;
   renderAccount();
-  if (!state.user?.premium) {
+  if (!hasPremium()) {
     $("accountPremiumStatus").textContent = "Betalningen är mottagen, men Premium är inte aktiverat än. Ladda om sidan om en stund - hör av dig till supporten om det dröjer.";
   }
 }

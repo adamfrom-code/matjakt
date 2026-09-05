@@ -57,6 +57,28 @@ tillgängligt". "Din matvecka" + "Extra du lagt till": kampanjprodukter
 `frontend/app/src/services/extras.js`: kampanjpris gäller ENDAST sin egen
 kedja; osäker match = rad utan pris. Extras synkas via kontostaten.
 
+## Kontrollrummet (2026-09-06)
+
+`/app/admin.html` (serveras av backend-servern, dvs. matjakt.onrender.com/app/admin.html,
+admin-token) visar överst MÄNNISKOR: konton, aktiva 7/28 dagar, Premium, tratten
+per registreringsvecka (registrerade -> skapade en vecka -> tillbaka efter 7 dagar
+-> Premium, "ofullständig" tills alla haft sju dagar på sig), händelserna dag för
+dag med unika konton, och fritextfeedbacken. Därunder prisdatabasen som förut.
+Skriptet ligger i `admin.js` - serverns CSP (`script-src 'self'`) blockerade det
+gamla inline-skriptet, så sidan var död när den serverades av backend.
+
+Datan: `backend/services/analytics/` med två tabeller i kontodatabasen
+(`analytics_daily` anonymt per dag, `analytics_user_days` konto x dag x händelse,
+aldrig klockslag/IP) plus `users.last_active_day` som sessionsuppslaget sätter
+högst en gång per dag. De gamla räknarna i kv_cache rensades efter 7 dagar (så
+"14 dagar" tappade hälften) - de flyttas in vid uppstart. Frontend skickar
+sessionen med i `trackEvent`, så personer kan skiljas från klick. Raderas
+kontot följer mätraderna med. Integritetspolicyn nämner produktstatistiken.
+Läses via `GET /api/admin/insights` (`/testresultat` = samma svar).
+
+Lanseringsmått (30 dagar efter att låset öppnas): 100 personer som planerat
+en vecka, 10 tillbaka vecka två, 1 betalande.
+
 ## Tester
 
 `npm test` = node --test (frontend) + `python backend/tests/run.py`

@@ -457,6 +457,9 @@ class ApiServerHttpTest(unittest.TestCase):
     def setUp(self):
         self._original_code = api_server.PREMIUM_CODE
         api_server.PREMIUM_CODE = "hemlig-kod"
+        # Admin-tokenens gissningsbudget är per IP och alla tester delar
+        # 127.0.0.1 - ett test som provar fel token får inte låsa nästa.
+        ratelimit.clear_on_success("admin", "127.0.0.1")
         # Primat is a real third-party service - tests must never depend on
         # a live network call to it (slow, flaky, and .env may have a real
         # PRIMAT_API_KEY set for local dev). Default every test to "Primat
@@ -610,17 +613,94 @@ class ApiServerHttpTest(unittest.TestCase):
         self.assertTrue(payload["ok"])
 
     def test_analytics_event_counts_are_aggregated_per_day_not_per_click(self):
-        api_server.KV_CACHE.clear()
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        before = api_server.ANALYTICS.daily_events()["events"]["view_premium"]["perDag"].get(today, 0)
+        self.post("/api/analytics/event", {"event": "view_premium"})
+        self.post("/api/analytics/event", {"event": "view_premium"})
+        self.post("/api/analytics/event", {"event": "view_premium"})
+        after = api_server.ANALYTICS.daily_events()["events"]["view_premium"]
+        self.assertEqual(after["perDag"].get(today, 0), before + 3)
+        # Utloggade klick är klick, inte personer.
+        self.assertEqual(after["unikaKonton"], 0)
+
+    def test_logged_in_events_count_people_not_clicks_and_feed_the_funnel(self):
+        """Inloggad räknas händelsen per konto och DAG - så tratten kan säga
+        "en person skapade en vecka", inte "tre klick". Och kontot får en
+        senast-aktiv-dag, vilket är hela grunden för återkomstmåttet."""
+        email = f"tratt-{uuid.uuid4().hex[:8]}@example.com"
+        status, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        self.assertEqual(status, 201)
+        token = payload["token"]
+        for _ in range(3):
+            status, _ = self.post("/api/analytics/event", {"event": "vecka_skapad"}, token=token)
+            self.assertEqual(status, 200)
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        rows = api_server.ACCOUNT_STORE.connection.execute(
+            "SELECT users.last_active_day, d.count FROM users JOIN analytics_user_days d ON d.user_id = users.id "
+            "WHERE users.email = ? AND d.event = 'vecka_skapad' AND d.day = ?", (email, today)).fetchall()
+        self.assertEqual(len(rows), 1, "en rad per konto och dag, inte en per klick")
+        self.assertEqual(rows[0][1], 3)
+        self.assertEqual(rows[0][0], today)
+
+        funnel = api_server.insights_payload()["tratt"]
+        this_week = funnel["kohorter"][0]
+        self.assertGreaterEqual(this_week["registrerade"], 1)
+        self.assertGreaterEqual(this_week["skapadeVecka"], 1)
+        self.assertFalse(this_week["mogen"], "veckans kohort kan inte ha svarat på 'kom tillbaka' än")
+        self.assertGreaterEqual(funnel["totalt"]["aktivaSenaste7Dagarna"], 1)
+
+        # Raderas kontot försvinner dess mätrader med det.
+        status, _ = self.post("/api/auth/delete-account", {"password": "hemligt123"}, token=token)
+        self.assertEqual(status, 200)
+        left = api_server.ACCOUNT_STORE.connection.execute(
+            "SELECT COUNT(*) FROM analytics_user_days d LEFT JOIN users ON users.id = d.user_id WHERE users.id IS NULL"
+        ).fetchone()[0]
+        self.assertEqual(left, 0)
+
+    def test_admin_token_guessing_is_rate_limited_like_a_password(self):
+        """Tio fel per timme och IP, sedan 429 - även för RÄTT token, annars
+        vore spärren meningslös. Rätt token nollställer räknaren, så
+        kontrollrummets polling var femte sekund låser aldrig ute admin."""
+        original = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "admin-test"
+        ratelimit.reset()
         try:
-            self.post("/api/analytics/event", {"event": "view_premium"})
-            self.post("/api/analytics/event", {"event": "view_premium"})
-            self.post("/api/analytics/event", {"event": "view_premium"})
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            count, updated_at = api_server.KV_CACHE.get("analytics", f"view_premium:{today}")
-            self.assertEqual(count, 3)
-            self.assertIsNotNone(updated_at)
+            for _ in range(10):
+                status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "fel"})
+                self.assertEqual(status, 403)
+            status, payload = self.get("/api/admin/insights", headers={"X-Admin-Token": "fel"})
+            self.assertEqual(status, 429)
+            self.assertIn("retryAfter", payload)
+            status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "admin-test"})
+            self.assertEqual(status, 429, "budgeten gäller före jämförelsen, annars kan man gissa vidare")
+            ratelimit.reset()
+            for _ in range(30):
+                status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "admin-test"})
+                self.assertEqual(status, 200)
+            # Utan konfigurerad token är ingen någonsin admin - och 404-vägarna
+            # avslöjar inte att de finns.
+            api_server.ADMIN_TOKEN = ""
+            status, _ = self.get("/api/admin/stripe-check", headers={"X-Admin-Token": ""})
+            self.assertEqual(status, 404)
         finally:
-            api_server.KV_CACHE.clear()
+            ratelimit.reset()
+            api_server.ADMIN_TOKEN = original
+
+    def test_admin_insights_requires_the_admin_token(self):
+        original = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "admin-test"
+        ratelimit.clear_on_success("admin", "127.0.0.1")
+        try:
+            status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "fel"})
+            self.assertEqual(status, 403)
+            status, payload = self.get("/api/admin/insights", headers={"X-Admin-Token": "admin-test"})
+            self.assertEqual(status, 200)
+            self.assertIn("kohorter", payload["tratt"])
+            self.assertIn("vecka_skapad", payload["handelser"]["events"])
+            self.assertIn("vecka_skapad", payload["events14Dagar"])
+            self.assertIsInstance(payload["feedback"], list)
+        finally:
+            api_server.ADMIN_TOKEN = original
 
     def test_static_files_are_never_heuristically_cached(self):
         # Same connection reused for both requests (HTTP/1.1 keep-alive) so this
@@ -2326,18 +2406,9 @@ class FeedbackAndTestResultsTest(unittest.TestCase):
             # anropa GET-dispatchen direkt för exakt denna path
             handler.path = "/api/admin/testresultat"
             handler._json_response = False
-            # kör bara själva grenen: bygg om logiken via riktig dispatch är
-            # tungt här - vi exekverar i stället samma kod som grenen kör.
-            counters = {}
-            from datetime import datetime, timedelta, timezone
-            for event in sorted(api_server.ANALYTICS_ALLOWED_EVENTS):
-                total = 0
-                for days_back in range(14):
-                    day = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%d")
-                    count, _ = api_server.KV_CACHE.get("analytics", f"{event}:{day}")
-                    total += count or 0
-                counters[event] = total
-            self.assertIn("vecka_skapad", counters)
-            self.assertTrue(api_server.ACCOUNT_STORE.list_feedback() is not None)
+            # Grenen svarar med samma payload som /api/admin/insights.
+            payload = api_server.insights_payload()
+            self.assertIn("vecka_skapad", payload["events14Dagar"])
+            self.assertIsInstance(payload["feedback"], list)
         finally:
             api_server.ADMIN_TOKEN = original
