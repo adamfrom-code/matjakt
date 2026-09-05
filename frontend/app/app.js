@@ -59,6 +59,17 @@ const recipePhoto = recipe => recipe.bild ? `<img class="recipe-photo" src="${es
 // bug, in the one place a food app is supposed to look appetising.
 window.addEventListener("error", event => {
   const img = event.target;
+  if (img?.tagName === "IMG" && !img.dataset.fell
+      && (img.classList?.contains("shopping-item-image") || img.classList?.contains("chain-item-photo"))) {
+    // Produktbild som 404:ar eller blockeras: kategori-ikonen i stället för
+    // webbläsarens trasiga-bild-glyf. Varunamnet sitter på radens checkbox.
+    img.dataset.fell = "1";
+    const name = img.closest("label, .shopping-item")?.querySelector("[data-shopping]")?.dataset.shopping || "";
+    const holder = document.createElement("span");
+    holder.innerHTML = categoryIconMarkup(itemCategory(name));
+    if (holder.firstChild) img.replaceWith(holder.firstChild);
+    return;
+  }
   if (img?.tagName === "IMG" && img.classList?.contains("recipe-photo") && !img.dataset.fell) {
     img.dataset.fell = "1";
     const holder = document.createElement("span");
@@ -86,7 +97,7 @@ function wireRatingStars(container, recipeId) {
 function recipeFeedback(recipeId) { return state.feedback[recipeId] || {}; }
 function feedbackMarkup(recipeId) {
   const fb = recipeFeedback(recipeId);
-  return `<div class="recipe-feedback"><button type="button" class="feedback-btn ${fb.liked ? "active" : ""}" data-like-recipe="${recipeId}">👍 Gillar</button><button type="button" class="feedback-btn dislike ${fb.disliked ? "active" : ""}" data-dislike-recipe="${recipeId}">👎 Gillar inte</button></div>`;
+  return `<div class="recipe-feedback"><button type="button" class="feedback-btn ${fb.liked ? "active" : ""}" data-like-recipe="${recipeId}">Gillar</button><button type="button" class="feedback-btn dislike ${fb.disliked ? "active" : ""}" data-dislike-recipe="${recipeId}">Gillar inte</button></div>`;
 }
 function wireFeedbackButtons(container, recipeId) {
   container.querySelector("[data-like-recipe]")?.addEventListener("click", () => {
@@ -1034,7 +1045,7 @@ async function renderRecipePage() {
     item.classList.toggle("active", item.dataset.view === "recipes")); /* bottennavigeringen följer med in på receptsidan - flikarna ska alltid
      vara ett tryck bort */ $("recipePage").hidden = false;
   const chips = [
-    recipe.tid ? `⏱ ${recipe.tid} min` : null,
+    recipe.tid ? `${recipe.tid} min` : null,
     `${state.personer} portioner`,
     recipe.difficulty || null,
     recipe.priceStatus !== "unavailable" && recipe.portionspris ? `${money(recipe.portionspris)}/portion` : null,
@@ -1337,7 +1348,7 @@ function extraRowMarkup(extra, chain) {
   const displayName = match?.productName || extra.name;
   const metaBits = [];
   if (match?.packageSize || extra.packageSize) metaBits.push(match?.packageSize || extra.packageSize);
-  if (extra.source === "campaign") metaBits.push(`🏷️ Kampanj hos ${extra.chain}`);
+  if (extra.source === "campaign") metaBits.push(`Kampanj hos ${extra.chain}`);
   if (fromOtherChain && !match) metaBits.push(`Ingen matchande produkt hos ${chain}`);
   if (!extra.chain && !match) metaBits.push("Ingen säker prismatch – egen rad");
   const priceText = line != null ? money(line)
@@ -1390,7 +1401,7 @@ function storeCardMarkup(entry) {
   const { chain, total, locked, cheapest, active, unavailable } = entry;
   if (locked) {
     return `<button type="button" class="store-card locked" data-store-card-paywall="${escapeHtml(chain)}">
-      ${chainMarkMarkup(chain)}<strong>${escapeHtml(chain)}</strong><span>🔒 Se pris med Premium</span></button>`;
+      ${chainMarkMarkup(chain)}<strong>${escapeHtml(chain)}</strong><span>Se pris med Premium</span></button>`;
   }
   if (unavailable) {
     return `<div class="store-card unavailable">${chainMarkMarkup(chain)}<strong>${escapeHtml(chain)}</strong><span>Pris ej tillgängligt – för få varor prissatta</span></div>`;
@@ -1584,7 +1595,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
         : `<strong class="price-missing">Pris saknas</strong>`;
     const currentHeading = !hasUsablePrice(current) && current.source !== "estimate"
       ? "Inga priser hittades hos" : "Pris hos";
-    container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${currentHeading} ${escapeHtml(current.branch.namn)}</span>${currentPriceText}${coverageLabel(current)}${updatedLabel}</div>${results.length > 1 ? `<button type="button" class="store-compare-upsell" id="storeCompareUpsell-${containerId}">🔒 Se vilken butik som faktiskt är billigast av ${results.length} – med Premium</button>` : ""}</div>`;
+    container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${currentHeading} ${escapeHtml(current.branch.namn)}</span>${currentPriceText}${coverageLabel(current)}${updatedLabel}</div>${results.length > 1 ? `<button type="button" class="store-compare-upsell" id="storeCompareUpsell-${containerId}">Se vilken butik som faktiskt är billigast av ${results.length} – med Premium</button>` : ""}</div>`;
     $(`storeCompareUpsell-${containerId}`)?.addEventListener("click", openPremiumPitch);
     syncDatabasePricing(shoppingItems);
     syncBranchComparison(shoppingItems, branches);
@@ -2024,7 +2035,7 @@ function databaseShoppingItemMarkup(item, match) {
   const onCampaign = match.campaignPrice != null && match.regularPrice != null
     && match.campaignPrice < match.regularPrice;
   const campaign = onCampaign
-    ? `<small class="shopping-item-campaign">🏷️ Kampanj ${money(match.campaignPrice)} (ord. ${money(match.regularPrice)})</small>`
+    ? `<small class="shopping-item-campaign">Kampanj ${money(match.campaignPrice)} (ord. ${money(match.regularPrice)})</small>`
     : "";
   const packageText = match.packageSize && match.packageSize !== "1 st" ? match.packageSize : "";
   // What the RECIPES need and what the SHOPPER buys, side by side. "2 st"
@@ -2094,7 +2105,7 @@ function shoppingItemMarkup(item) {
   const qty = packages > 1 ? `${packages} st` : "";
   const neededPlain = needed > 0 ? `Behöver ${amountLabel(needed, item.unit)}` : "";
   const meta = !packages ? "Finns hemma" : escapeHtml([brandSize, neededPlain, qty].filter(Boolean).join(" · ") || "1 st");
-  const campaign = live?.kampanj?.text ? `<small class="shopping-item-campaign">🏷️ ${escapeHtml(live.kampanj.text)}</small>` : "";
+  const campaign = live?.kampanj?.text ? `<small class="shopping-item-campaign">${escapeHtml(live.kampanj.text)}</small>` : "";
   const status = stillFetching ? '<small class="item-status loading">pris hämtas…</small>' : "";
   const photo = live?.bild ? `<img class="shopping-item-image has-image" src="${live.bild}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(item.namn));
   // Checkboxen betyder "jag har handlat den". X betyder "ut ur listan" -
@@ -2240,7 +2251,7 @@ function weekShoppingRowMarkup(item) {
   if (match && match.totalCost != null) price = money(match.totalCost);
   else if (live && live.pris_kr != null) price = money(live.pris_kr);
   else if (live) { price = "Pris saknas"; missing = true; }
-  const campaign = live?.kampanj?.text ? `<small class="week-shopping-campaign">🏷️ ${escapeHtml(live.kampanj.text)}</small>` : "";
+  const campaign = live?.kampanj?.text ? `<small class="week-shopping-campaign">${escapeHtml(live.kampanj.text)}</small>` : "";
   const image = match?.imageUrl || live?.bild;
   const photo = image ? `<img class="shopping-item-image has-image" src="${escapeHtml(safeHttpUrl(image) || "")}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(item.namn));
   return `<label class="week-shopping-row"><input type="checkbox" data-week-shopping="${escapeHtml(item.namn)}">${photo}<span class="week-shopping-info"><strong>${escapeHtml(item.namn)}</strong>${campaign}</span><strong class="week-shopping-price ${missing ? "price-missing" : ""}">${price}</strong></label>`;
@@ -2274,7 +2285,7 @@ function renderWeekOverview(selected, shoppingItems, total) {
   const remainingItems = shoppingItems.filter(item => !state.avklarade.has(item.namn));
   $("weekShoppingSummary").textContent = shoppingItems.length ? `${plural(remainingItems.length, "vara kvar", "varor kvar")}${total == null ? "" : ` · ${money(total)}`}` : "";
   $("weekShoppingPreview").innerHTML = shoppingItems.length
-    ? (remainingItems.length ? remainingItems.slice(0, WEEK_SHOPPING_PREVIEW_COUNT).map(weekShoppingRowMarkup).join("") : `<p class="week-shopping-done">🎉 Allt handlat!</p>`)
+    ? (remainingItems.length ? remainingItems.slice(0, WEEK_SHOPPING_PREVIEW_COUNT).map(weekShoppingRowMarkup).join("") : `<p class="week-shopping-done">Allt handlat!</p>`)
     : `<p class="week-shopping-done">Skapa en vecka så samlar vi din inköpslista här.</p>`;
   $("weekShoppingOpenBtn").onclick = () => setView("basket");
 
@@ -2480,14 +2491,26 @@ function switchWeekStore(chain) {
 // held four thousand of its prices. A chain added to the backend now appears
 // here on its own.
 function availableChains() {
-  const fromStores = [...new Set(nearbyBranches().map(branch => branch.kedja))].filter(Boolean);
+  const fromStores = [...new Set(nearbyBranches().map(branch => branch.kedja))]
+    .filter(chain => chain && RELEASED_CHAINS.includes(chain));
   return fromStores.sort((a, b) => a.localeCompare(b, "sv"));
+}
+// Alternativen i butiksväljarna byggs från samma lista - aldrig hårdkodade
+// i HTML där en gated kedja kan ligga kvar.
+function storeOptionsMarkup(selected, autoLabel) {
+  const option = (value, label) => `<option value="${escapeHtml(value)}" ${selected === value ? "selected" : ""}>${escapeHtml(label)}</option>`;
+  return [option("auto", autoLabel), option("alla", "Alla butiker"), ...RELEASED_CHAINS.map(chain => option(chain, chain))].join("");
 }
 
 // Kept for the few places that ask "is this a real chain name" rather than
 // "which chains are nearby" - now derived, so it can never drift from the
 // store data.
-const VALID_CHAINS = ["ICA", "Willys", "Hemköp", "Coop", "City Gross"];
+// SLÄPPTA KEDJOR. Speglar backend/services/grocery/api.py RELEASED_CHAINS -
+// ett test (backend/tests/test_frontend_contract.py) låser att listorna är
+// lika. ICA, Coop och Lidl finns i butiksregistret men är gated tills
+// kvalitet och rättigheter räcker; de ska inte gå att välja i appen.
+const RELEASED_CHAINS = ["Willys", "Hemköp", "City Gross"];
+const VALID_CHAINS = RELEASED_CHAINS;
 
 function renderWeekStoreTabs() {
   const tabs = document.querySelector('[aria-label="Byt butik för veckan"]');
@@ -2738,11 +2761,17 @@ $("dislikeCustom")?.addEventListener("keydown", e => {
   if (value) { state.ogillar.add(value); e.target.value = ""; onDislikesChanged(); }
 });
 function syncSettingsInputs() {
+  if (!["auto", "alla", ...RELEASED_CHAINS].includes(state.butik)) { state.butik = "auto"; saveState(); }
+  const storeSelect = $("storeInput");
+  if (storeSelect && storeSelect.dataset.rendered !== RELEASED_CHAINS.join("|")) {
+    storeSelect.innerHTML = storeOptionsMarkup(state.butik, "Billigast automatiskt");
+    storeSelect.dataset.rendered = RELEASED_CHAINS.join("|");
+  }
   $("budgetInput").value = state.budget; $("peopleValue").textContent = state.personer; $("mealsValue").textContent = state.middagar; $("storeInput").value = state.butik; $("postcodeInput").value = state.postnummer;
   $("kosttypInput").value = state.kost.kosttyp;
   renderDislikeChips();
   document.querySelectorAll("#allergenChips input").forEach(box => { box.checked = state.kost.avoidAllergens.has(box.value);   const timeFilter = $("timeFilter");
-  if (timeFilter) timeFilter.value = String(state.maxTid || "");
+  if (timeFilter) timeFilter.value = String(state.maxTid || 0);
 });
   const autoOption = document.querySelector('#storeInput option[value="auto"]');
   if (autoOption) autoOption.textContent = hasPremium() ? "Billigast automatiskt" : "Närmast automatiskt (Premium: billigast)";
@@ -3047,14 +3076,14 @@ function swapOptionMarkup(option, isSelected) {
   // ingredients - never guessed or shown for a recipe just because some
   // other product happens to be on offer right now.
   const campaignIngredient = recipe.ingredienser.find(name => state.livePriser[name]?.kampanj?.text);
-  const campaignNote = campaignIngredient ? `<small class="swap-option-campaign">🏷️ Kampanj på ${escapeHtml(campaignIngredient)}</small>` : "";
+  const campaignNote = campaignIngredient ? `<small class="swap-option-campaign">Kampanj på ${escapeHtml(campaignIngredient)}</small>` : "";
   return `<button type="button" class="swap-option ${isSelected ? "selected" : ""}" data-choose-swap="${escapeHtml(recipe.id)}"><span class="swap-option-photo">${recipePhoto(recipe)}</span><span class="swap-option-info"><strong>${escapeHtml(recipe.namn)}</strong>${badge}<small class="swap-option-meta">${[recipe.tid ? `${recipe.tid} min` : "", price].filter(Boolean).join(" · ")}</small>${campaignNote}</span>${isSelected ? '<span class="swap-option-check" aria-hidden="true">✓</span>' : ""}</button>`;
 }
 const FREE_SWAP_LIMIT = 3;
 function openSwapModal(currentId) {
   if (!hasPremium() && state.swapsThisWeek >= FREE_SWAP_LIMIT) {
     $("swapModalHint").textContent = "";
-    $("swapOptions").innerHTML = `<button type="button" class="store-compare-upsell" id="swapUpsell">🔒 Du har använt dina ${FREE_SWAP_LIMIT} gratis byten den här veckan. Med Premium byter du hur mycket du vill.</button>`;
+    $("swapOptions").innerHTML = `<button type="button" class="store-compare-upsell" id="swapUpsell">Du har använt dina ${FREE_SWAP_LIMIT} gratis byten den här veckan. Med Premium byter du hur mycket du vill.</button>`;
     $("swapUpsell").addEventListener("click", () => { closeSwapModal(); openPremiumPitch(); });
     $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true;
     $("swapModal").hidden = false;
@@ -3191,9 +3220,9 @@ function planCardMarkup(plan, branch) {
   // catalogue is exactly the fabricated store total this app must not show.
   const locked = plan.feature ? !can(plan.feature) : false;
   const chooseButton = locked
-    ? `<button class="btn btn-primary plan-locked-btn" type="button" data-plan-paywall="${plan.key}"><span>🔒 Lås upp med Premium</span></button>`
+    ? `<button class="btn btn-primary plan-locked-btn" type="button" data-plan-paywall="${plan.key}"><span>Lås upp med Premium</span></button>`
     : `<button class="btn btn-primary" type="button" data-choose-plan="${plan.key}"><span>Välj den här</span></button>`;
-  return `<div class="plan-card ${locked ? "plan-card-locked" : ""}"><div class="plan-card-head"><strong>${locked ? "🔒 " : ""}${plan.label}</strong><span>${plan.hint}</span></div><div class="plan-card-price" data-plan-price="${plan.key}"><b>pris beräknas…</b><small>mot riktiga butikspriser</small></div>${plan.highlight ? `<p class="plan-card-highlight">${escapeHtml(String(plan.highlight(plan.combo, plan.cost, portions)))}</p>` : ""}<ul class="plan-card-meals">${plan.combo.map(recipe => `<li>${escapeHtml(recipe.namn)}</li>`).join("")}</ul>${chooseButton}</div>`;
+  return `<div class="plan-card ${locked ? "plan-card-locked" : ""}"><div class="plan-card-head"><strong>${locked ? "" : ""}${plan.label}</strong><span>${plan.hint}</span></div><div class="plan-card-price" data-plan-price="${plan.key}"><b>pris beräknas…</b><small>mot riktiga butikspriser</small></div>${plan.highlight ? `<p class="plan-card-highlight">${escapeHtml(String(plan.highlight(plan.combo, plan.cost, portions)))}</p>` : ""}<ul class="plan-card-meals">${plan.combo.map(recipe => `<li>${escapeHtml(recipe.namn)}</li>`).join("")}</ul>${chooseButton}</div>`;
 }
 
 // Prices every plan card against Matjakt's own price database - the same
@@ -3354,7 +3383,7 @@ function renderObKost() {
   return `<label for="obKosttyp">Kosttyp</label><select id="obKosttyp"><option value="" ${!state.kost.kosttyp ? "selected" : ""}>Vanlig, allt</option><option value="vegetariskt" ${state.kost.kosttyp === "vegetariskt" ? "selected" : ""}>Vegetariskt</option><option value="veganskt" ${state.kost.kosttyp === "veganskt" ? "selected" : ""}>Veganskt</option></select><label>Allergier att undvika</label><div class="protein-source-chips" id="obAllergenChips">${ALLERGENS.map(a => `<label><input type="checkbox" value="${a}" ${state.kost.avoidAllergens.has(a) ? "checked" : ""}> ${a[0].toUpperCase() + a.slice(1)}</label>`).join("")}</div>`;
 }
 function renderObButik() {
-  return `<label for="obPostcode">Postnummer</label><div class="location-row"><input id="obPostcode" value="${escapeHtml(state.postnummer)}" inputmode="numeric" maxlength="5"><button type="button" id="obLocateBtn">Hitta mig</button></div><p class="ob-error" id="obPostcodeError"></p><label for="obStore">Favoritbutik</label><select id="obStore"><option value="auto" ${state.butik === "auto" ? "selected" : ""}>Välj åt mig</option><option value="alla" ${state.butik === "alla" ? "selected" : ""}>Alla butiker</option><option value="ICA" ${state.butik === "ICA" ? "selected" : ""}>ICA</option><option value="Willys" ${state.butik === "Willys" ? "selected" : ""}>Willys</option><option value="Hemköp" ${state.butik === "Hemköp" ? "selected" : ""}>Hemköp</option><option value="City Gross" ${state.butik === "City Gross" ? "selected" : ""}>City Gross</option></select>`;
+  return `<label for="obPostcode">Postnummer</label><div class="location-row"><input id="obPostcode" value="${escapeHtml(state.postnummer)}" inputmode="numeric" maxlength="5"><button type="button" id="obLocateBtn">Hitta mig</button></div><p class="ob-error" id="obPostcodeError"></p><label for="obStore">Favoritbutik</label><select id="obStore">${storeOptionsMarkup(state.butik, "Välj åt mig")}</select>`;
 }
 function wireOnboardingStep() {
   document.querySelectorAll("[data-ob-adj]").forEach(button => button.addEventListener("click", () => {
@@ -3765,7 +3794,7 @@ document.querySelectorAll("#pantryTabs button").forEach(button => button.addEven
 $("pantrySearch").addEventListener("input", e => { renderPantryPicker(e.target.value); renderPantryLiveSearch(e.target.value); });
 
 function cookMatchRow(id, namn, matched, bild) {
-  return `<button type="button" class="cook-match" data-cook-open="${escapeHtml(id)}">${bild ? `<img src="${escapeHtml(bild)}" alt="">` : `<span class="cook-match-fallback">🍽️</span>`}<span class="cook-match-info"><strong>${escapeHtml(namn)}</strong><small>Matchar: ${matched.map(escapeHtml).join(", ")}</small></span></button>`;
+  return `<button type="button" class="cook-match" data-cook-open="${escapeHtml(id)}">${bild ? `<img src="${escapeHtml(bild)}" alt="">` : `<span class="cook-match-fallback" aria-hidden="true"></span>`}<span class="cook-match-info"><strong>${escapeHtml(namn)}</strong><small>Matchar: ${matched.map(escapeHtml).join(", ")}</small></span></button>`;
 }
 function renderCookResults(localMatches, externalRecipes, hiddenByDiet = false) {
   const localHtml = localMatches.length ? `<h3>Från dina recept</h3><div class="cook-match-list">${localMatches.map(({ recipe, matched }) => cookMatchRow(recipe.id, recipe.namn, matched, recipe.bild)).join("")}</div>` : "";

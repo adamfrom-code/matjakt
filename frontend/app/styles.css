@@ -21,7 +21,7 @@
 .cook-match-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
 .cook-match{display:flex;align-items:center;gap:12px;min-height:64px;padding:8px;border:0;border-radius:var(--r-sm);background:var(--surface);text-align:left}
 .cook-match:active{background:var(--primary-soft)}
-.cook-match img,.cook-match-fallback{flex-shrink:0;width:52px;height:52px;border-radius:12px;object-fit:cover}
+.cook-match img,.cook-match-fallback{background:var(--primary-soft);flex-shrink:0;width:52px;height:52px;border-radius:12px;object-fit:cover}
 .cook-match-fallback{display:grid;place-items:center;background:var(--primary-soft);font-size:22px}
 .cook-match-info strong{display:block;font-size:15px}
 .cook-match-info small{display:block;color:var(--muted);font-size:13px}
@@ -704,3 +704,4 @@ button{color:inherit}
 .comparison-store-main .chain-mark-sm{margin:0 0 4px}
 .store-card .chain-mark,.week-store-switch .chain-mark,.comparison-store-main .chain-mark{color:#fff}
 .update-note{position:fixed;left:50%;bottom:calc(72px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;padding:10px 16px;border:1px solid var(--line, #ddd);border-radius:10px;background:var(--surface, #fff);color:var(--text, #111);font:inherit;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.12)}
+#onboardingBody label{display:block;margin:14px 0 7px;color:var(--muted);font-size:13px;font-weight:700}#onboardingBody select{display:block;width:100%;min-height:48px;padding:0 13px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);font:inherit}#onboardingBody .protein-source-chips{margin-top:4px}
