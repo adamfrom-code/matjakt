@@ -12,6 +12,7 @@ starting from zero every deploy.
 import json
 import random
 import sqlite3
+import threading
 import time
 from pathlib import Path
 
@@ -28,6 +29,11 @@ class PriceCacheStore:
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = sqlite3.connect(db_path, check_same_thread=False)
         self._connection.execute("PRAGMA journal_mode=WAL")
+        # EN anslutning delas av alla servertrådar (och av KeyValueCacheStore).
+        # Utan lås kan två trådars "with connection" flätas ihop: "cannot
+        # start a transaction within a transaction" - sett som 500 på
+        # /api/products/batch i browser-E2E:n.
+        self.lock = threading.RLock()
         self._init_schema()
 
     @property
@@ -58,10 +64,11 @@ class PriceCacheStore:
         freshness window on top of updated_at (see cached_products) - this
         method itself doesn't judge age, so get_stale() below can reuse the
         exact same row for a fallback when a fresh re-fetch fails."""
-        row = self._connection.execute(
-            "SELECT products_json, updated_at FROM product_cache WHERE chain = ? AND query = ? AND zip = ?",
-            (chain, query, zip_code),
-        ).fetchone()
+        with self.lock:
+            row = self._connection.execute(
+                "SELECT products_json, updated_at FROM product_cache WHERE chain = ? AND query = ? AND zip = ?",
+                (chain, query, zip_code),
+            ).fetchone()
         if not row:
             return None, None
         return json.loads(row[0]), row[1]
@@ -80,7 +87,7 @@ class PriceCacheStore:
         """updated_at defaults to now - the override exists for tests that
         need to plant an entry of a specific age without sleeping."""
         now = updated_at if updated_at is not None else time.time()
-        with self._connection:
+        with self.lock, self._connection:
             self._connection.execute(
                 """
                 INSERT INTO product_cache (chain, query, zip, products_json, updated_at)
@@ -99,14 +106,14 @@ class PriceCacheStore:
             self._prune(time.time())
 
     def _prune(self, now: float):
-        with self._connection:
+        with self.lock, self._connection:
             self._connection.execute(
                 "DELETE FROM product_cache WHERE updated_at < ?", (now - PRUNE_MAX_AGE_SECONDS,)
             )
 
     def clear(self):
         """Test-only: wipes every entry."""
-        with self._connection:
+        with self.lock, self._connection:
             self._connection.execute("DELETE FROM product_cache")
 
     def close(self):
@@ -125,8 +132,11 @@ class KeyValueCacheStore:
     helpers in api_server.py); this store itself only tracks when a value
     was written, same division of responsibility as PriceCacheStore."""
 
-    def __init__(self, connection: sqlite3.Connection):
+    def __init__(self, connection: sqlite3.Connection, lock=None):
         self._connection = connection
+        # Samma lås som ägaren av anslutningen (PriceCacheStore.lock) - två
+        # lås på en anslutning skyddar ingenting.
+        self.lock = lock or threading.RLock()
         self._init_schema()
 
     def _init_schema(self):
@@ -146,17 +156,18 @@ class KeyValueCacheStore:
         """Returns (value, updated_at), or (None, None) if there's no entry -
         same shape as PriceCacheStore.get(), same reasoning: the caller
         judges freshness, this just answers "what's stored and when"."""
-        row = self._connection.execute(
-            "SELECT value_json, updated_at FROM kv_cache WHERE namespace = ? AND key = ?",
-            (namespace, key),
-        ).fetchone()
+        with self.lock:
+            row = self._connection.execute(
+                "SELECT value_json, updated_at FROM kv_cache WHERE namespace = ? AND key = ?",
+                (namespace, key),
+            ).fetchone()
         if not row:
             return None, None
         return json.loads(row[0]), row[1]
 
     def set(self, namespace: str, key: str, value, updated_at: float = None):
         now = updated_at if updated_at is not None else time.time()
-        with self._connection:
+        with self.lock, self._connection:
             self._connection.execute(
                 """
                 INSERT INTO kv_cache (namespace, key, value_json, updated_at)
@@ -171,12 +182,12 @@ class KeyValueCacheStore:
             self._prune(time.time())
 
     def _prune(self, now: float):
-        with self._connection:
+        with self.lock, self._connection:
             self._connection.execute(
                 "DELETE FROM kv_cache WHERE updated_at < ?", (now - PRUNE_MAX_AGE_SECONDS,)
             )
 
     def clear(self):
         """Test-only: wipes every entry."""
-        with self._connection:
+        with self.lock, self._connection:
             self._connection.execute("DELETE FROM kv_cache")

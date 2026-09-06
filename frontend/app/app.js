@@ -1457,8 +1457,16 @@ function renderStoreCards() {
   // eller "Billigast bland dina valda butiker" - enkelt för konsumenten,
   // och aldrig ett starkare påstående än datan bär.
   const basisLabel = state.dbComparison?.basisLabel;
+  // Jämförelsesidan (view-comparison) nås härifrån: veckans kompakta
+  // widget är dold på Vecka-skärmen, så utan den här knappen fanns ingen
+  // väg till "Exakt jämförelse mellan butikerna" som Premium lovar.
+  const comparableCount = entries.filter(entry => !entry.locked && !entry.unavailable).length;
+  const compareButton = hasPremium() && comparableCount > 1
+    ? `<button type="button" class="store-compare-open store-cards-compare" id="storeCardsCompareBtn">Jämför butiker →</button>` : "";
   container.innerHTML = entries.map(storeCardMarkup).join("")
-    + (basisLabel ? `<p class="store-basis">${escapeHtml(basisLabel)}</p>` : "");
+    + (basisLabel ? `<p class="store-basis">${escapeHtml(basisLabel)}</p>` : "")
+    + compareButton;
+  $("storeCardsCompareBtn")?.addEventListener("click", () => { renderStoreComparisonPage(selectedRecipes()); setView("comparison"); });
   container.querySelectorAll("[data-store-card]").forEach(card => card.addEventListener("click", () => {
     if (card.dataset.storeCard === chosenStore()) return;
     // switchWeekStore, inte bara state.butik: livepriserna är nyckelsatta på
@@ -2552,6 +2560,9 @@ async function fetchProductsBatch(chain, zip, names, onItem, storeKey, primatOnl
         // docstring for why), so they're always fast regardless of this
         // timeout - it's sized for the non-primatOnly case.
         const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: [name], ...(storeKey ? { butiksnyckel: storeKey } : {}), ...(primatOnly ? { primatOnly: true } : {}) }), signal: AbortSignal.timeout(35000) });
+        // 429 gäller hela klienten, inte varan: att fortsätta med nästa
+        // vara ger bara fler avvisade anrop (800 st på en E2E-körning).
+        if (response.status === 429) { nextIndex = names.length; return; }
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const found = (await response.json()).produkter || {};
         Object.assign(produkter, found);
@@ -2630,6 +2641,10 @@ function ensureWeekRecipeDetails() {
       // object, so replacing it would orphan them.
       Object.assign(recipe, detail, { steg: detail.instructions || detail.steg || [] });
       renderBasket();
+      // Öppnades receptet medan hämtningen pågick (byt rätt -> tryck på
+      // rätten) ritades sidan utan mängder och ritades aldrig om - den
+      // vägen hämtar inte själv när ett anrop redan är på väg.
+      if (new URLSearchParams(location.search).get("recept") === recipe.id) renderRecipePage();
     }).catch(() => recipeDetailFetches.delete(recipe.id));
   });
 }

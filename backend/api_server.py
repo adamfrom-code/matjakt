@@ -550,7 +550,7 @@ PRICE_CACHE = PriceCacheStore(PRICE_CACHE_PATH)
 # to live only in plain process-memory dicts, which reset to empty on every
 # deploy/restart. Persisting them here is what actually makes "senast
 # uppdaterad" survive a deploy.
-KV_CACHE = KeyValueCacheStore(PRICE_CACHE.connection)
+KV_CACHE = KeyValueCacheStore(PRICE_CACHE.connection, lock=PRICE_CACHE.lock)
 
 
 def clean_text(value):
@@ -1449,7 +1449,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
     # policy as a meta tag, because GitHub Pages serves it without any
     # headers of its own - but frame-ancestors and X-Frame-Options only work
     # as real headers, so they live here.
-    CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+    # script-src bär hashen för index.html:s enda inline-skript (låsskärmens
+    # omdirigering) - utan den blockerar headern skriptet när servern själv
+    # serverar appen. test_frontend_contract räknar om hashen.
+    CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self' 'sha256-sEnkNmVsXqElXERpnCgthiiTZkumda0MAsNL0i4X2ZM='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 
     def send_response(self, *args, **kwargs):
         # One handler instance serves MANY requests over a keep-alive
@@ -2780,6 +2783,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if not plan_features.allowed(plan, "all_store_prices"):
                 result = mask_pricing_for_free(result)
             self.send_json(200, result)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            raise   # klienten gav upp - inget prisfel, _guarded tar det tyst
         except Exception:
             logger.exception("Prissättning av veckan misslyckades")
             self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})
@@ -2816,6 +2821,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(200, grocery_api.shopping_list(
                 items, chain, pantry,
                 external_store_id=store_selection.get(chain) if store_selection else None))
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            raise
         except Exception:
             logger.exception("Inköpslista misslyckades för %s", chain)
             self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})
