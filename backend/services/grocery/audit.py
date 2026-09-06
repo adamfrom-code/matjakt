@@ -25,6 +25,8 @@ def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: 
                              "kilopris_som_paketpris", "smakords_misstanke", "saknade")}
     examples: dict[str, list] = {k: [] for k in counts}
     checks = 0
+    # Per kedja: en hel kedja utan priser får inte försvinna i totalen.
+    per_chain = {c: {"kontroller": 0, "saknade": 0} for c in store_rows}
 
     def note(kind, recipe, ing, chain, row, extra=""):
         counts[kind] += 1
@@ -40,9 +42,11 @@ def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: 
             unit = ing.get("unit") or "st"
             for chain, store_row in store_rows.items():
                 checks += 1
+                per_chain[chain]["kontroller"] += 1
                 row = engine.price_item(ing["name"], amount, unit, chain, store_row["id"])
                 if row is None:
                     counts["saknade"] += 1
+                    per_chain[chain]["saknade"] += 1
                     continue
                 folded_unit, package_unit = _fold(unit), _fold(row.get("packageUnit") or "")
                 packages, total, exact = row.get("packages") or 0, row.get("totalCost"), row.get("exactPackaging", True)
@@ -78,5 +82,6 @@ def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: 
     gate = all(counts[k] == 0 for k in ("gram_som_styck", "volym_som_styck", "estimat", "otolkad_paketstorlek",
                                         "kilopris_som_paketpris"))
     return {"recept": len(recipes), "kedjor": list(store_rows), "kontroller": checks,
+            "perKedja": per_chain,
             "flaggor": counts, "exempel": {k: v for k, v in examples.items() if v},
             "gate": "GRÖN" if gate else "RÖD"}

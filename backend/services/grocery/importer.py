@@ -28,6 +28,11 @@ import time
 from . import api as grocery_api
 from .errors import ProviderBlockedError
 
+# Anropas efter en lyckad import: hook(chain, saved). Servern registrerar
+# prisauditen här (services/grocery/audit) - importern kan inte importera
+# api_server själv utan cirkel. Ett hook-fel får aldrig fälla importen.
+AFTER_IMPORT_HOOKS: list = []
+
 logger = logging.getLogger("matjakt.grocery.importer")
 
 # NATTJOBBETS standardbutiker - INTE en produktbegränsning: start() tar
@@ -285,6 +290,11 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
                 recipe_prices.reprice_in_background(f"import {chain}")
             except Exception:
                 logger.exception("Kunde inte starta receptprissättningen")
+            for hook in list(AFTER_IMPORT_HOOKS):
+                try:
+                    hook(chain, saved)
+                except Exception:
+                    logger.exception("Efter-import-hook misslyckades för %s", chain)
     except Exception as error:
         logger.exception("Import misslyckades för %s", chain)
         _set(running=False, finishedAt=time.time(), status="failed", message=str(error))

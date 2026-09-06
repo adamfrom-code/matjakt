@@ -181,10 +181,16 @@ class KeyValueCacheStore:
         if random.random() < PRUNE_PROBABILITY:
             self._prune(time.time())
 
+    # Namnrymder som inte är cache utan driftsfakta (senaste prisauditen):
+    # de får inte försvinna efter sju dagar bara för att inget skrivit dem.
+    PROTECTED_NAMESPACES = ("pricing_audit",)
+
     def _prune(self, now: float):
         with self.lock, self._connection:
             self._connection.execute(
-                "DELETE FROM kv_cache WHERE updated_at < ?", (now - PRUNE_MAX_AGE_SECONDS,)
+                "DELETE FROM kv_cache WHERE updated_at < ? AND namespace NOT IN (%s)"
+                % ",".join("?" * len(self.PROTECTED_NAMESPACES)),
+                (now - PRUNE_MAX_AGE_SECONDS, *self.PROTECTED_NAMESPACES),
             )
 
     def clear(self):

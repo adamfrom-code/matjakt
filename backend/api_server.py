@@ -552,6 +552,144 @@ PRICE_CACHE = PriceCacheStore(PRICE_CACHE_PATH)
 # uppdaterad" survive a deploy.
 KV_CACHE = KeyValueCacheStore(PRICE_CACHE.connection, lock=PRICE_CACHE.lock)
 
+# ---------------------------------------------------------------------------
+# PRISAUDITEN SOM DRIFTSFAKTA. Releasegaten för prisdelen är auditen mot
+# DEN HÄR miljöns riktiga data (alla recept x ingredienser x släppta kedjor,
+# ~30-90 s). Den kördes bara på begäran med admin-token; nu körs den i
+# bakgrunden vid serverstart och efter varje lyckad import, och en
+# summering - bara siffror, inga produktnamn - visas i /api/health så att
+# "är prisdelen releaseklar?" kan besvaras utan hemligheter.
+# ---------------------------------------------------------------------------
+PRICING_AUDIT_STATE = {"running": False, "pending": None}
+_PRICING_AUDIT_LOCK = threading.Lock()
+# Under den här täckningen per kedja är auditen RÖD: en kedja vars priser
+# till stor del saknas kan inte kallas kontrollerad. Helt utan träffar =
+# INGEN DATA (ett tomt prisregister får aldrig ett grönt kvitto).
+PRICING_AUDIT_MIN_COVERAGE_PERCENT = 90.0
+# Vänta in kallstarten (receptprissättning, förvärmning, första kunderna)
+# innan auditen tar CPU. 0 i tester.
+PRICING_AUDIT_START_DELAY_SECONDS = float(os.environ.get("MATJAKT_PRICING_AUDIT_DELAY", "120") or 0)
+
+
+def pricing_audit_summary():
+    """Senaste auditen i den här miljön, eller None om ingen körts än."""
+    stored, _ = KV_CACHE.get("pricing_audit", "latest")
+    return stored
+
+
+def _pricing_audit_gate(result: dict) -> tuple[str, dict]:
+    """Auditens egna farliga kategorier + TÄCKNING. Returnerar (gate,
+    täckning per kedja). 'saknade' ingår inte i auditens eget gate-uttryck
+    (det mäter fel pris, inte avsaknad av pris) - därför vägs den här."""
+    checks = int(result.get("kontroller") or 0)
+    missing = int((result.get("flaggor") or {}).get("saknade") or 0)
+    per_chain = {}
+    for chain, row in (result.get("perKedja") or {}).items():
+        n, m = int(row.get("kontroller") or 0), int(row.get("saknade") or 0)
+        per_chain[chain] = {"kontroller": n, "saknade": m,
+                            "tackningProcent": round(100.0 * (n - m) / n, 1) if n else 0.0}
+    if checks == 0 or missing >= checks:
+        return "INGEN DATA", per_chain
+    if any(row["kontroller"] and row["saknade"] >= row["kontroller"] for row in per_chain.values()):
+        return "INGEN DATA", per_chain
+    if result.get("gate") != "GRÖN":
+        return "RÖD", per_chain
+    coverage = 100.0 * (checks - missing) / checks
+    if coverage < PRICING_AUDIT_MIN_COVERAGE_PERCENT or any(
+            row["kontroller"] and row["tackningProcent"] < PRICING_AUDIT_MIN_COVERAGE_PERCENT
+            for row in per_chain.values()):
+        return "RÖD", per_chain
+    return "GRÖN", per_chain
+
+
+def _store_pricing_audit_summary(result: dict, reason: str, started: float) -> dict:
+    """Siffror ur audit-resultatet - exemplen (produktnamn) stannar hos
+    admin-vägen. Bär också vilken commit som körde auditen, så health kan
+    visa om siffrorna gäller den körande deployen."""
+    checks = int(result.get("kontroller") or 0)
+    missing = int((result.get("flaggor") or {}).get("saknade") or 0)
+    gate, per_chain = _pricing_audit_gate(result)
+    summary = {"gate": gate, "kontroller": checks, "saknade": missing,
+               "tackningProcent": round(100.0 * (checks - missing) / checks, 1) if checks else 0.0,
+               "recept": result.get("recept"), "kedjor": result.get("kedjor"),
+               "perKedja": per_chain, "flaggor": result.get("flaggor"),
+               "ranAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+               "durationSeconds": round(time.time() - started, 1), "reason": reason,
+               "commit": (os.environ.get("RENDER_GIT_COMMIT") or "")[:12] or None}
+    KV_CACHE.set("pricing_audit", "latest", summary)
+    if gate == "RÖD":
+        METRICS.incr("pricing_audit_red")
+        logger.warning("Prisaudit RÖD (%s): %s", reason, summary["flaggor"])
+    else:
+        logger.info("Prisaudit %s (%s): %d kontroller", gate, reason, checks)
+    return summary
+
+
+def run_pricing_audit_in_background(reason: str = "", delay_seconds: float | None = None) -> bool:
+    """Startar auditen i en tråd. Pågår en redan köas begäran (senaste
+    skälet vinner) och körs direkt efteråt - nattens tre importer ger alltså
+    en audit som sett alla tre kedjornas nya priser, aldrig en tyst
+    överhoppad. Returnerar False när begäran köades."""
+    with _PRICING_AUDIT_LOCK:
+        if PRICING_AUDIT_STATE["running"]:
+            pending = PRICING_AUDIT_STATE.get("pending")
+            PRICING_AUDIT_STATE["pending"] = f"{pending}+{reason}" if pending else reason
+            return False
+        PRICING_AUDIT_STATE["running"] = True
+        PRICING_AUDIT_STATE["pending"] = None
+    wait = PRICING_AUDIT_START_DELAY_SECONDS if delay_seconds is None else delay_seconds
+
+    def work():
+        from services.grocery.audit import run_pricing_audit
+        try:
+            if wait:
+                time.sleep(wait)
+            started = time.time()
+            db = grocery_api.open_store()
+            rs = recipes_api.open_store()
+            try:
+                chains = [c for c in grocery_api.RELEASED_CHAINS if c in grocery_api.PROVIDER_STATUS]
+                result = run_pricing_audit(db, rs, chains)
+            finally:
+                db.close()
+                rs.close()
+            _store_pricing_audit_summary(result, reason, started)
+        except Exception:
+            logger.exception("Prisauditen misslyckades (%s)", reason)
+            METRICS.incr("pricing_audit_failed")
+            try:
+                # Ett tydligt värde - inte None - så "gate != RÖD" aldrig
+                # läser en havererad audit som godkänd.
+                KV_CACHE.set("pricing_audit", "latest", {
+                    "gate": "FEL", "error": "audit_failed", "kontroller": 0, "reason": reason,
+                    "ranAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "commit": (os.environ.get("RENDER_GIT_COMMIT") or "")[:12] or None})
+            except Exception:
+                logger.exception("Kunde inte spara auditens felstatus")
+        finally:
+            with _PRICING_AUDIT_LOCK:
+                PRICING_AUDIT_STATE["running"] = False
+                pending = PRICING_AUDIT_STATE.get("pending")
+                PRICING_AUDIT_STATE["pending"] = None
+            if pending:
+                run_pricing_audit_in_background(pending, delay_seconds=0)
+
+    threading.Thread(target=work, name="pricing-audit", daemon=True).start()
+    return True
+
+
+# Efter varje lyckad import (nattjobben) är priserna nya - audita igen.
+grocery_importer.AFTER_IMPORT_HOOKS.append(
+    lambda chain, saved: run_pricing_audit_in_background(f"import {chain}"))
+
+
+def _mail_from_domain():
+    """Bara domänen ur avsändaradressen - räcker för att verifiera "rätt
+    From-domän" i drift utan att visa adressen."""
+    from email.utils import parseaddr
+    address = parseaddr((MAIL_CONFIG.get("from_email") or "").strip())[1].strip("<> ")
+    return address.rsplit("@", 1)[1].lower() if "@" in address else None
+
 
 def clean_text(value):
     return re.sub(r"\s+", " ", value or "").strip()
@@ -1452,7 +1590,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
     # script-src bär hashen för index.html:s enda inline-skript (låsskärmens
     # omdirigering) - utan den blockerar headern skriptet när servern själv
     # serverar appen. test_frontend_contract räknar om hashen.
-    CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self' 'sha256-sEnkNmVsXqElXERpnCgthiiTZkumda0MAsNL0i4X2ZM='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+    CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self' 'sha256-4hCDEyWAtdpoYahtQwxdKcdT8sn6uJrdzLY6j1S582Q='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 
     def send_response(self, *args, **kwargs):
         # One handler instance serves MANY requests over a keep-alive
@@ -1743,6 +1881,17 @@ class ApiHandler(SimpleHTTPRequestHandler):
         # prisgate-stopp. Siffror - aldrig innehåll.
         "metrics": METRICS.snapshot(),
         "rateLimitPersistent": ratelimit.persistent(),
+        # Vilken commit som kör (Render sätter RENDER_GIT_COMMIT) - beviset
+        # för att en röd CI INTE deployade.
+        "commit": (os.environ.get("RENDER_GIT_COMMIT") or "")[:12] or None,
+        # Utvecklingslåset: true = appen är stängd för allmänheten (alla
+        # datavägar svarar 401). Måste vara false vid publik release.
+        "gate": GATE_ENABLED,
+        # Avsändardomänen (aldrig adressen) så "rätt From-domän" kan
+        # kontrolleras utan mejllåda.
+        "mailFrom": _mail_from_domain(),
+        # Senaste prisauditen mot den här miljöns data - bara siffror.
+        "pricingAudit": pricing_audit_summary(),
         # Stripe-läge utan hemligheter: bara om nyckeln är en TEST- eller
         # LIVE-nyckel (prefix) och vilka delar som är satta. Svarar på
         # "används inga live-nycklar?" utan att någonsin visa nyckeln.
@@ -2285,7 +2434,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(200, {"ok": True})
             return
         if parsed.path == "/api/auth/reset-password":
-            if self._rate_limit("password_reset"):
+            # Egen hink: att begära länken och att lösa in den delade budget,
+            # så tre klick på "skicka igen" plus två för korta lösenord låste
+            # användaren ute i en timme - lika länge som länken lever.
+            if self._rate_limit("password_reset_submit"):
                 return
             try:
                 ACCOUNT_STORE.reset_password(payload.get("token"), payload.get("password"))
@@ -2485,10 +2637,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
             chains = (payload or {}).get("chains") or list(grocery_api.RELEASED_CHAINS)
             db = grocery_api.open_store()
             rs = recipes_api.open_store()
+            started = time.time()
             try:
-                self.send_json(200, run_pricing_audit(db, rs, [c for c in chains if c in grocery_api.PROVIDER_STATUS]))
+                result = run_pricing_audit(db, rs, [c for c in chains if c in grocery_api.PROVIDER_STATUS])
             finally:
                 db.close(); rs.close()
+            _store_pricing_audit_summary(result, "admin", started)
+            self.send_json(200, result)
             return
         if parsed.path == "/api/admin/platform-activate":
             # Hela aktiveringen i ett anrop: registersynk + första referens-
@@ -3062,6 +3217,12 @@ if __name__ == "__main__":
         recipe_prices.reprice_in_background("serverstart")
     except Exception:
         logger.exception("Kunde inte starta receptprissättningen")
+    # Releasegatens prisaudit mot den här miljöns data, i bakgrunden efter
+    # kallstarten - resultatet i /api/health -> pricingAudit.
+    try:
+        run_pricing_audit_in_background("serverstart")
+    except Exception:
+        logger.exception("Kunde inte starta prisauditen")
 
     GROCERY_SCHEDULER.start()
     # Förvärm prismotorns ordindex i bakgrunden: kallstarten (indexbygge

@@ -2195,6 +2195,130 @@ class AuthHttpTest(unittest.TestCase):
         self.assertIsInstance(payload["metrics"].get("requests_total"), int)
         self.assertTrue(payload["rateLimitPersistent"])
 
+    # ---- Release gate: health visar commit, From-domän och senaste prisaudit ----
+    def test_health_exposes_commit_mail_domain_and_pricing_audit_without_secrets(self):
+        status, payload = self.get("/api/health")
+        self.assertEqual(status, 200)
+        self.assertIn("pricingAudit", payload)
+        self.assertIn("commit", payload)
+        self.assertIsNone(payload["mailFrom"])            # SMTP är osatt i sviten
+        self.assertFalse(payload["gate"])                 # låset är av i sviten
+        original = dict(api_server.MAIL_CONFIG)
+        api_server.MAIL_CONFIG.update({"host": "smtp.example.test", "from_email": "Matjakt <Noreply@Matjakt.store>"})
+        try:
+            _, payload = self.get("/api/health")
+            self.assertTrue(payload["mail"])
+            self.assertEqual(payload["mailFrom"], "matjakt.store")   # domänen, aldrig adressen - även med visningsnamn
+            self.assertNotIn("noreply", json.dumps(payload).lower())
+        finally:
+            api_server.MAIL_CONFIG.clear()
+            api_server.MAIL_CONFIG.update(original)
+
+    def test_background_pricing_audit_lands_in_health_as_numbers_only(self):
+        from unittest import mock
+        fake = {"recept": 3, "kedjor": ["Willys", "Hemköp"], "kontroller": 100,
+                "perKedja": {"Willys": {"kontroller": 50, "saknade": 1}, "Hemköp": {"kontroller": 50, "saknade": 1}},
+                "flaggor": {"estimat": 0, "saknade": 2, "gram_som_styck": 0},
+                "exempel": {"saknade": ["recept | Struts | Willys | None"]}, "gate": "GRÖN"}
+
+        def run_and_wait(result):
+            with mock.patch("services.grocery.audit.run_pricing_audit", return_value=result):
+                self.assertTrue(api_server.run_pricing_audit_in_background("test", delay_seconds=0))
+                deadline = time.time() + 10
+                while api_server.PRICING_AUDIT_STATE["running"] and time.time() < deadline:
+                    time.sleep(0.05)
+            self.assertFalse(api_server.PRICING_AUDIT_STATE["running"])
+            return self.get("/api/health")[1]["pricingAudit"]
+
+        audit = run_and_wait(fake)
+        self.assertEqual(audit["gate"], "GRÖN")
+        self.assertEqual(audit["kontroller"], 100)
+        self.assertEqual(audit["saknade"], 2)
+        self.assertEqual(audit["tackningProcent"], 98.0)
+        self.assertEqual(audit["perKedja"]["Hemköp"]["tackningProcent"], 98.0)
+        self.assertEqual(audit["reason"], "test")
+        self.assertIn("commit", audit)
+        self.assertNotIn("exempel", audit)                 # produktnamn stannar hos admin-vägen
+        self.assertIn("ranAt", audit)
+        # 0 kontroller är inget grönt kvitto.
+        audit = run_and_wait(dict(fake, kontroller=0, gate="GRÖN"))
+        self.assertEqual(audit["gate"], "INGEN DATA")
+        # ...och inte heller "alla kontroller saknar pris" (tomt prisregister).
+        audit = run_and_wait(dict(fake, flaggor={"saknade": 100}, perKedja={"Willys": {"kontroller": 50, "saknade": 50}, "Hemköp": {"kontroller": 50, "saknade": 50}}))
+        self.assertEqual(audit["gate"], "INGEN DATA")
+        # En hel kedja utan priser: INGEN DATA även om totalen ser bra ut.
+        audit = run_and_wait(dict(fake, flaggor={"saknade": 50}, perKedja={"Willys": {"kontroller": 50, "saknade": 0}, "Hemköp": {"kontroller": 50, "saknade": 50}}))
+        self.assertEqual(audit["gate"], "INGEN DATA")
+        # Täckning under 90 % i en kedja: RÖD fast de farliga kategorierna är noll.
+        audit = run_and_wait(dict(fake, flaggor={"saknade": 10}, perKedja={"Willys": {"kontroller": 50, "saknade": 0}, "Hemköp": {"kontroller": 50, "saknade": 10}}))
+        self.assertEqual(audit["gate"], "RÖD")
+        # Röd audit räknas.
+        before = api_server.METRICS.snapshot().get("pricing_audit_red", 0)
+        audit = run_and_wait(dict(fake, gate="RÖD", flaggor={"estimat": 3, "saknade": 2}))
+        self.assertEqual(audit["gate"], "RÖD")
+        self.assertEqual(api_server.METRICS.snapshot().get("pricing_audit_red", 0), before + 1)
+
+    def test_failed_pricing_audit_is_marked_fel_not_none(self):
+        from unittest import mock
+        with mock.patch("services.grocery.audit.run_pricing_audit", side_effect=RuntimeError("trasig rad")):
+            self.assertTrue(api_server.run_pricing_audit_in_background("test-fel", delay_seconds=0))
+            deadline = time.time() + 10
+            while api_server.PRICING_AUDIT_STATE["running"] and time.time() < deadline:
+                time.sleep(0.05)
+        audit = self.get("/api/health")[1]["pricingAudit"]
+        self.assertEqual(audit["gate"], "FEL")
+        self.assertEqual(audit["kontroller"], 0)
+        self.assertEqual(audit["error"], "audit_failed")
+
+    def test_pricing_audit_requested_while_running_is_queued_not_dropped(self):
+        from unittest import mock
+        import threading
+        release = threading.Event()
+        reasons = []
+
+        def slow(*args, **kwargs):
+            release.wait(10)
+            return {"recept": 1, "kedjor": ["Willys"], "kontroller": 4, "perKedja": {"Willys": {"kontroller": 4, "saknade": 0}},
+                    "flaggor": {"saknade": 0}, "exempel": {}, "gate": "GRÖN"}
+        with mock.patch("services.grocery.audit.run_pricing_audit", side_effect=slow):
+            self.assertTrue(api_server.run_pricing_audit_in_background("import Willys", delay_seconds=0))
+            self.assertFalse(api_server.run_pricing_audit_in_background("import Hemköp", delay_seconds=0))   # köad
+            self.assertFalse(api_server.run_pricing_audit_in_background("import City Gross", delay_seconds=0))
+            release.set()
+            deadline = time.time() + 10
+            while time.time() < deadline:
+                audit = self.get("/api/health")[1]["pricingAudit"] or {}
+                if audit.get("reason") == "import Hemköp+import City Gross" and not api_server.PRICING_AUDIT_STATE["running"]:
+                    break
+                time.sleep(0.05)
+        self.assertEqual(audit.get("reason"), "import Hemköp+import City Gross")   # omkörningen såg båda
+
+    def test_real_audit_against_a_store_without_prices_is_not_green(self):
+        """Den riktiga auditen mot butiker utan en enda prisrad: 'saknade'
+        räknas upp för varje kontroll och gaten får aldrig bli GRÖN."""
+        import tempfile as _tempfile
+        from services.grocery.audit import run_pricing_audit
+        from services.grocery.store import GroceryStore
+        from services.recipes.store import RecipeStore
+        with _tempfile.TemporaryDirectory() as tmp:
+            gs = GroceryStore(Path(tmp) / "g.db")
+            rs = RecipeStore(Path(tmp) / "r.db")
+            try:
+                gs.upsert_store(chain="Willys", external_store_id="w1", name="Willys Test", active=True)
+                rs.upsert_recipe({"id": "test-ris", "name": "Ris med ris", "description": "", "servings": 4,
+                                  "prepTime": 5, "cookTime": 10, "difficulty": "lätt", "tags": [], "categories": [],
+                                  "dietFlags": [], "allergens": [], "instructions": ["Koka."],
+                                  "ingredients": [{"name": "Ris", "amount": 200, "unit": "g"},
+                                                  {"name": "Salt", "pantryStaple": True}]})
+                result = run_pricing_audit(gs, rs, ["Willys"])
+            finally:
+                gs.close(); rs.close()
+        self.assertEqual(result["kontroller"], 1)
+        self.assertEqual(result["flaggor"]["saknade"], 1)
+        self.assertEqual(result["perKedja"]["Willys"], {"kontroller": 1, "saknade": 1})
+        gate, _ = api_server._pricing_audit_gate(result)
+        self.assertEqual(gate, "INGEN DATA")
+
     def test_redeem_premium_with_correct_code(self):
         email = self._email()
         _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
