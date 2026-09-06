@@ -3346,6 +3346,18 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if not queries:
             self.send_json(400, {"error": "Inga giltiga varunamn angavs"})
             return
+        # LIVEPRISER ÄR PREMIUM - också på servern. Free får sitt riktiga
+        # totalpris och sin lista hos den billigaste butiken ur prisdatabasen
+        # (99,7 % täckning); per-vara-hämtning från butikssajterna är
+        # Premiums "alla butikers riktiga priser". Utan den här spärren kunde
+        # Free byta veckoflik till en låst kedja och få dess priser radvis -
+        # och varje sådan flik blev tjugo skrapningar mot 30/min-spärren:
+        # 429-stormen i produktionsloggen.
+        user = ACCOUNT_STORE.user_for_token(self._bearer_token())
+        if not plan_features.allowed(plan_features.plan_for_user(user), "live_prices"):
+            self.send_json(403, {"locked": True, "feature": "live_prices",
+                                 "error": "Livepriser per vara ingår i Premium"})
+            return
 
         cache_zip = cache_scope(zip_code, store_key)
         results, to_scrape = {}, []

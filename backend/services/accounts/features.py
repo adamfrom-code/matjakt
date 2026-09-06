@@ -65,6 +65,7 @@ FEATURES = {
     "all_store_prices": {"free": False},
     "all_store_baskets": {"free": False},
     "store_comparison": {"free": False},      # exakta skillnader mellan butiker
+    "live_prices": {"free": False},           # per-vara-priser från butikssajterna (products/batch)
     # Recept & filter
     "recipe_search": {"free": True},
     "advanced_nutrition": {"free": False},    # kcal-/proteinfilter, näringsmål

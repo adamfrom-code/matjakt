@@ -912,6 +912,7 @@ const FREE_FEATURES = {
   bulk_week: false, quick_week: false, vegetarian_week: false, balanced_week: false,
   seven_dinners: false, cheapest_store_price: true, cheapest_store_basket: true,
   all_store_prices: false, all_store_baskets: false, store_comparison: false,
+  live_prices: false,
   recipe_search: true, advanced_nutrition: false, meal_prep: false,
   basic_pantry: true, full_pantry: false, favorites: true,
 };
@@ -1454,6 +1455,9 @@ async function syncBranchComparison(shoppingItems, branches) {
   const key = `${state.postnummer}|${names.join(",")}`;
   if (branchComparisonSync.key !== key) { branchComparisonSync = { key, branches: new Set() }; state.liveBranchTotals = {}; }
   if (!names.length) return;
+  // Filialpriser är Premium (servern nekar Free med 403) och pausas efter
+  // 429/403 - annars blev varje filial ett avvisat anrop till.
+  if (!hasPremium() || Date.now() < livePriceCooldownUntil) return;
   // Every nearby branch gets its own live fetch, keyed by its own primatKey -
   // this used to fetch once per CHAIN and let every branch of that chain
   // show that single result as if it were each branch's own live price
@@ -1963,8 +1967,9 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
       ? "Inga priser hittades hos" : "Pris hos";
     container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${currentHeading} ${escapeHtml(current.branch.namn)}</span>${currentPriceText}${coverageLabel(current)}${updatedLabel}</div>${results.length > 1 ? `<button type="button" class="store-compare-upsell" id="storeCompareUpsell-${containerId}">Se vilken butik som faktiskt är billigast av ${results.length} – med Premium</button>` : ""}</div>`;
     $(`storeCompareUpsell-${containerId}`)?.addEventListener("click", openPremiumPitch);
+    // Free: priset kommer ur prisdatabasen. Inga filialanrop - de är
+    // Premium och servern nekar dem ändå.
     syncDatabasePricing(shoppingItems);
-    syncBranchComparison(shoppingItems, branches);
     return;
   }
   // Sorted by cost, so the lowest number wins the top of this widget - and a
@@ -3213,30 +3218,38 @@ function renderWeekStoreTabs() {
 // Sending more in flight than the backend can actually run concurrently
 // wouldn't help (they'd just queue there instead of here), and sending only
 // one at a time would leave the backend's second worker idle the whole sync.
-const LIVE_PRICE_CONCURRENCY = 2;
+// Flera varor per anrop, ett anrop i taget. Varje anrop räknas mot
+// serverns skrapspärr (30/min per IP) - ett anrop per vara gjorde en
+// veckolista till tjugo anrop och produktionsloggen till en 429-storm.
+// Vid 429/403 pausas live-hämtningen en minut i stället för att loopa.
+// Skrapvägen tar fem varor per anrop så priserna landar löpande; den snabba
+// Primat-/cachevägen (primatOnly) tar serverns max (20) - en filial, ett anrop.
+const LIVE_PRICE_CHUNK = 5;
+const LIVE_PRICE_CHUNK_FAST = 20;
+const LIVE_PRICE_COOLDOWN_MS = 60_000;
+let livePriceCooldownUntil = 0;
 async function fetchProductsBatch(chain, zip, names, onItem, storeKey, primatOnly) {
   const produkter = {};
-  let nextIndex = 0;
-  async function worker() {
-    while (nextIndex < names.length) {
-      const name = names[nextIndex++];
-      try {
-        // 35s timeout to give Coop's slower pages room to finish (matches the backend's own 30s bound on how long it'll wait per item).
-        // primatOnly-fetches never scrape server-side (see the backend's own
-        // docstring for why), so they're always fast regardless of this
-        // timeout - it's sized for the non-primatOnly case.
-        const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: [name], ...(storeKey ? { butiksnyckel: storeKey } : {}), ...(primatOnly ? { primatOnly: true } : {}) }), signal: AbortSignal.timeout(35000) });
-        // 429 gäller hela klienten, inte varan: att fortsätta med nästa
-        // vara ger bara fler avvisade anrop (800 st på en E2E-körning).
-        if (response.status === 429) { nextIndex = names.length; return; }
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const found = (await response.json()).produkter || {};
-        Object.assign(produkter, found);
-        onItem?.(found);
-      } catch { /* den här varan missade - resten av listan hämtas ändå */ }
-    }
+  const size = primatOnly ? LIVE_PRICE_CHUNK_FAST : LIVE_PRICE_CHUNK;
+  for (let start = 0; start < names.length; start += size) {
+    if (Date.now() < livePriceCooldownUntil) break;
+    const chunk = names.slice(start, start + size);
+    try {
+      const response = await fetch(productsBatchApiUrl(), {
+        method: "POST", headers: pricingHeaders(),
+        body: JSON.stringify({ butik: chain, zip, varor: chunk, ...(storeKey ? { butiksnyckel: storeKey } : {}), ...(primatOnly ? { primatOnly: true } : {}) }),
+        signal: AbortSignal.timeout(35000),
+      });
+      if (response.status === 429 || response.status === 403) {
+        livePriceCooldownUntil = Date.now() + LIVE_PRICE_COOLDOWN_MS;
+        break;
+      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const found = (await response.json()).produkter || {};
+      Object.assign(produkter, found);
+      onItem?.(found);
+    } catch { /* den här gruppen missade - nästa grupp hämtas ändå */ }
   }
-  await Promise.all(Array.from({ length: Math.min(LIVE_PRICE_CONCURRENCY, names.length) }, worker));
   return produkter;
 }
 function mapLiveProducts(produkter) {
@@ -3272,6 +3285,10 @@ async function syncLivePrices(shoppingItems) {
     .map(item => item.ingredient));
   const names = shoppingItems.map(item => item.namn).filter(name => !answered.has(name)).sort();
   const key = `${chain}|${storeKey}|${state.postnummer}|${names.join(",")}`;
+  // Free får aldrig live-priser: prisdatabasen svarar för den billigaste
+  // butiken, och servern nekar ändå (403). Cooldown efter 429/403.
+  if (!hasPremium()) return;
+  if (Date.now() < livePriceCooldownUntil) return;
   if (!names.length || !VALID_CHAINS.includes(chain) || livePriceSync.loading || livePriceSync.key === key) return;
   livePriceSync = { key, loading: true };
   updateWeekStoreStatus();
@@ -3708,7 +3725,15 @@ function renderPriceTabs() {
   }
 }
 let awaitingPremiumActivation = false;
+let premiumPollInFlight = false;
 async function activatePremiumAfterCheckout() {
+  // Bara en poll åt gången: i native-appen kan visibilitychange komma
+  // flera gånger medan vi redan väntar på Stripes webhook.
+  if (premiumPollInFlight) return;
+  premiumPollInFlight = true;
+  try { await pollPremiumAfterCheckout(); } finally { premiumPollInFlight = false; }
+}
+async function pollPremiumAfterCheckout() {
   awaitingPremiumActivation = true;
   openAccountModal();
   renderAccount();
@@ -4659,6 +4684,14 @@ function openPaywall(triggerFeature = "") {
     el.addEventListener("click", () => beginCheckout(el.dataset.paywallPlan)));
 }
 
+// I native-appen (Capacitor) ska Stripe öppnas i systemets webbläsare -
+// navigeras webviewen till stripe.com lämnar användaren appen och landar
+// efteråt i webbversionen. Vid återkomst pollas Premium (visibilitychange).
+function isNativeApp() { return Boolean(window.Capacitor?.isNativePlatform?.()); }
+function openExternal(url) {
+  if (isNativeApp()) { window.open(url, "_blank"); return; }
+  location.href = url;
+}
 async function beginCheckout(plan) {
   if (!state.user) {
     document.getElementById("paywallModal").hidden = true;
@@ -4668,7 +4701,7 @@ async function beginCheckout(plan) {
   try {
     await flushServerSync();
     const { url } = await startCheckout(getStoredToken(), plan);
-    if (url) location.href = url;
+    if (url) { if (isNativeApp()) awaitingPremiumActivation = true; openExternal(url); }
   } catch (error) {
     alert(error?.message || "Kunde inte starta betalningen just nu.");
   }
@@ -4683,7 +4716,8 @@ $("subscribeBtn").addEventListener("click", async () => {
   try {
     await flushServerSync();
     const { url } = await startCheckout(state.authToken, selectedPlan);
-    window.location.href = url;
+    if (isNativeApp()) awaitingPremiumActivation = true;
+    openExternal(url);
   } catch (error) { $("checkoutError").textContent = error.message; }
 });
 $("manageBillingBtn").addEventListener("click", async () => {
@@ -4867,7 +4901,10 @@ handlePendingInvite();
 // Det här är vad som gör att Adam ser Saras avbockning "snart" (§25) utan
 // att vi bygger en WebSocket-infrastruktur för det.
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") { pullHousehold(); loadNotifications(); }
+  if (document.visibilityState !== "visible") return;
+  pullHousehold(); loadNotifications();
+  // Tillbaka från Stripe i native-appen: hämta Premium-status.
+  if (awaitingPremiumActivation && isNativeApp()) activatePremiumAfterCheckout();
 });
 // A first-time visitor arriving through a SHARED RECIPE LINK came for the
 // recipe - onboarding on top of it would bury the very thing that brought

@@ -1101,7 +1101,7 @@ class ApiServerHttpTest(unittest.TestCase):
         }
         api_server.parse_products = lambda page, chain, query: by_query.get(query.lower(), [])
         try:
-            status, payload = self.post("/api/products/batch", {"butik": "Willys", "zip": "11122", "varor": ["Paprika", "Lök", "Okänd vara"]})
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "zip": "11122", "varor": ["Paprika", "Lök", "Okänd vara"]}, token=self._premium_token())
             self.assertEqual(status, 200)
             self.assertEqual(payload["produkter"]["Paprika"]["produktnamn"], "Paprika Röd Klass 1")
             self.assertEqual(payload["produkter"]["Lök"]["produktnamn"], "Lök Gul Klass 1")
@@ -1120,7 +1120,7 @@ class ApiServerHttpTest(unittest.TestCase):
         _reset_shared_browser()
         api_server.parse_products = lambda page, chain, query: [{"produktnamn": "Lime Klass 1", "pris_kr": 4.9}, {"produktnamn": "Pressad apelsinjuice", "pris_kr": 15}]
         try:
-            status, payload = self.post("/api/products/batch", {"butik": "Willys", "zip": "11122", "varor": ["Citron"]})
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "zip": "11122", "varor": ["Citron"]}, token=self._premium_token())
             self.assertEqual(status, 200)
             self.assertIsNone(payload["produkter"]["Citron"])
         finally:
@@ -1136,7 +1136,7 @@ class ApiServerHttpTest(unittest.TestCase):
         api_server.parse_products = lambda page, chain, query: calls.append(1) or [{"produktnamn": "Smör Bregott Färskt 500g", "pris_kr": 10}]
         try:
             api_server.PRICE_CACHE.set("Willys", "smör", api_server.DEFAULT_ZIP, [{"produktnamn": "Smör Bregott Cachad 500g", "pris_kr": 25}])
-            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Smör"]})
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Smör"]}, token=self._premium_token())
             self.assertEqual(status, 200)
             self.assertEqual(payload["produkter"]["Smör"]["produktnamn"], "Smör Bregott Cachad 500g")
             self.assertEqual(len(calls), 0)
@@ -1157,7 +1157,7 @@ class ApiServerHttpTest(unittest.TestCase):
              "storlek": "", "lager": True, "url": "https://www.willys.se/x", "sokning": query, "kampanj": None, "gtin": "7311042001683", "kalla": "primat"}
         ]
         try:
-            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Paprika"]})
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Paprika"]}, token=self._premium_token())
             self.assertEqual(status, 200)
             self.assertEqual(payload["produkter"]["Paprika"]["produktnamn"], "Paprika Röd Klass 1")
             self.assertEqual(payload["produkter"]["Paprika"]["kalla"], "primat")
@@ -1175,7 +1175,7 @@ class ApiServerHttpTest(unittest.TestCase):
                      "storlek": "", "lager": True, "url": "", "sokning": query, "kampanj": None, "gtin": "1", "kalla": "primat"}]
         api_server.fetch_from_primat = _fake
         try:
-            self.post("/api/products/batch", {"butik": "Coop", "varor": ["Citron"], "butiksnyckel": "coop:206414"})
+            self.post("/api/products/batch", {"butik": "Coop", "varor": ["Citron"], "butiksnyckel": "coop:206414"}, token=self._premium_token())
             self.assertEqual(seen, ["coop:206414"])
         finally:
             api_server.fetch_from_primat = original_fetch_from_primat
@@ -1190,7 +1190,7 @@ class ApiServerHttpTest(unittest.TestCase):
         api_server.fetch_from_primat = lambda chain, query, zip_code, store_key=None: []
         api_server.parse_products = lambda page, chain, query: [{"produktnamn": "Smör Bregott Färskt 500g", "pris_kr": 10}]
         try:
-            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Smör"]})
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Smör"]}, token=self._premium_token())
             self.assertEqual(status, 200)
             self.assertEqual(payload["produkter"]["Smör"]["produktnamn"], "Smör Bregott Färskt 500g")
         finally:
@@ -1215,7 +1215,7 @@ class ApiServerHttpTest(unittest.TestCase):
         api_server.fetch_from_primat = lambda chain, query, zip_code, store_key=None: []
         api_server.parse_products = lambda page, chain, query: []
         try:
-            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Ris"]})
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Ris"]}, token=self._premium_token())
             self.assertEqual(status, 200)
             result = payload["produkter"]["Ris"]
             self.assertIsNotNone(result, "ett gammalt men riktigt pris ska visas, inte ingenting")
@@ -1240,7 +1240,7 @@ class ApiServerHttpTest(unittest.TestCase):
         api_server.fetch_from_primat = lambda chain, query, zip_code, store_key=None: []
         api_server.parse_products = lambda page, chain, query: []
         try:
-            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Saffran"]})
+            status, payload = self.post("/api/products/batch", {"butik": "Willys", "varor": ["Saffran"]}, token=self._premium_token())
             self.assertEqual(status, 200)
             self.assertIsNone(payload["produkter"]["Saffran"])
         finally:

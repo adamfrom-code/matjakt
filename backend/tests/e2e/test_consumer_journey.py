@@ -224,6 +224,11 @@ class BrowserJourney(unittest.TestCase):
         self.page = self.context.new_page()
         self.page.set_default_timeout(20_000)
         self.console_errors = []
+        # Nätdisciplin: hur många live-prisanrop resan gör. Free ska göra
+        # NOLL (priserna kommer ur prisdatabasen), Premium några få chunkar.
+        self.batch_requests = []
+        self.page.on("request", lambda request: self.batch_requests.append(request.url)
+                     if "/api/products/batch" in request.url else None)
         self.page.on("pageerror", lambda error: self.console_errors.append(str(error)))
         # Riktiga sidfel (undantag) och konsolfel - men inte nätverksmissar
         # för bilder/kampanjer: E2E:n körs utan internet, och en bild som
@@ -499,6 +504,7 @@ class BrowserJourney(unittest.TestCase):
             expect(page.locator("#pantryCount")).to_have_text("2")
 
         self.assertEqual(self.console_errors, [])
+        self.assertEqual(len(self.batch_requests), 0, "Free ska aldrig hämta livepriser per vara")
 
     def test_premium_paywall_and_stripe_testmode(self):
         page = self.page
@@ -609,6 +615,8 @@ class BrowserJourney(unittest.TestCase):
             expect(page.locator("#storeCards .store-card.locked")).to_have_count(2)
 
         self.assertEqual(self.console_errors, [])
+        self.assertLessEqual(len(self.batch_requests), 12,
+                             f"för många livepris-anrop för en Premium-resa: {len(self.batch_requests)}")
 
 
 if __name__ == "__main__":
