@@ -148,3 +148,13 @@ Oförändrat sedan master-auditen. Nytt frivilligt: `MATJAKT_LOG_FORMAT`
   Checklista i `docs/RELEASE.md`.
 - Sammanslagning med annan sessions commits (kontrollrum, utskick, statistik,
   `44ff642`): konflikter i CSP-headern och mailer lösta; 904 → 909 tester.
+
+## Gate-stegen genomförda 2026-09-06 (sen kväll, via Adams Chrome)
+
+- **Render:** Auto-Deploy = **"After CI Checks Pass"** (native; ingen hook-secret behövs; `render.yaml` behåller `autoDeploy: false` som fail-closed vid blueprint-synk). Admin-token roterad och laddad (omstart bekräftad).
+- **Loopia:** `_dmarc.matjakt.store TXT "v=DMARC1; p=none; rua=mailto:adamfrom@icloud.com"` publicerad (syns på 8.8.8.8/1.1.1.1).
+- **Resend:** domänen `matjakt.store` **verifierad** (DKIM + `rsend`/`send` CNAME) efter "Restart"; ny API-nyckel `matjakt-render-smtp` (Sending access, bara matjakt.store). "Enable Receiving" står kvar på → statusen visas som "partially verified" (bara kosmetiskt, utskick opåverkade).
+- **Render env:** `SMTP_HOST/PORT/USER/FROM_EMAIL` + `SMTP_PASSWORD` satta → `mail: true`, `mailFrom: matjakt.store`.
+- **Skarpt mejltest i produktion:** registrering → verifieringsmejl *Delivered* (Resend) → länk klickad → `emailVerified: true`; glömt lösenord → mejl *Delivered* → nytt lösenord → login 200, gammalt lösenord 401; okänd adress ger identiskt svar; `mail_send_failed` 0 efter domänverifieringen. **Första mejlet hamnade i skräpposten hos iCloud** (ny domän, DMARC nyss satt) - länkar i Skräp är avstängda i Apple Mail, flytta till inkorgen först.
+- **Öppet:** `POST /api/products/batch` → tätt 429-flöde från riktiga klienter (livepris-loopen); Loopia visar förfallen faktura för kontot (domänen!); låset (`MATJAKT_GATE=0`) vid lansering; juridik senare (Adams beslut).
+
