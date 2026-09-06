@@ -452,5 +452,89 @@ class ComparisonBasisLabels(_Base):
         self.assertEqual(payload["comparison"]["basisLabel"], "Billigast bland dina valda butiker")
 
 
+class PublishingIsAtomic(unittest.TestCase):
+    """Critical 2026-09-06: publiceringen skrev rad för rad i egna
+    transaktioner. En krasch mitt i lämnade ett halvt dataset synligt för
+    kunderna. Nu: allt eller inget, och körningen märks failed."""
+
+    def _staged_run(self, db, rows=6):
+        store = db.upsert_store(chain="Willys", external_store_id="2132", name="Willys Gestrike",
+                                city=None, postal_code=None, address=None, latitude=None,
+                                longitude=None, active=True, provider="axfood", pricing_scope="NATIONAL")
+        run = db.start_collector_run(chain="Willys")
+        products = []
+        for index in range(rows):
+            product = db.find_or_create_product(RawProduct(
+                chain="Willys", external_product_id=f"p{index}", name=f"Vara {index}",
+                store_id="2132", store_name="Willys", size="500 g", quantity=500.0, unit="g",
+                category="Skafferi > Test"))
+            products.append(product)
+            db.stage_price(run_id=run.id, store_id=store.id, product_id=product.id,
+                           regular_price=10.0 + index, currency="SEK", source="axfood:2132")
+        return store, run, products
+
+    def test_a_database_error_mid_publish_publishes_nothing_and_fails_the_run(self):
+        import sqlite3
+        with tempfile.TemporaryDirectory() as tmp:
+            db = GroceryStore(Path(tmp) / "g.db")
+            try:
+                store, run, products = self._staged_run(db)
+                real = db.upsert_current_price
+                calls = {"n": 0}
+
+                def flaky(**kwargs):
+                    calls["n"] += 1
+                    if calls["n"] == 4:
+                        raise sqlite3.OperationalError("database is locked")
+                    return real(**kwargs)
+                db.upsert_current_price = flaky
+                outcome = publish_run(db, run.id, store.id, "Willys", source="axfood:2132")
+                self.assertFalse(outcome["published_ok"])
+                self.assertEqual(outcome["published"], 0)
+                self.assertIn("avbröts", outcome["message"])
+                # INGEN rad nådde produktion - inte ens de tre som gick före felet.
+                self.assertEqual(db.price_count_for_store(store.id), 0)
+                self.assertEqual(db.reference_price_count("Willys"), 0)
+                self.assertEqual(len(db.staged_rows(run.id)), 0, "staging städad")
+                gate = db.connection.execute("SELECT published, gate_message FROM grocery_collector_runs WHERE id = ?", (run.id,)).fetchone()
+                self.assertEqual(gate["published"], 0)
+                self.assertIn("avbröts", gate["gate_message"])
+            finally:
+                db.close()
+
+    def test_a_clean_publish_still_lands_every_row(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = GroceryStore(Path(tmp) / "g.db")
+            try:
+                store, run, products = self._staged_run(db)
+                outcome = publish_run(db, run.id, store.id, "Willys", source="axfood:2132")
+                self.assertTrue(outcome["published_ok"])
+                self.assertEqual(outcome["published"], 6)
+                self.assertEqual(db.price_count_for_store(store.id), 6)
+                self.assertEqual(db.reference_price_count("Willys"), 6)
+            finally:
+                db.close()
+
+    def test_bulk_transaction_rolls_back_everything_on_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = GroceryStore(Path(tmp) / "g.db")
+            try:
+                store = db.upsert_store(chain="Willys", external_store_id="1", name="W", city=None,
+                                        postal_code=None, address=None, latitude=None, longitude=None, active=True)
+                product = db.find_or_create_product(RawProduct(
+                    chain="Willys", external_product_id="x", name="Mjölk", store_id="1", store_name="W",
+                    size="1 l", quantity=1000.0, unit="ml", category="Mejeri"))
+                with self.assertRaises(RuntimeError):
+                    with db.bulk_transaction():
+                        db.upsert_current_price(product_id=product.id, store_id=store.id, regular_price=12.0)
+                        raise RuntimeError("mitt i")
+                self.assertEqual(db.price_count_for_store(store.id), 0)
+                # Efteråt fungerar vanliga operationer igen (flaggan återställd).
+                db.upsert_current_price(product_id=product.id, store_id=store.id, regular_price=12.0)
+                self.assertEqual(db.price_count_for_store(store.id), 1)
+            finally:
+                db.close()
+
+
 if __name__ == "__main__":
     unittest.main()

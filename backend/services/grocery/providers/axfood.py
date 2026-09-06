@@ -249,6 +249,9 @@ class AxfoodProvider(GroceryProvider):
         self.page_size = page_size
 
     # ---- transport ---------------------------------------------------
+        # Kategorier vars listning gav upp efter alla försök - importen
+        # märker körningen partiell i stället för att kalla den komplett.
+        self.failed_categories: list[str] = []
 
     def _request(self, url: str) -> dict:
         request = urllib.request.Request(url, headers={
@@ -317,6 +320,7 @@ class AxfoodProvider(GroceryProvider):
     def get_products_by_category(self, store_id: str, categories: list[dict] | None = None,
                                  limit_per_category: int | None = None,
                                  on_category=None, on_products=None) -> list[RawProduct]:
+        self.failed_categories = []
         """Walks the category tree and imports every product in every leaf.
 
         Each product gets the category path of the listing it came from -
@@ -359,6 +363,7 @@ class AxfoodProvider(GroceryProvider):
                     raise
                 except AxfoodRequestError:
                     logger.exception("%s category listing failed for %r (page %d)", self.name, slug, page)
+                    self.failed_categories.append(category.get("path") or slug)
                     break
 
                 results = data.get("results") or []

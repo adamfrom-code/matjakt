@@ -18,5 +18,12 @@ android/app/build/
 # Renderad marknadsföringsvideo och dess arbetsfiler - byggs om med
 # backend/scripts/make_instagram_video.py, hör inte hemma i git (12 MB mp4).
 marketing/
-# Lokala säkerhetskopior av databaserna (innehåller kontouppgifter) - aldrig i git
+
+# Nattliga backupset (services/backup.py) - aldrig i repot.
 backend/data/backups/
+
+# Skärmdumpar från browser-E2E vid fel (tests/e2e/) - aldrig i repot.
+backend/tests/e2e/artifacts/
+
+# Byggd frontend (scripts/build_frontend.mjs) - byggs i deploy-jobbet.
+dist/

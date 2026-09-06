@@ -1,0 +1,32 @@
+Matjakt planerar veckans middagar efter din budget och räknar ut vad de kostar i butikerna nära dig - med riktiga priser, inte uppskattningar.
+
+SÅ FUNGERAR DET
+1. Berätta hur många ni är, vad veckan får kosta och var ni handlar.
+2. Matjakt sätter ihop en matvecka av recept som håller budgeten.
+3. Byt rätter tills veckan känns rätt.
+4. Inköpslistan skapas automatiskt, prissatt mot butikernas aktuella priser.
+5. Markera det du redan har hemma, så räknas det bort.
+
+RIKTIGA PRISER
+Priserna kommer från Willys, Hemköp och City Gross. När Matjakt inte kan prissätta en vara säger appen det - hellre inget pris än ett fel pris. Kedjor och butiker som inte kan jämföras rättvist märks aldrig som billigast.
+
+GRATIS
+- Upp till fyra middagar per vecka
+- Standardveckan
+- Totalpris och inköpslista hos den billigaste kvalificerade butiken
+- Tre byten av rätter per vecka
+- Skafferi och "finns hemma"
+
+PREMIUM (59 kr/månad eller 399 kr/år)
+- Upp till sju middagar per vecka
+- Alla veckotyper: familj, budget, träning, bulk, snabb, vegetarisk, balanserad
+- Alla butikers priser och inköpslistor, inte bara den billigaste
+- Exakt jämförelse mellan butikerna
+- Näringsmål: kalorier, protein, kolhydrater, fett och proteinkälla
+- Obegränsade byten av rätter
+- Aktuella erbjudanden och kampanjer
+- "Laga med det jag har hemma"
+
+Ditt konto följer med mellan telefon och webb. Du kan när som helst radera kontot och all data inifrån appen.
+
+Produktinformation delvis från Dabas.

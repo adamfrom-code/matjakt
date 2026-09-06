@@ -18,7 +18,7 @@
        elements; injected CSS is a far smaller problem than injected JS.
        frame-ancestors is ignored in a meta tag - the backend sends it as
        a real header (see api_server.end_headers). -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://plausible.io https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com https://plausible.io https://cloud.umami.is; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://plausible.io https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com https://plausible.io https://cloud.umami.is; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#f6f7f4">
   <meta name="description" content="Matjakt hjälper dig planera billigare middagar efter din budget.">
@@ -40,7 +40,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=62">
+  <link rel="stylesheet" href="styles.css?v=28">
 </head>
 <body>
   <div class="phone-shell">
@@ -53,7 +53,7 @@
     <p class="offline-note">Du är offline - listan och veckan visas från senaste besöket.</p>
     <main class="app view-home" id="top">
       <section class="screen home-screen" aria-labelledby="homeTitle">
-        <div class="home-hero"><h1 id="homeGreeting">God morgon <span aria-hidden="true">👋</span></h1><p id="homeSubtitle">Redo för en god och prisvärd vecka.</p></div>
+        <div class="home-hero"><h1 id="homeGreeting">God morgon</h1><p id="homeSubtitle">Redo för en god och prisvärd vecka.</p></div>
 
         <!-- IKVÄLL FÖRST. Det en familj öppnar appen för klockan 16 är
              "vad blir det för middag?" - inte en instrumentpanel. -->
@@ -96,7 +96,7 @@
               <label for="budgetInput">Veckobudget</label><div class="budget-row"><input type="number" id="budgetInput" value="800" min="0" step="50" inputmode="numeric"><span>kr</span></div>
               <div class="settings-grid"><div><label>Personer</label><div class="stepper"><button id="peopleMinus" aria-label="Färre personer">−</button><span id="peopleValue">2</span><button id="peoplePlus" aria-label="Fler personer">+</button></div></div><div><label>Middagar</label><div class="stepper"><button id="mealsMinus" aria-label="Färre middagar">−</button><span id="mealsValue">4</span><button id="mealsPlus" aria-label="Fler middagar">+</button></div></div></div>
               <label for="postcodeInput">Postnummer</label><div class="location-row"><input id="postcodeInput" inputmode="numeric" maxlength="5" placeholder="Ditt postnummer"><button id="locateBtn" type="button">Hitta mig</button></div><p id="locationHint" class="location-hint">Vi jämför butiker nära dig.</p>
-              <label for="storeInput">Butik</label><select id="storeInput"><option value="auto">Billigast automatiskt</option><option value="alla">Alla butiker</option><option value="ICA">ICA</option><option value="Willys">Willys</option><option value="Hemköp">Hemköp</option><option value="City Gross">City Gross</option><option value="Coop">Coop</option></select>
+              <label for="storeInput">Butik</label><select id="storeInput"><option value="auto">Billigast automatiskt</option><option value="alla">Alla butiker</option></select>
 
               <div class="nutrition-goals">
                 <div class="nutrition-goals-label"><span>Kost &amp; allergier</span></div>
@@ -269,7 +269,7 @@
         <div class="pantry-list" id="pantryList"></div>
         <section class="followed-section" id="followedSection" hidden>
           <h3 class="shopping-section-title">Varor du följer</h3>
-          <p class="screen-intro">Grunden för prisbevakningar - notiser kommer i appversionen.</p>
+          <p class="screen-intro">Varor du valt att följa från Veckans fynd samlas här.</p>
           <div id="followedList"></div>
         </section>
       </section>
@@ -370,7 +370,7 @@
           <p class="account-error" id="resetError"></p>
           <button class="btn btn-primary" type="submit"><span>Spara nytt lösenord</span></button>
         </form>
-        <p class="account-legal-links"><a href="mailto:adamfrom@icloud.com">Kontakta support</a> · <a href="../integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="../anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
+        <p class="account-legal-links"><a href="mailto:adamfrom@icloud.com">Kontakta support</a> · <a href="https://matjakt.store/integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="https://matjakt.store/anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
       </div>
 
       <div id="accountLoggedIn" hidden>
@@ -408,15 +408,15 @@
         <div class="premium-pitch" id="premiumPitch">
           <h3>Matjakt Premium</h3>
           <ul class="premium-feature-list">
-            <li>Aktuella erbjudanden och kampanjer</li>
-            <li>Full jämförelse mellan butiker</li>
+            <li>Upp till 7 middagar per vecka</li>
+            <li>Alla veckotyper: familj, budget, träning, bulk, snabb, vegetarisk, balanserad</li>
+            <li>Alla butikers priser och inköpslistor, inte bara den billigaste</li>
+            <li>Exakt jämförelse mellan butikerna</li>
             <li>Automatiskt val av billigaste butik</li>
-            <li>Kalorier, protein, kolhydrater och fett</li>
-            <li>Val av kött och proteinkälla</li>
-            <li>Matsvinnsoptimering</li>
-            <li>Appen lär sig vad du gillar</li>
+            <li>Näringsmål: kalorier, protein, kolhydrater, fett och proteinkälla</li>
             <li>Obegränsade byten av maträtter</li>
-            <li>Sparhistorik</li>
+            <li>Aktuella erbjudanden och kampanjer</li>
+            <li>Laga med det du redan har hemma</li>
           </ul>
           <div class="premium-pricing" role="tablist">
             <button type="button" class="premium-price-tab active" data-price-tab="month" data-plan="monthly"><span>Månad</span><strong></strong><small>/mån</small></button>
@@ -437,7 +437,7 @@
         <button class="account-logout-btn" id="gateLogoutBtn" type="button">Lås förhandsvisningen</button>
         <button class="account-delete-btn" id="deleteAccountBtn" type="button">Radera konto</button>
         <p class="account-error" id="deleteError"></p>
-        <p class="account-legal-links"><a href="mailto:adamfrom@icloud.com">Kontakta support</a> · <a href="../integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="../anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
+        <p class="account-legal-links"><a href="mailto:adamfrom@icloud.com">Kontakta support</a> · <a href="https://matjakt.store/integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="https://matjakt.store/anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
       </div>
     </div>
   </div>
@@ -512,6 +512,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=103"></script>
+  <script type="module" src="app.js?v=28"></script>
 </body>
 </html>

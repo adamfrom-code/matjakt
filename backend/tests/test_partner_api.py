@@ -86,7 +86,7 @@ class PartnerApiTest(unittest.TestCase):
     def test_admin_token_is_required(self):
         status, _ = self.request("POST", "/api/admin/partner-overview", {},
                                  {"X-Admin-Token": "fel"})
-        self.assertEqual(status, 403)
+        self.assertEqual(status, 404)   # admin-ytan syns inte utan token
 
     def test_partner_lifecycle_over_http(self):
         status, created = self.admin("/api/admin/partner", {
@@ -158,6 +158,46 @@ class PartnerApiTest(unittest.TestCase):
         status, stats = self.admin("/api/admin/partner-stats", {"storeId": self.store.id})
         self.assertEqual(status, 200)
         self.assertGreaterEqual(stats["stats"].get("store_compared", 0), 1)
+
+    def test_partner_a_cannot_deliver_or_read_for_partner_b_store(self):
+        """Horisontell eskalering (§37): partner A anger partner B:s butiks-id
+        i sin feed. Ska vägras med 403 och inget får publiceras. Statistik
+        och översikt är admin-ytor - en partnernyckel öppnar dem inte."""
+        db = GroceryStore(grocery_api.DB_PATH)
+        try:
+            other = db.upsert_store(chain="ICA", external_store_id="1004000", name="ICA Kvantum Uppsala",
+                                    city="Uppsala", pricing_scope="STORE_SPECIFIC")
+        finally:
+            db.close()
+        status, a = self.admin("/api/admin/partner", {"action": "create", "kind": "PER_STORE", "name": "A",
+                                                       "chain": "ICA", "storeIds": ["1003987"]})
+        self.assertEqual(status, 200, a)
+        status, b = self.admin("/api/admin/partner", {"action": "create", "kind": "PER_STORE", "name": "B",
+                                                       "chain": "ICA", "storeIds": ["1004000"]})
+        self.assertEqual(status, 200, b)
+        for partner in (a, b):
+            self.assertEqual(self.admin("/api/admin/partner", {"action": "activate", "partnerId": partner["partnerId"]})[0], 200)
+        rows = [{"gtin": MILK_GTIN, "namn": "Mellanmjölk 1,5%", "storlek": "1000 ml", "pris": "9,90"}]
+
+        # A levererar till B:s butik -> 403, inget publicerat.
+        status, body = self.request("POST", "/api/partner/feed",
+                                    {"storeId": other.id, "format": "API", "rows": rows},
+                                    {"X-Partner-Key": a["apiKey"]})
+        self.assertEqual(status, 403, body)
+        db = GroceryStore(grocery_api.DB_PATH)
+        try:
+            self.assertEqual(db.price_count_for_store(other.id), 0)
+        finally:
+            db.close()
+        # Okänd butik -> aldrig 200.
+        status, _ = self.request("POST", "/api/partner/feed",
+                                 {"storeId": 999999, "format": "API", "rows": rows},
+                                 {"X-Partner-Key": a["apiKey"]})
+        self.assertIn(status, (400, 403))
+        # Partnernyckel öppnar inte adminytorna.
+        for path in ("/api/admin/partner-stats", "/api/admin/partner-overview"):
+            status, _ = self.request("POST", path, {"partnerId": b["partnerId"]}, {"X-Partner-Key": a["apiKey"]})
+            self.assertEqual(status, 404, path)
 
     def test_bad_feed_rows_never_go_live_over_http(self):
         _, created = self.admin("/api/admin/partner", {

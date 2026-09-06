@@ -15,6 +15,7 @@ explicit expiry), so a leak of them is a much smaller window than a leak of
 plain text, and hashing them the same way is the obvious next step.
 """
 
+import functools
 import hashlib
 import re
 import secrets
@@ -34,6 +35,11 @@ BILLING_OWNING_STATUSES = ("active", "trialing", "past_due")
 # Respiten täcker Stripes förnyelseförsök (en lyckad förnyelse skickar alltid
 # ett nytt updated-event med ny period), så ingen demoteras i förtid.
 SESSION_TTL_DAYS = 30
+VERIFICATION_TOKEN_TTL_DAYS = 7
+# Samma PBKDF2-arbete oavsett om kontot finns: utan detta svarade login på
+# okänd e-post ~100 ms snabbare - en mätbar signal om vilka adresser som
+# har konto, trots identiska felmeddelanden.
+_DUMMY_SALT = bytes(16)
 SUBSCRIPTION_GRACE_SECONDS = 3 * 86400
 PBKDF2_ITERATIONS = 200_000
 
@@ -82,6 +88,12 @@ class AccountStore:
         guard_database_path(db_path, purpose="kontodatabasen")
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = sqlite3.connect(db_path, check_same_thread=False)
+        # EN anslutning delas av alla servertrådar. En commit()/rollback()
+        # från en tråd nollställer en annan tråds pågående SELECT - sett i
+        # CI som "401 Inte inloggad" på en giltig session mitt under
+        # Premium-aktiveringen. Varje publik metod tar därför _lock (RLock:
+        # publika metoder får anropa varandra) - se _synchronized nedan.
+        self._lock = threading.RLock()
         # Webhookar kan komma parallellt (ThreadingHTTPServer): läs-ändra-skriv
         # i apply_stripe_event måste vara odelbar.
         self._stripe_lock = threading.Lock()
@@ -120,6 +132,7 @@ class AccountStore:
             ("subscription_period_end", "TEXT"), ("subscription_cancel_at_period_end", "INTEGER NOT NULL DEFAULT 0"),
             ("synced_state", "TEXT"),
             ("email_verified", "INTEGER NOT NULL DEFAULT 0"), ("verification_token", "TEXT"),
+            ("verification_token_expires_at", "TEXT"),
             ("reset_token", "TEXT"), ("reset_token_expires_at", "TEXT"),
             # Ordning på Stripe-händelser: bara nyare än senast applicerade.
             ("stripe_event_created", "INTEGER"),
@@ -214,6 +227,7 @@ class AccountStore:
         email = (email or "").strip().lower()
         row = self._connection.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
         if not row:
+            _hash_password(password or "", _DUMMY_SALT)   # samma tid som en riktig kontroll
             raise AccountError("Fel e-post eller lösenord")
         expected = _hash_password(password or "", bytes.fromhex(row["salt"]))
         if not secrets.compare_digest(expected, row["password_hash"]):
@@ -224,7 +238,11 @@ class AccountStore:
         """Returns the RAW token - the only moment it exists outside the
         client. Only its hash is written down."""
         token = secrets.token_urlsafe(32)
-        expires_at = (datetime.now(timezone.utc) + timedelta(days=SESSION_TTL_DAYS)).isoformat()
+        now = datetime.now(timezone.utc)
+        expires_at = (now + timedelta(days=SESSION_TTL_DAYS)).isoformat()
+        # Utgångna sessioner filtrerades bort vid läsning men raderades aldrig;
+        # tabellen växte med varje inloggning för alltid. Städa här, billigt.
+        self._connection.execute("DELETE FROM sessions WHERE expires_at < ?", (now.isoformat(),))
         self._connection.execute(
             "INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)",
             (_session_key(token), user_id, expires_at),
@@ -388,27 +406,12 @@ class AccountStore:
 
     def apply_subscription_event(self, customer_id, subscription_id, status, period_end_iso,
                                  cancel_at_period_end, plan, event_created=None) -> bool:
-        """Skriver prenumerationsläget. Med `event_created` (Stripes
-        event.created) appliceras bara händelser som är minst lika nya som
-        den senast applicerade - Stripe garanterar ingen leveransordning,
-        och en försenad "active" får inte skriva över en färskare
-        "canceled". Returnerar True när en rad uppdaterades."""
-        if event_created is None:
-            cursor = self._connection.execute(
-                """UPDATE users SET stripe_subscription_id = ?, subscription_status = ?, subscription_period_end = ?,
-                   subscription_cancel_at_period_end = ?, subscription_plan = ? WHERE stripe_customer_id = ?""",
-                (subscription_id, status, period_end_iso, int(cancel_at_period_end), plan, customer_id),
-            )
-        else:
-            created = int(event_created)
-            cursor = self._connection.execute(
-                """UPDATE users SET stripe_subscription_id = ?, subscription_status = ?, subscription_period_end = ?,
-                   subscription_cancel_at_period_end = ?, subscription_plan = ?, stripe_event_created = ?
-                   WHERE stripe_customer_id = ? AND (stripe_event_created IS NULL OR stripe_event_created <= ?)""",
-                (subscription_id, status, period_end_iso, int(cancel_at_period_end), plan, created, customer_id, created),
-            )
-        self._connection.commit()
-        return cursor.rowcount > 0
+        """Tunn väg in i apply_stripe_event utan event-id (tester, manuell
+        administration). Webhooken använder apply_stripe_event direkt."""
+        return self.apply_stripe_event(
+            event_id=None, event_created=event_created, customer_id=customer_id,
+            subscription_id=subscription_id, status=status, period_end_iso=period_end_iso,
+            cancel_at_period_end=cancel_at_period_end, plan=plan) == "applied"
 
     def apply_stripe_event(self, *, event_id, event_created, customer_id, subscription_id,
                           status, period_end_iso, cancel_at_period_end, plan) -> str:
@@ -474,15 +477,6 @@ class AccountStore:
                 self._connection.rollback()
                 raise
 
-    def record_stripe_event(self, event_id, created) -> bool:
-        """True första gången ett event-id ses, False vid omleverans."""
-        cursor = self._connection.execute(
-            "INSERT OR IGNORE INTO stripe_events (event_id, created, received_at) VALUES (?, ?, ?)",
-            (event_id, int(created) if created else None, datetime.now(timezone.utc).isoformat()),
-        )
-        self._connection.commit()
-        return cursor.rowcount > 0
-
     def stripe_ids_for_token(self, token):
         """(stripe_customer_id, stripe_subscription_id) för inloggad användare -
         läses FÖRE en kontoradering så prenumerationen kan avslutas först."""
@@ -492,8 +486,14 @@ class AccountStore:
         return row["stripe_customer_id"], row["stripe_subscription_id"]
 
     def _create_verification_token(self, user_id) -> str:
+        """Returnerar den råa token som går i mejlet. Databasen får bara
+        hashen (som för sessioner) och en utgångstid - en läckt tabell ska
+        inte vara en bunt giltiga länkar."""
         token = secrets.token_urlsafe(24)
-        self._connection.execute("UPDATE users SET verification_token = ? WHERE id = ?", (token, user_id))
+        expires_at = (datetime.now(timezone.utc) + timedelta(days=VERIFICATION_TOKEN_TTL_DAYS)).isoformat()
+        self._connection.execute(
+            "UPDATE users SET verification_token = ?, verification_token_expires_at = ? WHERE id = ?",
+            (_session_key(token), expires_at, user_id))
         self._connection.commit()
         return token
 
@@ -506,11 +506,17 @@ class AccountStore:
     def verify_email(self, token: str) -> dict:
         if not token:
             raise AccountError("Ogiltig verifieringslänk")
-        row = self._connection.execute("SELECT * FROM users WHERE verification_token = ?", (token,)).fetchone()
+        row = self._connection.execute("SELECT * FROM users WHERE verification_token = ?",
+                                       (_session_key(token),)).fetchone()
         if not row:
             raise AccountError("Ogiltig eller redan använd verifieringslänk")
+        keys = row.keys()
+        expires = row["verification_token_expires_at"] if "verification_token_expires_at" in keys else None
+        if expires and expires < datetime.now(timezone.utc).isoformat():
+            raise AccountError("Verifieringslänken har gått ut - begär en ny under Ditt konto")
         self._connection.execute(
-            "UPDATE users SET email_verified = 1, verification_token = NULL WHERE id = ?", (row["id"],)
+            "UPDATE users SET email_verified = 1, verification_token = NULL, verification_token_expires_at = NULL WHERE id = ?",
+            (row["id"],)
         )
         self._connection.commit()
         return self._to_public(self._connection.execute("SELECT * FROM users WHERE id = ?", (row["id"],)).fetchone())
@@ -532,8 +538,11 @@ class AccountStore:
             return None
         token = secrets.token_urlsafe(24)
         expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+        # Bara hashen lagras: en reset-token är ett fullt kontoövertagande i
+        # en timme, och ska inte ligga läsbar i databasen eller en backup.
         self._connection.execute(
-            "UPDATE users SET reset_token = ?, reset_token_expires_at = ? WHERE id = ?", (token, expires_at, row["id"])
+            "UPDATE users SET reset_token = ?, reset_token_expires_at = ? WHERE id = ?",
+            (_session_key(token), expires_at, row["id"])
         )
         self._connection.commit()
         return token
@@ -543,7 +552,7 @@ class AccountStore:
             raise AccountError("Lösenordet måste vara minst 8 tecken")
         if not token:
             raise AccountError("Länken är ogiltig eller har gått ut")
-        row = self._connection.execute("SELECT * FROM users WHERE reset_token = ?", (token,)).fetchone()
+        row = self._connection.execute("SELECT * FROM users WHERE reset_token = ?", (_session_key(token),)).fetchone()
         now = datetime.now(timezone.utc).isoformat()
         if not row or not row["reset_token_expires_at"] or row["reset_token_expires_at"] < now:
             raise AccountError("Länken är ogiltig eller har gått ut")
@@ -608,3 +617,17 @@ class AccountStore:
         self._connection.execute("DELETE FROM users WHERE id = ?", (row["id"],))
         self._connection.commit()
         return stripe_customer_id, stripe_subscription_id
+
+
+def _synchronized(method):
+    """Kör metoden under kontolagrets lås - se AccountStore.__init__."""
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    return wrapper
+
+
+for _name, _member in list(vars(AccountStore).items()):
+    if callable(_member) and (not _name.startswith("_") or _name == "_session_user_row") and _name != "close":
+        setattr(AccountStore, _name, _synchronized(_member))

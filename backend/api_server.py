@@ -58,7 +58,9 @@ from services.grocery.scheduler import SCHEDULER as GROCERY_SCHEDULER  # noqa: E
 from services.pricing import CHAIN_TO_PRIMAT, KeyValueCacheStore, OpenFoodFactsError, PRIMAT_ATTRIBUTION, PriceCacheStore, PrimatError, image_url_for_gtin, nearby_stores as primat_nearby_stores, primat_account_status, resolve_stores as primat_resolve_stores, search_products as primat_search_products, to_matjakt_product as primat_to_matjakt_product
 from services.recipe_providers import RecipeService, TheMealDbProvider
 
-logging.basicConfig(level=logging.INFO)
+from services.observability import (  # noqa: E402
+    METRICS, configure_logging, log_access, new_request_id, request_id_var)
+configure_logging()
 logger = logging.getLogger("matjakt.api")
 
 
@@ -404,7 +406,11 @@ def run_on_scrape_thread(fn):
             pass
         stale_executor.shutdown(wait=False)
         raise
-RECIPE_SERVICE = RecipeService([TheMealDbProvider()])
+# Extern receptkälla (TheMealDB): engelska recept med översatta ingredienser,
+# tomt svar för svenska sökord. Matjakts egen receptbank är den enda sanningen
+# för användarna; den externa källan är avstängd tills den medvetet slås på.
+EXTERNAL_RECIPES_ENABLED = os.environ.get("MATJAKT_EXTERNAL_RECIPES", "").strip().lower() in {"1", "true", "yes", "on"}
+RECIPE_SERVICE = RecipeService([TheMealDbProvider()] if EXTERNAL_RECIPES_ENABLED else [])
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 # Where the persisted stores live. Overridable so a TEST RUN never touches
 # the real files: the suite calls KV_CACHE.clear() (documented "test-only")
@@ -418,6 +424,8 @@ DATA_DIR = Path(os.environ.get("MATJAKT_DATA_DIR") or (Path(__file__).resolve().
 # och innan matjakt.db/prices.db öppnas nedan - se services/data_guard.py.
 from services.data_guard import guard_database_path  # noqa: E402
 guard_database_path(DATA_DIR, purpose="datakatalogen")
+# Räknarna överlever omstart och delas av processer på samma disk.
+ratelimit.configure(DATA_DIR / "ratelimit.db")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 def _free_chain_for(week_result: dict) -> str | None:
@@ -542,7 +550,7 @@ PRICE_CACHE = PriceCacheStore(PRICE_CACHE_PATH)
 # to live only in plain process-memory dicts, which reset to empty on every
 # deploy/restart. Persisting them here is what actually makes "senast
 # uppdaterad" survive a deploy.
-KV_CACHE = KeyValueCacheStore(PRICE_CACHE.connection)
+KV_CACHE = KeyValueCacheStore(PRICE_CACHE.connection, lock=PRICE_CACHE.lock)
 # Produktmätningen bor i KONTOdatabasen (samma anslutning som ACCOUNT_STORE)
 # så tratten kan joina users. De gamla räknarna låg i KV_CACHE, som rensar
 # allt äldre än sju dagar - flytten nedan räddar det som finns kvar där och
@@ -1436,6 +1444,13 @@ def fetch_from_primat(chain, query, zip_code, store_key=None):
 
 
 class ApiHandler(SimpleHTTPRequestHandler):
+    # Inga versionsnummer i Server-headern: "SimpleHTTP/0.6 Python/3.10.12"
+    # är en gratis fingeravtryck för den som letar kända sårbarheter.
+    server_version = "Matjakt"
+    sys_version = ""
+
+    def version_string(self):
+        return "Matjakt"   # utan det efterföljande mellanslag stdlib annars lägger till
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(FRONTEND_DIR), **kwargs)
 
@@ -1450,6 +1465,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        request_id = getattr(self, "_request_id", None)
+        if request_id:
+            self.send_header("X-Request-Id", request_id)
         self.send_header("Access-Control-Allow-Origin", self._cors_origin())
         self.send_header("Vary", "Origin")
         self.send_header("Cache-Control", f"public, max-age={cache_seconds}" if cache_seconds else "no-store")
@@ -1460,9 +1478,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
     # policy as a meta tag, because GitHub Pages serves it without any
     # headers of its own - but frame-ancestors and X-Frame-Options only work
     # as real headers, so they live here.
-    # plausible.io / cloud.umami.is: besöksstatistiken (frontend/traffic.js) -
-    # laddas bara när <meta name="matjakt-traffic"> pekar ut en av dem.
-    CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self' https://plausible.io https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com https://plausible.io https://cloud.umami.is; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+    # script-src bär hashen för index.html:s enda inline-skript (låsskärmens
+    # omdirigering) - utan den blockerar headern skriptet när servern själv
+    # serverar appen. test_frontend_contract räknar om hashen.
+    CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self' https://plausible.io https://cloud.umami.is 'sha256-sEnkNmVsXqElXERpnCgthiiTZkumda0MAsNL0i4X2ZM='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com https://plausible.io https://cloud.umami.is; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 
     def send_response(self, *args, **kwargs):
         # One handler instance serves MANY requests over a keep-alive
@@ -1470,6 +1489,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
         # response begins - otherwise only the first request on each
         # connection got the security headers.
         self._security_headers_sent = False
+        if args:
+            self._last_status = args[0]
         super().send_response(*args, **kwargs)
 
     def end_headers(self):
@@ -1479,6 +1500,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("X-Frame-Options", "DENY")
             self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+            # HSTS när vi står bakom den betrodda proxyn (Render terminerar all
+            # trafik över HTTPS; MATJAKT_TRUST_PROXY sätts bara där). Lokalt över
+            # http ska headern aldrig sättas. Proxyn skickar inte
+            # X-Forwarded-Proto pålitligt - därför flaggan, inte headern.
+            if TRUST_PROXY_HEADERS or self.headers.get("X-Forwarded-Proto", "").lower() == "https":
+                self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 
         # Static files (frontend/*.js, *.css, ...) get no Cache-Control from
         # SimpleHTTPRequestHandler, so browsers fall back to heuristic caching
@@ -1584,7 +1611,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
         pass
 
     def _read_json_body(self):
-        length = int(self.headers.get("Content-Length", 0) or 0)
+        length = self._content_length()
+        if length is None:
+            raise json.JSONDecodeError("Ogiltig Content-Length", "", 0)
         if length > self.MAX_JSON_BODY_BYTES:
             raise self._BodyTooLarge(length)
         raw = self.rfile.read(length) if length else b""
@@ -1596,6 +1625,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if not isinstance(parsed, dict):
             raise json.JSONDecodeError("JSON-kroppen måste vara ett objekt", raw.decode("utf-8", "replace")[:40], 0)
         return parsed
+
+    def _admin_ok(self) -> bool:
+        """Admin-token i konstant tid. Vid fel: 404 som för en okänd väg -
+        admin-ytan ska inte ens synas utifrån. Skickar svaret själv. Går
+        genom _admin_authorized så att gissningar räknas mot IP:ns budget."""
+        return self._admin_authorized(hidden=True)
 
     def _content_length(self):
         """Kroppens längd, eller None när headern är trasig. Ett negativt tal
@@ -1624,6 +1659,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             event = parse_event(raw)
         except StripeError as error:
             logger.warning("Rejected Stripe webhook: %s", error)
+            METRICS.incr("stripe_webhook_rejected")
             self.send_json(400, {"error": str(error)})
             return
         except json.JSONDecodeError:
@@ -1671,6 +1707,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # Inget är sparat (transaktionen rullades tillbaka). 500 gör att
             # Stripe försöker igen i stället för att händelsen tyst tappas.
             logger.exception("Stripe-webhook %s (%s) kunde inte behandlas", event_id, event_type)
+            METRICS.incr("stripe_webhook_errors")
             self.send_json(500, {"error": "Kunde inte behandla händelsen just nu"})
             return
         if outcome != "applied":
@@ -1711,6 +1748,50 @@ class ApiHandler(SimpleHTTPRequestHandler):
         return True
 
     def do_GET(self):
+        self._guarded(self._do_get)
+
+    def do_POST(self):
+        self._guarded(self._do_post)
+
+    def _guarded(self, handler):
+        """Sista skyddsnätet för varje route: ett oväntat undantag blir ett
+        kontrollerat 500 på enkel svenska - aldrig en stängd anslutning
+        eller en traceback till klienten. Loggen får hela stacken.
+
+        Här sätts också begärans request-id (ekas i X-Request-Id och följer
+        varje loggrad) och accessloggen skrivs med status och svarstid."""
+        request_id = new_request_id(self.headers.get("X-Request-Id"))
+        token = request_id_var.set(request_id)
+        self._request_id = request_id
+        self._last_status = None
+        started = time.perf_counter()
+        try:
+            handler()
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            pass   # klienten försvann - ingen att svara
+        except Exception:
+            logger.exception("Ohanterat fel i %s %s", self.command, self.path.split("?")[0][:120])
+            METRICS.incr("unhandled_exceptions")
+            if not getattr(self, "_json_response", False):
+                try:
+                    self.send_json(500, {"error": "Något gick fel. Försök igen om en stund."})
+                except OSError:
+                    pass
+        finally:
+            try:
+                log_access(method=self.command or "-", path=self.path.split("?")[0],
+                           status=self._last_status or 0,
+                           duration_ms=(time.perf_counter() - started) * 1000,
+                           client_ip=self._client_ip(), request_id=request_id)
+            finally:
+                request_id_var.reset(token)
+
+    def log_message(self, format, *args):
+        """Stdlib:s accessrad till stderr ersätts av log_access ovan (JSON,
+        request-id, maskerad IP). Tyst här."""
+        return
+
+    def _do_get(self):
         self._json_response = False
         parsed = urlparse(self.path)
         if self._gate_blocked(parsed):
@@ -1732,6 +1813,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 logger.exception("Kunde inte läsa plattformsstatus")
                 platform = None
             self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG), "mail": mail_is_configured(MAIL_CONFIG),
+        # Driftsräknare sedan senaste start: begäranden, 4xx/5xx, långsamma
+        # svar, misslyckade inloggningar, avvisade webhookar, mejlfel,
+        # prisgate-stopp. Siffror - aldrig innehåll.
+        "metrics": METRICS.snapshot(),
+        "rateLimitPersistent": ratelimit.persistent(),
         # Stripe-läge utan hemligheter: bara om nyckeln är en TEST- eller
         # LIVE-nyckel (prefix) och vilka delar som är satta. Svarar på
         # "används inga live-nycklar?" utan att någonsin visa nyckeln.
@@ -1757,7 +1843,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # att ingen provperiod ligger på dem. Ett pris-id som inte finns
             # ger annars ett 400 först när en riktig kund trycker "Prenumerera".
             # Svaret innehåller aldrig nyckelmaterial.
-            if not self._admin_authorized(hidden=True):
+            if not self._admin_ok():
                 return
             mode = (("test" if STRIPE_SECRET_KEY.startswith("sk_test_") else
                      "live" if STRIPE_SECRET_KEY.startswith("sk_live_") else "unknown")
@@ -1798,7 +1884,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # annan maskin - scripts/pull_backup.py gör det dagligen. Samma
             # admin-hemlighet som övriga admin-vägar; 404 utan den. Innehållet
             # är databaserna (hashade lösenord/tokens, inga nycklar).
-            if not self._admin_authorized(hidden=True):
+            if not self._admin_ok():
                 return
             from services import backup as backup_service
             newest = backup_service.newest_set(DATA_DIR)
@@ -1832,7 +1918,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # everything if the secret was never configured, rather than
             # falling open. The Primat API key itself is never included in
             # the response - only Primat's own usage numbers are.
-            if not self._admin_authorized(hidden=True):
+            if not self._admin_ok():
                 return
             if not PRIMAT_API_KEY:
                 self.send_json(200, {"configured": False})
@@ -1864,12 +1950,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # Kontrollrummet: tratten per registreringsvecka, händelserna
             # dag för dag och fritextfeedbacken, i ett svar. Admin-token,
             # aldrig publikt. /testresultat är det gamla namnet.
-            if not self._admin_authorized():
+            if not self._admin_ok():
                 return
             self.send_json(200, insights_payload())
             return
         if parsed.path == "/api/admin/grocery-import":
-            if not self._admin_authorized():
+            if not self._admin_ok():
                 return
             self.send_json(200, {
                 "import": grocery_importer.status(),
@@ -1978,6 +2064,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(200, {"recipe": recipe}, cache_seconds=300)
             return
         if parsed.path == "/api/v1/recipes/search":
+            if self._rate_limit("search"):
+                return
             query = clean_text(parse_qs(parsed.query).get("q", [""])[0])
             if not 2 <= len(query) <= 100:
                 self.send_json(400, {"error": "Ange en receptsökning på 2–100 tecken"})
@@ -1990,6 +2078,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(502, {"error": "Receptkällan svarar inte just nu"})
             return
         if parsed.path == "/api/v1/recipes/by-pantry":
+            if self._rate_limit("search"):
+                return
             items = [clean_text(item) for item in parse_qs(parsed.query).get("items", [""])[0].split(",") if clean_text(item)]
             items = items[:30]
             if not items:
@@ -2023,6 +2113,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(502, {"error": "Receptkällan svarar inte just nu"})
             return
         if parsed.path == "/api/geocode":
+            if self._rate_limit("lookup"):
+                return
             zip_code = clean_text(parse_qs(parsed.query).get("zip", [""])[0])
             if not re.fullmatch(r"\d{5}", zip_code):
                 self.send_json(400, {"error": "Ange ett giltigt postnummer (5 siffror)"})
@@ -2038,9 +2130,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(502, {"error": "Postnummerslagningen svarar inte just nu"})
             return
         if parsed.path == "/api/campaigns":
+            if self._rate_limit("scrape"):
+                return
             self._handle_campaigns(parse_qs(parsed.query))
             return
         if parsed.path == "/api/stores":
+            if self._rate_limit("lookup"):
+                return
             zip_code = clean_text(parse_qs(parsed.query).get("zip", [""])[0])
             if not re.fullmatch(r"\d{5}", zip_code):
                 self.send_json(400, {"error": "Ange ett giltigt postnummer (5 siffror)"})
@@ -2071,6 +2167,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             except Exception:
                 logger.exception("Failed to compute nearby stores for zip %s", zip_code)
                 self.send_json(502, {"error": "Kunde inte hitta butiker just nu"})
+            return
+        if parsed.path == "/api/products" and self._rate_limit("scrape"):
             return
         if parsed.path != "/api/products":
             if parsed.path.startswith("/api/"):
@@ -2128,7 +2226,6 @@ class ApiHandler(SimpleHTTPRequestHandler):
         vare sig koden eller något att jämföra mot. Utan konfigurerad kod
         förblir låset stängt i stället för att falla öppet."""
         if self._rate_limit("gate", self._client_ip()):
-            self.send_json(429, {"error": "För många försök. Vänta en stund."})
             return
         username = " ".join(str((payload or {}).get("username") or "").split()).casefold()
         # strip() på båda sidor: en miljövariabel inklistrad i en dashboard
@@ -2156,7 +2253,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         expiry = int(time.time()) + GATE_TOKEN_TTL_SECONDS
         self.send_json(200, {"gateToken": _gate_sign(expiry), "expiresAt": expiry})
 
-    def do_POST(self):
+    def _do_post(self):
         self._json_response = False
         parsed = urlparse(self.path)
         if self._gate_blocked(parsed):
@@ -2205,6 +2302,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     logger.info("Verification email skipped for %s: mail not configured", user["email"])
                 except (AccountError, MailError):
                     mail_status = "failed"
+                    METRICS.incr("mail_send_failed")
                     logger.exception("Verification email failed for %s", user["email"])
                 self.send_json(201, {"token": token, "user": user, "verificationMail": mail_status})
             except AccountError as error:
@@ -2221,6 +2319,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 ratelimit.clear_on_success("login", self._client_ip(), email)
                 self.send_json(200, {"token": token, "user": user})
             except AccountError as error:
+                METRICS.incr("auth_login_failed")
                 self.send_json(401, {"error": str(error)})
             return
         if parsed.path == "/api/auth/change-password":
@@ -2272,6 +2371,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             try:
                 check_mail_transport(MAIL_CONFIG)
             except MailError as error:
+                METRICS.incr("mail_send_failed")
                 self.send_json(503, {"error": str(error), "code": error.code})
                 return
             reset_token = ACCOUNT_STORE.request_password_reset(payload.get("email"))
@@ -2297,6 +2397,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/auth/verify-email":
+            if self._rate_limit("verify_email"):
+                return
             try:
                 user = ACCOUNT_STORE.verify_email(payload.get("token"))
                 self.send_json(200, {"user": user})
@@ -2320,6 +2422,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(503, {"error": str(error), "code": error.code})
             return
         if parsed.path == "/api/auth/delete-account":
+            if self._rate_limit("delete_account"):
+                return
             try:
                 # Prenumerationen avslutas FÖRE kontot raderas. Tvärtom kunde
                 # Stripe fortsätta debitera ett konto som inte längre finns.
@@ -2389,12 +2493,18 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/products/batch":
+            if self._rate_limit("scrape"):
+                return
             self._handle_products_batch(payload)
             return
         if parsed.path == "/api/pricing/week":
+            if self._rate_limit("pricing"):
+                return
             self._handle_pricing_week(payload)
             return
         if parsed.path == "/api/pricing/list":
+            if self._rate_limit("pricing"):
+                return
             self._handle_pricing_list(payload)
             return
         if parsed.path.startswith("/api/admin/partner"):
@@ -2435,7 +2545,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # lookup: ett GTIN - provider-rad, Dabas-svar och Matjakts
             # normaliserade produkt sida vid sida, för testprodukterna.
             # Nyckeln finns bara i miljön och når aldrig svaret.
-            if not self._admin_authorized():
+            if not self._admin_ok():
                 return
             from services.grocery import enrichment as dabas_enrichment
             from services.grocery.providers.dabas import DabasClient, DabasError
@@ -2472,7 +2582,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/admin/pricing-audit":
             # Releasegatens audit mot PRODUKTIONENS databas: alla recept x
             # ingredienser x släppta kedjor. Tar ~30-90 s. Admin-token.
-            if not self._admin_authorized():
+            if not self._admin_ok():
                 return
             from services.grocery.audit import run_pricing_audit
             chains = (payload or {}).get("chains") or list(grocery_api.RELEASED_CHAINS)
@@ -2486,7 +2596,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/admin/platform-activate":
             # Hela aktiveringen i ett anrop: registersynk + första referens-
             # publicering + (valfritt) nattjobben för de släppta kedjorna nu.
-            if not self._admin_authorized():
+            if not self._admin_ok():
                 return
             from services.grocery.publish import backfill_reference_prices
             from services.grocery.register import sync_store_register
@@ -2514,7 +2624,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # ~2 800 rader) in i grocery_stores i en körning. Veckosyssla,
             # inte nattlig - butiker byter inte adress varje dag, och
             # körningen kostar ~2 800 rader av Primat-dygnskvoten.
-            if not self._admin_authorized():
+            if not self._admin_ok():
                 return
             if not PRIMAT_API_KEY:
                 self.send_json(503, {"error": "PRIMAT_API_KEY är inte satt"})
@@ -2533,7 +2643,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(502, {"error": str(error)[:200]})
             return
         if parsed.path == "/api/admin/grocery-import":
-            if not self._admin_authorized():
+            if not self._admin_ok():
                 return
             chain = (payload or {}).get("chain")
             # ALL_STORES, not DEFAULT_STORES: an admin may refresh ICA by
@@ -2543,11 +2653,23 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": f"Okänd kedja. Välj en av "
                                               f"{sorted(grocery_importer.ALL_STORES)}"})
                 return
+            per_category = (payload or {}).get("perCategory")
+            if per_category is not None and (isinstance(per_category, bool) or not isinstance(per_category, int)
+                                             or not 1 <= per_category <= 500):
+                # 0 gjorde en full körning "partiell" och kringgick 30 %-regeln.
+                self.send_json(400, {"error": "perCategory måste vara ett heltal 1-500"})
+                return
+            store = (payload or {}).get("store")
+            if store is not None and (not isinstance(store, (str, int)) or len(str(store)) > 40):
+                self.send_json(400, {"error": "store måste vara ett butiks-id"})
+                return
             self.send_json(200, grocery_importer.start(
-                chain, store_id=(payload or {}).get("store"),
-                limit_per_category=(payload or {}).get("perCategory")))
+                chain, store_id=str(store) if store is not None else None,
+                limit_per_category=per_category))
             return
         if parsed.path == "/api/analytics/event":
+            if self._rate_limit("analytics"):
+                return
             self._handle_analytics_event(payload)
             return
         if parsed.path == "/api/account/marketing":
@@ -2562,7 +2684,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/admin/mailing":
             # preview: skicka ett exempel till en adress (kräver bara SMTP).
             # run: kör dagens utskick nu (respekterar alla spärrar).
-            if not self._admin_authorized():
+            if not self._admin_ok():
                 return
             action = (payload or {}).get("action")
             try:
@@ -2675,7 +2797,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         for entry in raw_items:
             if not isinstance(entry, dict):
                 continue
-            name = clean_text(str(entry.get("name") or entry.get("namn") or ""))
+            name = clean_text(str(entry.get("name") or entry.get("namn") or ""))[:120]
             if not name:
                 continue
             try:
@@ -2683,7 +2805,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
                                else entry.get("total") or 0)
             except (TypeError, ValueError):
                 amount = 0.0
-            unit = clean_text(str(entry.get("unit") or entry.get("enhet") or "st")) or "st"
+            # Ändlig och rimlig, annars 400: 1e308 gick tidigare hela vägen in
+            # i motorn och kom ut som "Prisdatabasen är inte tillgänglig".
+            if not math.isfinite(amount) or amount < 0 or amount > 1_000_000:
+                return None, f"Ogiltig mängd för {name[:40]}"
+            unit = clean_text(str(entry.get("unit") or entry.get("enhet") or "st"))[:20] or "st"
             items.append({"name": name, "amount": amount, "unit": unit})
         # Varor användaren aktivt tagit bort ur sin lista ("finns hemma",
         # "redan köpt"). The recipeIds path re-aggregates the week server
@@ -2707,7 +2833,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         aktivering/paus/uppsägning, feedinmatning och statistik. Admin-
         token, aldrig publikt. Betalning påverkar aldrig rankingen: det
         här lagret styr LEVERANSRÄTT, inte prisresultat."""
-        if not self._admin_authorized():
+        if not self._admin_ok():
             return
         from services.grocery import partners as partner_api
         payload = payload or {}
@@ -2786,6 +2912,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if not plan_features.allowed(plan, "all_store_prices"):
                 result = mask_pricing_for_free(result)
             self.send_json(200, result)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            raise   # klienten gav upp - inget prisfel, _guarded tar det tyst
         except Exception:
             logger.exception("Prissättning av veckan misslyckades")
             self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})
@@ -2822,6 +2950,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(200, grocery_api.shopping_list(
                 items, chain, pantry,
                 external_store_id=store_selection.get(chain) if store_selection else None))
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            raise
         except Exception:
             logger.exception("Inköpslista misslyckades för %s", chain)
             self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})

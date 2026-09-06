@@ -140,5 +140,46 @@ class ChangePasswordTest(unittest.TestCase):
         self.assertNotEqual(before, after)
 
 
+class PersistentRateLimit(unittest.TestCase):
+    """Räknarna ska överleva en omstart och delas mellan processer på
+    samma disk - annars förlåter varje deploy en pågående attack."""
+
+    def setUp(self):
+        import tempfile
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.path = Path(self._tmp.name) / "ratelimit.db"
+        ratelimit.configure(self.path)
+        ratelimit.reset()
+        self.addCleanup(ratelimit.disable)
+
+    def test_limit_survives_a_reconfigure_like_a_restart(self):
+        limit, _ = ratelimit.LIMITS["login"]
+        for _ in range(limit):
+            ratelimit.check("login", "9.9.9.9")
+        ratelimit.disable()                 # "processen dog"
+        ratelimit.configure(self.path)      # "ny process, samma disk"
+        with self.assertRaises(ratelimit.RateLimited):
+            ratelimit.check("login", "9.9.9.9")
+        self.assertTrue(ratelimit.persistent())
+
+    def test_success_clears_only_that_identifier(self):
+        limit, _ = ratelimit.LIMITS["login"]
+        for _ in range(limit):
+            ratelimit.check("login", "9.9.9.9", "a@example.se")
+        ratelimit.clear_on_success("login", "a@example.se")
+        ratelimit.check("login", "1.1.1.1", "a@example.se")     # kontot fritt igen
+        with self.assertRaises(ratelimit.RateLimited):
+            ratelimit.check("login", "9.9.9.9")                  # IP:n är kvar
+
+    def test_falls_back_to_memory_if_the_database_breaks(self):
+        ratelimit._connection.close()      # simulera trasig databasfil
+        limit, _ = ratelimit.LIMITS["login"]
+        for _ in range(limit):
+            ratelimit.check("login", "7.7.7.7")
+        with self.assertRaises(ratelimit.RateLimited):
+            ratelimit.check("login", "7.7.7.7")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -252,6 +252,38 @@ class BootstrapTest(unittest.TestCase):
         self.assertEqual(self.started, [])
 
 
+class DaylightSavingAndLateTicks(unittest.TestCase):
+    """Exakt minutmatchning missade 02:00-jobbet natten klockan hoppar från
+    02:00 till 03:00, och varje tick som blev försenad av last."""
+
+    def setUp(self):
+        self.started = []
+        self.scheduler = GroceryScheduler({"Willys": "02:00"})
+        self._original = scheduler_module.importer.start
+        scheduler_module.importer.start = lambda chain: (self.started.append(chain) or {"started": True, "chain": chain})
+
+    def tearDown(self):
+        scheduler_module.importer.start = self._original
+
+    def test_spring_forward_night_still_runs_the_job(self):
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("Europe/Stockholm")
+        # 2026-03-29: klockan 02:00 CET blir 03:00 CEST. Första ticken efter
+        # hoppet är 03:00 - jobbet ska gå då, inte utebli.
+        self.scheduler._tick(datetime(2026, 3, 29, 1, 59, tzinfo=tz))
+        self.assertEqual(self.started, [])
+        self.scheduler._tick(datetime(2026, 3, 29, 3, 0, tzinfo=tz))
+        self.assertEqual(self.started, ["Willys"])
+        self.scheduler._tick(datetime(2026, 3, 29, 3, 1, tzinfo=tz))
+        self.assertEqual(self.started, ["Willys"], "en gång per dygn")
+
+    def test_a_tick_a_few_minutes_late_still_fires_but_half_an_hour_late_does_not(self):
+        self.scheduler._tick(datetime(2026, 8, 31, 2, 3))
+        self.assertEqual(self.started, ["Willys"])
+        self.scheduler._tick(datetime(2026, 9, 1, 2, 30))
+        self.assertEqual(self.started, ["Willys"], "30 minuter sent är inte samma jobb")
+
+
 if __name__ == "__main__":
     unittest.main()
 

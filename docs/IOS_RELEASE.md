@@ -53,3 +53,16 @@
 - Support-URL: `https://matjakt.store` · Integritetspolicy-URL: `https://matjakt.store/integritetspolicy.html`
 - Beskrivning: utgå från `package.json` description + Free/Premium-matrisen i `backend/services/accounts/features.py` – lova inga butiker som inte är släppta (ICA/Coop/Lidl är gated).
 - Skärmbilder: 6,7" (iPhone 15 Pro Max) och 6,5" krävs; ta dem i simulatorn på Mac från Hem, Recept, Handla (butiksjämförelse) och Justera veckan.
+
+## Gjort 2026-09-06 (release-finish)
+
+| Punkt | Status | Var |
+|---|---|---|
+| App Store-metadata på svenska (namn, undertitel, beskrivning, nyckelord, kampanjtext, support-/integritets-URL) | ✅ klara att klistra in | `store/appstore/metadata/sv-SE/` |
+| Notes for App Review (inloggning, låset, betalning, plats, kontoradering) | ✅ mall - Adam fyller i testkonto | `store/appstore/metadata/review_notes.txt` |
+| Juridiklänkar absoluta (`https://matjakt.store/...`) så de fungerar i native-webviewen | ✅ | `frontend/app/index.html` |
+| Kontoradering inifrån appen (Apple 5.1.1(v)) | ✅ finns: Konto → Radera konto, avslutar även Stripe-prenumerationen först | `api_server.py` `/api/auth/delete-account` |
+| Sign in with Apple | ej krav: appen har bara e-post + lösenord, ingen tredjepartsinloggning (riktlinje 4.8 gäller bara när tredjepartsinloggning erbjuds) | – |
+| Browser-E2E av hela konsumentresan i mobil viewport (390×844, touch) | ✅ `backend/tests/e2e/` | CI-jobb `e2e` |
+
+Kvar (kräver Mac/Adam): `npx cap add ios`, signering, skärmbilder, IAP-beslut (väg A rekommenderas för v1), juridiska platshållare i policy/villkor, låset av eller dokumenterat i review notes.

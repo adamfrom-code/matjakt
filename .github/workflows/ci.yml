@@ -1,0 +1,86 @@
+name: CI
+
+# Körs på varje pull request och varje push till main. Deploy-flödet
+# (deploy.yml) väntar redan på "npm test"; det här jobbet är den fullständiga
+# grinden: backend-svit i isolerad tempkatalog, frontend-tester, syntaxkontroll,
+# hemlighetsskanning och att versionsnumren följs åt.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend-tester (isolerad data, inga riktiga anrop)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements.txt
+      - name: Kompilera allt
+        run: python -m compileall -q backend
+      - name: Testsvit (tests/run.py sätter MATJAKT_TEST_MODE + tempkatalog)
+        run: python backend/tests/run.py
+
+  frontend:
+    name: Frontend-tester och syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node --check frontend/app/app.js
+      - run: node --check frontend/app/sw.js
+      - run: node --test
+
+  security:
+    name: Hemligheter och versioner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Inga hemligheter i spårade filer
+        run: python backend/scripts/secret_scan.py
+      - name: .env är inte spårad
+        run: |
+          if git ls-files --error-unmatch .env >/dev/null 2>&1; then echo ".env är spårad av git"; exit 1; fi
+      - name: Versionsnumren följs åt (sw.js, app.js?v=, styles.css?v=)
+        run: python backend/scripts/check_frontend_version.py
+
+  e2e:
+    name: Browser-E2E (Playwright, konsumentresan + Premium/Stripe testläge)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements.txt playwright
+      - run: python -m playwright install --with-deps chromium
+      - name: Konsumentresan i källform
+        run: python backend/tests/run.py --pattern "test_consumer*"
+      - name: Samma resa mot det byggda bundlet
+        run: |
+          npm ci
+          npm run build
+          MATJAKT_E2E_FRONTEND_DIR=dist/frontend python backend/tests/run.py --pattern "test_consumer*"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-skarmdumpar
+          path: backend/tests/e2e/artifacts/
+          if-no-files-found: ignore

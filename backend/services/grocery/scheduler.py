@@ -35,7 +35,7 @@ import logging
 import os
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import timezone, datetime, timedelta
 
 try:
     from zoneinfo import ZoneInfo
@@ -414,9 +414,22 @@ class GroceryScheduler:
             threading.Thread(target=self._run_dabas_enrichment,
                              name="grocery-dabas-enrichment", daemon=True).start()
         for chain, when in self.schedule.items():
-            if now.strftime("%H:%M") != when or self._last_fired.get(chain) == stamp:
+            # Ett FÖNSTER (inte exakt minut) efter jobbets klockslag, en gång
+            # per dygn. Exakt minutmatchning missade jobbet vid sommartids-
+            # omställningen (02:00 finns inte den natten) och vid en tick
+            # som blev försenad av last.
+            due = _due_today(now, when)
+            day_stamp = now.strftime("%Y-%m-%d")
+            if due is None:
                 continue
-            self._last_fired[chain] = stamp
+            # I UTC, uttryckligen: två datetime med SAMMA tzinfo jämförs
+            # naivt i Python, och då syns inte sommartidshoppet alls.
+            late = (now.astimezone(timezone.utc) - due.astimezone(timezone.utc)) if now.tzinfo else (now - due)
+            if late < timedelta(0) or late > timedelta(minutes=5):
+                continue
+            if self._last_fired.get(chain) == day_stamp:
+                continue
+            self._last_fired[chain] = day_stamp
             result = importer.start(chain)
             if result.get("started"):
                 logger.info("Nattjobb startade import för %s", chain)
@@ -424,6 +437,18 @@ class GroceryScheduler:
                 # Not an error: the importer allows one run at a time on
                 # purpose, and a still-running job is the normal reason.
                 logger.info("Nattjobb hoppade över %s: %s", chain, result.get("reason"))
+
+
+def _due_today(now, when: str):
+    """Dagens förekomst av ett "HH:MM"-klockslag, i samma tidszon som now.
+    På sommartidsnatten pekar 02:00 på en minut som inte finns; i UTC-
+    jämförelsen blir den då lika med 03:00, så jobbet startar då i stället
+    för att utebli."""
+    try:
+        hour, minute = (int(part) for part in when.split(":"))
+    except (TypeError, ValueError):
+        return None
+    return now.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
 
 def _truthy(value) -> bool:

@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import http.client
 import json
+import logging
 import os
 import sys
 import tempfile
@@ -710,7 +711,7 @@ class ApiServerHttpTest(unittest.TestCase):
 
     def test_admin_mailing_is_admin_only_and_honest_without_smtp(self):
         status, _ = self.post("/api/admin/mailing", {"action": "preview", "kind": "welcome_3", "email": "x@example.com"})
-        self.assertEqual(status, 403)
+        self.assertEqual(status, 404, "admin-ytan syns inte utifrån")
         original = api_server.ADMIN_TOKEN
         api_server.ADMIN_TOKEN = "admin-test"
         try:
@@ -750,7 +751,7 @@ class ApiServerHttpTest(unittest.TestCase):
         try:
             for _ in range(10):
                 status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "fel"})
-                self.assertEqual(status, 403)
+                self.assertEqual(status, 404)
             status, payload = self.get("/api/admin/insights", headers={"X-Admin-Token": "fel"})
             self.assertEqual(status, 429)
             self.assertIn("retryAfter", payload)
@@ -775,7 +776,7 @@ class ApiServerHttpTest(unittest.TestCase):
         ratelimit.clear_on_success("admin", "127.0.0.1")
         try:
             status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "fel"})
-            self.assertEqual(status, 403)
+            self.assertEqual(status, 404)
             status, payload = self.get("/api/admin/insights", headers={"X-Admin-Token": "admin-test"})
             self.assertEqual(status, 200)
             self.assertIn("kohorter", payload["tratt"])
@@ -2114,6 +2115,248 @@ class AuthHttpTest(unittest.TestCase):
             self.assertEqual(self.get("/api/auth/me", token=token)[0], 200)
         finally:
             api_server.STRIPE_SECRET_KEY, api_server.cancel_subscription = originals
+
+    # ---- Härdning 2026-09-06: kontrollerade svar i stället för stängda anslutningar ----
+    def _raw(self, method, path, body=b"", headers=None):
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            conn.putrequest(method, path)
+            for key, value in {"Content-Type": "application/json", **(headers or {})}.items():
+                conn.putheader(key, value)
+            if "Content-Length" not in (headers or {}):
+                conn.putheader("Content-Length", str(len(body)))
+            conn.endheaders()
+            if body:
+                conn.send(body)
+            response = conn.getresponse()
+            raw = response.read()
+            return response.status, (json.loads(raw) if raw else None)
+        finally:
+            conn.close()
+
+    def test_broken_content_length_on_any_post_is_a_400_not_a_dropped_connection(self):
+        for path in ("/api/auth/login", "/api/pricing/week", "/api/feedback", "/api/analytics/event"):
+            status, payload = self._raw("POST", path, b"{}", {"Content-Length": "abc"})
+            self.assertEqual(status, 400, path)
+            self.assertIn("error", payload)
+            status, payload = self._raw("POST", path, b"{}", {"Content-Length": "-5"})
+            self.assertEqual(status, 400, path)
+
+    def test_an_unexpected_exception_becomes_a_calm_500_without_a_traceback(self):
+        original = api_server.ACCOUNT_STORE.user_for_token
+
+        def boom(token):
+            raise RuntimeError("sqlite3.OperationalError: database disk image is malformed")
+        api_server.ACCOUNT_STORE.user_for_token = boom
+        try:
+            status, payload = self.get("/api/auth/me", token="x")
+            self.assertEqual(status, 500)
+            self.assertEqual(payload["error"], "Något gick fel. Försök igen om en stund.")
+            self.assertNotIn("Traceback", json.dumps(payload))
+            self.assertNotIn("sqlite3", json.dumps(payload))
+        finally:
+            api_server.ACCOUNT_STORE.user_for_token = original
+
+    def test_login_does_the_same_work_for_unknown_and_known_email(self):
+        """Timing-orakel: okänd e-post svarade utan att köra PBKDF2. Nu
+        hashas alltid, så svarstiden säger inget om vilka konton som finns."""
+        from services.accounts import store as account_store
+        calls = {"n": 0}
+        real = account_store._hash_password
+
+        def counting(password, salt):
+            calls["n"] += 1
+            return real(password, salt)
+        account_store._hash_password = counting
+        try:
+            status, _ = self.post("/api/auth/login", {"email": "finns-inte@example.se", "password": "hemligt123"})
+            self.assertEqual(status, 401)
+            self.assertEqual(calls["n"], 1, "okänd e-post ska kosta en hashning")
+        finally:
+            account_store._hash_password = real
+
+    def test_expired_sessions_are_pruned_on_next_login(self):
+        email = self._email()
+        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        store = api_server.ACCOUNT_STORE
+        store._connection.execute("UPDATE sessions SET expires_at = '2000-01-01T00:00:00+00:00'")
+        store._connection.commit()
+        self.assertEqual(store._connection.execute("SELECT COUNT(*) FROM sessions").fetchone()[0], 1)
+        status, _ = self.post("/api/auth/login", {"email": email, "password": "hemligt123"})
+        self.assertEqual(status, 200)
+        self.assertEqual(store._connection.execute("SELECT COUNT(*) FROM sessions").fetchone()[0], 1,
+                         "den utgångna raden ska vara borta, bara den nya kvar")
+
+    def test_verification_and_reset_tokens_are_hashed_at_rest_and_verification_expires(self):
+        email = self._email()
+        self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        store = api_server.ACCOUNT_STORE
+        verify_token = store.create_verification_token_for_email(email)
+        reset_token = store.request_password_reset(email)
+        row = store._connection.execute("SELECT verification_token, reset_token, verification_token_expires_at FROM users WHERE email = ?", (email,)).fetchone()
+        self.assertNotEqual(row["verification_token"], verify_token)   # bara hashen i databasen
+        self.assertNotEqual(row["reset_token"], reset_token)
+        self.assertIsNotNone(row["verification_token_expires_at"])
+        # Gått ut -> avvisas; färsk -> går igenom och är engångs.
+        store._connection.execute("UPDATE users SET verification_token_expires_at = '2000-01-01T00:00:00+00:00' WHERE email = ?", (email,))
+        store._connection.commit()
+        status, payload = self.post("/api/auth/verify-email", {"token": verify_token})
+        self.assertEqual(status, 400)
+        self.assertIn("gått ut", payload["error"])
+        verify_token = store.create_verification_token_for_email(email)
+        self.assertEqual(self.post("/api/auth/verify-email", {"token": verify_token})[0], 200)
+        self.assertEqual(self.post("/api/auth/verify-email", {"token": verify_token})[0], 400)
+        # Reset-token fungerar fortfarande via hashen.
+        status, _ = self.post("/api/auth/reset-password", {"token": reset_token, "password": "nyttlosen123"})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.post("/api/auth/login", {"email": email, "password": "nyttlosen123"})[0], 200)
+
+    def test_admin_routes_answer_404_uniformly_without_token(self):
+        original = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "admin-hemlighet"
+        try:
+            for path in ("/api/admin/primat-status", "/api/admin/backup-download", "/api/admin/stripe-check"):
+                status, payload = self.get(path)
+                self.assertEqual(status, 404, path)
+                status, payload = self.get(path, headers={"X-Admin-Token": "fel"})
+                self.assertEqual(status, 404, path)
+            for path in ("/api/admin/pricing-audit", "/api/admin/platform-activate", "/api/admin/store-register-sync"):
+                self.assertEqual(self.post(path, {})[0], 404, path)
+        finally:
+            api_server.ADMIN_TOKEN = original
+
+    def test_hsts_only_when_the_trusted_proxy_says_https(self):
+        original = api_server.TRUST_PROXY_HEADERS
+        try:
+            api_server.TRUST_PROXY_HEADERS = True
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            conn.request("GET", "/api/health", headers={"X-Forwarded-Proto": "https"})
+            self.assertIn("max-age=31536000", conn.getresponse().getheader("Strict-Transport-Security", ""))
+            conn.close()
+            api_server.TRUST_PROXY_HEADERS = False
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            conn.request("GET", "/api/health")
+            response = conn.getresponse()
+            self.assertIsNone(response.getheader("Strict-Transport-Security"))
+            self.assertEqual(response.getheader("Server"), "Matjakt")     # inga versionsnummer
+            conn.close()
+        finally:
+            api_server.TRUST_PROXY_HEADERS = original
+
+    def test_absurd_amounts_are_rejected_not_priced(self):
+        for amount in (1e308, -1, float("inf"), 10**9):
+            status, payload = self.post("/api/pricing/week", {"items": [{"name": "Mjölk", "amount": amount, "unit": "l"}], "chains": ["Willys"]})
+            self.assertEqual(status, 400, amount)
+            self.assertIn("Ogiltig mängd", payload["error"])
+
+    def test_expensive_and_open_routes_are_rate_limited(self):
+        from services.accounts import ratelimit
+        limit, _ = ratelimit.LIMITS["scrape"]
+        statuses = [self.get("/api/campaigns")[0] for _ in range(limit + 1)]
+        self.assertNotIn(429, statuses[:limit])
+        self.assertEqual(statuses[-1], 429)
+        ratelimit.reset()
+        limit, _ = ratelimit.LIMITS["analytics"]
+        for _ in range(limit):
+            self.post("/api/analytics/event", {"event": "view_home"})
+        self.assertEqual(self.post("/api/analytics/event", {"event": "view_home"})[0], 429)
+
+    def test_external_recipe_source_is_off_by_default(self):
+        status, payload = self.get("/api/health")
+        self.assertEqual(payload["recipeProviders"], [])
+        status, payload = self.get("/api/v1/recipes/search?q=chicken")
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["recipes"], [])
+
+    def test_grocery_import_validates_per_category(self):
+        original_token, original_start = api_server.ADMIN_TOKEN, api_server.grocery_importer.start
+        api_server.ADMIN_TOKEN = "admin-hemlighet"
+        api_server.grocery_importer.start = lambda chain, store_id=None, limit_per_category=None: {"started": False, "reason": "test"}
+        try:
+            headers = {"X-Admin-Token": "admin-hemlighet"}
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            for bad in (0, -1, 501, "5", True):
+                conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+                conn.request("POST", "/api/admin/grocery-import", body=json.dumps({"chain": "Willys", "perCategory": bad}).encode(),
+                             headers={"Content-Type": "application/json", **headers})
+                response = conn.getresponse(); response.read()
+                self.assertEqual(response.status, 400, bad)
+                conn.close()
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            conn.request("POST", "/api/admin/grocery-import", body=json.dumps({"chain": "Willys", "perCategory": 5}).encode(),
+                         headers={"Content-Type": "application/json", **headers})
+            response = conn.getresponse(); response.read()
+            self.assertEqual(response.status, 200)
+            conn.close()
+        finally:
+            api_server.ADMIN_TOKEN, api_server.grocery_importer.start = original_token, original_start
+
+    # ---- Observability: request-id, strukturerad logg, räknare ----
+    def test_every_response_carries_a_request_id_and_honours_a_wellformed_incoming_one(self):
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request("GET", "/api/health")
+        response = conn.getresponse(); response.read()
+        generated = response.getheader("X-Request-Id")
+        self.assertRegex(generated, r"^[0-9a-f]{16}$")
+        conn.close()
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request("GET", "/api/health", headers={"X-Request-Id": "support-ärende-1234"})
+        response = conn.getresponse(); response.read()
+        self.assertNotEqual(response.getheader("X-Request-Id"), "support-ärende-1234")   # ej välformat (icke-ASCII)
+        conn.close()
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request("GET", "/api/health", headers={"X-Request-Id": "abc-12345678"})
+        response = conn.getresponse(); response.read()
+        self.assertEqual(response.getheader("X-Request-Id"), "abc-12345678")
+        conn.close()
+
+    def test_access_log_is_json_with_request_id_and_masked_ip(self):
+        from services import observability
+        records = []
+
+        class Capture(logging.Handler):
+            def emit(self, record):
+                records.append(observability.JsonFormatter().format(record))
+        handler = Capture()
+        handler.addFilter(observability.RequestIdFilter())
+        observability.access_logger.addHandler(handler)
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            conn.request("GET", "/api/health?zip=80252", headers={"X-Request-Id": "rid-e2e-0001"})
+            conn.getresponse().read(); conn.close()
+        finally:
+            observability.access_logger.removeHandler(handler)
+        rows = [json.loads(line) for line in records]
+        mine = [row for row in rows if row.get("rid") == "rid-e2e-0001"]
+        self.assertTrue(mine, rows[-3:])
+        row = mine[-1]
+        self.assertEqual(row["path"], "/api/health")           # query aldrig i loggen
+        self.assertEqual(row["status"], 200)
+        self.assertEqual(row["ip"], "127.0.0.0")                # maskerad
+        self.assertEqual(row["request_id"], "rid-e2e-0001")
+        self.assertIn("duration_ms", row)
+
+    def test_metrics_count_failed_logins_and_unhandled_errors(self):
+        from services.observability import METRICS
+        before = METRICS.snapshot()
+        self.post("/api/auth/login", {"email": "ingen@example.se", "password": "fel"})
+        original = api_server.ACCOUNT_STORE.user_for_token
+
+        def boom(token):
+            raise RuntimeError("test")
+        api_server.ACCOUNT_STORE.user_for_token = boom
+        try:
+            self.get("/api/auth/me", token="x")
+        finally:
+            api_server.ACCOUNT_STORE.user_for_token = original
+        after = METRICS.snapshot()
+        self.assertEqual(after.get("auth_login_failed", 0), before.get("auth_login_failed", 0) + 1)
+        self.assertEqual(after.get("unhandled_exceptions", 0), before.get("unhandled_exceptions", 0) + 1)
+        self.assertGreaterEqual(after.get("responses_5xx", 0), before.get("responses_5xx", 0) + 1)
+        status, payload = self.get("/api/health")
+        self.assertIn("metrics", payload)
+        self.assertIsInstance(payload["metrics"].get("requests_total"), int)
+        self.assertTrue(payload["rateLimitPersistent"])
 
     def test_redeem_premium_with_correct_code(self):
         email = self._email()

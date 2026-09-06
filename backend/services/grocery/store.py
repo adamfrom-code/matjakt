@@ -15,6 +15,7 @@ for context.
 """
 
 import re
+import contextlib
 import sqlite3
 import time
 from pathlib import Path
@@ -52,6 +53,7 @@ class GroceryStore:
         # to fingerprint the same (easy for small test fixtures) would share
         # one cache entry and answer for each other.
         self.db_path = str(db_path)
+        self._in_bulk = False
         self._connection = sqlite3.connect(db_path, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
         self._connection.execute("PRAGMA journal_mode=WAL")
@@ -99,7 +101,7 @@ class GroceryStore:
     def _migrate_schema(self):
         for table, columns in self._COLUMN_MIGRATIONS.items():
             existing = {row[1] for row in self._connection.execute(f"PRAGMA table_info({table})")}
-            with self._connection:
+            with self._txn():
                 for name, decl in columns:
                     if name not in existing:
                         self._connection.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
@@ -226,7 +228,7 @@ class GroceryStore:
             """)
 
         now = time.time()
-        with self._connection:
+        with self._txn():
             # Första kommersiella erbjudandet - konfigurerbart, inte hårdkodat
             # i någon kärnlogik: ändra raden, inte koden.
             self._connection.execute(
@@ -242,6 +244,30 @@ class GroceryStore:
         except Exception:  # pragma: no cover - loggas, blockerar aldrig
             import logging
             logging.getLogger("matjakt.grocery.store").exception("Kunde inte seeda kedjetabellen")
+
+    def _txn(self):
+        """Transaktionsgräns för EN operation - eller ingenting alls inne i
+        bulk_transaction(), där hela batchen är en enda transaktion. Utan
+        detta committade varje upsert för sig, och sqlite3:s context manager
+        committar även när den är nästlad."""
+        return contextlib.nullcontext() if self._in_bulk else self._connection
+
+    @contextlib.contextmanager
+    def bulk_transaction(self):
+        """Allt inuti blir EN transaktion: antingen publiceras alla rader,
+        eller ingen. Ett halvt dataset är värre än gårdagens hela."""
+        if self._in_bulk:
+            yield
+            return
+        self._in_bulk = True
+        try:
+            yield
+            self._connection.commit()
+        except BaseException:
+            self._connection.rollback()
+            raise
+        finally:
+            self._in_bulk = False
 
     @property
     def connection(self):
@@ -369,7 +395,7 @@ class GroceryStore:
                       active: bool = True, provider: str | None = None,
                       pricing_scope: str | None = None) -> Store:
         now = time.time()
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 """
                 INSERT INTO grocery_stores (chain, external_store_id, name, city, postal_code, address,
@@ -492,7 +518,7 @@ class GroceryStore:
 
     def _create_product(self, raw: RawProduct) -> Product:
         now = time.time()
-        with self._connection:
+        with self._txn():
             cursor = self._connection.execute(
                 """
                 INSERT INTO grocery_products (gtin, ean, name, brand, description, size, quantity, unit,
@@ -557,12 +583,12 @@ class GroceryStore:
         updates.append("updated_at = ?")
         params.append(time.time())
         params.append(product.id)
-        with self._connection:
+        with self._txn():
             self._connection.execute(f"UPDATE grocery_products SET {', '.join(updates)} WHERE id = ?", params)
         return self.get_product(product.id)
 
     def _link_external_id(self, chain: str, external_product_id: str, product_id: int):
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 """
                 INSERT INTO grocery_product_external_ids (chain, external_product_id, product_id)
@@ -630,7 +656,7 @@ class GroceryStore:
     def record_dabas_check(self, product_id: int, *, status: str, error: str | None = None,
                            source_version: str | None = None):
         now = time.time()
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 "UPDATE grocery_products SET dabas_status = ?, dabas_last_checked = ?, dabas_error = ?, "
                 "dabas_last_success = CASE WHEN ? = 'ok' THEN ? ELSE dabas_last_success END, "
@@ -652,7 +678,7 @@ class GroceryStore:
             return
         updates["updated_at"] = time.time()
         assignments = ", ".join(f"{k} = ?" for k in updates)
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 f"UPDATE grocery_products SET {assignments} WHERE id = ?", (*updates.values(), product_id))
 
@@ -721,7 +747,7 @@ class GroceryStore:
             )
         )
 
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 """
                 INSERT INTO grocery_current_prices (product_id, store_id, regular_price, campaign_price,
@@ -817,7 +843,7 @@ class GroceryStore:
         if regular_price is None and campaign_price is None:
             return False
         now = time.time()
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 """
                 INSERT INTO grocery_reference_prices (product_id, chain, regular_price, campaign_price,
@@ -862,7 +888,7 @@ class GroceryStore:
                     campaign_price=None, member_price=None, multibuy_price=None, unit_price=None,
                     currency: str = "SEK", source_url: str | None = None, source: str | None = None,
                     valid_to: float | None = None, fetched_at: float | None = None):
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 "INSERT INTO grocery_price_staging (run_id, store_id, product_id, regular_price, "
                 "campaign_price, member_price, multibuy_price, unit_price, currency, source_url, "
@@ -880,12 +906,12 @@ class GroceryStore:
             (status, reason, staging_id))
 
     def clear_staging(self, run_id: int):
-        with self._connection:
+        with self._txn():
             self._connection.execute("DELETE FROM grocery_price_staging WHERE run_id = ?", (run_id,))
 
     def record_run_gate(self, run_id: int, *, rows_staged: int, gate_percent: float | None,
                         published: bool, message: str | None = None):
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 "UPDATE grocery_collector_runs SET rows_staged = ?, gate_percent = ?, published = ?, "
                 "gate_message = ? WHERE id = ?",
@@ -901,7 +927,7 @@ class GroceryStore:
                      reference_source: str | None = None, reference_store_external_id: str | None = None,
                      partner_model: str = "PER_STORE"):
         now = time.time()
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 """
                 INSERT INTO grocery_chains (name, pricing_model, reference_price_available, reference_source,
@@ -922,7 +948,7 @@ class GroceryStore:
             "SELECT * FROM grocery_chains WHERE name = ?", (name,)).fetchone()
 
     def set_chain_partner(self, chain: str, partner_id: int | None):
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 "UPDATE grocery_chains SET chain_partner_id = ?, updated_at = ? WHERE name = ?",
                 (partner_id, time.time(), chain))
@@ -937,7 +963,7 @@ class GroceryStore:
             plan = self._connection.execute(
                 "SELECT monthly_price_sek FROM grocery_partner_plans WHERE code = ?", (plan_code,)).fetchone()
             monthly_price_sek = plan["monthly_price_sek"] if plan else None
-        with self._connection:
+        with self._txn():
             cursor = self._connection.execute(
                 "INSERT INTO grocery_partners (kind, name, status, plan_code, monthly_price_sek, chain, "
                 "contact_email, api_key_hash, created_at, updated_at) VALUES (?, ?, 'PENDING', ?, ?, ?, ?, ?, ?, ?)",
@@ -954,7 +980,7 @@ class GroceryStore:
 
     def set_partner_status(self, partner_id: int, status: str):
         now = time.time()
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 "UPDATE grocery_partners SET status = ?, updated_at = ?, "
                 "started_at = CASE WHEN ? = 'ACTIVE' AND started_at IS NULL THEN ? ELSE started_at END, "
@@ -962,7 +988,7 @@ class GroceryStore:
                 (status, now, status, now, status, now, partner_id))
 
     def link_partner_store(self, partner_id: int, store_id: int):
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 "INSERT OR IGNORE INTO grocery_partner_stores (partner_id, store_id) VALUES (?, ?)",
                 (partner_id, store_id))
@@ -981,7 +1007,7 @@ class GroceryStore:
     def record_partner_feed(self, *, partner_id: int, store_id: int, format: str, status: str,
                             rows_received: int, rows_published: int, gate_percent: float | None,
                             message: str | None = None):
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 "INSERT INTO grocery_partner_feeds (partner_id, store_id, format, status, rows_received, "
                 "rows_published, gate_percent, message, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -996,13 +1022,13 @@ class GroceryStore:
     def delete_prices_from_source(self, source_prefix: str) -> int:
         """Partnerns priser försvinner när partnern inte längre är ACTIVE:
         utan aktiv leverantör finns ingen som går i god för dem."""
-        with self._connection:
+        with self._txn():
             cursor = self._connection.execute(
                 "DELETE FROM grocery_current_prices WHERE source LIKE ?", (source_prefix + "%",))
         return cursor.rowcount
 
     def bump_partner_stat(self, store_id: int, event: str, day: str, amount: int = 1):
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 "INSERT INTO grocery_partner_stats (store_id, day, event, count) VALUES (?, ?, ?, ?) "
                 "ON CONFLICT(store_id, day, event) DO UPDATE SET count = count + excluded.count",
@@ -1105,7 +1131,7 @@ class GroceryStore:
 
     def start_collector_run(self, *, chain: str, store_id: int | None = None) -> CollectorRun:
         now = time.time()
-        with self._connection:
+        with self._txn():
             cursor = self._connection.execute(
                 "INSERT INTO grocery_collector_runs (chain, store_id, started_at, status) VALUES (?, ?, ?, 'running')",
                 (chain, store_id, now),
@@ -1115,7 +1141,7 @@ class GroceryStore:
     def finish_collector_run(self, run_id: int, *, status: str, products_found: int = 0,
                               products_created: int = 0, products_updated: int = 0, prices_updated: int = 0,
                               images_found: int = 0, errors: int = 0, error_message: str | None = None) -> CollectorRun:
-        with self._connection:
+        with self._txn():
             self._connection.execute(
                 """
                 UPDATE grocery_collector_runs SET

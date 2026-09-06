@@ -241,5 +241,24 @@ class PackageMathInvariants(unittest.TestCase):
         self.assertIsNone(convert_amount(1, "tsk", "g"))
 
 
+class LoosePiecesAtKiloPrice(unittest.TestCase):
+    def test_small_pieces_at_kilo_price_are_loose_weight_not_ten_packages(self):
+        """City Gross 'Potatis Mjölig CA80G' 14,95 kr (= kr/kg): 800 g behov
+        visades som 'Köp 10 × CA80G'. Det är lösvikt: kr/kg × behov, ett
+        paket, märkt perKg - så listan säger 'ca 800 g' i stället."""
+        engine, store_id, tmp, db = _engine_with([{
+            "id": "pot", "name": "Potatis Mjölig", "size": "CA80G", "quantity": None, "unit": None,
+            "price": 14.95, "unit_price": 14.95, "category": "Frukt & grönt > Potatis & rotsaker > Potatis"}])
+        try:
+            row = engine.price_item("Potatis", 800, "g", "Willys", store_id)
+            self.assertTrue(row["perKg"])
+            self.assertEqual(row["packages"], 1)
+            self.assertTrue(row["exactPackaging"])
+            self.assertAlmostEqual(row["totalCost"], 11.96, places=2)   # 14,95 × 0,8
+            self.assertFalse(row["weightPriced"])
+        finally:
+            db.close(); tmp.cleanup()
+
+
 if __name__ == "__main__":
     unittest.main()

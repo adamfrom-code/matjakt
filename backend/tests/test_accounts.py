@@ -148,5 +148,50 @@ class AccountStoreTest(unittest.TestCase):
             self.store.delete_account("okant-token")
 
 
+class SharedConnectionIsThreadSafe(unittest.TestCase):
+    """Alla servertrådar delar en SQLite-anslutning. Utan lås kunde en
+    tråds commit() nollställa en annan tråds pågående SELECT, så en giltig
+    session svarade "inte inloggad" mitt i en annan begäran (sett i CI
+    under Premium-aktiveringen). Läsningar och skrivningar i parallell ska
+    aldrig ge ett falskt None för en giltig token."""
+
+    def test_concurrent_reads_never_lose_a_valid_session(self):
+        import threading
+        with tempfile.TemporaryDirectory() as tmp:
+            store = AccountStore(Path(tmp) / "t.db")
+            try:
+                token, _ = store.register("tradsaker@example.com", "hemligt123")
+                misses, errors = [], []
+                stop = threading.Event()
+
+                def reader():
+                    while not stop.is_set():
+                        try:
+                            if store.user_for_token(token) is None:
+                                misses.append(1)
+                        except Exception as error:   # pragma: no cover - ska inte hända
+                            errors.append(repr(error))
+
+                def writer():
+                    for i in range(300):
+                        try:
+                            store.set_synced_state(token, '{"i": %d}' % i)
+                            store.apply_subscription_event("cus_x", "sub_x", "active", None, False, "monthly",
+                                                           event_created=i)
+                        except Exception as error:   # pragma: no cover
+                            errors.append(repr(error))
+                    stop.set()
+
+                threads = [threading.Thread(target=reader) for _ in range(4)] + [threading.Thread(target=writer)]
+                for thread in threads:
+                    thread.start()
+                for thread in threads:
+                    thread.join(timeout=60)
+                self.assertEqual(errors, [])
+                self.assertEqual(misses, [])
+            finally:
+                store.close()
+
+
 if __name__ == "__main__":
     unittest.main()

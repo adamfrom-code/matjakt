@@ -311,7 +311,11 @@ class PrimatProvider(GroceryProvider):
             multibuy_price=price_row.get("multi_price"),
             unit_price=comparison.get("price"),
             source_url=urls.get("source"),
-            fetched_at=_epoch(detail.get("confirmed_at") or price_row.get("changed_at")),
+            # NU, inte källans changed_at: fetched_at blir verified_at i
+            # butikspriset, och ett pris som Primat bekräftade för en vecka
+            # sedan men vi hämtade i natt är verifierat i natt - annars föll
+            # färska Primat-priser för fyradygnsregeln direkt vid import.
+            fetched_at=time.time(),
             campaign_valid_to=_epoch(price_row.get("offer_valid_to") or price_row.get("offer_valid_until"))
             if campaign is not None else None,
         )

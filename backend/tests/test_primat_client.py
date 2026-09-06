@@ -369,5 +369,61 @@ class FetchFromPrimatIntegrationTest(unittest.TestCase):
         self.assertEqual(result[0]["kedja"], "Willys")
 
 
+class RetriesWithBackoff(unittest.TestCase):
+    """En enda timeout kastade tidigare hela den kvotdyra körningen."""
+
+    def setUp(self):
+        self._base = primat_client.RETRY_BASE_SECONDS
+        primat_client.RETRY_BASE_SECONDS = 0.0
+
+    def tearDown(self):
+        primat_client.RETRY_BASE_SECONDS = self._base
+
+    def test_transient_failure_then_success(self):
+        import io as _io
+        import urllib.error
+        from unittest.mock import patch
+        calls = {"n": 0}
+
+        class _Resp(_io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        def flaky(req, timeout=None):
+            calls["n"] += 1
+            if calls["n"] < 3:
+                raise urllib.error.URLError("timeout")
+            return _Resp(b'{"data": [1]}')
+        with patch.object(primat_client.urllib.request, "urlopen", flaky):
+            self.assertEqual(primat_client._request("GET", "/prices", api_key="k"), {"data": [1]})
+        self.assertEqual(calls["n"], 3)
+
+    def test_client_errors_are_not_retried(self):
+        import urllib.error
+        from unittest.mock import patch
+        calls = {"n": 0}
+
+        def forbidden(req, timeout=None):
+            calls["n"] += 1
+            raise urllib.error.HTTPError(req.full_url, 403, "Forbidden", {}, None)
+        with patch.object(primat_client.urllib.request, "urlopen", forbidden):
+            with self.assertRaises(primat_client.PrimatError):
+                primat_client._request("GET", "/prices", api_key="k")
+        self.assertEqual(calls["n"], 1)
+
+    def test_gives_up_after_the_last_attempt(self):
+        import urllib.error
+        from unittest.mock import patch
+        calls = {"n": 0}
+
+        def down(req, timeout=None):
+            calls["n"] += 1
+            raise urllib.error.HTTPError(req.full_url, 503, "Unavailable", {}, None)
+        with patch.object(primat_client.urllib.request, "urlopen", down):
+            with self.assertRaises(primat_client.PrimatError):
+                primat_client._request("GET", "/prices", api_key="k")
+        self.assertEqual(calls["n"], primat_client.RETRY_ATTEMPTS)
+
+
 if __name__ == "__main__":
     unittest.main()
