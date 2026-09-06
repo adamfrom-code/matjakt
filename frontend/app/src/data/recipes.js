@@ -16,7 +16,11 @@
 
 import { API_BASE_URL } from "../api/config.js";
 
-const FALLBACK_URL = new URL("../../data/recipes.json", import.meta.url);
+// Relativt SIDAN, inte modulen: efter esbuild-bygget är import.meta.url
+// bundelns adress (app/app.js) och "../../data" skulle peka fel.
+const FALLBACK_URL = typeof document !== "undefined"
+  ? new URL("data/recipes.json", document.baseURI)
+  : new URL("../../data/recipes.json", import.meta.url);
 
 // The filter row on the recipe page. Kept here rather than in the markup so
 // "proteinrikt" means the same thing in the filter, the shelf and the
