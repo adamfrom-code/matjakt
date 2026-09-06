@@ -477,6 +477,91 @@ class HorizontalEscalationApiTest(HouseholdApiTest):
         self.assertEqual(status, 404)
 
 
+class HouseholdSharesTheApiHardeningTest(HouseholdApiTest):
+    """Hushållsvägarna ska ha SAMMA härdning som resten av API:t.
+
+    De kom till efter observability-, rate limit- och request-id-arbetet, och
+    ligger i en egen dispatch. Det är precis så en ny yta råkar hamna utanför
+    skyddet som alla andra vägar har - därför mäts det här."""
+
+    def _raw(self, method, path, token=None, headers=None):
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            all_headers = {"Content-Type": "application/json", **(headers or {})}
+            if token:
+                all_headers["Authorization"] = f"Bearer {token}"
+            body = b"{}" if method == "POST" else None
+            if body:
+                all_headers["Content-Length"] = str(len(body))
+            conn.request(method, path, body=body, headers=all_headers)
+            response = conn.getresponse()
+            response.read()
+            return response
+        finally:
+            conn.close()
+
+    def test_every_household_response_carries_a_request_id(self):
+        adam, _, _, _ = self._family()
+        for method, path in (("GET", "/api/household"), ("GET", "/api/household/sync"),
+                             ("POST", "/api/household/leave")):
+            response = self._raw(method, path, adam)
+            self.assertRegex(response.getheader("X-Request-Id") or "", r"^[0-9a-f]{16}$",
+                             f"{method} {path} saknar request-id")
+
+    def test_a_supplied_request_id_is_echoed_back(self):
+        """Supportärenden följer ett id genom loggen - även på hushållsvägar."""
+        adam, _, _, _ = self._family()
+        response = self._raw("GET", "/api/household", adam, {"X-Request-Id": "abc-12345678"})
+        self.assertEqual(response.getheader("X-Request-Id"), "abc-12345678")
+
+    def test_household_writes_are_rate_limited(self):
+        """Taket är generöst (en familj i en butik bockar av snabbt) men det
+        SKA finnas - annars är hushållsvägarna den enda oskyddade ytan."""
+        from services.accounts import ratelimit
+        self.assertIn("household", ratelimit.LIMITS)
+        self.assertIn("household_invite", ratelimit.LIMITS)
+        # Inbjudningar är en delbar bärarhemlighet och har ett strammare tak.
+        self.assertLess(ratelimit.LIMITS["household_invite"][0], ratelimit.LIMITS["household"][0])
+
+    def test_a_broken_body_on_a_household_path_is_a_controlled_400(self):
+        """Samma svar som resten av API:t - inte en stängd anslutning."""
+        adam, _, _, _ = self._family()
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            conn.putrequest("POST", "/api/household/shopping/item")
+            conn.putheader("Content-Type", "application/json")
+            conn.putheader("Authorization", f"Bearer {adam}")
+            conn.putheader("Content-Length", "abc")
+            conn.endheaders()
+            conn.send(b'{"name":"Mjolk"}')
+            response = conn.getresponse()
+            response.read()
+            self.assertEqual(response.status, 400)
+        finally:
+            conn.close()
+
+    def test_an_unexpected_error_becomes_a_calm_500_without_a_traceback(self):
+        adam, _, _, _ = self._family()
+        original = api_server.HOUSEHOLD_STORE.household_id_for_user
+
+        def boom(_user_id):
+            raise RuntimeError("sqlite3.OperationalError: database disk image is malformed")
+        api_server.HOUSEHOLD_STORE.household_id_for_user = boom
+        try:
+            status, payload = self.get("/api/household/sync", adam)
+            self.assertEqual(status, 500)
+            self.assertNotIn("sqlite3", json.dumps(payload))
+            self.assertNotIn("Traceback", json.dumps(payload))
+        finally:
+            api_server.HOUSEHOLD_STORE.household_id_for_user = original
+
+    def test_household_paths_are_behind_the_development_gate(self):
+        """Låset gäller hela /api/ - hushållet får ingen egen väg förbi."""
+        self.assertTrue(all(not "/api/household".startswith(prefix)
+                            for prefix in api_server.ApiHandler.GATE_EXEMPT),
+                        "hushållsvägar får inte stå i GATE_EXEMPT")
+
+
 class NotificationApiTest(HouseholdApiTest):
     def test_a_members_change_reaches_the_other_but_not_themselves(self):
         adam, sara, household_id, _ = self._family()

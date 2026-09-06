@@ -6,6 +6,20 @@
   "City Gross"
  ],
  "kontroller": 4614,
+ "perKedja": {
+  "Willys": {
+   "kontroller": 1538,
+   "saknade": 0
+  },
+  "Hemköp": {
+   "kontroller": 1538,
+   "saknade": 7
+  },
+  "City Gross": {
+   "kontroller": 1538,
+   "saknade": 5
+  }
+ },
  "flaggor": {
   "gram_som_styck": 0,
   "volym_som_styck": 0,
@@ -34,5 +48,5 @@
  "gate": "GRÖN",
  "produkter": 17849,
  "prisdata_senast": 1788461520.0622382,
- "kord": "2026-09-06T15:30:32+00:00"
+ "kord": "2026-09-06T17:51:47+00:00"
 }

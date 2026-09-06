@@ -252,6 +252,8 @@ def publish_run(db, run_id: int, store_id: int, chain: str, *, source: str,
                                       f"{previous} tidigare - misstänkt trasig, inget publicerat")
 
     if not publish_ok:
+        from ..observability import METRICS
+        METRICS.incr("pricing_gate_failed")
         db.record_run_gate(run_id, rows_staged=staged, gate_percent=gate_percent,
                            published=False, message=message)
         db.clear_staging(run_id)

@@ -24,11 +24,20 @@ async function parseJsonResponse(response) {
   return data;
 }
 
-export function register(email, password) {
+export function register(email, password, marketing = false) {
   return fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, marketing: Boolean(marketing) }),
+  }).then(parseJsonResponse);
+}
+
+// Tacka ja/nej till utskick. Servern äger svaret; UI:t ritar om från `user`.
+export function setMarketingConsent(token, consent) {
+  return fetch(`${API_BASE_URL}/account/marketing`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ consent: Boolean(consent) }),
   }).then(parseJsonResponse);
 }
 
@@ -132,10 +141,12 @@ export function fetchAccountState(token) {
   }).then(parseJsonResponse);
 }
 
-export function saveAccountState(token, stateBlob) {
+export function saveAccountState(token, stateBlob, { keepalive = false } = {}) {
+  // keepalive: anropet får överleva att sidan stängs/lämnas (pagehide).
   return fetch(`${API_BASE_URL}/account/state`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(stateBlob),
+    keepalive,
   }).then(parseJsonResponse);
 }

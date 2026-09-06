@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="robots" content="noindex, nofollow">
   <!-- Utvecklingslåset: utan gate-token skickas besökaren till låsskärmen
-       innan appen ens börjar ladda. Att ta bort denna rad i DevTools öppnar
+       innan appen ens börjar ladda. Query-strängen följer med (?verify=,
+       ?reset= ur mejlen) och landningen skickar den tillbaka hit efter
+       upplåsning - annars dör mejllänkarna i varje olåst webbläsare. Att ta bort denna rad i DevTools öppnar
        ingenting - servern vägrar all data utan giltig token. -->
-  <script>try{if(!localStorage.getItem("matjakt-gate")&&location.hostname!=="localhost"&&location.hostname!=="127.0.0.1")location.replace("../")}catch(e){}</script>
+  <script>try{if(!localStorage.getItem("matjakt-gate")&&location.hostname!=="localhost"&&location.hostname!=="127.0.0.1")location.replace("../"+location.search)}catch(e){}</script>
   <!-- The session token is a bearer credential held in localStorage (see
        src/api/auth.js for why cookies are not usable across matjakt.store
        -> onrender.com). That makes script injection the way it could be
@@ -18,7 +20,7 @@
        elements; injected CSS is a far smaller problem than injected JS.
        frame-ancestors is ignored in a meta tag - the backend sends it as
        a real header (see api_server.end_headers). -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://plausible.io https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com https://plausible.io https://cloud.umami.is; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#f6f7f4">
   <meta name="description" content="Matjakt hjälper dig planera billigare middagar efter din budget.">
@@ -27,6 +29,9 @@
        server, vilket inte finns när frontend och backend körs på olika adresser. Lämna tomt bara när frontend
        körs same-origin med backend (t.ex. lokalt via `npm run backend`). -->
   <meta name="matjakt-api-url" content="">
+  <!-- Besöksstatistik utan kakor: "plausible:matjakt.store" eller "umami:<website-id>". Tomt = av. -->
+  <meta name="matjakt-traffic" content="">
+  <script src="../traffic.js" defer></script>
   <title>Matjakt – din smarta matvecka</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="assets/icons/icon-192.png">
@@ -37,7 +42,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=26">
+  <link rel="stylesheet" href="styles.css?v=30">
 </head>
 <body>
   <div class="phone-shell">
@@ -368,6 +373,7 @@
           <input id="registerEmail" type="email" required autocomplete="email">
           <label for="registerPassword">Lösenord (minst 8 tecken)</label>
           <input id="registerPassword" type="password" required minlength="8" autocomplete="new-password">
+          <label class="account-consent"><input id="registerMarketing" type="checkbox"> Ja, mejla mig veckans bästa erbjudanden och tips. Avsluta när du vill.</label>
           <p class="account-error" id="registerError"></p>
           <button class="btn btn-primary" type="submit"><span>Skapa konto</span></button>
         </form>
@@ -385,13 +391,15 @@
           <p class="account-error" id="resetError"></p>
           <button class="btn btn-primary" type="submit"><span>Spara nytt lösenord</span></button>
         </form>
-        <p class="account-legal-links"><a href="mailto:adamfrom@icloud.com">Kontakta support</a> · <a href="../integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="../anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
+        <p class="account-legal-links"><a href="mailto:adamfrom@icloud.com">Kontakta support</a> · <a href="https://matjakt.store/integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="https://matjakt.store/anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
       </div>
 
       <div id="accountLoggedIn" hidden>
         <h2>Ditt konto</h2>
         <p class="account-email" id="accountEmail"></p>
         <p class="account-premium-status" id="accountPremiumStatus"></p>
+
+        <label class="account-consent" id="marketingConsentRow"><input id="marketingToggle" type="checkbox"> Mejla mig veckans bästa erbjudanden och tips <span class="account-consent-note" id="marketingNote"></span></label>
 
         <div class="verify-email-notice" id="verifyEmailNotice" hidden>
           <p>Din e-postadress är inte verifierad än.</p>
@@ -507,7 +515,7 @@
         <button class="account-logout-btn" id="gateLogoutBtn" type="button">Lås förhandsvisningen</button>
         <button class="account-delete-btn" id="deleteAccountBtn" type="button">Radera konto</button>
         <p class="account-error" id="deleteError"></p>
-        <p class="account-legal-links"><a href="mailto:adamfrom@icloud.com">Kontakta support</a> · <a href="../integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="../anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
+        <p class="account-legal-links"><a href="mailto:adamfrom@icloud.com">Kontakta support</a> · <a href="https://matjakt.store/integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="https://matjakt.store/anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
       </div>
     </div>
   </div>
@@ -582,6 +590,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=26"></script>
+  <script type="module" src="app.js?v=30"></script>
 </body>
 </html>

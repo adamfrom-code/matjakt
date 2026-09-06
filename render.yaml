@@ -5,6 +5,10 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: .
     plan: starter
+    # Deploy sker BARA via deploy-hooken från GitHub CI (ci.yml, jobb
+    # deploy-backend) - aldrig direkt på push. Måste också vara Off i
+    # dashboarden; det här gör att en blueprint-synk inte slår på det igen.
+    autoDeploy: false
     healthCheckPath: /api/health
     disk:
       name: matjakt-data
@@ -31,6 +35,13 @@ services:
         value: "1"
       - key: MATJAKT_MAX_SCRAPES
         value: "1"
+      # Utskick (välkomstserie + Kampanjtorget): av tills Adam slår på.
+      - key: MATJAKT_MAILINGS_ENABLED
+        value: "0"
+      - key: MATJAKT_MAIL_SECRET
+        sync: false
+      - key: MATJAKT_PUBLIC_API_URL
+        value: https://matjakt.onrender.com/api
       - key: PRIMAT_API_KEY
         sync: false
       - key: MATJAKT_ADMIN_TOKEN

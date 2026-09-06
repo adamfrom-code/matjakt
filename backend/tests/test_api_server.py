@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import http.client
 import json
+import logging
 import os
 import sys
 import tempfile
@@ -457,6 +458,9 @@ class ApiServerHttpTest(unittest.TestCase):
     def setUp(self):
         self._original_code = api_server.PREMIUM_CODE
         api_server.PREMIUM_CODE = "hemlig-kod"
+        # Admin-tokenens gissningsbudget är per IP och alla tester delar
+        # 127.0.0.1 - ett test som provar fel token får inte låsa nästa.
+        ratelimit.clear_on_success("admin", "127.0.0.1")
         # Primat is a real third-party service - tests must never depend on
         # a live network call to it (slow, flaky, and .env may have a real
         # PRIMAT_API_KEY set for local dev). Default every test to "Primat
@@ -610,17 +614,177 @@ class ApiServerHttpTest(unittest.TestCase):
         self.assertTrue(payload["ok"])
 
     def test_analytics_event_counts_are_aggregated_per_day_not_per_click(self):
-        api_server.KV_CACHE.clear()
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        before = api_server.ANALYTICS.daily_events()["events"]["view_premium"]["perDag"].get(today, 0)
+        self.post("/api/analytics/event", {"event": "view_premium"})
+        self.post("/api/analytics/event", {"event": "view_premium"})
+        self.post("/api/analytics/event", {"event": "view_premium"})
+        after = api_server.ANALYTICS.daily_events()["events"]["view_premium"]
+        self.assertEqual(after["perDag"].get(today, 0), before + 3)
+        # Utloggade klick är klick, inte personer.
+        self.assertEqual(after["unikaKonton"], 0)
+
+    def test_logged_in_events_count_people_not_clicks_and_feed_the_funnel(self):
+        """Inloggad räknas händelsen per konto och DAG - så tratten kan säga
+        "en person skapade en vecka", inte "tre klick". Och kontot får en
+        senast-aktiv-dag, vilket är hela grunden för återkomstmåttet."""
+        email = f"tratt-{uuid.uuid4().hex[:8]}@example.com"
+        status, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        self.assertEqual(status, 201)
+        token = payload["token"]
+        for _ in range(3):
+            status, _ = self.post("/api/analytics/event", {"event": "vecka_skapad"}, token=token)
+            self.assertEqual(status, 200)
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        rows = api_server.ACCOUNT_STORE.connection.execute(
+            "SELECT users.last_active_day, d.count FROM users JOIN analytics_user_days d ON d.user_id = users.id "
+            "WHERE users.email = ? AND d.event = 'vecka_skapad' AND d.day = ?", (email, today)).fetchall()
+        self.assertEqual(len(rows), 1, "en rad per konto och dag, inte en per klick")
+        self.assertEqual(rows[0][1], 3)
+        self.assertEqual(rows[0][0], today)
+
+        funnel = api_server.insights_payload()["tratt"]
+        this_week = funnel["kohorter"][0]
+        self.assertGreaterEqual(this_week["registrerade"], 1)
+        self.assertGreaterEqual(this_week["skapadeVecka"], 1)
+        self.assertFalse(this_week["mogen"], "veckans kohort kan inte ha svarat på 'kom tillbaka' än")
+        self.assertGreaterEqual(funnel["totalt"]["aktivaSenaste7Dagarna"], 1)
+
+        # Raderas kontot försvinner dess mätrader med det.
+        status, _ = self.post("/api/auth/delete-account", {"password": "hemligt123"}, token=token)
+        self.assertEqual(status, 200)
+        left = api_server.ACCOUNT_STORE.connection.execute(
+            "SELECT COUNT(*) FROM analytics_user_days d LEFT JOIN users ON users.id = d.user_id WHERE users.id IS NULL"
+        ).fetchone()[0]
+        self.assertEqual(left, 0)
+
+    def test_marketing_consent_is_opt_in_toggleable_and_unsubscribable_by_link(self):
+        email = f"utskick-{uuid.uuid4().hex[:8]}@example.com"
+        # Utan kryss: inget samtycke.
+        status, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        self.assertEqual(status, 201)
+        self.assertFalse(payload["user"]["marketingConsent"])
+        token = payload["token"]
+        # Tacka ja under Konto.
+        status, payload = self.post("/api/account/marketing", {"consent": True}, token=token)
+        self.assertEqual(status, 200)
+        self.assertTrue(payload["user"]["marketingConsent"])
+        status, payload = self.get("/api/auth/me", token=token)
+        self.assertTrue(payload["user"]["marketingConsent"])
+        # Utloggad kan inte ändra någon annans val.
+        status, _ = self.post("/api/account/marketing", {"consent": False})
+        self.assertEqual(status, 401)
+        # Avprenumerationslänken: fel token ändrar inget, rätt token stänger av.
+        from services import mailings
+        user_id = api_server.ACCOUNT_STORE.user_id_for_token(token)
+        original_secret = api_server.MAIL_SECRET
+        api_server.MAIL_SECRET = "test-mail-secret"
+        ratelimit.reset()
         try:
-            self.post("/api/analytics/event", {"event": "view_premium"})
-            self.post("/api/analytics/event", {"event": "view_premium"})
-            self.post("/api/analytics/event", {"event": "view_premium"})
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            count, updated_at = api_server.KV_CACHE.get("analytics", f"view_premium:{today}")
-            self.assertEqual(count, 3)
-            self.assertIsNotNone(updated_at)
+            def unsubscribe(query):
+                conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+                try:
+                    conn.request("GET", f"/api/mail/unsubscribe?{query}")
+                    response = conn.getresponse()
+                    return response, response.read().decode("utf-8")
+                finally:
+                    conn.close()
+            response, body = unsubscribe(f"u={user_id}&t=fel")
+            self.assertEqual(response.status, 400)
+            self.assertIn("Länken fungerar inte", body)
+            self.assertTrue(api_server.ACCOUNT_STORE.user_for_token(token)["marketingConsent"])
+            good_token = mailings.unsubscribe_token(user_id, "test-mail-secret")
+            response, body = unsubscribe(f"u={user_id}&t={good_token}")
+            self.assertEqual(response.status, 200)
+            self.assertIn("text/html", response.getheader("Content-Type"))
+            self.assertIn("Du får inga fler utskick", body)
+            self.assertFalse(api_server.ACCOUNT_STORE.user_for_token(token)["marketingConsent"])
         finally:
-            api_server.KV_CACHE.clear()
+            api_server.MAIL_SECRET = original_secret
+            ratelimit.reset()
+        # Kryss vid registreringen = samtycke från start.
+        status, payload = self.post("/api/auth/register",
+                                    {"email": f"ja-{uuid.uuid4().hex[:8]}@example.com",
+                                     "password": "hemligt123", "marketing": True})
+        self.assertEqual(status, 201)
+        self.assertTrue(payload["user"]["marketingConsent"])
+
+    def test_admin_mailing_is_admin_only_and_honest_without_smtp(self):
+        status, _ = self.post("/api/admin/mailing", {"action": "preview", "kind": "welcome_3", "email": "x@example.com"})
+        self.assertEqual(status, 404, "admin-ytan syns inte utifrån")
+        original = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "admin-test"
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            try:
+                conn.request("POST", "/api/admin/mailing",
+                             body=json.dumps({"action": "preview", "kind": "welcome_3", "email": "x@example.com"}),
+                             headers={"Content-Type": "application/json", "X-Admin-Token": "admin-test"})
+                response = conn.getresponse()
+                payload = json.loads(response.read())
+            finally:
+                conn.close()
+            # Testsviten har ingen SMTP: säg det, skicka inget, krascha inte.
+            self.assertEqual(response.status, 400)
+            self.assertIn("SMTP", payload["error"])
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            try:
+                conn.request("POST", "/api/admin/mailing", body=json.dumps({"action": "run"}),
+                             headers={"Content-Type": "application/json", "X-Admin-Token": "admin-test"})
+                response = conn.getresponse()
+                payload = json.loads(response.read())
+            finally:
+                conn.close()
+            self.assertEqual(response.status, 200)
+            self.assertIsNotNone(payload["blockerat"], "utskicken är av i testerna och ska säga varför")
+            self.assertEqual(payload["skickat"], {})
+        finally:
+            api_server.ADMIN_TOKEN = original
+
+    def test_admin_token_guessing_is_rate_limited_like_a_password(self):
+        """Tio fel per timme och IP, sedan 429 - även för RÄTT token, annars
+        vore spärren meningslös. Rätt token nollställer räknaren, så
+        kontrollrummets polling var femte sekund låser aldrig ute admin."""
+        original = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "admin-test"
+        ratelimit.reset()
+        try:
+            for _ in range(10):
+                status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "fel"})
+                self.assertEqual(status, 404)
+            status, payload = self.get("/api/admin/insights", headers={"X-Admin-Token": "fel"})
+            self.assertEqual(status, 429)
+            self.assertIn("retryAfter", payload)
+            status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "admin-test"})
+            self.assertEqual(status, 429, "budgeten gäller före jämförelsen, annars kan man gissa vidare")
+            ratelimit.reset()
+            for _ in range(30):
+                status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "admin-test"})
+                self.assertEqual(status, 200)
+            # Utan konfigurerad token är ingen någonsin admin - och 404-vägarna
+            # avslöjar inte att de finns.
+            api_server.ADMIN_TOKEN = ""
+            status, _ = self.get("/api/admin/stripe-check", headers={"X-Admin-Token": ""})
+            self.assertEqual(status, 404)
+        finally:
+            ratelimit.reset()
+            api_server.ADMIN_TOKEN = original
+
+    def test_admin_insights_requires_the_admin_token(self):
+        original = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "admin-test"
+        ratelimit.clear_on_success("admin", "127.0.0.1")
+        try:
+            status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "fel"})
+            self.assertEqual(status, 404)
+            status, payload = self.get("/api/admin/insights", headers={"X-Admin-Token": "admin-test"})
+            self.assertEqual(status, 200)
+            self.assertIn("kohorter", payload["tratt"])
+            self.assertIn("vecka_skapad", payload["handelser"]["events"])
+            self.assertIn("vecka_skapad", payload["events14Dagar"])
+            self.assertIsInstance(payload["feedback"], list)
+        finally:
+            api_server.ADMIN_TOKEN = original
 
     def test_static_files_are_never_heuristically_cached(self):
         # Same connection reused for both requests (HTTP/1.1 keep-alive) so this
@@ -1162,7 +1326,7 @@ class AuthHttpTest(unittest.TestCase):
         self.assertEqual(payload["user"], {
             "email": email, "premium": False, "plan": "free", "trialEndsAt": None, "trialUsed": False,
             "subscriptionStatus": None, "subscriptionPlan": None, "subscriptionPeriodEnd": None,
-            "subscriptionCancelAtPeriodEnd": False, "emailVerified": False,
+            "subscriptionCancelAtPeriodEnd": False, "emailVerified": False, "marketingConsent": False,
         })
         status, payload = self.get("/api/auth/me", token=token)
         self.assertEqual(status, 200)
@@ -2116,9 +2280,12 @@ class AuthHttpTest(unittest.TestCase):
             conn.request("GET", "/api/health", headers={"X-Forwarded-Proto": "https"})
             self.assertIn("max-age=31536000", conn.getresponse().getheader("Strict-Transport-Security", ""))
             conn.close()
+            api_server.TRUST_PROXY_HEADERS = False
             conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
             conn.request("GET", "/api/health")
-            self.assertIsNone(conn.getresponse().getheader("Strict-Transport-Security"))
+            response = conn.getresponse()
+            self.assertIsNone(response.getheader("Strict-Transport-Security"))
+            self.assertEqual(response.getheader("Server"), "Matjakt")     # inga versionsnummer
             conn.close()
         finally:
             api_server.TRUST_PROXY_HEADERS = original
@@ -2170,6 +2337,197 @@ class AuthHttpTest(unittest.TestCase):
             conn.close()
         finally:
             api_server.ADMIN_TOKEN, api_server.grocery_importer.start = original_token, original_start
+
+    # ---- Observability: request-id, strukturerad logg, räknare ----
+    def test_every_response_carries_a_request_id_and_honours_a_wellformed_incoming_one(self):
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request("GET", "/api/health")
+        response = conn.getresponse(); response.read()
+        generated = response.getheader("X-Request-Id")
+        self.assertRegex(generated, r"^[0-9a-f]{16}$")
+        conn.close()
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request("GET", "/api/health", headers={"X-Request-Id": "support-ärende-1234"})
+        response = conn.getresponse(); response.read()
+        self.assertNotEqual(response.getheader("X-Request-Id"), "support-ärende-1234")   # ej välformat (icke-ASCII)
+        conn.close()
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request("GET", "/api/health", headers={"X-Request-Id": "abc-12345678"})
+        response = conn.getresponse(); response.read()
+        self.assertEqual(response.getheader("X-Request-Id"), "abc-12345678")
+        conn.close()
+
+    def test_access_log_is_json_with_request_id_and_masked_ip(self):
+        from services import observability
+        records = []
+
+        class Capture(logging.Handler):
+            def emit(self, record):
+                records.append(observability.JsonFormatter().format(record))
+        handler = Capture()
+        handler.addFilter(observability.RequestIdFilter())
+        observability.access_logger.addHandler(handler)
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            conn.request("GET", "/api/health?zip=80252", headers={"X-Request-Id": "rid-e2e-0001"})
+            conn.getresponse().read(); conn.close()
+        finally:
+            observability.access_logger.removeHandler(handler)
+        rows = [json.loads(line) for line in records]
+        mine = [row for row in rows if row.get("rid") == "rid-e2e-0001"]
+        self.assertTrue(mine, rows[-3:])
+        row = mine[-1]
+        self.assertEqual(row["path"], "/api/health")           # query aldrig i loggen
+        self.assertEqual(row["status"], 200)
+        self.assertEqual(row["ip"], "127.0.0.0")                # maskerad
+        self.assertEqual(row["request_id"], "rid-e2e-0001")
+        self.assertIn("duration_ms", row)
+
+    def test_metrics_count_failed_logins_and_unhandled_errors(self):
+        from services.observability import METRICS
+        before = METRICS.snapshot()
+        self.post("/api/auth/login", {"email": "ingen@example.se", "password": "fel"})
+        original = api_server.ACCOUNT_STORE.user_for_token
+
+        def boom(token):
+            raise RuntimeError("test")
+        api_server.ACCOUNT_STORE.user_for_token = boom
+        try:
+            self.get("/api/auth/me", token="x")
+        finally:
+            api_server.ACCOUNT_STORE.user_for_token = original
+        after = METRICS.snapshot()
+        self.assertEqual(after.get("auth_login_failed", 0), before.get("auth_login_failed", 0) + 1)
+        self.assertEqual(after.get("unhandled_exceptions", 0), before.get("unhandled_exceptions", 0) + 1)
+        self.assertGreaterEqual(after.get("responses_5xx", 0), before.get("responses_5xx", 0) + 1)
+        status, payload = self.get("/api/health")
+        self.assertIn("metrics", payload)
+        self.assertIsInstance(payload["metrics"].get("requests_total"), int)
+        self.assertTrue(payload["rateLimitPersistent"])
+
+    # ---- Release gate: health visar commit, From-domän och senaste prisaudit ----
+    def test_health_exposes_commit_mail_domain_and_pricing_audit_without_secrets(self):
+        status, payload = self.get("/api/health")
+        self.assertEqual(status, 200)
+        self.assertIn("pricingAudit", payload)
+        self.assertIn("commit", payload)
+        self.assertIsNone(payload["mailFrom"])            # SMTP är osatt i sviten
+        self.assertFalse(payload["gate"])                 # låset är av i sviten
+        original = dict(api_server.MAIL_CONFIG)
+        api_server.MAIL_CONFIG.update({"host": "smtp.example.test", "from_email": "Matjakt <Noreply@Matjakt.store>"})
+        try:
+            _, payload = self.get("/api/health")
+            self.assertTrue(payload["mail"])
+            self.assertEqual(payload["mailFrom"], "matjakt.store")   # domänen, aldrig adressen - även med visningsnamn
+            self.assertNotIn("noreply", json.dumps(payload).lower())
+        finally:
+            api_server.MAIL_CONFIG.clear()
+            api_server.MAIL_CONFIG.update(original)
+
+    def test_background_pricing_audit_lands_in_health_as_numbers_only(self):
+        from unittest import mock
+        fake = {"recept": 3, "kedjor": ["Willys", "Hemköp"], "kontroller": 100,
+                "perKedja": {"Willys": {"kontroller": 50, "saknade": 1}, "Hemköp": {"kontroller": 50, "saknade": 1}},
+                "flaggor": {"estimat": 0, "saknade": 2, "gram_som_styck": 0},
+                "exempel": {"saknade": ["recept | Struts | Willys | None"]}, "gate": "GRÖN"}
+
+        def run_and_wait(result):
+            with mock.patch("services.grocery.audit.run_pricing_audit", return_value=result):
+                self.assertTrue(api_server.run_pricing_audit_in_background("test", delay_seconds=0))
+                deadline = time.time() + 10
+                while api_server.PRICING_AUDIT_STATE["running"] and time.time() < deadline:
+                    time.sleep(0.05)
+            self.assertFalse(api_server.PRICING_AUDIT_STATE["running"])
+            return self.get("/api/health")[1]["pricingAudit"]
+
+        audit = run_and_wait(fake)
+        self.assertEqual(audit["gate"], "GRÖN")
+        self.assertEqual(audit["kontroller"], 100)
+        self.assertEqual(audit["saknade"], 2)
+        self.assertEqual(audit["tackningProcent"], 98.0)
+        self.assertEqual(audit["perKedja"]["Hemköp"]["tackningProcent"], 98.0)
+        self.assertEqual(audit["reason"], "test")
+        self.assertIn("commit", audit)
+        self.assertNotIn("exempel", audit)                 # produktnamn stannar hos admin-vägen
+        self.assertIn("ranAt", audit)
+        # 0 kontroller är inget grönt kvitto.
+        audit = run_and_wait(dict(fake, kontroller=0, gate="GRÖN"))
+        self.assertEqual(audit["gate"], "INGEN DATA")
+        # ...och inte heller "alla kontroller saknar pris" (tomt prisregister).
+        audit = run_and_wait(dict(fake, flaggor={"saknade": 100}, perKedja={"Willys": {"kontroller": 50, "saknade": 50}, "Hemköp": {"kontroller": 50, "saknade": 50}}))
+        self.assertEqual(audit["gate"], "INGEN DATA")
+        # En hel kedja utan priser: INGEN DATA även om totalen ser bra ut.
+        audit = run_and_wait(dict(fake, flaggor={"saknade": 50}, perKedja={"Willys": {"kontroller": 50, "saknade": 0}, "Hemköp": {"kontroller": 50, "saknade": 50}}))
+        self.assertEqual(audit["gate"], "INGEN DATA")
+        # Täckning under 90 % i en kedja: RÖD fast de farliga kategorierna är noll.
+        audit = run_and_wait(dict(fake, flaggor={"saknade": 10}, perKedja={"Willys": {"kontroller": 50, "saknade": 0}, "Hemköp": {"kontroller": 50, "saknade": 10}}))
+        self.assertEqual(audit["gate"], "RÖD")
+        # Röd audit räknas.
+        before = api_server.METRICS.snapshot().get("pricing_audit_red", 0)
+        audit = run_and_wait(dict(fake, gate="RÖD", flaggor={"estimat": 3, "saknade": 2}))
+        self.assertEqual(audit["gate"], "RÖD")
+        self.assertEqual(api_server.METRICS.snapshot().get("pricing_audit_red", 0), before + 1)
+
+    def test_failed_pricing_audit_is_marked_fel_not_none(self):
+        from unittest import mock
+        with mock.patch("services.grocery.audit.run_pricing_audit", side_effect=RuntimeError("trasig rad")):
+            self.assertTrue(api_server.run_pricing_audit_in_background("test-fel", delay_seconds=0))
+            deadline = time.time() + 10
+            while api_server.PRICING_AUDIT_STATE["running"] and time.time() < deadline:
+                time.sleep(0.05)
+        audit = self.get("/api/health")[1]["pricingAudit"]
+        self.assertEqual(audit["gate"], "FEL")
+        self.assertEqual(audit["kontroller"], 0)
+        self.assertEqual(audit["error"], "audit_failed")
+
+    def test_pricing_audit_requested_while_running_is_queued_not_dropped(self):
+        from unittest import mock
+        import threading
+        release = threading.Event()
+        reasons = []
+
+        def slow(*args, **kwargs):
+            release.wait(10)
+            return {"recept": 1, "kedjor": ["Willys"], "kontroller": 4, "perKedja": {"Willys": {"kontroller": 4, "saknade": 0}},
+                    "flaggor": {"saknade": 0}, "exempel": {}, "gate": "GRÖN"}
+        with mock.patch("services.grocery.audit.run_pricing_audit", side_effect=slow):
+            self.assertTrue(api_server.run_pricing_audit_in_background("import Willys", delay_seconds=0))
+            self.assertFalse(api_server.run_pricing_audit_in_background("import Hemköp", delay_seconds=0))   # köad
+            self.assertFalse(api_server.run_pricing_audit_in_background("import City Gross", delay_seconds=0))
+            release.set()
+            deadline = time.time() + 10
+            while time.time() < deadline:
+                audit = self.get("/api/health")[1]["pricingAudit"] or {}
+                if audit.get("reason") == "import Hemköp+import City Gross" and not api_server.PRICING_AUDIT_STATE["running"]:
+                    break
+                time.sleep(0.05)
+        self.assertEqual(audit.get("reason"), "import Hemköp+import City Gross")   # omkörningen såg båda
+
+    def test_real_audit_against_a_store_without_prices_is_not_green(self):
+        """Den riktiga auditen mot butiker utan en enda prisrad: 'saknade'
+        räknas upp för varje kontroll och gaten får aldrig bli GRÖN."""
+        import tempfile as _tempfile
+        from services.grocery.audit import run_pricing_audit
+        from services.grocery.store import GroceryStore
+        from services.recipes.store import RecipeStore
+        with _tempfile.TemporaryDirectory() as tmp:
+            gs = GroceryStore(Path(tmp) / "g.db")
+            rs = RecipeStore(Path(tmp) / "r.db")
+            try:
+                gs.upsert_store(chain="Willys", external_store_id="w1", name="Willys Test", active=True)
+                rs.upsert_recipe({"id": "test-ris", "name": "Ris med ris", "description": "", "servings": 4,
+                                  "prepTime": 5, "cookTime": 10, "difficulty": "lätt", "tags": [], "categories": [],
+                                  "dietFlags": [], "allergens": [], "instructions": ["Koka."],
+                                  "ingredients": [{"name": "Ris", "amount": 200, "unit": "g"},
+                                                  {"name": "Salt", "pantryStaple": True}]})
+                result = run_pricing_audit(gs, rs, ["Willys"])
+            finally:
+                gs.close(); rs.close()
+        self.assertEqual(result["kontroller"], 1)
+        self.assertEqual(result["flaggor"]["saknade"], 1)
+        self.assertEqual(result["perKedja"]["Willys"], {"kontroller": 1, "saknade": 1})
+        gate, _ = api_server._pricing_audit_gate(result)
+        self.assertEqual(gate, "INGEN DATA")
 
     def test_redeem_premium_with_correct_code(self):
         email = self._email()
@@ -2632,18 +2990,9 @@ class FeedbackAndTestResultsTest(unittest.TestCase):
             # anropa GET-dispatchen direkt för exakt denna path
             handler.path = "/api/admin/testresultat"
             handler._json_response = False
-            # kör bara själva grenen: bygg om logiken via riktig dispatch är
-            # tungt här - vi exekverar i stället samma kod som grenen kör.
-            counters = {}
-            from datetime import datetime, timedelta, timezone
-            for event in sorted(api_server.ANALYTICS_ALLOWED_EVENTS):
-                total = 0
-                for days_back in range(14):
-                    day = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%d")
-                    count, _ = api_server.KV_CACHE.get("analytics", f"{event}:{day}")
-                    total += count or 0
-                counters[event] = total
-            self.assertIn("vecka_skapad", counters)
-            self.assertTrue(api_server.ACCOUNT_STORE.list_feedback() is not None)
+            # Grenen svarar med samma payload som /api/admin/insights.
+            payload = api_server.insights_payload()
+            self.assertIn("vecka_skapad", payload["events14Dagar"])
+            self.assertIsInstance(payload["feedback"], list)
         finally:
             api_server.ADMIN_TOKEN = original

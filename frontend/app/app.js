@@ -36,7 +36,7 @@ import { extraLineTotal, extraUnitPrice, extrasTotal, newExtraItem, removeExtra,
 import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
 import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
-import { changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
+import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
 import { adjustInventory, createHousehold, createInvite, fetchHousehold, fetchNotifications, joinHousehold, leaveHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, removeMember, renameHousehold, replaceWeekItems, saveHouseholdDoc, saveHouseholdProfile, saveNotificationPrefs, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
@@ -248,11 +248,26 @@ function scheduleServerSync() {
   // could race with itself. One request ~1.5s after the last change is enough for
   // "follows you to another phone", which is the actual requirement here.
   serverSyncTimer = setTimeout(() => {
+    serverSyncTimer = null;
     saveAccountState(state.authToken, buildSyncPayload())
       .then(() => setSyncStatus("idle"))
       .catch(() => { setSyncStatus("error"); /* nästa saveState-anrop försöker igen */ });
   }, 1500);
 }
+// Skicka en väntande synk NU. Lämnas sidan (Stripe Checkout, portalen,
+// fliken stängs) inom 1,5 s efter sista ändringen försvann annars den
+// väntande timern med sidan - och nästa öppning hämtade serverns ÄLDRE
+// blob och skrev över veckan och onboardingflaggan som just gjorts.
+// Sett i CI: efter checkout var Handla tom och onboarding "ogjord".
+async function flushServerSync({ keepalive = false } = {}) {
+  if (!serverSyncTimer || !state.authToken) return;
+  clearTimeout(serverSyncTimer); serverSyncTimer = null;
+  try {
+    await saveAccountState(state.authToken, buildSyncPayload(), { keepalive });
+    setSyncStatus("idle");
+  } catch { setSyncStatus("error"); }
+}
+window.addEventListener("pagehide", () => { flushServerSync({ keepalive: true }); });
 async function pullAccountState() {
   if (!state.authToken) return;
   try {
@@ -1800,8 +1815,16 @@ function renderStoreCards() {
   // eller "Billigast bland dina valda butiker" - enkelt för konsumenten,
   // och aldrig ett starkare påstående än datan bär.
   const basisLabel = state.dbComparison?.basisLabel;
+  // Jämförelsesidan (view-comparison) nås härifrån: veckans kompakta
+  // widget är dold på Vecka-skärmen, så utan den här knappen fanns ingen
+  // väg till "Exakt jämförelse mellan butikerna" som Premium lovar.
+  const comparableCount = entries.filter(entry => !entry.locked && !entry.unavailable).length;
+  const compareButton = hasPremium() && comparableCount > 1
+    ? `<button type="button" class="store-compare-open store-cards-compare" id="storeCardsCompareBtn">Jämför butiker →</button>` : "";
   container.innerHTML = entries.map(storeCardMarkup).join("")
-    + (basisLabel ? `<p class="store-basis">${escapeHtml(basisLabel)}</p>` : "");
+    + (basisLabel ? `<p class="store-basis">${escapeHtml(basisLabel)}</p>` : "")
+    + compareButton;
+  $("storeCardsCompareBtn")?.addEventListener("click", () => { renderStoreComparisonPage(selectedRecipes()); setView("comparison"); });
   container.querySelectorAll("[data-store-card]").forEach(card => card.addEventListener("click", () => {
     if (card.dataset.storeCard === chosenStore()) return;
     // switchWeekStore, inte bara state.butik: livepriserna är nyckelsatta på
@@ -3203,6 +3226,9 @@ async function fetchProductsBatch(chain, zip, names, onItem, storeKey, primatOnl
         // docstring for why), so they're always fast regardless of this
         // timeout - it's sized for the non-primatOnly case.
         const response = await fetch(productsBatchApiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ butik: chain, zip, varor: [name], ...(storeKey ? { butiksnyckel: storeKey } : {}), ...(primatOnly ? { primatOnly: true } : {}) }), signal: AbortSignal.timeout(35000) });
+        // 429 gäller hela klienten, inte varan: att fortsätta med nästa
+        // vara ger bara fler avvisade anrop (800 st på en E2E-körning).
+        if (response.status === 429) { nextIndex = names.length; return; }
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const found = (await response.json()).produkter || {};
         Object.assign(produkter, found);
@@ -3282,10 +3308,15 @@ function ensureWeekRecipeDetails() {
       // object, so replacing it would orphan them.
       Object.assign(recipe, detail, { steg: detail.instructions || detail.steg || [] });
       renderBasket();
+      // Öppnades receptet medan hämtningen pågick (byt rätt -> tryck på
+      // rätten) ritades sidan utan mängder och ritades aldrig om - den
+      // vägen hämtar inte själv när ett anrop redan är på väg.
+      if (new URLSearchParams(location.search).get("recept") === recipe.id) renderRecipePage();
     }).catch(() => {
       // Nätfel eller serverfel: vi vet ingenting om receptet. Släpp id:t
       // fritt så nästa omritning försöker igen - annars står inköpslistan
-      // tom tills sidan laddas om.
+      // tom tills sidan laddas om. (Ett 404 släpper INTE id:t: se
+      // if (!detail) ovan.)
       recipeDetailFetches.delete(recipe.id);
     });
   });
@@ -3333,14 +3364,17 @@ function clearPriceSnapshots() {
   state.dbPricedAt = null;
 }
 
-// Anonym produkthändelseräknare - får aldrig blockera ett klick, aldrig
-// kasta. Räknar kärnhändelserna som avgör om Matjakt fungerar: skapade
-// veckor och använda listor, inte nedladdningar.
+// Produkthändelseräknare - får aldrig blockera ett klick, aldrig kasta.
+// Räknar kärnhändelserna som avgör om Matjakt fungerar: skapade veckor
+// och använda listor, inte nedladdningar. Inloggad skickas sessionen
+// med, så servern kan räkna PERSONER och inte klick (den sparar bara
+// konto + dag + händelsenamn, aldrig klockslag eller sida).
 function trackEvent(name) {
   try {
+    const token = getStoredToken();
     fetch(`${API_BASE_URL}/analytics/event`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ event: name }),
       keepalive: true,
     }).catch(() => {});
@@ -3680,6 +3714,8 @@ async function activatePremiumAfterCheckout() {
   renderAccount();
   for (let attempt = 0; attempt < 15; attempt++) {
     await refreshUser();
+    // hasPremium() är den enda vägen till premiumflaggan (se tests/premium.test.js);
+    // på loopback kortsluter dev-luckan pollen, vilket är ofarligt där.
     if (hasPremium()) break;
     await new Promise(resolve => setTimeout(resolve, 2000));
   }
@@ -3946,6 +3982,11 @@ function renderAccount() {
   if (loggedIn) {
     $("accountEmail").textContent = state.user.email;
     $("verifyEmailNotice").hidden = state.user.emailVerified;
+    $("marketingToggle").checked = Boolean(state.user.marketingConsent);
+    // Utskick går bara till verifierade adresser - säg det, i stället för
+    // att låta någon tacka ja och undra varför inget kommer.
+    $("marketingNote").textContent = state.user.marketingConsent && !state.user.emailVerified
+      ? "(skickas när adressen är verifierad)" : "";
     const daysLeft = state.user.trialEndsAt ? Math.max(1, Math.ceil((new Date(state.user.trialEndsAt) - Date.now()) / 86400000)) : 0;
     const hasSubscription = ["active", "trialing", "past_due", "canceled", "unpaid"].includes(state.user.subscriptionStatus);
     const pastDue = ["past_due", "unpaid", "incomplete"].includes(state.user.subscriptionStatus);
@@ -4418,6 +4459,17 @@ $("resetPasswordForm").addEventListener("submit", async event => {
     event.target.reset();
   } catch (error) { $("resetError").textContent = error.message; }
 });
+$("marketingToggle").addEventListener("change", async event => {
+  if (!state.authToken) return;
+  const wanted = event.target.checked;
+  try {
+    const { user } = await setMarketingConsent(state.authToken, wanted);
+    state.user = user;
+  } catch {
+    event.target.checked = !wanted; // servern sa nej: visa sanningen, inte önskan
+  }
+  renderAccount();
+});
 $("resendVerificationBtn").addEventListener("click", async () => {
   $("verifyError").textContent = "";
   try {
@@ -4543,7 +4595,7 @@ $("accountRegisterForm").addEventListener("submit", async event => {
   event.preventDefault();
   $("registerError").textContent = "";
   try {
-    const { token, user, verificationMail } = await register($("registerEmail").value, $("registerPassword").value);
+    const { token, user, verificationMail } = await register($("registerEmail").value, $("registerPassword").value, $("registerMarketing").checked);
     state.authToken = token; state.user = user; storeToken(token);
     await pullAccountState();
     event.target.reset(); renderAccount();
@@ -4614,6 +4666,7 @@ async function beginCheckout(plan) {
     return;
   }
   try {
+    await flushServerSync();
     const { url } = await startCheckout(getStoredToken(), plan);
     if (url) location.href = url;
   } catch (error) {
@@ -4628,6 +4681,7 @@ $("subscribeBtn").addEventListener("click", async () => {
   $("checkoutError").textContent = "";
   if (!state.authToken) { $("checkoutError").textContent = "Skapa ett konto eller logga in först."; return; }
   try {
+    await flushServerSync();
     const { url } = await startCheckout(state.authToken, selectedPlan);
     window.location.href = url;
   } catch (error) { $("checkoutError").textContent = error.message; }
@@ -4635,6 +4689,7 @@ $("subscribeBtn").addEventListener("click", async () => {
 $("manageBillingBtn").addEventListener("click", async () => {
   $("portalError").textContent = "";
   try {
+    await flushServerSync();
     const { url } = await openBillingPortal(state.authToken);
     window.location.href = url;
   } catch (error) { $("portalError").textContent = error.message; }

@@ -7,7 +7,9 @@ silently pretending an email went out.
 """
 
 import smtplib
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr, formatdate, make_msgid, parseaddr
 
 from ..data_guard import guard_outbound_call
 
@@ -44,22 +46,41 @@ def is_configured(config) -> bool:
     return bool(config.get("host") and config.get("from_email"))
 
 
-def send_email(config, to_email, subject, body_text):
+def send_email(config, to_email, subject, body_text, body_html=None, unsubscribe_url=None):
+    """Text alltid; HTML som alternativ när det finns. `unsubscribe_url`
+    sätter List-Unsubscribe så mejlklienter kan visa sin egen avsluta-knapp -
+    utskicksmodulen (services/mailings) skickar aldrig utan den."""
     host = config.get("host")
     from_email = config.get("from_email")
     if not host or not from_email:
         raise MailNotConfigured("E-post är inte konfigurerat på servern ännu")
     guard_outbound_call("en SMTP-server")
-    message = MIMEText(body_text, "plain", "utf-8")
+    # Kuvertadressen (MAIL FROM) är den bara adressen; From-huvudet får ett
+    # namn. Date och Message-ID sätts uttryckligen - utan dem ger
+    # SpamAssassins MISSING_DATE/MISSING_MID poäng och mejlet hamnar i
+    # skräpposten trots DKIM.
+    display_name, envelope_from = parseaddr(from_email)
+    envelope_from = envelope_from or from_email
+    if body_html:
+        message = MIMEMultipart("alternative")
+        message.attach(MIMEText(body_text, "plain", "utf-8"))
+        message.attach(MIMEText(body_html, "html", "utf-8"))
+    else:
+        message = MIMEText(body_text, "plain", "utf-8")
     message["Subject"] = subject
-    message["From"] = from_email
+    message["From"] = formataddr((display_name or "Matjakt", envelope_from))
     message["To"] = to_email
+    message["Date"] = formatdate(localtime=True)
+    message["Message-ID"] = make_msgid(domain=envelope_from.rsplit("@", 1)[-1] or None)
+    if unsubscribe_url:
+        message["List-Unsubscribe"] = f"<{unsubscribe_url}>"
+        message["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
     try:
         with smtplib.SMTP(host, int(config.get("port") or 587), timeout=15) as smtp:
             smtp.starttls()
             if config.get("user") and config.get("password"):
                 smtp.login(config["user"], config["password"])
-            smtp.sendmail(from_email, [to_email], message.as_string())
+            smtp.sendmail(envelope_from, [to_email], message.as_string())
     except (smtplib.SMTPException, OSError) as error:
         raise MailSendFailed(f"Kunde inte skicka e-post: {error}")
 

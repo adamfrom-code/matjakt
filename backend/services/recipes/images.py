@@ -424,14 +424,34 @@ PROTEIN_ACCEPT = {
 }
 
 
+# Treletters-ord som är huvud i sammansättningar: "ugnslax" är lax,
+# "laxfilé" är lax, "jasminris" är ris. Längre ord matchas i båda ändar;
+# de här kräver minst tre bokstävers förled/efterled så "relax" inte blir
+# lax och "ostron" inte blir ost.
+SHORT_COMPOUND_HEADS = {"lax": ("suffix", "prefix"), "ris": ("suffix", "prefix"),
+                        "ost": ("suffix",), "agg": ("suffix",)}
+
+
+def _token_names_food(token: str, swedish: str) -> bool:
+    if token == swedish:
+        return True
+    if len(swedish) > 3:
+        return token.endswith(swedish) or token.startswith(swedish)
+    modes = SHORT_COMPOUND_HEADS.get(swedish, ())
+    remainder = len(token) - len(swedish)
+    if remainder < 3:
+        return False
+    return (("suffix" in modes and token.endswith(swedish))
+            or ("prefix" in modes and token.startswith(swedish)))
+
+
 def _english_signals(recipe: dict) -> list[str]:
     """The recipe's food words in English, main ingredient first."""
     seen, ordered = set(), []
     def add(text):
         for token in re.findall(r"[a-z]+", _fold(text or "")):
             for swedish, english in INGREDIENT_EN.items():
-                if (token == swedish or (len(swedish) > 3 and
-                        (token.endswith(swedish) or token.startswith(swedish)))):
+                if _token_names_food(token, swedish):
                     if english not in seen:
                         seen.add(english)
                         ordered.append(english)

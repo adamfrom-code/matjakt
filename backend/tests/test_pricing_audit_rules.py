@@ -11,6 +11,15 @@ En gate som står röd av fel skäl är farligare än en som står röd av rätt
 skäl: den slutar betyda något, och nästa riktiga fel drunknar i bruset.
 Testerna nedan låser fast båda undantagen OCH att regeln fortfarande
 fångar det den finns för.
+
+REGELN SOM TESTAS ÄR MAIN:S (`kilo_price_as_pack_price`). Två pass hittade
+samma falska larm oberoende av varandra; main:s formulering vann eftersom
+den jämför PAKETPRISET konsumenten ser (totalCost/packages) i stället för
+unitPrice, vilket är striktare. De här testerna kördes om mot den och
+fixturerna anpassades - felet uttrycks nu som "paketet kostar kilopriset",
+för det är vad kunden faktiskt drabbas av.
+
+Kompletterar `test_pricing_audit.py`, som testar hjälpfunktionen direkt.
 """
 
 import sys
@@ -71,6 +80,12 @@ def _audit_with(row, monkeypatch_target=None):
 
 # En viktvara med cirkavikt vars pris ÄR kilopriset. Skiljer sig bara i
 # vilken väg motorn tog för att prissätta den.
+#
+# OBS vad regeln faktiskt mäter: PAKETPRISET konsumenten ser
+# (totalCost/packages), inte unitPrice. Ett paket på 98 g för 44,90 kr när
+# jämförpriset är 44,90 kr/kg betyder att motorn glömt kr/kg × cirkavikt -
+# kunden får betala kilopriset för en tomat. Fixturen nedan är det FELET;
+# varianterna som inte ska flaggas sätter ett rimligt paketpris.
 def _variable_weight_row(**overrides):
     row = {
         "productName": "Tomat Runda Sverige Klass 1",
@@ -79,7 +94,8 @@ def _variable_weight_row(**overrides):
         "packageUnit": "g",
         "comparisonPrice": 44.9,
         "unitPrice": 44.9,
-        "totalCost": 8.8,
+        # Paketpriset ÄR kilopriset - det är felet regeln finns för.
+        "totalCost": 44.9,
         "packages": 1,
         "exactPackaging": True,
         "weightPriced": False,
@@ -87,6 +103,11 @@ def _variable_weight_row(**overrides):
     }
     row.update(overrides)
     return row
+
+
+def _correctly_priced_row(**overrides):
+    """Samma vara, rätt prissatt: 44,90 kr/kg × 98 g ≈ 4,40 kr."""
+    return _variable_weight_row(totalCost=4.40, **overrides)
 
 
 class KiloPriceRuleTest(unittest.TestCase):
@@ -117,6 +138,12 @@ class KiloPriceRuleTest(unittest.TestCase):
         result = _audit_with(_variable_weight_row(packageSize="500 g", packageAmount=500))
         self.assertEqual(result["flaggor"]["kilopris_som_paketpris"], 0)
 
+    def test_a_correctly_priced_loose_item_is_not_flagged(self):
+        """Kr/kg × cirkavikt uträknat rätt: paketpriset är inte kilopriset."""
+        result = _audit_with(_correctly_priced_row())
+        self.assertEqual(result["flaggor"]["kilopris_som_paketpris"], 0)
+        self.assertEqual(result["gate"], "GRÖN")
+
     def test_a_one_kilo_package_is_not_flagged(self):
         """Ett kilopaket SKA ha pris == jämförpris. Det är aritmetik, inte
         ett fel."""
@@ -130,14 +157,14 @@ class GateDefinitionTest(unittest.TestCase):
         misstänkt smakord kan vara ett varumärke ("Familjefavoriter"), och
         en saknad rad är fail-closed - varan står kvar oprissatt i stället
         för att gissas. Ingen av dem får fälla gaten."""
-        row = _variable_weight_row(perKg=True, productName="Grekisk Matyoghurt 10% Familjefavoriter")
+        row = _correctly_priced_row(productName="Grekisk Matyoghurt 10% Familjefavoriter")
         result = _audit_with(row)
         self.assertGreater(result["flaggor"]["smakords_misstanke"], 0)
         self.assertEqual(result["gate"], "GRÖN")
 
     def test_an_estimate_still_fails_the_gate(self):
         """Ett gissat antal får aldrig passera som ett pris."""
-        result = _audit_with(_variable_weight_row(perKg=True, exactPackaging=False))
+        result = _audit_with(_correctly_priced_row(exactPackaging=False))
         self.assertEqual(result["flaggor"]["estimat"], 1)
         self.assertEqual(result["gate"], "RÖD")
 

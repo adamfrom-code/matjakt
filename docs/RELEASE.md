@@ -5,14 +5,14 @@
 ## Vad som händer vid `git push origin main`
 
 1. **CI** (`.github/workflows/ci.yml`): kompilering, hela backend-sviten i en isolerad tempkatalog utan riktiga anrop, frontend-tester, `node --check`, hemlighetsskanning, kontroll att `.env` inte är spårad, kontroll att frontendens tre versionsnummer följs åt.
-2. **Pages** (`.github/workflows/deploy.yml`): kör `npm test` och deployar `frontend/` till matjakt.store med `matjakt-api-url` satt till Render.
+2. **Pages** (`.github/workflows/deploy.yml`): startar när CI är GRÖN på main (`workflow_run`), kör `npm test`, bygger `dist/frontend` med `npm run build` (esbuild: `app.js` buntad + minifierad, `styles.css` minifierad, källorna orörda) och deployar den till matjakt.store med `matjakt-api-url` satt till Render.
 3. **Render**: bygger `backend/Dockerfile` och deployar. *Observera:* Render lyssnar på pushen direkt – inte på CI. En röd svit stoppar i dag Pages men inte backend. Åtgärd (Adam, Render-dashboarden): stäng av *Auto-Deploy* och lägg ett deploy-hook-steg sist i `ci.yml` (`curl -X POST "$RENDER_DEPLOY_HOOK"` med hooken som GitHub-secret). Tills dess: pusha bara grönt.
 
 ## Kvalitetsgrind – release är RÖD om något av detta gäller
 
 | Kontroll | Kommando / var | Krav |
 |---|---|---|
-| Backend-svit | `python backend/tests/run.py` | alla gröna |
+| Backend-svit | `python backend/tests/run.py` (E2E:n ingår när Playwright finns) | alla gröna |
 | Frontend-svit | `node --test` | alla gröna |
 | Syntax | `node --check frontend/app/app.js && python -m compileall -q backend` | ok |
 | Hemligheter | `python backend/scripts/secret_scan.py` | inga träffar |
@@ -44,6 +44,73 @@ curl -s https://matjakt.onrender.com/api/health | python -m json.tool
 
 Kontrollera i hälsosvaret: `ok`, `platform.active`, `platform.releasedChains`, `stripe.pricesVerified`, `mail`.
 
+## Loggar, request-id och räknare
+
+- Varje svar bär `X-Request-Id` (klientens egna id behålls om det är välformat, 8-64 tecken `[A-Za-z0-9._-]`). Samma id står i varje loggrad som skrivs under begäran - vid ett supportärende: be om id:t, sök i Render-loggen.
+- På Render skrivs loggen som JSON (`MATJAKT_LOG_FORMAT=json` är standard där; `text` lokalt). Accessraden har sökväg utan query, status, svarstid och IP maskerad till /24.
+- `GET /api/health` → `metrics`: `requests_total`, `responses_4xx/5xx`, `slow_requests_2s`, `auth_login_failed`, `stripe_webhook_rejected/errors`, `mail_send_failed`, `pricing_gate_failed`, `unhandled_exceptions`, `uptime_seconds`. Nollställs vid omstart - de svarar på "händer det nu?".
+- Larmgräns att bevaka manuellt tills en riktig monitor finns: `responses_5xx` > 0 efter deploy, `stripe_webhook_rejected` > 0, `pricing_gate_failed` > 0.
+
+## Rate limit
+
+Räknarna ligger i `ratelimit.db` i datakatalogen (`services/accounts/ratelimit.py`) och överlever omstart/deploy; `GET /api/health` → `rateLimitPersistent: true`. Flera processer på samma disk delar dem. Vid horisontell skalning över flera diskar (fler Render-instanser) krävs en central räknare - byt `_check_db` mot Redis `INCR`+`EXPIRE` per `action:identifier`; publika API:t (`check`, `clear_on_success`, `LIMITS`) är oförändrat.
+
+## Frontend-bygge
+
+`npm run build` → `dist/frontend` (gitignorerad). Lokalt körs appen från källorna; Playwright-E2E:n kan köras mot bygget: `MATJAKT_E2E_FRONTEND_DIR=dist/frontend python backend/tests/run.py --pattern "test_consumer*"`. Bygget ändrar ingen funktionalitet - bara en fil i stället för tretton moduler.
+
+## Deploy bara på grön CI
+
+Backend deployas av jobbet `deploy-backend` i `ci.yml`: det körs efter `backend`, `frontend`, `security` och `e2e` och bara när alla är gröna på en **push till main**, och anropar Renders deploy-hook med `ref=<committen>` (repo-secret `RENDER_DEPLOY_HOOK`). Frontend deployas av `deploy.yml` som triggas av CI:s slutförande (`workflow_run`, bara `success` för en push till main) och checkar ut **exakt den commit CI testade** (`workflow_run.head_sha`). `ci.yml` kör en körning per gren i taget (`concurrency`), så en äldre grön körning kan inte deploya efter en nyare push. `render.yaml` har `autoDeploy: false`. Undantag: `workflow_dispatch` på `deploy.yml` är en manuell väg med bara `npm test` som grind - använd den inte för släpp.
+
+**Engångssteg i Render-dashboarden (Adam):** Service → Settings → *Auto-Deploy: Off*; Settings → *Deploy Hook* → skapa och kopiera URL:en → GitHub → repo → Settings → Secrets → `RENDER_DEPLOY_HOOK`. Hooken är en hemlighet: aldrig i chatt, repo eller loggar (jobbet skriver bara "triggad").
+
+**Bevis att röd CI inte deployar - utan att göra main röd:**
+1. Render → *Events*: bara deploys med trigger *Deploy hook* efter att Auto-Deploy stängts av (en push utan grön CI får inte synas där).
+2. Pusha en avsiktligt röd commit (ett `assert False` i en TESTFIL, aldrig i körande kod) på en gren och öppna PR: CI röd, `deploy-backend` visas som *skipped*, `deploy.yml` startar inte. Stäng PR:en.
+3. Positivt bevis på main: nästa gröna push → `deploy-backend` grön → `GET /api/health` → `commit` = den pushade committens 12 första tecken inom ~5 min, och Pages serverar `app.js?v=` från samma commit.
+Dokumentera körnings-id:n i CHECKPOINT.md.
+
+## Låset av vid publik release
+
+Utvecklingslåset (`GATE_ENABLED`) är på per definition på Render tills `MATJAKT_GATE=0` sätts. `GET /api/health` → `gate` visar läget (true = alla datavägar svarar 401). **GO förutsätter `gate: false`**, verifierat efter deploy - och att låsets landningssida då inte längre är vägen in.
+
+## Prisauditen i drift
+
+Auditen (`services/grocery/audit.run_pricing_audit`, alla recept × ingredienser × släppta kedjor) körs i bakgrunden vid serverstart (efter 120 s, `MATJAKT_PRICING_AUDIT_DELAY`) och efter varje lyckad import; begärs en ny medan en pågår köas den och körs direkt efteråt. `GET /api/health` → `pricingAudit`: `gate` (GRÖN/RÖD/INGEN DATA/FEL), `kontroller`, `saknade`, `tackningProcent`, `perKedja` (kontroller/saknade/täckning per kedja), `recept`, `kedjor`, `flaggor` (alla räknare), `ranAt`, `durationSeconds`, `reason`, `commit`. Bara siffror - exemplen finns i admin-vägen `POST /api/admin/pricing-audit` (som också uppdaterar summeringen).
+
+Gate-regler: 0 kontroller, eller en kedja helt utan priser → **INGEN DATA**; någon av de farliga kategorierna > 0 (gram→styck, volym→styck, estimat, otolkad förpackning, kilopris som paketpris) eller täckning < 90 % totalt eller i någon kedja → **RÖD**; havererad audit → **FEL**. **Releasekrav:** `gate: GRÖN`, `commit` = körande deploy, `kedjor` = alla släppta, `kontroller` i tusental, `ranAt` efter senaste uppstart. Rapportera alltid `saknade`/`perKedja` bredvid gaten.
+
+## Mejl: skarpt test efter att SMTP satts i Render
+
+Förutsättningar: Resend-domänen `matjakt.store` *Verified* (DKIM `resend._domainkey` och `send`-posten finns hos Loopia sedan 2026-09-06). **Lägg `_dmarc.matjakt.store TXT "v=DMARC1; p=none; rua=mailto:<adress som läses>"` före testet** - Gmail/Outlook väger avsaknad av DMARC negativt för en ny domän. Render: `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=587`, `SMTP_USER=resend`, `SMTP_PASSWORD=<Resend-nyckel, direkt i Render>`, `SMTP_FROM_EMAIL=noreply@matjakt.store` (eller `Matjakt <noreply@matjakt.store>`). Mejlen bär Date, Message-ID och avsändarnamn. Öppna mejllänkarna i **samma upplåsta webbläsare** medan låset är på (låset bevarar `?verify`/`?reset`, men den nya webbläsaren måste först låsas upp).
+
+*Serversida, utan inkorg (kan verifieras utifrån):*
+
+| Steg | Förväntat |
+|---|---|
+| `GET /api/health` | `mail: true` (= konfigurerad, inte bevisat fungerande), `mailFrom: "matjakt.store"`, `metrics.mail_send_failed` = 0 efter registreringen |
+| `POST /api/auth/request-password-reset` med OKÄND adress | 200, samma svar som för känd (ingen enumerering) |
+| `POST /api/auth/verify-email` med påhittad token | 400 |
+| Samma reset-token två gånger | andra gången 400 (engångs, 1 h) - även testat i sviten |
+
+*Kräver Adams inkorg:*
+
+| Steg | Förväntat |
+|---|---|
+| Registrera nytt konto | svaret säger att verifieringsmejlet skickats; mejl inom en minut, From `Matjakt <noreply@matjakt.store>`, inte i skräpposten |
+| Klicka verifieringslänken | "verifierad"; kontot visar inte längre "inte verifierad"; samma länk igen avvisas |
+| Glömt lösenord → mejl → länk → nytt lösenord | inloggning med NYA lösenordet fungerar; gamla nekas; andra enheter utloggade |
+| Öppna reset-länken igen | avvisas |
+| Mejlhuvuden (visa original) | `DKIM: PASS` (d=matjakt.store) - det som bär DMARC; `SPF` PASS på `send.matjakt.store` om Resend skriver om Return-Path, annars `none` (ok); `DMARC: PASS` när posten finns |
+| Resend → Logs | levererat, inga studsar/klagomål |
+
+Känt och accepterat: registrering svarar "det finns redan ett konto" (kontoenumerering via registrering är en medveten UX-avvägning; reset-vägen svarar identiskt oavsett). `noreply@` kan inte ta emot svar (ingen MX på matjakt.store) - supportadressen står i appen.
+
+## Juridik
+
+Inga `class="placeholder"` får finnas kvar i `frontend/integritetspolicy.html` och `frontend/anvandarvillkor.html` vid publik release (CI:s säkerhetsjobb varnar). Avtalspart/personuppgiftsansvarig, organisationsnummer, abonnemang/uppsägning, ångerrätt, integritet samt allergi-/kostsamtycke fylls i av Adam.
+
 ## Rollback
 
 `git revert <commit>` + push. Både Pages och Render bygger om. Databasen berörs inte av en kodrollback; för data, se `docs/DISASTER_RECOVERY.md`.
@@ -61,7 +128,7 @@ Android: `npx cap sync android` efter frontend-ändringar, bumpa `versionCode`/`
 | Frontend unit | `tests/*.test.js` (63) | ja | renderingskoden i `app.js` saknar test |
 | Kontrakt frontend↔backend | `test_frontend_contract.py` | ja | – |
 | Fuzz | `scratchpad`-skript vid audit (Content-Length, typer, injektion, path traversal) | nej – kör manuellt vid större ändringar | flytta in i sviten |
-| Browser-E2E | manuell konsumentresa vid audit (onboarding → vecka → recept → Handla → skafferi → konto) | nej | automatisera med Playwright mot lokal server |
+| Browser-E2E | `backend/tests/e2e/test_consumer_journey.py` (Playwright, riktig Chromium mot riktig server med egna tempdatabaser): signup → login → onboarding 4 steg → vecka → byt rätt → recept → Handla → finns hemma → skafferi → butiksjämförelse/paywall → logout → login → allt kvar; Premium-paywall + Stripe-testläge med mockad Stripe-gräns och riktigt signerad webhook | ja (`ci.yml` jobb `e2e`, både källor och byggt bundle) | visuell regression |
 | Produktions-smoke | `curl /api/health`, `backend/tests/prod_persistence_e2e.py` (manuell, bakom låset) | nej | – |
 | Säkerhetsregression | auth-härdning, rate limits, admin 404, HSTS, hashade token, testspärr | ja | – |
-| Visuell regression | skärmbilder tagna för hand | nej | – |
+| Visuell regression | skärmdumpar sparas av E2E:n vid fel (`tests/e2e/artifacts/`) | nej | jämförelse mot referensbilder |

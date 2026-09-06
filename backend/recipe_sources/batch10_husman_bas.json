@@ -784,6 +784,13 @@
       "blandkost",
       "pescetariskt",
       "glutenfritt"
-    ]
+    ],
+    "image": "https://images.pexels.com/photos/20182311/pexels-photo-20182311.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "imageSource": "Pexels",
+    "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-salmon-in-sauce-with-broccoli-20182311/",
+    "imageCredit": "Valeria Boltneva",
+    "imageLicense": "Pexels License",
+    "imageAlt": "Ugnslax med kokt potatis och kall dillsås upplagd på tallrik",
+    "imageStatus": "ok"
   }
 ]

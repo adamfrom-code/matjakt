@@ -13,6 +13,12 @@ on:
 permissions:
   contents: read
 
+# En körning per gren i taget (kö, ingen avbrytning): en äldre grön körning
+# kan inte fyra deploy-hooken EFTER att en nyare push landat.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   backend:
     name: Backend-tester (isolerad data, inga riktiga anrop)
@@ -57,3 +63,64 @@ jobs:
           if git ls-files --error-unmatch .env >/dev/null 2>&1; then echo ".env är spårad av git"; exit 1; fi
       - name: Versionsnumren följs åt (sw.js, app.js?v=, styles.css?v=)
         run: python backend/scripts/check_frontend_version.py
+      - name: Juridiska platshållare (varning - släppgrind, inte byggfel)
+        run: |
+          if grep -rn 'class="placeholder"' frontend/*.html; then
+            echo "::warning::Juridiska platshållare kvar i frontend/*.html - fylls i före publik release (docs/RELEASE.md)."
+          else
+            echo "Inga platshållare."
+          fi
+
+  e2e:
+    name: Browser-E2E (Playwright: konsumentresan, Premium/Stripe, hushållet med två personer)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements.txt playwright
+      - run: python -m playwright install --with-deps chromium
+      - name: Resorna i källform (konsument + hushåll)
+        run: python backend/tests/run.py --pattern "test_*journey*"
+      - name: Samma resor mot det byggda bundlet
+        run: |
+          npm ci
+          npm run build
+          MATJAKT_E2E_FRONTEND_DIR=dist/frontend python backend/tests/run.py --pattern "test_*journey*"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-skarmdumpar
+          path: backend/tests/e2e/artifacts/
+          if-no-files-found: ignore
+
+  # ENDA vägen till Render. Auto-Deploy i Render-dashboarden ska vara AV;
+  # den här hooken körs bara när alla jobb ovan är gröna på main. Saknas
+  # secreten RENDER_DEPLOY_HOOK loggas det och inget deployas.
+  deploy-backend:
+    name: Deploy backend till Render (bara grön main)
+    needs: [backend, frontend, security, e2e]
+    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: render-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Trigga Renders deploy-hook för exakt den gröna committen
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK saknas i repo-secrets - ingen deploy triggad."
+            exit 0
+          fi
+          # ref= gör att Render bygger DEN HÄR committen, inte grenspetsen
+          # när hooken råkar tas emot. /api/health -> commit ska sedan
+          # visa samma SHA-prefix.
+          case "$RENDER_DEPLOY_HOOK" in *\?*) sep='&';; *) sep='?';; esac
+          curl -fsS -X POST "${RENDER_DEPLOY_HOOK}${sep}ref=${GITHUB_SHA}" -o /dev/null
+          echo "Render-deploy triggad för ${GITHUB_SHA}"
