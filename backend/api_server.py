@@ -44,6 +44,8 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
+from services.household import HouseholdStore, NotificationStore
+from services.household.routes import HouseholdRouter
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
@@ -540,6 +542,10 @@ ACCOUNT_STORE_PATH = DATA_DIR / "matjakt.db"
 PRICE_CACHE_PATH = DATA_DIR / "prices.db"
 
 ACCOUNT_STORE = AccountStore(ACCOUNT_STORE_PATH)
+# Hushållet delar SQLite-fil med kontona (household_members refererar users)
+# men har egen anslutning och eget schema - se services/household/store.py.
+HOUSEHOLD_STORE = HouseholdStore(ACCOUNT_STORE_PATH)
+NOTIFICATION_STORE = NotificationStore(ACCOUNT_STORE_PATH)
 PRICE_CACHE = PriceCacheStore(PRICE_CACHE_PATH)
 # Same SQLite file/connection as PRICE_CACHE (see KeyValueCacheStore's
 # docstring) - campaigns, geocoding, store lists and Primat/OFF lookups used
@@ -1515,6 +1521,19 @@ class ApiHandler(SimpleHTTPRequestHandler):
         header = self.headers.get("Authorization", "")
         return header[7:] if header.lower().startswith("bearer ") else None
 
+    def _handle_household(self, method, parsed, payload):
+        """Alla /api/household-vägar. Routern byggs per begäran så att den
+        alltid ser MODULENS aktuella lager - testerna byter ut dem, och en
+        router som fångat gamla referenser vid uppstart hade tyst skrivit i
+        fel databas."""
+        limit = "household_invite" if parsed.path == "/api/household/invite" and method == "POST" else "household"
+        if self._rate_limit(limit, (self._bearer_token() or "")[:16]):
+            return
+        router = HouseholdRouter(HOUSEHOLD_STORE, NOTIFICATION_STORE, ACCOUNT_STORE, APP_URL)
+        status, body = router.handle(method, parsed.path, parse_qs(parsed.query), payload,
+                                     self._bearer_token())
+        self.send_json(status, body)
+
     # Största JSON-kropp servern läser in. Största legitima kroppen är ett
     # kontos synkade state (veckor, skafferi, extraval) - långt under 256 kB.
     # Utan tak var en oautentiserad POST med hundratals MB body en gratis
@@ -1679,6 +1698,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/gate/check":
             self.send_json(200, {"ok": True} if gate_token_valid(self.headers.get("X-Gate-Token", ""))
                            else {"ok": False})
+            return
+        if parsed.path.startswith("/api/household"):
+            self._handle_household("GET", parsed, None)
             return
         if parsed.path == "/api/health":
             # recipeCount: ett ensamt tal säger inget om produkten men låter
@@ -2129,6 +2151,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/gate/login":
             self._handle_gate_login(payload)
             return
+        if parsed.path.startswith("/api/household"):
+            self._handle_household("POST", parsed, payload)
+            return
         if parsed.path == "/api/auth/register":
             if self._rate_limit("register", str(payload.get("email") or "").strip().lower()):
                 return
@@ -2181,6 +2206,16 @@ class ApiHandler(SimpleHTTPRequestHandler):
             token = self._bearer_token()
             if token:
                 ACCOUNT_STORE.logout(token)
+            # Enheten ska sluta ta emot det utloggade kontots hushållsnotiser.
+            # Klienten skickar sin push-token med i utloggningen; utan detta
+            # fortsatte "Sara lade till mjölk" till en telefon som inte längre
+            # tillhör hushållet.
+            device_token = payload.get("deviceToken") if isinstance(payload, dict) else None
+            if device_token:
+                try:
+                    NOTIFICATION_STORE.forget_device(device_token)
+                except Exception:
+                    logger.exception("Kunde inte glömma enheten vid utloggning")
             self.send_json(200, {"ok": True})
             return
         if parsed.path == "/api/auth/redeem":
@@ -2283,7 +2318,19 @@ class ApiHandler(SimpleHTTPRequestHandler):
                         self.send_json(503, {"error": "Prenumerationen kunde inte avslutas hos Stripe just nu, så kontot är kvar. Försök igen om en stund.",
                                              "code": "STRIPE_UNAVAILABLE"})
                         return
+                # Hushållsdatan städas FÖRE kontot försvinner - efteråt finns
+                # inget user_id att städa efter. Personlig data (medlemskap,
+                # profil, notisinställningar, enheter) tas bort; gemensam
+                # hushållsdata stannar hos de andra medlemmarna. Se
+                # HouseholdStore.forget_user.
+                identity = ACCOUNT_STORE.identity_for_token(self._bearer_token())
                 ACCOUNT_STORE.delete_account(self._bearer_token())
+                if identity:
+                    try:
+                        HOUSEHOLD_STORE.forget_user(identity[0])
+                        NOTIFICATION_STORE.forget_user(identity[0])
+                    except Exception:
+                        logger.exception("Kunde inte städa hushållsdata för raderat konto")
                 if customer_id and STRIPE_SECRET_KEY:
                     try:
                         delete_customer(STRIPE_SECRET_KEY, customer_id)

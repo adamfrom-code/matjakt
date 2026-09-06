@@ -61,6 +61,13 @@ LIMITS = {
     "lookup": (120, 60),           # stores, geocode
     "scrape": (30, 60),            # campaigns, products, products/batch -> Chromium
     "analytics": (300, 60),        # beacon, förbi gaten
+    # Hushållet: en familj i en butik bockar av snabbt, och Handla skriver
+    # en rad per klick. Taket ska stoppa en skenande klient, inte två
+    # personer som handlar.
+    "household": (600, 60),
+    # En inbjudan är en delbar bärarhemlighet: att skapa dem i högt tempo
+    # är inte ett normalt beteende, och att GISSA en är ingen väg alls.
+    "household_invite": (20, 3600),
     "verify_email": (20, 3600),
     "delete_account": (5, 3600),
 }
