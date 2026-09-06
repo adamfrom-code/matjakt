@@ -55,7 +55,7 @@
         fetch(API + "/api/gate/check", { headers: { "X-Gate-Token": stored } })
           .then(function (r) { return r.json(); })
           .then(function (d) {
-            if (d && d.ok) location.replace("app/");
+            if (d && d.ok) location.replace("app/" + location.search);
             else try { localStorage.removeItem("matjakt-gate"); } catch (e) {}
           }).catch(function () {});
       }
@@ -75,7 +75,7 @@
           .then(function (res) {
             if (res.ok && res.d.gateToken) {
               try { localStorage.setItem("matjakt-gate", res.d.gateToken); } catch (e) {}
-              location.replace("app/");
+              location.replace("app/" + location.search);
             } else {
               error.textContent = (res.d && res.d.error) || "Fel användarnamn eller kod";
               button.disabled = false;

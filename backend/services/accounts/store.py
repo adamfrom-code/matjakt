@@ -8,11 +8,9 @@ Session tokens are stored as SHA-256 hashes, never raw - see _session_key.
 The raw token exists in exactly two places: the client that holds it, and the
 single response that handed it over.
 
-NOT YET HASHED: the password-reset and e-mail-verification tokens on the
-users table. They are single-use and short-lived (the reset token carries an
-explicit expiry), so a leak of them is a much smaller window than a leak of
-30-day session tokens - but they are still bearer credentials sitting in
-plain text, and hashing them the same way is the obvious next step.
+Password-reset and e-mail-verification tokens are stored the same way
+(SHA-256 via _session_key) with an explicit expiry (1 hour / 7 days) and
+are single-use: a database leak hands over neither sessions nor tokens.
 """
 
 import functools

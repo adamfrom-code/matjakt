@@ -148,6 +148,23 @@ class AccountStoreTest(unittest.TestCase):
             self.store.delete_account("okant-token")
 
 
+class ResetTokenIsSingleUse(unittest.TestCase):
+    """Release gate: en förbrukad återställningslänk får inte fungera igen."""
+
+    def test_used_reset_token_is_rejected_the_second_time(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = AccountStore(Path(tmp) / "t.db")
+            try:
+                store.register("engang@example.com", "hemligt123")
+                token = store.request_password_reset("engang@example.com")
+                store.reset_password(token, "nyttlosen456")
+                with self.assertRaises(AccountError):
+                    store.reset_password(token, "annatlosen789")
+                store.login("engang@example.com", "nyttlosen456")     # det första bytet gäller
+            finally:
+                store.close()
+
+
 class SharedConnectionIsThreadSafe(unittest.TestCase):
     """Alla servertrådar delar en SQLite-anslutning. Utan lås kunde en
     tråds commit() nollställa en annan tråds pågående SELECT, så en giltig

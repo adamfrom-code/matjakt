@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="robots" content="noindex, nofollow">
   <!-- Utvecklingslåset: utan gate-token skickas besökaren till låsskärmen
-       innan appen ens börjar ladda. Att ta bort denna rad i DevTools öppnar
+       innan appen ens börjar ladda. Query-strängen följer med (?verify=,
+       ?reset= ur mejlen) och landningen skickar den tillbaka hit efter
+       upplåsning - annars dör mejllänkarna i varje olåst webbläsare. Att ta bort denna rad i DevTools öppnar
        ingenting - servern vägrar all data utan giltig token. -->
-  <script>try{if(!localStorage.getItem("matjakt-gate")&&location.hostname!=="localhost"&&location.hostname!=="127.0.0.1")location.replace("../")}catch(e){}</script>
+  <script>try{if(!localStorage.getItem("matjakt-gate")&&location.hostname!=="localhost"&&location.hostname!=="127.0.0.1")location.replace("../"+location.search)}catch(e){}</script>
   <!-- The session token is a bearer credential held in localStorage (see
        src/api/auth.js for why cookies are not usable across matjakt.store
        -> onrender.com). That makes script injection the way it could be
@@ -37,7 +39,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=27">
+  <link rel="stylesheet" href="styles.css?v=28">
 </head>
 <body>
   <div class="phone-shell">
@@ -506,6 +508,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=27"></script>
+  <script type="module" src="app.js?v=28"></script>
 </body>
 </html>

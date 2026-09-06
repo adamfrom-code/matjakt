@@ -33,6 +33,9 @@ LIMITS = {
     "login": (10, 300),           # 10 guesses / 5 min
     "register": (5, 3600),        # 5 new accounts / hour
     "password_reset": (5, 3600),  # 5 reset mails / hour
+    # Inlösen av länken räknas för sig - den som begärt tre mejl och skrivit
+    # fel två gånger ska fortfarande kunna sätta sitt lösenord.
+    "password_reset_submit": (20, 3600),
     "change_password": (10, 3600),
     # A premium code is a credential; guessing it must cost as much as
     # guessing a password.
