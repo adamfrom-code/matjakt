@@ -657,6 +657,89 @@ class ApiServerHttpTest(unittest.TestCase):
         ).fetchone()[0]
         self.assertEqual(left, 0)
 
+    def test_marketing_consent_is_opt_in_toggleable_and_unsubscribable_by_link(self):
+        email = f"utskick-{uuid.uuid4().hex[:8]}@example.com"
+        # Utan kryss: inget samtycke.
+        status, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        self.assertEqual(status, 201)
+        self.assertFalse(payload["user"]["marketingConsent"])
+        token = payload["token"]
+        # Tacka ja under Konto.
+        status, payload = self.post("/api/account/marketing", {"consent": True}, token=token)
+        self.assertEqual(status, 200)
+        self.assertTrue(payload["user"]["marketingConsent"])
+        status, payload = self.get("/api/auth/me", token=token)
+        self.assertTrue(payload["user"]["marketingConsent"])
+        # Utloggad kan inte ändra någon annans val.
+        status, _ = self.post("/api/account/marketing", {"consent": False})
+        self.assertEqual(status, 401)
+        # Avprenumerationslänken: fel token ändrar inget, rätt token stänger av.
+        from services import mailings
+        user_id = api_server.ACCOUNT_STORE.user_id_for_token(token)
+        original_secret = api_server.MAIL_SECRET
+        api_server.MAIL_SECRET = "test-mail-secret"
+        ratelimit.reset()
+        try:
+            def unsubscribe(query):
+                conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+                try:
+                    conn.request("GET", f"/api/mail/unsubscribe?{query}")
+                    response = conn.getresponse()
+                    return response, response.read().decode("utf-8")
+                finally:
+                    conn.close()
+            response, body = unsubscribe(f"u={user_id}&t=fel")
+            self.assertEqual(response.status, 400)
+            self.assertIn("Länken fungerar inte", body)
+            self.assertTrue(api_server.ACCOUNT_STORE.user_for_token(token)["marketingConsent"])
+            good_token = mailings.unsubscribe_token(user_id, "test-mail-secret")
+            response, body = unsubscribe(f"u={user_id}&t={good_token}")
+            self.assertEqual(response.status, 200)
+            self.assertIn("text/html", response.getheader("Content-Type"))
+            self.assertIn("Du får inga fler utskick", body)
+            self.assertFalse(api_server.ACCOUNT_STORE.user_for_token(token)["marketingConsent"])
+        finally:
+            api_server.MAIL_SECRET = original_secret
+            ratelimit.reset()
+        # Kryss vid registreringen = samtycke från start.
+        status, payload = self.post("/api/auth/register",
+                                    {"email": f"ja-{uuid.uuid4().hex[:8]}@example.com",
+                                     "password": "hemligt123", "marketing": True})
+        self.assertEqual(status, 201)
+        self.assertTrue(payload["user"]["marketingConsent"])
+
+    def test_admin_mailing_is_admin_only_and_honest_without_smtp(self):
+        status, _ = self.post("/api/admin/mailing", {"action": "preview", "kind": "welcome_3", "email": "x@example.com"})
+        self.assertEqual(status, 403)
+        original = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "admin-test"
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            try:
+                conn.request("POST", "/api/admin/mailing",
+                             body=json.dumps({"action": "preview", "kind": "welcome_3", "email": "x@example.com"}),
+                             headers={"Content-Type": "application/json", "X-Admin-Token": "admin-test"})
+                response = conn.getresponse()
+                payload = json.loads(response.read())
+            finally:
+                conn.close()
+            # Testsviten har ingen SMTP: säg det, skicka inget, krascha inte.
+            self.assertEqual(response.status, 400)
+            self.assertIn("SMTP", payload["error"])
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            try:
+                conn.request("POST", "/api/admin/mailing", body=json.dumps({"action": "run"}),
+                             headers={"Content-Type": "application/json", "X-Admin-Token": "admin-test"})
+                response = conn.getresponse()
+                payload = json.loads(response.read())
+            finally:
+                conn.close()
+            self.assertEqual(response.status, 200)
+            self.assertIsNotNone(payload["blockerat"], "utskicken är av i testerna och ska säga varför")
+            self.assertEqual(payload["skickat"], {})
+        finally:
+            api_server.ADMIN_TOKEN = original
+
     def test_admin_token_guessing_is_rate_limited_like_a_password(self):
         """Tio fel per timme och IP, sedan 429 - även för RÄTT token, annars
         vore spärren meningslös. Rätt token nollställer räknaren, så
@@ -1242,7 +1325,7 @@ class AuthHttpTest(unittest.TestCase):
         self.assertEqual(payload["user"], {
             "email": email, "premium": False, "plan": "free", "trialEndsAt": None, "trialUsed": False,
             "subscriptionStatus": None, "subscriptionPlan": None, "subscriptionPeriodEnd": None,
-            "subscriptionCancelAtPeriodEnd": False, "emailVerified": False,
+            "subscriptionCancelAtPeriodEnd": False, "emailVerified": False, "marketingConsent": False,
         })
         status, payload = self.get("/api/auth/me", token=token)
         self.assertEqual(status, 200)

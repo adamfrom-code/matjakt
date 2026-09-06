@@ -703,3 +703,8 @@ button{color:inherit}
 .week-store-switch button{display:inline-flex;align-items:center}
 .comparison-store-main .chain-mark-sm{margin:0 0 4px}
 .store-card .chain-mark,.week-store-switch .chain-mark,.comparison-store-main .chain-mark{color:#fff}
+
+/* Samtycke till utskick (registrering + Konto) */
+.account-consent { display: flex; gap: .55rem; align-items: flex-start; font-size: .88rem; line-height: 1.4; margin: .4rem 0 .6rem; cursor: pointer; }
+.account-consent input { margin-top: .2rem; flex: none; }
+.account-consent-note { color: var(--muted, #6b665c); font-size: .8rem; }

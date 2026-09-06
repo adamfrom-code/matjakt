@@ -36,7 +36,7 @@ import { extraLineTotal, extraUnitPrice, extrasTotal, newExtraItem, removeExtra,
 import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
 import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
-import { changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
+import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
 
@@ -3024,6 +3024,11 @@ function renderAccount() {
   if (loggedIn) {
     $("accountEmail").textContent = state.user.email;
     $("verifyEmailNotice").hidden = state.user.emailVerified;
+    $("marketingToggle").checked = Boolean(state.user.marketingConsent);
+    // Utskick går bara till verifierade adresser - säg det, i stället för
+    // att låta någon tacka ja och undra varför inget kommer.
+    $("marketingNote").textContent = state.user.marketingConsent && !state.user.emailVerified
+      ? "(skickas när adressen är verifierad)" : "";
     const daysLeft = state.user.trialEndsAt ? Math.max(1, Math.ceil((new Date(state.user.trialEndsAt) - Date.now()) / 86400000)) : 0;
     const hasSubscription = ["active", "trialing", "past_due", "canceled", "unpaid"].includes(state.user.subscriptionStatus);
     const pastDue = ["past_due", "unpaid", "incomplete"].includes(state.user.subscriptionStatus);
@@ -3466,6 +3471,17 @@ $("resetPasswordForm").addEventListener("submit", async event => {
     event.target.reset();
   } catch (error) { $("resetError").textContent = error.message; }
 });
+$("marketingToggle").addEventListener("change", async event => {
+  if (!state.authToken) return;
+  const wanted = event.target.checked;
+  try {
+    const { user } = await setMarketingConsent(state.authToken, wanted);
+    state.user = user;
+  } catch {
+    event.target.checked = !wanted; // servern sa nej: visa sanningen, inte önskan
+  }
+  renderAccount();
+});
 $("resendVerificationBtn").addEventListener("click", async () => {
   $("verifyError").textContent = "";
   try {
@@ -3583,7 +3599,7 @@ $("accountRegisterForm").addEventListener("submit", async event => {
   event.preventDefault();
   $("registerError").textContent = "";
   try {
-    const { token, user, verificationMail } = await register($("registerEmail").value, $("registerPassword").value);
+    const { token, user, verificationMail } = await register($("registerEmail").value, $("registerPassword").value, $("registerMarketing").checked);
     state.authToken = token; state.user = user; storeToken(token);
     await pullAccountState();
     event.target.reset(); renderAccount();

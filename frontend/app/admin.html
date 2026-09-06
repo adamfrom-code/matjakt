@@ -103,6 +103,24 @@
       <ul class="feedback" id="feedback"></ul>
     </div>
 
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <strong>Utskick</strong>
+        <button id="runMailings">Kör dagens utskick nu</button>
+      </div>
+      <div id="mailings" class="note">—</div>
+      <div class="row" style="margin-top:.7rem">
+        <select id="previewKind">
+          <option value="welcome_3">Välkommen dag 3</option>
+          <option value="welcome_7">Välkommen dag 7</option>
+          <option value="kampanjtorget">Kampanjtorget</option>
+        </select>
+        <input type="email" id="previewEmail" placeholder="din@adress.se" style="padding:.5rem .7rem;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);font:inherit">
+        <button id="previewMailing">Skicka exempel till mig</button>
+      </div>
+      <p class="note" id="mailingResult"></p>
+    </div>
+
     <h2>Prisdatabas</h2>
     <div class="card">
       <strong>Pågående import</strong>

@@ -39,7 +39,10 @@ async function call(path, options = {}) {
     headers: { "X-Admin-Token": token, "Content-Type": "application/json", ...(options.headers || {}) },
   });
   if (response.status === 403) throw new Error("Fel admin-token");
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || `HTTP ${response.status}`);
+  }
   return response.json();
 }
 
@@ -87,6 +90,17 @@ function renderInsights(data) {
         days.map(d => `<i style="height:${Math.max(1, Math.round(16 * (e.perDag[d] || 0) / peak))}px"></i>`).join("")
       }</span></td>
     </tr>`).join("");
+
+  const mail = data.utskick || {};
+  const sent = mail.skickadeSenaste30Dagarna || {};
+  const who = mail.mottagare || {};
+  $("mailings").innerHTML =
+    `<span class="pill ${mail.blockerat ? "off" : "ok"}">${mail.blockerat ? "av" : "på"}</span> ` +
+    (mail.blockerat ? esc(mail.blockerat) + ". " : `Skickas kl. ${esc(mail.skickasKl)} (${esc(mail.timezone)}), Kampanjtorget på ${esc(mail.kampanjtorgetDag)}. `) +
+    `<br>Tackat ja: ${who.tackatJa ?? "—"}, varav verifierade (får utskick): ${who.tackatJaOchVerifierade ?? "—"}.` +
+    `<br>Senaste 30 dagarna: välkommen dag 3 ${sent.welcome_3 ?? 0}, dag 7 ${sent.welcome_7 ?? 0}, Kampanjtorget ${sent.kampanjtorget ?? 0}.` +
+    (mail.senasteKorning ? `<br>Senaste körning ${esc(mail.senasteKorning.dag)}: ${esc(JSON.stringify(mail.senasteKorning.skickat))}` +
+      (mail.senasteKorning.blockerat ? ` (blockerat: ${esc(mail.senasteKorning.blockerat)})` : "") : "");
 
   const feedback = data.feedback || [];
   $("feedback").innerHTML = feedback.length
@@ -188,6 +202,24 @@ $("connect").addEventListener("click", async () => {
     token = "";
     $("authError").textContent = error.message;
   }
+});
+$("previewMailing").addEventListener("click", async () => {
+  $("mailingResult").textContent = "Skickar…";
+  try {
+    const result = await call("/admin/mailing", { method: "POST", body: JSON.stringify({
+      action: "preview", kind: $("previewKind").value, email: $("previewEmail").value.trim() }) });
+    $("mailingResult").textContent = `Skickat: "${result.subject}"`;
+  } catch (error) { $("mailingResult").textContent = error.message; }
+});
+$("runMailings").addEventListener("click", async () => {
+  $("mailingResult").textContent = "Kör…";
+  try {
+    const result = await call("/admin/mailing", { method: "POST", body: JSON.stringify({ action: "run" }) });
+    $("mailingResult").textContent = result.blockerat
+      ? `Inget skickat: ${result.blockerat}`
+      : `Skickat: ${JSON.stringify(result.skickat)}${Object.values(result.fel || {}).some(Boolean) ? `, fel: ${JSON.stringify(result.fel)}` : ""}`;
+    await refresh();
+  } catch (error) { $("mailingResult").textContent = error.message; }
 });
 $("token").addEventListener("keydown", event => { if (event.key === "Enter") $("connect").click(); });
 $("refresh").addEventListener("click", () => refresh().catch(error => alert(error.message)));

@@ -126,6 +126,9 @@ class AccountStore:
             # Senaste dag (aldrig klockslag) kontot användes - se
             # _touch_activity. Grunden för "kom någon tillbaka vecka två?".
             ("last_active_day", "TEXT"),
+            # Samtycke till utskick (services/mailings). 0 tills personen
+            # själv tackat ja; tidpunkten sparas för att kunna visa när.
+            ("marketing_consent", "INTEGER NOT NULL DEFAULT 0"), ("marketing_consent_at", "TEXT"),
         ):
             try:
                 self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
@@ -182,9 +185,10 @@ class AccountStore:
             "subscriptionPeriodEnd": row["subscription_period_end"] if "subscription_period_end" in keys else None,
             "subscriptionCancelAtPeriodEnd": bool(row["subscription_cancel_at_period_end"]) if "subscription_cancel_at_period_end" in keys else False,
             "emailVerified": bool(row["email_verified"]) if "email_verified" in keys else False,
+            "marketingConsent": bool(row["marketing_consent"]) if "marketing_consent" in keys else False,
         }
 
-    def register(self, email: str, password: str) -> tuple[str, dict]:
+    def register(self, email: str, password: str, marketing: bool = False) -> tuple[str, dict]:
         email = (email or "").strip().lower()
         if not EMAIL_PATTERN.match(email):
             raise AccountError("Ange en giltig e-postadress")
@@ -192,10 +196,12 @@ class AccountStore:
             raise AccountError("Lösenordet måste vara minst 8 tecken")
         salt = secrets.token_bytes(16)
         password_hash = _hash_password(password, salt)
+        now = datetime.now(timezone.utc).isoformat()
         try:
             cursor = self._connection.execute(
-                "INSERT INTO users (email, password_hash, salt, premium, created_at) VALUES (?, ?, ?, 0, ?)",
-                (email, password_hash, salt.hex(), datetime.now(timezone.utc).isoformat()),
+                "INSERT INTO users (email, password_hash, salt, premium, created_at, marketing_consent, marketing_consent_at) "
+                "VALUES (?, ?, ?, 0, ?, ?, ?)",
+                (email, password_hash, salt.hex(), now, 1 if marketing else 0, now if marketing else None),
             )
             self._connection.commit()
         except sqlite3.IntegrityError:
@@ -276,6 +282,23 @@ class AccountStore:
     def user_id_for_token(self, token: str) -> int | None:
         row = self._session_user_row(token)
         return int(row["id"]) if row else None
+
+    # ---- Samtycke till utskick ------------------------------------------
+    def set_marketing_consent(self, user_id: int, consent: bool) -> bool:
+        """Sätter samtycket för ett konto-id (avprenumerationslänken går
+        hit utan inloggning). True om kontot fanns."""
+        cursor = self._connection.execute(
+            "UPDATE users SET marketing_consent = ?, marketing_consent_at = ? WHERE id = ?",
+            (1 if consent else 0, datetime.now(timezone.utc).isoformat(), int(user_id)))
+        self._connection.commit()
+        return cursor.rowcount > 0
+
+    def set_marketing_consent_for_token(self, token: str, consent: bool) -> dict:
+        row = self._session_user_row(token)
+        if not row:
+            raise AccountError("Du måste vara inloggad")
+        self.set_marketing_consent(row["id"], consent)
+        return self._to_public(self._session_user_row(token))
 
     def redeem_premium(self, token: str, code: str, expected_code: str) -> dict:
         if not expected_code:

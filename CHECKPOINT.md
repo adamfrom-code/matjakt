@@ -79,6 +79,28 @@ Läses via `GET /api/admin/insights` (`/testresultat` = samma svar).
 Lanseringsmått (30 dagar efter att låset öppnas): 100 personer som planerat
 en vecka, 10 tillbaka vecka två, 1 betalande.
 
+## Trafik och utskick (2026-09-06)
+
+Trafik: `frontend/traffic.js` laddar Plausible eller Umami när
+`<meta name="matjakt-traffic">` (landningssidan + app/index.html) säger
+`plausible:matjakt.store` eller `umami:<website-id>`. Tomt = av; aldrig på
+localhost. Värdarna finns i CSP:n (meta i app/index.html + api_server).
+
+Utskick: `backend/services/mailings.py`. Välkomstserien dag 3 och dag 7
+(fönster 3-7 resp. 7-21 dagar efter registrering) och Kampanjtorget varje
+torsdag, allt kl. 08:00 Europe/Stockholm. Dag 0 = verifieringsmejlet (nu med
+igångsättningstips; transaktionellt). REGLER: bara samtycke
+(`users.marketing_consent`, kryss vid registrering eller Konto-vyn) OCH
+verifierad adress; varje mejl har HMAC-signerad avprenumerationslänk
+(`GET /api/mail/unsubscribe?u=&t=`, gate-exempt, rate-limitad) + List-Unsubscribe;
+`mail_log` gör varje steg en-gång; tomt torg skickas aldrig; kedja = användarens
+favoritbutik om släppt, annars alla släppta (aldrig Coop). AV tills
+`MATJAKT_MAILINGS_ENABLED=1` (render.yaml har "0"); `MATJAKT_MAIL_SECRET`
+signerar länkarna (fallback admin-token); `MATJAKT_PUBLIC_API_URL` för länkar.
+Kontrollrummet har ett Utskick-kort: status, mottagare, "Skicka exempel till
+mig" (kräver bara SMTP) och "Kör dagens utskick nu". Innan påslag: verifiera
+SMTP-leverans + SPF/DKIM för avsändardomänen.
+
 ## Tester
 
 `npm test` = node --test (frontend) + `python backend/tests/run.py`

@@ -58,6 +58,8 @@ LIMITS = {
     # samma gissningsbudget. Kontrollrummets egen polling räknas inte:
     # rätt token nollställer räknaren (se ApiHandler._admin_authorized).
     "admin": (10, 3600),
+    # Avprenumerationslänken: signerad token, men ingen ska kunna prova sig fram.
+    "unsubscribe": (20, 3600),
 }
 
 # A single dict of key -> [timestamps]. Pruned as it goes, and hard-capped so

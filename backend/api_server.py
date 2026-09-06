@@ -45,6 +45,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
 from services.analytics import ANALYTICS_EVENTS, AnalyticsStore
+from services import mailings
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
@@ -210,6 +211,14 @@ MAIL_CONFIG = {
     "password": os.environ.get("SMTP_PASSWORD", ""),
     "from_email": os.environ.get("SMTP_FROM_EMAIL", ""),
 }
+# Utskick (services/mailings). Av tills MATJAKT_MAILINGS_ENABLED=1 - en lokal
+# körning mejlar aldrig någon av sig själv. Avprenumerationslänkarna signeras
+# med MATJAKT_MAIL_SECRET, annars admin-token; saknas båda skickas inget.
+MAILINGS_ENABLED = os.environ.get("MATJAKT_MAILINGS_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}
+MAIL_SECRET = os.environ.get("MATJAKT_MAIL_SECRET", "").strip() or ADMIN_TOKEN
+# Den publika adressen till API:t, för länkar i mejl (avprenumeration).
+PUBLIC_API_URL = (os.environ.get("MATJAKT_PUBLIC_API_URL") or os.environ.get("MATJAKT_API_URL")
+                  or f"http://{HOST}:{PORT}/api").rstrip("/")
 AXFOOD_STORE_LIST_URL = {"Willys": "https://www.willys.se/axfood/rest/v1/store", "Hemköp": "https://www.hemkop.se/axfood/rest/v1/store"}
 STORE_LIST_CACHE_TTL_SECONDS = 86400
 ICA_STORE_LIST_TTL_SECONDS = 3600
@@ -540,6 +549,12 @@ KV_CACHE = KeyValueCacheStore(PRICE_CACHE.connection)
 # är ofarlig att köra vid varje uppstart (skriver bara dagar som saknas).
 ANALYTICS = AnalyticsStore(ACCOUNT_STORE.connection)
 ANALYTICS.import_legacy_counters(lambda event, day: KV_CACHE.get("analytics", f"{event}:{day}")[0])
+MAILINGS = mailings.MailingScheduler(
+    mailings.MailingStore(ACCOUNT_STORE.connection),
+    lambda to, subject, text, body_html, unsub: send_email(MAIL_CONFIG, to, subject, text, body_html, unsub),
+    lambda: grocery_api.campaign_deals(per_chain=mailings.DEALS_PER_CHAIN).get("deals", {}),
+    api_base=PUBLIC_API_URL, app_url=APP_URL, secret=MAIL_SECRET, enabled=MAILINGS_ENABLED,
+    mail_configured=lambda: mail_is_configured(MAIL_CONFIG), released_chains=grocery_api.RELEASED_CHAINS)
 
 
 def insights_payload() -> dict:
@@ -555,6 +570,7 @@ def insights_payload() -> dict:
         # Gamla fältet från /testresultat: totalsumma per händelse.
         "events14Dagar": {event: entry["total"] for event, entry in events["events"].items()},
         "feedback": ACCOUNT_STORE.list_feedback(),
+        "utskick": MAILINGS.status(),
     }
 
 
@@ -1444,7 +1460,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
     # policy as a meta tag, because GitHub Pages serves it without any
     # headers of its own - but frame-ancestors and X-Frame-Options only work
     # as real headers, so they live here.
-    CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+    # plausible.io / cloud.umami.is: besöksstatistiken (frontend/traffic.js) -
+    # laddas bara när <meta name="matjakt-traffic"> pekar ut en av dem.
+    CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self' https://plausible.io https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com https://plausible.io https://cloud.umami.is; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 
     def send_response(self, *args, **kwargs):
         # One handler instance serves MANY requests over a keep-alive
@@ -1539,6 +1557,18 @@ class ApiHandler(SimpleHTTPRequestHandler):
         else:
             self.send_json(403, {"error": "Admin-token krävs"})
         return False
+
+    def send_html(self, status, body_html):
+        """En liten HTML-sida (avprenumeration) - samma säkerhetshuvuden som
+        allt annat, ingen cache."""
+        self._json_response = True
+        body = body_html.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def _bearer_token(self):
         header = self.headers.get("Authorization", "")
@@ -1652,7 +1682,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
     # egen övervakning; analytics-beacon (räknar bara namngivna events).
     # Stripes webhook har ingen gate-token - den bär sin egen HMAC-signatur.
     # Utan undantaget svarar utvecklingslåset 401 och Premium aktiveras aldrig.
-    GATE_EXEMPT = ("/api/gate/", "/api/health", "/api/analytics/event", "/api/billing/webhook")
+    GATE_EXEMPT = ("/api/gate/", "/api/health", "/api/analytics/event", "/api/billing/webhook",
+                   "/api/mail/unsubscribe")
 
     def _gate_blocked(self, parsed) -> bool:
         """True när utvecklingslåset stoppar denna begäran (svaret är då
@@ -1855,6 +1886,32 @@ class ApiHandler(SimpleHTTPRequestHandler):
             user = ACCOUNT_STORE.user_for_token(self._bearer_token())
             plan = plan_features.plan_for_user(user)
             self.send_json(200, plan_features.entitlements(plan))
+            return
+        if parsed.path == "/api/mail/unsubscribe":
+            # Avsluta utskicken från länken i mejlet: ingen inloggning, bara
+            # den signerade tokenen. Fel token ger samma sida som ett okänt
+            # konto - länken avslöjar inte om ett id finns. Rate-limitad så
+            # den inte kan användas för att prova sig fram.
+            if self._rate_limit("unsubscribe"):
+                return
+            params = parse_qs(parsed.query)
+            user_id, token = (params.get("u") or [""])[0], (params.get("t") or [""])[0]
+            ok = mailings.unsubscribe_valid(user_id, token, MAIL_SECRET) and \
+                ACCOUNT_STORE.set_marketing_consent(int(user_id), False)
+            title = "Du får inga fler utskick" if ok else "Länken fungerar inte"
+            text = ("Du är avprenumererad. Kontot och appen fungerar precis som förut - "
+                    "du kan tacka ja igen under Konto i appen.") if ok else \
+                   ("Länken är ogiltig eller har redan använts. Du kan stänga av utskicken "
+                    "under Konto i appen.")
+            self.send_html(200 if ok else 400,
+                "<!doctype html><html lang=\"sv\"><meta charset=\"utf-8\">"
+                "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                f"<title>{title} - Matjakt</title>"
+                "<body style=\"margin:0;background:#f6f3ea;color:#1c1b18;font:17px/1.55 Georgia,serif;\">"
+                "<div style=\"max-width:520px;margin:0 auto;padding:56px 20px;\">"
+                "<p style=\"font-size:13px;letter-spacing:.04em;color:#6b665c;\">MATJAKT</p>"
+                f"<h1 style=\"font-weight:normal;font-size:26px;\">{title}</h1><p>{text}</p>"
+                f"<p><a href=\"{APP_URL}\" style=\"color:#1c1b18;\">Öppna Matjakt</a></p></div></body></html>")
             return
         if parsed.path == "/api/auth/me":
             user = ACCOUNT_STORE.user_for_token(self._bearer_token())
@@ -2122,16 +2179,26 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if self._rate_limit("register", str(payload.get("email") or "").strip().lower()):
                 return
             try:
-                token, user = ACCOUNT_STORE.register(payload.get("email"), payload.get("password"))
+                token, user = ACCOUNT_STORE.register(payload.get("email"), payload.get("password"),
+                                                     marketing=bool(payload.get("marketing")))
                 # Ärligt om verifieringsmejlet: "sent", "not_configured" eller
                 # "failed". UI:t får aldrig påstå att ett mejl gått iväg när
                 # inget gjorde det.
                 mail_status = "sent"
                 try:
                     verify_token = ACCOUNT_STORE.create_verification_token_for_email(user["email"])
+                    # Dag 0 i välkomstserien ÄR verifieringsmejlet: det är
+                    # transaktionellt (kontot behöver det) och får därför
+                    # bära igångsättningstipsen utan samtycke.
                     send_email(
-                        MAIL_CONFIG, user["email"], "Verifiera din e-postadress - Matjakt",
-                        f"Välkommen till Matjakt!\n\nKlicka här för att verifiera din e-postadress:\n{APP_URL}/?verify={verify_token}\n\nOm du inte skapade det här kontot kan du ignorera mejlet.",
+                        MAIL_CONFIG, user["email"], "Välkommen till Matjakt - verifiera din e-postadress",
+                        "Välkommen till Matjakt!\n\n"
+                        f"Klicka här för att verifiera din e-postadress:\n{APP_URL}/?verify={verify_token}\n\n"
+                        "Så kommer du igång:\n"
+                        "1. Sätt din veckobudget och hur många ni är.\n"
+                        "2. Skapa din första vecka - Matjakt väljer middagar och räknar ut var de blir billigast.\n"
+                        "3. Ta med inköpslistan till butiken och bocka av.\n\n"
+                        "Om du inte skapade det här kontot kan du ignorera mejlet.",
                     )
                 except MailNotConfigured:
                     mail_status = "not_configured"
@@ -2482,6 +2549,32 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/analytics/event":
             self._handle_analytics_event(payload)
+            return
+        if parsed.path == "/api/account/marketing":
+            # Tacka ja/nej till utskick från Konto-vyn. Servern äger svaret.
+            try:
+                user = ACCOUNT_STORE.set_marketing_consent_for_token(
+                    self._bearer_token(), bool((payload or {}).get("consent")))
+                self.send_json(200, {"user": user})
+            except AccountError as error:
+                self.send_json(401, {"error": str(error)})
+            return
+        if parsed.path == "/api/admin/mailing":
+            # preview: skicka ett exempel till en adress (kräver bara SMTP).
+            # run: kör dagens utskick nu (respekterar alla spärrar).
+            if not self._admin_authorized():
+                return
+            action = (payload or {}).get("action")
+            try:
+                if action == "preview":
+                    self.send_json(200, MAILINGS.preview(str((payload or {}).get("kind") or ""),
+                                                         str((payload or {}).get("email") or "")))
+                elif action == "run":
+                    self.send_json(200, MAILINGS.run_due())
+                else:
+                    self.send_json(400, {"error": "action ska vara preview eller run"})
+            except (ValueError, RuntimeError, MailError) as error:
+                self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/feedback":
             # Anonym testarfeedback. Rate-limitad så den inte blir en
@@ -2977,6 +3070,7 @@ if __name__ == "__main__":
         logger.exception("Kunde inte starta receptprissättningen")
 
     GROCERY_SCHEDULER.start()
+    MAILINGS.start()
     # Förvärm prismotorns ordindex i bakgrunden: kallstarten (indexbygge
     # per kedja, ~2-3 s) ska betalas här vid deploy - inte av första kundens
     # första prisanrop.

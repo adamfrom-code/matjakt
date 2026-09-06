@@ -7,6 +7,7 @@ silently pretending an email went out.
 """
 
 import smtplib
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from ..data_guard import guard_outbound_call
@@ -44,16 +45,27 @@ def is_configured(config) -> bool:
     return bool(config.get("host") and config.get("from_email"))
 
 
-def send_email(config, to_email, subject, body_text):
+def send_email(config, to_email, subject, body_text, body_html=None, unsubscribe_url=None):
+    """Text alltid; HTML som alternativ när det finns. `unsubscribe_url`
+    sätter List-Unsubscribe så mejlklienter kan visa sin egen avsluta-knapp -
+    utskicksmodulen (services/mailings) skickar aldrig utan den."""
     host = config.get("host")
     from_email = config.get("from_email")
     if not host or not from_email:
         raise MailNotConfigured("E-post är inte konfigurerat på servern ännu")
     guard_outbound_call("en SMTP-server")
-    message = MIMEText(body_text, "plain", "utf-8")
+    if body_html:
+        message = MIMEMultipart("alternative")
+        message.attach(MIMEText(body_text, "plain", "utf-8"))
+        message.attach(MIMEText(body_html, "html", "utf-8"))
+    else:
+        message = MIMEText(body_text, "plain", "utf-8")
     message["Subject"] = subject
     message["From"] = from_email
     message["To"] = to_email
+    if unsubscribe_url:
+        message["List-Unsubscribe"] = f"<{unsubscribe_url}>"
+        message["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
     try:
         with smtplib.SMTP(host, int(config.get("port") or 587), timeout=15) as smtp:
             smtp.starttls()
