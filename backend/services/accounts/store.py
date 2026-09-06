@@ -15,6 +15,7 @@ explicit expiry), so a leak of them is a much smaller window than a leak of
 plain text, and hashing them the same way is the obvious next step.
 """
 
+import functools
 import hashlib
 import re
 import secrets
@@ -87,6 +88,12 @@ class AccountStore:
         guard_database_path(db_path, purpose="kontodatabasen")
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = sqlite3.connect(db_path, check_same_thread=False)
+        # EN anslutning delas av alla servertrådar. En commit()/rollback()
+        # från en tråd nollställer en annan tråds pågående SELECT - sett i
+        # CI som "401 Inte inloggad" på en giltig session mitt under
+        # Premium-aktiveringen. Varje publik metod tar därför _lock (RLock:
+        # publika metoder får anropa varandra) - se _synchronized nedan.
+        self._lock = threading.RLock()
         # Webhookar kan komma parallellt (ThreadingHTTPServer): läs-ändra-skriv
         # i apply_stripe_event måste vara odelbar.
         self._stripe_lock = threading.Lock()
@@ -550,3 +557,17 @@ class AccountStore:
         self._connection.execute("DELETE FROM users WHERE id = ?", (row["id"],))
         self._connection.commit()
         return stripe_customer_id, stripe_subscription_id
+
+
+def _synchronized(method):
+    """Kör metoden under kontolagrets lås - se AccountStore.__init__."""
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    return wrapper
+
+
+for _name, _member in list(vars(AccountStore).items()):
+    if callable(_member) and (not _name.startswith("_") or _name == "_session_user_row") and _name != "close":
+        setattr(AccountStore, _name, _synchronized(_member))
