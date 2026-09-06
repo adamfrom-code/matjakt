@@ -12,6 +12,31 @@ FLAVOR_SUSPECTS = ["knäcke", "bulle", "kaka", "skorpa", "müsli", "godis",
                    "glass", "te ", "dryck", "yoghurt", "gröt", "chips"]
 
 
+def kilo_price_as_pack_price(row: dict):
+    """Paketpriset som konsumenten ser (totalCost/packages) för en viktvara
+    ("ca: 850g") som ändå är exakt kilopriset fast paketet inte väger 1 kg -
+    dvs. motorn har glömt kr/kg × cirkavikt. Returnerar paketpriset när det
+    är fel, annars None.
+
+    LÖSVIKT (perKg) är inte det här felet: där finns inget paket, kostnaden
+    är kr/kg × behov och unitPrice ÄR kilopriset per definition. Att jämföra
+    unitPrice i stället för paketpriset gjorde varje tomat och ingefära till
+    ett falskt larm (316 rader i produktion 2026-09-06) och gav röd gate på
+    en prissättning som var rätt."""
+    if row.get("perKg") or row.get("weightPriced"):
+        return None
+    size = row.get("packageSize") or ""
+    package_unit = _fold(row.get("packageUnit") or "")
+    if not _VARIABLE_WEIGHT_RE.match(size) or package_unit not in _MASS:
+        return None
+    comparison, total, packages = row.get("comparisonPrice"), row.get("totalCost"), row.get("packages") or 0
+    pack_g = convert_amount(row.get("packageAmount") or 0, row.get("packageUnit") or "g", "g")
+    if not comparison or total is None or not packages or not pack_g or abs(pack_g - 1000) <= 1:
+        return None
+    pack_cost = round(total / packages, 2)
+    return pack_cost if abs(pack_cost - comparison) < 0.01 else None
+
+
 def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: int = 4,
                       max_examples: int = 8) -> dict:
     from . import api as grocery_api
@@ -70,14 +95,12 @@ def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: 
                     note("otolkad_paketstorlek", recipe, ing, chain, row, f"size={row.get('packageSize')!r}")
                 if any(word in _fold(row.get("productName") or "") for word in FLAVOR_SUSPECTS):
                     note("smakords_misstanke", recipe, ing, chain, row)
-                # Viktvara ("ca: 850g") vars radpris fortfarande ÄR kilopriset:
+                # Viktvara ("ca: 850g") vars PAKETPRIS fortfarande är kilopriset:
                 # 125 kr/kg visat som 125 kr paketet. Fel pris - gaten är röd.
-                size = row.get("packageSize") or ""
-                comparison, unit_cost = row.get("comparisonPrice"), row.get("unitPrice")
-                pack_g = convert_amount(row.get("packageAmount") or 0, row.get("packageUnit") or "g", "g") if package_unit in _MASS else None
-                if (_VARIABLE_WEIGHT_RE.match(size) and comparison and unit_cost and pack_g
-                        and abs(pack_g - 1000) > 1 and abs(unit_cost - comparison) < 0.01 and not row.get("weightPriced")):
-                    note("kilopris_som_paketpris", recipe, ing, chain, row, f"{unit_cost} kr = {comparison} kr/kg")
+                pack_cost = kilo_price_as_pack_price(row)
+                if pack_cost is not None:
+                    note("kilopris_som_paketpris", recipe, ing, chain, row,
+                         f"{pack_cost} kr/paket = {row.get('comparisonPrice')} kr/kg")
 
     gate = all(counts[k] == 0 for k in ("gram_som_styck", "volym_som_styck", "estimat", "otolkad_paketstorlek",
                                         "kilopris_som_paketpris"))
