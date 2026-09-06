@@ -5,6 +5,10 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: .
     plan: starter
+    # Deploy sker BARA via deploy-hooken från GitHub CI (ci.yml, jobb
+    # deploy-backend) - aldrig direkt på push. Måste också vara Off i
+    # dashboarden; det här gör att en blueprint-synk inte slår på det igen.
+    autoDeploy: false
     healthCheckPath: /api/health
     disk:
       name: matjakt-data
