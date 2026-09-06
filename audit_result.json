@@ -9,7 +9,7 @@
  "flaggor": {
   "gram_som_styck": 0,
   "volym_som_styck": 0,
-  "paket_over_10": 6,
+  "paket_over_10": 0,
   "paket_over_50": 0,
   "rad_over_500": 0,
   "rad_over_1000": 0,
@@ -20,14 +20,6 @@
   "saknade": 12
  },
  "exempel": {
-  "paket_over_10": [
-   "flaskfile-svampsas | Champinjoner | City Gross | Champinjoner 13 paket",
-   "kassler-potatisgratang | Potatis | City Gross | Potatis Mjölig 13 paket",
-   "kroppkakor | Potatis | City Gross | Potatis Mjölig 13 paket",
-   "krämig-svampasta | Champinjoner | City Gross | Champinjoner 25 paket",
-   "potatisgratang-skinka | Potatis | City Gross | Potatis Mjölig 13 paket",
-   "svamprisotto | Champinjoner | City Gross | Champinjoner 20 paket"
-  ],
   "smakords_misstanke": [
    "falafel-pitabrod | Grekisk yoghurt | Willys | Grekisk Matyoghurt 10% Familjefavoriter",
    "falafel-pitabrod | Grekisk yoghurt | Hemköp | Grekisk Matyoghurt 10% Familjefavoriter",
@@ -39,5 +31,8 @@
    "fishtacos | Grekisk yoghurt | Hemköp | Grekisk Matyoghurt 10% Familjefavoriter"
   ]
  },
- "gate": "GRÖN"
+ "gate": "GRÖN",
+ "produkter": 17849,
+ "prisdata_senast": 1788461520.0622382,
+ "kord": "2026-09-06T15:30:32+00:00"
 }

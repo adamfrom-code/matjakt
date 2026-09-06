@@ -39,7 +39,10 @@ async function getJson(path, { timeout = 12000 } = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     signal: AbortSignal.timeout(timeout),
   });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  // Statuskoden följer med: en 404 är ett SVAR ("finns inte") medan ett
+  // nätfel eller en 500 är ett uteblivet svar. Anroparen måste kunna skilja
+  // dem åt för att veta om det är någon idé att försöka igen.
+  if (!response.ok) throw Object.assign(new Error(`HTTP ${response.status}`), { status: response.status });
   return response.json();
 }
 
@@ -96,12 +99,23 @@ export async function searchRecipes({ tags = [], maxTime, minProtein, maxKcal, q
 
 /** One full recipe, with ingredients and steps. Only this call returns
  *  everything, because only the detail screen needs it. */
+/**
+ * Ett recept, eller null när det BEVISLIGEN inte finns.
+ *
+ * null betyder "backend säger att receptet inte finns" - ett definitivt
+ * svar det inte är någon idé att fråga om igen. Allt annat (nätfel, 500,
+ * timeout) kastas vidare, för då vet vi ingenting och ett omförsök är
+ * rimligt. Tidigare svaldes båda och blev null, vilket gjorde ett
+ * permanent 404 omöjligt att skilja från en tillfällig störning - och
+ * anroparen försökte då om i evighet på varje omritning.
+ */
 export async function loadRecipe(id) {
   try {
     const data = await getJson(`/recipes/${encodeURIComponent(id)}`);
     return data.recipe ? fromApi(data.recipe) : null;
-  } catch {
-    return null;
+  } catch (error) {
+    if (error?.status === 404) return null;
+    throw error;
   }
 }
 

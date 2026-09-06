@@ -68,11 +68,25 @@ def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: 
                     note("smakords_misstanke", recipe, ing, chain, row)
                 # Viktvara ("ca: 850g") vars radpris fortfarande ÄR kilopriset:
                 # 125 kr/kg visat som 125 kr paketet. Fel pris - gaten är röd.
+                #
+                # Motorn har TVÅ vägar som redan hanterar kilopriset korrekt,
+                # och båda måste undantas här:
+                #   weightPriced  paketet räknades om till kr/kg × cirkavikt
+                #                 (en kycklingfilé på 850 g)
+                #   perKg         lösvikt: kr/kg × behovet, ingen paketräkning
+                #                 (en tomat på 98 g - se LOOSE_PIECE_MAX_GRAMS)
+                # perKg saknades här: regeln skrevs innan lösviktsvägen fanns
+                # och fortsatte flagga 317 rader som motorn prissatte HELT
+                # RÄTT. Gaten stod därmed röd av fel skäl, vilket är värre än
+                # att den står röd av rätt skäl - en gate ingen tror på
+                # skyddar ingenting. Kontrollerat 2026-09-06: samtliga 317
+                # hade perKg=True, alltså noll faktiska felprissättningar.
                 size = row.get("packageSize") or ""
                 comparison, unit_cost = row.get("comparisonPrice"), row.get("unitPrice")
                 pack_g = convert_amount(row.get("packageAmount") or 0, row.get("packageUnit") or "g", "g") if package_unit in _MASS else None
                 if (_VARIABLE_WEIGHT_RE.match(size) and comparison and unit_cost and pack_g
-                        and abs(pack_g - 1000) > 1 and abs(unit_cost - comparison) < 0.01 and not row.get("weightPriced")):
+                        and abs(pack_g - 1000) > 1 and abs(unit_cost - comparison) < 0.01
+                        and not row.get("weightPriced") and not row.get("perKg")):
                     note("kilopris_som_paketpris", recipe, ing, chain, row, f"{unit_cost} kr = {comparison} kr/kg")
 
     gate = all(counts[k] == 0 for k in ("gram_som_styck", "volym_som_styck", "estimat", "otolkad_paketstorlek",

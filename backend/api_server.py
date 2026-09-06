@@ -1543,10 +1543,20 @@ class ApiHandler(SimpleHTTPRequestHandler):
     class _BodyTooLarge(ValueError):
         pass
 
+    # Skiljer "vi kunde inte tolka Content-Length" (kroppen är oläst och
+    # anslutningen måste överges) från "kroppen lästes men var inte JSON"
+    # (ingenting oläst, anslutningen är fin). Samma 400 utåt, olika städning.
+    _BAD_FRAMING = "Ogiltig Content-Length"
+
+    # Hur länge tömningen väntar på mer data. Kort med flit: det som redan
+    # anlänt hämtas direkt, och att vänta längre skulle bara låta en långsam
+    # klient hålla tråden - vilket är precis det taket ovan finns för.
+    ABANDON_DRAIN_SECONDS = 0.05
+
     def _read_json_body(self):
         length = self._content_length()
         if length is None:
-            raise json.JSONDecodeError("Ogiltig Content-Length", "", 0)
+            raise json.JSONDecodeError(self._BAD_FRAMING, "", 0)
         if length > self.MAX_JSON_BODY_BYTES:
             raise self._BodyTooLarge(length)
         raw = self.rfile.read(length) if length else b""
@@ -1558,6 +1568,56 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if not isinstance(parsed, dict):
             raise json.JSONDecodeError("JSON-kroppen måste vara ett objekt", raw.decode("utf-8", "replace")[:40], 0)
         return parsed
+
+    def _abandon_body(self, expected_length=None):
+        """Anropas när ett svar skickas UTAN att kroppen lästs: trasig
+        Content-Length, eller en kropp som är för stor för att läsa.
+
+        Två saker måste hända, båda av samma skäl - att svaret vi just
+        formulerat faktiskt ska nå fram.
+
+        1. Anslutningen kan inte återanvändas. Vid trasig ramning vet vi inte
+           var kroppen slutar, så nästa "requestrad" vi läste vore mitt inne
+           i den förra kroppen.
+
+        2. Det klienten redan hunnit skicka måste tömmas ur mottagnings-
+           bufferten INNAN vi stänger. Windows skickar RST i stället för FIN
+           när en socket stängs med oläst data, och en RST kastar bort svaret
+           - även när det redan lämnat servern. Uppmätt 2026-09-06: utan detta
+           tappade ~1 av 30 begäranden sitt 400, och testsviten föll ungefär
+           varannan körning. Hela poängen med den här vägen är ett
+           KONTROLLERAT svar i stället för en stängd anslutning; utan
+           tömningen blev det ändå en stängd anslutning ibland.
+
+        Tömningen är begränsad till MAX_JSON_BODY_BYTES. En klient som
+        fortsätter skicka mer än så är inte den vi försöker svara vänligt -
+        då får anslutningen brytas, vilket är hela skälet till taket."""
+        self.close_connection = True
+        limit = self.MAX_JSON_BODY_BYTES
+        if expected_length is not None:
+            limit = min(limit, max(0, expected_length))
+        if not limit:
+            return
+        original_timeout = self.connection.gettimeout()
+        try:
+            # Kort timeout: vi tömmer det som REDAN kommit, vi väntar inte in
+            # en kropp klienten kanske aldrig skickar. Datan vi bryr oss om
+            # ligger per definition redan i bufferten - det är just den som
+            # annars gör stängningen till en RST.
+            self.connection.settimeout(self.ABANDON_DRAIN_SECONDS)
+            drained = 0
+            while drained < limit:
+                chunk = self.connection.recv(min(65536, limit - drained))
+                if not chunk:
+                    break
+                drained += len(chunk)
+        except OSError:
+            pass    # inget mer att hämta, eller klienten är redan borta
+        finally:
+            try:
+                self.connection.settimeout(original_timeout)
+            except OSError:
+                pass
 
     def _admin_ok(self) -> bool:
         """Admin-token i konstant tid. Vid fel: 404 som för en okänd väg -
@@ -1583,9 +1643,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
     def _handle_stripe_webhook(self):
         length = self._content_length()
         if length is None:
+            self._abandon_body()
             self.send_json(400, {"error": "Ogiltig Content-Length"})
             return
         if length > self.MAX_JSON_BODY_BYTES:
+            self._abandon_body(length)
             self.send_json(413, {"error": "För stor begäran"})
             return
         raw = self.rfile.read(length) if length else b""
@@ -2142,10 +2204,16 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return
         try:
             payload = self._read_json_body()
-        except self._BodyTooLarge:
+        except self._BodyTooLarge as too_large:
+            self._abandon_body(too_large.args[0] if too_large.args else None)
             self.send_json(413, {"error": "För stor begäran"})
             return
-        except (json.JSONDecodeError, UnicodeDecodeError):
+        except (json.JSONDecodeError, UnicodeDecodeError) as error:
+            # Bara en TRASIG RAMNING lämnar kroppen oläst. Ett syntaxfel i en
+            # kropp vi faktiskt läst har ingen oläst data kvar, och där ska
+            # anslutningen få leva vidare som vanligt.
+            if isinstance(error, json.JSONDecodeError) and error.msg == self._BAD_FRAMING:
+                self._abandon_body()
             self.send_json(400, {"error": "Ogiltig JSON"})
             return
         if parsed.path == "/api/gate/login":
