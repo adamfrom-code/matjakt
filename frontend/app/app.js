@@ -231,11 +231,26 @@ function scheduleServerSync() {
   // could race with itself. One request ~1.5s after the last change is enough for
   // "follows you to another phone", which is the actual requirement here.
   serverSyncTimer = setTimeout(() => {
+    serverSyncTimer = null;
     saveAccountState(state.authToken, buildSyncPayload())
       .then(() => setSyncStatus("idle"))
       .catch(() => { setSyncStatus("error"); /* nästa saveState-anrop försöker igen */ });
   }, 1500);
 }
+// Skicka en väntande synk NU. Lämnas sidan (Stripe Checkout, portalen,
+// fliken stängs) inom 1,5 s efter sista ändringen försvann annars den
+// väntande timern med sidan - och nästa öppning hämtade serverns ÄLDRE
+// blob och skrev över veckan och onboardingflaggan som just gjorts.
+// Sett i CI: efter checkout var Handla tom och onboarding "ogjord".
+async function flushServerSync({ keepalive = false } = {}) {
+  if (!serverSyncTimer || !state.authToken) return;
+  clearTimeout(serverSyncTimer); serverSyncTimer = null;
+  try {
+    await saveAccountState(state.authToken, buildSyncPayload(), { keepalive });
+    setSyncStatus("idle");
+  } catch { setSyncStatus("error"); }
+}
+window.addEventListener("pagehide", () => { flushServerSync({ keepalive: true }); });
 async function pullAccountState() {
   if (!state.authToken) return;
   try {
@@ -3681,6 +3696,7 @@ async function beginCheckout(plan) {
     return;
   }
   try {
+    await flushServerSync();
     const { url } = await startCheckout(getStoredToken(), plan);
     if (url) location.href = url;
   } catch (error) {
@@ -3695,6 +3711,7 @@ $("subscribeBtn").addEventListener("click", async () => {
   $("checkoutError").textContent = "";
   if (!state.authToken) { $("checkoutError").textContent = "Skapa ett konto eller logga in först."; return; }
   try {
+    await flushServerSync();
     const { url } = await startCheckout(state.authToken, selectedPlan);
     window.location.href = url;
   } catch (error) { $("checkoutError").textContent = error.message; }
@@ -3702,6 +3719,7 @@ $("subscribeBtn").addEventListener("click", async () => {
 $("manageBillingBtn").addEventListener("click", async () => {
   $("portalError").textContent = "";
   try {
+    await flushServerSync();
     const { url } = await openBillingPortal(state.authToken);
     window.location.href = url;
   } catch (error) { $("portalError").textContent = error.message; }

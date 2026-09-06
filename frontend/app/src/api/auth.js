@@ -128,10 +128,12 @@ export function fetchAccountState(token) {
   }).then(parseJsonResponse);
 }
 
-export function saveAccountState(token, stateBlob) {
+export function saveAccountState(token, stateBlob, { keepalive = false } = {}) {
+  // keepalive: anropet får överleva att sidan stängs/lämnas (pagehide).
   return fetch(`${API_BASE_URL}/account/state`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(stateBlob),
+    keepalive,
   }).then(parseJsonResponse);
 }

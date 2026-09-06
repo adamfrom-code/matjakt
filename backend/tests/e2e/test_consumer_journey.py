@@ -500,6 +500,8 @@ class BrowserJourney(unittest.TestCase):
             expect(paywall).to_contain_text("Matjakt Premium")
 
         with self.step("checkout (testläge, mockad Stripe) → tillbaka i appen"):
+            week_before = list(self.local_state().get("weekPlan") or [])
+            self.assertTrue(week_before)
             with page.expect_navigation():
                 page.click('#paywallModal [data-paywall-plan="yearly"]')
             expect(page.locator("#accountPremiumStatus")).to_contain_text("Aktiverar Premium")
@@ -521,6 +523,12 @@ class BrowserJourney(unittest.TestCase):
             expect(page.locator("#accountPremiumStatus")).to_have_text("✓ Premium aktiverat", timeout=30_000)
             expect(page.locator("#subscriptionPanelLine")).to_contain_text("399 kr/år")
             expect(page.locator("#premiumPitch")).to_be_hidden()
+            # Veckan och onboardingen gjordes sekunderna före checkout: den
+            # väntande synken måste ha nått servern innan sidan lämnades,
+            # annars hämtar återkomsten en äldre blob och allt är borta.
+            state = self.wait_for_state(lambda s: s.get("weekPlan") == week_before and s.get("onboardingComplete"),
+                                        timeout=20, what="veckan efter checkout")
+            self.assertEqual(state.get("postnummer"), fixture.POSTCODE)
 
         with self.step("Premium: alla butiker prissatta och jämförelsesidan"):
             self.close_account_modal()
