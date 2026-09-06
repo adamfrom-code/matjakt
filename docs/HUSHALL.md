@@ -168,6 +168,51 @@ kärnfunktioner. Prioritetsordning för inloggning: e-post (finns),
 Apple-inloggning, Google-inloggning. BankID dokumenteras här som en
 möjlighet om ett faktiskt användningsfall uppstår - inte som en plan.
 
+## Release-härdning 2026-09-06
+
+Vad som verifierades innan hushållet gick vidare mot release, och vad som
+hittades på vägen.
+
+**Trasig ramning tappade sitt svar.** När `Content-Length` inte gick att
+tolka lästes kroppen aldrig, och anslutningen stängdes med den datan kvar i
+mottagningsbufferten. Windows skickar RST i stället för FIN i det läget, och
+en RST kastar bort svaret även när det redan lämnat servern - ~1 av 30
+begäranden fick aldrig sitt 400. `ApiHandler._abandon_body` tömmer bufferten
+och markerar anslutningen för stängning innan svaret går ut.
+
+**Fem recept-id kunde planeras men aldrig öppnas.** `chili`, `fiskgratang`,
+`kottbullar`, `kycklingwok` och `lax` fanns i klientens medföljande bank men
+i inget av backendens 241 recept. Alla fem mappades till motsvarigheten med
+samma rätt. `test_recipe_identity.py` är grinden: varje id i den
+medföljande banken måste finnas i den canonical banken.
+
+**404-loopen.** `loadRecipe` svalde alla fel och gav `null`, så ett
+permanent "finns inte" gick inte att skilja från ett nätfel - och anroparen
+försökte om på varje omritning. Nu är `null` definitivt och frågas aldrig om
+igen; nätfel kastas vidare och släpper id:t fritt.
+
+**Prisgaten var röd av fel skäl.** Auditen flaggade 317 rader som "kilopris
+visat som paketpris". Samtliga hade `perKg=True` - motorn hade räknat
+kr/kg × behovet, alltså rätt. Regeln undantog `weightPriced` men inte
+lösviktsvägen som kom senare. Med undantaget på plats: **gate GRÖN**,
+4 614 kontroller mot 17 849 riktiga produkter. Auditen vägrar numera köra
+mot en tom prisdatabas - "0 kontroller, allt grönt" är ingen granskning.
+
+**Spärr på varje utgående anrop.** Stripe och SMTP var spärrade; de sex
+providervägarna var det inte, och ett brett test hittade dessutom
+receptbilds- och videonedladdningen. `guard_outbound_http` släpper förbi en
+redan utbytt `urlopen` men stoppar en glömd mock. Ett test letar igenom hela
+`services/` så nästa provider som glömmer spärren fastnar direkt.
+
+**En patchläcka mellan testfiler** täpptes till: en klass i
+`test_citygross_provider.py` patchade `urlopen` utan tearDown, så fejken låg
+kvar resten av sviten.
+
+Testtäckning efter passet: **1069 backend-tester** och **103 node-tester**,
+körda två gånger i rad med produktionsdatabaserna verifierat orörda
+(sha256 före/efter). Två-telefonersplanen ligger i
+`docs/TVA_TELEFONER_TEST.md`.
+
 ## Premium
 
 Ingen ny funktion i det här passet är Premium-låst. Familjedelning är
