@@ -42,6 +42,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+      # tests/build-native.test.js kör byggskriptet (esbuild i devDependencies).
+      - run: npm ci
       - run: node --check frontend/app/app.js
       - run: node --check frontend/app/sw.js
       - run: node --test
