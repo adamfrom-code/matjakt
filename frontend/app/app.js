@@ -136,13 +136,23 @@ function selectedRecipes() {
   const allRecipes = [...RECEPT, ...state.apiRecipes];
   return state.weekPlan.map(id => allRecipes.find(recipe => recipe.id === id)).filter(Boolean);
 }
+// Den senaste RIKTIGA veckototalen - aldrig ett uppskattat pris. Sätts i
+// renderBasket och sparas med veckan när den byts ut, så budgethjälpen
+// (§18) har verkliga tal att jämföra mot i stället för gissningar.
+let lastRealWeekTotal = null;
+
 function setWeekPlan(ids) {
   // Papperskorgen: den vecka som just ersätts läggs överst i historiken
-  // (tre senaste behålls, synkas med kontot). "Skapa ny vecka" av misstag
-  // ska aldrig kosta en kurerad vecka.
+  // (de tolv senaste behålls, synkas med kontot). "Skapa ny vecka" av
+  // misstag ska aldrig kosta en kurerad vecka, och historiken är dessutom
+  // det som gör att samma rätter inte kommer tillbaka direkt (§15).
   if (state.weekPlan?.length && state.weekPlan.join() !== [...ids].join()) {
-    state.weekHistory = [{ plan: [...state.weekPlan], savedAt: Date.now() },
-                         ...(state.weekHistory || [])].slice(0, 3);
+    // Totalen sparas MED veckan så budgethjälpen har riktiga tal att
+    // jämföra mot (§18). Bara en riktig, prissatt total - null när veckan
+    // aldrig hann prissättas, så snittet aldrig bygger på en gissning.
+    state.weekHistory = [{ plan: [...state.weekPlan], savedAt: Date.now(),
+                           total: lastRealWeekTotal },
+                         ...(state.weekHistory || [])].slice(0, 12);
   }
   state.weekPlan = [...ids]; state.valda = new Set(ids);
 }
@@ -783,8 +793,32 @@ function comboVarietyPenalty(combo) {
   return penalty;
 }
 
+// Vad familjen NYSS åt drar ner, vad de HAR HEMMA drar upp.
+//
+// Båda är mjuka termer i samma poäng, inte spärrar. Tacos varje fredag är
+// ett val familjen får göra; poängen ska bara sluta föreslå det av sig
+// självt vecka efter vecka (§15). Och en rätt som använder kycklingen och
+// paprikan som redan står i kylen är värd mer än en som inte gör det, utan
+// att bli obligatorisk (§17).
+function comboHistoryPenalty(combo) {
+  return combo.reduce((sum, recipe) =>
+    sum + recentlyEatenPenalty(recipe.id, state.weekHistory, state.favoriter), 0);
+}
+
+// Skalan är avsiktligt låg: en vara hemma är värd ungefär en tredjedel av
+// ett "gillar"-betyg. Att låta skafferiet styra hårdare hade gjort veckan
+// till en resthantering i stället för en matsedel.
+const PANTRY_BONUS_PER_ITEM = 0.4;
+function comboPantryBonus(combo) {
+  const home = pantryNamesForCooking();
+  if (!home.length) return 0;
+  return combo.reduce((sum, recipe) => sum + pantryOverlap(recipe, home), 0) * PANTRY_BONUS_PER_ITEM;
+}
+
 const comboAffinity = combo => combo.reduce((sum, recipe) => sum + recipeAffinity(recipe), 0)
-  - comboVarietyPenalty(combo);
+  - comboVarietyPenalty(combo)
+  - comboHistoryPenalty(combo)
+  + comboPantryBonus(combo);
 // combinations() is C(pool, count), so a fixed pool size makes the search
 // blow up as the week gets longer: with the previous fixed pool of 24 a
 // 7-dinner week evaluated 346,104 combos against 10,626 for 4 - measured at
@@ -2681,7 +2715,48 @@ function weekShoppingRowMarkup(item) {
   return `<label class="week-shopping-row"><input type="checkbox" data-week-shopping="${escapeHtml(item.namn)}">${photo}<span class="week-shopping-info"><strong>${escapeHtml(item.namn)}</strong>${campaign}</span><strong class="week-shopping-price ${missing ? "price-missing" : ""}">${price}</strong></label>`;
 }
 let weekDayAutoPicked = false;
+// §14: veckan sammanfattad i fyra rader innan man dyker ner i dagarna.
+//
+// Varje rad är RÄKNAD, inte påstådd. "3 familjefavoriter" räknas på
+// betyg/gillamarkeringar som faktiskt finns, "7 ingredienser finns redan
+// hemma" på skafferiet, och kostnaden skrivs bara ut när den är en riktig
+// prissatt total - aldrig ett uppskattat pris med "ca" framför.
+function weekSummaryFacts(selected, shoppingItems, total) {
+  const favourites = selected.filter(recipe =>
+    state.favoriter.has(recipe.id) || (state.betyg[recipe.id] || 0) >= 4 || state.feedback[recipe.id]?.liked).length;
+  const home = pantryForPricing();
+  const atHome = shoppingItems.filter(item => (home[item.namn] || 0) > 0).length;
+  const onCampaign = shoppingItems.filter(item => {
+    const match = databaseItemFor(item.namn);
+    return match && match.campaignPrice != null && match.regularPrice != null
+      && match.campaignPrice < match.regularPrice;
+  }).length;
+  return { dinners: selected.length, favourites, fresh: selected.length - favourites, atHome, onCampaign, total };
+}
+
+function renderWeekSummary(selected, shoppingItems, total) {
+  const box = $("weekSummary");
+  if (!box) return;
+  box.hidden = !selected.length;
+  if (!selected.length) return;
+  const facts = weekSummaryFacts(selected, shoppingItems, total);
+  const lines = [
+    `${plural(facts.dinners, "middag", "middagar")}`,
+    facts.favourites ? `${facts.favourites} ${facts.favourites === 1 ? "familjefavorit" : "familjefavoriter"}` : "",
+    facts.fresh ? `${facts.fresh} ${facts.fresh === 1 ? "ny rätt" : "nya rätter"}` : "",
+    facts.atHome ? `${plural(facts.atHome, "ingrediens", "ingredienser")} finns redan hemma` : "",
+    facts.onCampaign ? `${plural(facts.onCampaign, "kampanjvara", "kampanjvaror")} används` : "",
+  ].filter(Boolean);
+  const heading = householdActive() ? `Veckan är klar för ${state.household.name}` : "Veckan är klar";
+  box.innerHTML = `<h2>${escapeHtml(heading)}</h2><ul>${lines.map(line => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`
+    // Kostnaden står bara här när den är RIKTIG. "Beräknad matkasse" på en
+    // uppskattning hade varit den sortens siffra hela prismotorn finns för
+    // att inte producera.
+    + (facts.total != null ? `<p class="week-summary-total">Beräknad matkasse ${money(facts.total)}</p>` : "");
+}
+
 function renderWeekOverview(selected, shoppingItems, total) {
+  renderWeekSummary(selected, shoppingItems, total);
   // Bara vid FÖRSTA målningen: att öppna appen en fredag med en
   // 4-middagarsvecka ska visa en planerad dag, inte "Ingen middag". Men den
   // som själv klickar på söndagsfliken ska självklart få se söndagen.
@@ -2881,6 +2956,32 @@ function shoppingItemsForView(selected) {
   return [...merged, ...byName.values()];
 }
 
+// Är veckan dyrare än hushållets vanliga? En mening och en väg vidare -
+// inga procent, inga påhittade besparingar. Regeln (minst fyra prissatta
+// veckor, minst 75 kr) bor i src/services/swap.js.
+function renderWeekCostAlert(total) {
+  const box = $("weekCostAlert");
+  if (!box) return;
+  const alert = weekCostAlert(total, state.weekHistory);
+  box.hidden = !alert;
+  if (!alert) return;
+  box.innerHTML = `<p>Den här veckan blev cirka ${money(alert.difference)} dyrare än er vanliga vecka (${money(alert.usual)}).</p>`
+    + `<button type="button" class="btn btn-ghost" id="lowerCostBtn">Sänk priset</button>`;
+  // "Sänk priset" öppnar bytesrutan på veckans DYRASTE rätt med avsikten
+  // billigare förvald - konkreta byten, inte ett råd.
+  $("lowerCostBtn").addEventListener("click", () => {
+    const priciest = selectedRecipes().filter(recipe => recipe.portionspris)
+      .sort((a, b) => b.portionspris - a.portionspris)[0];
+    if (!priciest) return;
+    openSwapModal(priciest.id);
+    if (swapContext) {
+      swapContext.intent = "cheaper";
+      swapContext.allOptions = swapOptionsFor(swapContext.current, swapContext.candidates, "cheaper");
+      renderSwapModal();
+    }
+  });
+}
+
 function renderBasket() {
   const selected = selectedRecipes();
   ensureWeekRecipeDetails();
@@ -2991,6 +3092,9 @@ function renderBasket() {
     basketNote.hidden = !householdActive();
     if (householdActive()) basketNote.textContent = `Delas med ${state.household.name}`;
   }
+  // Bara en riktig total får bli historik eller jämförelsegrund.
+  if (total != null) lastRealWeekTotal = total;
+  renderWeekCostAlert(total);
   renderStaplePrompt(shoppingItems);
   renderAttribution(shoppingItems);
   renderStoreComparison(selected); renderStoreCards(); renderExtraItems(activeChain); renderPantry();
