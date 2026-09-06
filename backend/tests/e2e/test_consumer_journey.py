@@ -534,9 +534,13 @@ class BrowserJourney(unittest.TestCase):
             self.close_account_modal()
             page.click('.bottom-nav-item[data-view="basket"]')
             expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
-            self.wait_for_store_cards()
+            # Efter återkomsten från checkout prissätts veckan i två omgångar
+            # (ny vecka + återställd vecka) och korten töms däremellan - vänta
+            # in de TRE prissatta korten innan något annat asserteras, annars
+            # passerar "inga lås" på en tom behållare (sett i CI).
+            expect(page.locator("#storeCards .store-card:not(.locked):not(.unavailable)")).to_have_count(3, timeout=30_000)
+            expect(page.locator("#shoppingCost")).not_to_contain_text("pris hämtas", timeout=30_000)
             expect(page.locator("#storeCards .store-card.locked")).to_have_count(0)
-            expect(page.locator("#storeCards .store-card:not(.locked):not(.unavailable)")).to_have_count(3)
             expect(page.locator("#storeCards .store-card-badge")).to_have_count(1)     # exakt EN Billigast
             page.click("#storeCardsCompareBtn")
             expect(page.locator("#top")).to_have_class(re.compile(r"view-comparison"))
