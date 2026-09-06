@@ -21,6 +21,7 @@ import urllib.request
 from pathlib import Path
 
 from ..recipes.images import PEXELS_LICENCE, USER_AGENT, pexels_key
+from ..data_guard import guard_outbound_http
 
 PEXELS_VIDEO_API = "https://api.pexels.com/videos/search"
 
@@ -166,6 +167,7 @@ def _get(url: str, params: dict) -> dict:
     request = urllib.request.Request(
         f"{url}?{urllib.parse.urlencode(params)}",
         headers={"Authorization": key, "User-Agent": USER_AGENT})
+    guard_outbound_http("Pexels (sajtvideo)")
     with urllib.request.urlopen(request, timeout=30) as response:
         return json.loads(response.read().decode("utf-8"))
 
@@ -315,6 +317,7 @@ def _describe(picked: dict, scene: dict, orientation: str, score: float) -> dict
 def download(url: str, destination: Path) -> int:
     destination.parent.mkdir(parents=True, exist_ok=True)
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    guard_outbound_http("Pexels (sajtvideo)")
     with urllib.request.urlopen(request, timeout=180) as response:
         data = response.read()
     destination.write_bytes(data)

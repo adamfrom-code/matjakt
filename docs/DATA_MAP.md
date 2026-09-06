@@ -18,6 +18,13 @@
 | Sessionstoken | `sessions.token` (SHA-256 av token), `expires_at` (30 dygn) | hålla användaren inloggad, flera enheter | ingen – hash | avtal |
 | Verifierings-/reset-token | `users.verification_token` (hash, 7 dygn), `users.reset_token` (hash, 1 timme) | bevisa adress, byta lösenord | ingen – hash | avtal |
 | Synkat tillstånd | `users.synced_state` (JSON) | samma vecka på alla enheter: hushåll, budget, postnummer, ev. position (lat/lon från "Hitta mig"), vald butik, veckans recept, inköpslista, skafferi, favoriter, kostpreferenser, allergener, ogillade råvaror, näringsmål | Adam (drift) | avtal; allergener/kost är känsliga uppgifter i GDPR:s mening – kräver uttryckligt samtycke i policyn |
+| Hushållsmedlemskap | `matjakt.db` → `household_members` (user_id, roll, visningsnamn, profil) | dela vecka, lista och skafferi med familjen | de andra medlemmarna i samma hushåll, Adam (drift) | avtal; profilens allergier är känsliga uppgifter i GDPR:s mening – samma samtycke som synkat tillstånd |
+| Delad hushållsdata | `households`, `shopping_items`, `inventory_items`, `household_docs` | familjens gemensamma vecka, inköpslista och skafferi | alla medlemmar i hushållet | avtal |
+| Inbjudningslänk | `household_invites.token_hash` (SHA-256, engångs, 72 h) | bjuda in en familjemedlem | ingen – hash | avtal |
+| Hushållshändelser | `household_events` (typ, vem, när, varans namn) | underlag för notiser; högst 500 rader per hushåll | medlemmarna, Adam (drift) | avtal |
+| Notisinställningar | `notification_prefs` (per kategori) | användaren styr vad som plingar | Adam (drift) | avtal |
+| Enhetstoken för push | `push_devices.token_hash` (SHA-256) | skicka notis till rätt enhet; glöms vid utloggning och byter ägare när ett nytt konto loggar in på enheten | ingen – hash | avtal |
+| Köade notiser | `notification_outbox` (titel, text, deeplink; högst 100 per användare) | leverera notiser; töms när någon lämnar hushållet | mottagaren, Adam (drift) | avtal |
 | Premiumstatus | `users.premium`, `subscription_*`, `stripe_customer_id`, `stripe_subscription_id`, `stripe_event_created` | låsa upp Premium, sköta prenumerationen | Adam, Stripe | avtal |
 | Provperiodsfält (`trial_*`) | `matjakt.db` | historik för två gamla konton; ingen ny trial ges | Adam | – (utfasas) |
 | Feedback (fritext + skärm) | `matjakt.db` → `feedback` | produktförbättring; ingen koppling till konto | Adam | berättigat intresse |
@@ -47,7 +54,7 @@
 
 | Rättighet | Hur |
 |---|---|
-| Radering | "Radera konto" i appen: sessioner, konto och synkat tillstånd raderas; Stripe-prenumerationen sägs upp först och Stripe-kunden raderas (`POST /api/auth/delete-account`) |
+| Radering | "Radera konto" i appen: sessioner, konto och synkat tillstånd raderas; hushållsmedlemskap, profil, notisinställningar, enhetstoken och köade notiser raderas; gemensam hushållsdata stannar hos övriga medlemmar (raderas helt om kontot var ensamt i hushållet); Stripe-prenumerationen sägs upp först och Stripe-kunden raderas (`POST /api/auth/delete-account`) |
 | Tillgång/export | Synkat tillstånd hämtas som JSON via `GET /api/account/state` med sessionstoken. En knapp i UI saknas – se `docs/RETENTION.md` |
 | Rättelse | E-post kan inte bytas i UI ännu; lösenord kan bytas |
 | Invändning mot analytics | Räknarna bär ingen identitet – inget att invända mot per person |

@@ -295,6 +295,17 @@ class AccountStore:
         row = self._session_user_row(token)
         return self._to_public(row) if row else None
 
+    def identity_for_token(self, token: str) -> tuple[int, str] | None:
+        """(user_id, email) för en giltig session, annars None.
+
+        Hushållsvägarna behöver ETT numeriskt id att äga rader med, och
+        user_for_token() lämnar medvetet inte ut id:t (det är kontots publika
+        vy). Den här är den enda dörren till id:t, och den öppnas bara av en
+        levande session - aldrig av något klienten skickar in. Det är hela
+        skyddet mot att byta household_id/user_id i en payload."""
+        row = self._session_user_row(token)
+        return (row["id"], row["email"]) if row else None
+
     def user_id_for_token(self, token: str) -> int | None:
         row = self._session_user_row(token)
         return int(row["id"]) if row else None
@@ -338,6 +349,15 @@ class AccountStore:
         if not row:
             raise AccountError("Du måste vara inloggad")
         return row["id"], row["email"], row["stripe_customer_id"]
+
+    def email_for_user_id(self, user_id) -> str | None:
+        """E-posten för ett användar-id. Anropas bara av kod som redan
+        bevisat att den frågande är medlem i samma hushåll - lagret här
+        kontrollerar inte det, och får därför aldrig nås direkt från en
+        route utan den kontrollen först."""
+        row = self._connection.execute(
+            "SELECT email FROM users WHERE id = ?", (int(user_id),)).fetchone()
+        return row["email"] if row else None
 
     def set_stripe_customer_id(self, user_id, customer_id):
         self._connection.execute("UPDATE users SET stripe_customer_id = ? WHERE id = ?", (customer_id, user_id))

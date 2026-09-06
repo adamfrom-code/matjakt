@@ -31,7 +31,7 @@ import { readStoredState, writeStoredState } from "./src/state/storage.js";
 import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
 import { createDebouncedSearch, filterRecipes, mergeRecipeResults } from "./src/services/recipe-search.js";
 import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/nutrition.js";
-import { expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts } from "./src/services/pantry.js";
+import { PANTRY_LOCATIONS, expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts } from "./src/services/pantry.js";
 import { extraLineTotal, extraUnitPrice, extrasTotal, newExtraItem, removeExtra, setQty } from "./src/services/extras.js";
 import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
@@ -39,6 +39,10 @@ import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, groceryStatusApiUrl, p
 import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
+import { adjustInventory, createHousehold, createInvite, fetchHousehold, fetchNotifications, joinHousehold, leaveHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, removeMember, renameHousehold, replaceWeekItems, saveHouseholdDoc, saveHouseholdProfile, saveNotificationPrefs, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
+import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, householdDietary, inventoryNames, inventoryRows, memberName, pantryAmountsFor, shoppingRows } from "./src/services/household-state.js";
+import { CATEGORY_ORDER, categoryFor, groupByCategory } from "./src/services/categories.js";
+import { BUDGET_ALERT_MIN_WEEKS, SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swapReasonText, weekCostAlert } from "./src/services/swap.js";
 
 // The recipe bank is DATA, loaded from data/recipes.json - see
 // src/data/recipes.js. It used to be two hardcoded arrays right here, which
@@ -132,13 +136,23 @@ function selectedRecipes() {
   const allRecipes = [...RECEPT, ...state.apiRecipes];
   return state.weekPlan.map(id => allRecipes.find(recipe => recipe.id === id)).filter(Boolean);
 }
+// Den senaste RIKTIGA veckototalen - aldrig ett uppskattat pris. Sätts i
+// renderBasket och sparas med veckan när den byts ut, så budgethjälpen
+// (§18) har verkliga tal att jämföra mot i stället för gissningar.
+let lastRealWeekTotal = null;
+
 function setWeekPlan(ids) {
   // Papperskorgen: den vecka som just ersätts läggs överst i historiken
-  // (tre senaste behålls, synkas med kontot). "Skapa ny vecka" av misstag
-  // ska aldrig kosta en kurerad vecka.
+  // (de tolv senaste behålls, synkas med kontot). "Skapa ny vecka" av
+  // misstag ska aldrig kosta en kurerad vecka, och historiken är dessutom
+  // det som gör att samma rätter inte kommer tillbaka direkt (§15).
   if (state.weekPlan?.length && state.weekPlan.join() !== [...ids].join()) {
-    state.weekHistory = [{ plan: [...state.weekPlan], savedAt: Date.now() },
-                         ...(state.weekHistory || [])].slice(0, 3);
+    // Totalen sparas MED veckan så budgethjälpen har riktiga tal att
+    // jämföra mot (§18). Bara en riktig, prissatt total - null när veckan
+    // aldrig hann prissättas, så snittet aldrig bygger på en gissning.
+    state.weekHistory = [{ plan: [...state.weekPlan], savedAt: Date.now(),
+                           total: lastRealWeekTotal },
+                         ...(state.weekHistory || [])].slice(0, 12);
   }
   state.weekPlan = [...ids]; state.valda = new Set(ids);
 }
@@ -148,7 +162,7 @@ function restorePreviousWeek() {
   if (!previous) return;
   state.weekHistory = state.weekHistory.slice(1);
   state.weekPlan = [...previous.plan]; state.valda = new Set(previous.plan);
-  state.avklarade.clear(); state.removedItems.clear();
+  state.avklarade.clear(); state.harHemma.clear(); state.removedItems.clear();
   clearPriceSnapshots();
   saveState(); render();
   showUndoToast("Förra veckan är tillbaka", () => {});
@@ -160,7 +174,7 @@ function removeFromWeekPlan(id) { state.weekPlan = state.weekPlan.filter(existin
 // swapping "this day" rather than clearing and re-picking the week.
 function swapWeekPlanDay(dayIndex, newId) { state.weekPlan = state.weekPlan.map((id, index) => index === dayIndex ? newId : id); state.valda = new Set(state.weekPlan); }
 const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: Math.min(12, Math.max(1, Number(savedState.personer) || 2)), middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), removedItems: new Set(savedState.removedItems || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, dbLockedChains: [], extraItems: savedState.extraItems || [], extraMatches: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null, weekHistory: savedState.weekHistory || [], foljdaVaror: savedState.foljdaVaror || [],
+const state = { budget: savedState.budget || 800, personer: Math.min(12, Math.max(1, Number(savedState.personer) || 2)), middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), removedItems: new Set(savedState.removedItems || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, dbLockedChains: [], extraItems: savedState.extraItems || [], extraMatches: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null, weekHistory: savedState.weekHistory || [], foljdaVaror: savedState.foljdaVaror || [], harHemma: new Set(savedState.harHemma || []), stapleItems: savedState.stapleItems || [], stapleAsked: savedState.stapleAsked || {}, household: emptyHouseholdState(), householdLoaded: false, notiser: [],
   // The week's recipe ids in day order (index 0 = Måndag) - the actual
   // source of truth for "which day has which recipe", now that a day swap
   // has to replace exactly one day's recipe in place. state.valda (a Set)
@@ -170,7 +184,7 @@ const state = { budget: savedState.budget || 800, personer: Math.min(12, Math.ma
   // never valda's own iteration order (a Set has none tied to day position).
   weekPlan: Array.isArray(savedState.weekPlan) ? savedState.weekPlan : [...(savedState.valda || [])] };
 function buildSyncPayload() {
-  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], removedItems: [...state.removedItems], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan, weekHistory: state.weekHistory, foljdaVaror: state.foljdaVaror, extraItems: state.extraItems,
+  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], removedItems: [...state.removedItems], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan, weekHistory: state.weekHistory, foljdaVaror: state.foljdaVaror, extraItems: state.extraItems, harHemma: [...state.harHemma], stapleItems: state.stapleItems, stapleAsked: state.stapleAsked,
     // The last real pricing snapshot. Painted immediately on next visit with
     // its own timestamp while a fresh fetch runs - the difference between
     // "pris hämtas…" for seconds on every open and prices that are simply
@@ -194,6 +208,9 @@ function applySyncBlob(blob) {
   if (blob.extraItems !== undefined) state.extraItems = blob.extraItems;
   if (blob.weekHistory !== undefined) state.weekHistory = blob.weekHistory;
   if (blob.foljdaVaror !== undefined) state.foljdaVaror = blob.foljdaVaror;
+  if (blob.harHemma !== undefined) state.harHemma = new Set(blob.harHemma);
+  if (blob.stapleItems !== undefined) state.stapleItems = blob.stapleItems;
+  if (blob.stapleAsked !== undefined) state.stapleAsked = blob.stapleAsked;
   if (blob.dbChainTotals) { state.dbChainTotals = blob.dbChainTotals; state.dbComparison = blob.dbComparison || null; state.dbPricedAt = blob.dbPricedAt || null; }
   if (blob.naringsmal !== undefined) state.naringsmal = blob.naringsmal;
   if (blob.betyg !== undefined) state.betyg = blob.betyg;
@@ -271,6 +288,294 @@ async function pullAccountState() {
   } catch { /* offline eller serverfel - den lokala datan används tills nästa försök */ }
 }
 function saveState() { writeStoredState(localStorage, buildSyncPayload()); scheduleServerSync(); }
+
+// ---------------------------------------------------------------------------
+// HUSHÅLLET
+//
+// En vara i Handla har fyra tillstånd (§6): behöver köpa, har hemma, köpt,
+// borttagen. Modellen gäller ALLA - den som handlar ensam får samma fyra
+// tillstånd som en familj. Hushållet ändrar bara VAR de bor: i serverns
+// delade rader i stället för i den här enhetens localStorage.
+//
+// Adaptern nedan är den enda platsen som vet vilket av de två som gäller.
+// Resten av appen frågar itemStatus()/setItemStatus() och bryr sig inte.
+// ---------------------------------------------------------------------------
+
+const householdActive = () => Boolean(state.household.id);
+const foldName = name => String(name || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+const itemKeyFor = (name, gtin) => gtin ? `gtin:${gtin}` : `name:${foldName(name)}`;
+
+function householdRow(name, gtin) {
+  return state.household.shopping[itemKeyFor(name, gtin)] || null;
+}
+
+function itemStatus(name, gtin) {
+  if (householdActive()) return householdRow(name, gtin)?.status || NEED_TO_BUY;
+  if (state.removedItems.has(name)) return REMOVED;
+  if (state.avklarade.has(name)) return PURCHASED;
+  if (state.harHemma.has(name)) return ALREADY_HAVE;
+  return NEED_TO_BUY;
+}
+
+// Vad varan var innan senaste ändringen, så "Ångra" kan lämna tillbaka
+// exakt det - inte en gissning om vad användaren troligen menade.
+let lastShoppingUndo = null;
+
+function setItemStatus(name, status, options = {}) {
+  const previous = itemStatus(name, options.gtin);
+  if (previous === status) return;
+  if (householdActive()) {
+    setHouseholdStatus(name, status, previous, options);
+    return;
+  }
+  state.removedItems.delete(name);
+  state.avklarade.delete(name);
+  state.harHemma.delete(name);
+  if (status === REMOVED) state.removedItems.add(name);
+  if (status === PURCHASED) state.avklarade.add(name);
+  if (status === ALREADY_HAVE) state.harHemma.add(name);
+  let addedToPantry = false;
+  // "Har hemma" ska BETYDA något (§5): varan lämnar behovet OCH hamnar i
+  // skafferiet. Detsamma för "köpt" när användaren bett om det.
+  if (status === ALREADY_HAVE || (status === PURCHASED && options.addToPantry)) {
+    addedToPantry = addLocalPantryItem(name, options);
+  }
+  lastShoppingUndo = { name, status: previous, pantryAdded: addedToPantry, gtin: options.gtin };
+  clearPriceSnapshots();
+  saveState();
+  render();
+}
+
+function addLocalPantryItem(name, options = {}) {
+  const location = PANTRY_LOCATIONS.includes(options.location) ? options.location : "skafferi";
+  if (state.pantry[name]?.amount > 0) {
+    // Fanns redan hemma: rör inte mängden. Ångra ska inte kunna radera
+    // familjens riktiga vara bara för att någon tryckte fel i Handla.
+    state.pantry[name] = { ...state.pantry[name], location };
+    return false;
+  }
+  state.pantry[name] = { amount: 1, location, expiry: null };
+  return true;
+}
+
+async function setHouseholdStatus(name, status, previous, options = {}) {
+  const key = options.key || itemKeyFor(name, options.gtin);
+  // Optimistiskt: knappen svarar direkt, även i en affär med dålig täckning.
+  state.household = applyLocalRow(state.household, "shopping", { key, name, status });
+  render();
+  try {
+    const location = PANTRY_LOCATIONS.includes(options.location) ? options.location : "skafferi";
+    let response;
+    if (status === ALREADY_HAVE) response = await markAtHome(state.authToken, key, location);
+    else if (status === PURCHASED) response = await markPurchased(state.authToken, key, { addToInventory: Boolean(options.addToPantry), location });
+    else response = await setShoppingStatus(state.authToken, key, status);
+    lastShoppingUndo = response.undo ? { ...response.undo, name } : { key, name, status: previous };
+    applyHouseholdResponse(response);
+  } catch (error) {
+    // Skrivningen gick inte fram - hämta serverns sanning i stället för att
+    // låta den optimistiska raden ljuga.
+    lastShoppingUndo = null;
+    pullHousehold(true);
+  }
+}
+
+function applyHouseholdResponse(response) {
+  if (!response) return;
+  const rows = { revision: response.revision, shopping: [], inventory: [] };
+  if (response.item) rows.shopping.push(response.item);
+  if (response.inventory && response.inventory.key) rows.inventory.push(response.inventory);
+  if (Array.isArray(response.items)) rows.shopping.push(...response.items);
+  state.household = applySync(state.household, rows);
+  render();
+}
+
+function undoLastShoppingAction() {
+  const undo = lastShoppingUndo;
+  lastShoppingUndo = null;
+  if (!undo) return;
+  if (householdActive()) {
+    state.household = applyLocalRow(state.household, "shopping", { key: undo.key, status: undo.status });
+    render();
+    undoShoppingAction(state.authToken, undo).then(applyHouseholdResponse).catch(() => pullHousehold(true));
+    return;
+  }
+  state.removedItems.delete(undo.name);
+  state.avklarade.delete(undo.name);
+  state.harHemma.delete(undo.name);
+  if (undo.status === REMOVED) state.removedItems.add(undo.name);
+  if (undo.status === PURCHASED) state.avklarade.add(undo.name);
+  if (undo.status === ALREADY_HAVE) state.harHemma.add(undo.name);
+  // Bara en rad som HANDLINGEN skapade tas bort igen.
+  if (undo.pantryAdded) delete state.pantry[undo.name];
+  clearPriceSnapshots();
+  saveState();
+  render();
+}
+
+// ---- skafferiet: hushållets rader eller enhetens egna ---------------------
+
+// Skafferiet som EN lista, oavsett var det bor. Vyerna nedan läser bara
+// härifrån, så de ser likadana ut i båda lägena.
+function pantryList(location = null) {
+  if (householdActive()) {
+    return inventoryRows(state.household, location).map(item => ({
+      key: item.key, name: item.name, amount: item.amount, unit: item.unit || "st",
+      location: item.location, expiry: item.expiry, product: item.product || null,
+      category: item.category || categoryFor(item.name, item.product?.category),
+    }));
+  }
+  return Object.entries(state.pantry)
+    .filter(([, entry]) => entry.amount > 0 && (!location || entry.location === location))
+    .map(([name, entry]) => ({
+      key: itemKeyFor(name), name, amount: entry.amount,
+      unit: PACKAGE_INFO[name]?.unit || "st", location: entry.location, expiry: entry.expiry,
+      product: null, category: categoryFor(name),
+    }));
+}
+
+// Vad prismotorn får veta om vad som finns hemma. Konservativt (§10):
+// bara mängder vi faktiskt vet.
+function pantryForPricing() {
+  return householdActive() ? pantryAmountsFor(state.household) : pantryAmounts(state.pantry);
+}
+
+function pantryNamesForCooking() {
+  return householdActive() ? inventoryNames(state.household) : Object.keys(state.pantry);
+}
+
+function addPantryItem(fields) {
+  const location = PANTRY_LOCATIONS.includes(fields.location) ? fields.location : "skafferi";
+  if (householdActive()) {
+    const key = itemKeyFor(fields.name, fields.gtin);
+    state.household = applyLocalRow(state.household, "inventory", {
+      key, name: fields.name, amount: fields.amount || 1, unit: fields.unit || "st",
+      location, product: fields.product || null, deleted: false,
+    });
+    render();
+    upsertInventoryItem(state.authToken, { ...fields, location, key })
+      .then(applyHouseholdInventory).catch(() => pullHousehold(true));
+    return;
+  }
+  state.pantry[fields.name] = {
+    amount: Math.max(0, Number(fields.amount) || 1), location,
+    expiry: fields.expiry || null,
+  };
+  saveState();
+  render();
+}
+
+function applyHouseholdInventory(response) {
+  if (!response || !response.item) return;
+  state.household = applySync(state.household, { revision: response.revision, inventory: [response.item] });
+  render();
+}
+
+function stepPantryItem(entry, delta) {
+  if (householdActive()) {
+    const amount = Math.max(0, (Number(entry.amount) || 0) + delta);
+    state.household = applyLocalRow(state.household, "inventory", { key: entry.key, amount, deleted: amount <= 0 });
+    render();
+    adjustInventory(state.authToken, entry.key, delta).then(applyHouseholdInventory).catch(() => pullHousehold(true));
+    return;
+  }
+  const next = (state.pantry[entry.name]?.amount || 0) + delta;
+  if (next <= 0) delete state.pantry[entry.name];
+  else state.pantry[entry.name].amount = next;
+  saveState();
+  render();
+}
+
+function removePantryItem(entry) {
+  if (householdActive()) {
+    state.household = applyLocalRow(state.household, "inventory", { key: entry.key, deleted: true });
+    render();
+    removeInventoryItem(state.authToken, entry.key).then(applyHouseholdInventory).catch(() => pullHousehold(true));
+    return;
+  }
+  delete state.pantry[entry.name];
+  saveState();
+  render();
+}
+
+// ---- synk ----------------------------------------------------------------
+//
+// Enklaste robusta lösningen (§25): hämta det som ändrats sedan förra
+// revisionen. Ingen WebSocket, ingen ny infrastruktur - en GET som nästan
+// alltid svarar tomt. Den går när appen är synlig, efter varje egen
+// ändring, och när telefonen kommer tillbaka från bakgrunden.
+const HOUSEHOLD_POLL_MS = 20000;
+let householdPollTimer = null;
+let householdPullInFlight = false;
+
+async function pullHousehold(force = false) {
+  if (!state.authToken || !householdActive()) return;
+  if (householdPullInFlight && !force) return;
+  householdPullInFlight = true;
+  try {
+    const payload = await syncHousehold(state.authToken, state.household.revision);
+    const before = state.household.revision;
+    state.household = applySync(state.household, payload);
+    if (state.household.revision !== before) render();
+  } catch (error) {
+    // 404 = kontot är inte längre med i hushållet (utkastad, eller lämnade
+    // från en annan enhet). Appen faller tillbaka till enhetens egen data
+    // i stället för att visa en familj som inte längre finns.
+    if (error.status === 404) { state.household = emptyHouseholdState(); renderAccount(); render(); }
+  } finally {
+    householdPullInFlight = false;
+  }
+}
+
+function startHouseholdSync() {
+  clearInterval(householdPollTimer);
+  if (!householdActive()) return;
+  householdPollTimer = setInterval(() => {
+    if (document.visibilityState === "visible") pullHousehold();
+  }, HOUSEHOLD_POLL_MS);
+}
+
+async function loadHousehold() {
+  if (!state.authToken) { state.household = emptyHouseholdState(); startHouseholdSync(); return; }
+  try {
+    const { household } = await fetchHousehold(state.authToken);
+    if (household) {
+      state.household = applySync(emptyHouseholdState(), { household, revision: 0 });
+      await pullHousehold(true);
+      pushWeekToHousehold();
+    } else {
+      state.household = emptyHouseholdState();
+    }
+  } catch { /* offline - appen fungerar lokalt tills nästa försök */ }
+  state.householdLoaded = true;
+  startHouseholdSync();
+  renderAccount();
+  render();
+}
+
+// Veckans behov ut till hushållets lista.
+//
+// Skickar BARA veckans rader; det familjen själv bestämt om en vara ("har
+// hemma", "köpt", manuellt tillagd) rörs inte av servern. Utan debouncen
+// hade varje receptbyte skickat hela listan på nytt.
+let weekPushTimer = null;
+let lastWeekPushKey = null;
+function pushWeekToHousehold() {
+  if (!householdActive()) return;
+  const items = aggregateShopping(selectedRecipes()).map(item => ({
+    name: item.namn, amount: item.total, unit: item.unit,
+    category: categoryFor(item.namn, databaseItemFor(item.namn)?.category),
+  }));
+  const key = JSON.stringify(items);
+  if (key === lastWeekPushKey) return;
+  clearTimeout(weekPushTimer);
+  weekPushTimer = setTimeout(() => {
+    lastWeekPushKey = key;
+    replaceWeekItems(state.authToken, items)
+      .then(payload => { state.household = applySync(state.household, payload); render(); })
+      .catch(() => { lastWeekPushKey = null; });
+  }, 900);
+}
+
 // Shown only when no real branch list could be fetched. The name says what
 // the price actually is: Willys prices are verified national, so the total
 // is real - it is the BRANCH that is unknown, not the price.
@@ -359,13 +664,13 @@ const RECIPE_QUANTITIES = {
   linssoppa: { "Röda linser": [250, "g"], Kokosmjölk: [400, "ml"], Morötter: [300, "g"], "Lök & vitlök": [150, "g"] },
   korvstroganoff: { Falukorv: [400, "g"], Grädde: [200, "ml"], "Tomatpuré": [70, "g"], Ris: [250, "g"] },
   tacobonor: { "Svarta bönor": [380, "g"], Ris: [250, "g"], Majs: [150, "g"], Salsa: [230, "g"] },
-  lax: { "Laxfilé": [600, "g"], Potatis: [800, "g"], Citron: [1, "st"], Dill: [1, "st"] },
+  "ugnslax-citron": { "Laxfilé": [600, "g"], Potatis: [800, "g"], Citron: [1, "st"], Dill: [1, "st"] },
   halloumibowl: { Halloumi: [225, "g"], Matvete: [250, "g"], Paprika: [1, "st"], Yoghurt: [200, "g"] },
-  chili: { "Kidneybönor": [400, "g"], "Krossade tomater": [400, "g"], Majs: [150, "g"], Paprika: [2, "st"] },
-  kycklingwok: { "Kycklingfilé": [500, "g"], "Äggnudlar": [250, "g"], Wokgrönsaker: [400, "g"], Soja: [30, "ml"] },
+  "chili-sin-carne-budget": { "Kidneybönor": [400, "g"], "Krossade tomater": [400, "g"], Majs: [150, "g"], Paprika: [2, "st"] },
+  "kycklingwok-nudlar-protein": { "Kycklingfilé": [500, "g"], "Äggnudlar": [250, "g"], Wokgrönsaker: [400, "g"], Soja: [30, "ml"] },
   tomatsoppa: { "Krossade tomater": [400, "g"], Grädde: [200, "ml"], Lök: [2, "st"], Basilika: [1, "st"] },
   pannkakor: { "Vetemjöl": [250, "g"], Mjölk: [600, "ml"], Ägg: [4, "st"], Bär: [300, "g"] },
-  kottbullar: { "Köttfärs": [500, "g"], Potatis: [800, "g"], Grädde: [200, "ml"], Lingonsylt: [100, "g"] },
+  "kottbullar-potatismos": { "Köttfärs": [500, "g"], Potatis: [800, "g"], Grädde: [200, "ml"], Lingonsylt: [100, "g"] },
   vegetarisklasagne: { Lasagneplattor: [300, "g"], "Krossade tomater": [400, "g"], "Riven ost": [150, "g"], Zucchini: [2, "st"] },
   scampi: { "Räkor": [300, "g"], Pasta: [250, "g"], Vitlök: [1, "st"], Citron: [1, "st"] },
   kikartscurry: { Kikärtor: [380, "g"], Kokosmjölk: [400, "ml"], Ris: [250, "g"], "Curry & grönsaker": [28, "g"] },
@@ -375,7 +680,7 @@ const RECIPE_QUANTITIES = {
   kycklingcouscous: { Kycklingfilé: [500, "g"], Matvete: [250, "g"], Paprika: [2, "st"], Citron: [1, "st"] },
   rotfruktsgratang: { Falukorv: [400, "g"], Potatis: [800, "g"], Morötter: [400, "g"], "Riven ost": [100, "g"] },
   butterchicken: { Kycklingfilé: [500, "g"], "Krossade tomater": [400, "g"], Grädde: [200, "ml"], "Curry & grönsaker": [28, "g"] },
-  fiskgratang: { "Fryst torsk": [500, "g"], Räkor: [200, "g"], Dill: [1, "st"], Grädde: [200, "g"] },
+  "fiskgratang-dill": { "Fryst torsk": [500, "g"], Räkor: [200, "g"], Dill: [1, "st"], Grädde: [200, "g"] },
   tofuwok: { Tofu: [400, "g"], Wokgrönsaker: [400, "g"], Soja: [30, "ml"], Ris: [250, "g"] },
   ugnstorsk: { "Fryst torsk": [600, "g"], Citron: [1, "st"], Sparris: [300, "g"], Potatis: [600, "g"] },
   flaskkarre: { "Fläskfilé": [600, "g"], "Äppelmos": [200, "g"], Rödkål: [300, "g"], Potatis: [600, "g"] },
@@ -439,10 +744,10 @@ const RECIPE_DETAILS = {
   korvstroganoff: { beskrivning: "En svensk vardagsklassiker med tomat, grädde och mild paprika.", steg: ["Skär korven och bryn den lätt.", "Fräs tomatpuré och paprika innan du tillsätter grädde.", "Låt såsen sjuda några minuter och servera med ris."], tips: "En skvätt soja ger såsen mer djup." },
   tacobonor: { beskrivning: "Fräsch tacobowl med svarta bönor, majs, ris och salsa.", steg: ["Koka riset och värm bönorna med kryddor.", "Skär grönsakerna och blanda majsen med salsan.", "Bygg skålar med ris, bönor, grönsaker och salsa."], tips: "Pressa över lime precis före servering." },
   fiskpasta: { beskrivning: "Len fiskpasta med citron, crème fraiche och dill.", steg: ["Koka pastan och spara lite pastavatten.", "Tillaga fisken försiktigt i en krämig citronsås.", "Vänd ner pastan och späd med pastavatten till rätt konsistens."], tips: "Koka inte fisken för hårt, då blir den saftigare." },
-  lax: { beskrivning: "Ugnsbakad lax med citron, dill och rostad potatis.", steg: ["Sätt ugnen på 200°C.", "Lägg lax och potatis i en form.", "Toppa med citron och dill och baka tills laxen är klar."], tips: "Laxen är klar när den precis börjar dela sig i lameller." },
+  "ugnslax-citron": { beskrivning: "Ugnsbakad lax med citron, dill och rostad potatis.", steg: ["Sätt ugnen på 200°C.", "Lägg lax och potatis i en form.", "Toppa med citron och dill och baka tills laxen är klar."], tips: "Laxen är klar när den precis börjar dela sig i lameller." },
   halloumibowl: { beskrivning: "Krispig halloumi med rostade grönsaker och krämig yoghurt.", steg: ["Koka matvetet enligt förpackningen.", "Rosta grönsakerna i ugnen.", "Stek halloumin och servera med yoghurt."], tips: "Stek halloumin sist så håller den sig varm och krispig." },
-  chili: { beskrivning: "Mustig chili sin carne med bönor, tomat och paprika.", steg: ["Fräs paprika och lök.", "Tillsätt tomater, bönor och majs.", "Låt sjuda i 20 minuter och servera med ris."], tips: "Låt chilin vila tio minuter före servering för djupare smak." },
-  kycklingwok: { beskrivning: "Snabb wok med kyckling, nudlar och krispiga grönsaker.", steg: ["Koka nudlarna.", "Stek kycklingen tills den är genomstekt.", "Woka grönsakerna och blanda allt med soja."], tips: "Ha alla ingredienser framme innan du börjar woka." },
+  "chili-sin-carne-budget": { beskrivning: "Mustig chili sin carne med bönor, tomat och paprika.", steg: ["Fräs paprika och lök.", "Tillsätt tomater, bönor och majs.", "Låt sjuda i 20 minuter och servera med ris."], tips: "Låt chilin vila tio minuter före servering för djupare smak." },
+  "kycklingwok-nudlar-protein": { beskrivning: "Snabb wok med kyckling, nudlar och krispiga grönsaker.", steg: ["Koka nudlarna.", "Stek kycklingen tills den är genomstekt.", "Woka grönsakerna och blanda allt med soja."], tips: "Ha alla ingredienser framme innan du börjar woka." },
   tomatsoppa: { beskrivning: "Len tomatsoppa med basilika och en skvätt grädde.", steg: ["Fräs löken mjuk.", "Koka med tomater och buljong.", "Mixa soppan och rör ner grädden."], tips: "En liten nypa socker balanserar syrliga tomater." },
   pannkakor: { beskrivning: "Klassiska tunna pannkakor med sötsyrliga bär.", steg: ["Vispa ihop smetens ingredienser.", "Stek tunna pannkakor i smör.", "Servera med bär."], tips: "Låt smeten vila en stund så blir pannkakorna jämnare." }
 };
@@ -452,7 +757,7 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const scaledPurchasePrice = (recipe, branch = selectedBranch()) => recipe.inkopspris * portionFactor(state.personer) * (branch?.prisfaktor || 1);
 function shoppingListCost(selected, branch) {
   const factor = branch?.prisfaktor || 1;
-  return calculateShoppingTotal(aggregateShopping(selected), PRODUCT_CATALOG, pantryAmounts(state.pantry), factor);
+  return calculateShoppingTotal(aggregateShopping(selected), PRODUCT_CATALOG, pantryForPricing(), factor);
 }
 function combinations(list, size) {
   if (size === 0) return [[]];
@@ -503,8 +808,32 @@ function comboVarietyPenalty(combo) {
   return penalty;
 }
 
+// Vad familjen NYSS åt drar ner, vad de HAR HEMMA drar upp.
+//
+// Båda är mjuka termer i samma poäng, inte spärrar. Tacos varje fredag är
+// ett val familjen får göra; poängen ska bara sluta föreslå det av sig
+// självt vecka efter vecka (§15). Och en rätt som använder kycklingen och
+// paprikan som redan står i kylen är värd mer än en som inte gör det, utan
+// att bli obligatorisk (§17).
+function comboHistoryPenalty(combo) {
+  return combo.reduce((sum, recipe) =>
+    sum + recentlyEatenPenalty(recipe.id, state.weekHistory, state.favoriter), 0);
+}
+
+// Skalan är avsiktligt låg: en vara hemma är värd ungefär en tredjedel av
+// ett "gillar"-betyg. Att låta skafferiet styra hårdare hade gjort veckan
+// till en resthantering i stället för en matsedel.
+const PANTRY_BONUS_PER_ITEM = 0.4;
+function comboPantryBonus(combo) {
+  const home = pantryNamesForCooking();
+  if (!home.length) return 0;
+  return combo.reduce((sum, recipe) => sum + pantryOverlap(recipe, home), 0) * PANTRY_BONUS_PER_ITEM;
+}
+
 const comboAffinity = combo => combo.reduce((sum, recipe) => sum + recipeAffinity(recipe), 0)
-  - comboVarietyPenalty(combo);
+  - comboVarietyPenalty(combo)
+  - comboHistoryPenalty(combo)
+  + comboPantryBonus(combo);
 // combinations() is C(pool, count), so a fixed pool size makes the search
 // blow up as the week gets longer: with the previous fixed pool of 24 a
 // 7-dinner week evaluated 346,104 combos against 10,626 for 4 - measured at
@@ -874,6 +1203,7 @@ function chooseMenu(shouldScroll = true) {
   // week could show ingredients as "already bought" just because an item with
   // the same name was checked off last week.
   state.avklarade.clear();
+  state.harHemma.clear();
   state.removedItems.clear();
   state.swapsThisWeek = 0;
   clearPriceSnapshots();
@@ -1034,7 +1364,10 @@ async function renderRecipePage() {
       && !recipeDetailFetches.has(found.id)) {
     recipeDetailFetches.add(found.id);
     loadRecipe(found.id).then(detail => {
-      if (!detail) { recipeDetailFetches.delete(found.id); return; }
+      // Samma regel som i ensureWeekRecipeDetails: null är ett definitivt
+      // "finns inte" och frågas aldrig om igen; ett kastat fel är okänt och
+      // släpper id:t fritt för nästa försök.
+      if (!detail) return;
       Object.assign(found, detail, { steg: detail.instructions || detail.steg || [] });
       renderRecipePage();
     }).catch(() => recipeDetailFetches.delete(found.id));
@@ -1106,7 +1439,7 @@ async function renderRecipePage() {
 }
 
 function branchLiveTotal(shoppingItems, chainProducts) {
-  return calculateLiveShoppingTotal(shoppingItems, chainProducts, pantryAmounts(state.pantry));
+  return calculateLiveShoppingTotal(shoppingItems, chainProducts, pantryForPricing());
 }
 // A branch's stable identity for state.liveBranchTotals - primatKey, not
 // chain name, since two branches of the same chain can genuinely have
@@ -1191,7 +1524,7 @@ function weekPricingBody(shoppingItems) {
   const bankRecipes = selected.filter(recipe => recipe.priceStatus !== "unavailable"
     && (!Array.isArray(recipe.ingredients) || recipe.ingredients.length || recipe.slug));
   const recipeIds = bankRecipes.map(recipe => recipe.id);
-  const body = { people: state.personer, pantry: pantryAmounts(state.pantry || {}) };
+  const body = { people: state.personer, pantry: pantryForPricing() };
   // Borttagna varor måste följa med: recipeIds-vägen aggregerar om veckan på
   // servern, och utan denna lista skulle butiksjämförelsen fortsätta prissätta
   // varor användaren tagit bort.
@@ -1341,9 +1674,19 @@ function addExtraItem(fields) {
   const foldName = String(fields.name || "").toLowerCase();
   const inList = aggregateShopping(selectedRecipes()).some(item => item.namn.toLowerCase() === foldName)
     || state.extraItems.some(item => (item.name || "").toLowerCase() === foldName);
-  const inPantry = Object.keys(state.pantry).some(key => key.toLowerCase() === foldName);
+  const inPantry = pantryNamesForCooking().some(key => key.toLowerCase() === foldName);
   if (inList || inPantry) {
     showUndoToast(inPantry ? `${fields.name} finns redan i ditt skafferi` : `${fields.name} står redan i listan`, () => {});
+  }
+  if (householdActive()) {
+    // I ett hushåll är en tillagd vara familjens, inte den här telefonens.
+    const key = itemKeyFor(fields.name);
+    state.household = applyLocalRow(state.household, "shopping",
+                                    { key, name: fields.name, status: NEED_TO_BUY, source: "manual" });
+    renderBasket();
+    upsertShoppingItem(state.authToken, { name: fields.name, source: "manual", category: categoryFor(fields.name) })
+      .then(applyHouseholdResponse).catch(() => pullHousehold(true));
+    return { id: key, name: fields.name };
   }
   const extra = newExtraItem(fields);
   state.extraItems = [...state.extraItems, extra];
@@ -1832,10 +2175,12 @@ async function openChainShoppingList(chain, branch = null) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     body.innerHTML = chainShoppingListMarkup(await response.json(), branch);
     body.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => {
-      input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping);
-      saveState();
-      // Handla-vyn delar samma avbockningar - utan omritning såg dess lista,
-      // progress och "Allt handlat" inget förrän någon orelaterad render.
+      // Samma fyra statusar som Handla, inte en egen kryssruta: en avbockning
+      // här ÄR ett köp, och ska hamna i skafferiet på samma villkor.
+      const name = input.dataset.shopping;
+      setItemStatus(name, input.checked ? PURCHASED : NEED_TO_BUY,
+                    { addToPantry: input.checked, location: suggestedLocationFor(name),
+                      gtin: databaseItemFor(name)?.gtin });
       renderBasket();
     }));
   } catch {
@@ -1889,7 +2234,7 @@ function chainShoppingListMarkup(data, branch = null) {
   const head = sticky + `<div class="chain-list-head"><h2>${escapeHtml(storeName)}</h2><small>${escapeHtml([data.chain, distance].filter(Boolean).join(" · "))}</small>${pricedElsewhere}<div class="chain-list-total"><span>Total kassakostnad</span><strong>${money(total)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor har pris</span>${data.estimatedItems ? `<span>${data.estimatedItems} med uppskattat antal</span>` : ""}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span><button type="button" class="report-price-btn" data-report-price>Ser något fel ut?</button>${savings}</div>${warning}</div>`;
 
   const rows = (data.items || []).map(item => {
-    const checked = state.avklarade.has(item.ingredient);
+    const checked = itemStatus(item.ingredient) !== NEED_TO_BUY;
     const missing = item.priceStatus === "missing";
     const photo = item.imageUrl
       ? `<img class="chain-item-photo" src="${escapeHtml(safeHttpUrl(item.imageUrl) || "")}" alt="" loading="lazy">`
@@ -2010,8 +2355,9 @@ function renderStoreComparisonPage(selected) {
     : "Priser hämtas…";
 }
 
-const CATEGORY_MAP = { "Frukt & grönt": ["Purjolök", "Morötter", "Lök", "Paprika", "Citron", "Dill", "Basilika", "Lök & vitlök", "Zucchini", "Vitlök", "Timjan", "Sparris", "Rödkål"], Mejeri: ["Grädde", "Riven ost", "Yoghurt", "Mjölk", "Crème fraiche", "Ägg", "Halloumi", "Feta"], "Kött & fisk": ["Kycklinglårfilé", "Kycklingfilé", "Falukorv", "Fryst torsk", "Laxfilé", "Köttfärs", "Fläskfilé", "Biff", "Kalvschnitzel"], Torrvaror: ["Pasta", "Ris", "Matvete", "Äggnudlar", "Vetemjöl", "Röda linser", "Kidneybönor", "Svarta bönor", "Majs", "Krossade tomater", "Tomatpuré", "Salsa", "Soja", "Lasagneplattor", "Kikärtor", "Lingonsylt", "Vegofärs", "Tofu", "Äppelmos", "Kapris"], Frys: ["Wokgrönsaker", "Bär", "Räkor"] };
-function itemCategory(name) { return Object.entries(CATEGORY_MAP).find(([, names]) => names.includes(name))?.[0] || "Övrigt"; }
+// Kategorierna bor i src/services/categories.js så att Handla, Skafferi
+// och veckan alla sorterar likadant - se §31 (butiksordning).
+const itemCategory = name => categoryFor(name, databaseItemFor(name)?.category);
 // Bundled locally (no network fetch) so every shopping item always shows something
 // relevant even offline or before a real product photo has loaded - never a bare
 // letter or a broken image. One simple, on-brand line icon per category; picking
@@ -2021,7 +2367,8 @@ const CATEGORY_ICONS = {
   "Frukt & grönt": '<path d="M12 9c-3 0-5.5 2.7-5.5 6.2C6.5 19 8.8 21 11 21c.7 0 1-.3 1-.3s.3.3 1 .3c2.2 0 4.5-2 4.5-5.8C17.5 11.7 15 9 12 9Z"/><path d="M12 9c0-2 1.2-3.3 2.8-3.6"/>',
   Mejeri: '<path d="M10 3h4v3l2 2v11a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V8l2-2V3Z"/><path d="M9 13h6"/>',
   "Kött & fisk": '<path d="M4 12c4-5 10-6 15-3-1 1-1 5 0 6-5 3-11 2-15-3Z"/><path d="M17 9l3-2v10l-3-2"/>',
-  Torrvaror: '<path d="M7 8h10v11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V8Z"/><path d="M9 8V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3M8 12h8"/>',
+  Skafferi: '<path d="M7 8h10v11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V8Z"/><path d="M9 8V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3M8 12h8"/>',
+  "Bröd": '<path d="M5 11a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2Z"/><path d="M9 8V6m3 2V6m3 2V6"/>',
   Frys: '<path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9"/>',
   Övrigt: '<path d="M6 8h12l-1 12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8ZM9 8V6a3 3 0 0 1 6 0v2"/>',
 };
@@ -2047,94 +2394,145 @@ function renderAttribution(shoppingItems) {
 // from the price database - the product name, its pack size, how many
 // packages this week's amount actually needs, and what that costs. Nothing
 // is estimated, so nothing here carries an "Uppskattat" badge.
-function databaseShoppingItemMarkup(item, match) {
-  const checked = state.avklarade.has(item.namn);
-  const photo = match.imageUrl
-    ? `<img class="shopping-item-image has-image" src="${escapeHtml(safeHttpUrl(match.imageUrl) || "")}" alt="" loading="lazy">`
-    : categoryIconMarkup(itemCategory(item.namn));
-  // A campaign price is only worth a badge when it is actually lower than
-  // the ordinary price - showing "kampanj" on a product at its normal price
-  // would invent a discount.
-  const onCampaign = match.campaignPrice != null && match.regularPrice != null
+// ---------------------------------------------------------------------------
+// HANDLA: EN RAD
+//
+// Frågorna en rad ska besvara på ett ögonkast, i den ordningen (§30):
+//   Vad är varan?  Hur mycket behöver vi?  Har vi den?  Vad kostar den?
+//   Var köps den?
+//
+// Bilden får aldrig ta över. Den är 44 px, ligger till vänster och ersätts
+// av en neutral kategorisymbol när vi inte har en bild vi får visa (§9) -
+// aldrig av en annan produkts bild för att fylla tomrummet.
+//
+// Produktnamn, märke och förpackning skrivs BARA ut när de kommer från en
+// riktig matchning i prisdatabasen. En osäker matchning blir inte säker av
+// att den får en bild (§35).
+// ---------------------------------------------------------------------------
+
+const AT_HOME_ICON = '<svg viewBox="0 0 24 24"><path d="m4 11 8-6 8 6v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1Z"/></svg>';
+const BOUGHT_ICON = '<svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg>';
+
+function shoppingActionsMarkup(name, status) {
+  if (status === NEED_TO_BUY) {
+    return `<div class="shopping-actions">`
+      + `<button type="button" class="shopping-action" data-at-home="${escapeHtml(name)}">${AT_HOME_ICON}<span>Har hemma</span></button>`
+      + `<button type="button" class="shopping-action buy" data-bought="${escapeHtml(name)}">${BOUGHT_ICON}<span>Köpt</span></button>`
+      + `</div>`;
+  }
+  const label = status === PURCHASED ? "Köpt" : "Finns hemma";
+  return `<div class="shopping-actions handled"><span class="shopping-handled-label">${label}</span>`
+    + `<button type="button" class="shopping-action" data-need="${escapeHtml(name)}">Behöver köpa</button></div>`;
+}
+
+// Vad raden ska säga om mängd. "2 st" ensamt svarade varken på vad veckan
+// behöver eller vad man ska lägga i korgen - båda står här.
+function quantityTextFor(item, match, status = NEED_TO_BUY) {
+  if (!match) {
+    const needed = Math.max(0, item.total - (pantryForPricing()[item.namn] || 0));
+    if (needed > 0) return `Behöver ${amountLabel(needed, item.unit)}`;
+    // Skafferiavdraget är en SLUTSATS; att användaren tryckt "behöver köpa"
+    // är ett BESKED. Beskedet vinner - annars stod det "Finns hemma" på en
+    // rad personen just sagt att de måste handla.
+    return status === NEED_TO_BUY ? `Behöver ${amountLabel(item.total, item.unit)}` : "Finns hemma";
+  }
+  const packageText = match.packageSize && match.packageSize !== "1 st" ? match.packageSize : "";
+  const needed = match.neededAmount ? `Behöver ${amountLabel(match.neededAmount, match.neededUnit)}` : "";
+  const count = match.packages > 1
+    ? `${match.packages} × ${packageText || "förpackning"}`
+    : (packageText ? `1 × ${packageText}` : "");
+  return [needed, count].filter(Boolean).join(" · ");
+}
+
+function shoppingRowMarkup(item) {
+  const match = databaseItemFor(item.namn);
+  const status = itemStatus(item.namn, match?.gtin);
+  const category = categoryFor(item.namn, match?.category);
+  const live = state.livePriser[item.namn];
+  // BILDEN: bara en bild vi faktiskt har rätt att visa för just den här
+  // produkten. Saknas den ritas kategorisymbolen - aldrig någon annans bild.
+  const imageUrl = match?.imageUrl || live?.bild;
+  const photo = imageUrl
+    ? `<img class="shopping-item-image has-image" src="${escapeHtml(safeHttpUrl(imageUrl) || "")}" alt="" loading="lazy" decoding="async">`
+    : categoryIconMarkup(category);
+  const title = match ? match.productName : (live ? live.produktnamn : item.namn);
+  const quantity = quantityTextFor(item, match, status);
+  const brand = match ? match.brand : (live ? live.markeOchStorlek : "");
+  const meta = escapeHtml([brand, quantity].filter(Boolean).join(" · "));
+  // Priset: bara ett riktigt pris får skrivas ut. Ett statiskt katalogpris
+  // är en gissning i en kolumn av fakta och skrivs aldrig.
+  const dbSyncPending = databasePricingSync.pending || (!state.dbPricedAt && !state.dbPricingFailedAt);
+  const priceMissing = live && live.pris_kr == null;
+  const packages = match ? match.packages : (item.package ? Math.ceil(Math.max(0, item.total - (pantryForPricing()[item.namn] || 0)) / item.package.amount) : 1);
+  const stillFetching = !match && !live && (dbSyncPending || (livePriceSync.loading && VALID_CHAINS.includes(chosenStore())));
+  const price = match && match.totalCost != null ? money(match.totalCost)
+    : priceMissing ? "Pris saknas"
+      : live ? money(live.pris_kr * (packages || 1))
+        : stillFetching ? "" : "Pris saknas";
+  const store = match ? (state.dbChainTotals[currentPricedChain()]?.chain || currentPricedChain() || "") : "";
+  const onCampaign = match && match.campaignPrice != null && match.regularPrice != null
     && match.campaignPrice < match.regularPrice;
   const campaign = onCampaign
     ? `<small class="shopping-item-campaign">Kampanj ${money(match.campaignPrice)} (ord. ${money(match.regularPrice)})</small>`
-    : "";
-  const packageText = match.packageSize && match.packageSize !== "1 st" ? match.packageSize : "";
-  // What the RECIPES need and what the SHOPPER buys, side by side. "2 st"
-  // alone answered neither question - you want to know that the week needs
-  // 750 g and that two 400 g packs cover it.
-  const neededText = match.neededAmount
-    ? `Behöver ${amountLabel(match.neededAmount, match.neededUnit)}` : "";
-  const countText = match.packages > 1
-    ? `Köp ${match.packages} × ${packageText || "1 st"}`
-    : (packageText ? `Köp 1 × ${packageText}` : "");
-  // Flagged, not hidden: when the recipe's unit can't be converted to the
-  // pack's unit (a recipe in "st" against a pack in "g") the engine falls
-  // back to one package. That is a guess about QUANTITY, and the shopper is
-  // the one who can tell whether one is enough.
-  const inexact = match.priceStatus === "estimated"
-    ? '<small class="item-status estimated">Antal osäkert</small>' : "";
-  // Jämförpriset (kr/kg eller kr/l) är det som gör olika förpacknings-
-  // storlekar jämförbara - hyllkantens viktigaste siffra.
-  const comparePrice = match.comparisonPrice != null ? `${money(match.comparisonPrice)}/${/l|ml|dl/.test(match.packageUnit || "") ? "l" : "kg"}` : "";
-  const meta = escapeHtml([match.brand, neededText, countText, comparePrice].filter(Boolean).join(" · ") || "1 st");
-  return `<label class="shopping-item ${checked ? "checked" : ""}"><input type="checkbox" data-shopping="${escapeHtml(item.namn)}" ${checked ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${escapeHtml(match.productName)}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong>${match.totalCost != null ? money(match.totalCost) : ""}</strong>${inexact}</span><button type="button" class="shopping-remove" data-remove-item="${escapeHtml(item.namn)}" aria-label="Ta bort ${escapeHtml(item.namn)} från listan">×</button></label>`;
+    : (live?.kampanj?.text ? `<small class="shopping-item-campaign">${escapeHtml(live.kampanj.text)}</small>` : "");
+  // Flaggad, inte gömd: när receptets enhet inte går att räkna om mot
+  // förpackningens gissar motorn "en förpackning". Det är en gissning om
+  // ANTAL, och den som står i affären är den som kan avgöra.
+  const inexact = match?.priceStatus === "estimated"
+    ? '<small class="item-status estimated">Antal osäkert</small>'
+    : (stillFetching ? '<small class="item-status loading">pris hämtas…</small>' : "");
+  const comparePrice = match?.comparisonPrice != null
+    ? `<small class="shopping-item-compare">${money(match.comparisonPrice)}/${/l|ml|dl/.test(match.packageUnit || "") ? "l" : "kg"}</small>` : "";
+  return `<article class="shopping-item status-${status.toLowerCase()}">`
+    + `<div class="shopping-item-main">${photo}`
+    + `<span class="shopping-item-info"><strong>${escapeHtml(title)}</strong>`
+    + `<small class="shopping-item-meta">${meta}</small>${campaign}</span>`
+    + `<span class="shopping-item-price"><strong class="${price === "Pris saknas" ? "price-missing" : ""}">${price}</strong>`
+    + `${store ? `<small class="shopping-item-store">${escapeHtml(store)}</small>` : ""}${comparePrice}${inexact}</span>`
+    + `<button type="button" class="shopping-remove" data-remove-item="${escapeHtml(item.namn)}" aria-label="Ta bort ${escapeHtml(item.namn)} ur listan">×</button></div>`
+    + shoppingActionsMarkup(item.namn, status)
+    + `</article>`;
 }
 
-function shoppingItemMarkup(item) {
-  // A real product from Matjakt's own price database beats everything below
-  // it: it is a named product on a real shelf, at a real price, with the
-  // real number of packages you have to buy. The rest of this function is
-  // the fallback for lines the database could not price - which stay
-  // visible and honestly labelled rather than being hidden.
-  const fromDatabase = databaseItemFor(item.namn);
-  if (fromDatabase) return databaseShoppingItemMarkup(item, fromDatabase);
-  const product = PRODUCT_CATALOG[item.namn] || { namn: item.namn, marke: "", pris: 0 };
-  const pantry = state.pantry[item.namn]?.amount || 0;
-  const needed = Math.max(0, item.total - pantry);
-  const packages = item.package ? Math.ceil(needed / item.package.amount) : Math.ceil(needed);
-  const live = state.livePriser[item.namn];
-  const chain = chosenStore();
-  // The only two moments worth calling out to the user: a fetch for this
-  // specific item is genuinely still in flight, or the price shown is a
-  // static guess rather than a real captured one. A settled real price gets
-  // no badge at all - see the "no Live/Uppdaterad" reasoning this replaced.
-  // live can exist with pris_kr === null (a confidently matched product, or
-  // no confident match at all - either way, the backend has already decided
-  // and this is not "still fetching" or "just an estimate") - that must show
-  // "Pris saknas", never 0 kr, and must never enter a total (see
-  // shoppingListCost/branchLiveTotal).
-  const priceMissing = live && live.pris_kr == null;
-  // While the database sync is still working the row says so; once it has
-  // answered (this line was in missingItems) the row says "Pris saknas".
-  // The static catalogue price is never printed: "Bär 30 kr - Uppskattat"
-  // is an invented number in a column of real ones, and the moment it later
-  // jumps to a real price the whole list looks unreliable.
-  const dbSyncPending = databasePricingSync.pending || (!state.dbPricedAt && !state.dbPricingFailedAt);
-  const stillFetching = packages > 0 && !live && (dbSyncPending || (livePriceSync.loading && VALID_CHAINS.includes(chain)));
-  const priceLabel = priceMissing ? "Pris saknas" : live ? money(live.pris_kr * (packages || 1)) : stillFetching ? "" : "Pris saknas";
-  const displayName = live ? escapeHtml(live.produktnamn) : escapeHtml(item.namn);
-  // PRODUCT_CATALOG uses "ICA" as a generic placeholder brand for estimated
-  // prices, not a claim that the item comes from ICA specifically - showing it
-  // next to a Willys/Coop list read as a store mismatch, so it's only shown
-  // when it names a real distinguishing brand.
-  // "1 st" as a package size is a no-op worth hiding (every produce item not
-  // sold by weight has one) - stating it next to a "1 st" quantity read as a
-  // typo ("1 st · 1 st"). Real sizes (g/ml/kruka/knippe) and quantities above
-  // one are the only pieces of this line actually worth a shopper's glance.
-  const sizeText = product.storlek && product.storlek !== "1 st" ? product.storlek : "";
-  const brandSize = live ? live.markeOchStorlek : [product.marke && product.marke !== "ICA" ? product.marke : "", sizeText].filter(Boolean).join(" ");
-  const qty = packages > 1 ? `${packages} st` : "";
-  const neededPlain = needed > 0 ? `Behöver ${amountLabel(needed, item.unit)}` : "";
-  const meta = !packages ? "Finns hemma" : escapeHtml([brandSize, neededPlain, qty].filter(Boolean).join(" · ") || "1 st");
-  const campaign = live?.kampanj?.text ? `<small class="shopping-item-campaign">${escapeHtml(live.kampanj.text)}</small>` : "";
-  const status = stillFetching ? '<small class="item-status loading">pris hämtas…</small>' : "";
-  const photo = live?.bild ? `<img class="shopping-item-image has-image" src="${live.bild}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(item.namn));
-  // Checkboxen betyder "jag har handlat den". X betyder "ut ur listan" -
-  // finns hemma, redan köpt, köps någon annanstans. Två olika beteenden.
-  return `<label class="shopping-item ${state.avklarade.has(item.namn) ? "checked" : ""}"><input type="checkbox" data-shopping="${escapeHtml(item.namn)}" ${state.avklarade.has(item.namn) ? "checked" : ""}>${photo}<span class="shopping-item-info"><strong>${displayName}</strong><small class="shopping-item-meta">${meta}</small>${campaign}</span><span class="shopping-item-price"><strong class="${priceLabel === "Pris saknas" ? "price-missing" : ""}">${priceLabel}</strong>${status}</span><button type="button" class="shopping-remove" data-remove-item="${escapeHtml(item.namn)}" aria-label="Ta bort ${escapeHtml(item.namn)} från listan">×</button></label>`;
+// Handlade och hemmavarande rader samlas under listan i stället för att
+// försvinna: den som bockat fel ska kunna se det och ta tillbaka varan.
+function handledRowMarkup(item) {
+  const status = itemStatus(item.namn);
+  const label = status === PURCHASED ? "Köpt" : "Finns hemma";
+  return `<div class="shopping-handled-row"><span><strong>${escapeHtml(item.namn)}</strong><small>${label}</small></span>`
+    + `<button type="button" class="btn-ghost" data-need="${escapeHtml(item.namn)}">Behöver köpa</button></div>`;
 }
+
+function wireShoppingRowActions(container) {
+  container.querySelectorAll("[data-at-home]").forEach(button => button.addEventListener("click", () => {
+    const name = button.dataset.atHome;
+    setItemStatus(name, ALREADY_HAVE, { location: suggestedLocationFor(name), gtin: databaseItemFor(name)?.gtin });
+    showUndoToast(`${name} · finns hemma, lagt i ${PANTRY_TAB_LABELS[suggestedLocationFor(name)]}`, undoLastShoppingAction);
+  }));
+  container.querySelectorAll("[data-bought]").forEach(button => button.addEventListener("click", () => {
+    const name = button.dataset.bought;
+    if (!window.__matjaktListaAnvand) { window.__matjaktListaAnvand = true; trackEvent("lista_anvand"); }
+    setItemStatus(name, PURCHASED, { addToPantry: true, location: suggestedLocationFor(name), gtin: databaseItemFor(name)?.gtin });
+    noteStaplePurchase(name);
+    showUndoToast(`${name} · köpt, lagt i ${PANTRY_TAB_LABELS[suggestedLocationFor(name)]}`, undoLastShoppingAction);
+  }));
+  container.querySelectorAll("[data-need]").forEach(button => button.addEventListener("click", () => {
+    setItemStatus(button.dataset.need, NEED_TO_BUY, { gtin: databaseItemFor(button.dataset.need)?.gtin });
+  }));
+  container.querySelectorAll("[data-remove-item]").forEach(button => button.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    removeShoppingItem(button.dataset.removeItem);
+  }));
+}
+
+// Var varan rimligen hör hemma. Härlett ur kategorin vi redan har - inte
+// gissat per vara, och aldrig något användaren inte kan flytta efteråt.
+const CATEGORY_TO_LOCATION = { Mejeri: "kyl", "Kött & fisk": "kyl", Frys: "frys" };
+function suggestedLocationFor(name) {
+  return CATEGORY_TO_LOCATION[categoryFor(name, databaseItemFor(name)?.category)] || "skafferi";
+}
+
 function amountLabel(amount, unit) {
   // Pieces are bought whole - "Behöver 0.5 st citron" is true in the pot
   // but useless in the store, so st rounds up.
@@ -2157,21 +2555,84 @@ function renderFollowedProducts() {
   }));
 }
 
+// ---------------------------------------------------------------------------
+// SKAFFERI / KYL / FRYS
+//
+// En rad visar produkten när vi FAKTISKT vet vilken produkt det är (bild,
+// märke, förpackningsstorlek, GTIN internt) och bara namnet när vi inte gör
+// det (§7-§8). Lök, potatis och persilja har inget varumärke, och att hitta
+// på ett vore värre än att låta bli.
+//
+// Bilden följer samma regel som i Handla (§9): bara en bild vi har rätt att
+// visa för just den produkten, annars en neutral kategorisymbol. Aldrig en
+// annan produkts bild för att fylla tomrummet.
+// ---------------------------------------------------------------------------
+
+function pantryItemMarkup(entry) {
+  const product = entry.product || null;
+  const status = expiryStatus(entry.expiry);
+  const image = product?.imageUrl
+    ? `<img class="pantry-item-image" src="${escapeHtml(safeHttpUrl(product.imageUrl) || "")}" alt="" loading="lazy" decoding="async">`
+    : categoryIconMarkup(entry.category || categoryFor(entry.name));
+  // Märke och storlek bara när produkten är känd. Mängden hemma står alltid.
+  const amountText = `${formatPantryAmount(entry.amount)} ${escapeHtml(entry.unit || "st")}`;
+  const facts = [product?.brand, product?.packageSize].filter(Boolean).map(escapeHtml).join(" · ");
+  const expiry = entry.expiry ? `Bäst före ${escapeHtml(entry.expiry)}` : "";
+  const badge = status === "expired" ? '<small class="pantry-expiry-badge expired">Utgången</small>'
+    : status === "soon" ? '<small class="pantry-expiry-badge soon">Går ut snart</small>' : "";
+  return `<div class="pantry-item">${image}`
+    + `<span class="pantry-item-info"><strong>${escapeHtml(product?.productName || entry.name)}</strong>`
+    + `<small>${[facts, amountText, expiry].filter(Boolean).join(" · ")}</small>${badge}</span>`
+    + `<div class="pantry-item-controls">`
+    + `<button type="button" class="pantry-step" data-pantry-step="-1" data-pantry-key="${escapeHtml(entry.key)}" aria-label="Mindre ${escapeHtml(entry.name)}">−</button>`
+    + `<span class="pantry-item-count">${formatPantryAmount(entry.amount)}</span>`
+    + `<button type="button" class="pantry-step" data-pantry-step="1" data-pantry-key="${escapeHtml(entry.key)}" aria-label="Mer ${escapeHtml(entry.name)}">+</button>`
+    + `<button type="button" data-remove-pantry="${escapeHtml(entry.key)}" aria-label="Ta bort ${escapeHtml(entry.name)}">×</button>`
+    + `</div></div>`;
+}
+
+// Hela tal skrivs som hela tal: "3 st", inte "3.0 st". Halvor får finnas.
+function formatPantryAmount(amount) {
+  const value = Number(amount) || 0;
+  return Number.isInteger(value) ? String(value) : String(Math.round(value * 10) / 10);
+}
+
+// Steget i +/- följer varans enhet: styckvaror går ett i taget, vikt och
+// volym i 50-steg. Att öka ris med "1 gram" hade varit meningslöst.
+function pantryStepFor(entry) {
+  return (entry.unit || "st") === "st" ? 1 : 50;
+}
+
 function renderPantry() {
   renderFollowedProducts();
-  const allItems = Object.entries(state.pantry).filter(([, entry]) => entry.amount > 0);
-  $("pantryCount").textContent = allItems.length;
+  const all = pantryList();
+  $("pantryCount").textContent = all.length;
   document.querySelectorAll("#pantryTabs button").forEach(button => button.classList.toggle("active", button.dataset.pantryTab === state.pantryTab));
-  const items = allItems.filter(([, entry]) => entry.location === state.pantryTab);
-  $("pantryList").innerHTML = items.length ? items.map(([name, entry]) => {
-    const status = expiryStatus(entry.expiry);
-    const unit = PACKAGE_INFO[name]?.unit || "st";
-    return `<div class="pantry-item"><span><strong>${escapeHtml(name)}</strong><small>${entry.amount} ${unit}${entry.expiry ? ` · Bäst före ${entry.expiry}` : ""}</small>${status === "expired" ? '<small class="pantry-expiry-badge expired">Utgången</small>' : status === "soon" ? '<small class="pantry-expiry-badge soon">Går ut snart</small>' : ""}</span><div class="pantry-item-controls"><button type="button" class="pantry-step" data-pantry-decrement="${escapeHtml(name)}" aria-label="Mindre ${escapeHtml(name)}">−</button><button type="button" class="pantry-step" data-pantry-increment="${escapeHtml(name)}" aria-label="Mer ${escapeHtml(name)}">+</button><button type="button" data-remove-pantry="${escapeHtml(name)}" aria-label="Ta bort ${escapeHtml(name)}">×</button></div></div>`;
-  }).join("") : `<div class="pantry-empty"><svg viewBox="0 0 64 64"><path d="M12 22h40v34H12zM20 22v-9h24v9M20 33h24M20 43h16"/></svg><h2>${PANTRY_TAB_LABELS[state.pantryTab]} är tomt</h2><p>Lägg in det du redan har hemma så hjälper Matjakt dig att handla mindre.</p></div>`;
-  document.querySelectorAll("[data-remove-pantry]").forEach(button => button.addEventListener("click", () => { delete state.pantry[button.dataset.removePantry]; saveState(); render(); }));
-  document.querySelectorAll("[data-pantry-increment]").forEach(button => button.addEventListener("click", () => { const name = button.dataset.pantryIncrement; state.pantry[name].amount += pantryStep(name); saveState(); render(); }));
-  document.querySelectorAll("[data-pantry-decrement]").forEach(button => button.addEventListener("click", () => { const name = button.dataset.pantryDecrement; const next = state.pantry[name].amount - pantryStep(name); if (next <= 0) delete state.pantry[name]; else state.pantry[name].amount = next; saveState(); render(); }));
+  const items = all.filter(entry => entry.location === state.pantryTab);
+  const byKey = new Map(all.map(entry => [entry.key, entry]));
+  $("pantryList").innerHTML = items.length
+    ? items.map(pantryItemMarkup).join("")
+    : `<div class="pantry-empty"><svg viewBox="0 0 64 64"><path d="M12 22h40v34H12zM20 22v-9h24v9M20 33h24M20 43h16"/></svg><h2>${PANTRY_TAB_LABELS[state.pantryTab]} är tomt</h2><p>Lägg in det du redan har hemma så hjälper Matjakt dig att handla mindre.</p></div>`;
+  $("pantryList").querySelectorAll("[data-remove-pantry]").forEach(button => button.addEventListener("click", () => {
+    const entry = byKey.get(button.dataset.removePantry);
+    if (entry) removePantryItem(entry);
+  }));
+  $("pantryList").querySelectorAll("[data-pantry-step]").forEach(button => button.addEventListener("click", () => {
+    const entry = byKey.get(button.dataset.pantryKey);
+    if (entry) stepPantryItem(entry, Number(button.dataset.pantryStep) * pantryStepFor(entry));
+  }));
+  renderHouseholdPantryNote();
 }
+
+// Diskret rad om att skafferiet är familjens, inte bara den här telefonens.
+// En mening, ingen banner - annars är det marknadsföring i en vardagsvy.
+function renderHouseholdPantryNote() {
+  const note = $("pantryHouseholdNote");
+  if (!note) return;
+  note.hidden = !householdActive();
+  if (householdActive()) note.textContent = `Delas med ${state.household.name}`;
+}
+
 // Which day tab is showing in the "Min matvecka" overview - defaults to
 // today (Mon=0..Sun=6, converting from JS's native Sun=0..Sat=6), since
 // "Dagens middag" only makes sense pointed at the actual current day.
@@ -2280,7 +2741,48 @@ function weekShoppingRowMarkup(item) {
   return `<label class="week-shopping-row"><input type="checkbox" data-week-shopping="${escapeHtml(item.namn)}">${photo}<span class="week-shopping-info"><strong>${escapeHtml(item.namn)}</strong>${campaign}</span><strong class="week-shopping-price ${missing ? "price-missing" : ""}">${price}</strong></label>`;
 }
 let weekDayAutoPicked = false;
+// §14: veckan sammanfattad i fyra rader innan man dyker ner i dagarna.
+//
+// Varje rad är RÄKNAD, inte påstådd. "3 familjefavoriter" räknas på
+// betyg/gillamarkeringar som faktiskt finns, "7 ingredienser finns redan
+// hemma" på skafferiet, och kostnaden skrivs bara ut när den är en riktig
+// prissatt total - aldrig ett uppskattat pris med "ca" framför.
+function weekSummaryFacts(selected, shoppingItems, total) {
+  const favourites = selected.filter(recipe =>
+    state.favoriter.has(recipe.id) || (state.betyg[recipe.id] || 0) >= 4 || state.feedback[recipe.id]?.liked).length;
+  const home = pantryForPricing();
+  const atHome = shoppingItems.filter(item => (home[item.namn] || 0) > 0).length;
+  const onCampaign = shoppingItems.filter(item => {
+    const match = databaseItemFor(item.namn);
+    return match && match.campaignPrice != null && match.regularPrice != null
+      && match.campaignPrice < match.regularPrice;
+  }).length;
+  return { dinners: selected.length, favourites, fresh: selected.length - favourites, atHome, onCampaign, total };
+}
+
+function renderWeekSummary(selected, shoppingItems, total) {
+  const box = $("weekSummary");
+  if (!box) return;
+  box.hidden = !selected.length;
+  if (!selected.length) return;
+  const facts = weekSummaryFacts(selected, shoppingItems, total);
+  const lines = [
+    `${plural(facts.dinners, "middag", "middagar")}`,
+    facts.favourites ? `${facts.favourites} ${facts.favourites === 1 ? "familjefavorit" : "familjefavoriter"}` : "",
+    facts.fresh ? `${facts.fresh} ${facts.fresh === 1 ? "ny rätt" : "nya rätter"}` : "",
+    facts.atHome ? `${plural(facts.atHome, "ingrediens", "ingredienser")} finns redan hemma` : "",
+    facts.onCampaign ? `${plural(facts.onCampaign, "kampanjvara", "kampanjvaror")} används` : "",
+  ].filter(Boolean);
+  const heading = householdActive() ? `Veckan är klar för ${state.household.name}` : "Veckan är klar";
+  box.innerHTML = `<h2>${escapeHtml(heading)}</h2><ul>${lines.map(line => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`
+    // Kostnaden står bara här när den är RIKTIG. "Beräknad matkasse" på en
+    // uppskattning hade varit den sortens siffra hela prismotorn finns för
+    // att inte producera.
+    + (facts.total != null ? `<p class="week-summary-total">Beräknad matkasse ${money(facts.total)}</p>` : "");
+}
+
 function renderWeekOverview(selected, shoppingItems, total) {
+  renderWeekSummary(selected, shoppingItems, total);
   // Bara vid FÖRSTA målningen: att öppna appen en fredag med en
   // 4-middagarsvecka ska visa en planerad dag, inte "Ingen middag". Men den
   // som själv klickar på söndagsfliken ska självklart få se söndagen.
@@ -2305,7 +2807,7 @@ function renderWeekOverview(selected, shoppingItems, total) {
   $("weekPlanToggle").textContent = weekPlanExpanded ? "Visa färre" : "Visa hela veckan";
   $("weekPlanToggle").onclick = () => { weekPlanExpanded = !weekPlanExpanded; renderWeekOverview(selected, shoppingItems, total); };
 
-  const remainingItems = shoppingItems.filter(item => !state.avklarade.has(item.namn));
+  const remainingItems = shoppingItems.filter(item => itemStatus(item.namn) === NEED_TO_BUY);
   $("weekShoppingSummary").textContent = shoppingItems.length ? `${plural(remainingItems.length, "vara kvar", "varor kvar")}${total == null ? "" : ` · ${money(total)}`}` : "";
   $("weekShoppingPreview").innerHTML = shoppingItems.length
     ? (remainingItems.length ? remainingItems.slice(0, WEEK_SHOPPING_PREVIEW_COUNT).map(weekShoppingRowMarkup).join("") : `<p class="week-shopping-done">Allt handlat!</p>`)
@@ -2355,8 +2857,14 @@ function renderWeekOverview(selected, shoppingItems, total) {
   }));
   document.querySelectorAll("[data-week-browse-recipes]").forEach(button => button.addEventListener("click", () => $("recipeScroll")?.scrollIntoView({ behavior: "smooth" })));
   document.querySelectorAll("[data-week-shopping]").forEach(input => {
-    input.checked = state.avklarade.has(input.dataset.weekShopping);
-    input.addEventListener("change", () => { input.checked ? state.avklarade.add(input.dataset.weekShopping) : state.avklarade.delete(input.dataset.weekShopping); saveState(); renderBasket(); });
+    input.checked = itemStatus(input.dataset.weekShopping) !== NEED_TO_BUY;
+    input.addEventListener("change", () => {
+      const name = input.dataset.weekShopping;
+      setItemStatus(name, input.checked ? PURCHASED : NEED_TO_BUY,
+                    { addToPantry: input.checked, location: suggestedLocationFor(name),
+                      gtin: databaseItemFor(name)?.gtin });
+      renderBasket();
+    });
   });
   document.querySelectorAll("[data-week-swap]").forEach(button => button.addEventListener("click", () => openSwapModal(button.dataset.weekSwap)));
   document.querySelectorAll("[data-cooked]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.cooked; const fb = state.feedback[id] || {}; state.feedback[id] = { ...fb, cooked: (fb.cooked || 0) + 1 }; saveState(); renderBasket(); }));
@@ -2377,10 +2885,133 @@ function renderGreeting() {
   const name = rawName.length <= 18 && !/\d{4,}/.test(rawName) ? rawName : "";
   $("homeGreeting").textContent = name ? `${timeGreeting}, ${name}` : timeGreeting;
 }
+
+// ---------------------------------------------------------------------------
+// ÅTERKOMMANDE BASVAROR (§13)
+//
+// Matjakt lägger ALDRIG in dem själv. Den frågar - en vara i taget, en rad
+// diskret ovanför listan - och ett nej gäller resten av veckan. Att fylla
+// listan med tio saker familjen inte bett om är precis den administration
+// appen ska ta bort, inte skapa.
+//
+// Vad som räknas som en basvara lär vi oss av vad som faktiskt köpts, inte
+// av en fast lista över vad folk "brukar" ha hemma.
+// ---------------------------------------------------------------------------
+
+const STAPLE_THRESHOLD = 3;          // köpt så här många veckor -> "köper ofta"
+const STAPLE_MEMORY_WEEKS = 8;
+
+function weekStamp(date = new Date()) {
+  // ISO-veckonummer räcker som "den här veckan" - vi behöver bara veta att
+  // två köp låg i olika veckor, inte exakt vilken.
+  const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  target.setUTCDate(target.getUTCDate() + 4 - (target.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+  return `${target.getUTCFullYear()}-${Math.ceil(((target - yearStart) / 86400000 + 1) / 7)}`;
+}
+
+// Kallas när en vara faktiskt KÖPS - inte när den bara står i listan.
+function noteStaplePurchase(name) {
+  const stamp = weekStamp();
+  const entry = state.stapleItems.find(item => item.name === name);
+  if (entry) {
+    if (!entry.weeks.includes(stamp)) entry.weeks = [...entry.weeks, stamp].slice(-STAPLE_MEMORY_WEEKS);
+  } else {
+    state.stapleItems = [...state.stapleItems, { name, weeks: [stamp] }].slice(-60);
+  }
+  saveState();
+}
+
+function staplesToOffer(shoppingItems) {
+  const stamp = weekStamp();
+  const inList = new Set(shoppingItems.map(item => item.namn));
+  const athome = new Set(pantryList().map(entry => entry.name));
+  return state.stapleItems
+    .filter(item => item.weeks.length >= STAPLE_THRESHOLD)
+    .filter(item => !item.weeks.includes(stamp))     // redan köpt i veckan
+    .filter(item => !inList.has(item.name) && !athome.has(item.name))
+    .filter(item => state.stapleAsked[item.name] !== stamp);   // nej gäller veckan ut
+}
+
+function renderStaplePrompt(shoppingItems) {
+  const box = $("staplePrompt");
+  if (!box) return;
+  const offers = staplesToOffer(shoppingItems);
+  box.hidden = !offers.length;
+  if (!offers.length) return;
+  // EN vara åt gången. En lista med kryssrutor är en till uppgift; en fråga
+  // är en fråga.
+  const item = offers[0];
+  box.innerHTML = `<p>Behöver ni ${escapeHtml(item.name.toLowerCase())} den här veckan?</p>`
+    + `<div class="staple-prompt-actions">`
+    + `<button type="button" class="btn btn-ghost" data-staple-no="${escapeHtml(item.name)}">Nej tack</button>`
+    + `<button type="button" class="btn btn-primary" data-staple-yes="${escapeHtml(item.name)}"><span>Lägg till</span></button>`
+    + `</div>`;
+  box.querySelector("[data-staple-yes]").addEventListener("click", () => {
+    addExtraItem({ name: item.name, source: "staple" });
+    state.stapleAsked[item.name] = weekStamp();
+    saveState();
+    render();
+  });
+  box.querySelector("[data-staple-no]").addEventListener("click", () => {
+    state.stapleAsked[item.name] = weekStamp();
+    saveState();
+    renderStaplePrompt(shoppingItems);
+  });
+}
+
+// Listan som Handla faktiskt ritar.
+//
+// Utan hushåll: veckans aggregat, precis som förut.
+// Med hushåll: serverns rader - så en vara någon ANNAN lade till syns här -
+// berikade med veckans mängd och förpackning där raderna möts. En rad som
+// bara finns hos hushållet (manuellt tillagd, eller från den andres vecka)
+// får sin mängd från raden själv.
+function shoppingItemsForView(selected) {
+  const weekItems = aggregateShopping(selected);
+  if (!householdActive()) return weekItems;
+  const byName = new Map(weekItems.map(item => [foldName(item.namn), item]));
+  const rows = shoppingRows(state.household).filter(row => row.status !== REMOVED);
+  const merged = rows.map(row => {
+    const weekItem = byName.get(foldName(row.name));
+    if (weekItem) { byName.delete(foldName(row.name)); return weekItem; }
+    return { namn: row.name, total: row.amount || 1, unit: row.unit || "st", package: null };
+  });
+  // Veckans rader som ännu inte hunnit ut till servern visas ändå - annars
+  // blinkade listan tom den sekund en ny vecka skapades.
+  return [...merged, ...byName.values()];
+}
+
+// Är veckan dyrare än hushållets vanliga? En mening och en väg vidare -
+// inga procent, inga påhittade besparingar. Regeln (minst fyra prissatta
+// veckor, minst 75 kr) bor i src/services/swap.js.
+function renderWeekCostAlert(total) {
+  const box = $("weekCostAlert");
+  if (!box) return;
+  const alert = weekCostAlert(total, state.weekHistory);
+  box.hidden = !alert;
+  if (!alert) return;
+  box.innerHTML = `<p>Den här veckan blev cirka ${money(alert.difference)} dyrare än er vanliga vecka (${money(alert.usual)}).</p>`
+    + `<button type="button" class="btn btn-ghost" id="lowerCostBtn">Sänk priset</button>`;
+  // "Sänk priset" öppnar bytesrutan på veckans DYRASTE rätt med avsikten
+  // billigare förvald - konkreta byten, inte ett råd.
+  $("lowerCostBtn").addEventListener("click", () => {
+    const priciest = selectedRecipes().filter(recipe => recipe.portionspris)
+      .sort((a, b) => b.portionspris - a.portionspris)[0];
+    if (!priciest) return;
+    openSwapModal(priciest.id);
+    if (swapContext) {
+      swapContext.intent = "cheaper";
+      swapContext.allOptions = swapOptionsFor(swapContext.current, swapContext.candidates, "cheaper");
+      renderSwapModal();
+    }
+  });
+}
+
 function renderBasket() {
   const selected = selectedRecipes();
   ensureWeekRecipeDetails();
-  const shoppingItems = aggregateShopping(selected);
+  const shoppingItems = shoppingItemsForView(selected);
   // The header total must be the SAME number the store-comparison widget
   // shows for the currently selected/pinned branch - a live total when one
   // has been fetched, the static per-package estimate otherwise - never a
@@ -2401,31 +3032,39 @@ function renderBasket() {
   const total = activeDb ? activeDb.totalCheckoutCost + extrasCost
     : currentResult && currentResult.source !== "estimate"
       ? currentResult.cost + extrasCost : null;
-  const groups = shoppingItems.reduce((result, item) => { const category = itemCategory(item.namn); (result[category] ||= []).push(item); return result; }, {});
+  // ATT HANDLA vs REDAN LÖST. Varor som är köpta eller redan finns hemma
+  // lämnar den aktiva listan men försvinner inte: de samlas under den, så
+  // ett felklick går att se och ta tillbaka (§5, §6).
+  const activeItems = shoppingItems.filter(item => itemStatus(item.namn) === NEED_TO_BUY);
+  const handledItems = shoppingItems.filter(item => {
+    const status = itemStatus(item.namn);
+    return status === PURCHASED || status === ALREADY_HAVE;
+  });
+  // Butiksordning, inte alfabetisk: frukt & grönt först, frysen sist (§31).
+  const groups = groupByCategory(activeItems, item => itemCategory(item.namn));
   // Tom lista av två helt olika skäl: ingen meny finns, eller användaren
   // har tagit bort varenda rad själv. Samma tomtillstånd för båda vore en
   // lögn om det första.
   const emptyState = state.removedItems.size
     ? `<div class="pantry-empty"><h2>Allt är borttaget ur listan</h2><p>Du har markerat varje vara som borttagen. Återställ dem nedan om du ångrar dig.</p></div>`
-    : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
-  $("shoppingList").innerHTML = shoppingItems.length ? Object.entries(groups).map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingItemMarkup).join("")}</section>`).join("") : emptyState;
+    : handledItems.length
+      ? `<div class="pantry-empty"><h2>Allt är avbockat</h2><p>Ingenting kvar att handla den här veckan.</p></div>`
+      : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
+  const alreadyHome = handledItems.filter(item => itemStatus(item.namn) === ALREADY_HAVE).length;
+  const handledSection = handledItems.length
+    ? `<section class="shopping-handled"><h3>Klart${alreadyHome ? ` · ${plural(alreadyHome, "vara finns hemma", "varor finns hemma")}` : ""}<span>${handledItems.length}</span></h3>${handledItems.map(handledRowMarkup).join("")}</section>`
+    : "";
+  $("shoppingList").innerHTML = (activeItems.length
+    ? groups.map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingRowMarkup).join("")}</section>`).join("")
+    : (shoppingItems.length ? "" : emptyState)) + handledSection;
+  if (shoppingItems.length && !activeItems.length && !handledItems.length) $("shoppingList").innerHTML = emptyState;
   if (state.removedItems.size) {
     $("shoppingList").insertAdjacentHTML("beforeend",
       `<button type="button" class="restore-removed" id="restoreRemovedBtn">${plural(state.removedItems.size, "borttagen vara", "borttagna varor")} · Återställ alla</button>`);
     $("restoreRemovedBtn").addEventListener("click", () => { state.removedItems.clear(); saveState(); render(); });
   }
-  document.querySelectorAll("[data-shopping]").forEach(input => input.addEventListener("change", () => {
-    input.checked ? state.avklarade.add(input.dataset.shopping) : state.avklarade.delete(input.dataset.shopping);
-    if (input.checked && !window.__matjaktListaAnvand) { window.__matjaktListaAnvand = true; trackEvent("lista_anvand"); }
-    saveState(); renderBasket();
-  }));
-  document.querySelectorAll("[data-remove-item]").forEach(button => button.addEventListener("click", event => {
-    // Knappen bor i en <label> - utan detta togglar klicket också checkboxen.
-    event.preventDefault();
-    event.stopPropagation();
-    removeShoppingItem(button.dataset.removeItem);
-  }));
-  const completed = shoppingItems.filter(item => state.avklarade.has(item.namn)).length, itemsLeft = shoppingItems.length - completed, progress = shoppingItems.length ? completed / shoppingItems.length * 100 : 0;
+  wireShoppingRowActions($("shoppingList"));
+  const completed = handledItems.length, itemsLeft = activeItems.length, progress = shoppingItems.length ? completed / shoppingItems.length * 100 : 0;
   // No mention of how many items happen to have a live-fetched price, and no
   // fetch timestamp - that's internal plumbing, not something a shopper needs
   // to see. Only the plain, calm facts: what's left, and what it costs.
@@ -2474,6 +3113,15 @@ function renderBasket() {
   const extrasDone = state.extraItems.every(extra => extra.checked);
   $("shoppingComplete").hidden = !((shoppingItems.length || state.extraItems.length)
     && completed === shoppingItems.length && extrasDone);
+  const basketNote = $("basketHouseholdNote");
+  if (basketNote) {
+    basketNote.hidden = !householdActive();
+    if (householdActive()) basketNote.textContent = `Delas med ${state.household.name}`;
+  }
+  // Bara en riktig total får bli historik eller jämförelsegrund.
+  if (total != null) lastRealWeekTotal = total;
+  renderWeekCostAlert(total);
+  renderStaplePrompt(shoppingItems);
   renderAttribution(shoppingItems);
   renderStoreComparison(selected); renderStoreCards(); renderExtraItems(activeChain); renderPantry();
   renderWeekStoreTabs();
@@ -2483,6 +3131,9 @@ function renderBasket() {
   // one render pass, never two separate computations that could drift.
   renderWeekOverview(selected, shoppingItems, total);
   syncLivePrices(shoppingItems);
+  // Veckans behov ut till familjens delade lista. Debouncad och idempotent:
+  // en oförändrad vecka skickar ingenting.
+  pushWeekToHousehold();
 }
 function updateWeekStoreStatus() {
   const selected = selectedRecipes();
@@ -2648,10 +3299,11 @@ function ensureWeekRecipeDetails() {
     if (recipeDetailFetches.has(recipe.id)) return;
     recipeDetailFetches.add(recipe.id);
     loadRecipe(recipe.id).then(detail => {
-      // loadRecipe swallows network errors and resolves null - a deploy
-      // window's failed fetch must not poison the once-per-id set, or the
-      // shopping list stays empty until a full reload.
-      if (!detail) { recipeDetailFetches.delete(recipe.id); return; }
+      // null = backend säger att receptet inte finns. Det svaret ändrar sig
+      // inte, så id:t stannar i mängden och vi frågar aldrig igen. Utan den
+      // skillnaden blev ett borttaget recept-id en 404-loop som gick om på
+      // varje omritning (femdubblad av hushållssynkens omritningar).
+      if (!detail) return;
       // Merge in place: every list, week and favourites reference THIS
       // object, so replacing it would orphan them.
       Object.assign(recipe, detail, { steg: detail.instructions || detail.steg || [] });
@@ -2660,7 +3312,13 @@ function ensureWeekRecipeDetails() {
       // rätten) ritades sidan utan mängder och ritades aldrig om - den
       // vägen hämtar inte själv när ett anrop redan är på väg.
       if (new URLSearchParams(location.search).get("recept") === recipe.id) renderRecipePage();
-    }).catch(() => recipeDetailFetches.delete(recipe.id));
+    }).catch(() => {
+      // Nätfel eller serverfel: vi vet ingenting om receptet. Släpp id:t
+      // fritt så nästa omritning försöker igen - annars står inköpslistan
+      // tom tills sidan laddas om. (Ett 404 släpper INTE id:t: se
+      // if (!detail) ovan.)
+      recipeDetailFetches.delete(recipe.id);
+    });
   });
 }
 
@@ -2677,7 +3335,7 @@ function aggregateShopping(selected) {
   // Beskär mot det verkliga aggregatet - men bara när det finns ett: under
   // uppstart är listan tom för att recepten inte laddats än, inte för att
   // borttagningarna blivit ogiltiga.
-  if (everything.length && (state.removedItems.size || state.avklarade.size)) {
+  if (everything.length && (state.removedItems.size || state.avklarade.size || state.harHemma.size)) {
     const names = new Set(everything.map(item => item.namn));
     for (const name of [...state.removedItems]) {
       if (!names.has(name)) state.removedItems.delete(name);
@@ -2687,6 +3345,9 @@ function aggregateShopping(selected) {
     // visas varan förbockad som "redan handlad".
     for (const name of [...state.avklarade]) {
       if (!names.has(name)) state.avklarade.delete(name);
+    }
+    for (const name of [...state.harHemma]) {
+      if (!names.has(name)) state.harHemma.delete(name);
     }
   }
   return everything.filter(item => !state.removedItems.has(item.namn));
@@ -2724,6 +3385,8 @@ function removeShoppingItem(name) {
   state.removedItems.add(name);
   // A removed item is not a BOUGHT item - it left the list entirely.
   state.avklarade.delete(name);
+  state.harHemma.delete(name);
+  if (householdActive()) setHouseholdStatus(name, REMOVED, itemStatus(name), { gtin: databaseItemFor(name)?.gtin });
   // Cached live totals priced the removed item; painting them once more
   // would show the OLD sum next to the new list. Drop them and let the
   // refetch fill honest numbers in.
@@ -2741,12 +3404,18 @@ function removeShoppingItem(name) {
 // En enda toast åt gången: en ny borttagning ersätter den förra i stället
 // för att stapla remsor över navigeringen.
 let undoToastTimer = null;
-function showUndoToast(message, onUndo) {
+function showUndoToast(message, onUndo, onOpen = null) {
   const toast = $("undoToast");
   toast.querySelector("span").textContent = message;
   toast.hidden = false;
   const button = toast.querySelector("button");
-  button.onclick = () => { clearTimeout(undoToastTimer); toast.hidden = true; onUndo(); };
+  // Samma remsa, två roller: "Ångra" efter en egen ändring, "Öppna" när det
+  // är en notis om något NÅGON ANNAN gjort. Att ångra någon annans ändring
+  // vore fel knapp på fel handling.
+  const action = onUndo || onOpen;
+  button.textContent = onUndo ? "Ångra" : "Öppna";
+  button.hidden = !action;
+  button.onclick = () => { clearTimeout(undoToastTimer); toast.hidden = true; if (action) action(); };
   clearTimeout(undoToastTimer);
   undoToastTimer = setTimeout(() => { toast.hidden = true; }, 6000);
 }
@@ -3056,6 +3725,251 @@ async function activatePremiumAfterCheckout() {
     $("accountPremiumStatus").textContent = "Betalningen är mottagen, men Premium är inte aktiverat än. Ladda om sidan om en stund - hör av dig till supporten om det dröjer.";
   }
 }
+
+// ---------------------------------------------------------------------------
+// MITT HUSHÅLL (Konto → Hushåll)
+//
+// Flödet är avsiktligt tre steg och inte fler (§1):
+//   skriv namnet → Bjud in → skicka länken.
+// Ingen kod att läsa upp, ingen inställningssida att gå igenom först.
+// ---------------------------------------------------------------------------
+
+const NOTIFY_LABELS = {
+  week: "Ny vecka",
+  shopping: "Ändringar i inköpslistan",
+  plan: "Ändringar i veckoplaneringen",
+  inventory: "Skafferi, kyl och frys",
+  price: "Prisbevakningar",
+};
+
+function renderHousehold() {
+  const panel = $("householdPanel");
+  if (!panel) return;
+  // Hushållet kräver ett konto - det är där medlemskapet bor.
+  panel.hidden = !state.authToken;
+  if (!state.authToken) return;
+  const active = householdActive();
+  $("householdNone").hidden = active;
+  $("householdCurrent").hidden = !active;
+  if (!active) return;
+  $("householdNameLabel").textContent = state.household.name;
+  const me = state.household.members.find(member => member.isMe);
+  const isAdmin = state.household.role === "admin";
+  $("householdMembers").innerHTML = state.household.members.map(member => {
+    const name = member.displayName || (member.email ? member.email.split("@")[0] : "Medlem");
+    const tags = [member.role === "admin" ? "administratör" : "", member.isMe ? "du" : ""].filter(Boolean).join(" · ");
+    const remove = isAdmin && !member.isMe
+      ? `<button type="button" class="household-remove" data-remove-member="${member.userId}" aria-label="Ta bort ${escapeHtml(name)}">Ta bort</button>` : "";
+    return `<li><span><strong>${escapeHtml(name)}</strong>${tags ? `<small>${escapeHtml(tags)}</small>` : ""}</span>${remove}</li>`;
+  }).join("");
+  $("householdMembers").querySelectorAll("[data-remove-member]").forEach(button => button.addEventListener("click", () => {
+    const userId = Number(button.dataset.removeMember);
+    removeMember(state.authToken, userId)
+      .then(({ household }) => { state.household = applySync(state.household, { household, revision: state.household.revision }); state.household.members = household.members; renderHousehold(); })
+      .catch(error => { $("householdInviteError").textContent = error.message; });
+  }));
+  // Bara administratören kan bjuda in - samma regel som servern håller.
+  $("householdInviteBtn").hidden = !isAdmin;
+  if (me) {
+    $("householdDisplayName").value = me.displayName || "";
+    $("householdSpice").value = me.profile?.spice || "";
+    $("householdDiet").value = me.profile?.diet || "";
+    $("householdAllergies").value = (me.profile?.allergies || []).join(", ");
+  }
+  renderNotificationPrefs();
+}
+
+function renderNotificationPrefs() {
+  const list = $("householdNotifyList");
+  if (!list || !state.notisInstallningar) return;
+  const prefs = state.notisInstallningar;
+  const rows = Object.entries(NOTIFY_LABELS).map(([key, label]) =>
+    `<label class="household-notify-row"><span>${label}</span><input type="checkbox" data-notify-pref="${key}" ${prefs[key] === false ? "" : "checked"}></label>`).join("");
+  list.innerHTML = `<label class="household-notify-row main"><span>Alla notiser</span><input type="checkbox" data-notify-pref="all" ${prefs.all === false ? "" : "checked"}></label>${rows}`;
+  list.querySelectorAll("[data-notify-pref]").forEach(input => input.addEventListener("change", () => {
+    const next = { ...prefs, [input.dataset.notifyPref]: input.checked };
+    state.notisInstallningar = next;
+    saveNotificationPrefs(state.authToken, next)
+      .then(({ preferences }) => { state.notisInstallningar = preferences; })
+      .catch(() => { /* nästa ändring försöker igen */ });
+  }));
+}
+
+async function loadNotifications() {
+  if (!state.authToken || !householdActive()) return;
+  try {
+    const payload = await fetchNotifications(state.authToken);
+    state.notisInstallningar = payload.preferences;
+    if (payload.notifications.length) showHouseholdNotice(payload.notifications);
+    renderNotificationPrefs();
+  } catch { /* notiser är aldrig värt att störa appen för */ }
+}
+
+// Notisen i appen. När push är produktionsklart är detta samma data från
+// samma utkorg - bara en annan transport (se services/household/notifications.py).
+function showHouseholdNotice(notices) {
+  const notice = notices[notices.length - 1];
+  showUndoToast(notice.body, null, notice.deeplink ? () => openDeeplink(notice.deeplink) : null);
+}
+
+const DEEPLINK_VIEWS = { "/handla": "basket", "/vecka": "week", "/skafferi": "pantry", "/konto": null };
+function openDeeplink(deeplink) {
+  const view = DEEPLINK_VIEWS[deeplink];
+  if (view) setView(view);
+  else if (deeplink === "/konto") openAccountModal();
+}
+
+// Hushållet hör till KONTOT, inte till telefonen. Utan den här städningen
+// låg familjens vecka, lista och skafferi kvar på skärmen efter utloggning -
+// och nästa person som loggade in på enheten såg dem.
+function clearHouseholdSession() {
+  state.household = emptyHouseholdState();
+  state.notisInstallningar = null;
+  lastWeekPushKey = null;
+  clearInterval(householdPollTimer);
+}
+
+function wireHouseholdUi() {
+  $("householdCreateForm")?.addEventListener("submit", async event => {
+    event.preventDefault();
+    $("householdCreateError").textContent = "";
+    try {
+      const { household } = await createHousehold(state.authToken, $("householdNameInput").value);
+      state.household = applySync(emptyHouseholdState(), { household, revision: 0 });
+      await pullHousehold(true);
+      // Veckan som redan finns på den här enheten blir familjens första vecka.
+      lastWeekPushKey = null;
+      pushWeekToHousehold();
+      pushPantryToHousehold();
+      startHouseholdSync();
+      renderHousehold();
+      loadNotifications();
+      render();
+    } catch (error) {
+      $("householdCreateError").textContent = error.message;
+    }
+  });
+
+  $("householdInviteBtn")?.addEventListener("click", async () => {
+    $("householdInviteError").textContent = "";
+    try {
+      const invite = await createInvite(state.authToken);
+      $("householdInviteBox").hidden = false;
+      $("householdInviteLink").value = invite.url;
+      // Systemets egen delningsruta när den finns: SMS, WhatsApp, Messenger -
+      // alla på en gång, utan att vi bygger en egen lista över appar.
+      const canShare = typeof navigator.share === "function";
+      $("householdShareBtn").hidden = !canShare;
+      $("householdShareBtn").onclick = () => navigator.share({ title: invite.shareTitle, text: invite.shareText, url: invite.url }).catch(() => {});
+      $("householdCopyBtn").onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(invite.url);
+          $("householdCopyBtn").textContent = "Kopierad";
+          setTimeout(() => { $("householdCopyBtn").textContent = "Kopiera"; }, 2000);
+        } catch {
+          $("householdInviteLink").select();
+        }
+      };
+    } catch (error) {
+      $("householdInviteError").textContent = error.message;
+    }
+  });
+
+  $("householdProfileForm")?.addEventListener("submit", async event => {
+    event.preventDefault();
+    $("householdProfileError").textContent = "";
+    try {
+      const { household } = await saveHouseholdProfile(state.authToken, {
+        displayName: $("householdDisplayName").value,
+        profile: {
+          spice: $("householdSpice").value || undefined,
+          diet: $("householdDiet").value || undefined,
+          allergies: $("householdAllergies").value.split(",").map(value => value.trim()).filter(Boolean),
+        },
+      });
+      state.household = applySync(state.household, { household, revision: state.household.revision });
+      state.household.members = household.members;
+      renderHousehold();
+    } catch (error) {
+      $("householdProfileError").textContent = error.message;
+    }
+  });
+
+  $("householdLeaveBtn")?.addEventListener("click", async () => {
+    if (!confirm(`Lämna ${state.household.name}? Den gemensamma veckan, listan och skafferiet stannar hos de andra.`)) return;
+    try {
+      await leaveHousehold(state.authToken);
+    } catch { /* redan ute, eller offline - lokalt läge gäller ändå */ }
+    state.household = emptyHouseholdState();
+    startHouseholdSync();
+    renderHousehold();
+    render();
+  });
+
+  $("inviteDismissBtn")?.addEventListener("click", () => { $("inviteLanding").hidden = true; clearInviteFromUrl(); });
+}
+
+// Skafferiet som redan finns på enheten följer med in i det nya hushållet.
+// Utan detta stod familjen med ett tomt skafferi första dagen, trots att
+// den som skapade hushållet redan hade fyllt sitt.
+function pushPantryToHousehold() {
+  Object.entries(state.pantry).forEach(([name, entry]) => {
+    if (!(entry.amount > 0)) return;
+    upsertInventoryItem(state.authToken, {
+      name, amount: entry.amount, unit: PACKAGE_INFO[name]?.unit || "st",
+      location: entry.location, expiry: entry.expiry, category: categoryFor(name),
+    }).then(applyHouseholdInventory).catch(() => {});
+  });
+}
+
+// ---- inbjudningslandningen ------------------------------------------------
+
+function clearInviteFromUrl() {
+  const url = new URL(location.href);
+  url.searchParams.delete("invite");
+  history.replaceState(null, "", url.pathname + url.search + url.hash);
+}
+
+const pendingInviteToken = new URLSearchParams(location.search).get("invite");
+
+async function handlePendingInvite() {
+  if (!pendingInviteToken) return;
+  let preview;
+  try {
+    preview = await previewInvite(pendingInviteToken);
+  } catch (error) {
+    $("inviteLanding").hidden = false;
+    $("inviteLandingTitle").textContent = "Inbjudan gäller inte längre";
+    $("inviteLandingBody").textContent = "Be den som bjöd in dig att skicka en ny länk.";
+    $("inviteJoinBtn").hidden = true;
+    return;
+  }
+  $("inviteLanding").hidden = false;
+  $("inviteLandingTitle").textContent = `${preview.invitedBy || "Någon"} har bjudit in dig till ${preview.householdName}`;
+  $("inviteLandingBody").textContent = state.authToken
+    ? "Ni delar veckan, inköpslistan och skafferiet."
+    : "Logga in eller skapa ett konto så är du med.";
+  $("inviteJoinBtn").querySelector("span").textContent = state.authToken ? `Gå med i ${preview.householdName}` : "Logga in och gå med";
+  $("inviteJoinBtn").onclick = async () => {
+    if (!state.authToken) { $("inviteLanding").hidden = true; openAccountModal(); return; }
+    $("inviteLandingError").textContent = "";
+    try {
+      const { household } = await joinHousehold(state.authToken, pendingInviteToken);
+      state.household = applySync(emptyHouseholdState(), { household, revision: 0 });
+      await pullHousehold(true);
+      startHouseholdSync();
+      clearInviteFromUrl();
+      $("inviteLanding").hidden = true;
+      renderHousehold();
+      loadNotifications();
+      render();
+      setView("week");
+    } catch (error) {
+      $("inviteLandingError").textContent = error.message;
+    }
+  };
+}
+
 function renderAccount() {
   const loggedIn = Boolean(state.user);
   $("accountLoggedOut").hidden = loggedIn;
@@ -3064,6 +3978,7 @@ function renderAccount() {
   $("profileBtn").classList.toggle("is-premium", hasPremium());
   syncSettingsInputs();
   renderPriceTabs();
+  renderHousehold();
   if (loggedIn) {
     $("accountEmail").textContent = state.user.email;
     $("verifyEmailNotice").hidden = state.user.emailVerified;
@@ -3117,7 +4032,10 @@ function swapOptionMarkup(option, isSelected) {
   // other product happens to be on offer right now.
   const campaignIngredient = recipe.ingredienser.find(name => state.livePriser[name]?.kampanj?.text);
   const campaignNote = campaignIngredient ? `<small class="swap-option-campaign">Kampanj på ${escapeHtml(campaignIngredient)}</small>` : "";
-  return `<button type="button" class="swap-option ${isSelected ? "selected" : ""}" data-choose-swap="${escapeHtml(recipe.id)}"><span class="swap-option-photo">${recipePhoto(recipe)}</span><span class="swap-option-info"><strong>${escapeHtml(recipe.namn)}</strong>${badge}<small class="swap-option-meta">${[recipe.tid ? `${recipe.tid} min` : "", price].filter(Boolean).join(" · ")}</small>${campaignNote}</span>${isSelected ? '<span class="swap-option-check" aria-hidden="true">✓</span>' : ""}</button>`;
+  // VARFÖR det här alternativet dök upp. En rad som säger "12 kr billigare
+  // per portion" är en anledning; en osorterad lista är bara brus.
+  const reason = option.reason ? `<small class="swap-option-reason">${escapeHtml(option.reason)}</small>` : "";
+  return `<button type="button" class="swap-option ${isSelected ? "selected" : ""}" data-choose-swap="${escapeHtml(recipe.id)}"><span class="swap-option-photo">${recipePhoto(recipe)}</span><span class="swap-option-info"><strong>${escapeHtml(recipe.namn)}</strong>${badge}<small class="swap-option-meta">${[recipe.tid ? `${recipe.tid} min` : "", price].filter(Boolean).join(" · ")}</small>${reason}${campaignNote}</span>${isSelected ? '<span class="swap-option-check" aria-hidden="true">✓</span>' : ""}</button>`;
 }
 const FREE_SWAP_LIMIT = 3;
 function openSwapModal(currentId) {
@@ -3137,19 +4055,45 @@ function openSwapModal(currentId) {
   // import). shoppingListCost gick via statiska PRODUCT_CATALOG som inte
   // känner bankreceptens ingredienser - varje kandidat kostade ~samma och
   // "billigast först" blev slumpartad.
-  const allOptions = candidates.map(candidate => ({ candidate, total: candidate.portionspris || 9999 })).sort((a, b) => a.total - b.total);
+  const current = selected.find(recipe => recipe.id === currentId);
+  const allOptions = swapOptionsFor(current, candidates, "");
   if (!allOptions.length) { $("swapModalHint").textContent = ""; $("swapOptions").innerHTML = `<p class="live-loading">Inga alternativ hittades som passar budget, butik och dina filter just nu.</p>`; $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true; $("swapModal").hidden = false; return; }
-  swapContext = { currentId, dayIndex, allOptions, visibleCount: SWAP_OPTIONS_BATCH, selectedId: null };
+  swapContext = { currentId, dayIndex, current, candidates, intent: "", allOptions, visibleCount: SWAP_OPTIONS_BATCH, selectedId: null };
   renderSwapModal();
   $("swapModal").hidden = false;
 }
+// Alternativen som faktiskt är bättre i den valda meningen. Rankningen och
+// ärlighetsreglerna bor i src/services/swap.js.
+function swapOptionsFor(current, candidates, intent) {
+  return rankSwapOptions(current, candidates, intent, pantryNamesForCooking())
+    .map(option => ({ ...option, total: option.price ?? 9999,
+                      reason: swapReasonText(option, intent, current) }));
+}
+
 function renderSwapModal() {
   if (!swapContext) return;
-  const { currentId, dayIndex, allOptions, visibleCount, selectedId } = swapContext;
+  const { currentId, dayIndex, allOptions, visibleCount, selectedId, intent } = swapContext;
   const currentRecipe = selectedRecipes().find(r => r.id === currentId);
   const dayLabel = DAYS[dayIndex] || `Dag ${dayIndex + 1}`;
-  $("swapModalHint").innerHTML = `${dayLabel}s middag${currentRecipe ? ` · nuvarande: ${escapeHtml(currentRecipe.namn)}` : ""}`;
-  $("swapOptions").innerHTML = allOptions.slice(0, visibleCount).map(option => swapOptionMarkup(option, option.candidate.id === selectedId)).join("");
+  // Avsikten först, alternativen sedan. Fem knappar räcker - det här ska
+  // vara ett val, inte ett formulär.
+  const intents = `<div class="swap-intents">${["", ...SWAP_INTENTS.map(option => option.id)].map(id => {
+    const label = id ? SWAP_INTENTS.find(option => option.id === id).label : "Något annat";
+    return `<button type="button" class="swap-intent ${id === intent ? "active" : ""}" data-swap-intent="${escapeHtml(id)}">${escapeHtml(label)}</button>`;
+  }).join("")}</div>`;
+  $("swapModalHint").innerHTML = `${dayLabel}s middag${currentRecipe ? ` · nuvarande: ${escapeHtml(currentRecipe.namn)}` : ""}` + intents;
+  $("swapModalHint").querySelectorAll("[data-swap-intent]").forEach(button => button.addEventListener("click", () => {
+    swapContext.intent = button.dataset.swapIntent;
+    swapContext.allOptions = swapOptionsFor(swapContext.current, swapContext.candidates, swapContext.intent);
+    swapContext.visibleCount = SWAP_OPTIONS_BATCH;
+    swapContext.selectedId = null;
+    renderSwapModal();
+  }));
+  // En tom lista är ett ärligare svar än en påhittad: det finns helt enkelt
+  // inget billigare/snabbare alternativ som också passar kost och budget.
+  $("swapOptions").innerHTML = allOptions.length
+    ? allOptions.slice(0, visibleCount).map(option => swapOptionMarkup(option, option.candidate.id === selectedId)).join("")
+    : `<p class="live-loading">Ingen av de rätter som passar er är ${escapeHtml((SWAP_INTENTS.find(o => o.id === intent)?.label || "annorlunda").toLowerCase())} än den här.</p>`;
   document.querySelectorAll("[data-choose-swap]").forEach(button => button.addEventListener("click", () => {
     swapContext.selectedId = swapContext.selectedId === button.dataset.chooseSwap ? null : button.dataset.chooseSwap;
     renderSwapModal();
@@ -3279,7 +4223,7 @@ async function syncPlanPricing(plans) {
       const response = await fetch(pricingWeekApiUrl(), {
         method: "POST",
         headers: pricingHeaders(),
-        body: JSON.stringify({ recipeIds, people: state.personer, pantry: pantryAmounts(state.pantry || {}),
+        body: JSON.stringify({ recipeIds, people: state.personer, pantry: pantryForPricing(),
           ...(Object.keys(storeSelectionForPricing()).length ? { stores: storeSelectionForPricing() } : {}) }),
         signal: AbortSignal.timeout(20000),
       });
@@ -3336,6 +4280,7 @@ function openPlanComparison() {
     state.swapsThisWeek = 0;
     setWeekPlan(plan.combo.map(recipe => recipe.id));
     state.avklarade.clear();
+  state.harHemma.clear();
     // Samma regel som i chooseMenu: en ny vecka är en ny lista, och förra
     // veckans "finns hemma"-borttagningar får inte tyst filtrera bort samma
     // ingrediensnamn ur den nya.
@@ -3538,6 +4483,7 @@ $("deleteAccountBtn").addEventListener("click", async () => {
   try {
     await deleteAccount(state.authToken);
     state.authToken = null; state.user = null; storeToken(null);
+    clearHouseholdSession();
     closeAccountModal(); renderAccount();
   } catch (error) { $("deleteError").textContent = error.message; }
 });
@@ -3558,6 +4504,9 @@ async function refreshUser() {
     }
   }
   renderAccount();
+  // Hushållet hämtas EFTER kontot: utan ett giltigt user_id finns inget
+  // medlemskap att slå upp.
+  loadHousehold().then(loadNotifications);
   // Editing a goal already regenerates the week directly (see
   // onNutritionGoalsChanged) - doing it again here unconditionally on every
   // login/session refresh would silently wipe checked-off items and cached
@@ -3747,8 +4696,9 @@ $("manageBillingBtn").addEventListener("click", async () => {
 });
 $("gateLogoutBtn").addEventListener("click", () => window.__matjaktGateLock());
 $("logoutBtn").addEventListener("click", async () => {
-  if (state.authToken) { try { await logoutRequest(state.authToken); } catch { /* session redan ogiltig server-side, städa lokalt ändå */ } }
+  if (state.authToken) { try { await logoutRequest(state.authToken, state.pushDeviceToken || null); } catch { /* session redan ogiltig server-side, städa lokalt ändå */ } }
   state.authToken = null; state.user = null; storeToken(null);
+  clearHouseholdSession();
   // Utloggning är ett byte av person, inte en paus: skafferi, vecka,
   // allergival och historik tillhör KONTOT. Kvarlämnat laddades det upp
   // till NÄSTA konto som registrerades på enheten (bootstrap-grenen i
@@ -3757,7 +4707,7 @@ $("logoutBtn").addEventListener("click", async () => {
   // onboarding klar) får stanna.
   state.pantry = {};
   state.valda = new Set(); state.weekPlan = [];
-  state.avklarade = new Set(); state.removedItems = new Set();
+  state.avklarade = new Set(); state.harHemma = new Set(); state.removedItems = new Set();
   state.favoriter = new Set(); state.ogillar = new Set();
   state.betyg = {}; state.feedback = {}; state.extraItems = [];
   state.kost = { kosttyp: "", avoidAllergens: new Set() };
@@ -3793,8 +4743,15 @@ let pantryPickLocation = "skafferi";
 function renderPantryPicker(query) {
   const search = query.trim().toLowerCase();
   const matches = Object.entries(PRODUCT_CATALOG).filter(([key, product]) => !search || key.toLowerCase().includes(search) || product.namn.toLowerCase().includes(search) || product.marke.toLowerCase().includes(search)).slice(0, 30);
-  $("pantryPickerList").innerHTML = matches.length ? matches.map(([key, product]) => `<button type="button" class="pantry-pick" data-pantry-pick="${escapeHtml(key)}"><span class="pantry-pick-info"><strong>${escapeHtml(product.namn)}</strong><small>${escapeHtml([product.marke && product.marke !== "ICA" ? product.marke : "", product.storlek].filter(Boolean).join(" · "))}</small></span><span class="pantry-pick-add">+ Lägg till</span></button>`).join("") : !search ? "" : `<p class="pantry-picker-empty">Inga vanliga varor matchar "${escapeHtml(query)}".</p>`;
+  const typed = query.trim();
+  // "Mjölk - generell": en vara utan varumärke är ett fullgott svar, inte
+  // ett misslyckande. Erbjuds alltid, överst, så flödet aldrig kör fast.
+  const generic = typed
+    ? `<button type="button" class="pantry-pick generic" data-pantry-generic="${escapeHtml(typed)}"><span class="pantry-pick-info"><strong>${escapeHtml(typed)}</strong><small>Generell vara - utan märke</small></span><span class="pantry-pick-add">+ Lägg till</span></button>`
+    : "";
+  $("pantryPickerList").innerHTML = generic + (matches.length ? matches.map(([key, product]) => `<button type="button" class="pantry-pick" data-pantry-pick="${escapeHtml(key)}"><span class="pantry-pick-info"><strong>${escapeHtml(product.namn)}</strong><small>${escapeHtml([product.marke && product.marke !== "ICA" ? product.marke : "", product.storlek].filter(Boolean).join(" · "))}</small></span><span class="pantry-pick-add">+ Lägg till</span></button>`).join("") : "");
   document.querySelectorAll("[data-pantry-pick]").forEach(button => button.addEventListener("click", () => openPantryAddConfirm(button.dataset.pantryPick, PRODUCT_CATALOG[button.dataset.pantryPick])));
+  document.querySelectorAll("[data-pantry-generic]").forEach(button => button.addEventListener("click", () => openPantryAddConfirm(button.dataset.pantryGeneric, { namn: button.dataset.pantryGeneric })));
 }
 let pantryLiveResults = [];
 const debouncedPantrySearch = createDebouncedSearch((query, signal) => fetch(productApiUrl(chosenStore(), query), { signal }).then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }), 300);
@@ -3809,7 +4766,10 @@ function renderPantryLiveSearch(query) {
     $("pantryLiveResults").innerHTML = pantryLiveResults.length ? `<p class="pantry-picker-section-label">Från ${chain}</p>${pantryLiveResults.map((product, index) => `<button type="button" class="pantry-pick" data-pantry-pick-live="${index}">${product.bild ? `<img class="pantry-pick-photo" src="${product.bild}" alt="" loading="lazy">` : `<span class="pantry-pick-photo placeholder" aria-hidden="true">${escapeHtml(product.produktnamn.slice(0, 1))}</span>`}<span class="pantry-pick-info"><strong>${product.produktnamn}</strong><small>${product.marke_och_storlek || (product.pris_kr == null ? "Pris saknas" : `${product.pris_kr.toLocaleString("sv-SE", { minimumFractionDigits: 2 })} kr`)}</small></span><span class="pantry-pick-add">+ Lägg till</span></button>`).join("")}` : `<p class="pantry-picker-empty">Inga produkter hos ${chain} matchar "${escapeHtml(search)}".</p>`;
     document.querySelectorAll("[data-pantry-pick-live]").forEach(button => button.addEventListener("click", () => {
       const product = pantryLiveResults[Number(button.dataset.pantryPickLive)];
-      if (product) openPantryAddConfirm(product.produktnamn, { namn: product.produktnamn, marke: product.marke_och_storlek || "", storlek: "" });
+      if (product) openPantryAddConfirm(product.produktnamn, {
+        namn: product.produktnamn, marke: product.marke_och_storlek || "", storlek: "",
+        bild: product.bild || "", gtin: product.gtin || "",
+      });
     }));
   }).catch(error => {
     if (error?.name === "AbortError") return;
@@ -3824,16 +4784,28 @@ function openPantryAddConfirm(key, product) {
   $("pantryAddExpiry").value = "";
   document.querySelectorAll("#pantryAddLocation button").forEach(button => button.classList.toggle("active", button.dataset.location === pantryPickLocation));
   $("pantryAddConfirmBtn").onclick = () => {
-    const entry = state.pantry[key] || { amount: 0, location: pantryPickLocation, expiry: null };
     // Ett påfyllt paket ska inte RADERA vad som redan är känt: lämnas
     // datumfältet tomt behålls befintligt bäst före-datum, och en vara som
     // redan har en plats behåller den om användaren inte aktivt bytt flik.
-    state.pantry[key] = {
-      amount: entry.amount + (PACKAGE_INFO[key]?.amount || 1),
+    const existing = pantryList().find(entry => entry.key === itemKeyFor(key, product.gtin));
+    // Produktdata följer bara med när vi FAKTISKT har den. En generisk vara
+    // ("Mjölk - generell") ska inte tilldelas ett varumärke vi gissat oss till.
+    const productData = product.marke || product.storlek || product.bild || product.gtin
+      ? { productName: product.namn, brand: product.marke || undefined,
+          packageSize: product.storlek || undefined, gtin: product.gtin || undefined,
+          imageUrl: product.bild || undefined }
+      : null;
+    addPantryItem({
+      name: key,
+      gtin: product.gtin,
+      amount: (existing?.amount || 0) + (PACKAGE_INFO[key]?.amount || 1),
+      unit: PACKAGE_INFO[key]?.unit || "st",
       location: pantryPickLocation,
-      expiry: $("pantryAddExpiry").value || entry.expiry || null,
-    };
-    saveState(); render(); closePantryModal();
+      expiry: $("pantryAddExpiry").value || existing?.expiry || null,
+      category: categoryFor(key),
+      product: productData,
+    });
+    closePantryModal();
   };
 }
 document.querySelectorAll("#pantryAddLocation button").forEach(button => button.addEventListener("click", () => { pantryPickLocation = button.dataset.location; document.querySelectorAll("#pantryAddLocation button").forEach(b => b.classList.toggle("active", b === button)); }));
@@ -3864,7 +4836,7 @@ function renderCookResults(localMatches, externalRecipes, hiddenByDiet = false) 
 }
 async function openCookModal() {
   $("cookModal").hidden = false;
-  const pantryNames = Object.keys(state.pantry);
+  const pantryNames = pantryNamesForCooking();
   const dietFilterActive = state.kost.kosttyp !== "" || state.kost.avoidAllergens.size > 0;
   const localMatches = matchLocalRecipesToPantry(localRecipesForUser(), pantryNames);
   if (dietFilterActive) { renderCookResults(localMatches, [], true); return; }
@@ -3883,10 +4855,20 @@ function closeCookModal() { $("cookModal").hidden = true; }
 $("cookFromPantryBtn").addEventListener("click", openCookModal);
 document.querySelectorAll("[data-cook-close]").forEach(button => button.addEventListener("click", closeCookModal));
 restoreNutritionGoalsForm();
+wireHouseholdUi();
 if (!state.valda.size) chooseMenu(false); else render();
 renderRecipePage();
 refreshUser();
 syncNearbyBranches();
+// En inbjudningslänk är det FÖRSTA som ska hända: personen kom hit för att
+// gå med i en familj, inte för att titta på appen.
+handlePendingInvite();
+// Telefonen tillbaka från bakgrunden: hämta det familjen ändrat under tiden.
+// Det här är vad som gör att Adam ser Saras avbockning "snart" (§25) utan
+// att vi bygger en WebSocket-infrastruktur för det.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") { pullHousehold(); loadNotifications(); }
+});
 // A first-time visitor arriving through a SHARED RECIPE LINK came for the
 // recipe - onboarding on top of it would bury the very thing that brought
 // them here. It opens on their next natural visit instead.

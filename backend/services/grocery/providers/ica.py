@@ -114,6 +114,7 @@ from ..errors import ProviderBlockedError, ProviderRequestError
 from ..base import GroceryProvider
 from .axfood import CATEGORY_PATH_SEPARATOR
 from ..models import RawProduct, Store
+from ...data_guard import guard_outbound_http
 
 logger = logging.getLogger("matjakt.grocery.ica")
 
@@ -239,6 +240,7 @@ class IcaProvider(GroceryProvider):
             if delay:
                 time.sleep(delay)
             try:
+                guard_outbound_http("ICA")
                 with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
                     # A WAF challenge comes back as a perfectly "successful"
                     # 202 with an empty body - checked BEFORE parsing, or it

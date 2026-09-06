@@ -45,6 +45,8 @@ if test_mode_active():
     import api_server
     from services.accounts import ratelimit
     from services.accounts import AccountStore
+    from services.household import HouseholdStore, NotificationStore
+    from services.analytics import AnalyticsStore
     from services.grocery import api as grocery_api
     from services.recipes import api as recipes_api
     from services.recipes import prices as recipe_prices
@@ -75,6 +77,18 @@ class _Server:
         self._saved = {
             "grocery": grocery_api.DB_PATH, "recipes": recipes_api.DB_PATH,
             "accounts": api_server.ACCOUNT_STORE,
+            # Hushållet delar SQLite-fil med kontona i produktion, och måste
+            # göra det här också - annars ligger sessionen i en databas och
+            # medlemskapet i en annan, och inget hushåll går att slå upp.
+            "household": api_server.HOUSEHOLD_STORE,
+            "notifications": api_server.NOTIFICATION_STORE,
+            # ANALYTICS binder ACCOUNT_STORE.connection VID IMPORT. Byts bara
+            # kontolagret ut hamnar resans händelser i den ursprungliga
+            # databasen medan kontona ligger här - och user_id krockar mellan
+            # databaserna, så en annan testfils konto får resans klick.
+            # (Syntes som "4 != 3" i trattestet när E2E:n körs i samma
+            # process som enhetstesterna, dvs. lokalt där Playwright finns.)
+            "analytics": api_server.ANALYTICS,
             "stripe": (api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET,
                        api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY,
                        api_server.APP_URL, api_server.create_customer, api_server.create_checkout_session),
@@ -82,6 +96,9 @@ class _Server:
         grocery_api.DB_PATH = root / "grocery.db"
         recipes_api.DB_PATH = root / "recipes.db"
         api_server.ACCOUNT_STORE = AccountStore(root / "matjakt.db")
+        api_server.HOUSEHOLD_STORE = HouseholdStore(root / "matjakt.db")
+        api_server.NOTIFICATION_STORE = NotificationStore(root / "matjakt.db")
+        api_server.ANALYTICS = AnalyticsStore(api_server.ACCOUNT_STORE.connection)
         grocery_api.clear_cache()
         recipes_api.clear_cache()
         ratelimit.reset()
@@ -91,6 +108,16 @@ class _Server:
         grocery_api.clear_cache()
         self.repriced = recipe_prices.reprice_all()
         api_server.KV_CACHE.set("geocode", fixture.POSTCODE, dict(fixture.GAVLE))
+        # INGEN E2E får nå en riktig leverantör. Utan det här sträckte sig
+        # /api/products/batch efter primat.nu på riktigt (43 anrop i en enda
+        # resa) - det syntes aldrig, för utfallet swaldes som "leverantören
+        # svarar inte". Spärren i data_guard gör numera samma försök till ett
+        # 500, vilket är hur det upptäcktes. E2E:n har sin egen prisdata i
+        # fixturen och behöver ingen livesökning.
+        self._saved["primat"] = (api_server.primat_resolve_stores,
+                                 api_server.primat_search_products)
+        api_server.primat_resolve_stores = lambda zip_code, api_key=None: {}
+        api_server.primat_search_products = lambda *args, **kwargs: []
         # MATJAKT_E2E_FRONTEND_DIR=dist/frontend kör samma resa mot det
         # byggda bundlet (scripts/build_frontend.mjs).
         self._saved["frontend"] = api_server.FRONTEND_DIR
@@ -110,10 +137,16 @@ class _Server:
         self.httpd.server_close()
         self.thread.join(timeout=5)
         api_server.ACCOUNT_STORE.close()
+        api_server.HOUSEHOLD_STORE.close()
+        api_server.NOTIFICATION_STORE.close()
+        api_server.HOUSEHOLD_STORE = self._saved["household"]
+        api_server.NOTIFICATION_STORE = self._saved["notifications"]
+        api_server.ANALYTICS = self._saved["analytics"]
         grocery_api.DB_PATH = self._saved["grocery"]
         recipes_api.DB_PATH = self._saved["recipes"]
         api_server.ACCOUNT_STORE = self._saved["accounts"]
         api_server.FRONTEND_DIR = self._saved["frontend"]
+        (api_server.primat_resolve_stores, api_server.primat_search_products) = self._saved["primat"]
         (api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET, api_server.STRIPE_PRICE_MONTHLY,
          api_server.STRIPE_PRICE_YEARLY, api_server.APP_URL, api_server.create_customer,
          api_server.create_checkout_session) = self._saved["stripe"]
@@ -410,9 +443,12 @@ class BrowserJourney(unittest.TestCase):
             expect(page.locator("#restoreRemovedBtn")).to_contain_text("1 borttagen vara")
             expect(page.locator("#storeCardsCompareBtn")).to_have_count(0)      # Free har ingen jämförelsesida
             self.assertEqual(page.locator("#shoppingList .shopping-item").count(), items_before - 1)
-            page.check("#shoppingList [data-shopping] >> nth=0")
+            # Kryssrutan är borta: "Har hemma" och "Köpt" är två olika saker
+            # och har två knappar (hushållspasset, §6). Ett klick på Köpt är
+            # det som förr var en avbockning - plus att varan hamnar hemma.
+            page.click("#shoppingList [data-bought] >> nth=0")
             state = self.wait_for_state(lambda s: len(s.get("avklarade") or []) == 1 and len(s.get("removedItems") or []) == 1,
-                                        what="borttagen + avbockad")
+                                        what="borttagen + köpt")
             removed_name = state["removedItems"][0]
 
         with self.step("skafferi: har hemma"):
@@ -424,7 +460,10 @@ class BrowserJourney(unittest.TestCase):
             expect(page.locator("#pantryAddConfirm")).to_be_visible()
             page.click("#pantryAddConfirmBtn")
             expect(page.locator("#pantryModal")).to_be_hidden()
-            expect(page.locator("#pantryCount")).to_have_text("1")
+            # TVÅ, inte en: "Köpt" i steget ovan lägger varan hemma (§6 -
+            # det man just burit hem finns hemma), och riset här är den
+            # andra. Förr gjorde en avbockning ingenting med skafferiet.
+            expect(page.locator("#pantryCount")).to_have_text("2")
 
         with self.step("butiksjämförelse: Free ser spridningen, låsta butiker och paywallen"):
             page.click('.bottom-nav-item[data-view="basket"]')
@@ -440,7 +479,8 @@ class BrowserJourney(unittest.TestCase):
             expect(paywall).to_be_hidden()
 
         with self.step("logout rensar, login återställer"):
-            self.wait_for_server_state(lambda s: s.get("weekPlan") == swapped_week and len(s.get("pantry") or {}) == 1,
+            # Två i skafferiet: den köpta varan och riset - se steget ovan.
+            self.wait_for_server_state(lambda s: s.get("weekPlan") == swapped_week and len(s.get("pantry") or {}) == 2,
                                        what="vecka + skafferi synkade")
             self.logout()
             state = self.wait_for_state(lambda s: not s.get("weekPlan"), what="rensad vecka")
@@ -449,14 +489,14 @@ class BrowserJourney(unittest.TestCase):
             state = self.wait_for_state(lambda s: s.get("weekPlan") == swapped_week, timeout=20, what="återställd vecka")
             self.assertEqual(state["removedItems"], [removed_name])
             self.assertEqual(len(state["avklarade"]), 1)
-            self.assertEqual(len(state["pantry"]), 1)
+            self.assertEqual(len(state["pantry"]), 2)     # köpt vara + ris
             self.assertEqual(state["budget"], 900)
             self.assertEqual(state["postnummer"], fixture.POSTCODE)
             self.close_account_modal()
             page.click('.bottom-nav-item[data-view="week"]')
             expect(page.locator("#weekTodayCard [data-week-details]")).to_be_visible()
             page.click('.bottom-nav-item[data-view="pantry"]')
-            expect(page.locator("#pantryCount")).to_have_text("1")
+            expect(page.locator("#pantryCount")).to_have_text("2")
 
         self.assertEqual(self.console_errors, [])
 

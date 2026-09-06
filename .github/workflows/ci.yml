@@ -72,7 +72,7 @@ jobs:
           fi
 
   e2e:
-    name: Browser-E2E (Playwright, konsumentresan + Premium/Stripe testläge)
+    name: "Browser-E2E (Playwright: konsumentresan, Premium/Stripe, hushållet med två personer)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -84,13 +84,13 @@ jobs:
           python-version: "3.12"
       - run: pip install -r backend/requirements.txt playwright
       - run: python -m playwright install --with-deps chromium
-      - name: Konsumentresan i källform
-        run: python backend/tests/run.py --pattern "test_consumer*"
-      - name: Samma resa mot det byggda bundlet
+      - name: Resorna i källform (konsument + hushåll)
+        run: python backend/tests/run.py --pattern "test_*journey*"
+      - name: Samma resor mot det byggda bundlet
         run: |
           npm ci
           npm run build
-          MATJAKT_E2E_FRONTEND_DIR=dist/frontend python backend/tests/run.py --pattern "test_consumer*"
+          MATJAKT_E2E_FRONTEND_DIR=dist/frontend python backend/tests/run.py --pattern "test_*journey*"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

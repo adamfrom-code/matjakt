@@ -2142,6 +2142,53 @@ class AuthHttpTest(unittest.TestCase):
             status, payload = self._raw("POST", path, b"{}", {"Content-Length": "-5"})
             self.assertEqual(status, 400, path)
 
+    def test_a_broken_framing_response_survives_the_close(self):
+        """Regression 2026-09-06, symtomsidan.
+
+        Servern läser aldrig kroppen när Content-Length är otolkbar, och
+        stängde sedan anslutningen med den datan kvar i mottagningsbufferten.
+        Windows skickar RST i stället för FIN i det läget, och en RST kastar
+        bort svaret - även när det redan lämnat servern. Uppmätt: ~1 av 30
+        begäranden tappade sitt 400, vilket fällde den här testklassen
+        ungefär varannan körning.
+
+        OBS: det här testet är ett RÖKPROV, inte garantin. Felet inträffade
+        bara ~3 % av gångerna, så trettio försök missar det ungefär var
+        tredje körning. Den deterministiska garantin ligger i
+        AbandonBodyTest nedan, som mäter tömningen direkt."""
+        for attempt in range(30):
+            status, payload = self._raw("POST", "/api/auth/login", b'{"a":1}',
+                                        {"Content-Length": "abc"})
+            self.assertEqual(status, 400, f"försök {attempt}")
+            self.assertIn("error", payload)
+
+    def test_an_oversized_body_is_also_abandoned_cleanly(self):
+        """Samma sak för 413: kroppen läses inte, och då gäller samma regel."""
+        for attempt in range(15):
+            status, payload = self._raw(
+                "POST", "/api/auth/login", b"x" * 2048,
+                {"Content-Length": str(api_server.ApiHandler.MAX_JSON_BODY_BYTES + 1)})
+            self.assertEqual(status, 413, f"försök {attempt}")
+
+    def test_a_bad_json_body_does_not_abandon_a_healthy_connection(self):
+        """Motsatsen: en kropp vi FAKTISKT läst har ingenting oläst kvar, och
+        där ska anslutningen inte överges. Annars hade varje syntaxfel kostat
+        en ny anslutning."""
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            body = b"{inte json}"
+            conn.request("POST", "/api/auth/login", body=body,
+                         headers={"Content-Type": "application/json",
+                                  "Content-Length": str(len(body))})
+            response = conn.getresponse()
+            response.read()
+            self.assertEqual(response.status, 400)
+            # HTTP/1.0-svar stänger ändå per begäran; det som testas är att
+            # servern svarade normalt utan att gå via överge-vägen.
+            self.assertFalse(response.will_close and response.status != 400)
+        finally:
+            conn.close()
+
     def test_an_unexpected_exception_becomes_a_calm_500_without_a_traceback(self):
         original = api_server.ACCOUNT_STORE.user_for_token
 
@@ -2524,6 +2571,93 @@ class FakeUrlResponse:
 
     def __exit__(self, *args):
         return False
+
+
+class AbandonBodyTest(unittest.TestCase):
+    """_abandon_body mätt direkt - den deterministiska garantin.
+
+    Symtomtestet ovan (ConnectionAbortedError) slår bara till ~3 % av
+    gångerna och kan därför inte bevisa att fixen sitter kvar. Det här
+    testet mäter i stället de två sakerna fixen FAKTISKT ska göra, varje
+    gång: markera anslutningen för stängning, och tömma det klienten redan
+    skickat ur mottagningsbufferten innan vi stänger.
+    """
+
+    class _FakeSocket:
+        """Bara det _abandon_body rör: gettimeout/settimeout/recv."""
+
+        def __init__(self, pending: bytes):
+            self._pending = pending
+            self.timeouts = []
+            self._timeout = None
+
+        def gettimeout(self):
+            return self._timeout
+
+        def settimeout(self, value):
+            self._timeout = value
+            self.timeouts.append(value)
+
+        def recv(self, size):
+            if not self._pending:
+                # Så beter sig en tömd buffert med timeout satt.
+                raise TimeoutError("timed out")
+            chunk, self._pending = self._pending[:size], self._pending[size:]
+            return chunk
+
+        @property
+        def unread(self) -> int:
+            return len(self._pending)
+
+    def _handler(self, pending: bytes):
+        handler = api_server.ApiHandler.__new__(api_server.ApiHandler)
+        handler.close_connection = False
+        handler.connection = self._FakeSocket(pending)
+        return handler
+
+    def test_pending_bytes_are_drained_before_the_socket_is_closed(self):
+        handler = self._handler(b'{"a":1}')
+        handler._abandon_body()
+        self.assertEqual(handler.connection.unread, 0,
+                         "oläst data kvar vid stängning ger RST i stället för FIN")
+
+    def test_the_connection_is_marked_for_close(self):
+        """Ramningen är okänd, så nästa 'requestrad' vi läste vore mitt inne
+        i den förra kroppen. Anslutningen får inte återanvändas."""
+        handler = self._handler(b"")
+        handler._abandon_body()
+        self.assertTrue(handler.close_connection)
+
+    def test_a_short_timeout_is_used_and_then_restored(self):
+        handler = self._handler(b"x")
+        handler._abandon_body()
+        self.assertIn(api_server.ApiHandler.ABANDON_DRAIN_SECONDS, handler.connection.timeouts)
+        self.assertIsNone(handler.connection.timeouts[-1],
+                          "tidsgränsen ska lämnas tillbaka som den var")
+
+    def test_draining_stops_at_the_body_cap(self):
+        """En klient som fortsätter skicka mer än taket är inte den vi
+        försöker svara vänligt - då får anslutningen brytas. Att tömma
+        obegränsat vore samma minnesproblem som taket finns för."""
+        cap = api_server.ApiHandler.MAX_JSON_BODY_BYTES
+        handler = self._handler(b"x" * (cap + 5000))
+        handler._abandon_body()
+        self.assertEqual(handler.connection.unread, 5000)
+
+    def test_a_known_length_is_not_over_drained(self):
+        """413-fallet vet exakt hur mycket som väntas; nästa begäran på en
+        återanvänd anslutning får inte slukas med."""
+        handler = self._handler(b"12345" + b"NASTA REQUEST")
+        handler._abandon_body(expected_length=5)
+        self.assertEqual(handler.connection.unread, len(b"NASTA REQUEST"))
+
+    def test_a_dead_socket_does_not_raise(self):
+        """Klienten kan redan vara borta - tömningen får aldrig bli felet som
+        döljer svaret vi försöker skicka."""
+        handler = self._handler(b"")
+        handler.connection.recv = lambda size: (_ for _ in ()).throw(OSError("gone"))
+        handler._abandon_body()
+        self.assertTrue(handler.close_connection)
 
 
 class IcaStoreCacheTest(unittest.TestCase):

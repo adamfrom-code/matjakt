@@ -9,6 +9,7 @@ POST /api/admin/pricing-audit. Skriver flaggrapport till stdout.
 
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -24,6 +25,20 @@ def main() -> int:
     gs = gapi.open_store()
     rs = rapi.open_store()
     try:
+        product_count = gs.connection.execute("SELECT COUNT(*) FROM grocery_products").fetchone()[0]
+        # Prisdatans ålder, inte filens sökväg: en audit mot en gammal kopia
+        # och en mot produktion har samma sökväg på olika maskiner, men olika
+        # färskhet - och det är färskheten som avgör vad resultatet är värt.
+        newest_price = gs.connection.execute(
+            "SELECT MAX(fetched_at) FROM grocery_current_prices").fetchone()[0]
+        if not product_count:
+            # Fail closed: en tom prisdatabas ger "allt grönt" utan att ha
+            # granskat något. Det är inget kvitto, det är en tom rapport.
+            print("AVBRYTER: prisdatabasen är tom - 0 produkter. En audit utan "
+                  "priser kan inte hitta ett enda fel och får inte skrivas som "
+                  "resultat. Peka MATJAKT_DATA_DIR på en databas med kedjedata.",
+                  file=sys.stderr)
+            return 2
         result = run_pricing_audit(gs, rs, ["Willys", "Hemköp", "City Gross"])
     finally:
         gs.close(); rs.close()
@@ -33,6 +48,13 @@ def main() -> int:
         print(f"  {kind:<24} {n}")
         for ex in result["exempel"].get(kind, [])[:6]:
             print(f"      {ex}")
+    # VARIFRÅN siffrorna kommer, sparat med dem. En audit med 0 kontroller
+    # ser ut som ett grönt kvitto men kan inte hitta ett enda fel, och en
+    # audit mot en gammal backup är inte samma sak som mot produktion.
+    # Utan den här raden gick de två inte att skilja åt i efterhand.
+    result["produkter"] = product_count
+    result["prisdata_senast"] = newest_price
+    result["kord"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     (ROOT / "audit_result.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
     return 0 if result["gate"] == "GRÖN" else 1
 

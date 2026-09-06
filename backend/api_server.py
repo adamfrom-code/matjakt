@@ -46,6 +46,8 @@ from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
 from services.analytics import ANALYTICS_EVENTS, AnalyticsStore
 from services import mailings
+from services.household import HouseholdStore, NotificationStore
+from services.household.routes import HouseholdRouter
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
@@ -544,6 +546,10 @@ ACCOUNT_STORE_PATH = DATA_DIR / "matjakt.db"
 PRICE_CACHE_PATH = DATA_DIR / "prices.db"
 
 ACCOUNT_STORE = AccountStore(ACCOUNT_STORE_PATH)
+# Hushållet delar SQLite-fil med kontona (household_members refererar users)
+# men har egen anslutning och eget schema - se services/household/store.py.
+HOUSEHOLD_STORE = HouseholdStore(ACCOUNT_STORE_PATH)
+NOTIFICATION_STORE = NotificationStore(ACCOUNT_STORE_PATH)
 PRICE_CACHE = PriceCacheStore(PRICE_CACHE_PATH)
 # Same SQLite file/connection as PRICE_CACHE (see KeyValueCacheStore's
 # docstring) - campaigns, geocoding, store lists and Primat/OFF lookups used
@@ -1739,6 +1745,19 @@ class ApiHandler(SimpleHTTPRequestHandler):
         header = self.headers.get("Authorization", "")
         return header[7:] if header.lower().startswith("bearer ") else None
 
+    def _handle_household(self, method, parsed, payload):
+        """Alla /api/household-vägar. Routern byggs per begäran så att den
+        alltid ser MODULENS aktuella lager - testerna byter ut dem, och en
+        router som fångat gamla referenser vid uppstart hade tyst skrivit i
+        fel databas."""
+        limit = "household_invite" if parsed.path == "/api/household/invite" and method == "POST" else "household"
+        if self._rate_limit(limit, (self._bearer_token() or "")[:16]):
+            return
+        router = HouseholdRouter(HOUSEHOLD_STORE, NOTIFICATION_STORE, ACCOUNT_STORE, APP_URL)
+        status, body = router.handle(method, parsed.path, parse_qs(parsed.query), payload,
+                                     self._bearer_token())
+        self.send_json(status, body)
+
     # Största JSON-kropp servern läser in. Största legitima kroppen är ett
     # kontos synkade state (veckor, skafferi, extraval) - långt under 256 kB.
     # Utan tak var en oautentiserad POST med hundratals MB body en gratis
@@ -1748,10 +1767,20 @@ class ApiHandler(SimpleHTTPRequestHandler):
     class _BodyTooLarge(ValueError):
         pass
 
+    # Skiljer "vi kunde inte tolka Content-Length" (kroppen är oläst och
+    # anslutningen måste överges) från "kroppen lästes men var inte JSON"
+    # (ingenting oläst, anslutningen är fin). Samma 400 utåt, olika städning.
+    _BAD_FRAMING = "Ogiltig Content-Length"
+
+    # Hur länge tömningen väntar på mer data. Kort med flit: det som redan
+    # anlänt hämtas direkt, och att vänta längre skulle bara låta en långsam
+    # klient hålla tråden - vilket är precis det taket ovan finns för.
+    ABANDON_DRAIN_SECONDS = 0.05
+
     def _read_json_body(self):
         length = self._content_length()
         if length is None:
-            raise json.JSONDecodeError("Ogiltig Content-Length", "", 0)
+            raise json.JSONDecodeError(self._BAD_FRAMING, "", 0)
         if length > self.MAX_JSON_BODY_BYTES:
             raise self._BodyTooLarge(length)
         raw = self.rfile.read(length) if length else b""
@@ -1763,6 +1792,56 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if not isinstance(parsed, dict):
             raise json.JSONDecodeError("JSON-kroppen måste vara ett objekt", raw.decode("utf-8", "replace")[:40], 0)
         return parsed
+
+    def _abandon_body(self, expected_length=None):
+        """Anropas när ett svar skickas UTAN att kroppen lästs: trasig
+        Content-Length, eller en kropp som är för stor för att läsa.
+
+        Två saker måste hända, båda av samma skäl - att svaret vi just
+        formulerat faktiskt ska nå fram.
+
+        1. Anslutningen kan inte återanvändas. Vid trasig ramning vet vi inte
+           var kroppen slutar, så nästa "requestrad" vi läste vore mitt inne
+           i den förra kroppen.
+
+        2. Det klienten redan hunnit skicka måste tömmas ur mottagnings-
+           bufferten INNAN vi stänger. Windows skickar RST i stället för FIN
+           när en socket stängs med oläst data, och en RST kastar bort svaret
+           - även när det redan lämnat servern. Uppmätt 2026-09-06: utan detta
+           tappade ~1 av 30 begäranden sitt 400, och testsviten föll ungefär
+           varannan körning. Hela poängen med den här vägen är ett
+           KONTROLLERAT svar i stället för en stängd anslutning; utan
+           tömningen blev det ändå en stängd anslutning ibland.
+
+        Tömningen är begränsad till MAX_JSON_BODY_BYTES. En klient som
+        fortsätter skicka mer än så är inte den vi försöker svara vänligt -
+        då får anslutningen brytas, vilket är hela skälet till taket."""
+        self.close_connection = True
+        limit = self.MAX_JSON_BODY_BYTES
+        if expected_length is not None:
+            limit = min(limit, max(0, expected_length))
+        if not limit:
+            return
+        original_timeout = self.connection.gettimeout()
+        try:
+            # Kort timeout: vi tömmer det som REDAN kommit, vi väntar inte in
+            # en kropp klienten kanske aldrig skickar. Datan vi bryr oss om
+            # ligger per definition redan i bufferten - det är just den som
+            # annars gör stängningen till en RST.
+            self.connection.settimeout(self.ABANDON_DRAIN_SECONDS)
+            drained = 0
+            while drained < limit:
+                chunk = self.connection.recv(min(65536, limit - drained))
+                if not chunk:
+                    break
+                drained += len(chunk)
+        except OSError:
+            pass    # inget mer att hämta, eller klienten är redan borta
+        finally:
+            try:
+                self.connection.settimeout(original_timeout)
+            except OSError:
+                pass
 
     def _admin_ok(self) -> bool:
         """Admin-token i konstant tid. Vid fel: 404 som för en okänd väg -
@@ -1786,9 +1865,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
     def _handle_stripe_webhook(self):
         length = self._content_length()
         if length is None:
+            self._abandon_body()
             self.send_json(400, {"error": "Ogiltig Content-Length"})
             return
         if length > self.MAX_JSON_BODY_BYTES:
+            self._abandon_body(length)
             self.send_json(413, {"error": "För stor begäran"})
             return
         raw = self.rfile.read(length) if length else b""
@@ -1937,6 +2018,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/gate/check":
             self.send_json(200, {"ok": True} if gate_token_valid(self.headers.get("X-Gate-Token", ""))
                            else {"ok": False})
+            return
+        if parsed.path.startswith("/api/household"):
+            self._handle_household("GET", parsed, None)
             return
         if parsed.path == "/api/health":
             # recipeCount: ett ensamt tal säger inget om produkten men låter
@@ -2412,14 +2496,23 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return
         try:
             payload = self._read_json_body()
-        except self._BodyTooLarge:
+        except self._BodyTooLarge as too_large:
+            self._abandon_body(too_large.args[0] if too_large.args else None)
             self.send_json(413, {"error": "För stor begäran"})
             return
-        except (json.JSONDecodeError, UnicodeDecodeError):
+        except (json.JSONDecodeError, UnicodeDecodeError) as error:
+            # Bara en TRASIG RAMNING lämnar kroppen oläst. Ett syntaxfel i en
+            # kropp vi faktiskt läst har ingen oläst data kvar, och där ska
+            # anslutningen få leva vidare som vanligt.
+            if isinstance(error, json.JSONDecodeError) and error.msg == self._BAD_FRAMING:
+                self._abandon_body()
             self.send_json(400, {"error": "Ogiltig JSON"})
             return
         if parsed.path == "/api/gate/login":
             self._handle_gate_login(payload)
+            return
+        if parsed.path.startswith("/api/household"):
+            self._handle_household("POST", parsed, payload)
             return
         if parsed.path == "/api/auth/register":
             if self._rate_limit("register", str(payload.get("email") or "").strip().lower()):
@@ -2485,6 +2578,16 @@ class ApiHandler(SimpleHTTPRequestHandler):
             token = self._bearer_token()
             if token:
                 ACCOUNT_STORE.logout(token)
+            # Enheten ska sluta ta emot det utloggade kontots hushållsnotiser.
+            # Klienten skickar sin push-token med i utloggningen; utan detta
+            # fortsatte "Sara lade till mjölk" till en telefon som inte längre
+            # tillhör hushållet.
+            device_token = payload.get("deviceToken") if isinstance(payload, dict) else None
+            if device_token:
+                try:
+                    NOTIFICATION_STORE.forget_device(device_token)
+                except Exception:
+                    logger.exception("Kunde inte glömma enheten vid utloggning")
             self.send_json(200, {"ok": True})
             return
         if parsed.path == "/api/auth/redeem":
@@ -2591,7 +2694,19 @@ class ApiHandler(SimpleHTTPRequestHandler):
                         self.send_json(503, {"error": "Prenumerationen kunde inte avslutas hos Stripe just nu, så kontot är kvar. Försök igen om en stund.",
                                              "code": "STRIPE_UNAVAILABLE"})
                         return
+                # Hushållsdatan städas FÖRE kontot försvinner - efteråt finns
+                # inget user_id att städa efter. Personlig data (medlemskap,
+                # profil, notisinställningar, enheter) tas bort; gemensam
+                # hushållsdata stannar hos de andra medlemmarna. Se
+                # HouseholdStore.forget_user.
+                identity = ACCOUNT_STORE.identity_for_token(self._bearer_token())
                 ACCOUNT_STORE.delete_account(self._bearer_token())
+                if identity:
+                    try:
+                        HOUSEHOLD_STORE.forget_user(identity[0])
+                        NOTIFICATION_STORE.forget_user(identity[0])
+                    except Exception:
+                        logger.exception("Kunde inte städa hushållsdata för raderat konto")
                 if customer_id and STRIPE_SECRET_KEY:
                     try:
                         delete_customer(STRIPE_SECRET_KEY, customer_id)

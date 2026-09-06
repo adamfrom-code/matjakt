@@ -74,6 +74,7 @@ from urllib.parse import quote
 from ..base import GroceryProvider
 from ..errors import ProviderBlockedError, ProviderRequestError
 from ..models import RawProduct, Store
+from ...data_guard import guard_outbound_http
 
 logger = logging.getLogger("matjakt.grocery.axfood")
 
@@ -264,6 +265,7 @@ class AxfoodProvider(GroceryProvider):
             if delay:
                 time.sleep(delay)
             try:
+                guard_outbound_http("Axfood (Willys/Hemköp)")
                 with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
                     body = response.read()
                     if not body.strip():

@@ -41,6 +41,7 @@ import urllib.request
 
 import os
 from pathlib import Path
+from ..data_guard import guard_outbound_http
 
 USER_AGENT = "Matjakt/1.0 (receptbilder; https://matjakt.store)"
 COMMONS_API = "https://commons.wikimedia.org/w/api.php"
@@ -175,6 +176,7 @@ def _fold(text: str) -> str:
 def _get(url: str, params: dict) -> dict:
     request = urllib.request.Request(
         f"{url}?{urllib.parse.urlencode(params)}", headers={"User-Agent": USER_AGENT})
+    guard_outbound_http("Pexels (receptbilder)")
     with urllib.request.urlopen(request, timeout=25) as response:
         return json.load(response)
 
@@ -508,6 +510,7 @@ def search_pexels(query: str, limit: int = 15) -> list[dict]:
         f"{PEXELS_API}?{urllib.parse.urlencode({'query': query, 'per_page': limit, 'orientation': 'landscape'})}",
         headers={"Authorization": key, "User-Agent": USER_AGENT})
     try:
+        guard_outbound_http("Pexels (receptbilder)")
         with urllib.request.urlopen(request, timeout=25) as response:
             data = json.load(response)
     except Exception:
