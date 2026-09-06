@@ -6,14 +6,14 @@ import { PANTRY_LOCATIONS, expiryStatus, matchLocalRecipesToPantry, normalizePan
 import { extraLineTotal, extraUnitPrice, extrasTotal, newExtraItem, removeExtra, setQty } from "./src/services/extras.js";
 import { ALLERGENS, filterByDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
-import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, groceryStatusApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
+import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
 import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
-import { adjustInventory, createHousehold, createInvite, fetchHousehold, fetchNotifications, joinHousehold, leaveHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, removeMember, renameHousehold, replaceWeekItems, saveHouseholdDoc, saveHouseholdProfile, saveNotificationPrefs, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
-import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, householdDietary, inventoryNames, inventoryRows, memberName, pantryAmountsFor, shoppingRows } from "./src/services/household-state.js";
-import { CATEGORY_ORDER, categoryFor, groupByCategory } from "./src/services/categories.js";
-import { BUDGET_ALERT_MIN_WEEKS, SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swapReasonText, weekCostAlert } from "./src/services/swap.js";
+import { adjustInventory, createHousehold, createInvite, fetchHousehold, fetchNotifications, joinHousehold, leaveHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, removeMember, replaceWeekItems, saveHouseholdProfile, saveNotificationPrefs, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
+import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, inventoryNames, inventoryRows, pantryAmountsFor, shoppingRows } from "./src/services/household-state.js";
+import { categoryFor, groupByCategory } from "./src/services/categories.js";
+import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swapReasonText, weekCostAlert } from "./src/services/swap.js";
 
 // The recipe bank is DATA, loaded from data/recipes.json - see
 // src/data/recipes.js. It used to be two hardcoded arrays right here, which
@@ -1466,6 +1466,14 @@ async function syncBranchComparison(shoppingItems, branches) {
 // same query with two different storeIds returns byte-identical responses).
 // Claiming a branch-specific number here would be inventing precision.
 let databasePricingSync = { key: null, pending: false };
+// Nya försök efter nätfel glesas ut (8 s, 16 s, ... max 2 min) och nollställs
+// vid lyckat svar: offline på tåget ska inte ge ett anrop var åttonde
+// sekund tills täckningen är tillbaka.
+const RETRY_BASE_MS = 8000;
+const RETRY_MAX_MS = 120_000;
+let pricingRetryCount = 0;
+let campaignRetryCount = 0;
+function retryDelay(count) { return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** count); }
 // The pricing request for the week's recipes: recipe IDS, not a client-built
 // item list. The server aggregates from its own recipe rows - the same rows
 // the recipe page shows - so the priced list can never drift from the
@@ -1541,6 +1549,7 @@ async function syncDatabasePricing(shoppingItems) {
     });
     state.dbComparison = data.comparison || null;
     state.dbPricedAt = Date.now();
+    pricingRetryCount = 0;
     renderBasket();
   } catch {
     // The price database being unreachable must never break the week view.
@@ -1553,7 +1562,7 @@ async function syncDatabasePricing(shoppingItems) {
     // "pris hämtas…" until a full reload. One deploy window was enough to
     // strand every open phone. Clear the key and retry shortly.
     databasePricingSync.key = null;
-    setTimeout(() => renderBasket(), 8000);
+    setTimeout(() => renderBasket(), retryDelay(pricingRetryCount++));
   } finally {
     databasePricingSync.pending = false;
   }
@@ -4528,6 +4537,7 @@ async function renderOwnCampaigns() {
     const response = await fetch(`${API_BASE_URL}/grocery/campaigns`, { signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
+    campaignRetryCount = 0;
     const all = Object.values(data.deals || {}).flat()
       .sort((a, b) => b.discountPercent - a.discountPercent);
     if (!all.length) { $("campaignList").innerHTML = `<p class="live-loading">Inga kampanjer i butikernas data just nu.</p>`; return; }
@@ -4569,7 +4579,7 @@ async function renderOwnCampaigns() {
     ownCampaignFetchKey = null;
     $("campaignList").innerHTML = `<p class="live-loading">Kunde inte hämta erbjudanden just nu - försöker igen strax.</p>`;
     // Utan egen omstart låg felet kvar tills någon annan render råkade ske.
-    setTimeout(() => renderOwnCampaigns(), 10000);
+    setTimeout(() => renderOwnCampaigns(), retryDelay(campaignRetryCount++));
   }
 }
 
