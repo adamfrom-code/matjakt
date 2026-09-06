@@ -333,6 +333,9 @@ async function setHouseholdStatus(name, status, previous, options = {}) {
   const key = options.key || itemKeyFor(name, options.gtin);
   // Optimistiskt: knappen svarar direkt, även i en affär med dålig täckning.
   state.household = applyLocalRow(state.household, "shopping", { key, name, status });
+  // Ångra-beskrivningen sätts INNAN svaret: remsan visas direkt, och ett
+  // "Ångra" som hinner före servern får inte backa FÖRRA varan.
+  lastShoppingUndo = { key, name, status: previous };
   render();
   try {
     const location = PANTRY_LOCATIONS.includes(options.location) ? options.location : "skafferi";
@@ -340,12 +343,14 @@ async function setHouseholdStatus(name, status, previous, options = {}) {
     if (status === ALREADY_HAVE) response = await markAtHome(state.authToken, key, location);
     else if (status === PURCHASED) response = await markPurchased(state.authToken, key, { addToInventory: Boolean(options.addToPantry), location });
     else response = await setShoppingStatus(state.authToken, key, status);
-    lastShoppingUndo = response.undo ? { ...response.undo, name } : { key, name, status: previous };
+    // Serverns beskrivning (med skafferinyckeln) - bara om ångra fortfarande
+    // gäller den här varan.
+    if (lastShoppingUndo?.key === key && response.undo) lastShoppingUndo = { ...response.undo, name };
     applyHouseholdResponse(response);
   } catch (error) {
     // Skrivningen gick inte fram - hämta serverns sanning i stället för att
     // låta den optimistiska raden ljuga.
-    lastShoppingUndo = null;
+    if (lastShoppingUndo?.key === key) lastShoppingUndo = null;
     pullHousehold(true);
   }
 }
@@ -492,6 +497,13 @@ async function pullHousehold(force = false) {
     // från en annan enhet). Appen faller tillbaka till enhetens egen data
     // i stället för att visa en familj som inte längre finns.
     if (error.status === 404) { state.household = emptyHouseholdState(); renderAccount(); render(); }
+    // 401 = sessionen är död (utloggad från annan enhet, utgången). Samma
+    // hantering som refreshUser - annars pollar appen var 20:e sekund med
+    // en död token och visar familjens data vidare.
+    if (error.status === 401) {
+      state.authToken = null; storeToken(null); state.user = null;
+      clearHouseholdSession(); renderAccount(); render();
+    }
   } finally {
     householdPullInFlight = false;
   }
@@ -3046,10 +3058,11 @@ function renderBasket() {
     ? groups.map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingRowMarkup).join("")}</section>`).join("")
     : (shoppingItems.length ? "" : emptyState)) + handledSection;
   if (shoppingItems.length && !activeItems.length && !handledItems.length) $("shoppingList").innerHTML = emptyState;
-  if (state.removedItems.size) {
+  const removedCount = removedRowsForView().length;
+  if (removedCount) {
     $("shoppingList").insertAdjacentHTML("beforeend",
-      `<button type="button" class="restore-removed" id="restoreRemovedBtn">${plural(state.removedItems.size, "borttagen vara", "borttagna varor")} · Återställ alla</button>`);
-    $("restoreRemovedBtn").addEventListener("click", () => { state.removedItems.clear(); saveState(); render(); });
+      `<button type="button" class="restore-removed" id="restoreRemovedBtn">${plural(removedCount, "borttagen vara", "borttagna varor")} · Återställ alla</button>`);
+    $("restoreRemovedBtn").addEventListener("click", restoreRemovedRows);
   }
   wireShoppingRowActions($("shoppingList"));
   const completed = handledItems.length, itemsLeft = activeItems.length, progress = shoppingItems.length ? completed / shoppingItems.length * 100 : 0;
@@ -3395,10 +3408,25 @@ function removeShoppingItem(name) {
   render();
   showUndoToast(`${name} borttagen`, () => {
     state.removedItems.delete(name);
+    // I hushållet är REMOVED serverns status - ångra måste också gå dit,
+    // annars ligger raden osynlig kvar utan väg tillbaka.
+    if (householdActive()) setHouseholdStatus(name, NEED_TO_BUY, REMOVED, { gtin: databaseItemFor(name)?.gtin });
     clearPriceSnapshots();
     saveState();
     render();
   });
+}
+function removedRowsForView() {
+  return householdActive()
+    ? shoppingRows(state.household).filter(row => row.status === REMOVED).map(row => row.name)
+    : [...state.removedItems];
+}
+function restoreRemovedRows() {
+  const names = removedRowsForView();
+  state.removedItems.clear();
+  if (householdActive()) names.forEach(name => setHouseholdStatus(name, NEED_TO_BUY, REMOVED, { gtin: databaseItemFor(name)?.gtin }));
+  saveState();
+  render();
 }
 
 // En enda toast åt gången: en ny borttagning ersätter den förra i stället

@@ -149,3 +149,15 @@ test("en tom sync ändrar ingenting", () => {
   assert.deepEqual(next.shopping, state.shopping);
   assert.equal(next.revision, 4);
 });
+
+test("en gravsten (deleted) döljer raden men hindrar en äldre revision från att återuppliva den", () => {
+  const state = applySync(emptyHouseholdState(), firstSync);
+  const key = Object.keys(state.shopping)[0];
+  const revision = state.revision + 5;
+  const next = applySync(state, { revision, shopping: [{ ...state.shopping[key], deleted: true, revision }] });
+  assert.equal(shoppingRows(next).some(row => row.key === key), false, "raden ska vara borta ur vyn");
+  // Ett fördröjt svar med den gamla levande raden får inte ta tillbaka den.
+  const stale = applySync(next, { revision, shopping: [{ ...state.shopping[key], revision: state.shopping[key].revision }] });
+  assert.equal(shoppingRows(stale).some(row => row.key === key), false);
+});
+

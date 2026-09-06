@@ -285,6 +285,85 @@ class SharedShoppingTest(HouseholdApiTest):
         pantry = [item for item in self.get("/api/household/sync", adam)[1]["inventory"]
                   if not item["deleted"]]
         self.assertEqual([item["name"] for item in pantry], ["Ketchup"])
+        # Inte bara kvar - OFÖRÄNDRAD: samma plats och mängd som innan klicket.
+        self.assertEqual(pantry[0]["location"], "kyl")
+        self.assertEqual(pantry[0]["amount"], 1)
+
+    def test_at_home_keeps_place_expiry_and_category_of_an_item_already_at_home(self):
+        """Grädden står i kylen med bäst före-datum. "Har hemma" i Handla får
+        inte flytta den till skafferiet eller radera datumet - och Ångra
+        lämnar den lika orörd (granskningen 2026-09-07, P1-1)."""
+        adam, sara, household_id, _ = self._family()
+        self.post("/api/household/inventory/item",
+                  {"name": "Grädde", "amount": 2, "unit": "dl", "location": "kyl",
+                   "expiry": "2026-09-10", "category": "Mejeri"}, adam)
+        added = self.post("/api/household/shopping/item",
+                          {"name": "Grädde", "source": "manual"}, adam)[1]["item"]
+        status, at_home = self.post("/api/household/shopping/at-home",
+                                    {"key": added["key"], "location": "skafferi"}, sara)
+        self.assertEqual(status, 200, at_home)
+        self.assertIsNone(at_home["undo"]["inventoryKey"])
+
+        def pantry_row():
+            rows = [item for item in self.get("/api/household/sync", adam)[1]["inventory"]
+                    if not item["deleted"]]
+            self.assertEqual(len(rows), 1, rows)
+            return rows[0]
+
+        row = pantry_row()
+        self.assertEqual((row["location"], row["amount"], row["unit"], row["expiry"], row["category"]),
+                         ("kyl", 2, "dl", "2026-09-10", "Mejeri"))
+        self.post("/api/household/shopping/undo", at_home["undo"], sara)
+        row = pantry_row()
+        self.assertEqual((row["location"], row["amount"], row["unit"], row["expiry"], row["category"]),
+                         ("kyl", 2, "dl", "2026-09-10", "Mejeri"))
+
+    def test_a_deleted_row_reaches_the_other_phone_as_a_deletion(self):
+        """Adam tar bort Kaffe. Saras nästa delta måste säga "Kaffe är borta"
+        - en hård radering syntes aldrig, och raden blev ett spöke på Saras
+        telefon (granskningen 2026-09-07, P1-2)."""
+        adam, sara, household_id, _ = self._family()
+        coffee = self.post("/api/household/shopping/item", {"name": "Kaffe", "source": "manual"}, adam)[1]["item"]
+        seen = self.get("/api/household/sync", sara)[1]["revision"]
+        status, _ = self.post("/api/household/shopping/delete", {"key": coffee["key"]}, adam)
+        self.assertEqual(status, 200)
+        delta = self.get(f"/api/household/sync?since={seen}", sara)[1]
+        gone = [row for row in delta["shopping"] if row["key"] == coffee["key"]]
+        self.assertEqual(len(gone), 1, delta["shopping"])
+        self.assertTrue(gone[0]["deleted"])
+        self.assertGreater(gone[0]["revision"], seen)
+        # En full hämtning (since=0) bär inga gravstenar.
+        full = self.get("/api/household/sync?since=0", sara)[1]["shopping"]
+        self.assertNotIn(coffee["key"], [row["key"] for row in full])
+        # Raden är borta för skrivningar också: status på den ger 400, inte tyst ok.
+        status, _ = self.post("/api/household/shopping/status", {"key": coffee["key"], "status": "PURCHASED"}, sara)
+        self.assertEqual(status, 400)
+        # Läggs Kaffe till igen är det en levande rad igen - inte en dubblett.
+        again = self.post("/api/household/shopping/item", {"name": "Kaffe", "source": "manual"}, sara)[1]["item"]
+        self.assertEqual(again["key"], coffee["key"])
+        self.assertFalse(again["deleted"])
+        self.assertEqual(again["status"], "NEED_TO_BUY")
+
+    def test_a_week_row_dropped_from_the_plan_disappears_on_the_other_phone(self):
+        """Veckan byts: Ris försvinner ur planen. Saras delta ska bära
+        raderingen, och kommer Ris tillbaka nästa vecka är den ett nytt behov."""
+        adam, sara, household_id, _ = self._family()
+        self.post("/api/household/shopping/week",
+                  {"items": [{"name": "Ris", "amount": 500, "unit": "g"}, {"name": "Pasta", "amount": 400, "unit": "g"}]}, adam)
+        rows = self.get("/api/household/sync", sara)[1]
+        seen = rows["revision"]
+        rice = next(row for row in rows["shopping"] if row["name"] == "Ris")
+        self.post("/api/household/shopping/status", {"key": rice["key"], "status": "PURCHASED"}, sara)
+        seen = self.get("/api/household/sync", sara)[1]["revision"]
+        self.post("/api/household/shopping/week", {"items": [{"name": "Pasta", "amount": 400, "unit": "g"}]}, adam)
+        delta = {row["name"]: row["deleted"] for row in self.get(f"/api/household/sync?since={seen}", sara)[1]["shopping"]}
+        self.assertTrue(delta.get("Ris"), f"Ris borde ha kommit som gravsten: {delta}")
+        self.assertIs(delta.get("Pasta"), False, "Pasta uppdaterades av planen och lever")
+        self.post("/api/household/shopping/week",
+                  {"items": [{"name": "Ris", "amount": 500, "unit": "g"}, {"name": "Pasta", "amount": 400, "unit": "g"}]}, adam)
+        rows = {row["name"]: row for row in self.get("/api/household/sync?since=0", sara)[1]["shopping"]}
+        self.assertFalse(rows["Ris"]["deleted"])
+        self.assertEqual(rows["Ris"]["status"], "NEED_TO_BUY", "en rad som kommer tillbaka är ett nytt behov")
 
     def test_purchased_is_not_the_same_as_already_have(self):
         adam, sara, household_id, _ = self._family()

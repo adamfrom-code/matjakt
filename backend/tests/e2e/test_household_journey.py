@@ -217,6 +217,22 @@ class HouseholdJourney(unittest.TestCase):
         self.assertEqual(pantry_names, {"Mjölk"},
                          "Ångra ska bara ta bort raden HANDLINGEN skapade - Saras köp ligger kvar")
 
+        # --- × och Ångra i hushållsläge ------------------------------------
+        # REMOVED är serverns status; ångra-remsan måste gå samma väg tillbaka,
+        # annars låg raden osynlig kvar utan väg hem (granskningen 2026-09-07).
+        remove_button = adam.locator("#shoppingList [data-remove-item]").first
+        removed_name = remove_button.get_attribute("data-remove-item")
+        remove_button.click()
+        adam.wait_for_timeout(1500)
+        statuses = {r["name"]: r["status"] for r in self._api(adam, "/api/household/sync?since=0")["body"]["shopping"]}
+        self.assertEqual(statuses.get(removed_name), "REMOVED", f"× nådde inte servern för {removed_name}")
+        expect(adam.locator("#undoToast")).to_be_visible()
+        adam.click("#undoToast button")
+        adam.wait_for_timeout(1500)
+        statuses = {r["name"]: r["status"] for r in self._api(adam, "/api/household/sync?since=0")["body"]["shopping"]}
+        self.assertEqual(statuses.get(removed_name), "NEED_TO_BUY", "Ångra efter × gav inte tillbaka raden i hushållet")
+        expect(adam.locator(f'#shoppingList [data-remove-item="{removed_name}"]')).to_be_visible()
+
         # --- Skafferiet delas -------------------------------------------------
         for page in (adam, sara):
             page.click("[data-view='pantry']")

@@ -333,6 +333,11 @@ class HouseholdRouter:
         key = item["key"]
         existing = self.store._find_inventory_row(household_id, key)
         created = existing is None or bool(existing["deleted"])
+        if not created:
+            # Fanns redan hemma: plats, mängd, bäst före och kategori är
+            # familjens uppgifter och skrivs inte över av ett klick i Handla
+            # (granskningen 2026-09-07, P1-1). Bara revisionen bumpas.
+            return self.store.touch_inventory_item(household_id, user_id, existing["id"]), False
         product = item.get("product") or {}
         entry = {
             "key": key,
@@ -347,10 +352,6 @@ class HouseholdRouter:
             "gtin": product.get("gtin"),
             "product": product or None,
         }
-        if not created:
-            # Fanns redan: rör inte mängden, bara platsen om den angetts.
-            entry["amount"] = existing["amount"]
-            entry["unit"] = existing["unit"] or entry["unit"]
         return self.store.upsert_inventory_item(household_id, user_id, entry), created
 
     def _undo(self, user_id, email, payload):

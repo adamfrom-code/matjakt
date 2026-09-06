@@ -224,6 +224,7 @@ class HouseholdStore:
                 category TEXT,
                 product TEXT,
                 note TEXT,
+                deleted INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 updated_by INTEGER,
@@ -271,6 +272,12 @@ class HouseholdStore:
             CREATE INDEX IF NOT EXISTS idx_events_household ON household_events(household_id, id);
             """
         )
+        # Migrering: inköpsrader raderades hårt fram till 2026-09-07, och en
+        # hård radering syns aldrig i ett delta - den andra telefonen behöll
+        # spökrader. Nu soft delete (som skafferiet redan hade).
+        columns = {row[1] for row in self._connection.execute("PRAGMA table_info(shopping_items)")}
+        if "deleted" not in columns:
+            self._connection.execute("ALTER TABLE shopping_items ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
         self._connection.commit()
 
     # ---- behörighet -----------------------------------------------------
@@ -619,7 +626,7 @@ class HouseholdStore:
                 (household_id, key)).fetchone()
             if existing is None:
                 count = self._connection.execute(
-                    "SELECT COUNT(*) AS n FROM shopping_items WHERE household_id = ?",
+                    "SELECT COUNT(*) AS n FROM shopping_items WHERE household_id = ? AND deleted = 0",
                     (household_id,)).fetchone()["n"]
                 if count >= MAX_SHOPPING_ITEMS:
                     raise HouseholdError("Inköpslistan är full")
@@ -640,7 +647,7 @@ class HouseholdStore:
             if existing:
                 self._connection.execute(
                     """UPDATE shopping_items SET display_name = ?, amount = ?, unit = ?, status = ?,
-                           source = ?, category = ?, product = ?, note = ?, updated_at = ?,
+                           source = ?, category = ?, product = ?, note = ?, deleted = 0, updated_at = ?,
                            updated_by = ?, revision = ?
                        WHERE id = ?""",
                     (values["display_name"], values["amount"], values["unit"], values["status"],
@@ -688,7 +695,18 @@ class HouseholdStore:
                 unit = _clean_name(item.get("unit"), 12) or None
                 category = _clean_name(item.get("category"), 40) or None
                 product_json = json.dumps(product, ensure_ascii=False) if product else None
-                if existing:
+                if existing and existing["deleted"]:
+                    # Raden var borttagen (planen bytte, eller någon tog bort
+                    # den manuellt) - kommer den tillbaka med veckan är den
+                    # ett nytt behov, inte det gamla beslutet.
+                    self._connection.execute(
+                        """UPDATE shopping_items SET display_name = ?, amount = ?, unit = ?,
+                               category = ?, product = COALESCE(?, product), status = ?,
+                               source = 'week', deleted = 0, updated_at = ?, updated_by = ?, revision = ?
+                           WHERE id = ?""",
+                        (name, amount, unit, category, product_json, NEED_TO_BUY, now, int(user_id),
+                         revision, existing["id"]))
+                elif existing:
                     self._connection.execute(
                         """UPDATE shopping_items SET display_name = ?, amount = ?, unit = ?,
                                category = ?, product = COALESCE(?, product), updated_at = ?,
@@ -707,11 +725,15 @@ class HouseholdStore:
             # Veckorader som inte längre ingår i planen försvinner - men bara
             # de som veckan själv lade dit.
             stale = self._connection.execute(
-                "SELECT id, item_key FROM shopping_items WHERE household_id = ? AND source = 'week'",
+                "SELECT id, item_key FROM shopping_items WHERE household_id = ? AND source = 'week' AND deleted = 0",
                 (household_id,)).fetchall()
             for row in stale:
                 if row["item_key"] not in seen:
-                    self._connection.execute("DELETE FROM shopping_items WHERE id = ?", (row["id"],))
+                    # Soft delete med ny revision - så den andra telefonen får
+                    # veta att raden ska bort (§ P1-2 i granskningen 2026-09-07).
+                    self._connection.execute(
+                        "UPDATE shopping_items SET deleted = 1, updated_at = ?, updated_by = ?, revision = ? WHERE id = ?",
+                        (now, int(user_id), revision, row["id"]))
             self._connection.commit()
         return {"revision": revision, "items": self.shopping_items(household_id, user_id)}
 
@@ -731,7 +753,7 @@ class HouseholdStore:
         return self.shopping_item(household_id, row["id"])
 
     def delete_shopping_item(self, household_id, user_id, key_or_id):
-        """Riktig radering - används bara för manuellt tillagda rader som
+        """Radering (soft) - används bara för manuellt tillagda rader som
         användaren ångrar helt. Statusändringar går genom set_item_status, som
         BEVARAR raden (och därmed ångra-möjligheten).
 
@@ -746,18 +768,22 @@ class HouseholdStore:
             row = self._find_shopping_row(household_id, key_or_id)
             if not row:
                 raise HouseholdError("Varan finns inte i listan")
-            self._connection.execute("DELETE FROM shopping_items WHERE id = ?", (row["id"],))
-            self._bump(household_id)
+            revision = self._bump(household_id)
+            # Soft delete: raden bär sin sista revision så ett delta-svar kan
+            # tala om för andra telefoner att den är borta.
+            self._connection.execute(
+                "UPDATE shopping_items SET deleted = 1, updated_at = ?, updated_by = ?, revision = ? WHERE id = ?",
+                (_now(), int(user_id), revision, row["id"]))
             self._connection.commit()
 
     def _find_shopping_row(self, household_id, key_or_id):
         household_id = int(household_id)
         if isinstance(key_or_id, int) or (isinstance(key_or_id, str) and key_or_id.isdigit()):
             return self._connection.execute(
-                "SELECT * FROM shopping_items WHERE household_id = ? AND id = ?",
+                "SELECT * FROM shopping_items WHERE household_id = ? AND id = ? AND deleted = 0",
                 (household_id, int(key_or_id))).fetchone()
         return self._connection.execute(
-            "SELECT * FROM shopping_items WHERE household_id = ? AND item_key = ?",
+            "SELECT * FROM shopping_items WHERE household_id = ? AND item_key = ? AND deleted = 0",
             (household_id, str(key_or_id))).fetchone()
 
     def shopping_item(self, household_id, item_id) -> dict:
@@ -768,9 +794,12 @@ class HouseholdStore:
 
     def shopping_items(self, household_id, user_id, since: int = 0) -> list[dict]:
         self._require_member(household_id, user_id)
+        since = _since(since)
+        # since=0 är en full hämtning: gravstenarna behövs inte där. I ett
+        # delta är de själva poängen - den andra telefonen ska ta bort raden.
         rows = self._connection.execute(
-            "SELECT * FROM shopping_items WHERE household_id = ? AND revision > ? ORDER BY id",
-            (int(household_id), _since(since))).fetchall()
+            "SELECT * FROM shopping_items WHERE household_id = ? AND revision > ? AND (deleted = 0 OR ? > 0) ORDER BY id",
+            (int(household_id), since, since)).fetchall()
         return [_shopping_to_public(row) for row in rows]
 
     # ---- skafferi / kyl / frys -------------------------------------------
@@ -822,6 +851,22 @@ class HouseholdStore:
                 item_id = cursor.lastrowid
             self._connection.commit()
         return self.inventory_item(household_id, item_id)
+
+    def touch_inventory_item(self, household_id, user_id, key_or_id) -> dict:
+        """"Har hemma" på en vara som REDAN står hemma: rör varken plats,
+        mängd, bäst före eller kategori - familjens rad är familjens rad.
+        Bara revisionen bumpas så alla telefoner ser att den bekräftades."""
+        with self._lock:
+            self._require_member(household_id, user_id)
+            row = self._find_inventory_row(household_id, key_or_id)
+            if not row:
+                raise HouseholdError("Varan finns inte i skafferiet")
+            revision = self._bump(household_id)
+            self._connection.execute(
+                "UPDATE inventory_items SET deleted = 0, updated_at = ?, updated_by = ?, revision = ? WHERE id = ?",
+                (_now(), int(user_id), revision, row["id"]))
+            self._connection.commit()
+        return self.inventory_item(household_id, row["id"])
 
     def adjust_inventory(self, household_id, user_id, key_or_id, delta: float) -> dict:
         """+/- i skafferiet. Går mängden till noll markeras raden som borttagen
@@ -1061,6 +1106,7 @@ def _shopping_to_public(row) -> dict:
         "category": row["category"],
         "product": _json_or_none(row["product"]),
         "note": row["note"],
+        "deleted": bool(row["deleted"]),
         "updatedAt": row["updated_at"],
         "updatedBy": row["updated_by"],
         "revision": row["revision"],

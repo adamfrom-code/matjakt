@@ -68,8 +68,10 @@ export function applyLocalRow(current, kind, item) {
   return { ...current, [bucket]: { ...current[bucket], [item.key]: { ...current[bucket][item.key], ...item } } };
 }
 
+/** Gravstenar (deleted) ligger kvar i state så en äldre revision aldrig kan
+ * återuppliva raden, men de är inte rader någon ska se. */
 export function shoppingRows(state) {
-  return Object.values(state.shopping || {});
+  return Object.values(state.shopping || {}).filter(item => !item.deleted);
 }
 
 /** Det som faktiskt ska handlas. REMOVED är ute ur listan; PURCHASED och
