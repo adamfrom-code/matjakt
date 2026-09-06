@@ -46,6 +46,7 @@ if test_mode_active():
     from services.accounts import ratelimit
     from services.accounts import AccountStore
     from services.household import HouseholdStore, NotificationStore
+    from services.analytics import AnalyticsStore
     from services.grocery import api as grocery_api
     from services.recipes import api as recipes_api
     from services.recipes import prices as recipe_prices
@@ -81,6 +82,13 @@ class _Server:
             # medlemskapet i en annan, och inget hushåll går att slå upp.
             "household": api_server.HOUSEHOLD_STORE,
             "notifications": api_server.NOTIFICATION_STORE,
+            # ANALYTICS binder ACCOUNT_STORE.connection VID IMPORT. Byts bara
+            # kontolagret ut hamnar resans händelser i den ursprungliga
+            # databasen medan kontona ligger här - och user_id krockar mellan
+            # databaserna, så en annan testfils konto får resans klick.
+            # (Syntes som "4 != 3" i trattestet när E2E:n körs i samma
+            # process som enhetstesterna, dvs. lokalt där Playwright finns.)
+            "analytics": api_server.ANALYTICS,
             "stripe": (api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET,
                        api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY,
                        api_server.APP_URL, api_server.create_customer, api_server.create_checkout_session),
@@ -90,6 +98,7 @@ class _Server:
         api_server.ACCOUNT_STORE = AccountStore(root / "matjakt.db")
         api_server.HOUSEHOLD_STORE = HouseholdStore(root / "matjakt.db")
         api_server.NOTIFICATION_STORE = NotificationStore(root / "matjakt.db")
+        api_server.ANALYTICS = AnalyticsStore(api_server.ACCOUNT_STORE.connection)
         grocery_api.clear_cache()
         recipes_api.clear_cache()
         ratelimit.reset()
@@ -132,6 +141,7 @@ class _Server:
         api_server.NOTIFICATION_STORE.close()
         api_server.HOUSEHOLD_STORE = self._saved["household"]
         api_server.NOTIFICATION_STORE = self._saved["notifications"]
+        api_server.ANALYTICS = self._saved["analytics"]
         grocery_api.DB_PATH = self._saved["grocery"]
         recipes_api.DB_PATH = self._saved["recipes"]
         api_server.ACCOUNT_STORE = self._saved["accounts"]
