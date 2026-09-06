@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-// Modulkedjan går via api/config.js som läser <meta> för API-adressen.
-// En minimal document räcker - vi testar hämtningslogiken, inte DOM:en.
-globalThis.document = { querySelector: () => null };
+// Modulkedjan går via api/config.js som läser <meta> för API-adressen, och
+// recipes.js löser fallback-URL:en mot document.baseURI (bundelsäkert - se
+// kommentaren där). Stubben måste därför likna ett riktigt document på båda
+// punkterna; en halv stubb kraschade på "Invalid URL".
+globalThis.document = { querySelector: () => null, baseURI: "http://localhost/app/" };
 // Dynamisk import EFTER stubben, annars körs config.js först.
 const { loadRecipe } = await import("../frontend/app/src/data/recipes.js");
 
