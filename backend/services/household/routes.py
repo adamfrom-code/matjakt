@@ -138,27 +138,30 @@ class HouseholdRouter:
 
     def _household_payload(self, household_id, user_id):
         household = self.store.household_for(household_id, user_id)
-        # E-post hämtas här, inte i lagret: medlemslistan i Konto ska kunna
-        # visa vem som är vem, men bara för den som redan är i hushållet.
-        emails = self._member_emails(household["members"])
-        for member in household["members"]:
-            member["email"] = emails.get(member["userId"])
-            member["isMe"] = member["userId"] == user_id
+        household["members"] = self._decorate_members(household["members"], user_id)
         return household
 
-    def _member_emails(self, members) -> dict:
-        emails = {}
-        for member in members:
+    def _decorate_members(self, members, user_id) -> list:
+        """E-post och "det här är jag" läggs på HÄR, inte i lagret: hushålls-
+        databasen ska inte kunna lämna ut en adress ens av misstag, och den
+        här metoden nås bara efter att medlemskapet redan bevisats."""
+        for member in members or []:
             try:
-                emails[member["userId"]] = self.accounts.email_for_user_id(member["userId"])
+                member["email"] = self.accounts.email_for_user_id(member["userId"])
             except Exception:
-                emails[member["userId"]] = None
-        return emails
+                member["email"] = None
+            member["isMe"] = member["userId"] == user_id
+        return members or []
 
     def _sync(self, user_id, query):
         household_id = self._household_id(user_id)
         since = _int(_first(query, "since"), 0)
         payload = self.store.sync(household_id, user_id, since)
+        # Medlemslistan berikas ÄVEN här, inte bara i den första hämtningen.
+        # Utan detta skrev varje delta-sync över den berikade listan med
+        # lagrets råa - och klienten tappade "det här är jag", varpå
+        # "Ta bort medlem" dök upp bredvid ens eget namn.
+        payload["members"] = self._decorate_members(payload["members"], user_id)
         if payload["household"] is not None:
             payload["household"] = self._household_payload(household_id, user_id)
         return 200, payload

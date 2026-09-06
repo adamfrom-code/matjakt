@@ -40,10 +40,14 @@ export function login(email, password) {
   }).then(parseJsonResponse);
 }
 
-export function logout(token) {
+export function logout(token, deviceToken = null) {
+  // deviceToken följer med så servern kan glömma just DEN här enheten:
+  // annars fortsätter det utloggade kontots hushållsnotiser till en telefon
+  // som nu tillhör någon annan.
   return fetch(`${API_BASE_URL}/auth/logout`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(deviceToken ? { deviceToken } : {}),
   }).then(parseJsonResponse);
 }
 

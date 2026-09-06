@@ -320,6 +320,17 @@ class SharedShoppingTest(HouseholdApiTest):
         statuses = {item["name"]: item["status"] for item in delta["shopping"]}
         self.assertEqual(statuses, {"Mjölk": "PURCHASED", "Kaffe": "ALREADY_HAVE"})
 
+    def test_every_sync_says_which_member_is_you(self):
+        """Hittat i webbläsaren: en delta-sync skrev över den berikade
+        medlemslistan med lagrets råa, klienten tappade isMe - och
+        "Ta bort medlem" dök upp bredvid ens eget namn."""
+        adam, sara, household_id, _ = self._family()
+        for path in ("/api/household/sync", "/api/household/sync?since=1"):
+            members = self.get(path, adam)[1]["members"]
+            me = [member for member in members if member["isMe"]]
+            self.assertEqual(len(me), 1, path)
+            self.assertTrue(me[0]["email"], path)
+
     def test_sync_since_only_returns_the_difference(self):
         adam, sara, household_id, _ = self._family()
         first = self.get("/api/household/sync", sara)[1]

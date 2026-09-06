@@ -37,7 +37,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=25">
+  <link rel="stylesheet" href="styles.css?v=26">
 </head>
 <body>
   <div class="phone-shell">
@@ -234,6 +234,8 @@
 
       <section class="screen shopping-screen" aria-labelledby="shoppingTitle">
         <header class="screen-header"><p class="eyebrow">Din lista</p><h1 id="shoppingTitle">Handla</h1></header>
+        <p class="household-shared-note" id="basketHouseholdNote" hidden></p>
+        <div class="staple-prompt" id="staplePrompt" hidden></div>
         <p class="price-source-note" id="priceSourceNote" hidden></p>
         <p class="price-source-note" id="dabasNote" hidden></p>
         <!-- Butiksvalet överst: först var det blir billigast, sedan listan. -->
@@ -260,6 +262,7 @@
       <section class="screen pantry-screen" aria-labelledby="pantryTitle">
         <header class="screen-header"><p class="eyebrow">Hemma hos dig</p><h1 id="pantryTitle">Skafferi</h1><p class="screen-intro">Har du redan något hemma? Lägg in det här, så räknar vi bort det från din inköpslista.</p></header>
         <section class="pantry-hero"><span>Varor hemma</span><strong id="pantryCount">0</strong><p>Matjakt räknar bort det du redan har.</p></section>
+        <p class="household-shared-note" id="pantryHouseholdNote" hidden></p>
         <div class="segmented" role="tablist" id="pantryTabs"><button class="active" type="button" data-pantry-tab="skafferi">Skafferi</button><button type="button" data-pantry-tab="kyl">Kyl</button><button type="button" data-pantry-tab="frys">Frys</button></div>
         <button class="add-pantry-btn" id="addPantryBtn" type="button"><span>＋</span> Lägg till vara</button>
         <button class="btn btn-primary cook-from-pantry-btn" id="cookFromPantryBtn" type="button"><span>Laga med det jag har</span></button>
@@ -313,6 +316,20 @@
     </nav>
   </div>
   <section class="recipe-page" id="recipePage" hidden></section>
+
+  <!-- Inbjudningslandningen. Öppnas av ?invite=... och visar bara det den
+       som skickade länken faktiskt tänkt sig: vem som bjuder in, till vad,
+       och en knapp. Ingen marknadsföring, inga tre steg. -->
+  <div class="invite-landing" id="inviteLanding" hidden>
+    <div class="invite-landing-card" role="dialog" aria-modal="true" aria-labelledby="inviteLandingTitle">
+      <p class="invite-landing-eyebrow">Matjakt</p>
+      <h2 id="inviteLandingTitle"></h2>
+      <p id="inviteLandingBody"></p>
+      <button class="btn btn-primary" type="button" id="inviteJoinBtn"><span>Gå med</span></button>
+      <p class="account-error" id="inviteLandingError"></p>
+      <button type="button" class="account-link-btn" id="inviteDismissBtn">Inte nu</button>
+    </div>
+  </div>
 
   <div class="week-sheet-backdrop" id="feedbackSheet" hidden role="dialog" aria-modal="true" aria-label="Tyck till">
     <div class="week-sheet-card">
@@ -379,6 +396,63 @@
           <button class="btn btn-ghost account-redeem-btn" type="button" id="resendVerificationBtn">Skicka verifieringsmejl igen</button>
           <p class="account-error" id="verifyError"></p>
         </div>
+
+        <section class="household-panel" id="householdPanel">
+          <h3>Mitt hushåll</h3>
+
+          <div id="householdNone">
+            <p class="household-intro">Dela veckan, inköpslistan och skafferiet med den du bor med. Alla ser samma lista, och det någon markerar som köpt syns direkt hos de andra.</p>
+            <form id="householdCreateForm" class="account-form">
+              <label for="householdNameInput">Vad heter ert hushåll?</label>
+              <input id="householdNameInput" type="text" maxlength="60" placeholder="Familjen From" required>
+              <p class="account-error" id="householdCreateError"></p>
+              <button class="btn btn-primary" type="submit"><span>Skapa hushåll</span></button>
+            </form>
+          </div>
+
+          <div id="householdCurrent" hidden>
+            <p class="household-name" id="householdNameLabel"></p>
+            <ul class="household-members" id="householdMembers"></ul>
+            <button class="btn btn-primary" type="button" id="householdInviteBtn"><span>Bjud in</span></button>
+            <div class="household-invite" id="householdInviteBox" hidden>
+              <p id="householdInviteHint">Skicka länken till den du vill bjuda in. Den gäller i tre dygn och kan bara användas en gång.</p>
+              <div class="household-invite-row">
+                <input id="householdInviteLink" type="text" readonly>
+                <button type="button" class="btn btn-ghost" id="householdCopyBtn">Kopiera</button>
+              </div>
+              <button type="button" class="btn btn-ghost" id="householdShareBtn" hidden>Dela länk</button>
+              <p class="account-error" id="householdInviteError"></p>
+            </div>
+
+            <details class="household-profile-panel">
+              <summary>Min profil i hushållet</summary>
+              <form id="householdProfileForm" class="account-form">
+                <label for="householdDisplayName">Vad ska du heta här?</label>
+                <input id="householdDisplayName" type="text" maxlength="40">
+                <label for="householdSpice">Stark mat</label>
+                <select id="householdSpice">
+                  <option value="">Ingen åsikt</option>
+                  <option value="mild">Helst milt</option>
+                  <option value="medel">Lagom</option>
+                  <option value="stark">Gärna starkt</option>
+                </select>
+                <label for="householdDiet">Kost</label>
+                <input id="householdDiet" type="text" maxlength="24" placeholder="t.ex. vegetarisk">
+                <label for="householdAllergies">Allergier (komma emellan)</label>
+                <input id="householdAllergies" type="text" maxlength="120" placeholder="t.ex. nötter, skaldjur">
+                <p class="account-error" id="householdProfileError"></p>
+                <button class="btn btn-ghost" type="submit"><span>Spara profil</span></button>
+              </form>
+            </details>
+
+            <details class="household-notify-panel">
+              <summary>Notiser</summary>
+              <div class="household-notify-list" id="householdNotifyList"></div>
+            </details>
+
+            <button type="button" class="account-link-btn household-leave" id="householdLeaveBtn">Lämna hushållet</button>
+          </div>
+        </section>
 
         <details class="account-change-password" id="changePasswordPanel">
           <summary>Byt lösenord</summary>
@@ -506,6 +580,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=25"></script>
+  <script type="module" src="app.js?v=26"></script>
 </body>
 </html>

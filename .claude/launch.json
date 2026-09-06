@@ -13,10 +13,9 @@
     },
     {
       "name": "backend",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "python",
       "runtimeArgs": [
-        "run",
-        "backend"
+        "backend/api_server.py"
       ],
       "port": 8000,
       "autoPort": false

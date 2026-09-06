@@ -1517,6 +1517,11 @@ class RecipePricingEngine:
                 best_rank = candidate_rank
                 best = {
                     "productId": product.id,
+                    # GTIN identifierar VARAN, inte butikens artikelnummer.
+                    # Hushållet använder den som radnyckel så samma Arla
+                    # Mellanmjölk blir EN rad även när två personer lägger
+                    # in den från varsin telefon.
+                    "gtin": product.gtin,
                     "productName": product.name,
                     "brand": product.brand,
                     # Carried through so a caller can see WHY this product was

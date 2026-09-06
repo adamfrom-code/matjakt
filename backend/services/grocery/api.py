@@ -825,6 +825,7 @@ def format_chain_result(result: dict, store_row=None, comparison: dict | None = 
             "neededAmount": match.get("neededAmount"),
             "neededUnit": match.get("neededUnit"),
             "productId": match.get("productId"),
+            "gtin": match.get("gtin"),
             "productName": match.get("productName"),
             "brand": match.get("brand"),
             "imageUrl": match.get("imageUrl"),
