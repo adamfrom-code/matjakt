@@ -66,3 +66,50 @@
 | Browser-E2E av hela konsumentresan i mobil viewport (390×844, touch) | ✅ `backend/tests/e2e/` | CI-jobb `e2e` |
 
 Kvar (kräver Mac/Adam): `npx cap add ios`, signering, skärmbilder, IAP-beslut (väg A rekommenderas för v1), juridiska platshållare i policy/villkor.
+
+## Native-pass 2026-09-06 (Windows) - vad som nu är gjort i repo
+
+| Punkt | Status | Var |
+|---|---|---|
+| Native-bygge: `npm run build:native` → `dist/native` med `https://matjakt.onrender.com/api` i metataggen och utan landningens statistikskript | ✅ testat (`tests/build-native.test.js`) | `scripts/build_frontend.mjs` |
+| `webDir` pekar på bygget (`dist/native/app`), inte källorna | ✅ | `capacitor.config.json` |
+| `@capacitor/app` (appStateChange, appUrlOpen) och `@capacitor/browser` (Stripe i SFSafariViewController) | ✅ installerade, används bara när `Capacitor.isNativePlatform()` | `package.json`, `frontend/app/app.js` |
+| Stripe-checkout/portal i native öppnas externt; Premium pollas när appen blir aktiv igen (en poll åt gången); `flushServerSync()` före | ✅ | `frontend/app/app.js` (`openExternal`, `onAppResumed`) |
+| Djuplänkar i native: `appUrlOpen` laddar om appen med query-strängen (`?verify`/`?reset`/`?invite`/`?recept`) så webbens startkod tar hand om den | ✅ kod; **kräver Associated Domains (Mac + Team-ID)** | `frontend/app/app.js` |
+| Utvecklingslåset borta, `capacitor://localhost` CORS-testat mot alla konsument-, konto- och hushållsvägar | ✅ | `backend/tests/test_api_server.py` `CorsForNativeTest` |
+| Livepriser: max ett anrop per filial, stopp vid 429 - ingen anropsstorm från appen | ✅ E2E räknar anrop | `backend/tests/e2e/test_consumer_journey.py` |
+
+### Exakt på Macen (i den här ordningen)
+
+```bash
+git pull
+npm ci
+npm run build:native          # dist/native - bygget som paketeras
+npx cap add ios               # bara första gången: skapar ios/App
+npx cap sync ios              # kopierar dist/native/app + plugin-pods (App, Browser)
+npx @capacitor/assets generate --ios     # ikon + splash från resources/
+npx cap open ios              # Xcode
+```
+
+I Xcode (första gången):
+1. Target App → Signing & Capabilities: Team (Apple-ID räcker för simulatorn - ingen betald medlemskap krävs), Bundle Identifier `se.matjakt.app`.
+2. Info-fliken: klistra in nycklarna från `ios-prep/Info.plist.additions.xml` (plats-text, endast stående läge, svenska, ingen egen kryptering).
+3. Lägg `ios-prep/PrivacyInfo.xcprivacy` i `ios/App/App/` och bocka i target App.
+4. Product → Destination → iPhone 15 Pro (simulator) → Run. Eller från terminalen: `npx cap run ios` (väljer simulator interaktivt).
+
+Simulatorkontroller (E2E för hand, ta skärmbilder till `store/appstore/screenshots/`):
+- Kallstart: ingen vit skärm, Hem-skärmen med onboarding.
+- Onboarding → Gävle-postnummer → butiker → vecka → Handla: "Har hemma"/"Köpt"/Ångra.
+- Konto: registrera, verifiera (mejlet öppnar `matjakt.store/app/?verify=` i Safari - fungerar utan Associated Domains), logga in i appen.
+- Hushåll: skapa, bjud in (dela-arket), gå med från en andra simulator/telefon, delad lista.
+- Premium: knappen öppnar Stripe (TEST) i SFSafariViewController; tillbaka i appen → Premium aktiverat inom 30 s.
+- Flygplansläge: ingen vit skärm, ingen utloggning, "pris saknas just nu" i stället för evig "hämtas…".
+- Safe areas (notch, hemindikator), tangentbordet skjuter inte bort inmatningsfältet, endast stående läge, statusfältet läsbart.
+
+### Universella länkar (djuplänkar direkt in i native-appen) - kräver Adam
+
+Utan detta öppnas mejl- och inbjudningslänkar i Safari (webbappen) - det fungerar, men inte inne i native-appen.
+1. Xcode → Signing & Capabilities → + Associated Domains → `applinks:matjakt.store`.
+2. Lägg `frontend/.well-known/apple-app-site-association` (JSON utan filändelse) med `"appID": "<TEAMID>.se.matjakt.app"` och `"paths": ["/app/*"]`; verifiera att GitHub Pages serverar den som `application/json` (annars via backend-proxy).
+3. Testa: `xcrun simctl openurl booted "https://matjakt.store/app/?recept=<id>"` - appen ska öppna receptet.
+

@@ -4664,8 +4664,16 @@ function openPaywall(triggerFeature = "") {
 // navigeras webviewen till stripe.com lämnar användaren appen och landar
 // efteråt i webbversionen. Vid återkomst pollas Premium (visibilitychange).
 function isNativeApp() { return Boolean(window.Capacitor?.isNativePlatform?.()); }
+function nativePlugin(name) { return isNativeApp() ? window.Capacitor?.Plugins?.[name] || null : null; }
 function openExternal(url) {
-  if (isNativeApp()) { window.open(url, "_blank"); return; }
+  if (isNativeApp()) {
+    // @capacitor/browser (SFSafariViewController) om den finns, annars
+    // ett nytt fönster som webviewen lämnar till systemet.
+    const browser = nativePlugin("Browser");
+    if (browser?.open) { browser.open({ url }).catch(() => window.open(url, "_blank")); return; }
+    window.open(url, "_blank");
+    return;
+  }
   location.href = url;
 }
 async function beginCheckout(plan) {
@@ -4875,12 +4883,30 @@ handlePendingInvite();
 // Telefonen tillbaka från bakgrunden: hämta det familjen ändrat under tiden.
 // Det här är vad som gör att Adam ser Saras avbockning "snart" (§25) utan
 // att vi bygger en WebSocket-infrastruktur för det.
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState !== "visible") return;
+function onAppResumed() {
   pullHousehold(); loadNotifications();
   // Tillbaka från Stripe i native-appen: hämta Premium-status.
   if (awaitingPremiumActivation && isNativeApp()) activatePremiumAfterCheckout();
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") onAppResumed();
 });
+// Native (Capacitor): appen vaknar och djuplänkar. @capacitor/app ger
+// appStateChange när appen kommer tillbaka från bakgrunden (webviewen
+// skickar inte alltid visibilitychange då) och appUrlOpen när en
+// universell länk (matjakt.store/app/?verify=|?reset=|?invite=|?recept=)
+// öppnar appen: query-strängen får aldrig tappas - appen laddas om med
+// den så samma startkod som på webben tar hand om länken.
+const nativeApp = nativePlugin("App");
+if (nativeApp?.addListener) {
+  nativeApp.addListener("appStateChange", ({ isActive }) => { if (isActive) onAppResumed(); });
+  nativeApp.addListener("appUrlOpen", ({ url }) => {
+    let search = "";
+    try { search = new URL(url).search; } catch { return; }
+    if (!search) return;
+    location.href = `${location.pathname}${search}`;
+  });
+}
 // A first-time visitor arriving through a SHARED RECIPE LINK came for the
 // recipe - onboarding on top of it would bury the very thing that brought
 // them here. It opens on their next natural visit instead.

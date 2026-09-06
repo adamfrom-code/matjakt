@@ -1,7 +1,7 @@
 {
   "appId": "se.matjakt.app",
   "appName": "Matjakt",
-  "webDir": "frontend/app",
+  "webDir": "dist/native/app",
   "ios": {
     "contentInset": "automatic",
     "backgroundColor": "#f6f7f4",

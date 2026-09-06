@@ -8,7 +8,10 @@
     "check": "node --check frontend/app/app.js && python -m compileall -q backend",
     "frontend": "python scripts/serve_frontend.py",
     "backend": "python backend/api_server.py",
-    "build": "node scripts/build_frontend.mjs"
+    "build": "node scripts/build_frontend.mjs",
+    "build:native": "node scripts/build_frontend.mjs dist/native --native --api-url=https://matjakt.onrender.com/api",
+    "ios:sync": "npm run build:native && npx cap sync ios",
+    "ios:open": "npx cap open ios"
   },
   "repository": {
     "type": "git",
@@ -24,6 +27,8 @@
   "homepage": "https://github.com/adamfrom-code/matjakt#readme",
   "dependencies": {
     "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@capacitor/ios": "^8.5.1"
