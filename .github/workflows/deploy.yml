@@ -39,6 +39,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r backend/requirements.txt
+      # npm test kör tests/build-native.test.js som behöver esbuild (devDependency).
+      - run: npm ci
       - run: npm test
 
   deploy:
