@@ -72,7 +72,7 @@ function wireRatingStars(container, recipeId) {
 function recipeFeedback(recipeId) { return state.feedback[recipeId] || {}; }
 function feedbackMarkup(recipeId) {
   const fb = recipeFeedback(recipeId);
-  return `<div class="recipe-feedback"><button type="button" class="feedback-btn ${fb.liked ? "active" : ""}" data-like-recipe="${recipeId}">Gillar</button><button type="button" class="feedback-btn dislike ${fb.disliked ? "active" : ""}" data-dislike-recipe="${recipeId}">Gillar inte</button></div>`;
+  return `<div class="recipe-feedback"><button type="button" class="feedback-btn ${fb.liked ? "active" : ""}" data-like-recipe="${escapeHtml(recipeId)}">Gillar</button><button type="button" class="feedback-btn dislike ${fb.disliked ? "active" : ""}" data-dislike-recipe="${escapeHtml(recipeId)}">Gillar inte</button></div>`;
 }
 function wireFeedbackButtons(container, recipeId) {
   container.querySelector("[data-like-recipe]")?.addEventListener("click", () => {
@@ -1299,7 +1299,7 @@ function renderRecipes() {
         ${recipe.kcal ? `<span class="recipe-macros">${macroLine(recipe)}</span>` : ""}
       </button>
       ${expanded ? `<div class="ingredients"><p class="recipe-description">${escapeHtml(details.beskrivning || "En god vardagsrätt med enkla råvaror.")}</p><strong>Du behöver köpa</strong><p>${escapeHtml(recipe.ingredienser.join(", "))}</p><small>Hemma: ${escapeHtml(recipe.hemma.join(", "))}</small>${details.steg ? `<ol class="recipe-steps">${details.steg.map(step => `<li>${escapeHtml(step)}</li>`).join("")}</ol>` : ""}${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${escapeHtml(details.tips)}</p>` : ""}</div>` : ""}
-      <button class="favorite-btn ${state.favoriter.has(recipe.id) ? "is-favorite" : ""}" data-favorite="${escapeHtml(recipe.id)}" aria-label="${state.favoriter.has(recipe.id) ? "Ta bort favorit" : "Spara som favorit"}">${state.favoriter.has(recipe.id) ? "★" : "☆"}</button><button class="add-btn" data-add="${recipe.id}">${selected ? "✓ Tillagd" : "+ Lägg till"}</button>
+      <button class="favorite-btn ${state.favoriter.has(recipe.id) ? "is-favorite" : ""}" data-favorite="${escapeHtml(recipe.id)}" aria-label="${state.favoriter.has(recipe.id) ? "Ta bort favorit" : "Spara som favorit"}">${state.favoriter.has(recipe.id) ? "★" : "☆"}</button><button class="add-btn" data-add="${escapeHtml(recipe.id)}">${selected ? "✓ Tillagd" : "+ Lägg till"}</button>
     </article>`;
   }).join("") : `<p class="empty-state">Inga recept matchar din sökning eller butik ännu.</p>`;
   document.querySelectorAll("[data-details]").forEach(btn => btn.addEventListener("click", () => openRecipeTab(btn.dataset.details)));
@@ -1387,7 +1387,7 @@ async function renderRecipePage() {
     ? `${ingredientRows.buy.map(row => `<div class="ing-row${row.optional ? " ing-optional" : ""}"><strong>${escapeHtml([row.amount, row.unit].filter(Boolean).join(" "))}</strong><span>${escapeHtml(row.name)}${row.optional ? " <em>(valfritt)</em>" : ""}</span></div>`).join("")}${ingredientRows.home.length ? `<p class="ing-home-label">Har du säkert hemma</p>${ingredientRows.home.map(row => `<div class="ing-row ing-home"><strong></strong><span>${escapeHtml(row.name)}</span></div>`).join("")}` : ""}`
     : `${recipe.ingredienser.map(item => `<div class="ing-row"><strong></strong><span>${escapeHtml(item)}</span></div>`).join("")}`;
   const stepsMarkup = (details.steg || []).map((step, index) => `<label class="step-row"><input type="checkbox" data-step-check="${index}"><span class="step-number">${index + 1}</span><span class="step-text">${escapeHtml(step)}</span></label>`).join("");
-  $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe">${recipe.bild ? `<img class="recipe-photo full-recipe-hero" src="${escapeHtml(safeHttpUrl(recipe.bild) || "")}" alt="${escapeHtml(recipe.namn)}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${escapeHtml(recipe.typ)}</p><h1>${escapeHtml(recipe.namn)}</h1><div class="recipe-chips">${chips.map(chip => `<span class="recipe-chip">${escapeHtml(chip)}</span>`).join("")}</div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${escapeHtml(details.beskrivning || "En god svensk vardagsrätt.")}</p><div class="recipe-cta-row"><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${recipe.id}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button><button type="button" class="recipe-share-btn" data-recipe-share aria-label="Dela receptet">Dela</button></div><section class="recipe-block"><div class="ing-head"><h2>Ingredienser</h2><span>${state.personer} portioner</span></div>${ingredientsMarkup}</section><section class="recipe-block"><h2>Gör så här</h2><div class="steps">${stepsMarkup}</div></section>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${escapeHtml(details.tips)}</p>` : ""}<div class="recipe-block">${recipeRatingMarkup(recipe.id)}${feedbackMarkup(recipe.id)}</div></article>`;
+  $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe">${recipe.bild ? `<img class="recipe-photo full-recipe-hero" src="${escapeHtml(safeHttpUrl(recipe.bild) || "")}" alt="${escapeHtml(recipe.namn)}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${escapeHtml(recipe.typ)}</p><h1>${escapeHtml(recipe.namn)}</h1><div class="recipe-chips">${chips.map(chip => `<span class="recipe-chip">${escapeHtml(chip)}</span>`).join("")}</div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${escapeHtml(details.beskrivning || "En god svensk vardagsrätt.")}</p><div class="recipe-cta-row"><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${escapeHtml(recipe.id)}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button><button type="button" class="recipe-share-btn" data-recipe-share aria-label="Dela receptet">Dela</button></div><section class="recipe-block"><div class="ing-head"><h2>Ingredienser</h2><span>${state.personer} portioner</span></div>${ingredientsMarkup}</section><section class="recipe-block"><h2>Gör så här</h2><div class="steps">${stepsMarkup}</div></section>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${escapeHtml(details.tips)}</p>` : ""}<div class="recipe-block">${recipeRatingMarkup(recipe.id)}${feedbackMarkup(recipe.id)}</div></article>`;
   $("recipePage").querySelector(".recipe-back").addEventListener("click", () => history.back());
   // Avbockade steg medan man lagar - sparas lokalt per recept så ett
   // vridet-bort-och-tillbaka på telefonen inte tappar var man var.
@@ -3797,7 +3797,7 @@ function renderHousehold() {
     const name = member.displayName || (member.email ? member.email.split("@")[0] : "Medlem");
     const tags = [member.role === "admin" ? "administratör" : "", member.isMe ? "du" : ""].filter(Boolean).join(" · ");
     const remove = isAdmin && !member.isMe
-      ? `<button type="button" class="household-remove" data-remove-member="${member.userId}" aria-label="Ta bort ${escapeHtml(name)}">Ta bort</button>` : "";
+      ? `<button type="button" class="household-remove" data-remove-member="${escapeHtml(String(member.userId))}" aria-label="Ta bort ${escapeHtml(name)}">Ta bort</button>` : "";
     return `<li><span><strong>${escapeHtml(name)}</strong>${tags ? `<small>${escapeHtml(tags)}</small>` : ""}</span>${remove}</li>`;
   }).join("");
   $("householdMembers").querySelectorAll("[data-remove-member]").forEach(button => button.addEventListener("click", () => {
@@ -4703,7 +4703,11 @@ function openPaywall(triggerFeature = "") {
 // efteråt i webbversionen. Vid återkomst pollas Premium (visibilitychange).
 function isNativeApp() { return Boolean(window.Capacitor?.isNativePlatform?.()); }
 function nativePlugin(name) { return isNativeApp() ? window.Capacitor?.Plugins?.[name] || null : null; }
-function openExternal(url) {
+function openExternal(rawUrl) {
+  // Bara https-adresser navigeras till - även om de kommer från vår egen
+  // server ska en oväntad "javascript:"-sträng aldrig kunna köras.
+  const url = safeHttpUrl(rawUrl);
+  if (!url) return;
   if (isNativeApp()) {
     // @capacitor/browser (SFSafariViewController) om den finns, annars
     // ett nytt fönster som webviewen lämnar till systemet.
@@ -4875,7 +4879,7 @@ document.querySelectorAll("#pantryTabs button").forEach(button => button.addEven
 $("pantrySearch").addEventListener("input", e => { renderPantryPicker(e.target.value); renderPantryLiveSearch(e.target.value); });
 
 function cookMatchRow(id, namn, matched, bild) {
-  return `<button type="button" class="cook-match" data-cook-open="${escapeHtml(id)}">${bild ? `<img src="${escapeHtml(bild)}" alt="">` : `<span class="cook-match-fallback" aria-hidden="true"></span>`}<span class="cook-match-info"><strong>${escapeHtml(namn)}</strong><small>Matchar: ${matched.map(escapeHtml).join(", ")}</small></span></button>`;
+  return `<button type="button" class="cook-match" data-cook-open="${escapeHtml(id)}">${bild ? `<img src="${escapeHtml(safeHttpUrl(bild) || "")}" alt="">` : `<span class="cook-match-fallback" aria-hidden="true"></span>`}<span class="cook-match-info"><strong>${escapeHtml(namn)}</strong><small>Matchar: ${matched.map(escapeHtml).join(", ")}</small></span></button>`;
 }
 function renderCookResults(localMatches, externalRecipes, hiddenByDiet = false) {
   const localHtml = localMatches.length ? `<h3>Från dina recept</h3><div class="cook-match-list">${localMatches.map(({ recipe, matched }) => cookMatchRow(recipe.id, recipe.namn, matched, recipe.bild)).join("")}</div>` : "";

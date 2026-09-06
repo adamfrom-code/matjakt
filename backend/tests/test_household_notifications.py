@@ -170,7 +170,7 @@ class DeviceTest(NotificationTestCase):
     def test_logging_out_forgets_the_device(self):
         token = "expo-push-token-" + "b" * 24
         self.notifications.register_device(self.adam, token)
-        self.notifications.forget_device(token)
+        self.notifications.forget_device(token, user_id=self.adam)
         self.assertEqual(self.notifications.devices_for(self.adam), [])
 
     def test_a_new_account_on_the_same_phone_takes_over_the_device(self):
@@ -209,6 +209,18 @@ class DeviceTest(NotificationTestCase):
                 recipient_ids=[self.sara], subject=f"Vecka {index}")
         self.assertLessEqual(self.notifications.pending_count(self.sara), MAX_OUTBOX_PER_USER)
 
+
+    def test_forgetting_a_device_requires_owning_it(self):
+        """En enhetstoken som råkat läcka får inte kunna tysta någon annans
+        notiser: glöm bara enheter som tillhör den session som ber om det."""
+        token = "enhet-" + "a" * 40
+        self.notifications.register_device(1, token, "ios")
+        self.notifications.forget_device(token)                 # ingen ägare angiven: händer inget
+        self.assertEqual(len(self.notifications.devices_for(1)), 1)
+        self.notifications.forget_device(token, user_id=2)      # fel ägare: händer inget
+        self.assertEqual(len(self.notifications.devices_for(1)), 1)
+        self.notifications.forget_device(token, user_id=1)      # ägaren: enheten glöms
+        self.assertEqual(self.notifications.devices_for(1), [])
 
 class DebounceWindowTest(NotificationTestCase):
     def test_the_window_is_pushed_forward_by_new_activity(self):

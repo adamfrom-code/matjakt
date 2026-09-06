@@ -59,7 +59,13 @@ LIMITS = {
     "search": (120, 60),           # receptsök
     "lookup": (120, 60),           # stores, geocode
     "scrape": (30, 60),            # campaigns, products, products/batch -> Chromium
-    "analytics": (300, 60),        # beacon, förbi gaten
+    "analytics": (300, 60),        # beacon
+    # Öppna lässvägar (health, recept, kampanjer, status): ingen normal
+    # användning kommer nära, men en flod mot fyra DB-aggregat per anrop
+    # ska inte kunna mätta instansen.
+    "public": (600, 60),
+    # Checkout/portal gör ett utgående Stripe-anrop per begäran.
+    "billing": (20, 3600),
     # Hushållet: en familj i en butik bockar av snabbt, och Handla skriver
     # en rad per klick. Taket ska stoppa en skenande klient, inte två
     # personer som handlar.

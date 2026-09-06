@@ -2604,6 +2604,27 @@ class AuthHttpTest(unittest.TestCase):
         self.assertEqual(payload["butik"], "Willys")
         self.assertEqual(set(payload["produkter"]), {"Mjölk", "Ris"})
 
+    def test_open_read_paths_and_billing_have_rate_buckets(self):
+        """Health, recept, kampanjer och status var helt utan hink; checkout/
+        portal gör ett Stripe-anrop per begäran. Hinkarna sätts snävt i
+        testet - normal användning kommer aldrig nära 600/min."""
+        saved_public, saved_billing = ratelimit.LIMITS["public"], ratelimit.LIMITS["billing"]
+        ratelimit.LIMITS["public"], ratelimit.LIMITS["billing"] = (3, 60), (2, 3600)
+        ratelimit.reset()
+        try:
+            for path in ("/api/health", "/api/recipes?limit=1", "/api/grocery/campaigns"):
+                self.assertEqual(self.get(path)[0], 200, path)
+            self.assertEqual(self.get("/api/health")[0], 429)
+            ratelimit.reset()
+            # Utan session avvisas checkout (400 "Du måste vara inloggad") - men
+            # hinken räknar ändå, så den tredje begäran är en 429.
+            self.assertIn(self.post("/api/billing/checkout", {"plan": "monthly"})[0], (400, 401))
+            self.assertIn(self.post("/api/billing/checkout", {"plan": "monthly"})[0], (400, 401))
+            self.assertEqual(self.post("/api/billing/checkout", {"plan": "monthly"})[0], 429)
+        finally:
+            ratelimit.LIMITS["public"], ratelimit.LIMITS["billing"] = saved_public, saved_billing
+            ratelimit.reset()
+
     def test_redeem_premium_with_correct_code(self):
         email = self._email()
         _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
@@ -3006,4 +3027,28 @@ class CorsForNativeTest(unittest.TestCase):
             status, headers = self._request("GET", "/api/recipes?limit=1", origin)
             self.assertEqual(headers.get("Access-Control-Allow-Origin"), "https://matjakt.store", origin)
             self.assertNotEqual(headers.get("Access-Control-Allow-Origin"), "*")
+
+class HalfOpenConnectionTest(unittest.TestCase):
+    """Slowloris: en anslutning som skickar "GET /api/health" utan radslut
+    höll en tråd för evigt (ingen socket-timeout). Nu stängs den."""
+
+    def test_a_half_sent_request_line_is_dropped_within_the_timeout(self):
+        import socket
+        saved = api_server.ApiHandler.timeout
+        api_server.ApiHandler.timeout = 1
+        server = ThreadingHTTPServer(("127.0.0.1", 0), api_server.ApiHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            client = socket.create_connection(("127.0.0.1", server.server_address[1]), timeout=10)
+            client.sendall(b"GET /api/health")          # inget \r\n - aldrig en hel begäran
+            started = time.time()
+            client.settimeout(10)
+            data = client.recv(64)                       # servern ska stänga (b"") av sig själv
+            self.assertEqual(data, b"")
+            self.assertLess(time.time() - started, 8)
+            client.close()
+        finally:
+            server.shutdown(); server.server_close(); thread.join(timeout=5)
+            api_server.ApiHandler.timeout = saved
 

@@ -38,7 +38,8 @@ async function call(path, options = {}) {
     ...options,
     headers: { "X-Admin-Token": token, "Content-Type": "application/json", ...(options.headers || {}) },
   });
-  if (response.status === 403) throw new Error("Fel admin-token");
+  // Servern svarar 404 på fel token (enhetligt med okänd väg) - 403 fanns förr.
+  if (response.status === 403 || response.status === 404) throw new Error("Fel admin-token (servern svarar 404)");
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw new Error(body.error || `HTTP ${response.status}`);

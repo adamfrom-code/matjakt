@@ -190,11 +190,16 @@ class NotificationStore:
             self._connection.commit()
         return {"ok": True, "platform": platform}
 
-    def forget_device(self, token: str):
+    def forget_device(self, token: str, user_id=None):
         """Vid utloggning. Enheten ska inte fortsätta ta emot privata
-        hushållsnotiser från kontot som lämnat telefonen."""
+        hushållsnotiser från kontot som lämnat telefonen. Bara ägaren får
+        glömma sin enhet - en token som råkat läcka ska inte kunna tysta
+        någon annans notiser."""
         with self._lock:
-            self._connection.execute("DELETE FROM push_devices WHERE token_hash = ?", (_device_key(token),))
+            if user_id is None:
+                return
+            self._connection.execute("DELETE FROM push_devices WHERE token_hash = ? AND user_id = ?",
+                                     (_device_key(token), int(user_id)))
             self._connection.commit()
 
     def forget_user_devices(self, user_id):

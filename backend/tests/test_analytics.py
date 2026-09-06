@@ -19,7 +19,7 @@ class AnalyticsStoreTest(unittest.TestCase):
     def setUp(self):
         self._tmpdir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.accounts = AccountStore(Path(self._tmpdir.name) / "test.db")
-        self.analytics = AnalyticsStore(self.accounts.connection)
+        self.analytics = AnalyticsStore(self.accounts.connection, lock=self.accounts.lock)
 
     def tearDown(self):
         self.accounts.close()
@@ -130,3 +130,46 @@ class AnalyticsStoreTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SharedConnectionUnderLoad(unittest.TestCase):
+    """Analytics och kontolagret delar SQLite-anslutning. Utan gemensamt lås
+    nollställde en commit() från mätningen ett pågående sessionsuppslag i en
+    annan tråd - "401 Inte inloggad" på en giltig session, mitt i betalning.
+    /api/analytics/event är öppen (300/min), så det var en angreppsyta."""
+
+    def test_analytics_writes_do_not_break_a_concurrent_session_lookup(self):
+        import threading
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(tmp.cleanup)
+        accounts = AccountStore(Path(tmp.name) / "shared.db")
+        self.addCleanup(accounts.close)
+        analytics = AnalyticsStore(accounts.connection, lock=accounts.lock)
+        token, _ = accounts.register("last@example.com", "hemligt123")
+        user_id = accounts.identity_for_token(token)[0]
+        event = next(iter(ANALYTICS_EVENTS))
+        misses, errors = [], []
+
+        def writer():
+            for _ in range(150):
+                try:
+                    analytics.record(event, user_id)
+                except Exception as error:   # noqa: BLE001 - allt är ett fel här
+                    errors.append(repr(error))
+
+        def reader():
+            for _ in range(150):
+                try:
+                    if accounts.user_for_token(token) is None:
+                        misses.append(1)
+                except Exception as error:   # noqa: BLE001
+                    errors.append(repr(error))
+
+        threads = [threading.Thread(target=writer) for _ in range(3)] + [threading.Thread(target=reader) for _ in range(3)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=60)
+        self.assertEqual(errors, [])
+        self.assertEqual(misses, [], f"{len(misses)} sessionsuppslag misslyckades under mätskrivningar")
+

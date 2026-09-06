@@ -531,10 +531,10 @@ KV_CACHE = KeyValueCacheStore(PRICE_CACHE.connection, lock=PRICE_CACHE.lock)
 # så tratten kan joina users. De gamla räknarna låg i KV_CACHE, som rensar
 # allt äldre än sju dagar - flytten nedan räddar det som finns kvar där och
 # är ofarlig att köra vid varje uppstart (skriver bara dagar som saknas).
-ANALYTICS = AnalyticsStore(ACCOUNT_STORE.connection)
+ANALYTICS = AnalyticsStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
 ANALYTICS.import_legacy_counters(lambda event, day: KV_CACHE.get("analytics", f"{event}:{day}")[0])
 MAILINGS = mailings.MailingScheduler(
-    mailings.MailingStore(ACCOUNT_STORE.connection),
+    mailings.MailingStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock),
     lambda to, subject, text, body_html, unsub: send_email(MAIL_CONFIG, to, subject, text, body_html, unsub),
     lambda: grocery_api.campaign_deals(per_chain=mailings.DEALS_PER_CHAIN).get("deals", {}),
     api_base=PUBLIC_API_URL, app_url=APP_URL, secret=MAIL_SECRET, enabled=MAILINGS_ENABLED,
@@ -1562,6 +1562,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
     # är en gratis fingeravtryck för den som letar kända sårbarheter.
     server_version = "Matjakt"
     sys_version = ""
+    # Socket-timeout: en halvöppen anslutning som aldrig skickar radslut
+    # (Slowloris) höll annars en tråd för evigt - ThreadingHTTPServer har
+    # inget tak på trådar. Läsning/skrivning som står stilla längre än så
+    # här stängs; normala svar tar sekunder, skrap-vägen har egen 30 s-gräns.
+    timeout = int(os.environ.get("MATJAKT_SOCKET_TIMEOUT", "30") or 30)
 
     def version_string(self):
         return "Matjakt"   # utan det efterföljande mellanslag stdlib annars lägger till
@@ -1719,7 +1724,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         alltid ser MODULENS aktuella lager - testerna byter ut dem, och en
         router som fångat gamla referenser vid uppstart hade tyst skrivit i
         fel databas."""
-        limit = "household_invite" if parsed.path == "/api/household/invite" and method == "POST" else "household"
+        limit = "household_invite" if parsed.path == "/api/household/invite" else "household"
         if self._rate_limit(limit, (self._bearer_token() or "")[:16]):
             return
         router = HouseholdRouter(HOUSEHOLD_STORE, NOTIFICATION_STORE, ACCOUNT_STORE, APP_URL)
@@ -1954,6 +1959,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self._handle_household("GET", parsed, None)
             return
         if parsed.path == "/api/health":
+            if self._rate_limit("public"):
+                return
             # recipeCount: ett ensamt tal säger inget om produkten men låter
             # driftverifiering se att en deploy faktiskt synkade receptbanken.
             # platform: aggregerade driftsiffror (inga priser, inga
@@ -2094,6 +2101,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(200, {"configured": True, "status": status})
             return
         if parsed.path == "/api/grocery/status":
+            if self._rate_limit("public"):
+                return
             # Public and deliberately blunt: the frontend must be able to
             # tell "this chain is expensive" apart from "we have barely any
             # data for this chain", and so must we when a deploy comes up
@@ -2177,6 +2186,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(401, {"error": str(error)})
             return
         if parsed.path == "/api/grocery/campaigns":
+            if self._rate_limit("public"):
+                return
             # All chains' current campaign discounts, from our own collected
             # prices. Public and cheap: one cached SQL pass, no scraping.
             try:
@@ -2186,6 +2197,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(503, {"error": "Kampanjerna är inte tillgängliga just nu"})
             return
         if parsed.path == "/api/recipes/shelves":
+            if self._rate_limit("public"):
+                return
             # Every shelf the recipe page draws, in ONE request. Nine
             # requests on a phone is nine chances to be slow, and the page
             # shows them together anyway.
@@ -2196,6 +2209,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(200, recipes_api.shelves(per_shelf), cache_seconds=120)
             return
         if parsed.path == "/api/recipes":
+            if self._rate_limit("public"):
+                return
             params = parse_qs(parsed.query)
 
             def number(name):
@@ -2219,6 +2234,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return
         recipes_prefix = "/api/recipes/"
         if parsed.path.startswith(recipes_prefix):
+            if self._rate_limit("public"):
+                return
             recipe_id = clean_text(unquote(parsed.path[len(recipes_prefix):]))
             recipe = recipes_api.get(recipe_id) if recipe_id else None
             if not recipe:
@@ -2466,17 +2483,22 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/auth/logout":
+            if self._rate_limit("public"):
+                return
             token = self._bearer_token()
+            # Identiteten hämtas FÖRE utloggningen - sessionen finns inte efteråt.
+            identity = ACCOUNT_STORE.identity_for_token(token) if token else None
             if token:
                 ACCOUNT_STORE.logout(token)
             # Enheten ska sluta ta emot det utloggade kontots hushållsnotiser.
             # Klienten skickar sin push-token med i utloggningen; utan detta
             # fortsatte "Sara lade till mjölk" till en telefon som inte längre
-            # tillhör hushållet.
+            # tillhör hushållet. Bara ÄGAREN (den session som loggar ut) får
+            # glömma enheten - annars kunde en läckt token tysta någon annan.
             device_token = payload.get("deviceToken") if isinstance(payload, dict) else None
-            if device_token:
+            if device_token and identity:
                 try:
-                    NOTIFICATION_STORE.forget_device(device_token)
+                    NOTIFICATION_STORE.forget_device(device_token, user_id=identity[0])
                 except Exception:
                     logger.exception("Kunde inte glömma enheten vid utloggning")
             self.send_json(200, {"ok": True})
@@ -2618,6 +2640,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(401, {"error": str(error)})
             return
         if parsed.path == "/api/billing/checkout":
+            if self._rate_limit("billing"):
+                return
             try:
                 price_id = STRIPE_PRICE_YEARLY if payload.get("plan") == "yearly" else STRIPE_PRICE_MONTHLY
                 if not price_id:
@@ -2643,6 +2667,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/billing/portal":
+            if self._rate_limit("billing"):
+                return
             try:
                 customer_id = ACCOUNT_STORE.stripe_customer_id_for_token(self._bearer_token())
                 url = create_portal_session(STRIPE_SECRET_KEY, customer_id, return_url=f"{APP_URL}/")

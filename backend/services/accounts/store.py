@@ -199,6 +199,14 @@ class AccountStore:
             "marketingConsent": bool(row["marketing_consent"]) if "marketing_consent" in keys else False,
         }
 
+    @property
+    def lock(self):
+        """Låset som skyddar anslutningen. Varje annat lager som delar
+        connection (AnalyticsStore, MailingStore) MÅSTE ta det här låset -
+        en commit() från en annan tråd nollställer en pågående SELECT och
+        gav "401 Inte inloggad" på giltiga sessioner."""
+        return self._lock
+
     def register(self, email: str, password: str, marketing: bool = False) -> tuple[str, dict]:
         email = (email or "").strip().lower()
         if not EMAIL_PATTERN.match(email):
@@ -608,8 +616,11 @@ class AccountStore:
         if secrets.compare_digest(_hash_password(new_password, bytes.fromhex(row["salt"])), row["password_hash"]):
             raise AccountError("Det nya lösenordet måste skilja sig från det nuvarande")
         salt = secrets.token_bytes(16)
+        # Ett lösenordsbyte dödar också en utestående återställningslänk:
+        # den som begärde den (kanske inte kontoägaren) ska inte kunna ta
+        # över kontot EFTER att ägaren bytt lösenord.
         self._connection.execute(
-            "UPDATE users SET password_hash = ?, salt = ? WHERE id = ?",
+            "UPDATE users SET password_hash = ?, salt = ?, reset_token = NULL, reset_token_expires_at = NULL WHERE id = ?",
             (_hash_password(new_password, salt), salt.hex(), row["id"]),
         )
         self._connection.execute(

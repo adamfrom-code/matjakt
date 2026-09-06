@@ -96,6 +96,16 @@ class ChangePasswordTest(unittest.TestCase):
             self.store.login("a@example.com", "gammalt-losenord")
         self.store.login("a@example.com", "nytt-losenord")  # must not raise
 
+    def test_changing_the_password_kills_a_pending_reset_link(self):
+        """Någon (kanske inte ägaren) begärde en återställningslänk. Ägaren
+        byter lösenord i appen - då får länken inte längre ta över kontot."""
+        reset_token = self.store.request_password_reset("a@example.com")
+        self.assertIsNotNone(reset_token)
+        self.store.change_password(self.token, "gammalt-losenord", "nytt-losenord")
+        with self.assertRaises(AccountError):
+            self.store.reset_password(reset_token, "angriparens-losenord")
+        self.store.login("a@example.com", "nytt-losenord")  # ägarens byte gäller
+
     def test_requires_the_current_password(self):
         """The session already proves who this is - but a borrowed or stolen
         session must not be enough to lock the real owner out."""

@@ -7,6 +7,7 @@ silently pretending an email went out.
 """
 
 import smtplib
+import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr, formatdate, make_msgid, parseaddr
@@ -38,6 +39,10 @@ class MailSendFailed(MailError):
         self.detail = detail
 
 
+# STARTTLS utan context verifierar inte serverns certifikat på Python < 3.12
+# (produktionens image är jammy/3.10) - en aktiv MITM kunde då läsa
+# SMTP-lösenordet och varje återställningslänk. create_default_context()
+# kräver giltig kedja och rätt värdnamn.
 def is_configured(config) -> bool:
     """Whether mail can even be attempted. Callers use this to answer
     honestly BEFORE claiming a mail was sent - an unconfigured server is a
@@ -77,7 +82,7 @@ def send_email(config, to_email, subject, body_text, body_html=None, unsubscribe
         message["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
     try:
         with smtplib.SMTP(host, int(config.get("port") or 587), timeout=15) as smtp:
-            smtp.starttls()
+            smtp.starttls(context=ssl.create_default_context())
             if config.get("user") and config.get("password"):
                 smtp.login(config["user"], config["password"])
             smtp.sendmail(envelope_from, [to_email], message.as_string())
@@ -94,7 +99,7 @@ def check_transport(config):
     guard_outbound_call("en SMTP-server")
     try:
         with smtplib.SMTP(config["host"], int(config.get("port") or 587), timeout=10) as smtp:
-            smtp.starttls()
+            smtp.starttls(context=ssl.create_default_context())
             if config.get("user") and config.get("password"):
                 smtp.login(config["user"], config["password"])
             smtp.noop()

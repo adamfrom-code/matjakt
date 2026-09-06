@@ -21,10 +21,15 @@ PATTERNS = {
     "stripe webhook secret": re.compile(r"whsec_[A-Za-z0-9]{16,}"),
     "resend api key": re.compile(r"\bre_[A-Za-z0-9]{20,}"),
     "privat nyckel": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
+    "github token": re.compile(r"(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}"),
+    "aws access key": re.compile(r"(?:AKIA|ASIA)[A-Z0-9]{16}"),
+    "anthropic/openai key": re.compile(r"sk-(?:ant-)?[A-Za-z0-9_\-]{24,}"),
+    "slack token": re.compile(r"xox[baprs]-[A-Za-z0-9-]{10,}"),
+    "google api key": re.compile(r"AIza[0-9A-Za-z_\-]{35}"),
     # Bara ett CITERAT literal räknas: `PRIMAT_API_KEY = original_key` är kod,
     # `PRIMAT_API_KEY = "abcd…"` är en ifylld hemlighet.
     "ifylld hemlighet": re.compile(
-        r"(?:SMTP_PASSWORD|PRIMAT_API_KEY|DABAS_API_KEY|MATJAKT_ADMIN_TOKEN|MATJAKT_PREMIUM_CODE|STRIPE_SECRET_KEY)"
+        r"(?:SMTP_PASSWORD|PRIMAT_API_KEY|DABAS_API_KEY|MATJAKT_ADMIN_TOKEN|MATJAKT_PREMIUM_CODE|MATJAKT_MAIL_SECRET|STRIPE_SECRET_KEY)"
         r"\s*[=:]\s*['\"][A-Za-z0-9_\-]{16,}['\"]"),
 }
 # Testfixturer får bära uppenbart påhittade värden. Allt annat är skarpt.
@@ -49,7 +54,9 @@ def main() -> int:
         for number, line in enumerate(text.splitlines(), 1):
             for name, pattern in PATTERNS.items():
                 for match in pattern.finditer(line):
-                    if ALLOWLIST.search(line):
+                    # Allowlisten prövas mot TRÄFFEN, inte raden: ett fejkvärde
+                    # på samma rad som en äkta nyckel ska inte tysta nyckeln.
+                    if ALLOWLIST.search(match.group(0)) or ALLOWLIST.search(line[max(0, match.start() - 40):match.end()]):
                         continue
                     hits.append((rel, number, name, match.group(0)[:6] + "…"))
     if hits:

@@ -422,7 +422,7 @@ class HouseholdRouter:
         return 200, {"ok": True}
 
     def _forget_device(self, user_id, email, payload):
-        self.notifications.forget_device(payload.get("token") or "")
+        self.notifications.forget_device(payload.get("token") or "", user_id=user_id)
         return 200, {"ok": True}
 
 

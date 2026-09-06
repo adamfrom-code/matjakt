@@ -22,6 +22,8 @@ identifierande data genom.
 """
 
 import sqlite3
+import threading
+import functools
 from datetime import date, datetime, timedelta, timezone
 
 # Kärnhändelserna: skapas veckor, används fynden, bockas listan av, delas
@@ -59,8 +61,11 @@ def _iso_week(day: date) -> str:
 
 
 class AnalyticsStore:
-    def __init__(self, connection: sqlite3.Connection):
+    def __init__(self, connection: sqlite3.Connection, lock=None):
         self._connection = connection
+        # Delar anslutning med AccountStore: SAMMA lås, annars kan en
+        # commit() här nollställa ett sessionsuppslag i en annan tråd.
+        self._lock = lock if lock is not None else threading.RLock()
         self._init_schema()
 
     def _init_schema(self):
@@ -224,3 +229,17 @@ class AnalyticsStore:
                 "mogen": "alla i kohorten har haft sju dagar på sig - först då är återkomstsiffran fullständig",
             },
         }
+
+
+def _synchronized(method):
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    return wrapper
+
+
+for _name, _member in list(vars(AnalyticsStore).items()):
+    if callable(_member) and not _name.startswith("_"):
+        setattr(AnalyticsStore, _name, _synchronized(_member))
+

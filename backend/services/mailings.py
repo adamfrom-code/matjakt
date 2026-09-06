@@ -22,6 +22,7 @@ REGLERNA, i den ordning de gäller:
 Tider är Europe/Stockholm av samma skäl som nattjobben.
 """
 
+import functools
 import hashlib
 import hmac
 import html as html_lib
@@ -75,10 +76,12 @@ def unsubscribe_url(api_base: str, user_id: int, secret: str) -> str:
 
 # ---- Lagring ----------------------------------------------------------------
 class MailingStore:
-    """mail_log i kontodatabasen (samma anslutning som AccountStore)."""
+    """mail_log i kontodatabasen (samma anslutning som AccountStore) - och
+    därför under SAMMA lås (se AccountStore.lock)."""
 
-    def __init__(self, connection):
+    def __init__(self, connection, lock=None):
         self._connection = connection
+        self._lock = lock if lock is not None else threading.RLock()
         self._connection.executescript(
             """
             CREATE TABLE IF NOT EXISTS mail_log (
@@ -243,6 +246,20 @@ def chains_for_user(synced_state, released: tuple) -> list:
 
 
 # ---- Schemaläggaren ---------------------------------------------------------
+
+def _synchronized(method):
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    return wrapper
+
+
+for _name, _member in list(vars(MailingStore).items()):
+    if callable(_member) and not _name.startswith("_"):
+        setattr(MailingStore, _name, _synchronized(_member))
+
+
 class MailingScheduler:
     """Timertråd som 08:00 varje dag skickar välkomststegen och på torsdagar
     Kampanjtorget. `sender(to, subject, text, html, unsubscribe_url)` gör
