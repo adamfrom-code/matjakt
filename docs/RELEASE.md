@@ -71,9 +71,9 @@ Backend deployas av jobbet `deploy-backend` i `ci.yml`: det körs efter `backend
 3. Positivt bevis på main: nästa gröna push → `deploy-backend` grön → `GET /api/health` → `commit` = den pushade committens 12 första tecken inom ~5 min, och Pages serverar `app.js?v=` från samma commit.
 Dokumentera körnings-id:n i CHECKPOINT.md.
 
-## Låset av vid publik release
+## Utvecklingslåset är avvecklat (2026-09-06)
 
-Utvecklingslåset (`GATE_ENABLED`) är på per definition på Render tills `MATJAKT_GATE=0` sätts. `GET /api/health` → `gate` visar läget (true = alla datavägar svarar 401). **GO förutsätter `gate: false`**, verifierat efter deploy - och att låsets landningssida då inte längre är vägen in.
+Konsumentvägarna kräver ingen token; konto/hushåll kräver session, admin admin-token (enhetlig 404), partner partnernyckel, Stripes webhook sin signatur (`test_removing_the_gate_removed_no_real_security`). `GET /api/health` → `gate: false`. Native-appen (`capacitor://localhost`) fungerar därför utan låsskärm; CORS ekar bara uttryckligen betrodda origins (`CorsForNativeTest`).
 
 ## Prisauditen i drift
 
@@ -83,7 +83,7 @@ Gate-regler: 0 kontroller, eller en kedja helt utan priser → **INGEN DATA**; n
 
 ## Mejl: skarpt test efter att SMTP satts i Render
 
-Förutsättningar: Resend-domänen `matjakt.store` *Verified* (DKIM `resend._domainkey` och `send`-posten finns hos Loopia sedan 2026-09-06). **Lägg `_dmarc.matjakt.store TXT "v=DMARC1; p=none; rua=mailto:<adress som läses>"` före testet** - Gmail/Outlook väger avsaknad av DMARC negativt för en ny domän. Render: `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=587`, `SMTP_USER=resend`, `SMTP_PASSWORD=<Resend-nyckel, direkt i Render>`, `SMTP_FROM_EMAIL=noreply@matjakt.store` (eller `Matjakt <noreply@matjakt.store>`). Mejlen bär Date, Message-ID och avsändarnamn. Öppna mejllänkarna i **samma upplåsta webbläsare** medan låset är på (låset bevarar `?verify`/`?reset`, men den nya webbläsaren måste först låsas upp).
+Förutsättningar: Resend-domänen `matjakt.store` *Verified* (DKIM `resend._domainkey` och `send`-posten finns hos Loopia sedan 2026-09-06). **Lägg `_dmarc.matjakt.store TXT "v=DMARC1; p=none; rua=mailto:<adress som läses>"` före testet** - Gmail/Outlook väger avsaknad av DMARC negativt för en ny domän. Render: `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=587`, `SMTP_USER=resend`, `SMTP_PASSWORD=<Resend-nyckel, direkt i Render>`, `SMTP_FROM_EMAIL=noreply@matjakt.store` (eller `Matjakt <noreply@matjakt.store>`). Mejlen bär Date, Message-ID och avsändarnamn. Mejllänkarna (`?verify`/`?reset`) landar på `matjakt.store` och följer med in i appen.
 
 *Serversida, utan inkorg (kan verifieras utifrån):*
 
@@ -129,6 +129,6 @@ Android: `npx cap sync android` efter frontend-ändringar, bumpa `versionCode`/`
 | Kontrakt frontend↔backend | `test_frontend_contract.py` | ja | – |
 | Fuzz | `scratchpad`-skript vid audit (Content-Length, typer, injektion, path traversal) | nej – kör manuellt vid större ändringar | flytta in i sviten |
 | Browser-E2E | `backend/tests/e2e/test_consumer_journey.py` (Playwright, riktig Chromium mot riktig server med egna tempdatabaser): signup → login → onboarding 4 steg → vecka → byt rätt → recept → Handla → finns hemma → skafferi → butiksjämförelse/paywall → logout → login → allt kvar; Premium-paywall + Stripe-testläge med mockad Stripe-gräns och riktigt signerad webhook | ja (`ci.yml` jobb `e2e`, både källor och byggt bundle) | visuell regression |
-| Produktions-smoke | `curl /api/health`, `backend/tests/prod_persistence_e2e.py` (manuell, bakom låset) | nej | – |
+| Produktions-smoke | `curl /api/health`, `backend/tests/prod_persistence_e2e.py` (manuell) | nej | – |
 | Säkerhetsregression | auth-härdning, rate limits, admin 404, HSTS, hashade token, testspärr | ja | – |
 | Visuell regression | skärmdumpar sparas av E2E:n vid fel (`tests/e2e/artifacts/`) | nej | jämförelse mot referensbilder |

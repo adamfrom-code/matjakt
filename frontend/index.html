@@ -4,12 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f6f3ea">
-  <!-- Matjakt är stängt för allmänheten under utveckling. Den här sidan
-       avslöjar ingenting om produkten. Verifieringen sker på servern - det
-       finns ingen hemlighet i den här filen att hitta. noindex är hygien,
-       inte säkerhet; säkerheten är att servern inte lämnar ut data utan
-       godkänd token. -->
-  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="Matjakt planerar veckans middagar efter din budget och räknar ut var de blir billigast - med riktiga butikspriser.">
   <title>Matjakt</title>
   <link rel="icon" href="app/assets/icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,7 +23,11 @@
     button{width:100%;margin-top:22px;padding:14px;border:0;border-radius:12px;background:var(--primary);color:#fff;font:inherit;font-size:16px;font-weight:600;cursor:pointer}
     button:hover{background:#24563e}
     button[disabled]{opacity:.6;cursor:default}
-    .error{min-height:20px;margin:12px 0 0;text-align:center;font-size:14px;color:#bf3636}
+    .lead{margin:0 0 26px;text-align:center;font-size:16px;line-height:1.5;color:var(--muted)}
+    a.open{display:block;text-align:center;text-decoration:none;margin-top:0;padding:14px;border-radius:12px;background:var(--primary);color:#fff;font-size:16px;font-weight:600}
+    a.open:hover{background:#24563e}
+    .legal{margin:22px 0 0;text-align:center;font-size:13px;color:var(--muted)}
+    .legal a{color:var(--muted)}
   </style>
   <!-- Besöksstatistik utan kakor: "plausible:matjakt.store" eller "umami:<website-id>". Tomt = av. -->
   <meta name="matjakt-traffic" content="">
@@ -37,58 +36,16 @@
 <body>
   <main>
     <h1>Matjakt<span>.</span></h1>
-    <form id="gateForm" autocomplete="off">
-      <label for="user">Användarnamn</label>
-      <input id="user" name="username" autocomplete="username" required>
-      <label for="code">Lösenord</label>
-      <input id="code" name="code" type="password" autocomplete="current-password" required>
-      <button type="submit" id="submitBtn">Logga in</button>
-      <p class="error" id="gateError" role="alert"></p>
-    </form>
+    <p class="lead">Säg din budget. Matjakt väljer veckans middagar och räknar ut var de blir billigast - med riktiga priser från butikerna nära dig.</p>
+    <a class="open" id="openApp" href="app/">Öppna Matjakt</a>
+    <p class="legal"><a href="integritetspolicy.html">Integritetspolicy</a> · <a href="anvandarvillkor.html">Användarvillkor</a> · <a href="mailto:adamfrom@icloud.com">Support</a></p>
   </main>
   <script>
+    // Djuplänkar (?verify=, ?reset=, ?invite=) som landar här följer med in
+    // i appen - query-strängen får aldrig tappas på vägen.
     (function () {
-      var API = location.hostname === "localhost" || location.hostname === "127.0.0.1"
-        ? "" : "https://matjakt.onrender.com";
-      var stored = null;
-      try { stored = localStorage.getItem("matjakt-gate"); } catch (e) {}
-      if (stored) {
-        // Redan godkänd? Verifiera mot servern innan vidareslussning - en
-        // hemsnickrad token i localStorage öppnar ingenting.
-        fetch(API + "/api/gate/check", { headers: { "X-Gate-Token": stored } })
-          .then(function (r) { return r.json(); })
-          .then(function (d) {
-            if (d && d.ok) location.replace("app/" + location.search);
-            else try { localStorage.removeItem("matjakt-gate"); } catch (e) {}
-          }).catch(function () {});
-      }
-      document.getElementById("gateForm").addEventListener("submit", function (event) {
-        event.preventDefault();
-        var button = document.getElementById("submitBtn");
-        var error = document.getElementById("gateError");
-        button.disabled = true; error.textContent = "";
-        fetch(API + "/api/gate/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username: document.getElementById("user").value,
-            code: document.getElementById("code").value,
-          }),
-        }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-          .then(function (res) {
-            if (res.ok && res.d.gateToken) {
-              try { localStorage.setItem("matjakt-gate", res.d.gateToken); } catch (e) {}
-              location.replace("app/" + location.search);
-            } else {
-              error.textContent = (res.d && res.d.error) || "Fel användarnamn eller kod";
-              button.disabled = false;
-            }
-          })
-          .catch(function () {
-            error.textContent = "Kunde inte nå servern. Försök igen.";
-            button.disabled = false;
-          });
-      });
+      var link = document.getElementById("openApp");
+      if (location.search) link.setAttribute("href", "app/" + location.search);
     })();
   </script>
 </body>

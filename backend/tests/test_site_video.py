@@ -146,28 +146,25 @@ class Manifest(unittest.TestCase):
         self.assertEqual(len(used), len(set(used)), "samma klipp i två scener")
 
 
-class LockedLandingPage(unittest.TestCase):
-    """Matjakt är stängt för allmänheten (2026-09-01): roten är en låsskärm.
-    Marknadssidan med presentation/video ligger kvar i git-historiken och
-    återinförs när produkten öppnas."""
+class PublicLandingPage(unittest.TestCase):
+    """Roten är en enkel publik landning som öppnar appen (låset avvecklat
+    2026-09-06). Marknadssidan med presentation/video ligger kvar i
+    git-historiken."""
 
     def _index(self):
         return (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
 
-    def test_the_lock_screen_reveals_nothing_about_the_product(self):
-        index = self._index().lower()
-        for leak in ("recept", "butik", "premium", "pris", "vecka", "handla",
-                     "inköpslista", "spara pengar", "screenshots", "site-film"):
-            self.assertNotIn(leak, index, f"låsskärmen läcker: {leak!r}")
-
-    def test_the_lock_screen_has_form_and_noindex_but_no_secret(self):
+    def test_the_landing_page_opens_the_app_and_keeps_deep_links(self):
+        """Låset är avvecklat: landningen är publik, länkar in i appen och
+        bär query-strängen (?verify=, ?reset=, ?invite=) vidare."""
         index = self._index()
-        self.assertIn('name="robots" content="noindex', index)
-        for field in ('id="user"', 'id="code"', 'type="password"', "/api/gate/login"):
-            self.assertIn(field, index)
-        # Verifieringen är serverns - sidan får inte bära något att jämföra
-        # mot, inte ens användarnamnet.
-        self.assertNotIn("adam", index.lower())
+        self.assertIn('href="app/"', index)
+        self.assertIn('"app/" + location.search', index)
+        self.assertNotIn("noindex", index)
+        for gone in ('id="code"', 'type="password"', "/api/gate/login", "matjakt-gate"):
+            self.assertNotIn(gone, index)
+        self.assertIn("integritetspolicy.html", index)
+        self.assertIn("anvandarvillkor.html", index)
 
 
 if __name__ == "__main__":

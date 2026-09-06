@@ -509,6 +509,7 @@ class ApiServerHttpTest(unittest.TestCase):
 
     def _premium_token(self):
         email = f"user-{uuid.uuid4().hex}@example.com"
+        ratelimit.clear_on_success("register", "127.0.0.1")   # 5 konton/timme per IP - sviten delar en
         _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
         token = payload["token"]
         self.post("/api/auth/redeem", {"code": "hemlig-kod"}, token=token)
@@ -1737,21 +1738,18 @@ class AuthHttpTest(unittest.TestCase):
         api_server.ACCOUNT_STORE.set_stripe_customer_id(user_id, customer_id)
         return token
 
-    def test_webhook_passes_the_dev_gate(self):
-        """Utvecklingslåset får aldrig stoppa Stripe - webhooken bär sin egen
-        HMAC-signatur. Utan undantaget aktiverades Premium aldrig i prod."""
-        original_secret, original_gate = api_server.STRIPE_WEBHOOK_SECRET, api_server.GATE_ENABLED
+    def test_webhook_needs_no_token_but_its_signature(self):
+        """Stripes webhook bär sin egen HMAC-signatur - ingen annan token."""
+        original_secret = api_server.STRIPE_WEBHOOK_SECRET
         api_server.STRIPE_WEBHOOK_SECRET = "whsec_test"
         try:
-            token = self._customer("cus_gate")   # registreras innan låset slås på
-            api_server.GATE_ENABLED = True
+            token = self._customer("cus_gate")
             status, payload = self._post_webhook(self._subscription_event("evt_gate_1", int(time.time()), "active", customer="cus_gate"))
             self.assertEqual(status, 200, payload)
-            api_server.GATE_ENABLED = original_gate
             status, payload = self.get("/api/auth/me", token=token)
             self.assertTrue(payload["user"]["premium"])
         finally:
-            api_server.STRIPE_WEBHOOK_SECRET, api_server.GATE_ENABLED = original_secret, original_gate
+            api_server.STRIPE_WEBHOOK_SECRET = original_secret
 
     def test_webhook_is_idempotent_and_ignores_older_events(self):
         original_secret = api_server.STRIPE_WEBHOOK_SECRET
@@ -2529,6 +2527,83 @@ class AuthHttpTest(unittest.TestCase):
         gate, _ = api_server._pricing_audit_gate(result)
         self.assertEqual(gate, "INGEN DATA")
 
+    # ---- Öppen app: konsumentvägar utan token, riktig säkerhet kvar ----
+    def _open(self, method, path, payload=None, headers=None):
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        try:
+            body = json.dumps(payload).encode("utf-8") if payload is not None else None
+            base = {"Content-Type": "application/json"} if body is not None else {}
+            base.update(headers or {})
+            conn.request(method, path, body=body, headers=base)
+            response = conn.getresponse()
+            raw = response.read()
+            return response.status, dict(response.getheaders()), (json.loads(raw) if raw else None)
+        finally:
+            conn.close()
+
+    def test_consumer_paths_are_open_without_any_token(self):
+        """Låset är avvecklat: recept, butiker, prissättning, entitlements och
+        health svarar utan gate-token. Native-appen (capacitor://localhost)
+        har ingen låsskärm att skaffa en token ifrån."""
+        for path in ("/api/health", "/api/recipes?limit=1", "/api/recipes/shelves?perShelf=1", "/api/entitlements",
+                     "/api/grocery/status"):
+            status, _, payload = self._open("GET", path)
+            self.assertEqual(status, 200, (path, payload))
+            self.assertFalse((payload or {}).get("gate"), path)
+        status, _, payload = self._open("POST", "/api/pricing/week", {"items": [{"name": "Ris", "amount": 500, "unit": "g"}]})
+        self.assertIn(status, (200, 503), payload)   # 503 = ingen prisdata i sviten, aldrig 401
+        self.assertNotEqual(status, 401)
+        self.assertFalse(self.get("/api/health")[1]["gate"])
+
+    def test_removing_the_gate_removed_no_real_security(self):
+        """Konto- och hushållsdata kräver session, admin kräver token (enhetlig
+        404), partner kräver nyckel, webhooken sin signatur."""
+        for path in ("/api/auth/me", "/api/account/state", "/api/household/me"):
+            status, _, payload = self._open("GET", path)
+            self.assertEqual(status, 401, (path, payload))
+        status, _, _ = self._open("POST", "/api/account/state", {"budget": 1})
+        self.assertEqual(status, 401)
+        status, _, _ = self._open("POST", "/api/household/create", {"name": "Familjen"})
+        self.assertEqual(status, 401)
+        for path in ("/api/admin/stripe-check", "/api/admin/pricing-audit", "/api/admin/backup-download"):
+            status, _, _ = self._open("GET" if path.endswith(("stripe-check", "backup-download")) else "POST", path,
+                                     None if path.endswith(("stripe-check", "backup-download")) else {})
+            self.assertEqual(status, 404, path)
+        status, _, _ = self._open("POST", "/api/admin/pricing-audit", {}, {"X-Admin-Token": "fel-token"})
+        self.assertEqual(status, 404)
+        status, _, payload = self._open("POST", "/api/partner/feed", {"storeId": 1, "rows": []})
+        self.assertEqual(status, 401, payload)
+        status, _, _ = self._open("POST", "/api/billing/webhook", {"type": "x"})
+        self.assertEqual(status, 400)
+        self.assertNotIn("X-Gate-Token", self._open("OPTIONS", "/api/recipes")[1].get("Access-Control-Allow-Headers", ""))
+
+    def test_live_prices_per_item_are_premium_on_the_server(self):
+        """Free får inte hämta per-vara-priser från butikssajterna: 403 med
+        lås - också utan att UI:t frågar. Det stänger både paywall-läckan
+        (låst kedjas priser radvis) och 429-stormen (tjugo skrapningar per
+        veckoflik)."""
+        body = {"butik": "Willys", "zip": "80252", "varor": ["Mjölk", "Ris"], "primatOnly": True}
+        status, _, payload = self._open("POST", "/api/products/batch", body)
+        self.assertEqual(status, 403, payload)
+        self.assertTrue(payload["locked"])
+        self.assertEqual(payload["feature"], "live_prices")
+        email = self._email()
+        _, reg = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        token = reg["token"]
+        status, _, payload = self._open("POST", "/api/products/batch", body, {"Authorization": f"Bearer {token}"})
+        self.assertEqual(status, 403, payload)                    # inloggad men Free
+        self.post("/api/auth/redeem", {"code": "hemlig-kod"}, token=token)
+        original_fetch_from_primat = api_server.fetch_from_primat
+        api_server.fetch_from_primat = lambda chain, query, zip_code, store_key=None: []   # aldrig riktiga anrop
+        try:
+            status, _, payload = self._open("POST", "/api/products/batch", body, {"Authorization": f"Bearer {token}"})
+        finally:
+            api_server.fetch_from_primat = original_fetch_from_primat
+            api_server.PRICE_CACHE.clear()
+        self.assertEqual(status, 200, payload)                    # Premium: svarar (tomma träffar utan data)
+        self.assertEqual(payload["butik"], "Willys")
+        self.assertEqual(set(payload["produkter"]), {"Mjölk", "Ris"})
+
     def test_redeem_premium_with_correct_code(self):
         email = self._email()
         _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
@@ -2801,134 +2876,6 @@ class NearbyStoresTest(unittest.TestCase):
         self.assertEqual(first, second)
 
 
-class DevelopmentGateTest(unittest.TestCase):
-    """Utvecklingslåset: ingen data utan godkänd inloggning, verifiering
-    endast server-side, och admin-token passerar."""
-
-    def setUp(self):
-        self._enabled = api_server.GATE_ENABLED
-        self._code = api_server.PREMIUM_CODE
-        api_server.GATE_ENABLED = True
-        api_server.PREMIUM_CODE = "hemlig-kod"
-
-    def tearDown(self):
-        api_server.GATE_ENABLED = self._enabled
-        api_server.PREMIUM_CODE = self._code
-
-    def _handler(self, headers=None):
-        handler = api_server.ApiHandler.__new__(api_server.ApiHandler)
-        handler.headers = headers or {}
-        handler.sent = []
-        handler.send_json = lambda status, payload, **kw: handler.sent.append((status, payload))
-        return handler
-
-    def _parsed(self, path):
-        from urllib.parse import urlparse
-        return urlparse(path)
-
-    def test_data_endpoints_are_blocked_without_token(self):
-        handler = self._handler()
-        self.assertTrue(handler._gate_blocked(self._parsed("/api/recipes")))
-        self.assertEqual(handler.sent[0][0], 401)
-        self.assertTrue(handler.sent[0][1].get("gate"))
-
-    def test_gate_login_and_health_stay_open(self):
-        handler = self._handler()
-        self.assertFalse(handler._gate_blocked(self._parsed("/api/gate/login")))
-        self.assertFalse(handler._gate_blocked(self._parsed("/api/health")))
-
-    def test_valid_token_passes(self):
-        token = api_server._gate_sign(int(api_server.time.time()) + 3600)
-        handler = self._handler({"X-Gate-Token": token})
-        self.assertFalse(handler._gate_blocked(self._parsed("/api/recipes")))
-
-    def test_expired_and_forged_tokens_are_refused(self):
-        expired = api_server._gate_sign(int(api_server.time.time()) - 10)
-        self.assertTrue(self._handler({"X-Gate-Token": expired})._gate_blocked(self._parsed("/api/recipes")))
-        forged = api_server._gate_sign(int(api_server.time.time()) + 3600)[:-4] + "beef"
-        self.assertTrue(self._handler({"X-Gate-Token": forged})._gate_blocked(self._parsed("/api/recipes")))
-
-    def test_admin_token_passes_without_gate_token(self):
-        original = api_server.ADMIN_TOKEN
-        api_server.ADMIN_TOKEN = "admin-hemlis"
-        try:
-            handler = self._handler({"X-Admin-Token": "admin-hemlis"})
-            self.assertFalse(handler._gate_blocked(self._parsed("/api/grocery/status")))
-        finally:
-            api_server.ADMIN_TOKEN = original
-
-    def test_login_requires_exact_username_and_code(self):
-        handler = self._handler()
-        handler._rate_limit = lambda *a: False
-        handler._client_ip = lambda: "1.2.3.4"
-        handler._handle_gate_login({"username": "  adam   FROM ", "code": "hemlig-kod"})
-        status, payload = handler.sent[-1]
-        self.assertEqual(status, 200)
-        self.assertTrue(api_server.gate_token_valid(payload["gateToken"]))
-        for bad in ({"username": "Adam From", "code": "fel"},
-                    {"username": "Eva From", "code": "hemlig-kod"}, {}):
-            handler.sent.clear()
-            handler._handle_gate_login(bad)
-            self.assertEqual(handler.sent[-1][0], 401)
-
-    def test_unset_code_keeps_the_gate_shut(self):
-        api_server.PREMIUM_CODE = ""
-        handler = self._handler()
-        handler._rate_limit = lambda *a: False
-        handler._client_ip = lambda: "1.2.3.4"
-        handler._handle_gate_login({"username": "Adam From", "code": ""})
-        # Stängt förblir det - men med rätt användarnamn får ägaren en
-        # diagnos (503) i stället för ett olösbart "fel kod".
-        self.assertEqual(handler.sent[-1][0], 503)
-        self.assertNotIn("gateToken", handler.sent[-1][1])
-
-
-class GateUnsetCodeDiagnosis(unittest.TestCase):
-    """Rätt användarnamn mot en server utan konfigurerad kod ska säga VAD som
-    är fel - annars är "Fel användarnamn eller kod" olösbart för ägaren."""
-
-    def _handler(self):
-        handler = api_server.ApiHandler.__new__(api_server.ApiHandler)
-        handler.headers = {}
-        handler.sent = []
-        handler.send_json = lambda status, payload, **kw: handler.sent.append((status, payload))
-        handler._rate_limit = lambda *a: False
-        handler._client_ip = lambda: "1.2.3.4"
-        return handler
-
-    def test_right_username_no_code_gets_the_diagnosis(self):
-        original = api_server.PREMIUM_CODE
-        api_server.PREMIUM_CODE = ""
-        try:
-            handler = self._handler()
-            handler._handle_gate_login({"username": "Adam From", "code": "vad-som-helst"})
-            status, payload = handler.sent[-1]
-            self.assertEqual(status, 503)
-            self.assertIn("MATJAKT_PREMIUM_CODE", payload["error"])
-        finally:
-            api_server.PREMIUM_CODE = original
-
-    def test_wrong_username_never_gets_the_diagnosis(self):
-        original = api_server.PREMIUM_CODE
-        api_server.PREMIUM_CODE = ""
-        try:
-            handler = self._handler()
-            handler._handle_gate_login({"username": "någon annan", "code": "x"})
-            self.assertEqual(handler.sent[-1][0], 401)
-        finally:
-            api_server.PREMIUM_CODE = original
-
-    def test_surrounding_whitespace_in_env_or_input_is_forgiven(self):
-        original = api_server.PREMIUM_CODE
-        api_server.PREMIUM_CODE = "  koden-med-luft \n"
-        try:
-            handler = self._handler()
-            handler._handle_gate_login({"username": "Adam From", "code": "koden-med-luft  "})
-            status, payload = handler.sent[-1]
-            self.assertEqual(status, 200)
-            self.assertIn("gateToken", payload)
-        finally:
-            api_server.PREMIUM_CODE = original
 
 
 class RequestBodyLimits(unittest.TestCase):
@@ -2996,3 +2943,67 @@ class FeedbackAndTestResultsTest(unittest.TestCase):
             self.assertIsInstance(payload["feedback"], list)
         finally:
             api_server.ADMIN_TOKEN = original
+
+class CorsForNativeTest(unittest.TestCase):
+    """Native-appen kör från capacitor://localhost. Bara uttryckligen betrodda
+    origins ekas; okända får standard-origin (aldrig *), och inga
+    credentials-headers - appen bär bearer-token, inte kakor."""
+
+    NATIVE = "capacitor://localhost"
+
+    @classmethod
+    def setUpClass(cls):
+        cls._saved = (api_server.ALLOWED_ORIGINS, api_server.ALLOWED_ORIGIN)
+        api_server.ALLOWED_ORIGINS = ("https://matjakt.store", cls.NATIVE)
+        api_server.ALLOWED_ORIGIN = "https://matjakt.store"
+        cls.server = ThreadingHTTPServer(("127.0.0.1", 0), api_server.ApiHandler)
+        cls.port = cls.server.server_address[1]
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown(); cls.server.server_close(); cls.thread.join(timeout=5)
+        api_server.ALLOWED_ORIGINS, api_server.ALLOWED_ORIGIN = cls._saved
+
+    def _request(self, method, path, origin, payload=None, headers=None):
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        try:
+            body = json.dumps(payload).encode("utf-8") if payload is not None else None
+            base = {"Origin": origin}
+            if body is not None:
+                base["Content-Type"] = "application/json"
+            base.update(headers or {})
+            conn.request(method, path, body=body, headers=base)
+            response = conn.getresponse(); response.read()
+            return response.status, dict(response.getheaders())
+        finally:
+            conn.close()
+
+    def test_native_origin_is_echoed_on_every_consumer_and_account_path(self):
+        ratelimit.reset()
+        paths = [("GET", "/api/recipes?limit=1", None), ("GET", "/api/entitlements", None),
+                 ("POST", "/api/auth/login", {"email": "x@example.com", "password": "fel"}),
+                 ("GET", "/api/auth/me", None), ("GET", "/api/account/state", None),
+                 ("POST", "/api/pricing/week", {"items": [{"name": "Ris", "amount": 100, "unit": "g"}]}),
+                 ("POST", "/api/products/batch", {"butik": "Willys", "zip": "80252", "varor": ["Ris"], "primatOnly": True}),
+                 ("GET", "/api/household/me", None), ("GET", "/api/stores?zip=8025", None)]
+        for method, path, payload in paths:
+            status, headers = self._request(method, path, self.NATIVE, payload)
+            self.assertEqual(headers.get("Access-Control-Allow-Origin"), self.NATIVE, (path, status))
+            self.assertNotIn("Access-Control-Allow-Credentials", headers, path)
+            self.assertIn("Origin", headers.get("Vary", ""), path)
+
+    def test_preflight_from_native_is_answered(self):
+        status, headers = self._request("OPTIONS", "/api/auth/login", self.NATIVE)
+        self.assertEqual(status, 204)
+        self.assertEqual(headers.get("Access-Control-Allow-Origin"), self.NATIVE)
+        self.assertIn("POST", headers.get("Access-Control-Allow-Methods", ""))
+        self.assertIn("Authorization", headers.get("Access-Control-Allow-Headers", ""))
+
+    def test_unknown_origins_never_get_echoed_or_wildcarded(self):
+        for origin in ("https://evil.example", "capacitor://evil", "null", "https://matjakt.store.evil.example"):
+            status, headers = self._request("GET", "/api/recipes?limit=1", origin)
+            self.assertEqual(headers.get("Access-Control-Allow-Origin"), "https://matjakt.store", origin)
+            self.assertNotEqual(headers.get("Access-Control-Allow-Origin"), "*")
+

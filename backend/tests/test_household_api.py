@@ -555,11 +555,11 @@ class HouseholdSharesTheApiHardeningTest(HouseholdApiTest):
         finally:
             api_server.HOUSEHOLD_STORE.household_id_for_user = original
 
-    def test_household_paths_are_behind_the_development_gate(self):
-        """Låset gäller hela /api/ - hushållet får ingen egen väg förbi."""
-        self.assertTrue(all(not "/api/household".startswith(prefix)
-                            for prefix in api_server.ApiHandler.GATE_EXEMPT),
-                        "hushållsvägar får inte stå i GATE_EXEMPT")
+    def test_household_paths_need_a_session_now_that_the_gate_is_gone(self):
+        """Låset är avvecklat - hushållets enda dörr är användarsessionen."""
+        for path in ("/api/household/me", "/api/household/sync", "/api/household/notifications"):
+            status, payload = self.get(path, None)
+            self.assertEqual(status, 401, (path, payload))
 
 
 class NotificationApiTest(HouseholdApiTest):

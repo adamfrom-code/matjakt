@@ -115,42 +115,12 @@ CAMPAIGN_SCAN_INGREDIENTS = ["Kycklingfilé", "Kycklinglårfilé", "Köttfärs",
 GEOCODE_CACHE_TTL_SECONDS = 86400
 PREMIUM_CODE = os.environ.get("MATJAKT_PREMIUM_CODE", "")
 
-# =============================================================================
-# UTVECKLINGSLÅSET. Matjakt är dold för allmänheten tills vidare: varje
-# data-endpoint kräver en gate-token som bara delas ut mot rätt användarnamn
-# och samma kod som låser upp Premium (MATJAKT_PREMIUM_CODE - miljövariabel,
-# aldrig i repo eller frontend). GitHub Pages kan inte skydda statiska filer,
-# så skalet är hämtbart - men utan godkänd inloggning svarar servern inte
-# med någon data alls, och appen är ett tomt skal.
-#
-# På av-läget: lokal utveckling och testsviten kör utan lås. Render sätter
-# alltid env-variabeln RENDER, så produktionen låser sig själv utan manuell
-# konfiguration; MATJAKT_GATE=0/1 finns som uttrycklig override åt båda håll.
-_gate_env = os.environ.get("MATJAKT_GATE", "").strip()
-GATE_ENABLED = _gate_env == "1" if _gate_env in ("0", "1") else bool(os.environ.get("RENDER"))
-GATE_USERNAME = "adam from"
-GATE_TOKEN_TTL_SECONDS = 30 * 24 * 3600
-# Härledd, inte lagrad: byts Premium-koden eller admin-token roteras alla
-# utdelade gate-tokens automatiskt.
-def _gate_secret() -> bytes:
-    return hashlib.sha256(f"matjakt-gate:{PREMIUM_CODE}:{ADMIN_TOKEN}".encode("utf-8")).digest()
-
-
-def _gate_sign(expiry: int) -> str:
-    signature = hmac.new(_gate_secret(), f"gate:{expiry}".encode(), hashlib.sha256).hexdigest()
-    return f"{expiry}.{signature}"
-
-
-def gate_token_valid(token: str) -> bool:
-    expiry_text, _, signature = (token or "").partition(".")
-    try:
-        expiry = int(expiry_text)
-    except ValueError:
-        return False
-    if expiry < time.time():
-        return False
-    expected = hmac.new(_gate_secret(), f"gate:{expiry}".encode(), hashlib.sha256).hexdigest()
-    return hmac.compare_digest(signature, expected)
+# UTVECKLINGSLÅSET ÄR AVVECKLAT (2026-09-06). Matjakt är öppet för
+# allmänheten: konsumentvägarna (recept, butiker, prissättning) kräver ingen
+# token, konto- och hushållsdata kräver användarsession, admin kräver
+# admin-token, partner partnernyckel och Stripes webhook sin signatur.
+# Native-appen (capacitor://localhost) kunde annars hamna i ett UI utan
+# någon väg att skaffa en gate-token. /api/health -> gate: false.
 # Gates GET /api/admin/primat-status (current Primat quota usage) - a
 # separate, unset-by-default secret, not tied to any user account (this app
 # has no admin-role concept on accounts, and building one just for this one
@@ -1622,10 +1592,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
     # policy as a meta tag, because GitHub Pages serves it without any
     # headers of its own - but frame-ancestors and X-Frame-Options only work
     # as real headers, so they live here.
-    # script-src bär hashen för index.html:s enda inline-skript (låsskärmens
-    # omdirigering) - utan den blockerar headern skriptet när servern själv
-    # serverar appen. test_frontend_contract räknar om hashen.
-    CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self' https://plausible.io https://cloud.umami.is 'sha256-4hCDEyWAtdpoYahtQwxdKcdT8sn6uJrdzLY6j1S582Q='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com https://plausible.io https://cloud.umami.is; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+    # Inga inline-skript i appen (låsskriptet är borta), så script-src behöver
+    # ingen hash. test_frontend_contract låser det.
+    CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self' https://plausible.io https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com https://plausible.io https://cloud.umami.is; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 
     def send_response(self, *args, **kwargs):
         # One handler instance serves MANY requests over a keep-alive
@@ -1670,7 +1639,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", self._cors_origin())
         self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Gate-Token")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Token, X-Partner-Key")
         self.send_header("Access-Control-Max-Age", "600")
         self.end_headers()
 
@@ -1934,38 +1903,6 @@ class ApiHandler(SimpleHTTPRequestHandler):
         self.send_json(200, {"received": True, **({"duplicate": True} if outcome == "duplicate" else {}),
                              **({"outcome": outcome} if outcome not in ("applied", "duplicate") else {})})
 
-    # Vägar som fungerar utan gate-token. Login förstås; health för Renders
-    # egen övervakning; analytics-beacon (räknar bara namngivna events).
-    # Stripes webhook har ingen gate-token - den bär sin egen HMAC-signatur.
-    # Utan undantaget svarar utvecklingslåset 401 och Premium aktiveras aldrig.
-    GATE_EXEMPT = ("/api/gate/", "/api/health", "/api/analytics/event", "/api/billing/webhook",
-                   "/api/mail/unsubscribe")
-
-    def _gate_blocked(self, parsed) -> bool:
-        """True när utvecklingslåset stoppar denna begäran (svaret är då
-        redan skickat). Admin-token är en starkare hemlighet och passerar."""
-        if not GATE_ENABLED or not parsed.path.startswith("/api/"):
-            return False
-        if any(parsed.path.startswith(prefix) for prefix in self.GATE_EXEMPT):
-            return False
-        # Admin-token öppnar låset - men bara inom samma gissningsbudget som
-        # admin-vägarna (räknas enbart när en token faktiskt skickas med, så
-        # vanliga användare utan header rör aldrig räknaren). Utan detta gick
-        # hemligheten att gissa obegränsat mot vilken gated väg som helst.
-        presented_admin = self.headers.get("X-Admin-Token", "")
-        if presented_admin:
-            try:
-                ratelimit.check("admin", self._client_ip())
-            except ratelimit.RateLimited:
-                presented_admin = ""  # budgeten slut: som om ingen token skickats
-            if presented_admin and ADMIN_TOKEN and hmac.compare_digest(presented_admin, ADMIN_TOKEN):
-                ratelimit.clear_on_success("admin", self._client_ip())
-                return False
-        if gate_token_valid(self.headers.get("X-Gate-Token", "")):
-            return False
-        self.send_json(401, {"error": "Matjakt är inte öppet ännu", "gate": True})
-        return True
-
     def do_GET(self):
         self._guarded(self._do_get)
 
@@ -2013,19 +1950,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
     def _do_get(self):
         self._json_response = False
         parsed = urlparse(self.path)
-        if self._gate_blocked(parsed):
-            return
-        if parsed.path == "/api/gate/check":
-            self.send_json(200, {"ok": True} if gate_token_valid(self.headers.get("X-Gate-Token", ""))
-                           else {"ok": False})
-            return
         if parsed.path.startswith("/api/household"):
             self._handle_household("GET", parsed, None)
             return
         if parsed.path == "/api/health":
             # recipeCount: ett ensamt tal säger inget om produkten men låter
-            # driftverifiering bakom utvecklingslåset se att en deploy
-            # faktiskt synkade receptbanken.
+            # driftverifiering se att en deploy faktiskt synkade receptbanken.
             # platform: aggregerade driftsiffror (inga priser, inga
             # användare) så den nationella prisplattformens tillstånd kan
             # verifieras i produktion utan hemligheter.
@@ -2043,9 +1973,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
         # Vilken commit som kör (Render sätter RENDER_GIT_COMMIT) - beviset
         # för att en röd CI INTE deployade.
         "commit": (os.environ.get("RENDER_GIT_COMMIT") or "")[:12] or None,
-        # Utvecklingslåset: true = appen är stängd för allmänheten (alla
-        # datavägar svarar 401). Måste vara false vid publik release.
-        "gate": GATE_ENABLED,
+        # Utvecklingslåset är avvecklat - fältet finns kvar så driftkontroller
+        # som frågar "är appen öppen?" får ett entydigt svar.
+        "gate": False,
         # Avsändardomänen (aldrig adressen) så "rätt From-domän" kan
         # kontrolleras utan mejllåda.
         "mailFrom": _mail_from_domain(),
@@ -2452,45 +2382,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
             logger.exception("Product scrape failed for %s/%s", chain, query)
             self.send_json(502, {"error": "Butikens webbsida kunde inte läsas"})
 
-    def _handle_gate_login(self, payload):
-        """Byter användarnamn + Premium-koden mot en signerad gate-token.
-
-        Verifieringen sker HÄR och ingen annanstans - frontenden bär aldrig
-        vare sig koden eller något att jämföra mot. Utan konfigurerad kod
-        förblir låset stängt i stället för att falla öppet."""
-        if self._rate_limit("gate", self._client_ip()):
-            return
-        username = " ".join(str((payload or {}).get("username") or "").split()).casefold()
-        # strip() på båda sidor: en miljövariabel inklistrad i en dashboard
-        # bär gärna ett osynligt radslut eller mellanslag med sig, och ett
-        # lösenord som "nästan stämmer" på grund av det är olösbart utifrån.
-        code = str((payload or {}).get("code") or "").strip()
-        expected_code = PREMIUM_CODE.strip()
-        username_ok = hmac.compare_digest(username.encode("utf-8"), GATE_USERNAME.encode("utf-8"))
-        if username_ok and not expected_code:
-            # Rätt användarnamn men ingen kod konfigurerad: säg det som det
-            # är. Det hjälper bara den som ändå inte kan släppas in - utan
-            # konfigurerad kod finns ingenting att gissa sig till.
-            logger.error("Gate-inloggning: MATJAKT_PREMIUM_CODE är inte satt i miljön")
-            self.send_json(503, {"error": "Ingen kod är konfigurerad på servern. "
-                                          "Sätt MATJAKT_PREMIUM_CODE i Render och försök igen."})
-            return
-        # Versaler förlåts: det här är ägarens egen nyckel till förhands-
-        # visningen, inte en kod med krav på exakt skiftläge - "Matjakt2026"
-        # och "matjakt2026" är samma avsikt.
-        code_ok = bool(expected_code) and hmac.compare_digest(
-            code.casefold().encode("utf-8"), expected_code.casefold().encode("utf-8"))
-        if not (username_ok and code_ok):
-            self.send_json(401, {"error": "Fel användarnamn eller kod"})
-            return
-        expiry = int(time.time()) + GATE_TOKEN_TTL_SECONDS
-        self.send_json(200, {"gateToken": _gate_sign(expiry), "expiresAt": expiry})
-
     def _do_post(self):
         self._json_response = False
         parsed = urlparse(self.path)
-        if self._gate_blocked(parsed):
-            return
         if parsed.path == "/api/billing/webhook":
             self._handle_stripe_webhook()
             return
@@ -2507,9 +2401,6 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if isinstance(error, json.JSONDecodeError) and error.msg == self._BAD_FRAMING:
                 self._abandon_body()
             self.send_json(400, {"error": "Ogiltig JSON"})
-            return
-        if parsed.path == "/api/gate/login":
-            self._handle_gate_login(payload)
             return
         if parsed.path.startswith("/api/household"):
             self._handle_household("POST", parsed, payload)

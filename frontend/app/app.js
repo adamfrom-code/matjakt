@@ -1,32 +1,3 @@
-// ---------------------------------------------------------------------------
-// UTVECKLINGSLÅSET. Servern kräver X-Gate-Token på varje data-anrop medan
-// Matjakt är stängt för allmänheten. En wrapper på fetch skickar token på
-// alla API-anrop så ingen enskild anropsplats kan glömmas; ett 401 med
-// gate-flaggan (utgången/ogiltig token) låser skärmen igen.
-(function () {
-  const gateToken = () => { try { return localStorage.getItem("matjakt-gate") || ""; } catch (e) { return ""; } };
-  const local = ["localhost", "127.0.0.1"].includes(location.hostname);
-  const lock = () => {
-    try { localStorage.removeItem("matjakt-gate"); } catch (e) {}
-    if (!local) location.replace("../");
-  };
-  const original = window.fetch.bind(window);
-  window.fetch = (resource, options = {}) => {
-    const url = typeof resource === "string" ? resource : resource?.url || "";
-    if (url.includes("/api/")) {
-      options = { ...options, headers: { ...(options.headers || {}), "X-Gate-Token": gateToken() } };
-      return original(resource, options).then(response => {
-        if (response.status === 401) {
-          response.clone().json().then(body => { if (body && body.gate) lock(); }).catch(() => {});
-        }
-        return response;
-      });
-    }
-    return original(resource, options);
-  };
-  window.__matjaktGateLock = lock;
-})();
-
 import { readStoredState, writeStoredState } from "./src/state/storage.js";
 import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
 import { createDebouncedSearch, filterRecipes, mergeRecipeResults } from "./src/services/recipe-search.js";
@@ -4725,10 +4696,9 @@ $("manageBillingBtn").addEventListener("click", async () => {
   try {
     await flushServerSync();
     const { url } = await openBillingPortal(state.authToken);
-    window.location.href = url;
+    openExternal(url);
   } catch (error) { $("portalError").textContent = error.message; }
 });
-$("gateLogoutBtn").addEventListener("click", () => window.__matjaktGateLock());
 $("logoutBtn").addEventListener("click", async () => {
   if (state.authToken) { try { await logoutRequest(state.authToken, state.pushDeviceToken || null); } catch { /* session redan ogiltig server-side, städa lokalt ändå */ } }
   state.authToken = null; state.user = null; storeToken(null);

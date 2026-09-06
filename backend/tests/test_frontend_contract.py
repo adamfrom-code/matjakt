@@ -50,23 +50,18 @@ class FrontendMirrorsBackend(unittest.TestCase):
             self.assertNotIn(char, html, f"emoji-ikon {char!r} i index.html")
 
 
-class InlineGateScriptHash(unittest.TestCase):
-    """index.html:s inline-låsskript måste vara tillåtet av serverns CSP-
-    header via sin sha256-hash - ändras skriptet måste hashen följa med,
-    annars blockeras omdirigeringen tyst."""
+class NoInlineScripts(unittest.TestCase):
+    """Låsskriptet är borta: app/index.html har inga inline-skript alls, så
+    CSP-headern behöver ingen hash och script-src är enbart 'self' (plus
+    statistikvärdarna som laddas som externa skript)."""
 
-    def test_csp_header_carries_the_current_inline_script_hash(self):
-        import base64
-        import hashlib
+    def test_app_shell_has_no_inline_script_and_csp_needs_no_hash(self):
         import re
         import api_server
         html = INDEX_HTML.read_text(encoding="utf-8")
-        scripts = re.findall(r"<script>(.*?)</script>", html, re.S)
-        self.assertEqual(len(scripts), 1, "exakt ett inline-skript (låset) är tillåtet")
-        digest = base64.b64encode(hashlib.sha256(scripts[0].encode("utf-8")).digest()).decode()
-        self.assertIn(f"'sha256-{digest}'", api_server.ApiHandler.CONTENT_SECURITY_POLICY)
-        # frame-ancestors verkar bara som header - i meta-taggen ger den
-        # bara ett konsolfel.
+        self.assertEqual(re.findall(r"<script>(.*?)</script>", html, re.S), [])
+        self.assertNotIn("sha256-", api_server.ApiHandler.CONTENT_SECURITY_POLICY)
+        self.assertNotIn("'unsafe-inline'", api_server.ApiHandler.CONTENT_SECURITY_POLICY.split("style-src")[0])
         meta = re.search(r'http-equiv="Content-Security-Policy" content="([^"]+)"', html).group(1)
         self.assertNotIn("frame-ancestors", meta)
         self.assertIn("frame-ancestors 'none'", api_server.ApiHandler.CONTENT_SECURITY_POLICY)

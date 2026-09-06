@@ -6,10 +6,8 @@ Testkonto för granskning: skapa ett i appen, eller ange här:
   E-post:    [FYLLS I AV ADAM - testkonto]
   Lösenord:  [FYLLS I AV ADAM]
 
-Utvecklingslås: om förhandsvisningslåset fortfarande är aktivt på servern
-när bygget skickas in, ange låsets inloggning här:
-  Användarnamn: [FYLLS I]   Kod: [FYLLS I - aldrig i repo]
-Rekommendation: stäng låset (MATJAKT_GATE=0 på Render) före inlämning.
+Inget förhandsvisningslås: appen och servern är öppna (utvecklingslåset
+avvecklades 2026-09-06). Granskaren kan använda appen direkt.
 
 Betalning: Premium säljs inte i iOS-appen i v1. Appen visar Free och låser
 upp Premium för konton som redan har det (köpt på webben). Inga köpknappar

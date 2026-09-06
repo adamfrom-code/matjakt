@@ -39,7 +39,7 @@
 
 **Native-drift.**
 - `<meta name="matjakt-api-url">` i `frontend/app/index.html` är tom ⇒ sätt `https://matjakt.onrender.com` före `cap sync` (webben körs same-origin, appen inte).
-- Utvecklingslåset (`GATE_ENABLED` på Render): antingen av vid release, eller dokumentera gate-inloggning för App Review i "Notes for reviewer".
+- Utvecklingslåset är avvecklat (2026-09-06): servern svarar `gate: false` och native-origin `capacitor://localhost` är CORS-betrodd - appen behöver ingen låsinloggning.
 - Typsnitten laddas från fonts.googleapis.com; bunta Bricolage Grotesque/Manrope lokalt så första start fungerar offline och CSP kan stängas ytterligare.
 
 ## Ikoner – not om källa
@@ -59,10 +59,10 @@
 | Punkt | Status | Var |
 |---|---|---|
 | App Store-metadata på svenska (namn, undertitel, beskrivning, nyckelord, kampanjtext, support-/integritets-URL) | ✅ klara att klistra in | `store/appstore/metadata/sv-SE/` |
-| Notes for App Review (inloggning, låset, betalning, plats, kontoradering) | ✅ mall - Adam fyller i testkonto | `store/appstore/metadata/review_notes.txt` |
+| Notes for App Review (inloggning, betalning, plats, kontoradering) | ✅ mall - Adam fyller i testkonto | `store/appstore/metadata/review_notes.txt` |
 | Juridiklänkar absoluta (`https://matjakt.store/...`) så de fungerar i native-webviewen | ✅ | `frontend/app/index.html` |
 | Kontoradering inifrån appen (Apple 5.1.1(v)) | ✅ finns: Konto → Radera konto, avslutar även Stripe-prenumerationen först | `api_server.py` `/api/auth/delete-account` |
 | Sign in with Apple | ej krav: appen har bara e-post + lösenord, ingen tredjepartsinloggning (riktlinje 4.8 gäller bara när tredjepartsinloggning erbjuds) | – |
 | Browser-E2E av hela konsumentresan i mobil viewport (390×844, touch) | ✅ `backend/tests/e2e/` | CI-jobb `e2e` |
 
-Kvar (kräver Mac/Adam): `npx cap add ios`, signering, skärmbilder, IAP-beslut (väg A rekommenderas för v1), juridiska platshållare i policy/villkor, låset av eller dokumenterat i review notes.
+Kvar (kräver Mac/Adam): `npx cap add ios`, signering, skärmbilder, IAP-beslut (väg A rekommenderas för v1), juridiska platshållare i policy/villkor.
