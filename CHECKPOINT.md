@@ -158,3 +158,67 @@ Oförändrat sedan master-auditen. Nytt frivilligt: `MATJAKT_LOG_FORMAT`
 - **Skarpt mejltest i produktion:** registrering → verifieringsmejl *Delivered* (Resend) → länk klickad → `emailVerified: true`; glömt lösenord → mejl *Delivered* → nytt lösenord → login 200, gammalt lösenord 401; okänd adress ger identiskt svar; `mail_send_failed` 0 efter domänverifieringen. **Första mejlet hamnade i skräpposten hos iCloud** (ny domän, DMARC nyss satt) - länkar i Skräp är avstängda i Apple Mail, flytta till inkorgen först.
 - **Öppet:** `POST /api/products/batch` → tätt 429-flöde från riktiga klienter (livepris-loopen); Loopia visar förfallen faktura för kontot (domänen!); låset (`MATJAKT_GATE=0`) vid lansering; juridik senare (Adams beslut).
 
+## Native + household + öppen app 2026-09-06/07 (natt)
+
+- **Utvecklingslåset avvecklat i kod** (`9c1898d`): inga GATE_*, inga `/api/gate/*`,
+  ingen fetch-wrapper, inget inline-låsskript (CSP utan hash). Kvar och testat:
+  konto/hushåll 401, admin 404 (även fel token), partner 401, webhook 400
+  (`test_removing_the_gate_removed_no_real_security`). Landningen är en enkel
+  "Öppna Matjakt"-sida som bär `?verify/?reset/?invite` vidare. Health: `gate: false`.
+- **CORS för native** (`CorsForNativeTest`): `capacitor://localhost` ekas på nio
+  vägar, okända origins får standard-origin, aldrig `*`, inga credentials.
+- **429-roten** (`476d119`): `/api/products/batch` var inte plan-gated → ny feature
+  `live_prices` (Free: nej), servern svarar 403. Klienten hämtar livepriser bara
+  för Premium, 5/20 varor per anrop, stopp + 60 s paus vid 429/403, inga
+  filialanrop för Free. E2E räknar anrop: Free 0, Premium ≤ 12.
+- **Riktig bugg bakom "flaky" bundle-E2E** (`9f5851c`): prisnyckeln saknade
+  planen → Free-maskat svar låg kvar efter checkout. Fixad i roten.
+- **Native-förberedelser** (`a3b5f0c`): `npm run build:native` → `dist/native`
+  med API-URL i metataggen, `webDir` = bygget, `@capacitor/app` + `@capacitor/browser`
+  (Stripe externt, appStateChange, appUrlOpen med bevarad query). Mac-kommandon
+  och simulatorkontroller i `docs/IOS_RELEASE.md`. **Ingen `ios/`-katalog kan
+  skapas på Windows** - simulatorn är Adams steg.
+- **Nätfel**: backoff 8 s→2 min på prissättning/kampanjer (ingen anropsloop),
+  utloggning bara vid 401 (oförändrat). Sju oanvända importer bort.
+- **CI**: frontend-jobbet och Pages-deployens testjobb kör `npm ci` (esbuild
+  behövs av `tests/build-native.test.js`); main var röd en körning (`a3b5f0c`),
+  grön igen från `6e422e5`.
+- **Verifierat i produktion (backend `6e422e5`)**: `gate: false`, recipes 200
+  utan token, account/household 401, admin 404 med och utan token, `/api/gate/check`
+  404, batch anonymt 403, CORS-eko för `capacitor://localhost`, preflight 204,
+  prisaudit GRÖN 4 596 kontroller / 99,7 %. Tester: backend 1117 (skipped 2),
+  node 106, E2E 4 resor mot källor och bundle; prod-DB-hashar oförändrade av
+  testkörningarna.
+- **Kvar/blockerare:** iOS-simulator och fysisk iPhone (Mac + Xcode, Apple-ID);
+  universella länkar kräver Team-ID; Stripe TEST; juridik parkerad (Adams beslut);
+  Loopias förfallna faktura (domänen!).
+
+## Granskningar och fixar samma natt (2026-09-07)
+
+- **P0 - kontodatabas i publikt repo:** `backend/data/backups/` (tre backupset,
+  tolv SQLite-filer inkl. `matjakt.db` med e-post + lösenordshashar + salt,
+  reset-token-hashar, synkad kontodata, fritextfeedback) var **spårad i git
+  sedan 2026-08-31** (.gitignore-regeln kom efter). Borttagen ur HEAD
+  (`1697d1f`), `.gitignore` breddad (`*.db`, `.env.*`), CI vägrar spårade
+  databasfiler. **Historiken är inte omskriven** - kräver Adams beslut
+  (force-push påverkar alla kloner/worktrees) och en bedömning av
+  anmälningsplikt (GDPR art. 33): 198 användarrader varav 11 adresser inte
+  ser ut som testkonton (räknat, inte listat).
+- **Hushållet (`ed69688`)**: fem fel ur granskningen fixade med tester -
+  "Har hemma" rör inte längre familjens skafferirad, raderingar når andra
+  telefonen (soft delete + gravstenar i delta), Ångra efter × och
+  "Återställ alla" går via servern, Ångra-race, 401 stoppar pollningen.
+  Öppet (P2): hushållsprofilernas allergier påverkar inte receptvalet
+  (produktbeslut - vems allergier gäller?), servern verifierar inte
+  klientens GTIN mot produktlagret, notiser konsumeras av första enheten.
+- **Säkerhet (`414835e`)**: delat lås på kontoanslutningen (analytics,
+  mail_log), socket-timeout mot Slowloris, lösenordsbyte dödar
+  reset-länk, hinkar på öppna vägar + billing, STARTTLS verifierar
+  certifikat, enhetstoken kräver ägarskap, secret_scan breddad, fyra
+  attribut escapade, safeHttpUrl på checkout-URL. Öppet (P1, kräver
+  beslut/större ändring): registreringen svarar olika för befintlig adress
+  (kontoenumeration, bromsad av 5/h), återställningens svarstid skiljer
+  (mejl skickas synkront), `admin.html` utan CSP-meta på Pages,
+  hushållslagrets läsvägar utan lås, `MAIL_SECRET` faller tillbaka på
+  admin-token.
+

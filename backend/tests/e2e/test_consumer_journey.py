@@ -217,6 +217,21 @@ class BrowserJourney(unittest.TestCase):
             cls.playwright.stop()
         cls.server.close()
 
+    def _pricing_diagnosis(self):
+        """Vad servern svarade på prissättningen (låsta kedjor, täckning) och
+        vad korten visar - för att skilja klientrace från serverdata."""
+        summary = []
+        for response in self.pricing_responses[-3:]:
+            try:
+                data = response.json()
+                summary.append({"status": response.status, "results": [
+                    {k: r.get(k) for k in ("chain", "locked", "comparable", "realPriceItems", "totalItems", "hasData")}
+                    for r in data.get("results", [])]})
+            except Exception as error:   # noqa: BLE001
+                summary.append({"status": response.status, "error": repr(error)})
+        cards = self.page.evaluate("() => document.querySelector('#storeCards')?.innerText || ''")
+        return f"pricing/week-svar={summary} kort={cards!r}"
+
     def setUp(self):
         ratelimit.reset()
         self.context = self.browser.new_context(viewport=MOBILE, locale="sv-SE", service_workers="block",
@@ -229,6 +244,11 @@ class BrowserJourney(unittest.TestCase):
         self.batch_requests = []
         self.page.on("request", lambda request: self.batch_requests.append(request.url)
                      if "/api/products/batch" in request.url else None)
+        # Diagnostik: varje svar från veckoprissättningen sparas så ett fel i
+        # butikskorten kan förklaras med vad servern faktiskt svarade.
+        self.pricing_responses = []
+        self.page.on("response", lambda response: self.pricing_responses.append(response)
+                     if "/api/pricing/week" in response.url else None)
         self.page.on("pageerror", lambda error: self.console_errors.append(str(error)))
         # Riktiga sidfel (undantag) och konsolfel - men inte nätverksmissar
         # för bilder/kampanjer: E2E:n körs utan internet, och en bild som
@@ -584,7 +604,10 @@ class BrowserJourney(unittest.TestCase):
             # (ny vecka + återställd vecka) och korten töms däremellan - vänta
             # in de TRE prissatta korten innan något annat asserteras, annars
             # passerar "inga lås" på en tom behållare (sett i CI).
-            expect(page.locator("#storeCards .store-card:not(.locked):not(.unavailable)")).to_have_count(3, timeout=30_000)
+            try:
+                expect(page.locator("#storeCards .store-card:not(.locked):not(.unavailable)")).to_have_count(3, timeout=30_000)
+            except AssertionError as error:
+                raise AssertionError(str(error) + " | DIAGNOS: " + self._pricing_diagnosis()) from None
             expect(page.locator("#shoppingCost")).not_to_contain_text("pris hämtas", timeout=30_000)
             expect(page.locator("#storeCards .store-card.locked")).to_have_count(0)
             expect(page.locator("#storeCards .store-card-badge")).to_have_count(1)     # exakt EN Billigast
