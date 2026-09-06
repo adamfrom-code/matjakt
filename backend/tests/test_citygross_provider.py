@@ -479,10 +479,15 @@ class CategoryBrowseTest(Base):
         self.assertEqual(len(ctx.exception.partial_products), 1)
 
 
-class NavigationFallsBackToStaticDepartments(unittest.TestCase):
+class NavigationFallsBackToStaticDepartments(Base):
     """Produktionens nattkörning föll tyst till termsökning när navigations-
     endpointen inte svarade - reserven är den statiska avdelningslistan,
-    eftersom PRODUKTendpointen bevisligen fungerar därifrån."""
+    eftersom PRODUKTendpointen bevisligen fungerar därifrån.
+
+    Ärver Base för tearDown:en. Utan den låg den patchade urlopen kvar
+    RESTEN AV SVITEN - klassen var den enda i filen som patchade utan att
+    städa, och nästa testfil som sparade "originalet" i sin setUp sparade
+    då den här fejken."""
 
     def test_unreachable_navigation_uses_static_departments(self):
         urls = []

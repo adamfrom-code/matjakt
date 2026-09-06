@@ -145,6 +145,28 @@ class OutboundCallsAreBlocked(unittest.TestCase):
     Testerna nedan importerar varje klient och kontrollerar att spärren
     ligger i anropsvägen. De ska falla den dag någon tar bort den."""
 
+    def setUp(self):
+        """Återställ den ÄKTA transporten under testet.
+
+        guard_outbound_http släpper medvetet förbi när urlopen redan är
+        utbytt - en mock kan inte nå nätet. Testerna här mäter motsatsen
+        (att en GLÖMD mock stoppas), och måste därför garantera att
+        transporten är den riktiga när de kör. Utan detta räckte det att ett
+        tidigare test lämnade kvar sin patch för att de skulle bli tysta
+        no-ops i stället för misslyckas - vilket också hände: en klass i
+        test_citygross_provider.py städade inte efter sig."""
+        import urllib.request
+        from services import data_guard as guard
+        self._patched = urllib.request.urlopen
+        urllib.request.urlopen = guard._REAL_URLOPEN
+        self.addCleanup(setattr, urllib.request, "urlopen", self._patched)
+
+    def test_the_real_transport_is_in_place_for_these_tests(self):
+        """Om den här faller mäter resten av klassen ingenting."""
+        import urllib.request
+        from services import data_guard as guard
+        self.assertIs(urllib.request.urlopen, guard._REAL_URLOPEN)
+
     def _assert_blocked(self, call, service_hint=""):
         with self.assertRaises(OutboundCallInTestError, msg=service_hint) as caught:
             call()
