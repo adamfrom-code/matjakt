@@ -56,7 +56,9 @@ from services.grocery.scheduler import SCHEDULER as GROCERY_SCHEDULER  # noqa: E
 from services.pricing import CHAIN_TO_PRIMAT, KeyValueCacheStore, OpenFoodFactsError, PRIMAT_ATTRIBUTION, PriceCacheStore, PrimatError, image_url_for_gtin, nearby_stores as primat_nearby_stores, primat_account_status, resolve_stores as primat_resolve_stores, search_products as primat_search_products, to_matjakt_product as primat_to_matjakt_product
 from services.recipe_providers import RecipeService, TheMealDbProvider
 
-logging.basicConfig(level=logging.INFO)
+from services.observability import (  # noqa: E402
+    METRICS, configure_logging, log_access, new_request_id, request_id_var)
+configure_logging()
 logger = logging.getLogger("matjakt.api")
 
 
@@ -422,6 +424,8 @@ DATA_DIR = Path(os.environ.get("MATJAKT_DATA_DIR") or (Path(__file__).resolve().
 # och innan matjakt.db/prices.db öppnas nedan - se services/data_guard.py.
 from services.data_guard import guard_database_path  # noqa: E402
 guard_database_path(DATA_DIR, purpose="datakatalogen")
+# Räknarna överlever omstart och delas av processer på samma disk.
+ratelimit.configure(DATA_DIR / "ratelimit.db")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 def _free_chain_for(week_result: dict) -> str | None:
@@ -1432,6 +1436,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        request_id = getattr(self, "_request_id", None)
+        if request_id:
+            self.send_header("X-Request-Id", request_id)
         self.send_header("Access-Control-Allow-Origin", self._cors_origin())
         self.send_header("Vary", "Origin")
         self.send_header("Cache-Control", f"public, max-age={cache_seconds}" if cache_seconds else "no-store")
@@ -1450,6 +1457,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
         # response begins - otherwise only the first request on each
         # connection got the security headers.
         self._security_headers_sent = False
+        if args:
+            self._last_status = args[0]
         super().send_response(*args, **kwargs)
 
     def end_headers(self):
@@ -1584,6 +1593,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             event = parse_event(raw)
         except StripeError as error:
             logger.warning("Rejected Stripe webhook: %s", error)
+            METRICS.incr("stripe_webhook_rejected")
             self.send_json(400, {"error": str(error)})
             return
         except json.JSONDecodeError:
@@ -1631,6 +1641,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # Inget är sparat (transaktionen rullades tillbaka). 500 gör att
             # Stripe försöker igen i stället för att händelsen tyst tappas.
             logger.exception("Stripe-webhook %s (%s) kunde inte behandlas", event_id, event_type)
+            METRICS.incr("stripe_webhook_errors")
             self.send_json(500, {"error": "Kunde inte behandla händelsen just nu"})
             return
         if outcome != "applied":
@@ -1667,18 +1678,40 @@ class ApiHandler(SimpleHTTPRequestHandler):
     def _guarded(self, handler):
         """Sista skyddsnätet för varje route: ett oväntat undantag blir ett
         kontrollerat 500 på enkel svenska - aldrig en stängd anslutning
-        eller en traceback till klienten. Loggen får hela stacken."""
+        eller en traceback till klienten. Loggen får hela stacken.
+
+        Här sätts också begärans request-id (ekas i X-Request-Id och följer
+        varje loggrad) och accessloggen skrivs med status och svarstid."""
+        request_id = new_request_id(self.headers.get("X-Request-Id"))
+        token = request_id_var.set(request_id)
+        self._request_id = request_id
+        self._last_status = None
+        started = time.perf_counter()
         try:
             handler()
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass   # klienten försvann - ingen att svara
         except Exception:
             logger.exception("Ohanterat fel i %s %s", self.command, self.path.split("?")[0][:120])
+            METRICS.incr("unhandled_exceptions")
             if not getattr(self, "_json_response", False):
                 try:
                     self.send_json(500, {"error": "Något gick fel. Försök igen om en stund."})
                 except OSError:
                     pass
+        finally:
+            try:
+                log_access(method=self.command or "-", path=self.path.split("?")[0],
+                           status=self._last_status or 0,
+                           duration_ms=(time.perf_counter() - started) * 1000,
+                           client_ip=self._client_ip(), request_id=request_id)
+            finally:
+                request_id_var.reset(token)
+
+    def log_message(self, format, *args):
+        """Stdlib:s accessrad till stderr ersätts av log_access ovan (JSON,
+        request-id, maskerad IP). Tyst här."""
+        return
 
     def _do_get(self):
         self._json_response = False
@@ -1702,6 +1735,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 logger.exception("Kunde inte läsa plattformsstatus")
                 platform = None
             self.send_json(200, {"ok": True, "stores": sorted(STORE_CONFIG), "mail": mail_is_configured(MAIL_CONFIG),
+        # Driftsräknare sedan senaste start: begäranden, 4xx/5xx, långsamma
+        # svar, misslyckade inloggningar, avvisade webhookar, mejlfel,
+        # prisgate-stopp. Siffror - aldrig innehåll.
+        "metrics": METRICS.snapshot(),
+        "rateLimitPersistent": ratelimit.persistent(),
         # Stripe-läge utan hemligheter: bara om nyckeln är en TEST- eller
         # LIVE-nyckel (prefix) och vilka delar som är satta. Svarar på
         # "används inga live-nycklar?" utan att någonsin visa nyckeln.
@@ -2158,6 +2196,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     logger.info("Verification email skipped for %s: mail not configured", user["email"])
                 except (AccountError, MailError):
                     mail_status = "failed"
+                    METRICS.incr("mail_send_failed")
                     logger.exception("Verification email failed for %s", user["email"])
                 self.send_json(201, {"token": token, "user": user, "verificationMail": mail_status})
             except AccountError as error:
@@ -2174,6 +2213,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 ratelimit.clear_on_success("login", self._client_ip(), email)
                 self.send_json(200, {"token": token, "user": user})
             except AccountError as error:
+                METRICS.incr("auth_login_failed")
                 self.send_json(401, {"error": str(error)})
             return
         if parsed.path == "/api/auth/change-password":
@@ -2225,6 +2265,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             try:
                 check_mail_transport(MAIL_CONFIG)
             except MailError as error:
+                METRICS.incr("mail_send_failed")
                 self.send_json(503, {"error": str(error), "code": error.code})
                 return
             reset_token = ACCOUNT_STORE.request_password_reset(payload.get("email"))

@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import http.client
 import json
+import logging
 import os
 import sys
 import tempfile
@@ -2126,6 +2127,73 @@ class AuthHttpTest(unittest.TestCase):
             conn.close()
         finally:
             api_server.ADMIN_TOKEN, api_server.grocery_importer.start = original_token, original_start
+
+    # ---- Observability: request-id, strukturerad logg, räknare ----
+    def test_every_response_carries_a_request_id_and_honours_a_wellformed_incoming_one(self):
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request("GET", "/api/health")
+        response = conn.getresponse(); response.read()
+        generated = response.getheader("X-Request-Id")
+        self.assertRegex(generated, r"^[0-9a-f]{16}$")
+        conn.close()
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request("GET", "/api/health", headers={"X-Request-Id": "support-ärende-1234"})
+        response = conn.getresponse(); response.read()
+        self.assertNotEqual(response.getheader("X-Request-Id"), "support-ärende-1234")   # ej välformat (icke-ASCII)
+        conn.close()
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request("GET", "/api/health", headers={"X-Request-Id": "abc-12345678"})
+        response = conn.getresponse(); response.read()
+        self.assertEqual(response.getheader("X-Request-Id"), "abc-12345678")
+        conn.close()
+
+    def test_access_log_is_json_with_request_id_and_masked_ip(self):
+        from services import observability
+        records = []
+
+        class Capture(logging.Handler):
+            def emit(self, record):
+                records.append(observability.JsonFormatter().format(record))
+        handler = Capture()
+        handler.addFilter(observability.RequestIdFilter())
+        observability.access_logger.addHandler(handler)
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            conn.request("GET", "/api/health?zip=80252", headers={"X-Request-Id": "rid-e2e-0001"})
+            conn.getresponse().read(); conn.close()
+        finally:
+            observability.access_logger.removeHandler(handler)
+        rows = [json.loads(line) for line in records]
+        mine = [row for row in rows if row.get("rid") == "rid-e2e-0001"]
+        self.assertTrue(mine, rows[-3:])
+        row = mine[-1]
+        self.assertEqual(row["path"], "/api/health")           # query aldrig i loggen
+        self.assertEqual(row["status"], 200)
+        self.assertEqual(row["ip"], "127.0.0.0")                # maskerad
+        self.assertEqual(row["request_id"], "rid-e2e-0001")
+        self.assertIn("duration_ms", row)
+
+    def test_metrics_count_failed_logins_and_unhandled_errors(self):
+        from services.observability import METRICS
+        before = METRICS.snapshot()
+        self.post("/api/auth/login", {"email": "ingen@example.se", "password": "fel"})
+        original = api_server.ACCOUNT_STORE.user_for_token
+
+        def boom(token):
+            raise RuntimeError("test")
+        api_server.ACCOUNT_STORE.user_for_token = boom
+        try:
+            self.get("/api/auth/me", token="x")
+        finally:
+            api_server.ACCOUNT_STORE.user_for_token = original
+        after = METRICS.snapshot()
+        self.assertEqual(after.get("auth_login_failed", 0), before.get("auth_login_failed", 0) + 1)
+        self.assertEqual(after.get("unhandled_exceptions", 0), before.get("unhandled_exceptions", 0) + 1)
+        self.assertGreaterEqual(after.get("responses_5xx", 0), before.get("responses_5xx", 0) + 1)
+        status, payload = self.get("/api/health")
+        self.assertIn("metrics", payload)
+        self.assertIsInstance(payload["metrics"].get("requests_total"), int)
+        self.assertTrue(payload["rateLimitPersistent"])
 
     def test_redeem_premium_with_correct_code(self):
         email = self._email()
