@@ -38,6 +38,12 @@ Commits `5e04cc0` … `9c89be0` (+ docs), alla pushade.
   butikskorten för Premium), 800 avvisade live-prisanrop per körning (stopp
   vid 429), 500 på `/api/products/batch` av delad SQLite-anslutning utan lås,
   CSP-headern blockerade låsskriptet, klientavbrott räknades som prisfel.
+  Två till hittades först i CI (snabbare maskin): kontosynken (debouncad
+  1,5 s) försvann när sidan lämnades för Stripe Checkout och återkomsten
+  hämtade serverns äldre blob - veckan och onboardingen "ogjorda"
+  (`flushServerSync` före navigering + pagehide med keepalive); och
+  kontolagrets delade SQLite-anslutning saknade lås (401 på giltig session
+  mitt under Premium-aktiveringen - lås runt varje publik metod).
 - **Receptbanken:** dubblett borttagen; bildsöken förstår `ugnslax`/`laxfilé`;
   209 recept med licensierad bild, **32 saknar bild** (husmanskost utan
   stockfoto - behöver egna foton eller manuellt urval).
@@ -49,7 +55,7 @@ Commits `5e04cc0` … `9c89be0` (+ docs), alla pushade.
 
 ## Tester
 
-`python backend/tests/run.py` → 875 tester gröna (inkl. 2 browser-E2E,
+`python backend/tests/run.py` → 876 tester gröna (inkl. 2 browser-E2E,
 1 skipped), isolerad tempkatalog, inga riktiga anrop. `node --test` → 63.
 `MATJAKT_E2E_FRONTEND_DIR=dist/frontend python backend/tests/run.py --pattern
 "test_consumer*"` → grön mot bundlet. Skärmdumpar vid E2E-fel i
