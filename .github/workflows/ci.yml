@@ -64,6 +64,12 @@ jobs:
       - name: .env är inte spårad
         run: |
           if git ls-files --error-unmatch .env >/dev/null 2>&1; then echo ".env är spårad av git"; exit 1; fi
+      - name: Inga databasfiler är spårade
+        # Backupkatalogen låg spårad i det publika repot 2026-08-31..09-06
+        # (kontodatabas med e-post + lösenordshashar). Aldrig igen.
+        run: |
+          tracked=$(git ls-files '*.db' '*.sqlite' '*.sqlite3' '*.db-wal' '*.db-shm')
+          if [ -n "$tracked" ]; then echo "Spårade databasfiler:"; echo "$tracked"; exit 1; fi
       - name: Versionsnumren följs åt (sw.js, app.js?v=, styles.css?v=)
         run: python backend/scripts/check_frontend_version.py
       - name: Juridiska platshållare (varning - släppgrind, inte byggfel)
