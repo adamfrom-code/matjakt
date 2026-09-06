@@ -33,6 +33,11 @@ if __name__ == "__main__":
             os.environ[secret] = ""
         here = Path(__file__).resolve().parent
         sys.path.insert(0, str(here.parent))
-        tests = unittest.defaultTestLoader.discover(str(here), top_level_dir=str(here))
+        # Valfritt filnamnsmönster: `run.py --pattern "test_consumer*"` kör
+        # bara browser-E2E:n (CI:s Playwright-jobb), utan argument allt.
+        pattern = "test*.py"
+        if len(sys.argv) >= 3 and sys.argv[1] == "--pattern":
+            pattern = sys.argv[2]
+        tests = unittest.defaultTestLoader.discover(str(here), pattern=pattern, top_level_dir=str(here))
         result = unittest.TextTestRunner(verbosity=1).run(tests)
         sys.exit(0 if result.wasSuccessful() else 1)
