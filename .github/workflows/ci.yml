@@ -72,7 +72,7 @@ jobs:
           fi
 
   e2e:
-    name: Browser-E2E (Playwright: konsumentresan, Premium/Stripe, hushållet med två personer)
+    name: "Browser-E2E (Playwright: konsumentresan, Premium/Stripe, hushållet med två personer)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
