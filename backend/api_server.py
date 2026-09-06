@@ -44,6 +44,8 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
+from services.analytics import ANALYTICS_EVENTS, AnalyticsStore
+from services import mailings
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
@@ -101,21 +103,11 @@ MAX_CONCURRENT_SCRAPES = int(os.environ.get("MATJAKT_MAX_SCRAPES", "1"))
 MAX_BATCH_ITEMS = 20
 PANTRY_RECIPE_CACHE_TTL_SECONDS = 1800
 CAMPAIGN_CACHE_TTL_SECONDS = 3600
-# Anonymous, aggregate-only counters for the landing page (see
-# _handle_analytics_event) - a fixed allowlist, not free-text, so this can
-# never become a place to smuggle arbitrary or identifying data through. No
-# IP, user id, or timestamp finer than "today" is ever stored alongside a
-# count.
-# Kärnhändelserna som avgör om Matjakt fungerar: skapas veckor, används
-# fynden, bockas listan av, delas recept - och rapporteras prisfel.
-# Nedladdningar är fåfänga; återkommande veckor är sanningen.
-ANALYTICS_ALLOWED_EVENTS = frozenset({
-    "cta_testa_gratis", "cta_logga_in", "cta_se_hur_det_fungerar", "view_premium",
-    "vecka_skapad", "fynd_tillagt", "lista_anvand", "recept_delat",
-    "prisfel_rapporterat", "recept_bytt",
-    # Grov tratt: vilken flik nås - visar var testpersonerna stannar.
-    "view_home", "view_week", "view_recipes", "view_basket", "view_pantry",
-})
+# Produkthändelserna (se _handle_analytics_event) - en fast allowlist, inte
+# fritext, så vägen aldrig kan bli en plats att smuggla in godtycklig data
+# genom. Listan och lagringen bor i services/analytics; namnet här finns
+# kvar för äldre anrop och tester.
+ANALYTICS_ALLOWED_EVENTS = ANALYTICS_EVENTS
 CAMPAIGN_CAPABLE_CHAINS = ("Coop", "Hemköp")
 CAMPAIGN_SCAN_INGREDIENTS = ["Kycklingfilé", "Kycklinglårfilé", "Köttfärs", "Biff", "Fläskfilé", "Laxfilé", "Fryst torsk", "Räkor", "Kalvschnitzel", "Falukorv", "Halloumi"]
 GEOCODE_CACHE_TTL_SECONDS = 86400
@@ -221,6 +213,14 @@ MAIL_CONFIG = {
     "password": os.environ.get("SMTP_PASSWORD", ""),
     "from_email": os.environ.get("SMTP_FROM_EMAIL", ""),
 }
+# Utskick (services/mailings). Av tills MATJAKT_MAILINGS_ENABLED=1 - en lokal
+# körning mejlar aldrig någon av sig själv. Avprenumerationslänkarna signeras
+# med MATJAKT_MAIL_SECRET, annars admin-token; saknas båda skickas inget.
+MAILINGS_ENABLED = os.environ.get("MATJAKT_MAILINGS_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}
+MAIL_SECRET = os.environ.get("MATJAKT_MAIL_SECRET", "").strip() or ADMIN_TOKEN
+# Den publika adressen till API:t, för länkar i mejl (avprenumeration).
+PUBLIC_API_URL = (os.environ.get("MATJAKT_PUBLIC_API_URL") or os.environ.get("MATJAKT_API_URL")
+                  or f"http://{HOST}:{PORT}/api").rstrip("/")
 AXFOOD_STORE_LIST_URL = {"Willys": "https://www.willys.se/axfood/rest/v1/store", "Hemköp": "https://www.hemkop.se/axfood/rest/v1/store"}
 STORE_LIST_CACHE_TTL_SECONDS = 86400
 ICA_STORE_LIST_TTL_SECONDS = 3600
@@ -551,6 +551,35 @@ PRICE_CACHE = PriceCacheStore(PRICE_CACHE_PATH)
 # deploy/restart. Persisting them here is what actually makes "senast
 # uppdaterad" survive a deploy.
 KV_CACHE = KeyValueCacheStore(PRICE_CACHE.connection, lock=PRICE_CACHE.lock)
+# Produktmätningen bor i KONTOdatabasen (samma anslutning som ACCOUNT_STORE)
+# så tratten kan joina users. De gamla räknarna låg i KV_CACHE, som rensar
+# allt äldre än sju dagar - flytten nedan räddar det som finns kvar där och
+# är ofarlig att köra vid varje uppstart (skriver bara dagar som saknas).
+ANALYTICS = AnalyticsStore(ACCOUNT_STORE.connection)
+ANALYTICS.import_legacy_counters(lambda event, day: KV_CACHE.get("analytics", f"{event}:{day}")[0])
+MAILINGS = mailings.MailingScheduler(
+    mailings.MailingStore(ACCOUNT_STORE.connection),
+    lambda to, subject, text, body_html, unsub: send_email(MAIL_CONFIG, to, subject, text, body_html, unsub),
+    lambda: grocery_api.campaign_deals(per_chain=mailings.DEALS_PER_CHAIN).get("deals", {}),
+    api_base=PUBLIC_API_URL, app_url=APP_URL, secret=MAIL_SECRET, enabled=MAILINGS_ENABLED,
+    mail_configured=lambda: mail_is_configured(MAIL_CONFIG), released_chains=grocery_api.RELEASED_CHAINS)
+
+
+def insights_payload() -> dict:
+    """Kontrollrummets svar (GET /api/admin/insights): tratten per
+    registreringsvecka, händelserna dag för dag och fritextfeedbacken.
+    Premium avgörs av kontotjänstens egen regel så tratten och /auth/me
+    aldrig säger olika saker om samma konto."""
+    funnel = ANALYTICS.funnel(premium_of=lambda row: AccountStore._to_public(row)["premium"])
+    events = ANALYTICS.daily_events(14)
+    return {
+        "tratt": funnel,
+        "handelser": events,
+        # Gamla fältet från /testresultat: totalsumma per händelse.
+        "events14Dagar": {event: entry["total"] for event, entry in events["events"].items()},
+        "feedback": ACCOUNT_STORE.list_feedback(),
+        "utskick": MAILINGS.status(),
+    }
 
 # ---------------------------------------------------------------------------
 # PRISAUDITEN SOM DRIFTSFAKTA. Releasegaten för prisdelen är auditen mot
@@ -1590,7 +1619,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
     # script-src bär hashen för index.html:s enda inline-skript (låsskärmens
     # omdirigering) - utan den blockerar headern skriptet när servern själv
     # serverar appen. test_frontend_contract räknar om hashen.
-    CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self' 'sha256-4hCDEyWAtdpoYahtQwxdKcdT8sn6uJrdzLY6j1S582Q='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+    CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self' https://plausible.io https://cloud.umami.is 'sha256-4hCDEyWAtdpoYahtQwxdKcdT8sn6uJrdzLY6j1S582Q='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com https://plausible.io https://cloud.umami.is; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 
     def send_response(self, *args, **kwargs):
         # One handler instance serves MANY requests over a keep-alive
@@ -1659,7 +1688,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
             forwarded = self.headers.get("X-Forwarded-For", "")
             if forwarded:
                 return forwarded.split(",")[0].strip()[:64]
-        return (self.client_address[0] if self.client_address else "") or ""
+        # getattr: handlern instansieras utan socket i enhetstester av
+        # gate- och admin-logiken - då finns ingen adress, och ingen räknare.
+        address = getattr(self, "client_address", None)
+        return (address[0] if address else "") or ""
 
     def _rate_limit(self, action, *identifiers):
         """Returns True when the request must be refused. Sends the 429."""
@@ -1669,6 +1701,39 @@ class ApiHandler(SimpleHTTPRequestHandler):
         except ratelimit.RateLimited as limited:
             self.send_json(429, {"error": str(limited), "retryAfter": limited.retry_after})
             return True
+
+    def _admin_authorized(self, hidden=False) -> bool:
+        """The ONE admin check. True when the request carries the right
+        admin token. Otherwise the refusal is already sent - 403, or 404 for
+        paths that should not reveal they exist (hidden=True) - and the
+        attempt counts against the IP's guessing budget, exactly like a
+        password: the limiter runs BEFORE the comparison, so once the budget
+        is spent even the right token gets 429 until the window passes.
+        A correct token clears the counter, so the control room's own
+        polling never locks Adam out. Never configured = never authorized."""
+        if self._rate_limit("admin"):
+            return False
+        presented = self.headers.get("X-Admin-Token", "")
+        if ADMIN_TOKEN and hmac.compare_digest(presented, ADMIN_TOKEN):
+            ratelimit.clear_on_success("admin", self._client_ip())
+            return True
+        if hidden:
+            self.send_json(404, {"error": "Okänd endpoint"})
+        else:
+            self.send_json(403, {"error": "Admin-token krävs"})
+        return False
+
+    def send_html(self, status, body_html):
+        """En liten HTML-sida (avprenumeration) - samma säkerhetshuvuden som
+        allt annat, ingen cache."""
+        self._json_response = True
+        body = body_html.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def _bearer_token(self):
         header = self.headers.get("Authorization", "")
@@ -1701,11 +1766,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
 
     def _admin_ok(self) -> bool:
         """Admin-token i konstant tid. Vid fel: 404 som för en okänd väg -
-        admin-ytan ska inte ens synas utifrån. Skickar svaret själv."""
-        if ADMIN_TOKEN and hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-            return True
-        self.send_json(404, {"error": "Okänd endpoint"})
-        return False
+        admin-ytan ska inte ens synas utifrån. Skickar svaret själv. Går
+        genom _admin_authorized så att gissningar räknas mot IP:ns budget."""
+        return self._admin_authorized(hidden=True)
 
     def _content_length(self):
         """Kroppens längd, eller None när headern är trasig. Ett negativt tal
@@ -1794,7 +1857,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
     # egen övervakning; analytics-beacon (räknar bara namngivna events).
     # Stripes webhook har ingen gate-token - den bär sin egen HMAC-signatur.
     # Utan undantaget svarar utvecklingslåset 401 och Premium aktiveras aldrig.
-    GATE_EXEMPT = ("/api/gate/", "/api/health", "/api/analytics/event", "/api/billing/webhook")
+    GATE_EXEMPT = ("/api/gate/", "/api/health", "/api/analytics/event", "/api/billing/webhook",
+                   "/api/mail/unsubscribe")
 
     def _gate_blocked(self, parsed) -> bool:
         """True när utvecklingslåset stoppar denna begäran (svaret är då
@@ -1803,8 +1867,19 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return False
         if any(parsed.path.startswith(prefix) for prefix in self.GATE_EXEMPT):
             return False
-        if ADMIN_TOKEN and hmac.compare_digest(self.headers.get("X-Admin-Token", ""), ADMIN_TOKEN):
-            return False
+        # Admin-token öppnar låset - men bara inom samma gissningsbudget som
+        # admin-vägarna (räknas enbart när en token faktiskt skickas med, så
+        # vanliga användare utan header rör aldrig räknaren). Utan detta gick
+        # hemligheten att gissa obegränsat mot vilken gated väg som helst.
+        presented_admin = self.headers.get("X-Admin-Token", "")
+        if presented_admin:
+            try:
+                ratelimit.check("admin", self._client_ip())
+            except ratelimit.RateLimited:
+                presented_admin = ""  # budgeten slut: som om ingen token skickats
+            if presented_admin and ADMIN_TOKEN and hmac.compare_digest(presented_admin, ADMIN_TOKEN):
+                ratelimit.clear_on_success("admin", self._client_ip())
+                return False
         if gate_token_valid(self.headers.get("X-Gate-Token", "")):
             return False
         self.send_json(401, {"error": "Matjakt är inte öppet ännu", "gate": True})
@@ -2020,21 +2095,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
                                     "schedule": scheduler["schedule"]}
             self.send_json(200, summary, cache_seconds=60)
             return
-        if parsed.path == "/api/admin/testresultat":
-            # Allt Adam behöver se efter en testrunda: fri text-feedbacken
-            # och händelseräknarna, i ett svar. Admin-token, aldrig publikt.
+        if parsed.path in ("/api/admin/insights", "/api/admin/testresultat"):
+            # Kontrollrummet: tratten per registreringsvecka, händelserna
+            # dag för dag och fritextfeedbacken, i ett svar. Admin-token,
+            # aldrig publikt. /testresultat är det gamla namnet.
             if not self._admin_ok():
                 return
-            counters = {}
-            for event in sorted(ANALYTICS_ALLOWED_EVENTS):
-                total = 0
-                for days_back in range(14):
-                    day = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%d")
-                    count, _ = KV_CACHE.get("analytics", f"{event}:{day}")
-                    total += count or 0
-                counters[event] = total
-            self.send_json(200, {"feedback": ACCOUNT_STORE.list_feedback(),
-                                 "events14Dagar": counters})
+            self.send_json(200, insights_payload())
             return
         if parsed.path == "/api/admin/grocery-import":
             if not self._admin_ok():
@@ -2054,6 +2121,32 @@ class ApiHandler(SimpleHTTPRequestHandler):
             user = ACCOUNT_STORE.user_for_token(self._bearer_token())
             plan = plan_features.plan_for_user(user)
             self.send_json(200, plan_features.entitlements(plan))
+            return
+        if parsed.path == "/api/mail/unsubscribe":
+            # Avsluta utskicken från länken i mejlet: ingen inloggning, bara
+            # den signerade tokenen. Fel token ger samma sida som ett okänt
+            # konto - länken avslöjar inte om ett id finns. Rate-limitad så
+            # den inte kan användas för att prova sig fram.
+            if self._rate_limit("unsubscribe"):
+                return
+            params = parse_qs(parsed.query)
+            user_id, token = (params.get("u") or [""])[0], (params.get("t") or [""])[0]
+            ok = mailings.unsubscribe_valid(user_id, token, MAIL_SECRET) and \
+                ACCOUNT_STORE.set_marketing_consent(int(user_id), False)
+            title = "Du får inga fler utskick" if ok else "Länken fungerar inte"
+            text = ("Du är avprenumererad. Kontot och appen fungerar precis som förut - "
+                    "du kan tacka ja igen under Konto i appen.") if ok else \
+                   ("Länken är ogiltig eller har redan använts. Du kan stänga av utskicken "
+                    "under Konto i appen.")
+            self.send_html(200 if ok else 400,
+                "<!doctype html><html lang=\"sv\"><meta charset=\"utf-8\">"
+                "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                f"<title>{title} - Matjakt</title>"
+                "<body style=\"margin:0;background:#f6f3ea;color:#1c1b18;font:17px/1.55 Georgia,serif;\">"
+                "<div style=\"max-width:520px;margin:0 auto;padding:56px 20px;\">"
+                "<p style=\"font-size:13px;letter-spacing:.04em;color:#6b665c;\">MATJAKT</p>"
+                f"<h1 style=\"font-weight:normal;font-size:26px;\">{title}</h1><p>{text}</p>"
+                f"<p><a href=\"{APP_URL}\" style=\"color:#1c1b18;\">Öppna Matjakt</a></p></div></body></html>")
             return
         if parsed.path == "/api/auth/me":
             user = ACCOUNT_STORE.user_for_token(self._bearer_token())
@@ -2332,16 +2425,26 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if self._rate_limit("register", str(payload.get("email") or "").strip().lower()):
                 return
             try:
-                token, user = ACCOUNT_STORE.register(payload.get("email"), payload.get("password"))
+                token, user = ACCOUNT_STORE.register(payload.get("email"), payload.get("password"),
+                                                     marketing=bool(payload.get("marketing")))
                 # Ärligt om verifieringsmejlet: "sent", "not_configured" eller
                 # "failed". UI:t får aldrig påstå att ett mejl gått iväg när
                 # inget gjorde det.
                 mail_status = "sent"
                 try:
                     verify_token = ACCOUNT_STORE.create_verification_token_for_email(user["email"])
+                    # Dag 0 i välkomstserien ÄR verifieringsmejlet: det är
+                    # transaktionellt (kontot behöver det) och får därför
+                    # bära igångsättningstipsen utan samtycke.
                     send_email(
-                        MAIL_CONFIG, user["email"], "Verifiera din e-postadress - Matjakt",
-                        f"Välkommen till Matjakt!\n\nKlicka här för att verifiera din e-postadress:\n{APP_URL}/?verify={verify_token}\n\nOm du inte skapade det här kontot kan du ignorera mejlet.",
+                        MAIL_CONFIG, user["email"], "Välkommen till Matjakt - verifiera din e-postadress",
+                        "Välkommen till Matjakt!\n\n"
+                        f"Klicka här för att verifiera din e-postadress:\n{APP_URL}/?verify={verify_token}\n\n"
+                        "Så kommer du igång:\n"
+                        "1. Sätt din veckobudget och hur många ni är.\n"
+                        "2. Skapa din första vecka - Matjakt väljer middagar och räknar ut var de blir billigast.\n"
+                        "3. Ta med inköpslistan till butiken och bocka av.\n\n"
+                        "Om du inte skapade det här kontot kan du ignorera mejlet.",
                     )
                 except MailNotConfigured:
                     mail_status = "not_configured"
@@ -2724,6 +2827,32 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 return
             self._handle_analytics_event(payload)
             return
+        if parsed.path == "/api/account/marketing":
+            # Tacka ja/nej till utskick från Konto-vyn. Servern äger svaret.
+            try:
+                user = ACCOUNT_STORE.set_marketing_consent_for_token(
+                    self._bearer_token(), bool((payload or {}).get("consent")))
+                self.send_json(200, {"user": user})
+            except AccountError as error:
+                self.send_json(401, {"error": str(error)})
+            return
+        if parsed.path == "/api/admin/mailing":
+            # preview: skicka ett exempel till en adress (kräver bara SMTP).
+            # run: kör dagens utskick nu (respekterar alla spärrar).
+            if not self._admin_ok():
+                return
+            action = (payload or {}).get("action")
+            try:
+                if action == "preview":
+                    self.send_json(200, MAILINGS.preview(str((payload or {}).get("kind") or ""),
+                                                         str((payload or {}).get("email") or "")))
+                elif action == "run":
+                    self.send_json(200, MAILINGS.run_due())
+                else:
+                    self.send_json(400, {"error": "action ska vara preview eller run"})
+            except (ValueError, RuntimeError, MailError) as error:
+                self.send_json(400, {"error": str(error)})
+            return
         if parsed.path == "/api/feedback":
             # Anonym testarfeedback. Rate-limitad så den inte blir en
             # skrivbar soptunna, gated som allt annat under utvecklingen.
@@ -2983,21 +3112,28 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})
 
     def _handle_analytics_event(self, payload):
-        """Anonymous product-event counter for the landing page - a click on
-        a specific CTA increments a per-day counter, nothing else. No account,
-        no cookie, no IP address is recorded here (the OS/Render's own
-        infrastructure logs may still see the request like any other, but
-        this handler adds nothing identifying on top of that). Never allowed
-        to affect page functionality - the frontend always fires this as a
-        best-effort, catch-and-ignore call."""
+        """Product-event counter. A named event increments a per-day counter;
+        with a valid session it is ALSO counted per account and day, which
+        is what lets the funnel tell "23 people" from "one person, 23
+        clicks" and answer whether anyone comes back in week two. Never a
+        timestamp finer than the day, never an IP, never free text (the
+        OS/Render's own infrastructure logs may still see the request like
+        any other, but this handler adds nothing identifying on top of
+        that). Never allowed to affect page functionality - the frontend
+        always fires this as a best-effort, catch-and-ignore call."""
         event = payload.get("event") if isinstance(payload, dict) else None
         if event not in ANALYTICS_ALLOWED_EVENTS:
             self.send_json(400, {"error": "Okänt event"})
             return
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        key = f"{event}:{today}"
-        count, _ = KV_CACHE.get("analytics", key)
-        KV_CACHE.set("analytics", key, (count or 0) + 1)
+        user_id = None
+        try:
+            user_id = ACCOUNT_STORE.user_id_for_token(self._bearer_token())
+        except Exception:
+            logger.exception("Kunde inte slå upp kontot för en händelse")
+        try:
+            ANALYTICS.record(event, user_id=user_id)
+        except Exception:
+            logger.exception("Kunde inte räkna händelsen %s", event)
         self.send_json(200, {"ok": True})
 
     def _handle_campaigns(self, params):
@@ -3225,6 +3361,7 @@ if __name__ == "__main__":
         logger.exception("Kunde inte starta prisauditen")
 
     GROCERY_SCHEDULER.start()
+    MAILINGS.start()
     # Förvärm prismotorns ordindex i bakgrunden: kallstarten (indexbygge
     # per kedja, ~2-3 s) ska betalas här vid deploy - inte av första kundens
     # första prisanrop.

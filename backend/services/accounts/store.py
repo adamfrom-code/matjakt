@@ -134,6 +134,12 @@ class AccountStore:
             ("reset_token", "TEXT"), ("reset_token_expires_at", "TEXT"),
             # Ordning på Stripe-händelser: bara nyare än senast applicerade.
             ("stripe_event_created", "INTEGER"),
+            # Senaste dag (aldrig klockslag) kontot användes - se
+            # _touch_activity. Grunden för "kom någon tillbaka vecka två?".
+            ("last_active_day", "TEXT"),
+            # Samtycke till utskick (services/mailings). 0 tills personen
+            # själv tackat ja; tidpunkten sparas för att kunna visa när.
+            ("marketing_consent", "INTEGER NOT NULL DEFAULT 0"), ("marketing_consent_at", "TEXT"),
         ):
             try:
                 self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
@@ -190,9 +196,10 @@ class AccountStore:
             "subscriptionPeriodEnd": row["subscription_period_end"] if "subscription_period_end" in keys else None,
             "subscriptionCancelAtPeriodEnd": bool(row["subscription_cancel_at_period_end"]) if "subscription_cancel_at_period_end" in keys else False,
             "emailVerified": bool(row["email_verified"]) if "email_verified" in keys else False,
+            "marketingConsent": bool(row["marketing_consent"]) if "marketing_consent" in keys else False,
         }
 
-    def register(self, email: str, password: str) -> tuple[str, dict]:
+    def register(self, email: str, password: str, marketing: bool = False) -> tuple[str, dict]:
         email = (email or "").strip().lower()
         if not EMAIL_PATTERN.match(email):
             raise AccountError("Ange en giltig e-postadress")
@@ -200,10 +207,12 @@ class AccountStore:
             raise AccountError("Lösenordet måste vara minst 8 tecken")
         salt = secrets.token_bytes(16)
         password_hash = _hash_password(password, salt)
+        now = datetime.now(timezone.utc).isoformat()
         try:
             cursor = self._connection.execute(
-                "INSERT INTO users (email, password_hash, salt, premium, created_at) VALUES (?, ?, ?, 0, ?)",
-                (email, password_hash, salt.hex(), datetime.now(timezone.utc).isoformat()),
+                "INSERT INTO users (email, password_hash, salt, premium, created_at, marketing_consent, marketing_consent_at) "
+                "VALUES (?, ?, ?, 0, ?, ?, ?)",
+                (email, password_hash, salt.hex(), now, 1 if marketing else 0, now if marketing else None),
             )
             self._connection.commit()
         except sqlite3.IntegrityError:
@@ -249,7 +258,7 @@ class AccountStore:
     def _session_user_row(self, token: str):
         if not token:
             return None
-        return self._connection.execute(
+        row = self._connection.execute(
             """
             SELECT users.* FROM sessions
             JOIN users ON users.id = sessions.user_id
@@ -257,10 +266,55 @@ class AccountStore:
             """,
             (_session_key(token), datetime.now(timezone.utc).isoformat()),
         ).fetchone()
+        if row is not None:
+            self._touch_activity(row)
+        return row
+
+    def _touch_activity(self, row):
+        """Antecknar att kontot användes i dag - högst en skrivning per konto
+        och dag, och bara dagen. Inget klockslag, ingen IP, ingen sida: det
+        räcker för att se om folk kommer tillbaka, och det är allt vi vill
+        veta. Får aldrig fälla en inloggad begäran."""
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if "last_active_day" in row.keys() and row["last_active_day"] == today:
+            return
+        try:
+            self._connection.execute(
+                "UPDATE users SET last_active_day = ? WHERE id = ?", (today, row["id"]))
+            self._connection.commit()
+        except sqlite3.Error:
+            pass
+
+    @property
+    def connection(self) -> sqlite3.Connection:
+        """Delas med mätningen (services/analytics) så tratten kan joina
+        users utan en andra databasfil att deploya och säkerhetskopiera."""
+        return self._connection
 
     def user_for_token(self, token: str) -> dict | None:
         row = self._session_user_row(token)
         return self._to_public(row) if row else None
+
+    def user_id_for_token(self, token: str) -> int | None:
+        row = self._session_user_row(token)
+        return int(row["id"]) if row else None
+
+    # ---- Samtycke till utskick ------------------------------------------
+    def set_marketing_consent(self, user_id: int, consent: bool) -> bool:
+        """Sätter samtycket för ett konto-id (avprenumerationslänken går
+        hit utan inloggning). True om kontot fanns."""
+        cursor = self._connection.execute(
+            "UPDATE users SET marketing_consent = ?, marketing_consent_at = ? WHERE id = ?",
+            (1 if consent else 0, datetime.now(timezone.utc).isoformat(), int(user_id)))
+        self._connection.commit()
+        return cursor.rowcount > 0
+
+    def set_marketing_consent_for_token(self, token: str, consent: bool) -> dict:
+        row = self._session_user_row(token)
+        if not row:
+            raise AccountError("Du måste vara inloggad")
+        self.set_marketing_consent(row["id"], consent)
+        return self._to_public(self._session_user_row(token))
 
     def redeem_premium(self, token: str, code: str, expected_code: str) -> dict:
         if not expected_code:
@@ -552,6 +606,12 @@ class AccountStore:
             raise AccountError("Du måste vara inloggad")
         stripe_customer_id, stripe_subscription_id = row["stripe_customer_id"], row["stripe_subscription_id"]
         self._connection.execute("DELETE FROM sessions WHERE user_id = ?", (row["id"],))
+        # Mätraderna (services/analytics) följer med kontot i graven: ett
+        # raderat konto lämnar inte ett spår av dagar efter sig.
+        try:
+            self._connection.execute("DELETE FROM analytics_user_days WHERE user_id = ?", (row["id"],))
+        except sqlite3.OperationalError:
+            pass  # tabellen finns inte i den här processen (t.ex. fristående test)
         self._connection.execute("DELETE FROM users WHERE id = ?", (row["id"],))
         self._connection.commit()
         return stripe_customer_id, stripe_subscription_id

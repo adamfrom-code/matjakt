@@ -50,6 +50,12 @@ LIMITS = {
     "feedback": (10, 3600),
     # Partnerfeeds: en butik behöver sällan mer än några leveranser i timmen.
     "partner_feed": (60, 3600),
+    # Admin-token är en hemlighet på samma nivå som ett lösenord och får
+    # samma gissningsbudget. Kontrollrummets egen polling räknas inte:
+    # rätt token nollställer räknaren (se ApiHandler._admin_authorized).
+    "admin": (10, 3600),
+    # Avprenumerationslänken: signerad token, men ingen ska kunna prova sig fram.
+    "unsubscribe": (20, 3600),
     # Dyra eller öppna vägar: skydd mot missbruk, inte mot normal användning.
     # Per IP, och generöst nog för familjer bakom operatörs-NAT på mobilen.
     "pricing": (300, 60),          # pricing/week, pricing/list

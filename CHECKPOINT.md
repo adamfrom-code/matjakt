@@ -53,6 +53,50 @@ Commits `5e04cc0` … `9c89be0` (+ docs), alla pushade.
 - **iOS/App Store:** `store/appstore/metadata/sv-SE/` (klart att klistra in),
   `review_notes.txt` (mall), absoluta juridiklänkar, `docs/IOS_RELEASE.md`.
 
+## Kontrollrummet (2026-09-06)
+
+`/app/admin.html` (serveras av backend-servern, dvs. matjakt.onrender.com/app/admin.html,
+admin-token) visar överst MÄNNISKOR: konton, aktiva 7/28 dagar, Premium, tratten
+per registreringsvecka (registrerade -> skapade en vecka -> tillbaka efter 7 dagar
+-> Premium, "ofullständig" tills alla haft sju dagar på sig), händelserna dag för
+dag med unika konton, och fritextfeedbacken. Därunder prisdatabasen som förut.
+Skriptet ligger i `admin.js` - serverns CSP (`script-src 'self'`) blockerade det
+gamla inline-skriptet, så sidan var död när den serverades av backend.
+
+Datan: `backend/services/analytics/` med två tabeller i kontodatabasen
+(`analytics_daily` anonymt per dag, `analytics_user_days` konto x dag x händelse,
+aldrig klockslag/IP) plus `users.last_active_day` som sessionsuppslaget sätter
+högst en gång per dag. De gamla räknarna i kv_cache rensades efter 7 dagar (så
+"14 dagar" tappade hälften) - de flyttas in vid uppstart. Frontend skickar
+sessionen med i `trackEvent`, så personer kan skiljas från klick. Raderas
+kontot följer mätraderna med. Integritetspolicyn nämner produktstatistiken.
+Läses via `GET /api/admin/insights` (`/testresultat` = samma svar).
+
+Lanseringsmått (30 dagar efter att låset öppnas): 100 personer som planerat
+en vecka, 10 tillbaka vecka två, 1 betalande.
+
+## Trafik och utskick (2026-09-06)
+
+Trafik: `frontend/traffic.js` laddar Plausible eller Umami när
+`<meta name="matjakt-traffic">` (landningssidan + app/index.html) säger
+`plausible:matjakt.store` eller `umami:<website-id>`. Tomt = av; aldrig på
+localhost. Värdarna finns i CSP:n (meta i app/index.html + api_server).
+
+Utskick: `backend/services/mailings.py`. Välkomstserien dag 3 och dag 7
+(fönster 3-7 resp. 7-21 dagar efter registrering) och Kampanjtorget varje
+torsdag, allt kl. 08:00 Europe/Stockholm. Dag 0 = verifieringsmejlet (nu med
+igångsättningstips; transaktionellt). REGLER: bara samtycke
+(`users.marketing_consent`, kryss vid registrering eller Konto-vyn) OCH
+verifierad adress; varje mejl har HMAC-signerad avprenumerationslänk
+(`GET /api/mail/unsubscribe?u=&t=`, gate-exempt, rate-limitad) + List-Unsubscribe;
+`mail_log` gör varje steg en-gång; tomt torg skickas aldrig; kedja = användarens
+favoritbutik om släppt, annars alla släppta (aldrig Coop). AV tills
+`MATJAKT_MAILINGS_ENABLED=1` (render.yaml har "0"); `MATJAKT_MAIL_SECRET`
+signerar länkarna (fallback admin-token); `MATJAKT_PUBLIC_API_URL` för länkar.
+Kontrollrummet har ett Utskick-kort: status, mottagare, "Skicka exempel till
+mig" (kräver bara SMTP) och "Kör dagens utskick nu". Innan påslag: verifiera
+SMTP-leverans + SPF/DKIM för avsändardomänen.
+
 ## Tester
 
 `python backend/tests/run.py` → 876 tester gröna (inkl. 2 browser-E2E,

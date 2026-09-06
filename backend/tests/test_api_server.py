@@ -458,6 +458,9 @@ class ApiServerHttpTest(unittest.TestCase):
     def setUp(self):
         self._original_code = api_server.PREMIUM_CODE
         api_server.PREMIUM_CODE = "hemlig-kod"
+        # Admin-tokenens gissningsbudget är per IP och alla tester delar
+        # 127.0.0.1 - ett test som provar fel token får inte låsa nästa.
+        ratelimit.clear_on_success("admin", "127.0.0.1")
         # Primat is a real third-party service - tests must never depend on
         # a live network call to it (slow, flaky, and .env may have a real
         # PRIMAT_API_KEY set for local dev). Default every test to "Primat
@@ -611,17 +614,177 @@ class ApiServerHttpTest(unittest.TestCase):
         self.assertTrue(payload["ok"])
 
     def test_analytics_event_counts_are_aggregated_per_day_not_per_click(self):
-        api_server.KV_CACHE.clear()
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        before = api_server.ANALYTICS.daily_events()["events"]["view_premium"]["perDag"].get(today, 0)
+        self.post("/api/analytics/event", {"event": "view_premium"})
+        self.post("/api/analytics/event", {"event": "view_premium"})
+        self.post("/api/analytics/event", {"event": "view_premium"})
+        after = api_server.ANALYTICS.daily_events()["events"]["view_premium"]
+        self.assertEqual(after["perDag"].get(today, 0), before + 3)
+        # Utloggade klick är klick, inte personer.
+        self.assertEqual(after["unikaKonton"], 0)
+
+    def test_logged_in_events_count_people_not_clicks_and_feed_the_funnel(self):
+        """Inloggad räknas händelsen per konto och DAG - så tratten kan säga
+        "en person skapade en vecka", inte "tre klick". Och kontot får en
+        senast-aktiv-dag, vilket är hela grunden för återkomstmåttet."""
+        email = f"tratt-{uuid.uuid4().hex[:8]}@example.com"
+        status, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        self.assertEqual(status, 201)
+        token = payload["token"]
+        for _ in range(3):
+            status, _ = self.post("/api/analytics/event", {"event": "vecka_skapad"}, token=token)
+            self.assertEqual(status, 200)
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        rows = api_server.ACCOUNT_STORE.connection.execute(
+            "SELECT users.last_active_day, d.count FROM users JOIN analytics_user_days d ON d.user_id = users.id "
+            "WHERE users.email = ? AND d.event = 'vecka_skapad' AND d.day = ?", (email, today)).fetchall()
+        self.assertEqual(len(rows), 1, "en rad per konto och dag, inte en per klick")
+        self.assertEqual(rows[0][1], 3)
+        self.assertEqual(rows[0][0], today)
+
+        funnel = api_server.insights_payload()["tratt"]
+        this_week = funnel["kohorter"][0]
+        self.assertGreaterEqual(this_week["registrerade"], 1)
+        self.assertGreaterEqual(this_week["skapadeVecka"], 1)
+        self.assertFalse(this_week["mogen"], "veckans kohort kan inte ha svarat på 'kom tillbaka' än")
+        self.assertGreaterEqual(funnel["totalt"]["aktivaSenaste7Dagarna"], 1)
+
+        # Raderas kontot försvinner dess mätrader med det.
+        status, _ = self.post("/api/auth/delete-account", {"password": "hemligt123"}, token=token)
+        self.assertEqual(status, 200)
+        left = api_server.ACCOUNT_STORE.connection.execute(
+            "SELECT COUNT(*) FROM analytics_user_days d LEFT JOIN users ON users.id = d.user_id WHERE users.id IS NULL"
+        ).fetchone()[0]
+        self.assertEqual(left, 0)
+
+    def test_marketing_consent_is_opt_in_toggleable_and_unsubscribable_by_link(self):
+        email = f"utskick-{uuid.uuid4().hex[:8]}@example.com"
+        # Utan kryss: inget samtycke.
+        status, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        self.assertEqual(status, 201)
+        self.assertFalse(payload["user"]["marketingConsent"])
+        token = payload["token"]
+        # Tacka ja under Konto.
+        status, payload = self.post("/api/account/marketing", {"consent": True}, token=token)
+        self.assertEqual(status, 200)
+        self.assertTrue(payload["user"]["marketingConsent"])
+        status, payload = self.get("/api/auth/me", token=token)
+        self.assertTrue(payload["user"]["marketingConsent"])
+        # Utloggad kan inte ändra någon annans val.
+        status, _ = self.post("/api/account/marketing", {"consent": False})
+        self.assertEqual(status, 401)
+        # Avprenumerationslänken: fel token ändrar inget, rätt token stänger av.
+        from services import mailings
+        user_id = api_server.ACCOUNT_STORE.user_id_for_token(token)
+        original_secret = api_server.MAIL_SECRET
+        api_server.MAIL_SECRET = "test-mail-secret"
+        ratelimit.reset()
         try:
-            self.post("/api/analytics/event", {"event": "view_premium"})
-            self.post("/api/analytics/event", {"event": "view_premium"})
-            self.post("/api/analytics/event", {"event": "view_premium"})
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            count, updated_at = api_server.KV_CACHE.get("analytics", f"view_premium:{today}")
-            self.assertEqual(count, 3)
-            self.assertIsNotNone(updated_at)
+            def unsubscribe(query):
+                conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+                try:
+                    conn.request("GET", f"/api/mail/unsubscribe?{query}")
+                    response = conn.getresponse()
+                    return response, response.read().decode("utf-8")
+                finally:
+                    conn.close()
+            response, body = unsubscribe(f"u={user_id}&t=fel")
+            self.assertEqual(response.status, 400)
+            self.assertIn("Länken fungerar inte", body)
+            self.assertTrue(api_server.ACCOUNT_STORE.user_for_token(token)["marketingConsent"])
+            good_token = mailings.unsubscribe_token(user_id, "test-mail-secret")
+            response, body = unsubscribe(f"u={user_id}&t={good_token}")
+            self.assertEqual(response.status, 200)
+            self.assertIn("text/html", response.getheader("Content-Type"))
+            self.assertIn("Du får inga fler utskick", body)
+            self.assertFalse(api_server.ACCOUNT_STORE.user_for_token(token)["marketingConsent"])
         finally:
-            api_server.KV_CACHE.clear()
+            api_server.MAIL_SECRET = original_secret
+            ratelimit.reset()
+        # Kryss vid registreringen = samtycke från start.
+        status, payload = self.post("/api/auth/register",
+                                    {"email": f"ja-{uuid.uuid4().hex[:8]}@example.com",
+                                     "password": "hemligt123", "marketing": True})
+        self.assertEqual(status, 201)
+        self.assertTrue(payload["user"]["marketingConsent"])
+
+    def test_admin_mailing_is_admin_only_and_honest_without_smtp(self):
+        status, _ = self.post("/api/admin/mailing", {"action": "preview", "kind": "welcome_3", "email": "x@example.com"})
+        self.assertEqual(status, 404, "admin-ytan syns inte utifrån")
+        original = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "admin-test"
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            try:
+                conn.request("POST", "/api/admin/mailing",
+                             body=json.dumps({"action": "preview", "kind": "welcome_3", "email": "x@example.com"}),
+                             headers={"Content-Type": "application/json", "X-Admin-Token": "admin-test"})
+                response = conn.getresponse()
+                payload = json.loads(response.read())
+            finally:
+                conn.close()
+            # Testsviten har ingen SMTP: säg det, skicka inget, krascha inte.
+            self.assertEqual(response.status, 400)
+            self.assertIn("SMTP", payload["error"])
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            try:
+                conn.request("POST", "/api/admin/mailing", body=json.dumps({"action": "run"}),
+                             headers={"Content-Type": "application/json", "X-Admin-Token": "admin-test"})
+                response = conn.getresponse()
+                payload = json.loads(response.read())
+            finally:
+                conn.close()
+            self.assertEqual(response.status, 200)
+            self.assertIsNotNone(payload["blockerat"], "utskicken är av i testerna och ska säga varför")
+            self.assertEqual(payload["skickat"], {})
+        finally:
+            api_server.ADMIN_TOKEN = original
+
+    def test_admin_token_guessing_is_rate_limited_like_a_password(self):
+        """Tio fel per timme och IP, sedan 429 - även för RÄTT token, annars
+        vore spärren meningslös. Rätt token nollställer räknaren, så
+        kontrollrummets polling var femte sekund låser aldrig ute admin."""
+        original = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "admin-test"
+        ratelimit.reset()
+        try:
+            for _ in range(10):
+                status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "fel"})
+                self.assertEqual(status, 404)
+            status, payload = self.get("/api/admin/insights", headers={"X-Admin-Token": "fel"})
+            self.assertEqual(status, 429)
+            self.assertIn("retryAfter", payload)
+            status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "admin-test"})
+            self.assertEqual(status, 429, "budgeten gäller före jämförelsen, annars kan man gissa vidare")
+            ratelimit.reset()
+            for _ in range(30):
+                status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "admin-test"})
+                self.assertEqual(status, 200)
+            # Utan konfigurerad token är ingen någonsin admin - och 404-vägarna
+            # avslöjar inte att de finns.
+            api_server.ADMIN_TOKEN = ""
+            status, _ = self.get("/api/admin/stripe-check", headers={"X-Admin-Token": ""})
+            self.assertEqual(status, 404)
+        finally:
+            ratelimit.reset()
+            api_server.ADMIN_TOKEN = original
+
+    def test_admin_insights_requires_the_admin_token(self):
+        original = api_server.ADMIN_TOKEN
+        api_server.ADMIN_TOKEN = "admin-test"
+        ratelimit.clear_on_success("admin", "127.0.0.1")
+        try:
+            status, _ = self.get("/api/admin/insights", headers={"X-Admin-Token": "fel"})
+            self.assertEqual(status, 404)
+            status, payload = self.get("/api/admin/insights", headers={"X-Admin-Token": "admin-test"})
+            self.assertEqual(status, 200)
+            self.assertIn("kohorter", payload["tratt"])
+            self.assertIn("vecka_skapad", payload["handelser"]["events"])
+            self.assertIn("vecka_skapad", payload["events14Dagar"])
+            self.assertIsInstance(payload["feedback"], list)
+        finally:
+            api_server.ADMIN_TOKEN = original
 
     def test_static_files_are_never_heuristically_cached(self):
         # Same connection reused for both requests (HTTP/1.1 keep-alive) so this
@@ -1163,7 +1326,7 @@ class AuthHttpTest(unittest.TestCase):
         self.assertEqual(payload["user"], {
             "email": email, "premium": False, "plan": "free", "trialEndsAt": None, "trialUsed": False,
             "subscriptionStatus": None, "subscriptionPlan": None, "subscriptionPeriodEnd": None,
-            "subscriptionCancelAtPeriodEnd": False, "emailVerified": False,
+            "subscriptionCancelAtPeriodEnd": False, "emailVerified": False, "marketingConsent": False,
         })
         status, payload = self.get("/api/auth/me", token=token)
         self.assertEqual(status, 200)
@@ -2693,18 +2856,9 @@ class FeedbackAndTestResultsTest(unittest.TestCase):
             # anropa GET-dispatchen direkt för exakt denna path
             handler.path = "/api/admin/testresultat"
             handler._json_response = False
-            # kör bara själva grenen: bygg om logiken via riktig dispatch är
-            # tungt här - vi exekverar i stället samma kod som grenen kör.
-            counters = {}
-            from datetime import datetime, timedelta, timezone
-            for event in sorted(api_server.ANALYTICS_ALLOWED_EVENTS):
-                total = 0
-                for days_back in range(14):
-                    day = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%d")
-                    count, _ = api_server.KV_CACHE.get("analytics", f"{event}:{day}")
-                    total += count or 0
-                counters[event] = total
-            self.assertIn("vecka_skapad", counters)
-            self.assertTrue(api_server.ACCOUNT_STORE.list_feedback() is not None)
+            # Grenen svarar med samma payload som /api/admin/insights.
+            payload = api_server.insights_payload()
+            self.assertIn("vecka_skapad", payload["events14Dagar"])
+            self.assertIsInstance(payload["feedback"], list)
         finally:
             api_server.ADMIN_TOKEN = original
