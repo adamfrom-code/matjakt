@@ -122,3 +122,29 @@ Oförändrat sedan master-auditen. Nytt frivilligt: `MATJAKT_LOG_FORMAT`
 - Retention för inaktiva konton obeslutad; juridiska platshållare; Apple
   IAP-beslut; `cap add ios` kräver Mac.
 - Ingen riktig monitor: räknarna i health måste läsas av någon.
+
+## Final web release gate 2026-09-06 (kväll) - läget
+
+- **Deploy bara på grön CI - mekaniken bevisad åt båda håll:** röd CI (merge-
+  committen `eb63036`) → `deploy-backend` *skipped* och Pages-körningen
+  *skipped*; grön CI (`9cfb8e4`) → `deploy-backend` kört (hook-secret saknas
+  ännu → loggar "saknas") och Pages deployade v29 via `workflow_run`.
+  **Render deployar dock fortfarande på push** (Auto-Deploy på i dashboarden)
+  → `render.yaml` har `autoDeploy: false`, men dashboarden måste ändras och
+  `RENDER_DEPLOY_HOOK` läggas som repo-secret (Adam).
+- **Hemlighet läckt i publikt repo:** `MATJAKT_ADMIN_TOKEN` låg i klartext i
+  `.claude/launch.json` (commit `27edd8a`, annan session). Borttagen ur filen
+  (`eb63036`) men kvar i git-historiken → **måste roteras i Render och i
+  lokal .env**. Rotationen ogiltigförklarar alla gate-tokens (härledda).
+- **Health visar nu** `gate` (låset), `commit`, `mailFrom`, `pricingAudit`.
+- **Produktionens prisaudit** kördes automatiskt första gången: 4 596
+  kontroller, 240 recept, tre kedjor, täckning 99,7 % - RÖD på
+  `kilopris_som_paketpris` 316 → visade sig vara ett **falskt larm i
+  auditen** (lösvikt per kilo räknades som kilopris-som-paketpris; motorn
+  var rätt). Auditen bedömer nu paketpriset (totalCost/packages), tester i
+  `tests/test_pricing_audit.py`; motorn orörd.
+- **Mejl:** DNS klart hos Loopia (DKIM + send), `_dmarc` saknas, SMTP-värden
+  inte i Render (`mail: false`). Låset bevarar nu `?verify`/`?reset`.
+  Checklista i `docs/RELEASE.md`.
+- Sammanslagning med annan sessions commits (kontrollrum, utskick, statistik,
+  `44ff642`): konflikter i CSP-headern och mailer lösta; 904 → 909 tester.
