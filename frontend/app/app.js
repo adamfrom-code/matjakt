@@ -1513,7 +1513,10 @@ function weekPricingBody(shoppingItems) {
 async function syncDatabasePricing(shoppingItems) {
   const body = weekPricingBody(shoppingItems);
   if (!body.recipeIds?.length && !body.items?.length) return;
-  const key = JSON.stringify(body);
+  // Planen ingår i nyckeln: servern maskar Free-svaret (låsta kedjor), och
+  // utan planen i nyckeln låg det maskade svaret kvar efter att Premium
+  // aktiverats tills veckan råkade ändras (sett i E2E efter checkout).
+  const key = `${hasPremium() ? "premium" : "free"}|${JSON.stringify(body)}`;
   if (databasePricingSync.key === key || databasePricingSync.pending) return;
   databasePricingSync = { key, pending: true };
   try {
@@ -3717,6 +3720,8 @@ async function pollPremiumAfterCheckout() {
   }
   awaitingPremiumActivation = false;
   renderAccount();
+  // Premium just nu: veckans priser hämtas om utan mask (nyckeln bär planen).
+  if (hasPremium()) renderBasket();
   if (!hasPremium()) {
     $("accountPremiumStatus").textContent = "Betalningen är mottagen, men Premium är inte aktiverat än. Ladda om sidan om en stund - hör av dig till supporten om det dröjer.";
   }
