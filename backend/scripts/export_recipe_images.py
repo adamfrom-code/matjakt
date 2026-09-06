@@ -45,7 +45,7 @@ def main() -> int:
                 if dirty:
                     updated += 1
             if dirty:
-                path.write_text(json.dumps(recipes, ensure_ascii=False, indent=1) + "\n",
+                path.write_text(json.dumps(recipes, ensure_ascii=False, indent=2) + "\n",
                                 encoding="utf-8")
                 files += 1
     finally:
