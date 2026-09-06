@@ -3899,7 +3899,6 @@ async function handlePendingInvite() {
     $("inviteJoinBtn").hidden = true;
     return;
   }
-  const who = preview.invitedBy ? escapeHtml(preview.invitedBy) : "Någon";
   $("inviteLanding").hidden = false;
   $("inviteLandingTitle").textContent = `${preview.invitedBy || "Någon"} har bjudit in dig till ${preview.householdName}`;
   $("inviteLandingBody").textContent = state.authToken
