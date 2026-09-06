@@ -1,0 +1,26 @@
+Notes for App Review (fylls i i App Store Connect > App Review Information)
+
+Inloggning: appen fungerar utan konto. Konto skapas med e-post + lösenord i
+appen (ingen tredjepartsinloggning, därför ingen Sign in with Apple).
+Testkonto för granskning: skapa ett i appen, eller ange här:
+  E-post:    [FYLLS I AV ADAM - testkonto]
+  Lösenord:  [FYLLS I AV ADAM]
+
+Utvecklingslås: om förhandsvisningslåset fortfarande är aktivt på servern
+när bygget skickas in, ange låsets inloggning här:
+  Användarnamn: [FYLLS I]   Kod: [FYLLS I - aldrig i repo]
+Rekommendation: stäng låset (MATJAKT_GATE=0 på Render) före inlämning.
+
+Betalning: Premium säljs inte i iOS-appen i v1. Appen visar Free och låser
+upp Premium för konton som redan har det (köpt på webben). Inga köpknappar
+visas i iOS-bygget (se docs/IOS_RELEASE.md, väg A). Om köp i appen läggs
+till senare sker det via In-App Purchase.
+
+Plats: används bara för att hitta butiker nära användaren (valfritt -
+postnummer räcker). Ingen spårning, inga tredjeparts-SDK:er.
+
+Kontoradering: Konto > Radera konto, direkt i appen.
+
+Priser i appen kommer från butikskedjornas egna uppgifter; produktinformation
+delvis från Dabas. Kampanjbilder och receptfoton är licensierade (Pexels /
+Wikimedia Commons, kreditering på receptsidan).
