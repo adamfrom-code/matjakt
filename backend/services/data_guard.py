@@ -29,9 +29,15 @@ import contextlib
 import os
 import sys
 import tempfile
+import urllib.request
 from pathlib import Path
 
 _TRUE = {"1", "true", "yes", "on"}
+
+# Den ÄKTA transporten, sparad vid import innan något test hunnit patcha
+# den. Jämförelsen mot den här är hur guard_outbound_http skiljer ett
+# mockat anrop från ett riktigt.
+_REAL_URLOPEN = urllib.request.urlopen
 
 
 class ProductionDatabaseInTestError(RuntimeError):
@@ -73,6 +79,22 @@ def mocked_outbound():
         yield
     finally:
         _outbound_mocked -= 1
+
+
+def guard_outbound_http(service: str) -> None:
+    """Spärr för HTTP-vägar, med ETT undantag: en redan utbytt transport.
+
+    Skillnaden mot Stripe- och SMTP-vägen är hur de mockas. De tar
+    mocked_outbound() explicit, medan providertesterna sedan länge patchar
+    urllib.request.urlopen direkt - åttio tester gör det redan. Att kräva om
+    dem alla hade varit mycket ändring för noll extra säkerhet: en patchad
+    urlopen KAN inte nå nätet.
+
+    Är transporten fortfarande den äkta funktionen gäller spärren fullt ut,
+    vilket är hela poängen - ett test som GLÖMT sin mock stoppas."""
+    if urllib.request.urlopen is not _REAL_URLOPEN:
+        return
+    guard_outbound_call(service)
 
 
 def guard_outbound_call(service: str) -> None:

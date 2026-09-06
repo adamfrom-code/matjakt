@@ -26,6 +26,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from ..data_guard import guard_outbound_http
 
 API_BASE = "https://primat.nu/api/v3"
 ATTRIBUTION = {"text": "Prisdata från primat.nu", "url": "https://primat.nu"}
@@ -103,6 +104,7 @@ def _request_once(method, path, api_key=None, params=None, body=None):
     if api_key:
         req.add_header("Authorization", f"Bearer {api_key}")
     try:
+        guard_outbound_http("Primat")
         with urllib.request.urlopen(req, timeout=10) as response:
             return json.load(response)
     except urllib.error.HTTPError as error:

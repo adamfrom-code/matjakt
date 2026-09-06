@@ -66,6 +66,7 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass, field
+from ...data_guard import guard_outbound_http
 
 logger = logging.getLogger("matjakt.grocery.dabas")
 
@@ -389,7 +390,9 @@ class DabasClient:
     def __init__(self, api_key: str | None = None, fmt: str = "JSON", opener=None):
         self._api_key = api_key if api_key is not None else os.environ.get("DABAS_API_KEY")
         self._format = fmt
-        self._open = opener or urllib.request.urlopen
+        # Spärren sitter på den sparade referensen: testerna byter
+        # ut `opener`, och en glömd mock ska falla, inte ringa Dabas.
+        self._open = opener or _guarded_urlopen
         self._last_call = 0.0
 
     @property
@@ -455,3 +458,9 @@ class DabasClient:
 
     def category_tree(self) -> dict:
         return self._get(f"/V2/categorytree/{self._format}")
+
+
+def _guarded_urlopen(*args, **kwargs):
+    """urlopen som vägrar under en testkörning - se services/data_guard."""
+    guard_outbound_http("Dabas")
+    return urllib.request.urlopen(*args, **kwargs)

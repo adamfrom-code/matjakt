@@ -133,6 +133,20 @@ def _clean_name(value, limit=MAX_ITEM_NAME) -> str:
     return text[:limit]
 
 
+def _since(value) -> int:
+    """Klientens "sedan revision N", tolkad defensivt.
+
+    En klient kan skicka skräp (en trasig lagrad revision, en manipulerad
+    parameter, None efter en misslyckad läsning). Att kasta ValueError där
+    gör en läsning till ett 500; att tolka skräp som 0 ger en full hämtning,
+    vilket alltid är ett korrekt - om än dyrare - svar. Negativa tal är
+    samma sak: det finns ingen revision före 0."""
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _number(value, default=0.0) -> float:
     try:
         number = float(value)
@@ -756,7 +770,7 @@ class HouseholdStore:
         self._require_member(household_id, user_id)
         rows = self._connection.execute(
             "SELECT * FROM shopping_items WHERE household_id = ? AND revision > ? ORDER BY id",
-            (int(household_id), int(since or 0))).fetchall()
+            (int(household_id), _since(since))).fetchall()
         return [_shopping_to_public(row) for row in rows]
 
     # ---- skafferi / kyl / frys -------------------------------------------
@@ -861,7 +875,7 @@ class HouseholdStore:
         if not include_deleted:
             sql += " AND deleted = 0"
         rows = self._connection.execute(sql + " ORDER BY id",
-                                        (int(household_id), int(since or 0))).fetchall()
+                                        (int(household_id), _since(since))).fetchall()
         return [_inventory_to_public(row) for row in rows]
 
     def pantry_amounts(self, household_id) -> dict:
@@ -908,7 +922,7 @@ class HouseholdStore:
     def docs_since(self, household_id, since: int = 0) -> dict:
         rows = self._connection.execute(
             "SELECT doc, body, revision, updated_by, updated_at FROM household_docs WHERE household_id = ? AND revision > ?",
-            (int(household_id), int(since or 0))).fetchall()
+            (int(household_id), _since(since))).fetchall()
         return {row["doc"]: {"body": _json_or_none(row["body"]), "revision": row["revision"],
                              "updatedBy": row["updated_by"], "updatedAt": row["updated_at"]}
                 for row in rows}
@@ -951,7 +965,7 @@ class HouseholdStore:
         gång - och en klient som ligger efter hämtar bara skillnaden."""
         self._require_member(household_id, user_id)
         household_id = int(household_id)
-        since = max(0, int(since or 0))
+        since = _since(since)
         return {
             "householdId": household_id,
             "revision": self.revision(household_id),

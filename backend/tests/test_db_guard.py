@@ -18,8 +18,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from services import data_guard  # noqa: E402
 from services.data_guard import (  # noqa: E402
-    ProductionDatabaseInTestError, check_database_path, guard_database_path,
-    is_test_safe_path, isolated_test_data_dir, test_mode_active,
+    OutboundCallInTestError, ProductionDatabaseInTestError, check_database_path,
+    guard_database_path, is_test_safe_path, isolated_test_data_dir, test_mode_active,
 )
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -131,6 +131,68 @@ class TempDatabasesAreAllowed(unittest.TestCase):
         self.assertEqual(os.environ.get("MATJAKT_TEST_MODE"), "1")
         # Idempotent: samma katalog varje gång i processen.
         self.assertEqual(isolated_test_data_dir(), data_dir)
+
+
+class OutboundCallsAreBlocked(unittest.TestCase):
+    """Ingen testkörning får nå en riktig extern tjänst.
+
+    Spärren infördes 2026-09-06 för Stripe och SMTP efter att sviten skapat
+    riktiga Stripe-kunder ur .env. PROVIDERVÄGARNA hade den inte: ett test
+    som glömde sin mock nådde alltså Willys, City Gross, ICA, Dabas, Primat
+    eller Open Food Facts på riktigt - och för butikerna ser det ut som
+    automatiserad trafik från vår IP.
+
+    Testerna nedan importerar varje klient och kontrollerar att spärren
+    ligger i anropsvägen. De ska falla den dag någon tar bort den."""
+
+    def _assert_blocked(self, call, service_hint=""):
+        with self.assertRaises(OutboundCallInTestError, msg=service_hint) as caught:
+            call()
+        self.assertIn("test", str(caught.exception).lower())
+
+    def test_stripe_is_blocked(self):
+        from services.billing import stripe_client
+        self._assert_blocked(lambda: stripe_client._request("GET", "/v1/customers", "sk_test_x"), "Stripe")
+
+    def test_smtp_is_blocked(self):
+        from services.email import mailer
+        self._assert_blocked(
+            lambda: mailer.check_transport({"host": "smtp.example.com", "port": 587,
+                                            "user": "u", "password": "p", "from_email": "a@b.c"}),
+            "SMTP")
+
+    def test_primat_is_blocked(self):
+        from services.pricing import primat_client
+        self._assert_blocked(lambda: primat_client._request_once("GET", "/stores", "nyckel"), "Primat")
+
+    def test_open_food_facts_is_blocked(self):
+        from services.pricing import open_food_facts_client as off
+        self._assert_blocked(lambda: off.image_url_for_gtin("7310865004703"), "Open Food Facts")
+
+    def test_dabas_is_blocked(self):
+        from services.grocery.providers import dabas
+        self._assert_blocked(lambda: dabas._guarded_urlopen("https://api.dabas.com/"), "Dabas")
+
+    def test_every_provider_module_carries_the_guard(self):
+        """Bredare än de enskilda anropen: varje modul som öppnar en
+        utgående anslutning måste importera OCH använda spärren. En ny
+        provider som glömmer den fastnar här."""
+        import re
+        root = Path(__file__).resolve().parents[1] / "services"
+        offenders = []
+        for path in sorted(root.rglob("*.py")):
+            if "__pycache__" in path.parts or path.name == "data_guard.py":
+                continue
+            source = path.read_text(encoding="utf-8")
+            if not re.search(r"urllib\.request\.urlopen|urlretrieve", source):
+                continue
+            # Två spärrar, samma krav: guard_outbound_call (Stripe/SMTP, där
+            # testerna tar mocked_outbound() explicit) eller
+            # guard_outbound_http (HTTP-vägarna, som släpper förbi en redan
+            # utbytt urlopen men stoppar en glömd mock).
+            if not any(name in source for name in ("guard_outbound_call", "guard_outbound_http")):
+                offenders.append(str(path.relative_to(root)))
+        self.assertEqual(offenders, [], f"utgående anrop utan spärr: {offenders}")
 
 
 class GuardIsPassiveInProduction(unittest.TestCase):

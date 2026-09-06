@@ -16,6 +16,7 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
+from ..data_guard import guard_outbound_http
 
 API_BASE = "https://world.openfoodfacts.org/api/v2"
 USER_AGENT = "Matjakt/1.0 (+https://adamfrom-code.github.io/matjakt)"
@@ -38,6 +39,7 @@ def image_url_for_gtin(gtin):
     req = urllib.request.Request(url, method="GET")
     req.add_header("User-Agent", USER_AGENT)
     try:
+        guard_outbound_http("Open Food Facts")
         with urllib.request.urlopen(req, timeout=8) as response:
             data = json.load(response)
     except urllib.error.HTTPError as error:

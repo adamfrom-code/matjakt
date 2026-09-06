@@ -90,6 +90,7 @@ from ..base import GroceryProvider
 from ..errors import ProviderBlockedError, ProviderRequestError
 from .axfood import CATEGORY_PATH_SEPARATOR
 from ..models import RawProduct, Store
+from ...data_guard import guard_outbound_http
 
 logger = logging.getLogger("matjakt.grocery.citygross")
 
@@ -306,6 +307,7 @@ class CityGrossProvider(GroceryProvider):
             if delay:
                 time.sleep(delay)
             try:
+                guard_outbound_http("City Gross")
                 with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
                     body = response.read()
                     if not body.strip():
