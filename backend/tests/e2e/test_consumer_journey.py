@@ -469,8 +469,8 @@ class BrowserJourney(unittest.TestCase):
         # Stripe-gränsen mockad: kund och checkout-session skapas "hos Stripe"
         # utan nät, success-URL:en är appens egen. Webhooken går den riktiga
         # vägen (signatur, idempotens, apply_stripe_event).
-        api_server.STRIPE_SECRET_KEY = "sk_test_e2e_mock"
-        api_server.STRIPE_WEBHOOK_SECRET = "whsec_e2e_mock"
+        api_server.STRIPE_SECRET_KEY = "sk_test_fake"
+        api_server.STRIPE_WEBHOOK_SECRET = "whsec_test"
         api_server.STRIPE_PRICE_MONTHLY = "price_e2e_month"
         api_server.STRIPE_PRICE_YEARLY = "price_e2e_year"
         api_server.APP_URL = f"{server.base}/app"
@@ -516,7 +516,7 @@ class BrowserJourney(unittest.TestCase):
                                     "cancel_at_period_end": False,
                                     "items": {"data": [{"price": {"id": "price_e2e_year"},
                                                          "current_period_end": int(time.time()) + 365 * 86400}]}}},
-            }, "whsec_e2e_mock")
+            }, "whsec_test")
             self.assertEqual(status, 200)
             expect(page.locator("#accountPremiumStatus")).to_have_text("✓ Premium aktiverat", timeout=30_000)
             expect(page.locator("#subscriptionPanelLine")).to_contain_text("399 kr/år")
@@ -545,7 +545,7 @@ class BrowserJourney(unittest.TestCase):
                                     "current_period_end": int(time.time()) - 10,
                                     "cancel_at_period_end": False,
                                     "items": {"data": [{"price": {"id": "price_e2e_year"}}]}}},
-            }, "whsec_e2e_mock")
+            }, "whsec_test")
             self.assertEqual(status, 200)
             page.reload()
             page.click("#profileBtn")
