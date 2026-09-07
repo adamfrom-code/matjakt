@@ -40,9 +40,10 @@ Det här gäller allt nedan och ska inte behöva upprepas per rad:
 |---|---|---|---|
 | F1 | Ofullständig kasse får inte krönas billigast | **klart att testa** | Revaliderat mot `235958a`: felet fanns kvar. PR #9 mergad (`9d68f48`). Regressionstest med exakt scenariot. Kvar: bekräfta i produktion att ingen kröning sker vid olika kassar |
 | F2 | Veckoval ska prissättas med riktig prismotor, inte ungefärlig kostnad | att göra — **kräver beslut** | Se avsnittet nedan |
-| F3 | Färskhet per prisrad, även referenspriser | att göra | `_chain_age_seconds` använder senaste tidsstämpeln i kedjan; en färsk rad kan dölja gamla |
-| F4 | Skilj möjlig / planerad / genomförd besparing | att göra | `savingsLog` skrivs vid val, inte vid handling. Flera val ger flera poster |
-| F5 | Osäker enhetsgenväg får inte räknas som exakt | att göra | `price_item` kan sätta exakt ett paket vid misslyckad omräkning |
+| F3 | Färskhet per prisrad | **pågår (PR #15)** | Åldern räknas nu på äldsta raden som faktiskt användes. Felet var värre än rapporterat: MAX() filtrerade bara på butik, inte på kassans varor |
+| F3b | Åldersgräns på referenspriser | att göra — **kräver beslut** | `store.py:869` hämtar referenspriser utan åldersgräns, och `pricing.py:1355` släpper ett för gammalt butikspris till förmån för ett referenspris som kan vara ÄLDRE. Kräver ett beslut om maxålder |
+| F4 | Skilj möjlig / planerad / genomförd besparing | **delvis (PR #14)** | "Billigaste butiken för dig" var läget av VALD butik - ingen prisjämförelse alls. Etiketten rättad, dedupering per vecka inlagd. Kvar: posten skrivs vid val, inte vid handling |
+| F5 | Osäker enhetsgenväg får inte räknas som exakt | **pågår (PR #13)** | Regeln prövade aldrig att varan var en krydda: 2 msk honung (~42 g) fick "1 paket, exakt" mot en 15 g-burk. Räknades in i säkra totaler och gick in i billigast-jämförelsen. Revisionen fångar det inte |
 | F6 | Databasincidenten i git-historiken | **blockerat** | Kräver force-push mot delad historik = ägarbeslut. Ingen destruktiv sanering utan uttryckligt godkännande |
 | F7 | Skilj CI, merge och deploy | verifierat | Kontrollerat 2026-09-07: `main` `235958a` live på backend, webben v34. Den misslyckade Pages-körningen följdes av en lyckad |
 
