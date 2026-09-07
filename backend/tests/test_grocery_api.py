@@ -21,9 +21,10 @@ from services.grocery import api as grocery_api  # noqa: E402
 from services.grocery.store import GroceryStore  # noqa: E402
 
 
-def result(chain, total, coverage, matched=10, age=None):
+def result(chain, total, coverage, matched=10, age=None, missing=()):
     return {"chain": chain, "totalCheckoutCost": total, "coveragePercent": coverage,
-            "realPriceItems": matched, "dataAgeSeconds": age}
+            "realPriceItems": matched, "dataAgeSeconds": age,
+            "missingItemNames": list(missing)}
 
 
 class CompareChainsTest(unittest.TestCase):
@@ -33,6 +34,32 @@ class CompareChainsTest(unittest.TestCase):
         self.assertEqual(comparison["cheapestChain"], "Willys")
         self.assertEqual(comparison["savings"], 60.0)
         self.assertIsNone(comparison["reason"])
+
+    def test_an_incomplete_basket_is_never_crowned_over_a_complete_one(self):
+        """Täckningströskeln ensam räckte inte. En kedja på 85 % (17 av 20
+        varor) klarade filtret och krontes över en kedja på 100 % - dess
+        total var lägre för att tre varor SAKNADES, inte för att butiken var
+        billig. De tre kunde kosta mer än de 50 kr som utlovades som
+        besparing, och då är beskedet falskt om användarens pengar."""
+        comparison = grocery_api.compare_chains([
+            result("A", 400.0, 85, missing=["Kycklingfilé", "Grädde", "Basmatiris"]),
+            result("B", 450.0, 100)])
+        self.assertIsNone(comparison["cheapestChain"])
+        self.assertIsNone(comparison["savings"])
+        self.assertEqual(comparison["reason"], "different_baskets")
+        # Vilka varor som skiljer, så gränssnittet kan säga varför i stället
+        # för att bara tiga.
+        self.assertEqual(comparison["differingItems"],
+                         ["Basmatiris", "Grädde", "Kycklingfilé"])
+
+    def test_chains_missing_the_same_items_may_still_be_compared(self):
+        """Saknar båda samma vara svarar totalerna fortfarande på samma
+        fråga - då är jämförelsen ärlig och kröningen tillåten."""
+        comparison = grocery_api.compare_chains([
+            result("Willys", 320.0, 95, missing=["Saffran"]),
+            result("Hemköp", 380.0, 95, missing=["Saffran"])])
+        self.assertEqual(comparison["cheapestChain"], "Willys")
+        self.assertEqual(comparison["savings"], 60.0)
 
     def test_one_chain_alone_is_not_a_comparison(self):
         comparison = grocery_api.compare_chains([result("Willys", 320.0, 95)])
