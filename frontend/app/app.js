@@ -26,6 +26,7 @@ import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swa
 import { RECIPE_FALLBACK_ART, RECIPE_FALLBACK_LABEL, kindFor as recipeFallbackKind } from "./src/services/recipe-fallback.js";
 import { recordWeekSaving, weekKeyFor } from "./src/services/savings-log.js";
 import { budgetScopeText as budgetScopeFor } from "./src/services/budget-scope.js";
+import { ASSUMED_STATE, assumedHomeItems, assumedState } from "./src/services/assumed-home.js";
 
 // The recipe bank is DATA, loaded from data/recipes.json - see
 // src/data/recipes.js. It used to be two hardcoded arrays right here, which
@@ -3010,6 +3011,32 @@ function staplesToOffer(shoppingItems) {
     .filter(item => state.stapleAsked[item.name] !== stamp);   // nej gäller veckan ut
 }
 
+// U06: säg vad vi ANTAR att du redan har - se src/services/assumed-home.js.
+const ASSUMED_ETIKETT = { [ASSUMED_STATE.ADDED]: "tillagd", [ASSUMED_STATE.AT_HOME]: "i skafferiet" };
+
+function renderAssumedHome() {
+  const section = $("assumedHomeSection"), box = $("assumedHomeList");
+  if (!section || !box) return;
+  const items = assumedHomeItems(selectedRecipes());
+  section.hidden = !items.length;
+  if (!items.length) return;
+  const tillagda = new Set(state.extraItems.map(e => String(e.name || "").trim().toLowerCase()));
+  const iSkafferi = new Set(pantryNamesForCooking().map(n => String(n || "").trim().toLowerCase()));
+  box.innerHTML = items.map(namn => {
+    const läge = assumedState(namn, tillagda, iSkafferi);
+    if (läge !== ASSUMED_STATE.OFFER)
+      return `<span class="assumed-chip is-${läge === ASSUMED_STATE.ADDED ? "added" : "athome"}">`
+        + `${escapeHtml(namn)} · ${ASSUMED_ETIKETT[läge]}</span>`;
+    return `<button type="button" class="assumed-chip" data-assumed-add="${escapeHtml(namn)}">`
+      + `${escapeHtml(namn)}<span aria-hidden="true">+</span>`
+      + `<span class="sr-only">lägg till i inköpslistan</span></button>`;
+  }).join("");
+  box.querySelectorAll("[data-assumed-add]").forEach(knapp => knapp.addEventListener("click", () => {
+    addExtraItem({ name: knapp.dataset.assumedAdd, source: "assumed_home" });
+    render();
+  }));
+}
+
 function renderStaplePrompt(shoppingItems) {
   const box = $("staplePrompt");
   if (!box) return;
@@ -3204,6 +3231,7 @@ function renderBasket() {
   if (total != null) lastRealWeekTotal = total;
   renderWeekCostAlert(total);
   renderStaplePrompt(shoppingItems);
+  renderAssumedHome();
   renderAttribution(shoppingItems);
   renderStoreComparison(selected); renderStoreCards(); renderExtraItems(activeChain); renderPantry();
   renderWeekStoreTabs();

@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=36">
+  <link rel="stylesheet" href="styles.css?v=37">
 </head>
 <body>
   <div class="phone-shell">
@@ -251,6 +251,11 @@
         <section class="extra-items" id="extraItemsSection" hidden>
           <h3 class="shopping-section-title">Extra du lagt till</h3>
           <div id="extraItemsList"></div>
+        </section>
+        <section class="assumed-home" id="assumedHomeSection" hidden>
+          <h3 class="shopping-section-title">Antas finnas hemma</h3>
+          <p class="section-help">Det här står inte på listan och räknas inte in i priset. Saknas något &mdash; tryck för att lägga till det.</p>
+          <div class="assumed-home-list" id="assumedHomeList"></div>
         </section>
         <div class="manual-add-row">
           <input type="text" id="manualItemInput" placeholder="Lägg till vara, t.ex. kaffe eller toalettpapper" maxlength="60">
@@ -583,6 +588,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=36"></script>
+  <script type="module" src="app.js?v=37"></script>
 </body>
 </html>
