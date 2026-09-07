@@ -23,6 +23,50 @@ class PriceCacheStoreTest(unittest.TestCase):
         self.assertIsNone(products)
         self.assertIsNone(updated_at)
 
+    def _plantera_gammal_tolkning(self, chain, query, zip_code, products):
+        """Skriver en rad som den såg ut FÖRE versionskolumnen fanns - alltså
+        parser_version = "". Det är exakt formen produktionsdatabasen hade när
+        jämförpriset tolkades som förpackningspris."""
+        import json
+        with self.store.lock, self.store.connection:
+            self.store.connection.execute(
+                "INSERT INTO product_cache (chain, query, zip, products_json, updated_at, parser_version) "
+                "VALUES (?, ?, ?, ?, ?, '')",
+                (chain, query, zip_code, json.dumps(products), time.time()))
+
+    def test_a_row_written_by_the_old_parser_is_never_served(self):
+        """PR #4 rättade tolkningen, men Hemköps felpriser låg kvar i cachen i
+        sex timmar till. Med versionen i raden blir en sådan rad osynlig direkt
+        - både för get() och för get_stale(), för "senast känt pris" får vara
+        gammalt men aldrig osant."""
+        fel = [{"produktnamn": "Sötpotatis Puré Från 4 Månader", "pris_kr": 111.6}]
+        self._plantera_gammal_tolkning("Hemköp", "sötpotatis puré", "80252", fel)
+        self.assertEqual(self.store.get("Hemköp", "sötpotatis puré", "80252"), (None, None))
+        self.assertEqual(self.store.get_stale("Hemköp", "sötpotatis puré", "80252"), (None, None))
+
+    def test_a_fresh_fetch_replaces_the_old_row_in_place(self):
+        """Raden ska skrivas över, inte dubbleras: primärnyckeln är oförändrad
+        (chain, query, zip), så versionen får aldrig skapa en andra rad."""
+        self._plantera_gammal_tolkning("Hemköp", "sötpotatis puré", "80252",
+                                       [{"produktnamn": "x", "pris_kr": 111.6}])
+        rätt = [{"produktnamn": "Sötpotatis Puré Från 4 Månader", "pris_kr": 11.83}]
+        self.store.set("Hemköp", "sötpotatis puré", "80252", rätt)
+        got, _ = self.store.get("Hemköp", "sötpotatis puré", "80252")
+        self.assertEqual(got, rätt)
+        antal = self.store.connection.execute(
+            "SELECT COUNT(*) FROM product_cache WHERE chain = 'Hemköp'").fetchone()[0]
+        self.assertEqual(antal, 1)
+
+    def test_other_chains_rows_are_untouched_by_the_bump(self):
+        """Versionsbumpen får inte röra orelaterad data - bara rader vars
+        tolkning faktiskt är föråldrad blir osynliga."""
+        aktuell = [{"produktnamn": "Citron", "pris_kr": 6.9}]
+        self.store.set("Willys", "citron", "80252", aktuell)
+        self._plantera_gammal_tolkning("Hemköp", "citron", "80252",
+                                       [{"produktnamn": "Citron", "pris_kr": 99.0}])
+        got, _ = self.store.get("Willys", "citron", "80252")
+        self.assertEqual(got, aktuell)
+
     def test_set_then_get_round_trip(self):
         products = [{"produktnamn": "Citron Klass 1", "pris_kr": 6.9, "bild": "https://example.com/citron.jpg"}]
         self.store.set("Willys", "citron", "80252", products)
