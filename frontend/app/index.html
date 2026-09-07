@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=35">
+  <link rel="stylesheet" href="styles.css?v=36">
 </head>
 <body>
   <div class="phone-shell">
@@ -89,7 +89,7 @@
           <div class="week-sheet-card">
             <div class="sheet-head"><strong>Justera veckan</strong><button type="button" class="modal-close" id="weekSheetClose" aria-label="Stäng">×</button></div>
             <div class="settings-content">
-              <label for="budgetInput">Veckobudget</label><div class="budget-row"><input type="number" id="budgetInput" value="800" min="0" step="50" inputmode="numeric"><span>kr</span></div>
+              <label for="budgetInput">Veckobudget</label><div class="budget-row"><input type="number" id="budgetInput" value="800" min="0" step="50" inputmode="numeric"><span>kr</span></div><p class="budget-scope" id="budgetScopeNote">Gäller 4 middagar för 2 personer. Frukost, lunch och hushållsvaror ingår inte.</p>
               <div class="settings-grid"><div><label>Personer</label><div class="stepper"><button id="peopleMinus" aria-label="Färre personer">−</button><span id="peopleValue">2</span><button id="peoplePlus" aria-label="Fler personer">+</button></div></div><div><label>Middagar</label><div class="stepper"><button id="mealsMinus" aria-label="Färre middagar">−</button><span id="mealsValue">4</span><button id="mealsPlus" aria-label="Fler middagar">+</button></div></div></div>
               <label for="postcodeInput">Postnummer</label><div class="location-row"><input id="postcodeInput" inputmode="numeric" maxlength="5" placeholder="Ditt postnummer"><button id="locateBtn" type="button">Hitta mig</button></div><p id="locationHint" class="location-hint">Vi jämför butiker nära dig.</p>
               <label for="storeInput">Butik</label><select id="storeInput"><option value="auto">Billigast automatiskt</option><option value="alla">Alla butiker</option></select>
@@ -583,6 +583,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=35"></script>
+  <script type="module" src="app.js?v=36"></script>
 </body>
 </html>

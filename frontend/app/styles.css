@@ -444,7 +444,7 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.02em}
 .screen-header{padding:8px 0 16px}
 .section-heading h2,.meal-count h2,.recipe-shelf h2,.shopping-list h3,.shopping-section-title{font:700 20px/1.2 var(--font-display);letter-spacing:-.02em}
 .section-subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
-.section-help,.cost-note,.stats-note,.location-hint{color:var(--muted);font-size:13px}
+.section-help,.cost-note,.stats-note,.location-hint,.budget-scope{color:var(--muted);font-size:13px}.budget-scope{margin:7px 0 0}
 
 /* ---- Hem: ordning och budgetblocket ---------------------------------- */
 .view-home .home-screen{display:flex;flex-direction:column}
