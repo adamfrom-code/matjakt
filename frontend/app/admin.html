@@ -73,6 +73,19 @@
   </div>
 
   <div id="panel" hidden>
+    <!-- DRIFTSTATUS FÖRST. Frågan "behöver jag göra något?" ska besvaras
+         innan någon siffra om användare. Sammanfattningen är avsiktligt
+         konservativ: okänt eller för gammalt underlag ger aldrig grönt. -->
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <strong>Driftstatus</strong>
+        <span class="note" id="opsCheckedAt">—</span>
+      </div>
+      <p id="opsSummary" style="margin:.6rem 0 0;font-size:1.05rem;font-weight:600">Läser…</p>
+      <div class="stats" id="opsSystems" style="margin-top:.8rem"></div>
+      <div id="opsAttention"></div>
+    </div>
+
     <div class="card">
       <div class="row" style="justify-content:space-between">
         <strong>Människor</strong>
@@ -137,7 +150,7 @@
       <strong>Kedjor</strong>
       <table id="chains">
         <thead><tr>
-          <th>Kedja</th><th>Status</th><th>Produkter</th><th>Priser</th>
+          <th>Kedja</th><th>Drift</th><th>Släppt</th><th>Provider</th><th>Produkter</th><th>Priser</th>
           <th>GTIN</th><th>Bild</th><th>Kategori</th>
           <th>Senaste lyckade</th><th>Senaste försök</th><th>Nästa nattkörning</th><th>Åtgärd</th>
         </tr></thead>
