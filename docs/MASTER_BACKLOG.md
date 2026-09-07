@@ -40,10 +40,10 @@ Det här gäller allt nedan och ska inte behöva upprepas per rad:
 |---|---|---|---|
 | F1 | Ofullständig kasse får inte krönas billigast | **klart att testa** | Revaliderat mot `235958a`: felet fanns kvar. PR #9 mergad (`9d68f48`). Regressionstest med exakt scenariot. Kvar: bekräfta i produktion att ingen kröning sker vid olika kassar |
 | F2 | Veckoval ska prissättas med riktig prismotor, inte ungefärlig kostnad | att göra — **kräver beslut** | Se avsnittet nedan |
-| F3 | Färskhet per prisrad | **pågår (PR #15)** | Åldern räknas nu på äldsta raden som faktiskt användes. Felet var värre än rapporterat: MAX() filtrerade bara på butik, inte på kassans varor |
+| F3 | Färskhet per prisrad | **klart att testa** (mergad `380a136`) | Åldern räknas nu på äldsta raden som faktiskt användes. Felet var värre än rapporterat: MAX() filtrerade bara på butik, inte på kassans varor |
 | F3b | Åldersgräns på referenspriser | att göra — **kräver beslut** | `store.py:869` hämtar referenspriser utan åldersgräns, och `pricing.py:1355` släpper ett för gammalt butikspris till förmån för ett referenspris som kan vara ÄLDRE. Kräver ett beslut om maxålder |
-| F4 | Skilj möjlig / planerad / genomförd besparing | **delvis (PR #14)** | "Billigaste butiken för dig" var läget av VALD butik - ingen prisjämförelse alls. Etiketten rättad, dedupering per vecka inlagd. Kvar: posten skrivs vid val, inte vid handling |
-| F5 | Osäker enhetsgenväg får inte räknas som exakt | **pågår (PR #13)** | Regeln prövade aldrig att varan var en krydda: 2 msk honung (~42 g) fick "1 paket, exakt" mot en 15 g-burk. Räknades in i säkra totaler och gick in i billigast-jämförelsen. Revisionen fångar det inte |
+| F4 | Skilj möjlig / planerad / genomförd besparing | **delvis, mergad** (`8103df5`) | "Billigaste butiken för dig" var läget av VALD butik - ingen prisjämförelse alls. Etiketten rättad, dedupering per vecka inlagd. Kvar: posten skrivs vid val, inte vid handling |
+| F5 | Osäker enhetsgenväg får inte räknas som exakt | **klart att testa** (mergad `f320e8a`) | Regeln prövade aldrig att varan var en krydda: 2 msk honung (~42 g) fick "1 paket, exakt" mot en 15 g-burk. Räknades in i säkra totaler och gick in i billigast-jämförelsen. Revisionen fångar det inte |
 | F6 | Databasincidenten i git-historiken | **blockerat** | Kräver force-push mot delad historik = ägarbeslut. Ingen destruktiv sanering utan uttryckligt godkännande |
 | F7 | Skilj CI, merge och deploy | verifierat | Kontrollerat 2026-09-07: `main` `235958a` live på backend, webben v34. Den misslyckade Pages-körningen följdes av en lyckad |
 
@@ -151,6 +151,10 @@ betaldata; ingen intäktssiffra får härledas ur antal Premium × pris.
 | Publiceringsgrindens 95 %-gräns testad vid kanten | #6 mergad | 94,9 % nekas, 95,0 % publiceras, last-good behålls |
 | Cachade priser bär tolkningens version | #7 mergad | Gamla felpriser serveras inte längre i sex timmar efter en fix |
 | ICA/Coop dagligen via Primat | #5 mergad | `RELEASED_CHAINS` orörd — kedjorna blir inte publika av sig själva |
+| F5: kryddgenvägen gällde honung | #13 **mergad** | 2 msk honung fick "1 paket, exakt" mot 15 g |
+| F4: "billigaste butiken" var oftast vald | #14 **mergad** | Osant påstående i UI rättat, dedupe per vecka |
+| F3: kassans ålder från använda rader | #15 **mergad** | En färsk rad nollställde inte längre kassens ålder |
+| Kampanjtorget med bilder och hero | #12 **mergad** | Bilden bär aldrig budskapet |
 | Driftstatus i kontrollrummet | #11 **mergad** | Verifierad i webbläsare, desktop + mobil |
 | health visar om larmen går att skicka | #10 **mergad** | Live: mottagare och transport bekräftade |
 | Driftstatus + larm med dedupe och recovery | #8 **mergad** | 21 tester; ett av dem hittade att en API-nyckel kunde mejlas i klartext |
