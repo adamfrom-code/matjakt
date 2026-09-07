@@ -770,7 +770,7 @@ def price_week(items: list[dict], chains: list[str] | None = None,
                 continue
             store_rows[chain] = target.label_row
             result = engine.price_list(items, chain, target.store_id, pantry=pantry)
-            result["dataAgeSeconds"] = _chain_age_seconds(store, chain, target.store_id)
+            result["dataAgeSeconds"] = _age_for_result(result, store, chain, target.store_id)
             raw_results.append(result)
 
         # Anonym partnerstatistik: butiken jämfördes. Räknas per butik och
@@ -827,6 +827,49 @@ def _comparison_basis(raw_results: list[dict], comparison: dict) -> dict:
     else:
         basis = "mixed"
     return {"basis": basis, "basisLabel": BASIS_LABELS[basis] if comparison.get("cheapestChain") else None}
+
+
+def _result_age_seconds(result, now: float = None):
+    """Åldern på det ÄLDSTA pris som FAKTISKT användes i den här kassen.
+
+    Det här ersätter en MAX()-fråga mot hela butiken, som svarade på en helt
+    annan fråga: "när uppdaterades något i den här butiken senast?" En enda
+    färsk prisrad - på vilken vara som helst, även en som inte ingick i
+    kassen - nollställde åldern för en kasse byggd på veckogamla priser.
+
+    Fel åt fel håll, dessutom. Åldern går in i compare_chains age-filter
+    (MAX_AGE_SECONDS_FOR_COMPARISON), så en kedja som borde diskvalificerats
+    för gammal data kunde krönas billigast för att en orelaterad rad var ny.
+
+    ÄLDSTA, inte nyaste: en kasse är inte färskare än sin äldsta prisrad.
+    Bara rader som räknades in i totalen vägs - en rad utan totalCost
+    påverkar inte summan och dess ålder säger inget om den.
+
+    verifiedAt före fetchedAt: när priset senast BEKRÄFTADES i butiken är
+    det som betyder något, inte när vi råkade hämta hem raden.
+    """
+    now = now if now is not None else time.time()
+    stamps = []
+    for match in result.get("matchedItems") or []:
+        if match.get("totalCost") is None:
+            continue
+        stamp = match.get("verifiedAt") or match.get("fetchedAt")
+        if stamp:
+            stamps.append(stamp)
+    return (now - min(stamps)) if stamps else None
+
+
+def _age_for_result(result, store: GroceryStore, chain: str, store_id: int | None = None):
+    """Kassans ålder, med kedjefrågan bara som sista utväg.
+
+    Har kassan prissatta rader är deras egen ålder det enda ärliga svaret.
+    Saknas rader helt finns ingen kasse att åldersbedöma, och då säger
+    kedjans tidsstämpel åtminstone något om butiken - en sådan kasse har
+    ändå realPriceItems = 0 och kan aldrig krönas billigast."""
+    from_rows = _result_age_seconds(result)
+    if from_rows is not None:
+        return from_rows
+    return _chain_age_seconds(store, chain, store_id)
 
 
 def _chain_age_seconds(store: GroceryStore, chain: str, store_id: int | None = None):
@@ -1092,7 +1135,7 @@ def shopping_list(items: list[dict], chain: str, pantry: dict | None = None,
                     "realPriceItems": 0, "estimatedItems": 0,
                     "missingItems": len(items or []), "items": []}
         result = RecipePricingEngine(store).price_list(items, chain, target.store_id, pantry=pantry)
-        result["dataAgeSeconds"] = _chain_age_seconds(store, chain, target.store_id)
+        result["dataAgeSeconds"] = _age_for_result(result, store, chain, target.store_id)
         return format_chain_result(result, label_row)
     finally:
         store.close()
