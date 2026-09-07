@@ -39,7 +39,7 @@ Det här gäller allt nedan och ska inte behöva upprepas per rad:
 | ID | Krav | Status | Bevis / nästa steg |
 |---|---|---|---|
 | F1 | Ofullständig kasse får inte krönas billigast | **klart att testa** | Revaliderat mot `235958a`: felet fanns kvar. PR #9 mergad (`9d68f48`). Regressionstest med exakt scenariot. Kvar: bekräfta i produktion att ingen kröning sker vid olika kassar |
-| F2 | Veckoval ska prissättas med riktig prismotor, inte ungefärlig kostnad | att göra | `comboEstimatedCost` summerar separata inköpspriser och skalar linjärt. Kräver kandidatval → riktig prissättning av ett fåtal hela kassar |
+| F2 | Veckoval ska prissättas med riktig prismotor, inte ungefärlig kostnad | att göra — **kräver beslut** | Se avsnittet nedan |
 | F3 | Färskhet per prisrad, även referenspriser | att göra | `_chain_age_seconds` använder senaste tidsstämpeln i kedjan; en färsk rad kan dölja gamla |
 | F4 | Skilj möjlig / planerad / genomförd besparing | att göra | `savingsLog` skrivs vid val, inte vid handling. Flera val ger flera poster |
 | F5 | Osäker enhetsgenväg får inte räknas som exakt | att göra | `price_item` kan sätta exakt ett paket vid misslyckad omräkning |
@@ -47,6 +47,49 @@ Det här gäller allt nedan och ska inte behöva upprepas per rad:
 | F7 | Skilj CI, merge och deploy | verifierat | Kontrollerat 2026-09-07: `main` `235958a` live på backend, webben v34. Den misslyckade Pages-körningen följdes av en lyckad |
 
 ---
+
+### F2 i detalj — varför den inte är en enkel fix
+
+Revaliderat mot `app.js:882`. Felet är kvar:
+
+```js
+function comboEstimatedCost(combo) {
+  const factor = portionFactor(state.personer);
+  return combo.reduce((sum, recipe) =>
+    sum + (recipe.inkopspris ?? medianInkopspris()) * factor, 0);
+}
+```
+
+Två fel i samma rad. Receptens **separata** inköpspriser summeras, så en
+förpackning som delas mellan två rätter räknas två gånger. Och kostnaden
+skalas **linjärt** med antal personer, men hela förpackningar skalar inte
+så — en dubbelt så stor familj köper sällan dubbelt så många paket.
+
+Talet används sedan på två ställen som båda gör skada:
+
+- `inBudgetPool(evaluated, budget)` förkastar veckor mot användarens
+  **riktiga** budget med ett **falskt** tal. En vecka som hade rymts
+  sorteras bort, en som inte ryms släpps igenom.
+- `pickCheapest` väljer billigast på samma falska tal.
+
+Veckan prissätts korrekt EFTER valet (`/api/pricing/week`), så användaren
+ser till slut rätt summa — men valet är redan gjort på fel grund.
+
+**Varför jag inte rättade den direkt.** `bestMenuCombo` är synkron och
+anropas från tre ställen (`app.js:1177`, `:1237`, `:4382`). En riktig fix
+kräver att kandidatval och prissättning skiljs åt: sålla snabbt, prissätta
+ett fåtal hela kassar med riktiga motorn, välja på det. Det gör funktionen
+asynkron, kräver laddningstillstånd i tre vyer och nätanrop mitt i
+planeringen. Det är en arkitekturändring, inte en rättelse — och
+browser-E2E:n är redan tidskänslig (två olika flakiga fall observerade).
+
+**Föreslagen ordning när den tas:**
+1. Bryt ut kandidatvalet så det går att testa utan DOM.
+2. Lägg till en prissättning av N kandidatkassar bakom ett explicit anrop.
+3. Gör budgetfiltret tolerant tills det riktiga priset finns — en
+   uppskattning får aldrig ensam förkasta en vecka mot en riktig budget.
+4. Visa det användaren behöver när budgeten inte går att hålla, med
+   konkreta ändringar (F2:s egen formulering).
 
 ## O — Operations (Fas 2)
 
