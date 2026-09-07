@@ -25,6 +25,18 @@ function when(value) {
 // Status is a claim about whether we can collect, not about whether the data
 // is good - a blocked chain can still be serving a perfectly good import from
 // two days ago, so the two are shown side by side rather than merged.
+// Driftstatusen svarar på "behöver jag göra något?". Den är avsiktligt
+// konservativ: okänt underlag ger aldrig grönt, och "released" är en flagga
+// - inte ett friskhetsbesked. En publik kedja kan mycket väl vara stale.
+const HEALTH_CLASS = {
+  healthy: "ok", ready_for_release: "warn", stale: "warn",
+  failed: "bad", limited: "off", never_imported: "off",
+};
+const HEALTH_LABEL = {
+  healthy: "Frisk", ready_for_release: "Redo att släppas", stale: "Inaktuell",
+  failed: "Trasig", limited: "Begränsad", never_imported: "Aldrig importerad",
+};
+
 const STATUS_CLASS = {
   working: "ok",
   working_but_unreliable: "warn",
@@ -50,6 +62,11 @@ async function call(path, options = {}) {
 async function refresh() {
   const data = await call("/admin/grocery-import");
   renderImport(data.import);
+  // Driftstatusen får inte falla om health gör det - och ska då visa att
+  // den inte kunde läsas, inte tyst se frisk ut.
+  let health = null;
+  try { health = await (await fetch(`${API}/health`)).json(); } catch { /* visas som okänt */ }
+  renderOps(health, data.providers);
   renderChains(data.providers, data.scheduler);
   renderScheduler(data.scheduler);
   // Kontrollrummet får inte falla om prisdatan gör det, och tvärtom.
@@ -130,6 +147,79 @@ function renderImport(state) {
   document.querySelectorAll("[data-import]").forEach(button => { button.disabled = busy; });
 }
 
+function healthPill(health) {
+  if (!health) return `<span class="pill off">okänt</span>`;
+  const ålder = health.ageHours == null ? "" :
+    ` <span class="quiet">${health.ageHours} h</span>`;
+  return `<span class="pill ${HEALTH_CLASS[health.status] || "off"}">` +
+         `${esc(HEALTH_LABEL[health.status] || health.status)}</span>${ålder}`;
+}
+
+// Ett systemkort. "okänt" är ett eget läge, aldrig grönt: ett kort som inte
+// kunde läsas får inte se friskt ut bara för att inget fel rapporterades.
+function opsCard(label, klass, värde, detalj) {
+  return `<div class="stat"><span class="pill ${klass}">${esc(värde)}</span>` +
+         `<span style="display:block;margin-top:.35rem">${esc(label)}</span>` +
+         `<span>${esc(detalj || "")}</span></div>`;
+}
+
+function renderOps(health, providers) {
+  const nu = new Date().toLocaleTimeString("sv-SE", { timeStyle: "short" });
+  $("opsCheckedAt").textContent = `kontrollerad ${nu}`;
+
+  if (!health) {
+    $("opsSummary").textContent = "Kunde inte läsa driftstatus";
+    $("opsSystems").innerHTML = opsCard("Backend", "bad", "svarar inte", "");
+    return;
+  }
+
+  const kedjor = providers || [];
+  const trasiga = kedjor.filter(p => p.health?.status === "failed");
+  const inaktuella = kedjor.filter(p => p.health?.status === "stale");
+  const behöverBlick = [...trasiga, ...inaktuella];
+
+  // Sammanfattningen namnger antal och kedja, inte bara en färg - "1 kedja
+  // behöver uppmärksamhet" utan att säga vilken tvingar fram ett klick.
+  $("opsSummary").textContent = trasiga.length
+    ? `Prisplattformen har problem: ${trasiga.map(p => p.chain).join(", ")}`
+    : inaktuella.length
+      ? `${inaktuella.length} kedja${inaktuella.length > 1 ? "r" : ""} behöver uppmärksamhet: ${inaktuella.map(p => p.chain).join(", ")}`
+      : "Alla kontrollerade system fungerar";
+
+  const audit = health.pricingAudit || {};
+  const larm = health.adminAlerts || {};
+  // Larmen är skarpa först när BÅDE mottagare och transport finns. Ett av
+  // dem ensamt betyder tysta larm respektive larm som aldrig når fram.
+  const larmSkarpa = larm.recipientConfigured && larm.transportConfigured;
+  const larmText = larm.recipientConfigured === undefined ? "okänt"
+    : larmSkarpa ? "aktiva"
+    : larm.recipientConfigured ? "ingen SMTP"
+    : "ingen mottagare";
+  const släppta = kedjor.filter(p => p.health?.released);
+  const friska = släppta.filter(p => p.health?.status === "healthy");
+
+  $("opsSystems").innerHTML =
+    opsCard("Backend", health.ok ? "ok" : "bad", health.ok ? "uppe" : "nere",
+            health.commit ? `commit ${String(health.commit).slice(0, 7)}` : "commit okänd") +
+    opsCard("Prisrevision", audit.gate === "GRÖN" ? "ok" : audit.gate ? "bad" : "off",
+            audit.gate || "ingen data",
+            audit.kontroller ? `${audit.kontroller} kontroller` : "inga kontroller") +
+    opsCard("Släppta kedjor", friska.length === släppta.length && släppta.length ? "ok" : "warn",
+            `${friska.length}/${släppta.length}`, "friska av släppta") +
+    opsCard("Driftlarm", larmSkarpa ? "ok" : larm.recipientConfigured === undefined ? "off" : "warn",
+            larmText, larm.recipientDomain ? `till ${larm.recipientDomain}` : "") +
+    opsCard("Utgående mejl", health.mail ? "ok" : "warn", health.mail ? "konfigurerat" : "saknas",
+            health.mailFrom ? `från ${health.mailFrom}` : "") +
+    opsCard("Utvecklingslåset", health.gate ? "warn" : "ok", health.gate ? "på" : "av",
+            health.gate ? "appen är inte öppen" : "appen är öppen");
+
+  $("opsAttention").innerHTML = behöverBlick.length
+    ? `<p class="note" style="margin-top:.8rem"><strong>Behöver uppmärksamhet:</strong> ` +
+      behöverBlick.map(p => `${esc(p.chain)} &mdash; ${esc(p.health.reason || p.health.status)}`).join(" · ") +
+      `</p>`
+    : "";
+}
+
 function renderChains(providers, scheduler) {
   const next = Object.fromEntries((scheduler.schedule || []).map(entry => [entry.chain, entry]));
   $("chains").querySelector("tbody").innerHTML = providers.map(provider => {
@@ -141,6 +231,8 @@ function renderChains(providers, scheduler) {
     const last = provider.lastRun, success = provider.lastSuccessfulRun;
     return `<tr>
       <td><strong>${esc(provider.chain)}</strong></td>
+      <td>${healthPill(provider.health)}</td>
+      <td>${provider.health?.released ? "JA" : `<span class="quiet">nej</span>`}</td>
       <td><span class="pill ${STATUS_CLASS[provider.status] || "off"}">${esc(provider.status)}</span></td>
       <td>${provider.products}</td>
       <td>${provider.prices}</td>
@@ -151,8 +243,8 @@ function renderChains(providers, scheduler) {
       <td>${last ? `${esc(last.status)} · ${when(last.finishedAt || last.startedAt)}` : "—"}</td>
       <td>${nightly ? esc(nightly.time) : `<span style="color:var(--muted)">ingen</span>`}</td>
       <td>${action}</td>
-    </tr>${last?.errorMessage ? `<tr><td colspan="11" class="wrap">⚠ ${esc(last.errorMessage)}</td></tr>` : ""}
-    ${blocked ? `<tr><td colspan="11" class="wrap">Ingen nattkörning: ${esc(blocked)}</td></tr>` : ""}`;
+    </tr>${last?.errorMessage ? `<tr><td colspan="13" class="wrap">⚠ ${esc(last.errorMessage)}</td></tr>` : ""}
+    ${blocked ? `<tr><td colspan="13" class="wrap">Ingen nattkörning: ${esc(blocked)}</td></tr>` : ""}`;
   }).join("");
 
   $("chainNotes").innerHTML = providers
