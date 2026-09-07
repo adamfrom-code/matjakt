@@ -933,6 +933,11 @@ def compare_chains(results: list[dict]) -> dict:
          MIN_COVERAGE_FOR_COMPARISON): its total is small because items are
          MISSING, not because the shop is cheap. This is the failure mode
          that matters most, since it makes the worst-covered chain look best.
+      2b. Chains that priced DIFFERENT items. The threshold alone let a
+         chain at 85 % be crowned over one at 100 %: its total was lower
+         because three items were missing, and those three could cost more
+         than the "savings". Two totals compare only when they answer the
+         same question.
       3. Every total identical - that is what happens when the numbers are
          not really chain-specific, and crowning one of several identical
          figures is exactly the "Coop 351 / Willys 351 / ICA 351, one marked
@@ -950,6 +955,25 @@ def compare_chains(results: list[dict]) -> dict:
     if len(comparable) < 2:
         return {"cheapestChain": None, "savings": None, "comparedChains": len(comparable),
                 "reason": "too_few_comparable_chains"}
+
+    # SAMMA VAROR, ANNARS INGEN KRÖNING.
+    #
+    # Täckningströskeln ensam räcker inte. En kedja på 85 % (17 av 20 varor)
+    # klarade filtret ovan och kunde krönas mot en kedja på 100 % - men dess
+    # total är lägre för att tre varor SAKNAS, inte för att butiken är
+    # billig. De tre kunde kosta mer än den utlovade besparingen, och då är
+    # "du sparar 50 kr" ett falskt besked om användarens pengar.
+    #
+    # Två totaler är jämförbara först när de svarar på samma fråga. Vi kräver
+    # därför att kedjorna saknar exakt samma varor - normalfallet är att de
+    # inte saknar några alls. Skiljer de sig returneras totalerna ändå (de är
+    # sanna var för sig) men utan kröning, och med vilka varor som skiljer
+    # så gränssnittet kan säga varför i stället för att bara tiga.
+    saknade = {r["chain"]: frozenset(r.get("missingItemNames") or ()) for r in comparable}
+    if len(set(saknade.values())) > 1:
+        skiljer = sorted(set().union(*saknade.values()))
+        return {"cheapestChain": None, "savings": None, "comparedChains": len(comparable),
+                "reason": "different_baskets", "differingItems": skiljer}
 
     totals = sorted(comparable, key=lambda r: r["totalCheckoutCost"])
     cheapest, priciest = totals[0], totals[-1]
