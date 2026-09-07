@@ -155,7 +155,7 @@ först enligt ägarens egen faseordning.
 
 | Grupp | ID | Status |
 |---|---|---|
-| Första användningen | U01–U06 | att göra |
+| Första användningen | U01–U06 | **delvis** — U01 och U06 mergade i PR #17/#18, U02–U05 att göra |
 | Veckoplanering | U07–U18 | att göra |
 | Pengar | U19–U30 | att göra (U19 = F1, **pågår**) |
 | I butiken | U31–U42 | att göra |
@@ -189,14 +189,31 @@ betaldata; ingen intäktssiffra får härledas ur antal Premium × pris.
 | F4: "billigaste butiken" var oftast vald | #14 **mergad** | Osant påstående i UI rättat, dedupe per vecka |
 | F3: kassans ålder från använda rader | #15 **mergad** | En färsk rad nollställde inte längre kassens ålder |
 | Revisionen namnger vad som är osäkert | #16 **öppen** | Rubriken kunde säga "alla system fungerar" över ett rött kort. Två tester i båda riktningarna |
+| U01: budgeten säger vad den räcker till | #17 **öppen, grön** | "Veckobudget" lästes rimligen som all mat. Verifierad i webbläsare, mobil |
+| U06: veckans antaganden syns och går att lägga till | #18 **öppen** | Appen antog tyst ris, smör och socker. Sju tester |
 | Kampanjtorget med bilder och hero | #12 **mergad** | Bilden bär aldrig budskapet |
 | Driftstatus i kontrollrummet | #11 **mergad** | Verifierad i webbläsare, desktop + mobil |
 | health visar om larmen går att skicka | #10 **mergad** | Live: mottagare och transport bekräftade |
 | Driftstatus + larm med dedupe och recovery | #8 **mergad** | 21 tester; ett av dem hittade att en API-nyckel kunde mejlas i klartext |
 | F1: ofullständig kasse krönas inte | #9 **mergad** | Regressionstest med exakt scenariot ur granskningen |
 
+## Flakig E2E — fyra observationer
+
+`test_premium_paywall_and_stripe_testmode` föll på
+`#storeCards .store-card:not(.locked):not(.unavailable)` = 0 element efter
+30 s, och gick igenom på omkörning utan kodändring. Samma sak har setts
+tidigare med två olika signaturer. I den senaste loggen föregicks felet av
+`Product scrape failed for Willys/ris` och `BrokenPipeError` i fixturen —
+alltså att testservern tappade prissättningen, inte att appen är trasig.
+
+**Ett test som failar slumpmässigt är värre än inget test**, för då lär man
+sig att köra om i stället för att läsa. Orsaken bör letas i fixturen, inte
+i väntetiderna: att höja timeouten döljer felet i stället för att rätta det.
+
 ## Kvar för ägaren
 
 1. **Primat App-nivå** — betalbeslut. Gratisnivån räcker inte för ICA och
    Coop samma natt.
+2. **De osäkra prisraderna** — se O10b ovan. Två vägar, och de är inte lika
+   bra.
 3. **F6 databasincidenten** — kräver ditt godkännande för historikrensning.
