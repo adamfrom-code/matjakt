@@ -409,3 +409,70 @@ class ChainHealthTest(unittest.TestCase):
             self.assertIn(entry["health"]["status"],
                           {"limited", "never_imported", "failed", "stale",
                            "healthy", "ready_for_release"}, entry["chain"])
+
+
+class BasketAgeTest(unittest.TestCase):
+    """Kassans färskhet.
+
+    Åldern gick in i compare_chains age-filter, så den avgjorde vilken kedja
+    som fick krönas billigast. Räknades den fel kunde en kedja med
+    veckogamla priser kröna sig mot en med färska.
+    """
+
+    NU = 1_000_000.0
+    TIMME = 3600.0
+
+    def _rad(self, verified=None, fetched=None, total=42.0):
+        return {"verifiedAt": verified, "fetchedAt": fetched, "totalCost": total}
+
+    def test_the_age_is_the_oldest_row_not_the_newest(self):
+        """En kasse är inte färskare än sin äldsta prisrad. Förut svarade
+        åldern på en annan fråga - "när uppdaterades något i butiken senast?"
+        - och en enda färsk rad nollställde åldern för hela kassen."""
+        resultat = {"matchedItems": [
+            self._rad(verified=self.NU - 200 * self.TIMME),   # åtta dygn
+            self._rad(verified=self.NU - 1 * self.TIMME),     # en timme
+        ]}
+        ålder = grocery_api._result_age_seconds(resultat, now=self.NU)
+        self.assertAlmostEqual(ålder, 200 * self.TIMME, delta=1)
+
+    def test_a_row_that_did_not_count_does_not_affect_the_age(self):
+        """En rad utan totalCost räknades inte in i summan, och dess ålder
+        säger därför ingenting om kassan."""
+        resultat = {"matchedItems": [
+            self._rad(verified=self.NU - 2 * self.TIMME),
+            self._rad(verified=self.NU - 500 * self.TIMME, total=None),
+        ]}
+        ålder = grocery_api._result_age_seconds(resultat, now=self.NU)
+        self.assertAlmostEqual(ålder, 2 * self.TIMME, delta=1)
+
+    def test_verified_beats_fetched(self):
+        """När priset senast BEKRÄFTADES i butiken är det som betyder något,
+        inte när vi råkade hämta hem raden."""
+        resultat = {"matchedItems": [
+            self._rad(verified=self.NU - 50 * self.TIMME, fetched=self.NU - 1),
+        ]}
+        ålder = grocery_api._result_age_seconds(resultat, now=self.NU)
+        self.assertAlmostEqual(ålder, 50 * self.TIMME, delta=1)
+
+    def test_fetched_is_used_when_nothing_was_verified(self):
+        resultat = {"matchedItems": [self._rad(fetched=self.NU - 3 * self.TIMME)]}
+        ålder = grocery_api._result_age_seconds(resultat, now=self.NU)
+        self.assertAlmostEqual(ålder, 3 * self.TIMME, delta=1)
+
+    def test_a_basket_without_priced_rows_has_no_age(self):
+        """Ingen kasse att åldersbedöma. En sådan kasse har realPriceItems=0
+        och kan ändå aldrig krönas billigast."""
+        self.assertIsNone(grocery_api._result_age_seconds({"matchedItems": []}, now=self.NU))
+        self.assertIsNone(grocery_api._result_age_seconds({}, now=self.NU))
+
+    def test_an_old_basket_is_excluded_from_the_crowning(self):
+        """Hela poängen: med rätt ålder faller en gammal kedja ur
+        jämförelsen i stället för att krönas billigast."""
+        gammal = result("A", 300.0, 95)
+        gammal["dataAgeSeconds"] = grocery_api.MAX_AGE_SECONDS_FOR_COMPARISON + 1
+        färsk = result("B", 400.0, 95)
+        färsk["dataAgeSeconds"] = 3600
+        jämförelse = grocery_api.compare_chains([gammal, färsk])
+        self.assertIsNone(jämförelse["cheapestChain"])
+        self.assertEqual(jämförelse["reason"], "too_few_comparable_chains")
