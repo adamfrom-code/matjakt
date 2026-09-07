@@ -570,7 +570,12 @@ class BrowserJourney(unittest.TestCase):
             self.assertTrue(week_before)
             with page.expect_navigation():
                 page.click('#paywallModal [data-paywall-plan="yearly"]')
-            expect(page.locator("#accountPremiumStatus")).to_contain_text("Aktiverar Premium")
+            # Texten får inte PÅSTÅ att betalningen är gjord: användaren kan ha
+            # stängt Stripes sida utan att betala (särskilt i native-appen).
+            expect(page.locator("#accountPremiumStatus")).to_contain_text("Kontrollerar om betalningen")
+            # Och köpknappen ska finnas kvar så länge Premium inte är aktiverat,
+            # annars är en avbruten betalning en återvändsgränd.
+            expect(page.locator("#premiumPitch")).to_be_visible()
             self.assertEqual(len(checkouts), 1)
             self.assertEqual(checkouts[0]["price"], "price_e2e_year")          # årsplanen mappar rätt
 

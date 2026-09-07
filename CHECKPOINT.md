@@ -254,3 +254,30 @@ för befintlig adress; fixen ändrar registreringsflödet och är Adams beslut),
 serverns tillit till klientens GTIN i skafferiet, notiser som konsumeras av
 första enheten på samma konto, och P0:n med databasbackuperna i git-historiken.
 
+## Defektjakt 2026-09-07 (kväll): nio bekräftade fel, sju åtgärdade
+
+Femton agenter läste appen ur fem vinklar (Handla, priser, konto, nät,
+hushåll); varje fynd fick en egen agent som försökte motbevisa det.
+
+**P0 (alla osynliga för ensamanvändare, alla träffsäkra i ett hushåll):**
+avbockningen skrev på GTIN-nyckel mot namn-nycklade rader (400 från servern,
+dubblett i listan, status borta vid omladdning); en tom vecka raderade
+familjens lista; Handla-headern visade en utdömd kedjas ofullständiga summa
+som veckans pris.
+
+**P1:** livepriset räknades på det visade måttet mot förpackningens basmått
+(6 dl grädde prissattes som en 2 dl-burk); "Du sparar X kr" mättes mot en
+statisk uppskattning eller en utdömd kedja; inbjudan tappades vid
+inloggning; en misslyckad hushållsskrivning rullades aldrig tillbaka;
+native-appen påstod "betalningen är mottagen" efter en AVBRUTEN betalning
+och gömde köpknappen i trettio sekunder.
+
+**Kvar (medvetet):** hushållets skafferirader kan få namn-nyckel från Handla
+och gtin-nyckel från Skafferi-formuläret - samma vara på två rader. Ingen
+datförlust, men värt en egen liten insats.
+
+Nyckelkontraktet mellan klient och server är nu låst av tester på båda sidor
+mot `tests/fixtures/household-keys.json`, och mutationstestat: bryts formeln
+faller nodtestet. `tests/app-imports.test.js` fångar den import-miss som
+annars ger ReferenceError först hos användaren.
+

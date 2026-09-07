@@ -8,7 +8,7 @@ if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "functi
   };
 }
 import { readStoredState, writeStoredState } from "./src/state/storage.js";
-import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
+import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, packagesFor, portionFactor } from "./src/services/calculations.js";
 import { createDebouncedSearch, filterRecipes, mergeRecipeResults } from "./src/services/recipe-search.js";
 import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/nutrition.js";
 import { PANTRY_LOCATIONS, expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts } from "./src/services/pantry.js";
@@ -2392,11 +2392,14 @@ function renderStoreComparisonPage(selected) {
   // "vald butik" - the chain actually in use right now, not necessarily the
   // cheapest one shown above, so this reflects what the user would really
   // save with the choice they've already made.
-  const activeResult = results.find(r => r.branch.kedja === chosenStore()) || cheapest;
-  // priciest is null whenever no shop qualified for a comparison - and a
-  // saving measured against nothing is not a saving. Say nothing instead of
-  // crashing the whole render, which is what reading .cost off null did.
-  const activeSavings = priciest && activeResult ? priciest.cost - activeResult.cost : 0;
+  // Bara JÄMFÖRBARA butiker får bära besparingen. Den aktiva kedjan kan
+  // sakna priser helt (raden blir en statisk uppskattning) - att mäta en
+  // riktig totalsumma mot den uppskattningen gav "Du sparar 220 kr med
+  // Coop" för en butik som inte hade ett enda pris. Hittas den aktiva
+  // kedjan inte bland de jämförbara faller vi tillbaka på den billigaste
+  // jämförbara, och priciestCost är null när färre än två kan jämföras.
+  const activeResult = validResults.find(r => r.branch.kedja === chosenStore()) || validResults[0] || null;
+  const activeSavings = priciestCost != null && activeResult ? priciestCost - activeResult.cost : 0;
   $("comparisonCampaignCard").hidden = !(activeSavings > 1);
   if (activeSavings > 1) {
     $("comparisonCampaignText").textContent = `Du sparar ${money(activeSavings)} med ${activeResult.branch.kedja}`;
@@ -2515,11 +2518,16 @@ function shoppingRowMarkup(item) {
   // är en gissning i en kolumn av fakta och skrivs aldrig.
   const dbSyncPending = databasePricingSync.pending || (!state.dbPricedAt && !state.dbPricingFailedAt);
   const priceMissing = live && live.pris_kr == null;
-  const packages = match ? match.packages : (item.package ? Math.ceil(Math.max(0, item.total - (pantryForPricing()[item.namn] || 0)) / item.package.amount) : 1);
+  // SAMMA räkning som totalsumman (packagesFor), inte en egen kopia: kopian
+  // räknade veckans behov i det VISADE måttet (6 dl) mot förpackningens
+  // basmått (200 ml) och kom fram till ett paket i stället för tre - raden
+  // sa "Behöver 6 dl" och visade priset för en burk. null = antal osäkert
+  // (vikt/volym utan paketinfo), 0 = allt finns redan hemma.
+  const packages = match ? match.packages : packagesFor(item, pantryForPricing());
   const stillFetching = !match && !live && (dbSyncPending || (livePriceSync.loading && VALID_CHAINS.includes(chosenStore())));
   const price = match && match.totalCost != null ? money(match.totalCost)
     : priceMissing ? "Pris saknas"
-      : live ? money(live.pris_kr * (packages || 1))
+      : live ? (packages == null ? "" : money(live.pris_kr * packages))
         : stillFetching ? "" : "Pris saknas";
   const store = match ? (state.dbChainTotals[currentPricedChain()]?.chain || currentPricedChain() || "") : "";
   const onCampaign = match && match.campaignPrice != null && match.regularPrice != null
@@ -2530,7 +2538,10 @@ function shoppingRowMarkup(item) {
   // Flaggad, inte gömd: när receptets enhet inte går att räkna om mot
   // förpackningens gissar motorn "en förpackning". Det är en gissning om
   // ANTAL, och den som står i affären är den som kan avgöra.
-  const inexact = match?.priceStatus === "estimated"
+  // Antalet är osäkert både när prisdatabasen säger det och när ett livepris
+  // saknar paketinfo för en vikt-/volymvara - i båda fallen ska raden säga
+  // det i stället för att visa ett tal vi inte kan stå för.
+  const inexact = match?.priceStatus === "estimated" || (!match && live && packages == null)
     ? '<small class="item-status estimated">Antal osäkert</small>'
     : (stillFetching ? '<small class="item-status loading">pris hämtas…</small>' : "");
   const comparePrice = match?.comparisonPrice != null
@@ -3816,7 +3827,10 @@ async function pollPremiumAfterCheckout() {
   // Premium just nu: veckans priser hämtas om utan mask (nyckeln bär planen).
   if (hasPremium()) renderBasket();
   if (!hasPremium()) {
-    $("accountPremiumStatus").textContent = "Betalningen är mottagen, men Premium är inte aktiverat än. Ladda om sidan om en stund - hör av dig till supporten om det dröjer.";
+    // Vi VET inte om betalningen gjordes: användaren kan ha stängt Stripes
+    // sida utan att betala. Säg vad som gäller i båda fallen i stället för
+    // att påstå ett köp och skicka en icke-betalande kund till supporten.
+    $("accountPremiumStatus").textContent = "Ingen betalning har registrerats än. Avbröt du köpet är du kvar på Free och kan prova igen. Gick betalningen igenom dyker Premium upp inom någon minut - hör av dig till supporten om det dröjer längre.";
   }
 }
 
@@ -4085,14 +4099,17 @@ function renderAccount() {
     const hasSubscription = ["active", "trialing", "past_due", "canceled", "unpaid"].includes(state.user.subscriptionStatus);
     const pastDue = ["past_due", "unpaid", "incomplete"].includes(state.user.subscriptionStatus);
     $("accountPremiumStatus").textContent = awaitingPremiumActivation && !hasPremium()
-      ? "Aktiverar Premium… (betalningen är mottagen)"
+      ? "Kontrollerar om betalningen gått igenom…"
       : daysLeft ? `✓ Provperiod aktiv - ${plural(daysLeft, "dag", "dagar")} kvar (ingen betalning krävs)`
       : state.user.premium ? "✓ Premium aktiverat"
       : pastDue ? "Premium är pausat tills betalningen gått igenom"
       : "Inget Premium ännu";
-    // Köpknappen döljs medan vi väntar in webhooken och när det redan finns
-    // en prenumeration att fixa i portalen - servern nekar ändå ett andra köp.
-    $("premiumPitch").hidden = state.user.premium || awaitingPremiumActivation || pastDue;
+    // Köpknappen döljs bara när det FINNS något att fixa i portalen. Medan
+    // vi kontrollerar en betalning står den kvar: i native-appen kan
+    // användaren ha stängt betalsidan utan att betala, och då vore en
+    // borttagen köpknapp en återvändsgränd. Servern nekar ändå ett andra
+    // köp (409) om prenumerationen redan finns.
+    $("premiumPitch").hidden = state.user.premium || pastDue;
     $("subscriptionPanel").hidden = !hasSubscription;
     if (hasSubscription) {
       const periodEnd = state.user.subscriptionPeriodEnd ? new Date(state.user.subscriptionPeriodEnd).toLocaleDateString("sv-SE") : "okänt datum";
