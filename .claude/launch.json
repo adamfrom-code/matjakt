@@ -23,11 +23,12 @@
     },
     {
       "name": "kontrollrum",
-      "runtimeExecutable": "powershell",
+      "runtimeExecutable": "node",
       "runtimeArgs": [
-        "-NoProfile",
-        "-Command",
-        "$env:MATJAKT_PORT='8010'; python backend/api_server.py"
+        "scripts/py.mjs",
+        "--env",
+        "MATJAKT_PORT=8010",
+        "backend/api_server.py"
       ],
       "port": 8010,
       "autoPort": false
