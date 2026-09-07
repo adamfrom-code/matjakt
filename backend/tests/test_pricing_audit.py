@@ -87,6 +87,62 @@ class AuditAgainstTheRealEngine(unittest.TestCase):
         self.assertEqual(result["flaggor"]["kilopris_som_paketpris"], 0, result.get("exempel"))
         self.assertEqual(result["gate"], "GRÖN")
 
+    def test_uncertain_row_names_the_ingredient(self):
+        """En osäker rad måste gå att åtgärda, alltså gå att hitta.
+
+        30 ml soja mot en 150-gramsflaska: motorn kan inte räkna om ml till
+        g för soja (ingen densitet finns) och raden blir korrekt ETT ESTIMAT.
+        Det är rätt svar - men gaten blir röd, och siffran "estimat: 1" ensam
+        säger inte VAD som är osäkert. Nedbrytningen ska namnge ingrediensen
+        och enheten, aldrig produkten."""
+        with tempfile.TemporaryDirectory() as tmp:
+            gs = GroceryStore(Path(tmp) / "g.db")
+            rs = RecipeStore(Path(tmp) / "r.db")
+            try:
+                store = gs.upsert_store(chain="Willys", external_store_id="w1", name="Willys Test", active=True)
+                product = gs.find_or_create_product(RawProduct(
+                    chain="Willys", external_product_id="soja", name="Soja Japansk",
+                    store_id="w1", store_name="Willys", gtin=None, brand=None,
+                    size="150 g", quantity=None, unit=None,
+                    category="Skafferi > Såser & dressing > Soja"))
+                gs.upsert_current_price(product_id=product.id, store_id=store.id, regular_price=24.9,
+                                        campaign_price=None, member_price=None, multibuy_price=None,
+                                        unit_price=166.0, currency="SEK", source_url=None, fetched_at=time.time())
+                self._recipe(rs, [{"name": "Soja", "amount": 30, "unit": "ml"}])
+                result = run_pricing_audit(gs, rs, ["Willys"])
+            finally:
+                gs.close(); rs.close()
+        self.assertEqual(result["flaggor"]["saknade"], 0)
+        self.assertEqual(result["flaggor"]["estimat"], 1, result.get("exempel"))
+        self.assertEqual(result["estimatPerIngrediens"], {"Soja (ml)": 1})
+        # Produktnamnet hör hemma i exempel (admin), aldrig i nedbrytningen.
+        self.assertNotIn("Japansk", " ".join(result["estimatPerIngrediens"]))
+        self.assertEqual(result["gate"], "RÖD")
+
+    def test_certain_rows_leave_the_breakdown_empty(self):
+        """Motsatsriktningen: gaten får inte kunna bli röd utan att någon rad
+        faktiskt är osäker. Kanel i tsk mot en 30-gramsburk ryms i F5-regeln
+        och ska förbli exakt - blir den ett estimat är regeln sönder."""
+        with tempfile.TemporaryDirectory() as tmp:
+            gs = GroceryStore(Path(tmp) / "g.db")
+            rs = RecipeStore(Path(tmp) / "r.db")
+            try:
+                store = gs.upsert_store(chain="Willys", external_store_id="w1", name="Willys Test", active=True)
+                product = gs.find_or_create_product(RawProduct(
+                    chain="Willys", external_product_id="kanel", name="Kanel Malen",
+                    store_id="w1", store_name="Willys", gtin=None, brand=None,
+                    size="30 g", quantity=None, unit=None, category="Skafferi > Kryddor"))
+                gs.upsert_current_price(product_id=product.id, store_id=store.id, regular_price=17.9,
+                                        campaign_price=None, member_price=None, multibuy_price=None,
+                                        unit_price=596.0, currency="SEK", source_url=None, fetched_at=time.time())
+                self._recipe(rs, [{"name": "Kanel", "amount": 2, "unit": "tsk"}])
+                result = run_pricing_audit(gs, rs, ["Willys"])
+            finally:
+                gs.close(); rs.close()
+        self.assertEqual(result["flaggor"]["estimat"], 0, result.get("exempel"))
+        self.assertEqual(result["estimatPerIngrediens"], {})
+        self.assertEqual(result["gate"], "GRÖN")
+
 
 if __name__ == "__main__":
     unittest.main()

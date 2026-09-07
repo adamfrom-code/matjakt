@@ -626,6 +626,7 @@ def _store_pricing_audit_summary(result: dict, reason: str, started: float) -> d
                "tackningProcent": round(100.0 * (checks - missing) / checks, 1) if checks else 0.0,
                "recept": result.get("recept"), "kedjor": result.get("kedjor"),
                "perKedja": per_chain, "flaggor": result.get("flaggor"),
+               "estimatPerIngrediens": result.get("estimatPerIngrediens") or {},
                "ranAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "durationSeconds": round(time.time() - started, 1), "reason": reason,
                "commit": (os.environ.get("RENDER_GIT_COMMIT") or "")[:12] or None}

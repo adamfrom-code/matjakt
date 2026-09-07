@@ -178,15 +178,27 @@ function renderOps(health, providers) {
   const inaktuella = kedjor.filter(p => p.health?.status === "stale");
   const behöverBlick = [...trasiga, ...inaktuella];
 
+  const audit = health.pricingAudit || {};
+
   // Sammanfattningen namnger antal och kedja, inte bara en färg - "1 kedja
   // behöver uppmärksamhet" utan att säga vilken tvingar fram ett klick.
+  //
+  // PRISREVISIONEN VÄGER IN. Rubriken läste förut bara kedjornas hälsa, så
+  // en röd revision kunde stå bredvid "Alla kontrollerade system fungerar" -
+  // kedjorna importerade ju precis som de skulle. Men en röd revision säger
+  // att priserna kan vara FEL, vilket är värre än att de är gamla, och en
+  // rubrik som säger grönt över ett rött kort lär ägaren att strunta i båda.
+  const auditTrasig = audit.gate === "RÖD" || audit.gate === "FEL";
+  const auditOkand = !audit.gate || audit.gate === "INGEN DATA";
   $("opsSummary").textContent = trasiga.length
     ? `Prisplattformen har problem: ${trasiga.map(p => p.chain).join(", ")}`
-    : inaktuella.length
-      ? `${inaktuella.length} kedja${inaktuella.length > 1 ? "r" : ""} behöver uppmärksamhet: ${inaktuella.map(p => p.chain).join(", ")}`
-      : "Alla kontrollerade system fungerar";
-
-  const audit = health.pricingAudit || {};
+    : auditTrasig
+      ? `Prisrevisionen är ${audit.gate.toLowerCase()}: ${auditDetalj(audit)}`
+      : inaktuella.length
+        ? `${inaktuella.length} kedja${inaktuella.length > 1 ? "r" : ""} behöver uppmärksamhet: ${inaktuella.map(p => p.chain).join(", ")}`
+        : auditOkand
+          ? "Kedjorna fungerar, men prisrevisionen har inte kunnat granska dem"
+          : "Alla kontrollerade system fungerar";
   const larm = health.adminAlerts || {};
   // Larmen är skarpa först när BÅDE mottagare och transport finns. Ett av
   // dem ensamt betyder tysta larm respektive larm som aldrig når fram.
@@ -202,8 +214,7 @@ function renderOps(health, providers) {
     opsCard("Backend", health.ok ? "ok" : "bad", health.ok ? "uppe" : "nere",
             health.commit ? `commit ${String(health.commit).slice(0, 7)}` : "commit okänd") +
     opsCard("Prisrevision", audit.gate === "GRÖN" ? "ok" : audit.gate ? "bad" : "off",
-            audit.gate || "ingen data",
-            audit.kontroller ? `${audit.kontroller} kontroller` : "inga kontroller") +
+            audit.gate || "ingen data", auditDetalj(audit)) +
     opsCard("Släppta kedjor", friska.length === släppta.length && släppta.length ? "ok" : "warn",
             `${friska.length}/${släppta.length}`, "friska av släppta") +
     opsCard("Driftlarm", larmSkarpa ? "ok" : larm.recipientConfigured === undefined ? "off" : "warn",
@@ -213,11 +224,41 @@ function renderOps(health, providers) {
     opsCard("Utvecklingslåset", health.gate ? "warn" : "ok", health.gate ? "på" : "av",
             health.gate ? "appen är inte öppen" : "appen är öppen");
 
-  $("opsAttention").innerHTML = behöverBlick.length
+  $("opsAttention").innerHTML = (behöverBlick.length
     ? `<p class="note" style="margin-top:.8rem"><strong>Behöver uppmärksamhet:</strong> ` +
       behöverBlick.map(p => `${esc(p.chain)} &mdash; ${esc(p.health.reason || p.health.status)}`).join(" · ") +
       `</p>`
-    : "";
+    : "") + osäkraIngredienser(audit);
+}
+
+// GATENS EGNA FLAGGOR, inte antalet kontroller. "4 596 kontroller" under ett
+// rött kvitto svarar på fel fråga: den som ser rött vill veta VAD som är
+// fel, inte hur mycket som granskades.
+const GATE_FLAGGOR = {
+  gram_som_styck: "gram som styck", volym_som_styck: "volym som styck",
+  estimat: "osäkra rader", otolkad_paketstorlek: "otolkade paket",
+  kilopris_som_paketpris: "kilopris som paketpris",
+};
+
+function auditDetalj(audit) {
+  const kontroller = audit.kontroller ? `${audit.kontroller} kontroller` : "inga kontroller";
+  if (audit.gate !== "RÖD") return kontroller;
+  const fel = Object.entries(GATE_FLAGGOR)
+    .filter(([nyckel]) => (audit.flaggor || {})[nyckel])
+    .map(([nyckel, text]) => `${audit.flaggor[nyckel]} ${text}`);
+  // Röd utan flagga = röd på TÄCKNING. Säg det i stället för att visa tomt.
+  return fel.length ? fel.join(", ") : `${kontroller}, för låg täckning`;
+}
+
+// Vilka ingredienser som är osäkra. Utan namnen är "30 osäkra rader" inte
+// åtgärdbar: siffran säger att något inte går att räkna ut, men inte vad.
+function osäkraIngredienser(audit) {
+  const rader = Object.entries(audit.estimatPerIngrediens || {});
+  if (!rader.length) return "";
+  return `<p class="note" style="margin-top:.6rem"><strong>Osäkra rader:</strong> ` +
+    rader.map(([namn, antal]) => `${esc(namn)} &times;${antal}`).join(" · ") +
+    ` <span class="quiet">&mdash; måttet går inte att räkna om till förpackningens enhet. ` +
+    `Raderna hålls utanför säkra totaler och billigast-jämförelsen.</span></p>`;
 }
 
 function renderChains(providers, scheduler) {
