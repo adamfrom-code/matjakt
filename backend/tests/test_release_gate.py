@@ -96,6 +96,50 @@ class TheThreeProductionErrors(unittest.TestCase):
         finally:
             db.close(); tmp.cleanup()
 
+    def test_a_dense_liquid_is_never_one_exact_package(self):
+        """2 msk honung behöver ~42 g (densitet ~1,4) och ryms INTE i en
+        15-gramsburk. Regeln prövade förut bara mängderna, inte att varan var
+        en torr krydda, så honung fick "1 förpackning, exakt" - och en
+        underskattad rad räknas in i säkra totaler och går rakt in i
+        billigast-jämförelsen mellan kedjor.
+
+        Revisionen fångar den inte heller: audit.py flaggar volym-som-styck
+        bara när paketenheten saknas i massregistret, vilket är precis det
+        här fallet. Testet är därför enda skyddet."""
+        for namn, produkt, kategori in [
+            ("Honung", "Honung Flytande", "Skafferi > Sötningsmedel"),
+            ("Sirap", "Sirap Ljus", "Skafferi > Sötningsmedel"),
+            ("Olivolja", "Olivolja Extra", "Skafferi > Olja & vinäger"),
+            ("Tomatpuré", "Tomatpuré", "Skafferi > Konserver"),
+        ]:
+            engine, store_id, tmp, db = _engine_with([{
+                "id": "x", "name": produkt, "size": "20g", "quantity": 20.0,
+                "unit": "g", "price": 25.0, "category": kategori}])
+            try:
+                row = engine.price_item(namn, 2, "msk", "Willys", store_id)
+                # Ingen tyst passering: matchas varan inte alls prövar testet
+                # ingenting, och då är det värdelöst som skydd.
+                self.assertIsNotNone(row, f"{namn} matchades inte - testet mäter inget")
+                self.assertFalse(row["exactPackaging"],
+                                 f"{namn} markerades som exakt förpackning")
+            finally:
+                db.close(); tmp.cleanup()
+
+    def test_the_spice_rule_holds_at_its_own_boundary(self):
+        """30 ml (2 msk) mot exakt 15 g är regelns yttersta kant och ska
+        fortfarande vara exakt. Testas för att en framtida skärpning av
+        gränsen inte tyst ska göra kryddor osäkra."""
+        engine, store_id, tmp, db = _engine_with([{
+            "id": "ka", "name": "Kanel Malen", "size": "15g",
+            "quantity": 15.0, "unit": "g", "price": 10.0,
+            "category": "Skafferi > Kryddor & smaksättare > Kryddor"}])
+        try:
+            row = engine.price_item("Kanel", 2, "msk", "Willys", store_id)
+            self.assertIsNotNone(row)
+            self.assertTrue(row["exactPackaging"])
+        finally:
+            db.close(); tmp.cleanup()
+
     def test_kanel_never_matches_kanel_flavoured_bakery(self):
         for product, category in [
             ("Kanel Veteknäcke Runt", "Bröd & Kakor > Knäckebröd & Skorpor"),
