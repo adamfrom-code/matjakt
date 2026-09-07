@@ -51,6 +51,7 @@ from services.household.routes import HouseholdRouter
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
+from services.grocery import alerts as grocery_alerts  # noqa: E402
 from services.grocery import api as grocery_api  # noqa: E402
 from services.recipes import api as recipes_api
 from services.recipes import prices as recipe_prices
@@ -722,6 +723,14 @@ def join_mail_workers(timeout: float = 5.0) -> None:
     en begäran (då vore timingen tillbaka)."""
     for thread in list(_MAIL_WORKERS):
         thread.join(timeout=timeout)
+
+
+def _admin_alert_domain():
+    """Domänen ur larmmottagaren, aldrig adressen. Räcker för att svara på
+    "går larmen till rätt ställe?" utan att lägga en e-postadress i ett
+    publikt health-svar."""
+    address = grocery_alerts.admin_email()
+    return address.rsplit("@", 1)[1].lower() if "@" in address else None
 
 
 def _mail_from_domain():
@@ -2070,6 +2079,22 @@ class ApiHandler(SimpleHTTPRequestHandler):
         "mailFrom": _mail_from_domain(),
         # Senaste prisauditen mot den här miljöns data - bara siffror.
         "pricingAudit": pricing_audit_summary(),
+        # DRIFTLARMEN: går de att skicka, och vart? Utan det här gick det
+        # inte att se om larmen var aktiverade - varken för ägaren eller för
+        # den som felsöker - eftersom adressen med rätta inte exponeras.
+        #
+        # De två fälten är AVSIKTLIGT skilda: transporten kan vara
+        # konfigurerad utan mottagare (då är larmen tysta) och en mottagare
+        # kan finnas utan fungerande SMTP (då når de ingen). Ett enda
+        # "larm: ja" hade dolt båda felen.
+        #
+        # Domänen visas, aldrig adressen: den svarar på "är det rätt
+        # mottagare?" utan att lägga en e-postadress i ett publikt svar.
+        "adminAlerts": {
+            "recipientConfigured": bool(grocery_alerts.admin_email()),
+            "recipientDomain": _admin_alert_domain(),
+            "transportConfigured": mail_is_configured(MAIL_CONFIG),
+        },
         # Stripe-läge utan hemligheter: bara om nyckeln är en TEST- eller
         # LIVE-nyckel (prefix) och vilka delar som är satta. Svarar på
         # "används inga live-nycklar?" utan att någonsin visa nyckeln.

@@ -8,6 +8,7 @@ larmen kan bli antingen tysta när de borde höras eller tjatiga när de borde
 tiga.
 """
 
+import os
 import sys
 import tempfile
 import unittest
@@ -156,3 +157,35 @@ class AlertTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HealthAdminAlertsTest(unittest.TestCase):
+    """health.adminAlerts ska svara på "går larmen att skicka, och vart?"
+    utan att lägga en e-postadress i ett publikt svar."""
+
+    def test_recipient_and_transport_are_separate_signals(self):
+        """Ett enda "larm: ja" hade dolt två olika fel: transport utan
+        mottagare (tysta larm) och mottagare utan SMTP (når ingen)."""
+        import api_server
+        with mock.patch.dict(os.environ, {"MATJAKT_ADMIN_EMAIL": "adam@example.test"}):
+            self.assertTrue(alerts.admin_email())
+            self.assertEqual(api_server._admin_alert_domain(), "example.test")
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("MATJAKT_ADMIN_EMAIL", None)
+            self.assertFalse(alerts.admin_email())
+            self.assertIsNone(api_server._admin_alert_domain())
+
+    def test_the_address_itself_is_never_exposed(self):
+        import api_server
+        with mock.patch.dict(os.environ, {"MATJAKT_ADMIN_EMAIL": "hemlig.adress@example.test"}):
+            domän = api_server._admin_alert_domain()
+        self.assertEqual(domän, "example.test")
+        self.assertNotIn("hemlig.adress", str(domän))
+
+    def test_a_capitalised_address_still_resolves(self):
+        """Adressen skrivs som den skrivs i dashboarden; versaler får inte
+        göra att larmen tyst slutar fungera."""
+        with mock.patch.dict(os.environ, {"MATJAKT_ADMIN_EMAIL": "Adamfrom@icloud.com"}):
+            import api_server
+            self.assertTrue(alerts.admin_email())
+            self.assertEqual(api_server._admin_alert_domain(), "icloud.com")
