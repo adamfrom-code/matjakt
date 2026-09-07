@@ -241,7 +241,11 @@ class BootstrapTest(unittest.TestCase):
         Willys full and Hemköp/City Gross at zero, waiting for the wall clock
         to reach their nightly slots."""
         self._summary(0, finished=False)
-        self.assertTrue(self.scheduler.bootstrap_if_empty())
+        # Med nyckeln får ÄVEN Primat-kedjorna starta, så testet fortsätter
+        # mäta det det menar: varje schemalagd kedja bootstrappas. Fallet
+        # utan nyckel täcks av test_primat_chains_are_skipped_without_the_key.
+        with mock.patch.dict(os.environ, {"PRIMAT_API_KEY": "x"}):
+            self.assertTrue(self.scheduler.bootstrap_if_empty())
         self.assertEqual(self.started[0], "Willys")
         self.assertEqual(sorted(self.started),
                          sorted(scheduler_module.SCHEDULABLE_CHAINS))
@@ -297,7 +301,8 @@ class BootstrapTest(unittest.TestCase):
         scheduler_module.time.sleep = lambda seconds: None
         self.addCleanup(lambda: setattr(scheduler_module.time, "sleep", real_sleep))
 
-        self.scheduler.bootstrap_if_empty()
+        with mock.patch.dict(os.environ, {"PRIMAT_API_KEY": "x"}):
+            self.scheduler.bootstrap_if_empty()
         self.assertEqual(len(self.started), len(scheduler_module.SCHEDULABLE_CHAINS))
 
     def test_a_full_chain_is_left_alone_while_empty_chains_import(self):
