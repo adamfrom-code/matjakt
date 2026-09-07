@@ -120,7 +120,7 @@ git clone https://github.com/adamfrom-code/matjakt.git && cd matjakt   # eller: 
 bash scripts/ios_mac_pass.sh --open
 ```
 
-Skriptet gör i ordning: Xcode/xcode-select, Node 20+, repo rent och på origin/main, capacitor.config, backend-health och CORS för `capacitor://localhost` från Macen, `npm ci`, `npm run build:native`, `npx cap add ios` (bara om `ios/` saknas; SPM om CocoaPods saknas), `npx cap sync ios`, bundle id `se.matjakt.app` i projektet, Info.plist (display name, plats-text, ingen egen kryptering, stående läge, sv, URL-schema `matjakt://`), PrivacyInfo, ikon + splash via `@capacitor/assets`, väljer nyaste iPhone-simulatorn, `xcodebuild` utan signering, installerar, startar, tar skärmdump (`build/ios/start.png`), skickar `matjakt://app/?recept=…`/`?verify=…`/`?reset=…`/`?invite=…` med `simctl openurl` och öppnar Xcode. Varje steg skriver ✓/✗ och rapporten i slutet är underlaget för iOS-statusen. `--checks-only` kör bara kontrollerna.
+Skriptet gör i ordning: Xcode/xcode-select, Node 20+, repo rent och på origin/main, capacitor.config, backend-health och CORS för `capacitor://localhost` från Macen, `npm ci`, `npm run build:native`, `npx cap add ios --packagemanager SPM` (bara om `ios/` saknas; Capacitor 8 använder SPM, ingen Podfile), `npx cap sync ios`, bundle id `se.matjakt.app` i projektet, Info.plist (display name, plats-text, ingen egen kryptering, stående läge, sv, URL-schema `matjakt://`), PrivacyInfo, ikon + splash via `@capacitor/assets`, väljer nyaste iPhone-simulatorn, `xcodebuild` utan signering, installerar, startar, tar skärmdump (`build/ios/start.png`), skickar `matjakt://app/?recept=…`/`?verify=…`/`?reset=…`/`?invite=…` med `simctl openurl` och öppnar Xcode. Varje steg skriver ✓/✗ och rapporten i slutet är underlaget för iOS-statusen. `--checks-only` kör bara kontrollerna.
 
 Efter skriptet: `ios/` ska committas (`git add ios && git commit -m "iOS-projekt (cap add ios)"`), inte `build/` eller `dist/`.
 
@@ -129,4 +129,13 @@ Efter skriptet: `ios/` ska committas (`git add ios && git commit -m "iOS-projekt
 > Kör `bash scripts/ios_mac_pass.sh --open` och åtgärda det som faller (bara iOS-filer, aldrig webb/pricing/mejl/hushåll). Gör sedan det manuella simulatortestet i docs/IOS_RELEASE.md ("Simulatorkontroller") med skärmdumpar via `xcrun simctl io booted screenshot`. Committa `ios/` och pusha. Rapportera på svenska: Xcode-version, simulator, build-status, app-start, login, API/CORS, household, djuplänk, kvar för fysisk iPhone, och avsluta med iOS SIMULATOR / FYSISK iPHONE / TESTFLIGHT: GO eller NO-GO.
 
 Kräver Apple-ID (gratis) först för **fysisk iPhone**: Xcode → Settings → Accounts → + → Apple-ID; target App → Signing & Capabilities → Team = ditt personliga team, "Automatically manage signing". Kräver betalt Developer-medlemskap för **TestFlight**.
+
+### Rättat efter granskning 2026-09-07 (innan första Mac-körningen)
+
+- `capacitor.config.json` hade `ios.scheme: "capacitor"` - det är **Xcode-schemat** (rätt värde: `App`), inte URL-schemat (`server.iosScheme`, redan `capacitor` som standard). `npx cap run ios` hade fallit. Borttaget.
+- `ios.contentInset: "automatic"` borttaget: CSS:en lägger själv `env(safe-area-inset-*)`, annars dubbel marginal upptill/nedtill.
+- `@capacitor/keyboard` tillagt (standard `resize: native`): webviewen krymper när tangentbordet visas så fälten i botten-arken (inloggning, postnummer, hushåll) inte täcks.
+- `AbortSignal.timeout`-polyfill i app.js: saknas i WebKit < 16 (iOS 15 är mallens deployment target) - utan den stod listan på "hämtas…".
+- Externa länkar (villkor, policy, butikssidor, källor) öppnas i appens egen webbläsarvy (`@capacitor/browser`) i stället för Safari.
+- PrivacyInfo.xcprivacy finns inte i Capacitors mall: skriptet kopierar filen och varnar tills den lagts till i target App i Xcode (Add Files to "App"…).
 

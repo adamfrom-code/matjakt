@@ -19,7 +19,11 @@ FAILED=0; WARNINGS=0
 SIM_NAME=""; OPEN_XCODE=0; CHECKS_ONLY=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --simulator) SIM_NAME="$2"; shift 2 ;;
+    --simulator)
+      if [ $# -lt 2 ] || case "$2" in --*|"") true ;; *) false ;; esac; then
+        printf 'fel: --simulator kräver ett simulatornamn, t.ex. --simulator "iPhone 16 Pro"\n' >&2; exit 2
+      fi
+      SIM_NAME="$2"; shift 2 ;;
     --open) OPEN_XCODE=1; shift ;;
     --checks-only) CHECKS_ONLY=1; shift ;;
     *) echo "okänd flagga: $1"; exit 2 ;;
@@ -60,9 +64,9 @@ have xcrun && ok "xcrun finns" || fail "xcrun saknas"
 step "Node/npm"
 if have node; then
   NODE_MAJOR="$(node -v | sed 's/v\([0-9]*\).*/\1/')"
-  [ "${NODE_MAJOR:-0}" -ge 20 ] && ok "node $(node -v)" || fail "node $(node -v) - behöver 20+ (brew install node@22)"
+  [ "${NODE_MAJOR:-0}" -ge 22 ] && ok "node $(node -v)" || fail "node $(node -v) - @capacitor/cli 8.5 kräver node 22+ (brew install node@22 && brew link --overwrite node@22)"
 else
-  fail "node saknas (brew install node@22)"
+  fail "node saknas (brew install node@22 && brew link --overwrite node@22)"
 fi
 have npm && ok "npm $(npm -v)" || fail "npm saknas"
 
@@ -106,7 +110,12 @@ if [ "$CHECKS_ONLY" = 1 ]; then step "Bara kontroller (--checks-only)"; printf '
 
 # ---------------------------------------------------------------- 5. Beroenden + native-bygge
 step "npm ci"
-if npm ci --no-audit --no-fund >/tmp/matjakt-npm.log 2>&1; then ok "npm ci"; else fail "npm ci föll - se /tmp/matjakt-npm.log"; tail -5 /tmp/matjakt-npm.log; exit 1; fi
+if npm ci --no-audit --no-fund >/tmp/matjakt-npm.log 2>&1; then
+  ok "npm ci"
+  if grep -q EBADENGINE /tmp/matjakt-npm.log; then warn "npm rapporterade EBADENGINE (fel nodversion) - se /tmp/matjakt-npm.log"; fi
+else
+  fail "npm ci föll - se /tmp/matjakt-npm.log"; grep -i "EBADENGINE\|required:\|current:" /tmp/matjakt-npm.log | head -5; tail -5 /tmp/matjakt-npm.log; exit 1
+fi
 
 step "Native-bygge (npm run build:native)"
 if npm run build:native >/tmp/matjakt-build.log 2>&1; then
@@ -121,10 +130,9 @@ fi
 # ---------------------------------------------------------------- 6. cap add ios (bara om ios/ saknas) + sync
 step "Capacitor iOS"
 if [ ! -d ios ]; then
-  PM_FLAG=""
-  if ! have pod; then PM_FLAG="--packagemanager SPM"; warn "CocoaPods saknas - använder Swift Package Manager ($PM_FLAG)"; fi
-  # shellcheck disable=SC2086
-  if npx cap add ios $PM_FLAG >/tmp/matjakt-capadd.log 2>&1; then ok "npx cap add ios $PM_FLAG"; else fail "cap add ios föll - se /tmp/matjakt-capadd.log"; tail -8 /tmp/matjakt-capadd.log; exit 1; fi
+  # Capacitor 8.5 använder Swift Package Manager om inte --packagemanager
+  # cocoapods anges uttryckligen: ingen Podfile, bara App.xcodeproj.
+  if npx cap add ios --packagemanager SPM >/tmp/matjakt-capadd.log 2>&1; then ok "npx cap add ios (Swift Package Manager, ingen Podfile)"; else fail "cap add ios föll - se /tmp/matjakt-capadd.log"; tail -8 /tmp/matjakt-capadd.log; exit 1; fi
 else
   ok "ios/ finns redan - hoppar över cap add"
 fi
@@ -170,35 +178,48 @@ if [ -f "$PLIST" ] && [ -x "$PB" ]; then
 else
   fail "$PLIST eller PlistBuddy saknas"
 fi
-if [ -f ios/App/App/PrivacyInfo.xcprivacy ]; then
-  cp ios-prep/PrivacyInfo.xcprivacy ios/App/App/PrivacyInfo.xcprivacy && ok "PrivacyInfo.xcprivacy ersatt med Matjakts (redan i target)"
+# Capacitors iOS-mall innehåller INGEN PrivacyInfo.xcprivacy: filen måste
+# läggas i App-targetet i Xcode. Status avgörs på Resources-fasen i
+# projektfilen, aldrig på att filen råkar ligga på disk från förra körningen.
+cp ios-prep/PrivacyInfo.xcprivacy ios/App/App/PrivacyInfo.xcprivacy || fail "kunde inte kopiera PrivacyInfo.xcprivacy"
+if grep -q "PrivacyInfo.xcprivacy in Resources" "$PBX"; then
+  ok "PrivacyInfo.xcprivacy på plats och i App-targetets Resources"
 else
-  cp ios-prep/PrivacyInfo.xcprivacy ios/App/App/PrivacyInfo.xcprivacy
-  grep -q "PrivacyInfo.xcprivacy" "$PBX" && ok "PrivacyInfo.xcprivacy kopierad (refererad i projektet)" || warn "PrivacyInfo.xcprivacy kopierad men INTE i target: Xcode → högerklicka App-mappen → Add Files to \"App\" → PrivacyInfo.xcprivacy"
+  warn "PrivacyInfo.xcprivacy kopierad men INTE i App-targetet (mallen saknar den): Xcode → högerklicka mappen App → Add Files to \"App\"… → välj ios/App/App/PrivacyInfo.xcprivacy, bocka i target App → kör skriptet igen"
 fi
 plutil -lint ios/App/App/PrivacyInfo.xcprivacy >/dev/null 2>&1 && ok "PrivacyInfo är giltig plist" || fail "PrivacyInfo.xcprivacy är inte en giltig plist"
 plutil -lint "$PLIST" >/dev/null 2>&1 && ok "Info.plist är giltig" || fail "Info.plist är trasig"
 
 # ---------------------------------------------------------------- 8. Ikon + splash
 step "Ikon och splash (@capacitor/assets)"
+# Mallen levererar redan Capacitors standardikon, så "det finns png-filer"
+# bevisar inget - jämför innehållet före/efter genereringen.
+ICON_DIR=ios/App/App/Assets.xcassets/AppIcon.appiconset
+SPLASH_DIR=ios/App/App/Assets.xcassets/Splash.imageset
+ICON_BEFORE="$(cat "$ICON_DIR"/*.png 2>/dev/null | shasum -a 256 | cut -d' ' -f1)"
 if npx --yes @capacitor/assets generate --ios --iconBackgroundColor '#f6f7f4' --iconBackgroundColorDark '#17211b' --splashBackgroundColor '#f6f7f4' --splashBackgroundColorDark '#17211b' >/tmp/matjakt-assets.log 2>&1; then
   ok "assets genererade"
 else
-  warn "assets-generering föll (se /tmp/matjakt-assets.log) - Capacitors standardikon används tills vidare"
+  fail "assets-generering föll (se /tmp/matjakt-assets.log) - Capacitors standardikon avvisas av App Review"; tail -5 /tmp/matjakt-assets.log
 fi
-ls ios/App/App/Assets.xcassets/AppIcon.appiconset/*.png >/dev/null 2>&1 && ok "AppIcon.appiconset har bilder" || warn "AppIcon.appiconset saknar bilder"
-ls ios/App/App/Assets.xcassets/Splash.imageset/*.png >/dev/null 2>&1 && ok "Splash.imageset har bilder" || warn "Splash.imageset saknar bilder"
+ICON_AFTER="$(cat "$ICON_DIR"/*.png 2>/dev/null | shasum -a 256 | cut -d' ' -f1)"
+if [ -n "$ICON_AFTER" ] && [ "$ICON_AFTER" != "$ICON_BEFORE" ]; then ok "AppIcon ersatt med Matjakts ikon"; elif [ -n "$ICON_AFTER" ] && grep -q "AppIcon" /tmp/matjakt-assets.log 2>/dev/null; then ok "AppIcon oförändrad sedan förra körningen"; else warn "AppIcon verkar fortfarande vara Capacitors standardikon"; fi
+ls "$SPLASH_DIR"/*.png >/dev/null 2>&1 && ok "Splash.imageset har bilder" || warn "Splash.imageset saknar bilder"
 
 # ---------------------------------------------------------------- 9. Simulator
 step "Simulator"
 SIM_JSON="$(xcrun simctl list devices available -j 2>/dev/null)"
-pick_sim() {   # nyaste iOS-runtime, nyaste iPhone; eller namnet från --simulator
+pick_sim() {   # nyaste iOS-runtime (numeriskt), nyaste iPhone (generation, sedan Pro Max > Pro > Plus); eller namnet från --simulator
   node -e '
     const j = JSON.parse(require("fs").readFileSync(0, "utf8")); const want = process.argv[1] || "";
-    const runtimes = Object.keys(j.devices).filter(r => /iOS/.test(r)).sort();
-    for (const rt of runtimes.reverse()) {
+    const version = rt => (rt.match(/iOS-(\d+)-(\d+)/) || [0, 0, 0]).slice(1).map(Number);
+    const runtimes = Object.keys(j.devices).filter(r => /iOS-\d+/.test(r))
+      .sort((a, b) => version(b)[0] - version(a)[0] || version(b)[1] - version(a)[1]);
+    const rank = n => { const m = /^iPhone (\d+)/.exec(n); const gen = m ? Number(m[1]) : -1;
+      const tier = /Pro Max/.test(n) ? 3 : /Pro/.test(n) ? 2 : /Plus|Max/.test(n) ? 1 : 0; return gen * 10 + tier; };
+    for (const rt of runtimes) {
       const phones = (j.devices[rt] || []).filter(d => d.isAvailable && /^iPhone/.test(d.name) && (!want || d.name === want));
-      phones.sort((a, b) => b.name.localeCompare(a.name, "en", { numeric: true }));
+      phones.sort((a, b) => rank(b.name) - rank(a.name) || b.name.localeCompare(a.name, "en", { numeric: true }));
       if (phones.length) { console.log(phones[0].udid + "\t" + phones[0].name + "\t" + rt.replace(/.*iOS-/, "iOS ").replace(/-/g, ".")); process.exit(0); }
     }
     process.exit(1);' "$1"
@@ -218,6 +239,10 @@ xcrun simctl bootstatus "$SIM_UDID" -b >/dev/null 2>&1 && ok "simulatorn är ig�
 # ---------------------------------------------------------------- 10. Xcode-bygge (ingen signering behövs för simulatorn)
 step "xcodebuild"
 BUILD_DIR="$ROOT/build/ios"
+# Produkterna rensas före bygget (inte hela DerivedData - då kompileras allt
+# om varje gång) så ett misslyckat bygge aldrig kan lämna en gammal App.app
+# som steg 11 sedan installerar.
+rm -rf "$BUILD_DIR/Build/Products"; mkdir -p "$BUILD_DIR"
 if [ -e ios/App/App.xcworkspace ]; then XC_TARGET=(-workspace ios/App/App.xcworkspace); else XC_TARGET=(-project ios/App/App.xcodeproj); fi
 if xcodebuild "${XC_TARGET[@]}" -scheme App -configuration Debug -sdk iphonesimulator \
      -destination "id=$SIM_UDID" -derivedDataPath "$BUILD_DIR" \
@@ -228,7 +253,8 @@ else
   BUILD_STATUS="BUILD FAILED"; fail "xcodebuild föll - de sista raderna:"; grep -E "error:|warning: .*deprecated|BUILD" /tmp/matjakt-xcodebuild.log | tail -12
 fi
 REPORT+=("Build: $BUILD_STATUS")
-APP_BUNDLE="$(find "$BUILD_DIR/Build/Products" -maxdepth 2 -name 'App.app' -path '*iphonesimulator*' 2>/dev/null | head -1)"
+APP_BUNDLE="$BUILD_DIR/Build/Products/Debug-iphonesimulator/App.app"
+[ "$BUILD_STATUS" = "BUILD SUCCEEDED" ] && [ -d "$APP_BUNDLE" ] || APP_BUNDLE=""
 
 # ---------------------------------------------------------------- 11. Installera + starta
 step "Installera och starta i simulatorn"
@@ -238,13 +264,21 @@ if [ -n "$APP_BUNDLE" ]; then
   [ "$BUNDLE_ID_BUILT" = "$APP_ID" ] && ok "byggd bundle id $BUNDLE_ID_BUILT" || fail "byggd bundle id är '$BUNDLE_ID_BUILT'"
   DISPLAY_BUILT="$($PB -c 'Print :CFBundleDisplayName' "$APP_BUNDLE/Info.plist" 2>/dev/null)"
   [ "$DISPLAY_BUILT" = "Matjakt" ] && ok "byggt display name $DISPLAY_BUILT" || fail "byggt display name är '$DISPLAY_BUILT'"
-  if xcrun simctl install "$SIM_UDID" "$APP_BUNDLE" >/dev/null 2>&1; then ok "installerad"; else fail "kunde inte installera $APP_BUNDLE"; fi
-  LAUNCH="$(xcrun simctl launch "$SIM_UDID" "$APP_ID" 2>&1 || true)"
-  if echo "$LAUNCH" | grep -q "$APP_ID"; then ok "startad: $LAUNCH"; APP_START="startad ($LAUNCH)"; else fail "start föll: $LAUNCH"; fi
+  APP_INSTALLED=0
+  if xcrun simctl install "$SIM_UDID" "$APP_BUNDLE" >/dev/null 2>&1; then ok "installerad"; APP_INSTALLED=1; else fail "kunde inte installera $APP_BUNDLE"; fi
+  # Exitkoden avgör, och utskriften ska vara "<bundle-id>: <pid>" - simctl:s
+  # felmeddelanden citerar också bundle-id:t, så ett grep på det räcker inte.
+  APP_ID_RE="$(printf '%s' "$APP_ID" | sed 's/[.[\*^$]/\\&/g')"
+  if [ "$APP_INSTALLED" = 1 ] && LAUNCH="$(xcrun simctl launch --terminate-running-process "$SIM_UDID" "$APP_ID" 2>&1)" \
+     && printf '%s\n' "$LAUNCH" | grep -q "^$APP_ID_RE: [0-9][0-9]*$"; then
+    ok "startad: $LAUNCH"; APP_START="startad ($LAUNCH)"
+  else
+    fail "start föll: ${LAUNCH:-installationen föll}"
+  fi
   sleep 6
   xcrun simctl io "$SIM_UDID" screenshot "$BUILD_DIR/start.png" >/dev/null 2>&1 && ok "skärmdump: build/ios/start.png (kolla att den INTE är vit)"
 else
-  fail "ingen App.app byggd"
+  fail "ingen ny App.app från den här körningen - hoppar över installation, start och djuplänk"
 fi
 REPORT+=("App-start: $APP_START")
 
@@ -252,11 +286,16 @@ REPORT+=("App-start: $APP_START")
 step "Djuplänkar (matjakt://)"
 DEEP="inte testad"
 if [ "$APP_START" != "inte startad" ]; then
+  # openurl säger bara att LaunchServices hittade en app för schemat - att
+  # webviewen laddade om med query-strängen syns i skärmdumparna
+  # (build/ios/deeplink-<param>.png) och i det manuella testet.
+  DEEP_FAILS=0
   for q in "recept=test-recept" "verify=testtoken" "reset=testtoken" "invite=testtoken"; do
-    if xcrun simctl openurl "$SIM_UDID" "matjakt://app/?$q" >/dev/null 2>&1; then ok "openurl matjakt://app/?$q levererad (appen laddar om med query-strängen)"; DEEP="matjakt:// levereras"; else fail "openurl matjakt://app/?$q föll"; DEEP="FEL"; fi
+    if xcrun simctl openurl "$SIM_UDID" "matjakt://app/?$q" >/dev/null 2>&1; then ok "openurl matjakt://app/?$q accepterad av LaunchServices"; else fail "openurl matjakt://app/?$q föll"; DEEP_FAILS=$((DEEP_FAILS + 1)); fi
     sleep 2
+    xcrun simctl io "$SIM_UDID" screenshot "$BUILD_DIR/deeplink-${q%%=*}.png" >/dev/null 2>&1 || true
   done
-  xcrun simctl io "$SIM_UDID" screenshot "$BUILD_DIR/deeplink.png" >/dev/null 2>&1 || true
+  if [ "$DEEP_FAILS" -eq 0 ]; then DEEP="matjakt:// accepteras (4/4, se build/ios/deeplink-*.png)"; else DEEP="FEL ($DEEP_FAILS av 4 föll)"; fi
   warn "https://matjakt.store/app/?... öppnas i Safari tills Associated Domains (Team-ID) är på plats - se docs/IOS_RELEASE.md"
 fi
 REPORT+=("Djuplänk: $DEEP (universella https-länkar kräver Team-ID)")

@@ -31,7 +31,8 @@
     "@capacitor/browser": "^8.0.4",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
-    "@capacitor/ios": "^8.5.1"
+    "@capacitor/ios": "^8.5.1",
+    "@capacitor/keyboard": "^8.0.5"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"

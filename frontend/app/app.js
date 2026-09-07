@@ -1,3 +1,12 @@
+// iOS 15 (Capacitors deployment target) saknar AbortSignal.timeout - utan
+// polyfillen kastar varje prisanrop TypeError och listan står på "hämtas…".
+if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "function") {
+  AbortSignal.timeout = ms => {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(new DOMException("TimeoutError", "TimeoutError")), ms);
+    return controller.signal;
+  };
+}
 import { readStoredState, writeStoredState } from "./src/state/storage.js";
 import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
 import { createDebouncedSearch, filterRecipes, mergeRecipeResults } from "./src/services/recipe-search.js";
@@ -4956,6 +4965,20 @@ document.addEventListener("visibilitychange", () => {
 // universell länk (matjakt.store/app/?verify=|?reset=|?invite=|?recept=)
 // öppnar appen: query-strängen får aldrig tappas - appen laddas om med
 // den så samma startkod som på webben tar hand om länken.
+// Externa länkar (villkor, policy, butikssidor, källor) öppnas i appens
+// egen webbläsarvy i stället för att kasta ut användaren till Safari.
+if (isNativeApp()) {
+  document.addEventListener("click", event => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey) return;
+    const anchor = event.target?.closest?.("a[href]");
+    if (!anchor) return;
+    let target;
+    try { target = new URL(anchor.href, location.href); } catch { return; }
+    if (!/^https?:$/.test(target.protocol) || target.origin === location.origin) return;
+    event.preventDefault();
+    openExternal(target.href);
+  }, true);
+}
 loadNativePlugins().then(plugins => {
   const nativeApp = plugins?.App;
   if (!nativeApp?.addListener) return;
