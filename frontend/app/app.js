@@ -23,6 +23,7 @@ import { adjustInventory, createHousehold, createInvite, fetchHousehold, fetchNo
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor, groupByCategory } from "./src/services/categories.js";
 import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swapReasonText, weekCostAlert } from "./src/services/swap.js";
+import { RECIPE_FALLBACK_ART, RECIPE_FALLBACK_LABEL, kindFor as recipeFallbackKind } from "./src/services/recipe-fallback.js";
 
 // The recipe bank is DATA, loaded from data/recipes.json - see
 // src/data/recipes.js. It used to be two hardcoded arrays right here, which
@@ -36,7 +37,14 @@ const RECEPT = [];
 const cardImageUrl = url => typeof url === "string" && url.includes("images.pexels.com")
   ? url.replace(/([?&])h=\d+&w=\d+/, "$1h=330&w=480")
   : url;
-const recipePhoto = recipe => recipe.bild ? `<img class="recipe-photo" src="${escapeHtml(safeHttpUrl(cardImageUrl(recipe.bild)) || "")}" alt="${escapeHtml(recipe.namn)}" loading="lazy" decoding="async">` : `<span class="recipe-photo recipe-fallback" role="img" aria-label="Ingen matbild tillgänglig"><svg viewBox="0 0 64 64"><path d="M14 48h36M18 44a14 14 0 0 1 28 0M32 20v10M27 20h10"/></svg><small>Matjakt</small></span>`;
+function recipeFallbackMarkup(recipe) {
+  const kind = recipeFallbackKind(recipe);
+  const label = RECIPE_FALLBACK_LABEL[kind];
+  // aria-label säger att bilden saknas, inte vad ikonen föreställer: en
+  // skärmläsare ska inte tro att vi visar ett foto av rätten.
+  return `<span class="recipe-photo recipe-fallback kind-${kind}" role="img" aria-label="Ingen matbild tillgänglig"><svg viewBox="0 0 64 64">${RECIPE_FALLBACK_ART[kind]}</svg><small>${label}</small></span>`;
+}
+const recipePhoto = recipe => recipe.bild ? `<img class="recipe-photo" src="${escapeHtml(safeHttpUrl(cardImageUrl(recipe.bild)) || "")}" alt="${escapeHtml(recipe.namn)}" loading="lazy" decoding="async">` : recipeFallbackMarkup(recipe);
 // A photo URL that 404s or is blocked must degrade into the same calm icon
 // as "no photo at all". Without this the card showed the browser's
 // broken-image glyph with the alt text spilled across it - which reads as a
@@ -57,7 +65,11 @@ window.addEventListener("error", event => {
   if (img?.tagName === "IMG" && img.classList?.contains("recipe-photo") && !img.dataset.fell) {
     img.dataset.fell = "1";
     const holder = document.createElement("span");
-    holder.innerHTML = recipePhoto({});
+    // alt bär rättens namn (recipePhoto sätter det), så en bild som 404:ar
+    // får samma kategoriikon som ett recept helt utan foto - inte den
+    // generiska. Utan det såg ett trasigt fotolänk annorlunda ut än ett
+    // saknat, vilket är förvirrande på samma kort.
+    holder.innerHTML = recipeFallbackMarkup({ namn: img.alt || "" });
     img.replaceWith(holder.firstChild);
   }
 }, true);
