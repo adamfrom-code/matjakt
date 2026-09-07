@@ -3,6 +3,7 @@
 tomt, av tills vidare - och avprenumerationslänken."""
 
 import tempfile
+import re
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -203,3 +204,77 @@ class MailingsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class KampanjtorgetBilderTest(unittest.TestCase):
+    """Bilder i Kampanjtorget.
+
+    Gmail och Outlook blockerar bilder som standard. Varje test här handlar
+    därför om samma sak från olika håll: mejlet ska bära sitt budskap i text
+    och bli finare av bilderna, aldrig beroende av dem.
+    """
+
+    def _deal(self, name, campaign, regular, percent, chain="Willys", image=None, size=None):
+        return {"name": name, "campaignPrice": campaign, "regularPrice": regular,
+                "discountPercent": percent, "chain": chain, "imageUrl": image,
+                "size": size, "brand": None, "lowestSeen": None}
+
+    def _render(self, deals_by_chain, chains=("Willys", "Hemköp")):
+        return mailings.render_kampanjtorget(deals_by_chain, list(chains),
+                                             "https://matjakt.store/app", "https://x/u", 37)
+
+    def test_the_biggest_discount_across_chains_becomes_the_hero(self):
+        """Bästa fyndet lyfts ut oavsett vilken kedja det ligger i - annars
+        avgörs "veckans bästa" av kedjornas ordning i listan."""
+        _, text, html = self._render({
+            "Willys": [self._deal("Kaffe", 39.0, 59.0, 34)],
+            "Hemköp": [self._deal("Ost", 45.0, 90.0, 50, chain="Hemköp")],
+        })
+        self.assertIn("VECKANS BÄSTA FYND", html)
+        hero = html.split("VECKANS BÄSTA FYND")[1][:600]
+        self.assertIn("Ost", hero)
+        self.assertIn("Hemköp", hero)
+        # Även textversionen ska ha det bästa fyndet - den som läser utan
+        # HTML får annars ett sämre mejl.
+        self.assertIn("VECKANS BÄSTA FYND", text)
+        self.assertIn("Ost", text)
+
+    def test_the_hero_still_reads_when_the_image_is_blocked(self):
+        """Namn, pris och rabatt står som TEXT bredvid bilden. Blockeras den
+        tappar mejlet ett foto, inte sitt innehåll."""
+        _, _, html = self._render({"Willys": [
+            self._deal("Kaffe", 39.0, 59.0, 34, image="https://bild.example/k.jpg")]})
+        utan_bilder = re.sub(r"<img[^>]*>", "", html)
+        self.assertIn("Kaffe", utan_bilder)
+        self.assertIn("39,00 kr", utan_bilder)
+        self.assertIn("34 %", utan_bilder)
+
+    def test_a_deal_without_an_image_still_renders(self):
+        _, _, html = self._render({"Willys": [self._deal("Mjölk", 12.0, 18.0, 33)]})
+        self.assertIn("Mjölk", html)
+        self.assertIn("12,00 kr", html)
+
+    def test_only_https_images_are_allowed(self):
+        """En url ur providerdata är inte vår att lita på. Allt utom https
+        släpps inte in - raden renderas hellre utan bild än med en attackyta."""
+        for ful in ("javascript:alert(1)", "data:text/html;base64,x",
+                    "http://osaker.example/x.jpg", "//protokollos.example/x.jpg"):
+            _, _, html = self._render({"Willys": [
+                self._deal("Vara", 10.0, 20.0, 50, image=ful)]})
+            self.assertNotIn(ful, html, ful)
+        _, _, html = self._render({"Willys": [
+            self._deal("Vara", 10.0, 20.0, 50, image="https://bild.example/v.jpg")]})
+        self.assertIn("https://bild.example/v.jpg", html)
+
+    def test_images_are_decorative_because_the_name_is_already_next_to_them(self):
+        """Varunamnet står som rubrik direkt under hero-bilden. En alt-text
+        med samma namn skulle läsas upp två gånger av en skärmläsare och
+        synas dubbelt när bilden blockeras - upptäckt genom att faktiskt
+        titta på mejlet med bilden bruten."""
+        _, _, html = self._render({"Willys": [
+            self._deal("Kaffe Mellanrost", 39.0, 59.0, 34,
+                       image="https://bild.example/k.jpg", size="450 g")]})
+        self.assertIn('alt=""', html)
+        self.assertNotIn('alt="Kaffe Mellanrost 450 g"', html)
+        # Namnet finns kvar som text - det är det som bär budskapet.
+        self.assertIn("Kaffe Mellanrost 450 g", re.sub(r"<img[^>]*>", "", html))

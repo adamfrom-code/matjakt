@@ -142,6 +142,50 @@ def _kr(value) -> str:
     return f"{float(value):.2f}".replace(".", ",") + " kr"
 
 
+def _bildlank(url) -> str:
+    """Bara https-bilder släpps in i ett mejl. En url ur providerdata är inte
+    vår att lita på: ett "javascript:" eller "data:" i ett href/src är precis
+    den vägen ett utskick blir en attackyta. Allt annat än https ger tom
+    sträng, och då renderas raden utan bild i stället för med en trasig."""
+    text = str(url or "").strip()
+    return text if text.startswith("https://") else ""
+
+
+def _hero(deal, chain) -> str:
+    """Veckans bästa fynd, stort och överst.
+
+    BILDEN FÅR ALDRIG BÄRA BUDSKAPET. Gmail och Outlook blockerar bilder som
+    standard, så namn, pris och rabatt står som text - blockeras bilden ser
+    mejlet fortfarande komplett ut, det tappar bara ett foto.
+
+    Just därför är alt tom. Varunamnet står som rubrik direkt under bilden,
+    så en alt-text med samma namn läses upp två gånger av en skärmläsare och
+    syns dubbelt när bilden blockeras. En bild vars innehåll redan står i
+    texten bredvid är dekorativ, och då är tom alt det korrekta."""
+    bild = _bildlank(deal.get("imageUrl"))
+    label = deal["name"] + (f" {deal['size']}" if deal.get("size") else "")
+    bild_html = (
+        f'<img src="{html_lib.escape(bild)}" alt="" width="240" '
+        f'style="display:block;margin:0 auto 14px;max-width:240px;height:auto;border:0;">'
+    ) if bild else ""
+    return (
+        '<table style="width:100%;border-collapse:collapse;background:#fff;'
+        'border:1px solid #e6e1d4;border-radius:10px;margin:0 0 26px;">'
+        '<tr><td style="padding:22px 20px;text-align:center;">'
+        '<p style="margin:0 0 12px;font-size:12px;letter-spacing:.08em;color:#6b665c;">'
+        'VECKANS BÄSTA FYND</p>'
+        f'{bild_html}'
+        f'<p style="margin:0 0 6px;font-size:20px;font-weight:bold;">{html_lib.escape(label)}</p>'
+        f'<p style="margin:0 0 4px;font-size:34px;font-weight:bold;line-height:1.1;">'
+        f'{html_lib.escape(_kr(deal["campaignPrice"]))}</p>'
+        f'<p style="margin:0;font-size:14px;color:#6b665c;">'
+        f'ord. {html_lib.escape(_kr(deal["regularPrice"]))} &middot; '
+        f'<strong style="color:#1c1b18;">&minus;{int(deal["discountPercent"])} %</strong> hos '
+        f'{html_lib.escape(chain)}</p>'
+        '</td></tr></table>'
+    )
+
+
 def _layout(title: str, paragraphs_html: str, app_url: str, unsubscribe: str) -> str:
     return f"""<!doctype html><html lang="sv"><body style="margin:0;padding:0;background:#f6f3ea;color:#1c1b18;">
 <div style="max-width:560px;margin:0 auto;padding:32px 20px;font:16px/1.55 Georgia,'Times New Roman',serif;">
@@ -201,7 +245,17 @@ def render_kampanjtorget(deals_by_chain: dict, chains: list, app_url: str, unsub
     subject = f"Kampanjtorget vecka {week}: bästa fynden hos {listed}"
     intro = ("Veckans bästa kampanjpriser, hämtade från butikerna själva. Procenten är mot ordinarie pris; "
              "\"lägsta vi sett\" är det lägsta priset Matjakt noterat för varan senaste 30 dagarna.")
-    text_parts, html_parts = [intro], [f"<p>{html_lib.escape(intro)}</p>"]
+    # Bästa fyndet över ALLA valda kedjor lyfts ut och visas stort överst.
+    # Ett mejl med tolv likadana rader läses inte; ett med ett tydligt bästa
+    # fynd gör det. Raden ligger kvar i sin kedjas lista också - att plocka
+    # bort den skulle göra kedjans avsnitt ofullständigt.
+    bäst_kedja, bäst = max(
+        ((chain, deal) for chain, deals in sections for deal in deals),
+        key=lambda par: par[1].get("discountPercent") or 0)
+    text_parts = [intro, f"\nVECKANS BÄSTA FYND\n  {bäst['name']}: "
+                  f"{_kr(bäst['campaignPrice'])} (ord. {_kr(bäst['regularPrice'])}, "
+                  f"-{int(bäst['discountPercent'])} %) hos {bäst_kedja}"]
+    html_parts = [f"<p>{html_lib.escape(intro)}</p>", _hero(bäst, bäst_kedja)]
     for chain, deals in sections:
         text_parts.append(f"\n{chain}\n" + "-" * len(chain))
         html_parts.append(f"<h2 style=\"font-size:18px;font-weight:normal;margin:26px 0 8px;\">{html_lib.escape(chain)}</h2>")
@@ -220,11 +274,24 @@ def render_kampanjtorget(deals_by_chain: dict, chains: list, app_url: str, unsub
             campaign_html = html_lib.escape(_kr(deal["campaignPrice"]))
             regular_html = html_lib.escape(_kr(deal["regularPrice"]))
             percent = int(deal["discountPercent"])
+            # Miniatyren får en egen smal kolumn med fast bredd, så raderna
+            # står i linje även för de varor som saknar bild - annars hoppar
+            # texten i sidled och listan blir svårläst.
+            tumnagel = _bildlank(deal.get("imageUrl"))
+            bild_cell = (
+                f'<img src="{html_lib.escape(tumnagel)}" alt="" width="44" '
+                f'style="display:block;width:44px;height:auto;border:0;border-radius:6px;">'
+            ) if tumnagel else "&nbsp;"
             rows.append(
-                '<tr><td style="padding:7px 0;border-bottom:1px solid #e6e1d4;">'
-                f'{html_lib.escape(label)}{note_html}</td>'
-                '<td style="padding:7px 0 7px 12px;border-bottom:1px solid #e6e1d4;text-align:right;white-space:nowrap;">'
-                f'{campaign_html}<br><span {muted}>ord. {regular_html} · -{percent} %</span></td></tr>')
+                '<tr>'
+                '<td width="56" style="padding:8px 12px 8px 0;border-bottom:1px solid #e6e1d4;'
+                'vertical-align:middle;">' + bild_cell + '</td>'
+                '<td style="padding:8px 0;border-bottom:1px solid #e6e1d4;vertical-align:middle;">'
+                f'<strong style="font-weight:600;">{html_lib.escape(label)}</strong>{note_html}</td>'
+                '<td style="padding:8px 0 8px 12px;border-bottom:1px solid #e6e1d4;text-align:right;'
+                'white-space:nowrap;vertical-align:middle;">'
+                f'<strong style="font-weight:bold;">{campaign_html}</strong>'
+                f'<br><span {muted}>ord. {regular_html} · &minus;{percent} %</span></td></tr>')
         html_parts.append("<table style=\"width:100%;border-collapse:collapse;font-size:15px;\">" + "".join(rows) + "</table>")
     text_parts.append(f"\nLägg fynden i din vecka: {app_url}")
     html_parts.append(f"<p style=\"margin-top:24px;\"><a href=\"{html_lib.escape(app_url)}\" style=\"color:#1c1b18;\">Lägg fynden i din vecka</a></p>")
