@@ -4702,18 +4702,35 @@ function openPaywall(triggerFeature = "") {
 // navigeras webviewen till stripe.com lämnar användaren appen och landar
 // efteråt i webbversionen. Vid återkomst pollas Premium (visibilitychange).
 function isNativeApp() { return Boolean(window.Capacitor?.isNativePlatform?.()); }
-function nativePlugin(name) { return isNativeApp() ? window.Capacitor?.Plugins?.[name] || null : null; }
+// Native-bryggan (native-bridge.js) ger window.Capacitor med isNativePlatform
+// och nativePromise, men plugin-proxies skapas av @capacitor/core i JS.
+// Core importeras därför dynamiskt BARA i native - esbuild buntar in den
+// i native-bygget, och på webben körs raden aldrig (ingen bare-import i
+// källläget). Plugin-paketens JS behövs inte: proxies talar med de
+// native-pods som cap sync installerat (@capacitor/app, @capacitor/browser).
+let nativePluginsReady = null;
+function loadNativePlugins() {
+  if (!isNativeApp()) return Promise.resolve(null);
+  if (!nativePluginsReady) {
+    nativePluginsReady = import("@capacitor/core")
+      .then(({ registerPlugin }) => ({ App: registerPlugin("App"), Browser: registerPlugin("Browser") }))
+      .catch(() => null);
+  }
+  return nativePluginsReady;
+}
 function openExternal(rawUrl) {
   // Bara https-adresser navigeras till - även om de kommer från vår egen
   // server ska en oväntad "javascript:"-sträng aldrig kunna köras.
   const url = safeHttpUrl(rawUrl);
   if (!url) return;
   if (isNativeApp()) {
-    // @capacitor/browser (SFSafariViewController) om den finns, annars
-    // ett nytt fönster som webviewen lämnar till systemet.
-    const browser = nativePlugin("Browser");
-    if (browser?.open) { browser.open({ url }).catch(() => window.open(url, "_blank")); return; }
-    window.open(url, "_blank");
+    // @capacitor/browser (SFSafariViewController) när den finns; annars
+    // window.open, som Capacitors webview lämnar till systemets webbläsare
+    // (WebViewDelegationHandler.createWebViewWith → UIApplication.open).
+    loadNativePlugins().then(plugins => {
+      if (plugins?.Browser?.open) return plugins.Browser.open({ url }).catch(() => window.open(url, "_blank"));
+      window.open(url, "_blank");
+    });
     return;
   }
   location.href = url;
@@ -4939,8 +4956,9 @@ document.addEventListener("visibilitychange", () => {
 // universell länk (matjakt.store/app/?verify=|?reset=|?invite=|?recept=)
 // öppnar appen: query-strängen får aldrig tappas - appen laddas om med
 // den så samma startkod som på webben tar hand om länken.
-const nativeApp = nativePlugin("App");
-if (nativeApp?.addListener) {
+loadNativePlugins().then(plugins => {
+  const nativeApp = plugins?.App;
+  if (!nativeApp?.addListener) return;
   nativeApp.addListener("appStateChange", ({ isActive }) => { if (isActive) onAppResumed(); });
   nativeApp.addListener("appUrlOpen", ({ url }) => {
     let search = "";
@@ -4948,7 +4966,7 @@ if (nativeApp?.addListener) {
     if (!search) return;
     location.href = `${location.pathname}${search}`;
   });
-}
+});
 // A first-time visitor arriving through a SHARED RECIPE LINK came for the
 // recipe - onboarding on top of it would bury the very thing that brought
 // them here. It opens on their next natural visit instead.
