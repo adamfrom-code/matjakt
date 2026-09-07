@@ -208,6 +208,49 @@ class QualityGateNeverLetsBadDataLive(_Base):
         self.assertEqual(self.db.get_current_price(products[0].id, maxi.id).regular_price, 11.0)
         self.assertEqual(self.db.price_count_for_store(maxi.id), 10)  # inget raderat
 
+    def _kör_med_gate(self, antal_rader, antal_giltiga, chain="ICA"):
+        """Stagear antal_rader rader varav antal_giltiga har ett pris. Resten
+        får pris 0 och fälls av radgaten. Ingen tidigare prisrad finns, så
+        ratio-skyddet mot en halv katalog kan inte förväxlas med gaten."""
+        butik = self.store(chain, "1003987", "Maxi Gävle")
+        run = self.db.start_collector_run(chain=chain, store_id=butik.id)
+        for i in range(antal_rader):
+            produkt = self.db.find_or_create_product(
+                _raw(chain, "x", name=f"Vara {i}", gtin=None, price=10))
+            self.db.stage_price(run_id=run.id, store_id=butik.id, product_id=produkt.id,
+                                regular_price=10.0 if i < antal_giltiga else 0.0)
+        return publish_run(self.db, run.id, butik.id, chain, source="test", blocked=False)
+
+    def test_exactly_95_percent_passes_the_gate(self):
+        """Gränsen är >=, inte >. En körning som ligger exakt på tröskeln ska
+        publiceras - annars kastas en godkänd katalog bort på ett likhetstecken."""
+        outcome = self._kör_med_gate(40, 38)   # 95,0 %
+        self.assertEqual(outcome["gatePercent"], 95.0)
+        self.assertTrue(outcome["published_ok"], outcome.get("message"))
+
+    def test_just_under_95_percent_is_refused(self):
+        """Och en hårsmån under ska nekas. Utan det här testet fanns bara 0 %
+        och 100 % täckta, och ett > i stället för >= hade sluppit igenom."""
+        outcome = self._kör_med_gate(39, 37)   # 94,87 %
+        self.assertLess(outcome["gatePercent"], 95.0)
+        self.assertFalse(outcome["published_ok"])
+
+    def test_an_empty_provider_response_never_wipes_the_last_good_data(self):
+        """Punkt 6 i klartext: en källa som svarar tomt - timeout, 401, 429,
+        trasig JSON - får aldrig kosta gårdagens priser. Publiceringen är
+        upsert, så det finns ingen raderingsväg alls, men kravet ska ha ett
+        test som smäller om någon inför en."""
+        produkt = self.db.find_or_create_product(
+            _raw("ICA", "x", name="Mjölk", gtin=None, price=12))
+        butik = self.store("ICA", "1003987", "Maxi Gävle")
+        self.store_price(produkt.id, butik.id, 12.0)
+        run = self.db.start_collector_run(chain="ICA", store_id=butik.id)
+        outcome = publish_run(self.db, run.id, butik.id, "ICA", source="test", blocked=False)
+        self.assertFalse(outcome["published_ok"])
+        # Gårdagens pris står kvar, oförändrat.
+        self.assertEqual(self.db.get_current_price(produkt.id, butik.id).regular_price, 12.0)
+        self.assertEqual(self.db.price_count_for_store(butik.id), 1)
+
     def test_backfill_survives_an_orphaned_price_row(self):
         """Produktion stannade två gånger på exakt 2 862 rader: en gammal
         prisrad vars produkt inte finns kastar FK-fel - det får kosta EN
