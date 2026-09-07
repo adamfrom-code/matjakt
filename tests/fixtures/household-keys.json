@@ -1,0 +1,13 @@
+{
+  "comment": "Hushållets radnycklar. Klienten (household-state.js shoppingKey) och servern (store.item_key) MÅSTE ge samma sträng - annars hittar servern ingen rad, svarar 400 på varje avbockning, och klientens optimistiska rad blir en dubblett. Hände på riktigt 2026-09-07. Båda sidor har ett test mot den här tabellen.",
+  "keys": {
+    "Mjölk": "name:mjolk",
+    "  Crème fraiche  ": "name:creme fraiche",
+    "Röd paprika": "name:rod paprika",
+    "ÄGG": "name:agg",
+    "Pasta   penne": "name:pasta penne",
+    "Kycklingfilé": "name:kycklingfile",
+    "Smör & margarin": "name:smor & margarin",
+    "Ost 17%": "name:ost 17%"
+  }
+}

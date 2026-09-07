@@ -27,6 +27,7 @@ fortsätta plinga om en familj den inte längre tillhör.
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import re
@@ -374,3 +375,22 @@ def _outbox_to_public(row) -> dict:
         "createdAt": row["created_at"],
         "sentAt": row["sent_at"],
     }
+
+
+def _synchronized(method):
+    """Samma anslutning delas av alla trådar, och en commit() från en tråd
+    nollställer en annan tråds pågående SELECT. Skrivvägarna tog redan låset;
+    läsvägarna gjorde det inte, vilket gav sällsynta tomma svar mitt i en
+    familjs handling. RLock, så en låst metod kan anropa en annan."""
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    return wrapper
+
+
+_ALSO_LOCKED = set()
+for _name, _member in list(vars(NotificationStore).items()):
+    if callable(_member) and _name != "close" and (not _name.startswith("_") or _name in _ALSO_LOCKED):
+        setattr(NotificationStore, _name, _synchronized(_member))
+

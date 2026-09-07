@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ALLERGENS, filterByDiet } from "../frontend/app/src/services/diet.js";
+import { ALLERGENS, filterByDiet, mergeDiet } from "../frontend/app/src/services/diet.js";
 
 const recipes = [
   { id: "a", proteinkalla: "kyckling", allergener: ["gluten"] },
@@ -44,3 +44,34 @@ test("allergen-synonymer fångas: mjölk är laktos, blötdjur är skaldjur", ()
   assert.equal(filterByDiet(bank, { avoidAllergens: ["skaldjur"] }).length, 2);
   assert.ok(ALLERGENS.includes("jordnötter") && ALLERGENS.includes("sesam"));
 });
+
+// Hushållets allergier: fylls i per medlem och måste gälla hela veckan.
+test("hushållets allergier läggs till enhetens egna", () => {
+  const diet = mergeDiet({ kosttyp: "", avoidAllergens: new Set(["gluten"]) }, { allergies: ["Nötter", " skaldjur "] });
+  assert.deepEqual([...diet.avoidAllergens].sort(), ["gluten", "nötter", "skaldjur"]);
+  const kvar = filterByDiet([
+    { id: "nöt", proteinkalla: "kyckling", allergener: ["nötter"] },
+    { id: "ren", proteinkalla: "kyckling", allergener: [] },
+  ], diet);
+  assert.deepEqual(kvar.map(r => r.id), ["ren"], "en nöträtt får aldrig komma igenom");
+});
+
+test("kosttypen slås inte ihop - bara allergierna", () => {
+  const diet = mergeDiet({ kosttyp: "", avoidAllergens: new Set() }, { allergies: [], dislikes: ["svamp"] });
+  assert.equal(diet.kosttyp, "", "en vegetarian i hushållet gör inte hela veckan vegetarisk");
+  assert.equal(diet.avoidAllergens.size, 0);
+});
+
+test("tomt hushåll ändrar ingenting", () => {
+  const kost = { kosttyp: "vegetariskt", avoidAllergens: new Set(["laktos"]) };
+  const diet = mergeDiet(kost, {});
+  assert.equal(diet.kosttyp, "vegetariskt");
+  assert.deepEqual([...diet.avoidAllergens], ["laktos"]);
+  assert.notEqual(diet.avoidAllergens, kost.avoidAllergens, "originalet får inte muteras");
+});
+
+test("dubbletter och tomma värden städas bort", () => {
+  const diet = mergeDiet({ avoidAllergens: ["nötter"] }, { allergies: ["nötter", "", "  ", "NÖTTER"] });
+  assert.deepEqual([...diet.avoidAllergens], ["nötter"]);
+});
+

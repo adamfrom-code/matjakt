@@ -19,6 +19,24 @@ export const REMOVED = "REMOVED";
 
 export const LOCATIONS = ["skafferi", "kyl", "frys"];
 
+/**
+ * Radens identitet i hushållet - SAMMA formel som serverns fold()/item_key()
+ * i backend/services/household/store.py. Går de isär hittar servern ingen
+ * rad, svarar 400, och klientens optimistiska rad blir en dubblett som inte
+ * går att bocka av (hänt på riktigt 2026-09-07: skrivvägen nycklade på GTIN
+ * medan veckans rader låg namn-nycklade). tests/fixtures/household-keys.json
+ * läses av både nod- och Python-testerna och låser fast att de räknar lika.
+ */
+export function foldName(name) {
+  return String(name || "").toLowerCase().normalize("NFD").replace(/\p{Mn}/gu, "").replace(/\s+/g, " ").trim();
+}
+
+/** Inköpslistans rader nycklas på NAMN. Skafferiet har egna rader och egen
+ * nyckel (gtin när varan är känd) - blanda aldrig de två. */
+export function shoppingKey(name) {
+  return `name:${foldName(name)}`;
+}
+
 export function emptyHouseholdState() {
   return { id: null, name: "", role: null, members: [], revision: 0, shopping: {}, inventory: {}, docs: {} };
 }

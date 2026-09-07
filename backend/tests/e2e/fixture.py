@@ -69,9 +69,13 @@ def seed_grocery(grocery_db_path, recipe_db_path) -> dict:
                 for name, unit in ingredients:
                     quantity, pack_unit, size = PACKAGES.get((unit or "st").lower(), PACKAGES["st"])
                     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+                    # GTIN på riktigt: utan det nycklade klienten sina
+                    # hushållsrader på namn av en slump, och den riktiga
+                    # buggen (gtin-nyckel mot namn-nyckel) syntes aldrig.
+                    gtin = "73" + f"{abs(hash((chain, slug))) % 10**11:011d}"
                     product = db.find_or_create_product(RawProduct(
                         chain=chain, external_product_id=f"e2e-{slug}", name=name,
-                        store_id=external_id, store_name=chain, gtin=None, brand="E2E",
+                        store_id=external_id, store_name=chain, gtin=gtin, brand="E2E",
                         size=size, quantity=quantity, unit=pack_unit, category=None))
                     price = round(_base_price(name) * factor, 2)
                     db.upsert_current_price(

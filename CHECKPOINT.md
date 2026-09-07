@@ -222,3 +222,35 @@ Oförändrat sedan master-auditen. Nytt frivilligt: `MATJAKT_LOG_FORMAT`
   hushållslagrets läsvägar utan lås, `MAIL_SECRET` faller tillbaka på
   admin-token.
 
+## Kvarvarande granskningsfynd åtgärdade 2026-09-07 (kväll)
+
+- **Hushållets allergier påverkade ingenting.** `householdDietary()` anropades
+  bara av tester: familjen fyllde i allergier per medlem och veckan tog ingen
+  hänsyn. Nu slås hushållets allergier ihop med enhetens egna i receptfiltret
+  (`mergeDiet` i `src/services/diet.js`), och fältets etikett säger att det
+  gäller hela hushållet. Kosttyp slås INTE ihop - en vegetarian i hushållet
+  gör inte hela familjens vecka vegetarisk. Allergi är säkerhet, kosttyp ett val.
+- **Återställningsmejlet skickades medan användaren väntade** - svarstiden
+  avslöjade om adressen fanns. Nu egen tråd (`send_email_async`), svaret går
+  direkt, och `join_mail_workers()` finns för tester och nedstängning.
+- **`MAIL_SECRET` var admin-token** när `MATJAKT_MAIL_SECRET` saknas. Nu en
+  härledd nyckel (HMAC), stabil över omstarter - en avprenumerationslänk kan
+  aldrig leda tillbaka till admin-token.
+- **`admin.html` saknade CSP-meta** trots att den publiceras till GitHub
+  Pages, som inte sätter någon CSP-header. Kontraktstest kräver nu en policy
+  i varje HTML-sida under `frontend/app/`.
+- **Hushållslagrets läsvägar tog inte låset** (bara skrivvägarna gjorde det).
+  En commit() i en tråd kunde nollställa en annan tråds SELECT mitt i en
+  familjs handling. Nu samma `_synchronized`-mönster som kontolagret, med
+  ett samtidighetstest.
+- **`householdDietary` användes utan att vara importerad** i app.js - hade
+  gett ReferenceError i receptfiltret hos användaren. `node --check` och
+  esbuild missar den klassen av fel; nu finns `tests/app-imports.test.js`
+  som kräver att varje modulnamn app.js anropar är importerat (och att inga
+  importer är oanvända).
+
+Öppet efter det här passet: kontoenumeration vid registrering (svaret skiljer
+för befintlig adress; fixen ändrar registreringsflödet och är Adams beslut),
+serverns tillit till klientens GTIN i skafferiet, notiser som konsumeras av
+första enheten på samma konto, och P0:n med databasbackuperna i git-historiken.
+

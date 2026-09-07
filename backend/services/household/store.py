@@ -33,6 +33,7 @@ avslöjar att hushållet finns.
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import re
@@ -1130,3 +1131,22 @@ def _inventory_to_public(row) -> dict:
         "updatedBy": row["updated_by"],
         "revision": row["revision"],
     }
+
+
+def _synchronized(method):
+    """Samma anslutning delas av alla trådar, och en commit() från en tråd
+    nollställer en annan tråds pågående SELECT. Skrivvägarna tog redan låset;
+    läsvägarna gjorde det inte, vilket gav sällsynta tomma svar mitt i en
+    familjs handling. RLock, så en låst metod kan anropa en annan."""
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    return wrapper
+
+
+_ALSO_LOCKED = {"_find_inventory_row", "_find_shopping_row", "_live_invite", "_members", "_require_member"}
+for _name, _member in list(vars(HouseholdStore).items()):
+    if callable(_member) and _name != "close" and (not _name.startswith("_") or _name in _ALSO_LOCKED):
+        setattr(HouseholdStore, _name, _synchronized(_member))
+

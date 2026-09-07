@@ -206,3 +206,44 @@ class SyncHardeningTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReadsUnderConcurrentWrites(unittest.TestCase):
+    """Läsvägarna tog inte hushållslåset. En commit() från en skrivande tråd
+    kan nollställa en annan tråds pågående SELECT - i en familj som handlar
+    samtidigt syntes det som en tom lista mitt i butiken."""
+
+    def test_sync_never_comes_back_empty_while_someone_writes(self):
+        import threading
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+            store = HouseholdStore(Path(tmp) / "household.db")
+            self.addCleanup(store.close)
+            adam = 1
+            household_id = store.create_household(adam, "Familjen From")["id"]
+            for index in range(10):
+                store.upsert_shopping_item(household_id, adam, {"name": f"Vara {index}", "source": "manual"})
+            problems = []
+
+            def writer():
+                for index in range(60):
+                    try:
+                        store.upsert_shopping_item(household_id, adam, {"name": f"Vara {index % 10}", "amount": index})
+                    except Exception as error:   # noqa: BLE001
+                        problems.append(repr(error))
+
+            def reader():
+                for _ in range(60):
+                    try:
+                        rows = store.sync(household_id, adam, 0)["shopping"]
+                        if len(rows) < 10:
+                            problems.append(f"bara {len(rows)} rader i synken")
+                    except Exception as error:   # noqa: BLE001
+                        problems.append(repr(error))
+
+            threads = [threading.Thread(target=writer) for _ in range(2)] + [threading.Thread(target=reader) for _ in range(3)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(timeout=60)
+            self.assertEqual(problems, [])
+

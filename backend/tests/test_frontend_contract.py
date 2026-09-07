@@ -69,3 +69,18 @@ class NoInlineScripts(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EveryPageHasContentSecurityPolicy(unittest.TestCase):
+    """Sidorna publiceras till GitHub Pages, som inte sätter någon
+    CSP-header. Skyddet får inte hänga på att backend råkar servera filen."""
+
+    def test_every_html_page_in_the_app_declares_a_policy(self):
+        pages = sorted(INDEX_HTML.parent.glob("*.html"))
+        self.assertTrue(pages)
+        for page in pages:
+            html = page.read_text(encoding="utf-8")
+            self.assertIn('http-equiv="Content-Security-Policy"', html, page.name)
+            self.assertIn("script-src 'self'", html, page.name)
+            self.assertNotIn("script-src 'self' 'unsafe-inline'", html, page.name)
+

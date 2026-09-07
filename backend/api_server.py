@@ -189,7 +189,14 @@ MAIL_CONFIG = {
 # körning mejlar aldrig någon av sig själv. Avprenumerationslänkarna signeras
 # med MATJAKT_MAIL_SECRET, annars admin-token; saknas båda skickas inget.
 MAILINGS_ENABLED = os.environ.get("MATJAKT_MAILINGS_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}
-MAIL_SECRET = os.environ.get("MATJAKT_MAIL_SECRET", "").strip() or ADMIN_TOKEN
+# Utan egen nyckel HÄRLEDS en ur admin-token i stället för att vara den:
+# två förtroendenivåer ska inte dela hemlighet, och en avprenumerationslänk
+# får aldrig kunna leda tillbaka till admin-token. Stabil över omstarter,
+# så redan utskickade länkar fortsätter gälla.
+_mail_secret_env = os.environ.get("MATJAKT_MAIL_SECRET", "").strip()
+MAIL_SECRET = _mail_secret_env or (
+    hmac.new(ADMIN_TOKEN.encode("utf-8"), b"matjakt-mail-secret", hashlib.sha256).hexdigest()
+    if ADMIN_TOKEN else "")
 # Den publika adressen till API:t, för länkar i mejl (avprenumeration).
 PUBLIC_API_URL = (os.environ.get("MATJAKT_PUBLIC_API_URL") or os.environ.get("MATJAKT_API_URL")
                   or f"http://{HOST}:{PORT}/api").rstrip("/")
@@ -686,6 +693,35 @@ def run_pricing_audit_in_background(reason: str = "", delay_seconds: float | Non
 # Efter varje lyckad import (nattjobben) är priserna nya - audita igen.
 grocery_importer.AFTER_IMPORT_HOOKS.append(
     lambda chain, saved: run_pricing_audit_in_background(f"import {chain}"))
+
+
+# Mejl som skickas MEDAN någon väntar på svaret gör svarstiden till ett
+# orakel: fanns adressen tog det en SMTP-session längre. Skicka på egen tråd
+# och svara direkt - lika snabbt för alla adresser.
+_MAIL_WORKERS: set = set()
+
+
+def send_email_async(*args, **kwargs) -> None:
+    def worker():
+        try:
+            send_email(*args, **kwargs)
+        except MailError:
+            METRICS.incr("mail_send_failed")
+            logger.exception("Kunde inte skicka mejl i bakgrunden")
+        except Exception:
+            logger.exception("Ohanterat fel när mejl skickades i bakgrunden")
+        finally:
+            _MAIL_WORKERS.discard(thread)
+    thread = threading.Thread(target=worker, name="matjakt-mail", daemon=True)
+    _MAIL_WORKERS.add(thread)
+    thread.start()
+
+
+def join_mail_workers(timeout: float = 5.0) -> None:
+    """Väntar in pågående mejltrådar. För tester och nedstängning - aldrig i
+    en begäran (då vore timingen tillbaka)."""
+    for thread in list(_MAIL_WORKERS):
+        thread.join(timeout=timeout)
 
 
 def _mail_from_domain():
@@ -2541,13 +2577,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 return
             reset_token = ACCOUNT_STORE.request_password_reset(payload.get("email"))
             if reset_token:
-                try:
-                    send_email(
-                        MAIL_CONFIG, (payload.get("email") or "").strip().lower(), "Återställ ditt Matjakt-lösenord",
-                        f"Klicka här för att välja ett nytt lösenord:\n{APP_URL}/?reset={reset_token}\n\nLänken slutar gälla om en timme. Om du inte bad om detta kan du ignorera mejlet.",
-                    )
-                except MailError:
-                    logger.exception("Failed to send password reset email")
+                send_email_async(
+                    MAIL_CONFIG, (payload.get("email") or "").strip().lower(), "Återställ ditt Matjakt-lösenord",
+                    f"Klicka här för att välja ett nytt lösenord:\n{APP_URL}/?reset={reset_token}\n\nLänken slutar gälla om en timme. Om du inte bad om detta kan du ignorera mejlet.",
+                )
             # Always respond the same way whether or not the email matched an account -
             # otherwise this endpoint could be used to check which emails have accounts.
             self.send_json(200, {"ok": True})

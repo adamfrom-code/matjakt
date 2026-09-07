@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<!-- Kontrollrummet bär admin-token i minnet. Sidan publiceras med resten av
+     frontend till GitHub Pages, som inte sätter någon CSP-header - skyddet
+     får därför inte hänga på vem som råkar servera filen. Inga inline-skript
+     finns här; admin.js laddas från samma origin. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://matjakt.onrender.com; base-uri 'self'; form-action 'self'">
 <title>Matjakt · Kontrollrum</title>
 <style>
   :root { color-scheme: light dark; --bg:#f6f7f9; --surface:#fff; --text:#14181f; --muted:#5b6470; --line:#e3e6ea; }

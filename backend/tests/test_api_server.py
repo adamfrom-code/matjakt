@@ -1416,6 +1416,9 @@ class AuthHttpTest(unittest.TestCase):
             self.assertEqual(status, 200)
             status, payload = self.post("/api/auth/request-password-reset", {"email": "nobody-" + email})
             self.assertEqual(status, 200)
+            # Mejlet skickas på egen tråd (svarstiden får inte avslöja om
+            # adressen finns), så vänta in den innan vi räknar.
+            api_server.join_mail_workers()
             self.assertEqual(len(sent), 1, "bara den riktiga adressen får mejl")
         finally:
             api_server.MAIL_CONFIG.clear(); api_server.MAIL_CONFIG.update(original)
@@ -2624,6 +2627,47 @@ class AuthHttpTest(unittest.TestCase):
         finally:
             ratelimit.LIMITS["public"], ratelimit.LIMITS["billing"] = saved_public, saved_billing
             ratelimit.reset()
+
+    def test_the_reset_answer_does_not_wait_for_the_mail(self):
+        """Svarstiden får inte skilja på "adressen finns" och "finns inte" -
+        förr skickades mejlet medan användaren väntade, och en långsam SMTP
+        var ett kontoorakel."""
+        email = self._email()
+        self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        original_send, original_check = api_server.send_email, api_server.check_mail_transport
+        original_config = dict(api_server.MAIL_CONFIG)
+        api_server.MAIL_CONFIG.update(host="smtp.test.local", from_email="noreply@matjakt.store")
+        api_server.check_mail_transport = lambda config: None
+        sent = []
+
+        def slow_send(*args, **kwargs):
+            time.sleep(1.5)          # en trög SMTP-server
+            sent.append(args)
+
+        api_server.send_email = slow_send
+        try:
+            started = time.monotonic()
+            status, _ = self.post("/api/auth/request-password-reset", {"email": email})
+            existing = time.monotonic() - started
+            self.assertEqual(status, 200)
+            started = time.monotonic()
+            self.post("/api/auth/request-password-reset", {"email": "nobody-" + email})
+            missing = time.monotonic() - started
+            self.assertLess(existing, 1.0, "svaret väntade på mejlet")
+            self.assertLess(abs(existing - missing), 0.75, "svarstiden avslöjar om kontot finns")
+            api_server.join_mail_workers()
+            self.assertEqual(len(sent), 1)
+        finally:
+            api_server.send_email, api_server.check_mail_transport = original_send, original_check
+            api_server.MAIL_CONFIG.clear(); api_server.MAIL_CONFIG.update(original_config)
+
+    def test_the_mail_signing_key_is_not_the_admin_token(self):
+        """Avprenumerationslänkar signeras med en HÄRLEDD nyckel: en läckt
+        länk får aldrig kunna vara admin-token."""
+        if not api_server.ADMIN_TOKEN:
+            self.skipTest("ingen admin-token i den här miljön")
+        self.assertNotEqual(api_server.MAIL_SECRET, api_server.ADMIN_TOKEN)
+        self.assertTrue(api_server.MAIL_SECRET)
 
     def test_redeem_premium_with_correct_code(self):
         email = self._email()

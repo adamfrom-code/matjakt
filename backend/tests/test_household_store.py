@@ -6,6 +6,7 @@ annat hushålls data genom att byta ut ett id - och på §6, att "köpt" och
 "har hemma" är två olika saker som inte får smälta samman.
 """
 
+import json
 import sys
 import tempfile
 import unittest
@@ -497,3 +498,30 @@ class HorizontalEscalationTest(HouseholdStoreTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class KeyContractWithTheClient(HouseholdStoreTestCase):
+    """Serverns halva av nyckelkontraktet (klientens ligger i
+    tests/household-keys.test.js). Går formlerna isär hittar servern ingen
+    rad, svarar 400 på varje "Köpt"/"Har hemma", och klientens optimistiska
+    rad blir en dubblett i familjens lista."""
+
+    FIXTURE = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "household-keys.json"
+
+    def test_the_server_key_matches_the_shared_table(self):
+        table = json.loads(self.FIXTURE.read_text(encoding="utf-8"))["keys"]
+        self.assertTrue(table)
+        for name, expected in table.items():
+            self.assertEqual(item_key(name), expected, f"nyckeln för {name!r} ändrades")
+
+    def test_a_week_row_and_a_status_change_land_on_the_same_row(self):
+        """Veckan läggs in utan produktdata; avbockningen måste träffa exakt
+        den raden."""
+        household_id = self._family()
+        self.store.replace_week_items(household_id, self.adam, [{"name": "Mjölk", "amount": 1, "unit": "l"}])
+        rows = self.store.shopping_items(household_id, self.adam)
+        milk = next(row for row in rows if row["name"] == "Mjölk")
+        self.assertEqual(milk["key"], item_key("Mjölk"))
+        updated = self.store.set_item_status(household_id, self.adam, item_key("Mjölk"), PURCHASED)
+        self.assertEqual(updated["status"], PURCHASED)
+
