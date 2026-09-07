@@ -52,13 +52,13 @@ Det här gäller allt nedan och ska inte behöva upprepas per rad:
 
 | ID | Krav | Status | Bevis / nästa steg |
 |---|---|---|---|
-| O1 | Driftstatus som adminförstasida | att göra | Datan finns i `provider_status()`; renderingen i `admin.html` saknas |
-| O2 | Rad/kort per kedja med health, released, scope, snapshot, ålder, gate | delvis | `chain_health()` mergad (`745d37e`), 9 tester. **UI saknas** — datan finns i `provider_status().health` |
+| O1 | Driftstatus som adminförstasida | **klart att testa** | Byggd och mergad (`d9aab36`). Verifierad i webbläsare mot fixturserver, desktop + mobil 375 px. Kvar: se den mot riktig produktionsdata |
+| O2 | Rad/kort per kedja med health, released, scope, snapshot, ålder, gate | **klart att testa** | `chain_health()` + tabellkolumner mergade. Drift, Släppt och Provider är skilda kolumner |
 | O3 | ICA/Coop: visa ej släppt, schema, ingen verifierad snapshot | **pågår** | Schema dagligen 05:30/06:30 mergat (#5). Coverage `ej verifierat` |
 | O4 | Lidl som Limited med orsak | **pågår** | `limited` finns i statusmodellen och larmar aldrig |
 | O5 | Aktiva incidenter med kundpåverkan | delvis | Incidenter finns i `alerts.py`; adminvyn som visar dem saknas |
 | O6 | Incidenthistorik, persistenta ID, dedupe | delvis | Dedupe + recovery mergat (`745d37e`), 12 tester. Historikvy saknas |
-| O7 | Admin-mail: skilj mottagare/transport/försök/leverans | delvis | `MATJAKT_ADMIN_EMAIL` optional, tyst utan den. De fyra nivåerna särskiljs inte än |
+| O7 | Admin-mail: skilj mottagare/transport/försök/leverans | delvis | **Verifierat live 2026-09-07:** `adminAlerts` visar recipientConfigured + transportConfigured = true, domän icloud.com. Kvar: senaste skickförsök och faktisk leverans |
 | O8 | Primat: configured JA/NEJ, kvot endast från verklig API-data | **blockerat** | Ingen dokumenterad kvot-endpoint hittad. Står `ej tillgängligt` tills motsatsen bevisas |
 | O9 | Scheduler: schema, faktiska körningar, nästa körning | delvis | Operations-koll 07:00 inkopplad med test som kräver att den ligger efter alla importer |
 | O10 | Pricing audit med definierade nämnare | behöver verifieras | Audit finns och är GRÖN i produktion. Live-parsningsvägen granskas INTE av den |
@@ -107,12 +107,13 @@ betaldata; ingen intäktssiffra får härledas ur antal Premium × pris.
 | Publiceringsgrindens 95 %-gräns testad vid kanten | #6 mergad | 94,9 % nekas, 95,0 % publiceras, last-good behålls |
 | Cachade priser bär tolkningens version | #7 mergad | Gamla felpriser serveras inte längre i sex timmar efter en fix |
 | ICA/Coop dagligen via Primat | #5 mergad | `RELEASED_CHAINS` orörd — kedjorna blir inte publika av sig själva |
+| Driftstatus i kontrollrummet | #11 **mergad** | Verifierad i webbläsare, desktop + mobil |
+| health visar om larmen går att skicka | #10 **mergad** | Live: mottagare och transport bekräftade |
 | Driftstatus + larm med dedupe och recovery | #8 **mergad** | 21 tester; ett av dem hittade att en API-nyckel kunde mejlas i klartext |
 | F1: ofullständig kasse krönas inte | #9 **mergad** | Regressionstest med exakt scenariot ur granskningen |
 
 ## Kvar för ägaren
 
-1. **`MATJAKT_ADMIN_EMAIL`** i Render — utan den är driftlarmen tysta.
-2. **Primat App-nivå** — betalbeslut. Gratisnivån räcker inte för ICA och
+1. **Primat App-nivå** — betalbeslut. Gratisnivån räcker inte för ICA och
    Coop samma natt.
 3. **F6 databasincidenten** — kräver ditt godkännande för historikrensning.
