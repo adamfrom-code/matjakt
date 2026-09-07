@@ -24,6 +24,7 @@ import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync
 import { categoryFor, groupByCategory } from "./src/services/categories.js";
 import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swapReasonText, weekCostAlert } from "./src/services/swap.js";
 import { RECIPE_FALLBACK_ART, RECIPE_FALLBACK_LABEL, kindFor as recipeFallbackKind } from "./src/services/recipe-fallback.js";
+import { recordWeekSaving, weekKeyFor } from "./src/services/savings-log.js";
 
 // The recipe bank is DATA, loaded from data/recipes.json - see
 // src/data/recipes.js. It used to be two hardcoded arrays right here, which
@@ -4398,8 +4399,23 @@ function openPlanComparison() {
     // Without this, "Du sparar" showed a literal "0 kr" for that structurally
     // guaranteed-zero case instead of the honest "underlag saknas" state.
     const hasRealComparison = (priciest?.cost || plan.cost) > plan.cost;
-    state.savingsLog.push({ date: new Date().toISOString().slice(0, 10), savings: Math.max(0, (priciest?.cost || plan.cost) - plan.cost), hasComparison: hasRealComparison, branch: branch?.namn || "", portionCost: plan.cost / (plan.combo.length * state.personer) });
-    state.savingsLog = state.savingsLog.slice(-60);
+    // EN POST PER VECKA, inte per klick. Att öppna jämförelsen tre gånger
+    // och välja varje gång gav förut tre poster som alla summerades - samma
+    // vecka räknades som tre veckors besparing. Posten ersätts därför på
+    // veckonyckeln i stället för att läggas till.
+    //
+    // Nyckeln är veckans plan, inte dagens datum: byter man vecka samma dag
+    // är det en ny handling, och väljer man om samma vecka är det inte det.
+    const veckoNyckel = weekKeyFor(plan.combo.map(recipe => recipe.id));
+    const post = {
+      date: new Date().toISOString().slice(0, 10),
+      weekKey: veckoNyckel,
+      savings: Math.max(0, (priciest?.cost || plan.cost) - plan.cost),
+      hasComparison: hasRealComparison,
+      branch: branch?.namn || "",
+      portionCost: plan.cost / (plan.combo.length * state.personer),
+    };
+    state.savingsLog = recordWeekSaving(state.savingsLog, post).slice(-60);
     state.swapsThisWeek = 0;
     setWeekPlan(plan.combo.map(recipe => recipe.id));
     state.avklarade.clear();
@@ -4431,14 +4447,19 @@ function renderStats() {
   const monthEntries = logEntriesSince(30).filter(entry => entry.hasComparison);
   const savedWeek = weekEntries.reduce((sum, entry) => sum + entry.savings, 0);
   const savedMonth = monthEntries.reduce((sum, entry) => sum + entry.savings, 0);
+  // OFTAST VALD, INTE BILLIGAST. Det här är läget av entry.branch - alltså
+  // vilken butik användaren valt flest gånger. Ingen prisjämförelse ingår.
+  // Etiketten hette "Billigaste butiken för dig", vilket var ett osant
+  // påstående om användarens pengar: en butik kan vara vald av vana, för
+  // att den ligger nära, eller för att den var förvald.
   const branchCounts = {};
   state.savingsLog.forEach(entry => { if (entry.branch) branchCounts[entry.branch] = (branchCounts[entry.branch] || 0) + 1; });
-  const cheapestName = Object.entries(branchCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || selectedBranch()?.namn || "-";
+  const mostChosenName = Object.entries(branchCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || selectedBranch()?.namn || "-";
   const avgPortion = state.savingsLog.length ? state.savingsLog.reduce((sum, entry) => sum + entry.portionCost, 0) / state.savingsLog.length : 0;
   const reused = reusedIngredientCount();
   $("statSavedWeek").textContent = weekEntries.length ? money(savedWeek) : "Underlag saknas";
   $("statSavedMonth").textContent = monthEntries.length ? money(savedMonth) : "Underlag saknas";
-  $("statCheapestStore").textContent = cheapestName;
+  $("statCheapestStore").textContent = mostChosenName;
   $("statAvgPortion").textContent = state.savingsLog.length ? money(avgPortion) : "-";
   $("statWasteReduced").textContent = reused ? `${plural(reused, "ingrediens", "ingredienser")} återanvänds i flera rätter denna vecka` : "Skapa en vecka för att se detta";
   // The hero savings card only ever shows REAL arithmetic: the server's own
