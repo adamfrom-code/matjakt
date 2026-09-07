@@ -3,18 +3,23 @@
 
 The important behaviour is not "does a timer fire" - it is WHICH CHAINS ARE
 ALLOWED TO RUN. Automatic collection is a claim that repeated unattended
-fetching works and is welcome, and three chains have not earned it: ICA trips
-an AWS WAF challenge, Coop needs someone else's API credential, and Lidl
-publishes no prices at all. A config typo must not be able to start hammering
-any of them.
+fetching works and is welcome. Willys, Hemköp och City Gross har förtjänat
+det mot sina egna sidor. ICA och Coop hämtas ALDRIG därifrån - deras rader i
+schemat gäller Primats betal-API, som aldrig rör kedjornas servrar - och utan
+PRIMAT_API_KEY hoppas de över helt, för då skulle importeraren falla tillbaka
+på den direkta skrap-providern. Lidl står kvar utanför: det finns inga
+per-produkt-priser att hämta. A config typo must not be able to start
+hammering any chain that said no.
 """
 
+import os
 import sys
 import tempfile
 import threading
 import time
 import unittest
 from datetime import datetime
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -26,17 +31,73 @@ from services.grocery.scheduler import (  # noqa: E402
 
 class SchedulableChainsTest(unittest.TestCase):
     def test_only_the_verified_chains_are_schedulable(self):
-        self.assertEqual(set(SCHEDULABLE_CHAINS), {"Willys", "Hemköp", "City Gross"})
+        """ICA och Coop kom till när Primat-vägen fanns: den rör aldrig
+        kedjornas egna servrar, så WAF-skälet gäller inte den. Lidl står
+        kvar utanför - det finns inga per-produkt-priser att hämta."""
+        self.assertEqual(set(SCHEDULABLE_CHAINS),
+                         {"Willys", "Hemköp", "City Gross", "ICA", "Coop"})
 
-    def test_blocked_chains_cannot_be_scheduled_by_config(self):
-        """The whole point of the allow-list: a typo in an env var must not
-        put ICA, Coop or Lidl on a nightly timer."""
-        for chain in ("ICA", "Coop", "Lidl"):
-            schedule = parse_schedule(f"{chain}=02:00")
-            self.assertNotIn(chain, schedule)
-            # Falls back to the safe default rather than to an empty schedule
-            # that would silently stop all imports.
-            self.assertEqual(schedule, DEFAULT_SCHEDULE)
+    def test_lidl_can_never_be_scheduled_by_config(self):
+        """Allow-listans kvarvarande poäng: ett stavfel i en miljövariabel
+        får inte sätta Lidl på en nattlig timer. Det finns ingenting att
+        hämta där, och en Lidl-total får aldrig fejkas fram."""
+        schedule = parse_schedule("Lidl=02:00")
+        self.assertNotIn("Lidl", schedule)
+        # Falls back to the safe default rather than to an empty schedule
+        # that would silently stop all imports.
+        self.assertEqual(schedule, DEFAULT_SCHEDULE)
+
+    def test_primat_chains_are_skipped_without_the_key(self):
+        """Utan PRIMAT_API_KEY väljer importer._provider_for() den DIREKTA
+        skrap-providern för ICA - exakt den upprepade hämtningen som triggar
+        ICAs WAF. Spärren är det som gör schemaposterna ofarliga."""
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("PRIMAT_API_KEY", None)
+            self.assertFalse(scheduler_module._får_köras("ICA"))
+            self.assertFalse(scheduler_module._får_köras("Coop"))
+            self.assertTrue(scheduler_module._får_köras("Willys"))
+        with mock.patch.dict(os.environ, {"PRIMAT_API_KEY": "x"}):
+            self.assertTrue(scheduler_module._får_köras("ICA"))
+            self.assertTrue(scheduler_module._får_köras("Coop"))
+
+    def test_primat_chains_never_share_a_day(self):
+        """Primats gratisnivå ger 20 000 rader/dygn och ICAs katalog är ensam
+        runt 11 000 - kör de samma natt spränger de kvoten."""
+        ica, _, _ = scheduler_module._split_when(DEFAULT_SCHEDULE["ICA"])
+        coop, _, _ = scheduler_module._split_when(DEFAULT_SCHEDULE["Coop"])
+        self.assertTrue(ica and coop)
+        self.assertEqual(ica & coop, set())
+
+    def test_primat_chains_run_often_enough_to_stay_fresh(self):
+        """pricing.py litar på ett butikspris i fyra dygn. Ett schema med för
+        långt glapp gör priserna oanvändbara utan att något larmar."""
+        for chain in ("ICA", "Coop"):
+            dagar, _, _ = scheduler_module._split_when(DEFAULT_SCHEDULE[chain])
+            index = sorted(scheduler_module.VECKODAGSORDNING.index(d) for d in dagar)
+            glapp = [b - a for a, b in zip(index, index[1:])] + [index[0] + 7 - index[-1]]
+            self.assertLessEqual(max(glapp), 4, f"{chain}: {max(glapp)} dygns glapp")
+
+    def test_weekday_schedules_only_fire_on_their_days(self):
+        mandag = datetime(2026, 9, 7, 5, 30)
+        tisdag = datetime(2026, 9, 8, 5, 30)
+        self.assertEqual(scheduler_module._due_today(mandag, "Mon,Wed,Fri 05:30"), mandag)
+        self.assertIsNone(scheduler_module._due_today(tisdag, "Mon,Wed,Fri 05:30"))
+        # Utan dagprefix betyder varje dag, som förut.
+        self.assertEqual(scheduler_module._due_today(tisdag, "02:00"),
+                         tisdag.replace(hour=2, minute=0))
+
+    def test_next_run_skips_to_the_next_allowed_day(self):
+        """Utan det pekade statusvyn på gårdagens tid för en måndagskedja."""
+        tisdag = datetime(2026, 9, 8, 5, 30)
+        self.assertEqual(next_run_at("ICA", DEFAULT_SCHEDULE, tisdag).strftime("%a %H:%M"),
+                         "Wed 05:30")
+
+    def test_weekdays_use_slashes_in_the_env_var(self):
+        """Komma separerar POSTER i MATJAKT_GROCERY_SCHEDULE, så veckodagar
+        måste skrivas med snedstreck där - annars bryts posten mitt itu."""
+        schedule = parse_schedule("ICA=Mon/Fri 06:00,Willys=01:00")
+        self.assertEqual(schedule["ICA"], "Mon,Fri 06:00")
+        self.assertEqual(schedule["Willys"], "01:00")
 
     def test_a_valid_override_is_honoured(self):
         self.assertEqual(parse_schedule("Willys=05:30"), {"Willys": "05:30"})
@@ -58,9 +119,16 @@ class SchedulableChainsTest(unittest.TestCase):
 
     def test_defaults_are_staggered(self):
         """Three simultaneous category walks would triple our request rate
-        against three sites in the same minute."""
-        times = sorted(DEFAULT_SCHEDULE.values())
-        self.assertEqual(len(set(times)), len(times))
+        against three sites in the same minute. Jämförelsen görs per DAG och
+        klockslag: ICA och Coop delar 05:30 men aldrig samma veckodag, och en
+        ren strängjämförelse hade sett det som olika utan att mäta något."""
+        upptagna = set()
+        for chain, when in DEFAULT_SCHEDULE.items():
+            dagar, hour, minute = scheduler_module._split_when(when)
+            for dag in (dagar or scheduler_module.VECKODAGSORDNING):
+                nyckel = (dag, hour, minute)
+                self.assertNotIn(nyckel, upptagna, f"{chain} krockar på {nyckel}")
+                upptagna.add(nyckel)
 
 
 class NextRunTest(unittest.TestCase):
@@ -75,7 +143,8 @@ class NextRunTest(unittest.TestCase):
                          datetime(2026, 9, 1, 2, 0))
 
     def test_unscheduled_chain_has_no_next_run(self):
-        self.assertIsNone(next_run_at("ICA", DEFAULT_SCHEDULE))
+        # Lidl, inte ICA: ICA har ett Primat-schema numera.
+        self.assertIsNone(next_run_at("Lidl", DEFAULT_SCHEDULE))
 
 
 class TickTest(unittest.TestCase):
@@ -113,9 +182,10 @@ class TickTest(unittest.TestCase):
         self.scheduler._tick(datetime(2026, 8, 31, 2, 0))  # must not raise
 
     def test_status_names_why_each_blocked_chain_has_no_job(self):
-        """A blank next-run for ICA/Coop/Lidl would read as an oversight."""
+        """A blank next-run for a blocked chain would read as an oversight.
+        Bara Lidl är kvar utan jobb: ICA och Coop går via Primat numera."""
         status = self.scheduler.status()
-        self.assertEqual(set(status["notScheduled"]), {"ICA", "Coop", "Lidl"})
+        self.assertEqual(set(status["notScheduled"]), {"Lidl"})
         self.assertEqual(status["timezone"], "Europe/Stockholm")
 
     def test_disabled_by_default(self):
