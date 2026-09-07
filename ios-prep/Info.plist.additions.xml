@@ -33,3 +33,19 @@
 </array>
 <key>CFBundleDevelopmentRegion</key>
 <string>sv</string>
+
+<!-- Eget URL-schema (matjakt://app/?recept=…) så djuplänkar kan testas i
+     simulatorn utan Team-ID. Universella https-länkar kräver Associated
+     Domains + apple-app-site-association (se docs/IOS_RELEASE.md). -->
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLName</key>
+    <string>se.matjakt.app</string>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>matjakt</string>
+    </array>
+  </dict>
+</array>
+

@@ -36,3 +36,6 @@ backend/tests/e2e/artifacts/
 
 # Byggd frontend (scripts/build_frontend.mjs) - byggs i deploy-jobbet.
 dist/
+
+# xcodebuild (scripts/ios_mac_pass.sh) - derived data, aldrig i repot.
+build/
