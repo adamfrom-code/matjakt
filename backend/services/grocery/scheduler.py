@@ -12,15 +12,29 @@ is welcome. Only three chains have earned it:
               own 3 s delay and retry) and a partial run is treated as
               normal, not as a failure
 
-  ICA         NOT automatic. Repeated fetching trips an AWS WAF challenge,
-              and we do not attempt to solve or evade it. ICA keeps its last
-              imported data and is refreshed manually until official access
-              exists. Running it on a nightly timer would be exactly the
-              aggressive repetition that trips the challenge.
-  Coop        never runs. All data sits behind Coop's own API credential,
-              and we do not authenticate with someone else's key.
+  ICA         Never fetched from ICA's own pages: repeated fetching trips an
+              AWS WAF challenge, and we do not attempt to solve or evade it.
+              It runs DAILY via PRIMAT'S PAID API instead - a licensed third
+              party that never touches ICA's servers, so the reason for the
+              ban does not apply to that route.
+  Coop        Same: Coop's own portal is locked to their internal Azure AD
+              and we do not authenticate with someone else's key. Runs daily
+              via Primat.
   Lidl        never runs. Lidl Sweden publishes no per-product prices at
-              all - there is nothing to fetch, and nothing to fake.
+              all - there is nothing to fetch, and nothing to fake. Primat's
+              Lidl feed is national and ~200-400 rows, too thin for a basket.
+
+PRIMAT_ONLY_CHAINS holds the line the WAF ban was really about: without
+PRIMAT_API_KEY those two are skipped entirely, because importer._provider_for
+would otherwise fall back to the direct scraper for ICA - the exact repeated
+fetching this module refuses to do.
+
+QUOTA. Primat's free tier allows 20 000 rows a day and ICA's catalogue alone
+is ~11 000, so running both chains in one night will likely exhaust it. That
+is safe, not broken: the provider stops at the ceiling, keeps what it fetched
+and marks the run "blocked", which publish.py merges rather than refuses - so
+coverage builds up over successive nights. Full same-night coverage for both
+would need the App tier (100 000 rows/day).
 
 Times are Europe/Stockholm, which is the point: a "03:00" job that silently
 means 03:00 UTC would drift an hour twice a year against the shelf prices it
@@ -55,14 +69,50 @@ DEFAULT_SCHEDULE = {
     "Willys": "02:00",
     "Hemköp": "03:00",
     "City Gross": "04:00",
+    # ICA och Coop hämtas ALDRIG från kedjornas egna sidor - se modulens
+    # docstring, den spärren står kvar. De här raderna gäller Primats
+    # betal-API, en licensierad tredjepartskälla som aldrig rör ICAs WAF
+    # eller Coops Azure AD. PRIMAT_ONLY_CHAINS ser till att de inte kan
+    # starta på någon annan väg.
+    #
+    # Dagligen, staggrat efter de tre andra. Kvoten nollställs midnatt UTC =
+    # 02:00 svensk sommartid, så båda ligger efter den. Importeraren kör en
+    # kedja i taget, så tiderna är startfönster - inte parallella jobb.
+    #
+    # KVOTVARNING: Primats gratisnivå ger 20 000 rader/dygn och ICAs katalog
+    # är ensam ~11 000. Kör båda samma natt slår den andra sannolikt i taket.
+    # Det är ofarligt - providern slutar hämta, behåller det den fått och
+    # märker körningen "blocked", vilket publiceringen slår ihop i stället
+    # för att förkasta - men full täckning för båda kan kräva App-nivån
+    # (100 000 rader/dygn). Se docs/RELEASE.md.
+    "ICA": "05:30",
+    "Coop": "06:30",
 }
 
-# Deliberately not configurable to include ICA/Coop/Lidl - see the module
-# docstring. A config typo must not be able to start hammering a chain that
-# has told us no.
+# Kedjor som BARA får importeras via Primat. Utan nyckeln väljer
+# importer._provider_for() den direkta skrap-providern för ICA, och ett
+# nattjobb får aldrig hamna där - det är precis den upprepade hämtningen som
+# triggar ICAs WAF. Saknas nyckeln hoppas de över, tyst och avsiktligt.
+PRIMAT_ONLY_CHAINS = frozenset({"ICA", "Coop"})
+
+
+def _får_köras(chain: str) -> bool:
+    """False för en Primat-kedja när nyckeln saknas. Kollas vid körning, inte
+    vid import av modulen: miljön kan ha fått nyckeln efter starten, och en
+    tom miljö i tester ska inte kunna schemalägga ICA mot skrap-providern."""
+    if chain in PRIMAT_ONLY_CHAINS and not os.environ.get("PRIMAT_API_KEY"):
+        logger.info("Hoppar över nattjobb för %s: PRIMAT_API_KEY saknas, och "
+                    "den här kedjan hämtas aldrig direkt från butikens sidor", chain)
+        return False
+    return True
+
+# Deliberately not configurable to include Lidl - see the module docstring.
+# A config typo must not be able to start hammering a chain that has told us
+# no, and Lidl has no per-product prices to fetch in the first place.
 SCHEDULABLE_CHAINS = frozenset(DEFAULT_SCHEDULE)
 
 CHECK_INTERVAL_SECONDS = 60
+
 
 # Veckodag + klockslag (Europe/Stockholm, strftime "%a %H:%M") för den
 # nationella butiksregistersynken.
@@ -87,6 +137,9 @@ BOOTSTRAP_CHAIN = "Willys"
 
 def parse_schedule(raw: str | None) -> dict:
     """Reads MATJAKT_GROCERY_SCHEDULE, e.g. "Willys=02:00,Hemköp=03:30".
+
+    Veckodagar skrivs med SNEDSTRECK här - "ICA=Mon/Wed/Fri 05:30" - eftersom
+    komma redan separerar posterna i den här strängen.
 
     An unparseable or unknown entry is logged and skipped rather than
     silently changing which chain runs when - and a chain that is not
@@ -188,6 +241,8 @@ class GroceryScheduler:
             # This cannot loop: once one run finishes, lastSuccessfulRun is
             # set and the condition stops being true, however many times we
             # restart.
+            if not _får_köras(chain):
+                continue
             if state.get("products", 0) == 0 or not state.get("lastSuccessfulRun"):
                 needy.append(chain)
         if not needy:
@@ -362,9 +417,17 @@ class GroceryScheduler:
             # nightly job, instead of leaving a blank that reads as an
             # oversight.
             "notScheduled": {
-                "ICA": "Bakom feature gate: referenskatalog via Primat kräver App-nivå för full nattsynk",
-                "Coop": "Bakom feature gate: samma som ICA",
                 "Lidl": "Bakom feature gate: Primats Lidl-feed är för liten för en hel matkorg",
+            },
+            # ICA och Coop HAR ett jobb men kan behöva flera körningar innan
+            # katalogen är hel: gratisnivån ger 20 000 rader/dygn och en
+            # körning som slår i taket märks "blocked", behåller det den hann
+            # hämta och slås ihop nästa gång. App-nivån (100 000/dygn) gör
+            # det till en körning i stället för flera. Sagt rakt ut här så
+            # adminvyn inte ser en halv katalog som ett fel.
+            "partialUntilFullTier": {
+                "ICA": "Primat gratisnivå: full katalog kan kräva flera körningar",
+                "Coop": "Primat gratisnivå: samma som ICA",
             },
             "registerSyncAt": REGISTER_SYNC_AT,
         }
@@ -430,6 +493,8 @@ class GroceryScheduler:
             if self._last_fired.get(chain) == day_stamp:
                 continue
             self._last_fired[chain] = day_stamp
+            if not _får_köras(chain):
+                continue
             result = importer.start(chain)
             if result.get("started"):
                 logger.info("Nattjobb startade import för %s", chain)
