@@ -514,6 +514,37 @@ def allowed_departments_for(ingredient: str) -> set:
     return departments
 
 
+# TORRA KRYDDOR - de varor där "30 ml ryms alltid i 15 g" faktiskt håller.
+#
+# Listan är avsiktligt kort och explicit. Att härleda den ur
+# INGREDIENT_DEPARTMENTS {"pantry"} vore frestande men fel: skafferiet
+# rymmer också honung, sirap, olja och tomatpuré - alltså precis de täta
+# varor regeln inte får gälla. En krydda som saknas här blir osäker, inte
+# felprissatt, och det är rätt håll att fela åt.
+DRY_SPICES = frozenset({
+    "kanel", "kardemumma", "muskot", "muskotnöt", "nejlikor", "spiskummin",
+    "gurkmeja", "chilipulver", "kummin", "curry", "paprikapulver", "oregano",
+    "timjan", "basilika", "rosmarin", "salvia", "dragon", "mejram",
+    "lagerblad", "ingefära malen", "vitpeppar", "svartpeppar", "cayennepeppar",
+})
+
+
+def is_dry_spice(ingredient) -> bool:
+    """Är ingrediensen en torr krydda som ryms i regeln ovan?
+
+    Matchar på hela ord i namnet, inte delsträng: "kanelbulle" innehåller
+    "kanel" men är inte en krydda, och "salt" får aldrig matcha "saltgurka".
+    """
+    ord_i_namn = set(re.findall(r"[a-zåäöé]+", str(ingredient or "").lower()))
+    if not ord_i_namn:
+        return False
+    for krydda in DRY_SPICES:
+        delar = krydda.split()
+        if all(del_ in ord_i_namn for del_ in delar):
+            return True
+    return False
+
+
 def category_allows_ingredient(category, ingredient) -> bool:
     """Whether a product in this category can be this ingredient at all.
 
@@ -1491,18 +1522,34 @@ class RecipePricingEngine:
             if per_kg_cost is not None:
                 exact = True
             elif count is None:
-                # BESTÄMD REGEL, inte gissning: ett kryddmått (max 2 msk =
-                # 30 ml) mot en förpackning på minst 15 g är ALLTID en
-                # förpackning - ingen torr krydda väger mer än ~1 g/ml, så
-                # 30 ml ryms alltid i 15 g+. Allt annat okonverterbart
-                # förblir estimat och hålls utanför säkra totaler.
-                folded_unit = _fold(unit)
-                required_ml = (_VOLUME.get(folded_unit, 0) or 0) * amount
+                # BESTÄMD REGEL, inte gissning - men bara för TORRA KRYDDOR.
+                #
+                # Motiveringen är att ingen torr krydda väger mer än ~1 g/ml,
+                # så 30 ml ryms alltid i 15 g. Det stämmer för burkkryddor.
+                # Regeln prövade tidigare BARA mängderna, inte att varan var
+                # en krydda - och då gällde den allt som råkade mätas i msk.
+                #
+                # 2 msk honung behöver ~42 g (densitet ~1,4) och fick ändå
+                # "1 förpackning, exakt" mot en 15-gramsburk. Samma sak för
+                # sirap, olja, salt, senap och tomatpuré. Underskattningen
+                # räknades in i den säkra totalen och gick rakt in i
+                # billigast-jämförelsen mellan kedjor, och revisionen fångar
+                # den inte: audit.py flaggar volym-som-styck bara när
+                # paketenheten SAKNAS i massregistret, vilket är precis det
+                # fall den här grenen skapar.
+                #
+                # effective_amount/effective_unit, inte rå amount/unit: bak-
+                # och mejerikonverteringen ovanför ska gälla även här.
+                folded_unit = _fold(effective_unit)
+                required_ml = (_VOLUME.get(folded_unit, 0) or 0) * (effective_amount or 0)
                 package_grams = ((_MASS.get(_fold(package_unit or ""), 0) or 0)
                                  * (package_amount or 0))
-                if 0 < required_ml <= 30 and package_grams >= 15:
+                if (is_dry_spice(ingredient)
+                        and 0 < required_ml <= 30 and package_grams >= 15):
                     count, exact = 1, True
                 else:
+                    # Fail-closed: en förpackning visas, men raden är osäker
+                    # och hålls utanför säkra totaler och jämförelser.
                     count, exact = 1, False
             else:
                 exact = True
