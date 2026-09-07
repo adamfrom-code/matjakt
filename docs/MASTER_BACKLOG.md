@@ -197,18 +197,36 @@ betaldata; ingen intäktssiffra får härledas ur antal Premium × pris.
 | Driftstatus + larm med dedupe och recovery | #8 **mergad** | 21 tester; ett av dem hittade att en API-nyckel kunde mejlas i klartext |
 | F1: ofullständig kasse krönas inte | #9 **mergad** | Regressionstest med exakt scenariot ur granskningen |
 
-## Flakig E2E — fyra observationer
+## Den "flakiga" E2E:n — orsaken är ännu inte hittad
 
-`test_premium_paywall_and_stripe_testmode` föll på
-`#storeCards .store-card:not(.locked):not(.unavailable)` = 0 element efter
-30 s, och gick igenom på omkörning utan kodändring. Samma sak har setts
-tidigare med två olika signaturer. I den senaste loggen föregicks felet av
-`Product scrape failed for Willys/ris` och `BrokenPipeError` i fixturen —
-alltså att testservern tappade prissättningen, inte att appen är trasig.
+**Rättelse av det jag skrev först.** Jag påstod att fixturen tappade
+prissättningen. Det var fel. Sedan trodde jag att fixturens enhetsval var
+orsaken. Det var också fel, och jag motbevisade det själv.
 
-**Ett test som failar slumpmässigt är värre än inget test**, för då lär man
-sig att köra om i stället för att läsa. Orsaken bör letas i fixturen, inte
-i väntetiderna: att höja timeouten döljer felet i stället för att rätta det.
+Vad som faktiskt är känt:
+
+- `coveragePercent` räknar **exakta** rader, inte prissatta (se
+  `pricing.price_list`). Under `MIN_COVERAGE_FOR_COMPARISON = 85` slutar en
+  kedja vara jämförbar och kortet blir "Pris ej tillgängligt". CI:s
+  diagnosrad visade `16/19 = 84,2 %` — 0,8 procentenheter under gränsen.
+- **Veckan är slumpad.** `everydayRank` (`app.js:902`) lägger
+  `Math.random()` på rankningen, avsiktligt, så att "Skapa ny vecka" ger en
+  ny vecka. E2E:n lottar alltså i receptbanken vid varje körning.
+- Skafferiet är **inte** inblandat: skafferitäckta rader hoppas över före
+  `requested = len(matched) + len(missing)` (`pricing.py:1650`).
+- Fixturen hade två äkta defekter (`MIN(unit)` gav mjöl i literförpackning,
+  msk/tsk föll till "1 st"). Rättade i PR #19 — men **de förklarar inte
+  fallen**. Modellerat över 20 000 slumpade veckor per storlek, aggregerat
+  som appens lista gör, går ingen veckostorlek under 85 % ens med den gamla
+  fixturen; sämsta fyrareceptsveckan var 87,0 % före och 90,5 % efter.
+- 16 lokala körningar av konsumentresan gick igenom med **båda**
+  fixturerna. Felet går inte att reproducera lokalt.
+
+**Kvar att undersöka:** 16/19 kan receptbanken ensam inte producera, så
+kassen måste innehålla rader som inte kommer ur recepten — extravaror,
+hushållsrader eller något tillstånd resan når som modellen ovan inte
+återskapar. Nästa steg är att logga kassens faktiska rader i
+`_pricing_diagnosis` när den failar, inte att höja timeouten.
 
 ## Kvar för ägaren
 
