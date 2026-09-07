@@ -736,14 +736,47 @@ def clean_text(value):
     return re.sub(r"\s+", " ", value or "").strip()
 
 
+# JÄMFÖRPRIS ÄR INTE VAD VARAN KOSTAR.
+#
+# "94,64 kr/kg" och "11,83 kr" står bredvid varandra på varje produktkort.
+# Bara det senare är vad kunden betalar. Parsrarna tog tidigare första bästa
+# tal följt av "kr", vilket gav rätt svar på Willys (som lägger förpacknings-
+# priset först i DOM:en) och fel på Hemköp (som lägger jämförpriset först).
+# Felet syntes i produktion: samma SEMPER-burk 125 g kostade 11,83 kr hos
+# Willys och 111,60 kr hos Hemköp - och 111,60 × 0,125 = 13,95, alltså ett
+# kilopris som presenterades som förpackningspris. Kvoten följde förpacknings-
+# storleken (70 g gav 17×, 190 g gav 6×), vilket är signaturen för just det.
+#
+# Prisrevisionen fångar det inte: den granskar den nattimporterade databasen,
+# inte livesökningen. Därför får spärren sitta i parsern, som är den enda
+# punkt båda kedjorna passerar.
+#
+# "kr" mellan talet och snedstrecket är valfritt: Hemköp skriver "94,64 kr/kg"
+# medan Willys delade format ger "94 64 kr/kg".
+PER_UNIT_SUFFIX = re.compile(r"\s*(?:kr)?\s*/\s*(?:kg|hg|l|liter|kilo)\b", re.I)
+
+
 def parse_price(text):
-    match = re.search(r"(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:kr|:-)", text, re.I)
-    return float(match.group(1).replace(",", ".")) if match else None
+    """Förpackningspriset ur en text som också kan innehålla jämförpris.
+
+    Går igenom alla träffar och hoppar över dem som följs av en enhets-
+    markör, i stället för att ta den första och hoppas. Hittas bara
+    jämförpriser blir svaret None - att gissa ett pris vore värre än att
+    säga att vi inte vet, och anroparen hoppar över varan."""
+    for match in re.finditer(r"(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:kr|:-)", text, re.I):
+        if PER_UNIT_SUFFIX.match(text, match.end()):
+            continue
+        return float(match.group(1).replace(",", "."))
+    return None
 
 
 def parse_willys_price(text):
-    match = re.search(r"(\d+)\s+(\d{2})", clean_text(text))
-    return float(f"{match.group(1)}.{match.group(2)}") if match else parse_price(text)
+    cleaned = clean_text(text)
+    for match in re.finditer(r"(\d+)\s+(\d{2})", cleaned):
+        if PER_UNIT_SUFFIX.match(cleaned, match.end()):
+            continue
+        return float(f"{match.group(1)}.{match.group(2)}")
+    return parse_price(cleaned)
 
 
 def geocode_postcode(zip_code):
@@ -1185,8 +1218,21 @@ def parse_products(page, chain, query):
         seen = set()
         for card in page.locator(config["product_selector"]).all()[:80]:
             text = clean_text(card.inner_text())
-            price_node = card.locator('[data-testid*="price"], [data-testid*="Price"]')
-            price = parse_willys_price(price_node.first.inner_text()) if price_node.count() else parse_price(text)
+            # Selektorn matchar VARJE testid som innehåller "price" - även
+            # jämförprisrutan - och kortens DOM-ordning skiljer sig mellan
+            # kedjorna. Att ta .first blev därför rätt på en sida och fel på
+            # en annan. Vi går i stället igenom noderna och tar den första som
+            # ger ett pris parsern accepterar; jämförpriser ger None och
+            # hoppas över. Taket på sex noder är bara för att inte loopa över
+            # ett kort med oväntat många träffar.
+            price = None
+            price_nodes = card.locator('[data-testid*="price"], [data-testid*="Price"]')
+            for index in range(min(price_nodes.count(), 6)):
+                price = parse_willys_price(price_nodes.nth(index).inner_text())
+                if price is not None:
+                    break
+            if price is None:
+                price = parse_price(text)
             link = card.locator("a").first
             href = link.get_attribute("href") if link.count() else None
             if not text or not price or not href:

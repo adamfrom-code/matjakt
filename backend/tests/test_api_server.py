@@ -51,8 +51,27 @@ class ApiHelpersTest(unittest.TestCase):
         self.assertEqual(parse_price("Pris 18,90 kr"), 18.9)
         self.assertIsNone(parse_price("pris saknas"))
 
+    def test_parse_price_hoppar_over_jamforpris(self):
+        # Produktkortet bär båda talen. Bara förpackningspriset är vad kunden
+        # betalar; jämförpriset gav tidigare 6-18 gånger för högt pris hos den
+        # kedja vars DOM råkade lägga det först.
+        self.assertEqual(parse_price("94,64 kr/kg 11,83 kr"), 11.83)
+        self.assertEqual(parse_price("11,83 kr 94,64 kr/kg"), 11.83)
+        for enhet in ("kg", "hg", "l", "liter", "kilo"):
+            self.assertIsNone(parse_price(f"94,64 kr/{enhet}"), enhet)
+        # Bara jämförpris och inget förpackningspris: hellre inget svar än ett
+        # påhittat. Anroparen hoppar över varan.
+        self.assertIsNone(parse_price("Jmf-pris 892,80 kr/kg"))
+
     def test_parse_willys_price(self):
         self.assertEqual(parse_willys_price("24 95"), 24.95)
+
+    def test_parse_willys_price_hoppar_over_jamforpris(self):
+        # Det delade formatet skriver jämförpriset som "94 64 kr/kg".
+        self.assertEqual(parse_willys_price("94 64 kr/kg 11 83"), 11.83)
+        self.assertIsNone(parse_willys_price("94 64 kr/kg"))
+        # Faller tillbaka på parse_price när det delade formatet saknas.
+        self.assertEqual(parse_willys_price("Pris 18,90 kr"), 18.9)
 
     def test_parse_kronor_ore_text(self):
         self.assertEqual(api_server.parse_kronor_ore_text("Ordinarie pris 74 kronor och 65 öre styck"), 74.65)
