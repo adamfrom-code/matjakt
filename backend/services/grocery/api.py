@@ -309,6 +309,72 @@ PROVIDER_STATUS = {
 }
 
 
+# Hur gammal en lyckad import får bli innan kedjan räknas som inaktuell.
+# Nattjobben ligger 02-06:30 och kör dagligen, så 36 timmar rymmer en missad
+# natt utan att larma - men inte två. Kortare och en enda hicka larmar i
+# onödan; längre och en kedja kan tyna bort en hel helg obemärkt.
+CHAIN_STALE_AFTER_SECONDS = 36 * 3600
+
+
+def chain_health(entry: dict, now: float = None) -> dict:
+    """En sammanfattande status per kedja, härledd ur data som redan finns.
+
+    Poängen är att ägaren ska kunna läsa EN rad i stället för att jämföra
+    produktantal mot tidsstämplar mot releaselistan i huvudet. Fälten under
+    den (products, lastRun, ageSeconds ...) står kvar oförändrade - det här
+    lägger bara en slutsats ovanpå dem.
+
+    Tillstånden, i den ordning de prövas:
+      limited            providern kan aldrig ge en hel korg (Lidl: ~200-400
+                         rikspriser). Inte ett fel, men får aldrig läsas som
+                         "snart klar".
+      never_imported     ingen körning alls har gjorts.
+      failed             senaste körningen misslyckades OCH ingen tidigare
+                         lyckad finns att falla tillbaka på.
+      stale              det finns godkänd data, men den senaste lyckade
+                         importen är äldre än CHAIN_STALE_AFTER_SECONDS.
+                         Användarna får fortfarande last-good - det här är
+                         ett driftlarm, inte ett kundfel.
+      healthy            släppt mot användare, färsk och frisk. Det här är
+                         det enda tillståndet som betyder "inget att göra".
+      ready_for_release  har färsk data som klarat de tekniska kraven, men
+                         kedjan är INTE publik. Kräver ett uttryckligt
+                         beslut; en lyckad import gör aldrig en kedja
+                         släppt av sig själv (se RELEASED_CHAINS).
+
+    "released" är en FLAGGA, inte ett tillstånd - en släppt kedja kan mycket
+    väl vara stale eller failed. Att blanda ihop dem skulle dölja precis de
+    fallen.
+    """
+    now = now if now is not None else time.time()
+    lyckad = entry.get("lastSuccessfulRun") or {}
+    senaste = entry.get("lastRun") or {}
+    klar_vid = lyckad.get("finishedAt")
+    ålder = (now - klar_vid) if klar_vid else None
+    resultat = {
+        "ageHours": round(ålder / 3600, 1) if ålder is not None else None,
+        "lastAttempt": senaste.get("finishedAt") or senaste.get("startedAt"),
+        "lastSuccess": klar_vid,
+        "released": entry.get("chain") in RELEASED_CHAINS,
+    }
+    if str(entry.get("status", "")).startswith("partial"):
+        return {**resultat, "status": "limited",
+                "reason": "Providern har för lite data för en hel matkasse"}
+    if not klar_vid:
+        if senaste and senaste.get("status") != "success":
+            return {**resultat, "status": "failed",
+                    "reason": senaste.get("errorMessage") or "Importen misslyckades"}
+        return {**resultat, "status": "never_imported",
+                "reason": "Ingen import har körts än"}
+    if ålder is not None and ålder > CHAIN_STALE_AFTER_SECONDS:
+        return {**resultat, "status": "stale",
+                "reason": f"Senaste lyckade import är {resultat['ageHours']} timmar gammal"}
+    if resultat["released"]:
+        return {**resultat, "status": "healthy", "reason": None}
+    return {**resultat, "status": "ready_for_release",
+            "reason": "Har färsk data men är inte släppt - kräver uttryckligt beslut"}
+
+
 def provider_status() -> list[dict]:
     """The status panel's data: what each chain's provider can do, and what
     the database actually holds for it right now.
@@ -363,6 +429,10 @@ def provider_status() -> list[dict]:
             "lastRun": runs.get(chain),
             "lastSuccessfulRun": successes.get(chain),
         })
+    # Slutsatsen läggs på efter att raden är komplett, så chain_health() ser
+    # samma fält som panelen visar - ingen risk att de säger olika saker.
+    for entry in panel:
+        entry["health"] = chain_health(entry)
     return panel
 
 

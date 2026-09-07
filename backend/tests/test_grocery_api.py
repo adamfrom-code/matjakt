@@ -328,3 +328,84 @@ class CampaignDealsSmokeTest(unittest.TestCase):
         willys = result["deals"].get("Willys") or []
         self.assertTrue(willys, "den seedade kampanjen måste komma ut ur frågan")
         self.assertEqual(willys[0]["campaignPrice"], 49.0)
+
+
+class ChainHealthTest(unittest.TestCase):
+    """Driftstatusen per kedja: EN rad ägaren kan läsa i stället för att
+    jämföra produktantal mot tidsstämplar mot releaselistan i huvudet.
+
+    Det viktiga är inte att fälten finns, utan att de aldrig ljuger åt det
+    optimistiska hållet: en kedja som inte importerats får inte se frisk ut,
+    och en lyckad import får aldrig i sig själv göra en kedja publik.
+    """
+
+    def _entry(self, chain="ICA", status="working_via_primat", last=None, success=None):
+        return {"chain": chain, "status": status, "lastRun": last, "lastSuccessfulRun": success}
+
+    def test_a_chain_that_never_imported_is_not_healthy(self):
+        health = grocery_api.chain_health(self._entry())
+        self.assertEqual(health["status"], "never_imported")
+        self.assertIsNone(health["ageHours"])
+        self.assertFalse(health["released"])
+
+    def test_a_failed_run_with_no_earlier_success_is_failed(self):
+        health = grocery_api.chain_health(self._entry(
+            last={"status": "failed", "finishedAt": 1000.0, "errorMessage": "429 quota"}))
+        self.assertEqual(health["status"], "failed")
+        self.assertIn("429", health["reason"])
+
+    def test_a_failed_run_after_a_good_one_is_not_failed(self):
+        """Kärnan i last-good: nattens fel är ett driftproblem, inte ett
+        kundproblem. Användarna får gårdagens priser, så kedjan är inte
+        'failed' - den är på sin höjd inaktuell."""
+        now = 100000.0
+        health = grocery_api.chain_health(self._entry(
+            last={"status": "failed", "finishedAt": now - 60, "errorMessage": "timeout"},
+            success={"status": "success", "finishedAt": now - 3600}), now=now)
+        self.assertNotEqual(health["status"], "failed")
+
+    def test_data_older_than_the_window_is_stale(self):
+        now = 1_000_000.0
+        health = grocery_api.chain_health(self._entry(
+            success={"status": "success",
+                     "finishedAt": now - grocery_api.CHAIN_STALE_AFTER_SECONDS - 60}), now=now)
+        self.assertEqual(health["status"], "stale")
+
+    def test_a_missed_night_alone_does_not_alarm(self):
+        """36 timmar rymmer en missad natt. Larmar vi på 25 timmar skriker
+        systemet varje gång ett jobb blir en timme sent."""
+        now = 1_000_000.0
+        health = grocery_api.chain_health(self._entry(
+            success={"status": "success", "finishedAt": now - 25 * 3600}), now=now)
+        self.assertNotEqual(health["status"], "stale")
+
+    def test_fresh_data_on_an_unreleased_chain_never_reads_as_released(self):
+        """En lyckad import gör ALDRIG en kedja publik. Den blir
+        ready_for_release och väntar på ett uttryckligt beslut."""
+        now = 1_000_000.0
+        health = grocery_api.chain_health(self._entry(
+            chain="ICA", success={"status": "success", "finishedAt": now - 3600}), now=now)
+        self.assertEqual(health["status"], "ready_for_release")
+        self.assertFalse(health["released"])
+        self.assertNotIn("ICA", grocery_api.RELEASED_CHAINS)
+
+    def test_a_released_chain_with_fresh_data_is_healthy(self):
+        now = 1_000_000.0
+        health = grocery_api.chain_health(self._entry(
+            chain="Willys", status="working",
+            success={"status": "success", "finishedAt": now - 3600}), now=now)
+        self.assertEqual(health["status"], "healthy")
+        self.assertTrue(health["released"])
+
+    def test_a_structurally_limited_provider_is_limited_not_pending(self):
+        """Lidl får aldrig läsas som 'snart klar'. Det finns inga
+        per-produkt-priser att vänta på."""
+        health = grocery_api.chain_health(self._entry(chain="Lidl", status="partial_via_primat"))
+        self.assertEqual(health["status"], "limited")
+
+    def test_every_chain_in_the_panel_gets_a_health_block(self):
+        for entry in grocery_api.provider_status():
+            self.assertIn("health", entry, entry["chain"])
+            self.assertIn(entry["health"]["status"],
+                          {"limited", "never_imported", "failed", "stale",
+                           "healthy", "ready_for_release"}, entry["chain"])

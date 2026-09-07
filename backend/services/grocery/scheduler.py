@@ -129,6 +129,11 @@ REFERENCE_HEAL_AT = "04:45"
 # Dabas-berikning, efter att prisjobben (02-04) hunnit publicera nya GTIN.
 DABAS_ENRICHMENT_AT = "05:00"
 
+# Driftkollen: EFTER nattens alla importer (Willys 02 ... Coop 06:30), så
+# larmet bedömer nattens resultat och inte gårdagens. Skickar bara när något
+# faktiskt är fel, och som mest ett mejl per incident - se alerts.py.
+OPS_ALERT_AT = "07:00"
+
 # Which chain fills an empty database first. Willys: the largest verified
 # catalogue (10 842 products, 100 % with category), plain HTTP with no
 # browser, and the chain most likely to be near any given user.
@@ -432,6 +437,22 @@ class GroceryScheduler:
             "registerSyncAt": REGISTER_SYNC_AT,
         }
 
+    def _run_ops_alerts(self):
+        """Läser panelen, jämför mot öppna incidenter och mejlar det som är
+        nytt. Allt tillstånd ligger i databasen, så en omstart mitt i en
+        incident inte skickar om larmet."""
+        try:
+            from . import alerts, api as grocery_api
+            from api_server import KV_CACHE, MAIL_CONFIG
+            resultat = alerts.process(grocery_api.provider_status(), KV_CACHE, MAIL_CONFIG)
+            if resultat["incidents"] or resultat["recoveries"]:
+                logger.warning("Driftlarm: %d nya, %d lösta",
+                               len(resultat["incidents"]), len(resultat["recoveries"]))
+            else:
+                logger.info("Driftkoll: inget att larma om")
+        except Exception:
+            logger.exception("Driftkollen kunde inte köras")
+
     def _loop(self):
         while not self._stop.wait(CHECK_INTERVAL_SECONDS):
             try:
@@ -476,6 +497,14 @@ class GroceryScheduler:
             self._last_fired["__dabas__"] = stamp
             threading.Thread(target=self._run_dabas_enrichment,
                              name="grocery-dabas-enrichment", daemon=True).start()
+        # Driftkollen efter nattens importer. Egen tråd och egen try: ett
+        # trasigt larm får aldrig fälla schemaläggaren - då byter vi ut ett
+        # driftproblem mot ett kundproblem.
+        if (now.strftime("%H:%M") == OPS_ALERT_AT
+                and self._last_fired.get("__ops__") != stamp):
+            self._last_fired["__ops__"] = stamp
+            threading.Thread(target=self._run_ops_alerts,
+                             name="grocery-ops-alerts", daemon=True).start()
         for chain, when in self.schedule.items():
             # Ett FÖNSTER (inte exakt minut) efter jobbets klockslag, en gång
             # per dygn. Exakt minutmatchning missade jobbet vid sommartids-

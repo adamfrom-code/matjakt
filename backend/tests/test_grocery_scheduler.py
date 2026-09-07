@@ -73,6 +73,14 @@ class SchedulableChainsTest(unittest.TestCase):
             timme = int(DEFAULT_SCHEDULE[chain].split(":")[0])
             self.assertGreaterEqual(timme, 2, f"{chain} startar före kvotresetten")
 
+    def test_the_ops_check_runs_after_every_import(self):
+        """Driftkollen ska bedöma NATTENS resultat. Ligger den före sista
+        importen larmar den på gårdagens läge, vilket är värre än inget larm
+        - man lär sig ignorera det."""
+        kollen = scheduler_module.OPS_ALERT_AT
+        for chain, when in DEFAULT_SCHEDULE.items():
+            self.assertLess(when, kollen, f"{chain} kör {when}, efter driftkollen {kollen}")
+
     def test_a_valid_override_is_honoured(self):
         self.assertEqual(parse_schedule("Willys=05:30"), {"Willys": "05:30"})
 
