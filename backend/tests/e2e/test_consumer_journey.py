@@ -217,6 +217,22 @@ class BrowserJourney(unittest.TestCase):
             cls.playwright.stop()
         cls.server.close()
 
+    @staticmethod
+    def _rader_som_saenker_taeckningen(result):
+        """VILKA rader som drar ner täckningen, inte hur många.
+
+        "16 av 19" säger att tre rader inte räknades, men inte vilka - och
+        utan namnen går felet inte att söka vidare på efter att CI-loggen
+        rullat förbi. Täckningen räknar EXAKTA rader (pricing.price_list),
+        så en rad kan falla ur på två sätt: ingen produkt alls, eller ett
+        gissat paketantal. De två betyder helt olika saker och hålls isär.
+        """
+        osaekra = [row.get("name") for row in (result.get("matchedItems") or [])
+                   if row.get("rowUncertain") or not row.get("exactPackaging", True)]
+        saknade = [row.get("name") for row in (result.get("missingItems") or [])]
+        return {"osäkra": sorted(n for n in osaekra if n),
+                "saknade": sorted(n for n in saknade if n)}
+
     def _pricing_diagnosis(self):
         """Vad servern svarade på prissättningen (låsta kedjor, täckning) och
         vad korten visar - för att skilja klientrace från serverdata."""
@@ -224,13 +240,32 @@ class BrowserJourney(unittest.TestCase):
         for response in self.pricing_responses[-3:]:
             try:
                 data = response.json()
-                summary.append({"status": response.status, "results": [
-                    {k: r.get(k) for k in ("chain", "locked", "comparable", "realPriceItems", "totalItems", "hasData")}
-                    for r in data.get("results", [])]})
+                rader = []
+                for r in data.get("results", []):
+                    rad = {k: r.get(k) for k in
+                           ("chain", "locked", "comparable", "realPriceItems", "totalItems", "hasData")}
+                    # Bara för den kedja som faktiskt föll - annars blir
+                    # raden tre gånger så lång utan att säga tre gånger mer.
+                    if not r.get("locked") and r.get("comparable") is False:
+                        rad.update(self._rader_som_saenker_taeckningen(r))
+                    rader.append(rad)
+                summary.append({"status": response.status, "results": rader})
             except Exception as error:   # noqa: BLE001
                 summary.append({"status": response.status, "error": repr(error)})
         cards = self.page.evaluate("() => document.querySelector('#storeCards')?.innerText || ''")
-        return f"pricing/week-svar={summary} kort={cards!r}"
+        # Kassen som klienten faktiskt bad om pris för. Modellering utifrån
+        # receptbanken räckte inte: 16 av 19 går inte att få fram ur
+        # recepten ensamma, så raderna måste komma någon annanstans ifrån.
+        korg = self.page.evaluate(
+            "() => [...document.querySelectorAll('#shoppingList .shopping-item')]"
+            ".map(e => (e.innerText || '').split('\\n')[0].trim()).filter(Boolean)")
+        # Extravarorna nycklas på id i DOM:en, så namnen hämtas ur appens
+        # eget läge i stället för ur markupen.
+        extra = self.page.evaluate(
+            "() => { try { return (JSON.parse(localStorage.getItem('matjakt-state') || '{}')"
+            ".extraItems || []).map(e => e.name); } catch (error) { return ['<olasbart läge>']; } }")
+        return (f"pricing/week-svar={summary} kort={cards!r} "
+                f"kassen({len(korg)})={korg!r} extravaror={extra!r}")
 
     def setUp(self):
         ratelimit.reset()
