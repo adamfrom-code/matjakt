@@ -22,6 +22,18 @@ PRUNE_PROBABILITY = 0.02
 PRUNE_MAX_AGE_SECONDS = 7 * 86400
 
 
+# Priset i en cachad rad är bara lika bra som tolkningen som skrev den.
+# BUMPA DEN HÄR när prisutvinningen ändras på ett sätt som gör gamla rader
+# fel - rader med annan version ignoreras direkt och skrivs över vid nästa
+# hämtning. Inget raderas, ingen annan data rörs.
+#
+#   2026-09-07  "kilo-vs-paket": jämförpris kunde tolkas som förpackningspris
+#               (PR #4). Hemköp visade 111,60 kr för en burk som kostar
+#               11,83. Utan den här bumpen hade de raderna serverats i sex
+#               timmar till efter att fixen deployats.
+PARSER_VERSION = "2026-09-07-kilo-vs-paket"
+
+
 class PriceCacheStore:
     def __init__(self, db_path: Path):
         # Testläge får aldrig nå en riktig databas - se services/data_guard.py.
@@ -56,6 +68,15 @@ class PriceCacheStore:
             );
             """
         )
+        # Migrering: rader skrivna före versionskolumnen får "", vilket aldrig
+        # matchar PARSER_VERSION och därför ignoreras - exakt det vi vill när
+        # tolkningen ändrats. De skrivs över vid nästa hämtning, så inget
+        # raderas och inget ackumuleras.
+        kolumner = {row[1] for row in self._connection.execute("PRAGMA table_info(product_cache)")}
+        if "parser_version" not in kolumner:
+            with self.lock, self._connection:
+                self._connection.execute(
+                    "ALTER TABLE product_cache ADD COLUMN parser_version TEXT NOT NULL DEFAULT ''")
 
     def get(self, chain: str, query: str, zip_code: str):
         """Returns (products, updated_at) - a real time.time() timestamp, not
@@ -66,8 +87,9 @@ class PriceCacheStore:
         exact same row for a fallback when a fresh re-fetch fails."""
         with self.lock:
             row = self._connection.execute(
-                "SELECT products_json, updated_at FROM product_cache WHERE chain = ? AND query = ? AND zip = ?",
-                (chain, query, zip_code),
+                "SELECT products_json, updated_at FROM product_cache "
+                "WHERE chain = ? AND query = ? AND zip = ? AND parser_version = ?",
+                (chain, query, zip_code, PARSER_VERSION),
             ).fetchone()
         if not row:
             return None, None
@@ -81,6 +103,9 @@ class PriceCacheStore:
     # get_stale() shouldn't have to know that's implemented identically to
     # get() today - only that it may legitimately return old data.
     def get_stale(self, chain: str, query: str, zip_code: str):
+        """Även den här respekterar PARSER_VERSION: "senast känt pris" får
+        vara gammalt, aldrig fel. En rad skriven av en tolkning vi vet var
+        felaktig är inte ett sämre svar - det är ett osant."""
         return self.get(chain, query, zip_code)
 
     def set(self, chain: str, query: str, zip_code: str, products: list, updated_at: float = None):
@@ -90,13 +115,14 @@ class PriceCacheStore:
         with self.lock, self._connection:
             self._connection.execute(
                 """
-                INSERT INTO product_cache (chain, query, zip, products_json, updated_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO product_cache (chain, query, zip, products_json, updated_at, parser_version)
+                VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT(chain, query, zip) DO UPDATE SET
                     products_json = excluded.products_json,
-                    updated_at = excluded.updated_at
+                    updated_at = excluded.updated_at,
+                    parser_version = excluded.parser_version
                 """,
-                (chain, query, zip_code, json.dumps(products), now),
+                (chain, query, zip_code, json.dumps(products), now, PARSER_VERSION),
             )
         # Unbounded growth isn't a real risk at this scale (one row per
         # distinct ingredient/store/zip ever searched), but a cheap
