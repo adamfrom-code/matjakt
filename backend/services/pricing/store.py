@@ -211,6 +211,22 @@ class KeyValueCacheStore:
     # de får inte försvinna efter sju dagar bara för att inget skrivit dem.
     PROTECTED_NAMESPACES = ("pricing_audit",)
 
+    def keys(self, namespace: str) -> list:
+        """Alla nycklar i ett namespace. Finns för driftlarmen, som måste
+        kunna hitta en ÖPPEN incident som inte längre är aktuell - annars går
+        det inte att skicka ett recoverymejl för något som slutat hända."""
+        with self.lock:
+            rows = self._connection.execute(
+                "SELECT key FROM kv_cache WHERE namespace = ?", (namespace,)).fetchall()
+        return [row[0] for row in rows]
+
+    def delete(self, namespace: str, key: str):
+        """Tar bort en post. Används när en incident är löst: en kvarliggande
+        rad skulle betyda att samma problem aldrig fick larma igen."""
+        with self.lock, self._connection:
+            self._connection.execute(
+                "DELETE FROM kv_cache WHERE namespace = ? AND key = ?", (namespace, key))
+
     def _prune(self, now: float):
         with self.lock, self._connection:
             self._connection.execute(
