@@ -14,12 +14,12 @@ is welcome. Only three chains have earned it:
 
   ICA         Never fetched from ICA's own pages: repeated fetching trips an
               AWS WAF challenge, and we do not attempt to solve or evade it.
-              It runs Mon/Wed/Fri via PRIMAT'S PAID API instead - a licensed
-              third party that never touches ICA's servers, so the reason for
-              the ban does not apply to that route.
+              It runs DAILY via PRIMAT'S PAID API instead - a licensed third
+              party that never touches ICA's servers, so the reason for the
+              ban does not apply to that route.
   Coop        Same: Coop's own portal is locked to their internal Azure AD
-              and we do not authenticate with someone else's key. Runs
-              Tue/Thu/Sat via Primat.
+              and we do not authenticate with someone else's key. Runs daily
+              via Primat.
   Lidl        never runs. Lidl Sweden publishes no per-product prices at
               all - there is nothing to fetch, and nothing to fake. Primat's
               Lidl feed is national and ~200-400 rows, too thin for a basket.
@@ -29,11 +29,12 @@ PRIMAT_API_KEY those two are skipped entirely, because importer._provider_for
 would otherwise fall back to the direct scraper for ICA - the exact repeated
 fetching this module refuses to do.
 
-WHY EVERY OTHER DAY AND NOT NIGHTLY. Primat's free tier allows 20 000 rows a
-day and ICA's catalogue alone is ~11 000, so two chains in one night would
-blow the quota. Alternating days stays inside it, and inside pricing.py's
-MAX_STORE_PRICE_AGE_SECONDS (4 days) - three runs a week means a price is at
-worst three days old when it is used.
+QUOTA. Primat's free tier allows 20 000 rows a day and ICA's catalogue alone
+is ~11 000, so running both chains in one night will likely exhaust it. That
+is safe, not broken: the provider stops at the ceiling, keeps what it fetched
+and marks the run "blocked", which publish.py merges rather than refuses - so
+coverage builds up over successive nights. Full same-night coverage for both
+would need the App tier (100 000 rows/day).
 
 Times are Europe/Stockholm, which is the point: a "03:00" job that silently
 means 03:00 UTC would drift an hour twice a year against the shelf prices it
@@ -70,21 +71,22 @@ DEFAULT_SCHEDULE = {
     "City Gross": "04:00",
     # ICA och Coop hämtas ALDRIG från kedjornas egna sidor - se modulens
     # docstring, den spärren står kvar. De här raderna gäller Primats
-    # betal-API, som är en licensierad tredjepartskälla och aldrig rör ICAs
-    # WAF eller Coops Azure AD. PRIMAT_ONLY_CHAINS nedan ser till att de inte
-    # kan starta på någon annan väg.
+    # betal-API, en licensierad tredjepartskälla som aldrig rör ICAs WAF
+    # eller Coops Azure AD. PRIMAT_ONLY_CHAINS ser till att de inte kan
+    # starta på någon annan väg.
     #
-    # Varannan dag, inte nattligt: Primats gratisnivå ger 20 000 rader/dygn
-    # och ICAs katalog är ensam runt 11 000 - två kedjor samma dygn spränger
-    # kvoten. Olika dagar räcker gott, för pricing.py litar på ett butikspris
-    # i MAX_STORE_PRICE_AGE_SECONDS = 4 dygn. Med tre körningar i veckan är
-    # värsta fallet tre dygn gammalt, alltså innanför fönstret.
+    # Dagligen, staggrat efter de tre andra. Kvoten nollställs midnatt UTC =
+    # 02:00 svensk sommartid, så båda ligger efter den. Importeraren kör en
+    # kedja i taget, så tiderna är startfönster - inte parallella jobb.
     #
-    # 05:30 ligger efter kvotnollställningen (midnatt UTC = 02:00 svensk
-    # sommartid) och efter de tre nattjobben, så en Primat-körning aldrig
-    # konkurrerar med dem om importerarens enda körplats.
-    "ICA": "Mon,Wed,Fri 05:30",
-    "Coop": "Tue,Thu,Sat 05:30",
+    # KVOTVARNING: Primats gratisnivå ger 20 000 rader/dygn och ICAs katalog
+    # är ensam ~11 000. Kör båda samma natt slår den andra sannolikt i taket.
+    # Det är ofarligt - providern slutar hämta, behåller det den fått och
+    # märker körningen "blocked", vilket publiceringen slår ihop i stället
+    # för att förkasta - men full täckning för båda kan kräva App-nivån
+    # (100 000 rader/dygn). Se docs/RELEASE.md.
+    "ICA": "05:30",
+    "Coop": "06:30",
 }
 
 # Kedjor som BARA får importeras via Primat. Utan nyckeln väljer
@@ -111,9 +113,6 @@ SCHEDULABLE_CHAINS = frozenset(DEFAULT_SCHEDULE)
 
 CHECK_INTERVAL_SECONDS = 60
 
-# strftime("%a") i C-lokalen, samma antagande som REGISTER_SYNC_AT vilar på.
-VECKODAGSORDNING = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-VECKODAGAR = frozenset(VECKODAGSORDNING)
 
 # Veckodag + klockslag (Europe/Stockholm, strftime "%a %H:%M") för den
 # nationella butiksregistersynken.
@@ -158,20 +157,13 @@ def parse_schedule(raw: str | None) -> dict:
             logger.warning("Hoppar över %r i schemat: kedjan får inte köras automatiskt", chain)
             continue
         try:
-            veckodagar, hour, minute = _split_when(when)
+            hour, minute = (int(value) for value in when.split(":"))
             if not (0 <= hour < 24 and 0 <= minute < 60):
                 raise ValueError(when)
-            if veckodagar and not veckodagar <= VECKODAGAR:
-                raise ValueError(when)
-        except (TypeError, ValueError):
-            logger.warning("Hoppar över %r i schemat: %r är varken HH:MM eller "
-                           "\"Mon,Wed,Fri HH:MM\"", chain, when)
+        except ValueError:
+            logger.warning("Hoppar över %r i schemat: %r är inte HH:MM", chain, when)
             continue
-        klockslag = f"{hour:02d}:{minute:02d}"
-        # Veckodagarna skrivs tillbaka i kanonisk ordning så en post satt via
-        # miljövariabeln ser likadan ut som DEFAULT_SCHEDULE i statusvyn.
-        schedule[chain] = (f"{','.join(d for d in VECKODAGSORDNING if d in veckodagar)} {klockslag}"
-                           if veckodagar else klockslag)
+        schedule[chain] = f"{hour:02d}:{minute:02d}"
     return schedule or dict(DEFAULT_SCHEDULE)
 
 
@@ -179,45 +171,16 @@ def _now():
     return datetime.now(STOCKHOLM) if STOCKHOLM else datetime.now()
 
 
-def _split_when(when: str):
-    """("Mon,Wed,Fri 05:30") -> ({"Mon","Wed","Fri"}, 5, 30).
-    ("02:00") -> (None, 2, 0). None betyder alla dagar.
-
-    Snedstreck duger lika bra som komma mellan dagarna, och är det enda som
-    fungerar i MATJAKT_GROCERY_SCHEDULE: den variabeln separerar sina POSTER
-    med komma, så "ICA=Mon,Wed 06:00" skulle brytas mitt itu. I koden, där
-    ingen sådan splittring sker, är komma läsligare."""
-    dagar, _, klockslag = str(when).rpartition(" ")
-    hour, minute = (int(value) for value in klockslag.split(":"))
-    veckodagar = {d.strip() for d in dagar.replace("/", ",").split(",") if d.strip()} if dagar else None
-    return veckodagar, hour, minute
-
-
 def next_run_at(chain: str, schedule: dict, reference=None):
-    """When this chain runs next, as a Europe/Stockholm datetime.
-
-    Hoppar fram till nästa tillåtna veckodag för de kedjor som inte går varje
-    dag. Utan det räknade den fram gårdagens tid för en måndagskedja på en
-    torsdag, och statusvyn påstod att ICA skulle köra om några timmar."""
+    """When this chain runs next, as a Europe/Stockholm datetime."""
     when = schedule.get(chain)
     if not when:
         return None
-    try:
-        veckodagar, hour, minute = _split_when(when)
-    except (TypeError, ValueError):
-        return None
+    hour, minute = (int(value) for value in when.split(":"))
     reference = reference or _now()
     candidate = reference.replace(hour=hour, minute=minute, second=0, microsecond=0)
     if candidate <= reference:
         candidate += timedelta(days=1)
-    if veckodagar:
-        # Som mest sju steg: någon av veckans dagar matchar alltid, annars är
-        # schemaposten fel och None är rätt svar.
-        for _ in range(7):
-            if candidate.strftime("%a") in veckodagar:
-                return candidate
-            candidate += timedelta(days=1)
-        return None
     return candidate
 
 
@@ -542,28 +505,12 @@ class GroceryScheduler:
 
 
 def _due_today(now, when: str):
-    """Dagens förekomst av ett klockslag, i samma tidszon som now.
-
-    "HH:MM" betyder varje dag. "Mon,Wed,Fri HH:MM" betyder bara de dagarna -
-    samma "%a"-format som REGISTER_SYNC_AT redan använder - och ger None
-    övriga dagar. Det är så Primat-kedjorna kan gå varannan dag utan att
-    spränga dygnskvoten.
-
+    """Dagens förekomst av ett "HH:MM"-klockslag, i samma tidszon som now.
     På sommartidsnatten pekar 02:00 på en minut som inte finns; i UTC-
     jämförelsen blir den då lika med 03:00, så jobbet startar då i stället
     för att utebli."""
-    if not isinstance(when, str):
-        return None
-    dagar, _, klockslag = when.rpartition(" ")
-    if dagar:
-        # strftime("%a") följer C-lokalen här (Python formaterar veckodagar
-        # på engelska om inget annat satts), samma antagande som
-        # REGISTER_SYNC_AT vilar på.
-        idag = now.strftime("%a")
-        if idag not in {d.strip() for d in dagar.split(",") if d.strip()}:
-            return None
     try:
-        hour, minute = (int(part) for part in klockslag.split(":"))
+        hour, minute = (int(part) for part in when.split(":"))
     except (TypeError, ValueError):
         return None
     return now.replace(hour=hour, minute=minute, second=0, microsecond=0)

@@ -60,44 +60,18 @@ class SchedulableChainsTest(unittest.TestCase):
             self.assertTrue(scheduler_module._får_köras("ICA"))
             self.assertTrue(scheduler_module._får_köras("Coop"))
 
-    def test_primat_chains_never_share_a_day(self):
-        """Primats gratisnivå ger 20 000 rader/dygn och ICAs katalog är ensam
-        runt 11 000 - kör de samma natt spränger de kvoten."""
-        ica, _, _ = scheduler_module._split_when(DEFAULT_SCHEDULE["ICA"])
-        coop, _, _ = scheduler_module._split_when(DEFAULT_SCHEDULE["Coop"])
-        self.assertTrue(ica and coop)
-        self.assertEqual(ica & coop, set())
+    def test_every_chain_runs_daily(self):
+        """Alla fem kedjor ska uppdateras varje dygn - inget veckoschema."""
+        for chain, when in DEFAULT_SCHEDULE.items():
+            self.assertRegex(when, r"^\d{2}:\d{2}$", f"{chain}: {when!r} är inte HH:MM")
 
-    def test_primat_chains_run_often_enough_to_stay_fresh(self):
-        """pricing.py litar på ett butikspris i fyra dygn. Ett schema med för
-        långt glapp gör priserna oanvändbara utan att något larmar."""
+    def test_primat_chains_run_after_the_daily_quota_reset(self):
+        """Primats dygnskvot nollställs midnatt UTC = 02:00 svensk sommartid.
+        Ett jobb före det faller på gårdagens förbrukning - verifierat i
+        produktion 2026-09-02 med 429 daily_row_budget_exceeded."""
         for chain in ("ICA", "Coop"):
-            dagar, _, _ = scheduler_module._split_when(DEFAULT_SCHEDULE[chain])
-            index = sorted(scheduler_module.VECKODAGSORDNING.index(d) for d in dagar)
-            glapp = [b - a for a, b in zip(index, index[1:])] + [index[0] + 7 - index[-1]]
-            self.assertLessEqual(max(glapp), 4, f"{chain}: {max(glapp)} dygns glapp")
-
-    def test_weekday_schedules_only_fire_on_their_days(self):
-        mandag = datetime(2026, 9, 7, 5, 30)
-        tisdag = datetime(2026, 9, 8, 5, 30)
-        self.assertEqual(scheduler_module._due_today(mandag, "Mon,Wed,Fri 05:30"), mandag)
-        self.assertIsNone(scheduler_module._due_today(tisdag, "Mon,Wed,Fri 05:30"))
-        # Utan dagprefix betyder varje dag, som förut.
-        self.assertEqual(scheduler_module._due_today(tisdag, "02:00"),
-                         tisdag.replace(hour=2, minute=0))
-
-    def test_next_run_skips_to_the_next_allowed_day(self):
-        """Utan det pekade statusvyn på gårdagens tid för en måndagskedja."""
-        tisdag = datetime(2026, 9, 8, 5, 30)
-        self.assertEqual(next_run_at("ICA", DEFAULT_SCHEDULE, tisdag).strftime("%a %H:%M"),
-                         "Wed 05:30")
-
-    def test_weekdays_use_slashes_in_the_env_var(self):
-        """Komma separerar POSTER i MATJAKT_GROCERY_SCHEDULE, så veckodagar
-        måste skrivas med snedstreck där - annars bryts posten mitt itu."""
-        schedule = parse_schedule("ICA=Mon/Fri 06:00,Willys=01:00")
-        self.assertEqual(schedule["ICA"], "Mon,Fri 06:00")
-        self.assertEqual(schedule["Willys"], "01:00")
+            timme = int(DEFAULT_SCHEDULE[chain].split(":")[0])
+            self.assertGreaterEqual(timme, 2, f"{chain} startar före kvotresetten")
 
     def test_a_valid_override_is_honoured(self):
         self.assertEqual(parse_schedule("Willys=05:30"), {"Willys": "05:30"})
@@ -119,16 +93,9 @@ class SchedulableChainsTest(unittest.TestCase):
 
     def test_defaults_are_staggered(self):
         """Three simultaneous category walks would triple our request rate
-        against three sites in the same minute. Jämförelsen görs per DAG och
-        klockslag: ICA och Coop delar 05:30 men aldrig samma veckodag, och en
-        ren strängjämförelse hade sett det som olika utan att mäta något."""
-        upptagna = set()
-        for chain, when in DEFAULT_SCHEDULE.items():
-            dagar, hour, minute = scheduler_module._split_when(when)
-            for dag in (dagar or scheduler_module.VECKODAGSORDNING):
-                nyckel = (dag, hour, minute)
-                self.assertNotIn(nyckel, upptagna, f"{chain} krockar på {nyckel}")
-                upptagna.add(nyckel)
+        against three sites in the same minute."""
+        times = sorted(DEFAULT_SCHEDULE.values())
+        self.assertEqual(len(set(times)), len(times))
 
 
 class NextRunTest(unittest.TestCase):
