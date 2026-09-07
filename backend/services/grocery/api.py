@@ -335,10 +335,16 @@ def chain_health(entry: dict, now: float = None) -> dict:
                          importen är äldre än CHAIN_STALE_AFTER_SECONDS.
                          Användarna får fortfarande last-good - det här är
                          ett driftlarm, inte ett kundfel.
-      released           släppt mot användare och färsk.
-      ready_for_release  har färsk data men är inte släppt. Kräver ett
-                         uttryckligt beslut; en lyckad import gör ALDRIG en
-                         kedja publik av sig själv (se RELEASED_CHAINS).
+      healthy            släppt mot användare, färsk och frisk. Det här är
+                         det enda tillståndet som betyder "inget att göra".
+      ready_for_release  har färsk data som klarat de tekniska kraven, men
+                         kedjan är INTE publik. Kräver ett uttryckligt
+                         beslut; en lyckad import gör aldrig en kedja
+                         släppt av sig själv (se RELEASED_CHAINS).
+
+    "released" är en FLAGGA, inte ett tillstånd - en släppt kedja kan mycket
+    väl vara stale eller failed. Att blanda ihop dem skulle dölja precis de
+    fallen.
     """
     now = now if now is not None else time.time()
     lyckad = entry.get("lastSuccessfulRun") or {}
@@ -364,7 +370,7 @@ def chain_health(entry: dict, now: float = None) -> dict:
         return {**resultat, "status": "stale",
                 "reason": f"Senaste lyckade import är {resultat['ageHours']} timmar gammal"}
     if resultat["released"]:
-        return {**resultat, "status": "released", "reason": None}
+        return {**resultat, "status": "healthy", "reason": None}
     return {**resultat, "status": "ready_for_release",
             "reason": "Har färsk data men är inte släppt - kräver uttryckligt beslut"}
 

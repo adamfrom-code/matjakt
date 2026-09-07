@@ -65,7 +65,7 @@ class AlertTest(unittest.TestCase):
         self._kör([_entry("ICA", "failed", reason="timeout")], now=1_000.0)
         self.skickade.clear()
 
-        friskt = [_entry("ICA", "released")]
+        friskt = [_entry("ICA", "healthy")]
         resultat = self._kör(friskt, now=1_000.0 + 7200)
         self.assertEqual(resultat["recoveries"], ["chain:ICA:failed"])
         self.assertEqual(len(self.skickade), 1)
@@ -80,7 +80,7 @@ class AlertTest(unittest.TestCase):
         återkommande incident tyst för alltid."""
         trasigt = [_entry("ICA", "failed", reason="timeout")]
         self._kör(trasigt, now=1_000.0)
-        self._kör([_entry("ICA", "released")], now=2_000.0)
+        self._kör([_entry("ICA", "healthy")], now=2_000.0)
         self.skickade.clear()
         resultat = self._kör(trasigt, now=3_000.0)
         self.assertEqual(resultat["incidents"], ["chain:ICA:failed"])

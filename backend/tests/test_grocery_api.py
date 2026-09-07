@@ -362,12 +362,12 @@ class ChainHealthTest(unittest.TestCase):
         self.assertFalse(health["released"])
         self.assertNotIn("ICA", grocery_api.RELEASED_CHAINS)
 
-    def test_a_released_chain_with_fresh_data_is_released(self):
+    def test_a_released_chain_with_fresh_data_is_healthy(self):
         now = 1_000_000.0
         health = grocery_api.chain_health(self._entry(
             chain="Willys", status="working",
             success={"status": "success", "finishedAt": now - 3600}), now=now)
-        self.assertEqual(health["status"], "released")
+        self.assertEqual(health["status"], "healthy")
         self.assertTrue(health["released"])
 
     def test_a_structurally_limited_provider_is_limited_not_pending(self):
@@ -381,4 +381,4 @@ class ChainHealthTest(unittest.TestCase):
             self.assertIn("health", entry, entry["chain"])
             self.assertIn(entry["health"]["status"],
                           {"limited", "never_imported", "failed", "stale",
-                           "released", "ready_for_release"}, entry["chain"])
+                           "healthy", "ready_for_release"}, entry["chain"])
