@@ -1384,7 +1384,26 @@ function renderRecipes() {
   document.querySelectorAll("[data-favorite]").forEach(btn => btn.addEventListener("click", () => { const id = btn.dataset.favorite; state.favoriter.has(id) ? state.favoriter.delete(id) : state.favoriter.add(id); saveState(); renderRecipes(); }));
 }
 
-function openRecipeTab(id) { history.pushState({ recept: id }, "", `${location.pathname}?recept=${encodeURIComponent(id)}`); renderRecipePage(); }
+// U65: kom ihåg var i listan man var.
+//
+// Att öppna ett recept ska börja överst i receptet - men att gå TILLBAKA
+// ska lämna en där man stod. Förut gjorde tillbakavägen scrollTo(0, 0),
+// alltså nollställdes platsen med flit, och den som bläddrade i en lång
+// receptlista fick börja om efter varje titt. Filtren låg redan kvar i
+// state; det enda som tappades var raden man tittade på.
+let listScrollY = 0;
+// Webbläsaren återställer SIN ihågkomna position vid bakåtnavigering, och
+// den positionen är var man stod INNE i receptet. Den slogs mot appens egen
+// återställning och landade emellan - 1200 px före, 1472 px efter i test.
+// Med "manual" äger appen scrollen, vilket är enda sättet att göra löftet i
+// U65 sant.
+if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
+function openRecipeTab(id) {
+  listScrollY = window.scrollY;
+  history.pushState({ recept: id }, "", `${location.pathname}?recept=${encodeURIComponent(id)}`);
+  renderRecipePage();
+}
 const FAVORITE_ICON = '<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.5-9C.7 8.2 2.4 5 5.7 5c2 0 3.4 1.1 4.3 2.4C11 6.1 12.4 5 14.4 5c3.3 0 5 3.2 3.2 7-2.5 4.4-9.5 9-9.5 9Z"/></svg>';
 const PRICE_TAG_ICON = '<svg viewBox="0 0 24 24"><path d="M20 12 12.5 4.5a2 2 0 0 0-1.4-.5H5a1 1 0 0 0-1 1v6.1a2 2 0 0 0 .6 1.4L12 20"/><circle cx="8" cy="8" r="1.3"/></svg>';
 function formatMeasure(amount) {
@@ -1413,7 +1432,22 @@ function scaledIngredientRows(recipe) {
 
 async function renderRecipePage() {
   const id = new URLSearchParams(location.search).get("recept");
-  if (!id) { $("top").hidden = false; $("recipePage").hidden = true; window.scrollTo(0, 0); return; }
+  if (!id) {
+    $("top").hidden = false;
+    $("recipePage").hidden = true;
+    // Efter renderingen, annars är sidan ännu för kort och scrollen klipps
+    // till noll. setView() scrollar också till toppen, så återställningen
+    // måste komma efter den - därför två bildrutor, inte en.
+    // MOMENTAN, inte mjuk. styles.css sätter html{scroll-behavior:smooth},
+    // så ett vanligt scrollTo blir en animation över ~300 ms - och en
+    // animation går att störa. Mätt: återställningen landade rätt på 1198 px
+    // och drogs sedan vidare till 1477 av något annat som hann emellan.
+    // Att komma tillbaka dit man var ska inte se ut som en resa.
+    const mål = listScrollY;
+    requestAnimationFrame(() => requestAnimationFrame(
+      () => window.scrollTo({ top: mål, left: 0, behavior: "instant" })));
+    return;
+  }
   let allRecipes = [...RECEPT, ...state.apiRecipes];
   // A card deliberately ships without steps and structured ingredients (the
   // list payload stays small). The detail PAGE is the one place that needs
