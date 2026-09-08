@@ -22,7 +22,7 @@ import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTag
 import { adjustInventory, createHousehold, createInvite, fetchHousehold, fetchNotifications, joinHousehold, leaveHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, removeMember, replaceWeekItems, saveHouseholdProfile, saveNotificationPrefs, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor, groupByCategory } from "./src/services/categories.js";
-import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swapReasonText, weekCostAlert } from "./src/services/swap.js";
+import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swapCostText, swapReasonText, weekCostAlert } from "./src/services/swap.js";
 import { RECIPE_FALLBACK_ART, RECIPE_FALLBACK_LABEL, kindFor as recipeFallbackKind } from "./src/services/recipe-fallback.js";
 import { recordWeekSaving, weekKeyFor } from "./src/services/savings-log.js";
 import { budgetScopeText as budgetScopeFor } from "./src/services/budget-scope.js";
@@ -4230,7 +4230,12 @@ function swapOptionMarkup(option, isSelected) {
   // VARFÖR det här alternativet dök upp. En rad som säger "12 kr billigare
   // per portion" är en anledning; en osorterad lista är bara brus.
   const reason = option.reason ? `<small class="swap-option-reason">${escapeHtml(option.reason)}</small>` : "";
-  return `<button type="button" class="swap-option ${isSelected ? "selected" : ""}" data-choose-swap="${escapeHtml(recipe.id)}"><span class="swap-option-photo">${recipePhoto(recipe)}</span><span class="swap-option-info"><strong>${escapeHtml(recipe.namn)}</strong>${badge}<small class="swap-option-meta">${[recipe.tid ? `${recipe.tid} min` : "", price].filter(Boolean).join(" · ")}</small>${reason}${campaignNote}</span>${isSelected ? '<span class="swap-option-check" aria-hidden="true">✓</span>' : ""}</button>`;
+  // Prisändringen står alltid, även när den är okänd - annars ser ett
+  // okänt pris ut som "ingen skillnad". Utelämnas bara när reason redan
+  // säger exakt samma sak, så raden inte upprepar sig själv.
+  const kostnad = option.cost && option.cost !== option.reason
+    ? `<small class="swap-option-cost">${escapeHtml(option.cost)}</small>` : "";
+  return `<button type="button" class="swap-option ${isSelected ? "selected" : ""}" data-choose-swap="${escapeHtml(recipe.id)}"><span class="swap-option-photo">${recipePhoto(recipe)}</span><span class="swap-option-info"><strong>${escapeHtml(recipe.namn)}</strong>${badge}<small class="swap-option-meta">${[recipe.tid ? `${recipe.tid} min` : "", price].filter(Boolean).join(" · ")}</small>${reason}${kostnad}${campaignNote}</span>${isSelected ? '<span class="swap-option-check" aria-hidden="true">✓</span>' : ""}</button>`;
 }
 const FREE_SWAP_LIMIT = 3;
 function openSwapModal(currentId) {
@@ -4262,7 +4267,9 @@ function openSwapModal(currentId) {
 function swapOptionsFor(current, candidates, intent) {
   return rankSwapOptions(current, candidates, intent, pantryNamesForCooking())
     .map(option => ({ ...option, total: option.price ?? 9999,
-                      reason: swapReasonText(option, intent, current) }));
+                      reason: swapReasonText(option, intent, current),
+                      // U21: alltid, inte bara när man byter för pengarnas skull.
+                      cost: swapCostText(option, current) }));
 }
 
 function renderSwapModal() {

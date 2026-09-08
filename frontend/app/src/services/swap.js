@@ -81,6 +81,31 @@ export function rankSwapOptions(current, candidates, intent, pantryNames = []) {
 }
 
 /** Varför just det här alternativet dök upp - en kort rad under namnet. */
+// U21: prisändringen ska stå FÖRE bytet, oavsett varför man byter.
+//
+// swapReasonText säger "X kr billigare per portion" bara när avsikten ÄR att
+// spara pengar. Byter man för att det ska gå fortare kan veckan bli dyrare
+// utan att ett ord sägs - och det är just det man behöver veta innan man
+// trycker. "Saknas data: ange det" står uttryckligen i kravet, så ett okänt
+// pris får inte se ut som noll skillnad.
+//
+// VAD TALET ÄR: skillnaden i receptets PORTIONSPRIS. Det är inte samma sak
+// som skillnaden i inköpskostnad för hela veckan, eftersom förpackningar
+// delas mellan rätter - mätt mot riktiga priser sparade två recept 3,1 % på
+// att prissättas tillsammans i stället för var för sig. Att räkna den
+// riktiga veckoskillnaden kräver att hela den bytta veckan prissätts, se F2
+// i docs/MASTER_BACKLOG.md. Därför säger texten "per portion", aldrig
+// "på veckan".
+export function swapCostText(option, current) {
+  const nu = current?.portionspris, sedan = option?.price;
+  if (nu == null || sedan == null) return "Prisändring okänd";
+  const diff = Math.round(sedan - nu);
+  if (diff === 0) return "Samma pris per portion";
+  return diff < 0
+    ? `${Math.abs(diff)} kr billigare per portion`
+    : `${diff} kr dyrare per portion`;
+}
+
 export function swapReasonText(option, intent, current) {
   if (intent === "cheaper" && option.price != null && current?.portionspris) {
     return `${Math.round(current.portionspris - option.price)} kr billigare per portion`;
