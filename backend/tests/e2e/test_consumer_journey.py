@@ -592,6 +592,51 @@ class BrowserJourney(unittest.TestCase):
         self.assertEqual(self.console_errors, [])
         self.assertEqual(len(self.batch_requests), 0, "Free ska aldrig hämta livepriser per vara")
 
+    def test_gasten_ser_nyttan_och_far_behalla_sin_vecka(self):
+        """U02: nyttan före kontokravet, och planen överlever registreringen.
+
+        Det klassiska felet är att kontot skapas, servern svarar med sitt
+        tomma tillstånd, och gästens vecka skrivs över av ingenting. Koden
+        har en gren för det (pullAccountState bootstrappar servern när den
+        inte har något) - men "finns i koden" är inte "fungerar", och det
+        här är den enda vägen som prövar den.
+        """
+        page = self.page
+
+        with self.step("gäst: vecka och priser UTAN konto"):
+            page.goto(self.app())
+            self.complete_onboarding()
+            self.choose_standard_week()
+            # Ingen token = ingen inloggning. Nyttan ska synas ändå.
+            self.assertIsNone(page.evaluate("() => localStorage.getItem('matjakt-auth-token')"))
+            page.click('.bottom-nav-item[data-view="basket"]')
+            expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
+            self.wait_for_store_cards()
+            varor = page.locator("#shoppingList .shopping-item").count()
+            self.assertGreater(varor, 0)
+            # Ett riktigt pris, inte "pris hämtas" och inte en gissning.
+            self.assertRegex(page.locator("#shoppingCost").inner_text(), r"\d+ kr")
+            gästens_vecka = list(self.local_state()["valda"])
+            self.assertTrue(gästens_vecka)
+
+        with self.step("konto skapas - veckan följer med"):
+            self.register(f"gast-{uuid.uuid4().hex[:10]}@example.com")
+            self.close_account_modal()
+            # Lokalt: samma vecka, inte en tom.
+            läge = self.wait_for_state(lambda s: bool(s.get("valda")), what="veckan efter registrering")
+            self.assertEqual(sorted(läge["valda"]), sorted(gästens_vecka))
+            self.assertEqual(page.locator("#shoppingList .shopping-item").count(), varor)
+
+        with self.step("servern har fått gästens vecka, inte tomheten"):
+            token = page.evaluate("() => localStorage.getItem('matjakt-auth-token')")
+            self.assertTrue(token)
+            status, payload = self.server.request(
+                "GET", "/api/account/state", headers={"Authorization": f"Bearer {token}"})
+            self.assertEqual(status, 200, payload)
+            fjärran = (payload or {}).get("state") or {}
+            self.assertEqual(sorted(fjärran.get("valda") or []), sorted(gästens_vecka),
+                             "servern fick inte gästens vecka")
+
     def test_antagna_hemmavaror_gar_att_lagga_till(self):
         """U06 hela vägen: antagandet syns, går att lägga till, och tillägget
         blir en riktig inköpsrad med pris - inte bara ett namn.
