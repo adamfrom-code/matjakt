@@ -346,6 +346,20 @@ avsiktligt, med motiveringen "2 st morötter plus 400 g morötter är inte
 Dubbelraden och den osäkra raden har SAMMA rot: ingen densitet för
 tomatpuré. Löser man den ena löser man båda.
 
+**Följdverkan, hittad när main blev röd 2026-09-08.** `removeShoppingItem`
+nycklar på NAMNET, medan aggregatet ger en rad per namn *och* enhetsfamilj.
+Ett klick på × tar därför bort alla rader med det namnet. Bevisat
+deterministiskt: fyra rader blev två när en vara togs bort.
+
+Avsikten är rimlig - "jag behöver inte tomatpuré" gäller båda raderna - men
+två saker skaver. UI:t säger "1 borttagen vara" fast två rader försvann,
+och den som bara ville stryka msk-raden kan inte det.
+
+Rätt fix är densiteten, inte borttagningen: med ett uppmätt värde blir det
+en rad och frågan upphör. Tomatpuré saknas i Livsmedelsverkets tabell, så
+den får vänta. Frontendens aggregat känner inte till backendens
+`VERIFIED_DENSITY_G_PER_ML` - att dela den vore ett eget steg.
+
 ## Gjort i den här sessionen
 
 | Vad | PR | Verifiering |
@@ -519,6 +533,20 @@ avsiktligt, med motiveringen "2 st morötter plus 400 g morötter är inte
 
 Dubbelraden och den osäkra raden har SAMMA rot: ingen densitet för
 tomatpuré. Löser man den ena löser man båda.
+
+**Följdverkan, hittad när main blev röd 2026-09-08.** `removeShoppingItem`
+nycklar på NAMNET, medan aggregatet ger en rad per namn *och* enhetsfamilj.
+Ett klick på × tar därför bort alla rader med det namnet. Bevisat
+deterministiskt: fyra rader blev två när en vara togs bort.
+
+Avsikten är rimlig - "jag behöver inte tomatpuré" gäller båda raderna - men
+två saker skaver. UI:t säger "1 borttagen vara" fast två rader försvann,
+och den som bara ville stryka msk-raden kan inte det.
+
+Rätt fix är densiteten, inte borttagningen: med ett uppmätt värde blir det
+en rad och frågan upphör. Tomatpuré saknas i Livsmedelsverkets tabell, så
+den får vänta. Frontendens aggregat känner inte till backendens
+`VERIFIED_DENSITY_G_PER_ML` - att dela den vore ett eget steg.
 
 ## Gjort i den här sessionen
 

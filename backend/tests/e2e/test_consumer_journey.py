@@ -530,10 +530,30 @@ class BrowserJourney(unittest.TestCase):
             self.assertRegex(page.locator("#shoppingCost").inner_text(), r"\d+ kr / 900 kr")
 
         with self.step("finns hemma (ur listan) och handlad"):
+            # EN VARA KAN STÅ SOM FLERA RADER. Aggregatet nycklar på namn OCH
+            # enhetsfamilj, så "2 msk tomatpuré" och "140 g tomatpuré" blir två
+            # rader - de går inte att summera utan en densitet. Borttagningen
+            # nycklar däremot bara på NAMNET, så ett klick tar alla rader med
+            # det namnet. Det är rimlig avsikt ("jag behöver inte tomatpuré"),
+            # men antalet rader minskar då med mer än ett.
+            #
+            # Testet antog items_before - 1 och föll på main med "13 != 14" när
+            # veckan råkade innehålla en dubblerad vara. Att skriva om det till
+            # ett lösare antal hade dolt saken; nu räknas raderna med det
+            # namnet först, och kravet är att exakt de försvinner.
+            namn_att_ta_bort = page.locator("#shoppingList .shopping-item strong").nth(0).inner_text().strip()
+            rader_med_namnet = page.locator("#shoppingList .shopping-item").evaluate_all(
+                "(rader, namn) => rader.filter(r => (r.querySelector('strong')?.innerText || '').trim() === namn).length",
+                namn_att_ta_bort)
             page.click("#shoppingList [data-remove-item] >> nth=0")
             expect(page.locator("#restoreRemovedBtn")).to_contain_text("1 borttagen vara")
             expect(page.locator("#storeCardsCompareBtn")).to_have_count(0)      # Free har ingen jämförelsesida
-            self.assertEqual(page.locator("#shoppingList .shopping-item").count(), items_before - 1)
+            self.assertEqual(page.locator("#shoppingList .shopping-item").count(),
+                             items_before - rader_med_namnet,
+                             f"{namn_att_ta_bort!r} stod på {rader_med_namnet} rader")
+            kvar = page.locator("#shoppingList .shopping-item strong").all_inner_texts()
+            self.assertNotIn(namn_att_ta_bort, [t.strip() for t in kvar],
+                             "den borttagna varan står kvar i listan")
             # Kryssrutan är borta: "Har hemma" och "Köpt" är två olika saker
             # och har två knappar (hushållspasset, §6). Ett klick på Köpt är
             # det som förr var en avbockning - plus att varan hamnar hemma.
