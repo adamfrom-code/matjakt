@@ -29,13 +29,52 @@ STORES = (
 )
 
 # Enhet i receptet -> förpackning (mängd, enhet, storlekstext).
+#
+# msk/tsk/krm hörde inte hit förut och föll på fallbacken till "1 st". Då
+# sålde fixturen olivolja och sirap STYCKVIS, och eftersom styck inte går
+# att räkna om till en volym blev raderna estimat. Riktiga butiker säljer
+# olja i flaska; att fixturen gör det med är inte en eftergift utan en
+# rättelse.
 PACKAGES = {
     "g": (1000.0, "g", "1 kg"),
     "ml": (1000.0, "ml", "1 l"),
     "dl": (1000.0, "ml", "1 l"),
     "l": (1000.0, "ml", "1 l"),
+    "msk": (1000.0, "ml", "1 l"),
+    "tsk": (1000.0, "ml", "1 l"),
+    "krm": (1000.0, "ml", "1 l"),
     "st": (1.0, "st", "1 st"),
 }
+
+
+# Vilken enhetsfamilj en förpackning helst ska ha. Massa först, sedan
+# volym, styck sist - för att motorn kan väga om ETT STYCK till gram via
+# styckvikttabellen, men inte 300 g till ett antal morötter. En gramvara
+# duger alltså åt båda sorternas recept; en styckvara bara åt sina egna.
+_FAMILJ = {"g": 0, "kg": 0, "hg": 0, "ml": 1, "dl": 1, "l": 1, "msk": 1, "tsk": 1, "krm": 1}
+
+
+def _forpackningsenhet(rows) -> str | None:
+    """Vilken enhet varan SÄLJS i, given hur recepten mäter den.
+
+    Förut stod det MIN(unit) i frågan, och alfabetisk ordning är inte ett
+    val. Vetemjöl mäts i gram i 18 recept, dl i 5 och msk i 4 - MIN valde
+    'dl' därför att d kommer före g, så fixturen sålde mjöl per liter och
+    de 18 gramrecepten gick inte att räkna om: 18 rader blev estimat.
+
+    Estimat räknas inte in i coveragePercent (se pricing.price_list), och
+    under 85 % slutar kedjan vara jämförbar. Konsumentresan kräver tre
+    prissatta butikskort - så en fixtur där VARENDA vara har ett pris kunde
+    ändå ge noll kort, beroende på vilka recept veckan råkade välja. Det såg
+    ut som flakighet och var en sorteringsordning.
+
+    Ordningen är familj först, antal sedan, enhetsnamnet sist - det sista
+    bara för att två lika vanliga enheter ska ge samma svar varje körning.
+    """
+    if not rows:
+        return None
+    return sorted(rows, key=lambda rad: (_FAMILJ.get((rad[0] or "").lower(), 2),
+                                         -rad[1], rad[0] or ""))[0][0]
 
 
 def _base_price(name: str) -> float:
@@ -49,8 +88,13 @@ def seed_grocery(grocery_db_path, recipe_db_path) -> dict:
     """Skapar butiker, produkter och priser. Returnerar en summering."""
     with sqlite3.connect(str(recipe_db_path)) as recipes:
         rows = recipes.execute(
-            "SELECT name, MIN(unit) FROM recipe_ingredients WHERE pantry_staple = 0 GROUP BY name").fetchall()
-    ingredients = [(name, unit) for name, unit in rows if name]
+            """SELECT name, unit, COUNT(*) FROM recipe_ingredients
+               WHERE pantry_staple = 0 GROUP BY name, unit""").fetchall()
+    per_namn: dict[str, list] = {}
+    for name, unit, antal in rows:
+        if name:
+            per_namn.setdefault(name, []).append((unit, antal))
+    ingredients = [(name, _forpackningsenhet(rader)) for name, rader in sorted(per_namn.items())]
 
     db = GroceryStore(grocery_db_path)
     try:
