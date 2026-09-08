@@ -198,7 +198,22 @@ inte finns. Utan dem flyttar en isolerad ändring bara felet: skriver vi in
 veckans hela behov i skafferiet i stället, dras samma varor av igen nästa
 vecka fast de är uppätna. Ändringen påverkar dessutom visade priser.
 **Kräver ett ägarbeslut om hur "finns hemma" ska betyda.**
-| Utseende och känsla | U61–U70 | att göra |
+| Utseende och känsla | U61–U70 | **delvis** — U64 och U67 finns, U65 rättad, resten inventerade |
+
+### U61–U80 i detalj
+
+| ID | Status | Vad som gäller |
+|---|---|---|
+| U64 reserverad plats | behöver verifieras | 42 regler för `min-height`/`aspect-ratio`/skelett i styles.css |
+| U65 bevara plats och filter | **klart att testa** | Tillbakavägen gjorde `scrollTo(0, 0)` - platsen nollställdes med FLIT. Rättat; filtren låg redan kvar i state. Exakt pixel går inte att kräva: webbläsarens scroll anchoring flyttar scrollY för att hålla bilden stilla när innehåll ovanför växer. Testet kräver att man står kvar djupt i listan, inom en skärmhöjd |
+| U67 lokalt/väntar/bekräftat | behöver verifieras | `setSyncStatus` med `pending`/`Synkar…` finns |
+| U68 bildrättigheter | delvis | Backend släpper bara bilder med licens (`migrate_recipes`: "An image whose licence we cannot state is an image we have no right to publish"). Frontend visar ingen kreditering |
+| U71 gemensam prisdefinition | delvis | `hasUsablePrice` och `comparable` finns på ETT ställe, men i app.js - inte utbrutet som modul |
+| U72 cache med rätt versioner | **verifierat** | Planen ingår i cachenyckeln (`${hasPremium() ? "premium" : "free"}\|...`), och `PARSER_VERSION` hindrar att felparsade priser återkommer ur stale-cache (PR #7) |
+| U76 övervakning av importer | **verifierat** | `alerts.py` med dedupe och recovery (PR #8), `_run_ops_alerts` 07:00, `reconcile_interrupted_runs` |
+| U78 fel-ID i felrapport | **att göra** | Servern loggar `rid=`, men inget når användaren |
+| U79 riktiga enheter | **att göra** | Ingen fysisk enhet testad. Simulator finns byggd i `build/ios` |
+| U80 databasincidenten | **blockerat** | = F6, kräver ägarbeslut om historikrensning |
 | Teknik | U71–U80 | att göra (U72 delvis: cacheversion mergad i PR #7; U80 = F6, blockerat) |
 
 ## X — ytterligare produktflöden
