@@ -155,7 +155,18 @@ först enligt ägarens egen faseordning.
 
 | Grupp | ID | Status |
 |---|---|---|
-| Första användningen | U01–U06 | **delvis** — U01 mergad (#17), U06 öppen (#21) med blockerande fynd, U02–U05 att göra |
+| Första användningen | U01–U06 | **delvis** — se raderna nedan |
+
+### U01–U06 i detalj
+
+| ID | Status | Bevis |
+|---|---|---|
+| U01 | **verifierat** | #17 mergad och driftsatt. Strängen `Frukost, lunch och hushållsvaror ingår inte` bekräftad i det minifierade bundlet på matjakt.store, frontend v37 |
+| U02 | **verifierat** | Gästen får en prissatt vecka utan konto, och veckan överlever registreringen - både lokalt och på servern. E2E-test som går hela vägen: gäst → vecka → pris → konto → `GET /api/account/state` |
+| U03 | behöver verifieras | Onboardingen har fyra steg (personer, budget/middagar, kost, plats). Tiden till första listan är INTE mätt - kravet säger uttryckligen att den ska mätas, inte påstås |
+| U04 | behöver verifieras | Justera veckan når alla startval utan omstart; ändringarna slår igenom direkt (sett i webbläsare vid U01-arbetet). Inget test |
+| U05 | behöver verifieras | Koden skiljer på `stillFetching` ("pris hämtas…") och verkligt saknat pris ("pris saknas just nu") - alltså ingen ändlös spinner och inga tekniska detaljer. Inte prövat systematiskt |
+| U06 | **verifierat** | #21 mergad och driftsatt. `står redan på listan` och `lägg till i inköpslistan` bekräftade i bundlet. Kvarstående lucka i extravarornas pris är dokumenterad, inte dold |
 | Veckoplanering | U07–U18 | att göra |
 | Pengar | U19–U30 | att göra (U19 = F1, **pågår**) |
 | I butiken | U31–U42 | att göra |
