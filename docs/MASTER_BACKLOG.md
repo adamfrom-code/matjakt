@@ -164,8 +164,8 @@ först enligt ägarens egen faseordning.
 | U01 | **verifierat** | #17 mergad och driftsatt. Strängen `Frukost, lunch och hushållsvaror ingår inte` bekräftad i det minifierade bundlet på matjakt.store, frontend v37 |
 | U02 | **verifierat** | Gästen får en prissatt vecka utan konto, och veckan överlever registreringen - både lokalt och på servern. E2E-test som går hela vägen: gäst → vecka → pris → konto → `GET /api/account/state` |
 | U03 | **mätt** | Tiden från öppnad app till en lista med varor OCH riktigt pris: **2,6–5,3 s** över sex lokala körningar, median ~3,2 s, 18–23 varor. Kravets mål är ungefär en minut. Siffran är ett GOLV, inte en människas tid: maskinen skriver inte och servern är lokal. I CI: **1,7–1,8 s**. Åtta mätningar totalt, 1,7–5,3 s. Testet skriver ut mätvärdet vid varje körning och faller över 30 s - nära sex gånger det långsammaste vi sett |
-| U04 | behöver verifieras | Justera veckan når alla startval utan omstart; ändringarna slår igenom direkt (sett i webbläsare vid U01-arbetet). Inget test |
-| U05 | behöver verifieras | Koden skiljer på `stillFetching` ("pris hämtas…") och verkligt saknat pris ("pris saknas just nu") - alltså ingen ändlös spinner och inga tekniska detaljer. Inte prövat systematiskt |
+| U04 | **verifierat** | E2E: alla fyra startval ändras i Justera veckan - personer, middagar, budget, postnummer, butik - och slår igenom både i lagringen och i gränssnittet (omfattningstexten följer med). Veckan lever kvar, ingen omladdning |
+| U05 | **verifierat** | E2E bryter `/api/pricing/week` i nätlagret och kräver att beskedet "pris saknas just nu" kommer inom 45 s. Kontrollerar också att texten är fri från HTTP-koder, `undefined`, `NaN` och stacktrace, och att listan lever kvar. Felet som en gång strandade varje öppen telefon (synknyckeln låg kvar efter ett misslyckat anrop) har nu ett test |
 | U06 | **verifierat** | #21 mergad och driftsatt. `står redan på listan` och `lägg till i inköpslistan` bekräftade i bundlet. Kvarstående lucka i extravarornas pris är dokumenterad, inte dold |
 | Veckoplanering | U07–U18 | att göra |
 | Pengar | U19–U30 | att göra (U19 = F1, **pågår**) |
