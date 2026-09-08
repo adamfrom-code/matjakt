@@ -252,7 +252,10 @@ k("O11", "Deploy: commit, tider, avvikelse", "delvis",
   "health.commit; revisionen bär sin egen commit", "Jämförelse mot förväntad deploy saknas", "—", "#16", "JA (fälten finns)")
 k("O12", "Skyddat admin-API, inte bara dold knapp", "behöver verifieras",
   "_admin_ok() finns på endpointerna", "Negativa tester för hushållsmedlem saknas", "—", "—", "NEJ")
-k("O13", "Mobilanpassad admin", "att göra", "—", "Påbörjas nu", "—", "—", "NEJ")
+k("O13", "Mobilanpassad admin", "klart att testa",
+  "Under 720 px: Kedjor-tabellen (13 kolumner, 1 424 px) ritas som kort per kedja; knappar min 44 px; sidscroll med synlig kant",
+  "Kontroll på riktig telefon (U79) och mot produktionsdata",
+  "Mätt i browser: 375 px före/efter, 1 280 px utan regression", "#36", "NEJ")
 k("O14", "Testlista för Operations", "delvis", "21+ tester (chain_health 9, alerts 12)", "Samlad lista saknas", "—", "#8", "NEJ")
 k("O15", "Active stores + kvotmonitorering", "att göra", "—",
   "De fyra definitionerna (register/valda/färska/kundtillgängliga) ska hållas isär", "—", "—", "NEJ")
