@@ -26,6 +26,7 @@ import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swa
 import { RECIPE_FALLBACK_ART, RECIPE_FALLBACK_LABEL, kindFor as recipeFallbackKind } from "./src/services/recipe-fallback.js";
 import { recordWeekSaving, weekKeyFor } from "./src/services/savings-log.js";
 import { budgetScopeText as budgetScopeFor } from "./src/services/budget-scope.js";
+import { planWarning } from "./src/services/plan-warning.js";
 import { ASSUMED_STATE, assumedHomeItems, assumedState } from "./src/services/assumed-home.js";
 
 // The recipe bank is DATA, loaded from data/recipes.json - see
@@ -1169,9 +1170,26 @@ function weekPlanCandidates() {
   if (nutritionCandidates.length < state.middagar) return { candidates: dietOnly, nutritionShortfall: true };
   return { candidates: nutritionCandidates, nutritionShortfall: false };
 }
-function updateNutritionWarning(nutritionShortfall) {
-  $("nutritionWarning").hidden = !nutritionShortfall;
-  if (nutritionShortfall) $("nutritionWarning").textContent = "Dina näringsmål matchade för få recept den här veckan, så vi visar de närmaste alternativen istället. Testa att justera målen om du vill ha en bättre träff.";
+// U17: säg när budget, kostkrav och receptutbud inte går ihop.
+//
+// bestMenuCombo returnerar allt den har när kandidaterna är färre än
+// antalet middagar - utan ett ord. Den som ber om sju middagar och får fem
+// tror att appen är trasig. Näringsmålen hade en text; kostkraven var tysta.
+function updateNutritionWarning(nutritionShortfall, fick = null) {
+  const text = planWarning({
+    önskade: state.middagar,
+    fick: fick == null ? state.middagar : fick,
+    nutritionShortfall,
+    kosttyp: state.kost.kosttyp,
+    allergener: state.kost.avoidAllergens.size,
+    ogillar: state.ogillar.size,
+    // Hela utbudet före användarens filter. Är det tomt har recepten inte
+    // laddats än, och då är noll träffar ett laddningstillstånd - inte ett
+    // besked om att kraven är för hårda.
+    utbud: RECEPT.length,
+  });
+  $("nutritionWarning").hidden = !text;
+  if (text) $("nutritionWarning").textContent = text;
 }
 function cheapestBranch(chain = null) {
   const branches = nearbyBranches().filter(branch => !chain || branch.kedja === chain);
@@ -1236,8 +1254,10 @@ const availableRecipes = () => candidateRecipesForUser();
 function chooseMenu(shouldScroll = true) {
   const branch = selectedBranch();
   const { candidates, nutritionShortfall } = weekPlanCandidates();
-  updateNutritionWarning(nutritionShortfall);
   const combo = bestMenuCombo(candidates, state.middagar, state.budget, branch);
+  // Varningen efter valet, inte före: först då vet vi hur många rätter
+  // veckan faktiskt fick.
+  updateNutritionWarning(nutritionShortfall, combo.length);
   setWeekPlan(combo.map(r => r.id));
   // A new set of meals makes any checked-off shopping items and cached live
   // prices from the previous week meaningless - without this, starting a new
