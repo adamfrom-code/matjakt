@@ -277,20 +277,24 @@ function renderChains(providers, scheduler) {
       ? `<button data-import="${esc(provider.chain)}">${provider.chain === "ICA" ? "Uppdatera manuellt" : "Starta import"}</button>`
       : "—";
     const last = provider.lastRun, success = provider.lastSuccessfulRun;
+    // O13: varje cell bär sin rubrik i data-label. Under 720 px döljs
+    // tabellhuvudet och raden ritas som ett kort med rubrik-värde-par -
+    // tretton kolumner i ett 341 px brett kort var fyra skärmbredder att
+    // svepa genom, och det är den här tabellen driften läser i handen.
     return `<tr>
-      <td><strong>${esc(provider.chain)}</strong></td>
-      <td>${healthPill(provider.health)}</td>
-      <td>${provider.health?.released ? "JA" : `<span class="quiet">nej</span>`}</td>
-      <td><span class="pill ${STATUS_CLASS[provider.status] || "off"}">${esc(provider.status)}</span></td>
-      <td>${provider.products}</td>
-      <td>${provider.prices}</td>
-      <td>${provider.gtinPercent}%</td>
-      <td>${provider.imagePercent}%</td>
-      <td>${provider.categoryPercent}%</td>
-      <td>${success ? when(success.finishedAt) : "—"}</td>
-      <td>${last ? `${esc(last.status)} · ${when(last.finishedAt || last.startedAt)}` : "—"}</td>
-      <td>${nightly ? esc(nightly.time) : `<span style="color:var(--muted)">ingen</span>`}</td>
-      <td>${action}</td>
+      <td data-label="Kedja"><strong>${esc(provider.chain)}</strong></td>
+      <td data-label="Drift">${healthPill(provider.health)}</td>
+      <td data-label="Släppt">${provider.health?.released ? "JA" : `<span class="quiet">nej</span>`}</td>
+      <td data-label="Provider"><span class="pill ${STATUS_CLASS[provider.status] || "off"}">${esc(provider.status)}</span></td>
+      <td data-label="Produkter">${provider.products}</td>
+      <td data-label="Priser">${provider.prices}</td>
+      <td data-label="GTIN">${provider.gtinPercent}%</td>
+      <td data-label="Bild">${provider.imagePercent}%</td>
+      <td data-label="Kategori">${provider.categoryPercent}%</td>
+      <td data-label="Senaste lyckade">${success ? when(success.finishedAt) : "—"}</td>
+      <td data-label="Senaste försök">${last ? `${esc(last.status)} · ${when(last.finishedAt || last.startedAt)}` : "—"}</td>
+      <td data-label="Nästa nattkörning">${nightly ? esc(nightly.time) : `<span style="color:var(--muted)">ingen</span>`}</td>
+      <td data-label="Åtgärd">${action}</td>
     </tr>${last?.errorMessage ? `<tr><td colspan="13" class="wrap">⚠ ${esc(last.errorMessage)}</td></tr>` : ""}
     ${blocked ? `<tr><td colspan="13" class="wrap">Ingen nattkörning: ${esc(blocked)}</td></tr>` : ""}`;
   }).join("");
