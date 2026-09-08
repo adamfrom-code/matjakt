@@ -25,6 +25,7 @@ import { categoryFor, groupByCategory } from "./src/services/categories.js";
 import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swapReasonText, weekCostAlert } from "./src/services/swap.js";
 import { RECIPE_FALLBACK_ART, RECIPE_FALLBACK_LABEL, kindFor as recipeFallbackKind } from "./src/services/recipe-fallback.js";
 import { recordWeekSaving, weekKeyFor } from "./src/services/savings-log.js";
+import { budgetScopeText as budgetScopeFor } from "./src/services/budget-scope.js";
 
 // The recipe bank is DATA, loaded from data/recipes.json - see
 // src/data/recipes.js. It used to be two hardcoded arrays right here, which
@@ -3528,11 +3529,20 @@ function showUndoToast(message, onUndo, onOpen = null) {
   undoToastTimer = setTimeout(() => { toast.hidden = true; }, 6000);
 }
 
+// U01: budgeten måste säga VAD den räcker till - se src/services/budget-scope.js.
+function budgetScopeText() { return budgetScopeFor(state.middagar, state.personer); }
+
 function updateSummary() {
   const hasWeek = selectedRecipes().length > 0;
   $("generateBtnLabel").textContent = hasWeek ? "Öppna veckan" : "Skapa min vecka";
   $("newWeekBtn").hidden = !hasWeek;
   $("weekCardStatus").textContent = hasWeek ? "Veckan är klar" : "Redo";
+  const scope = $("budgetScopeNote");
+  if (scope) scope.textContent = budgetScopeText();
+  // Hemkortet är avsiktligt kompakt och får inte en textrad till, men den
+  // som lyssnar sig igenom sidan ska höra omfattningen utan att först
+  // öppna inställningarna.
+  $("budgetCardBtn")?.setAttribute("aria-label", `Budget: ${budgetScopeText()}`);
 }
 function hemRecipePreviewMarkup(recipe) {
   const badge = recipe.typ && recipe.typ !== "Provider-recept" ? `<span class="hem-recipe-badge">${escapeHtml(recipe.typ)}</span>` : "";
@@ -4506,7 +4516,7 @@ function renderObHushall() {
   return `<div class="settings-grid"><div><label>Vuxna</label><div class="stepper"><button type="button" data-ob-adj="vuxna" data-delta="-1" aria-label="Färre vuxna">−</button><span>${state.hushall.vuxna}</span><button type="button" data-ob-adj="vuxna" data-delta="1" aria-label="Fler vuxna">+</button></div></div><div><label>Barn</label><div class="stepper"><button type="button" data-ob-adj="barn" data-delta="-1" aria-label="Färre barn">−</button><span>${state.hushall.barn}</span><button type="button" data-ob-adj="barn" data-delta="1" aria-label="Fler barn">+</button></div></div></div>`;
 }
 function renderObBudget() {
-  return `<label for="obBudget">Veckobudget</label><div class="budget-row"><input type="number" id="obBudget" value="${state.budget}" min="0" step="50" inputmode="numeric"><span>kr</span></div><div class="settings-grid"><div><label>Middagar per vecka</label><div class="stepper"><button type="button" data-ob-meals="-1" aria-label="Färre middagar">−</button><span>${state.middagar}</span><button type="button" data-ob-meals="1" aria-label="Fler middagar">+</button></div></div></div>`;
+  return `<label for="obBudget">Veckobudget</label><div class="budget-row"><input type="number" id="obBudget" value="${state.budget}" min="0" step="50" inputmode="numeric"><span>kr</span></div><p class="budget-scope">${escapeHtml(budgetScopeText())}</p><div class="settings-grid"><div><label>Middagar per vecka</label><div class="stepper"><button type="button" data-ob-meals="-1" aria-label="Färre middagar">−</button><span>${state.middagar}</span><button type="button" data-ob-meals="1" aria-label="Fler middagar">+</button></div></div></div>`;
 }
 function renderObKost() {
   return `<label for="obKosttyp">Kosttyp</label><select id="obKosttyp"><option value="" ${!state.kost.kosttyp ? "selected" : ""}>Vanlig, allt</option><option value="vegetariskt" ${state.kost.kosttyp === "vegetariskt" ? "selected" : ""}>Vegetariskt</option><option value="veganskt" ${state.kost.kosttyp === "veganskt" ? "selected" : ""}>Veganskt</option></select><label>Allergier att undvika</label><div class="protein-source-chips" id="obAllergenChips">${ALLERGENS.map(a => `<label><input type="checkbox" value="${a}" ${state.kost.avoidAllergens.has(a) ? "checked" : ""}> ${a[0].toUpperCase() + a.slice(1)}</label>`).join("")}</div>`;
