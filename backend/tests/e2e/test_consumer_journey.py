@@ -626,7 +626,7 @@ class BrowserJourney(unittest.TestCase):
         self.assertGreater(varor, 0, "listan var tom")
         self.assertRegex(total, r"\d+ kr", total)
         print(f"\n[U03] första användbara listan: {sekunder:.1f} s, {varor} varor, total {total!r}")
-        self.assertLess(sekunder, 60.0,
+        self.assertLess(sekunder, 30.0,
                         f"flödet tog {sekunder:.1f} s till en användbar lista ({varor} varor)")
 
     def test_gasten_ser_nyttan_och_far_behalla_sin_vecka(self):
