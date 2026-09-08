@@ -235,9 +235,10 @@ k("O6", "Incidenthistorik, persistenta ID, dedupe", "delvis",
 k("O7", "Admin-mail: mottagare/transport/försök/leverans", "delvis",
   "recipientConfigured + transportConfigured + domän i health",
   "Senaste skickförsök och faktisk leverans saknas", "Live-läst adminAlerts", "#10 6052735", "JA (delen som finns)")
-k("O8", "Primat: configured JA/NEJ, kvot ur verklig API-data", "blockerat",
-  "Inget", "BLOCKERAT: ingen dokumenterad kvot-endpoint. SJÄLVSTÄNDIGT: configured-flaggan kan visas utan kvoten - inte gjort",
-  "—", "—", "NEJ")
+k("O8", "Primat: configured JA/NEJ, kvot ur verklig API-data", "delvis",
+  "FINNS: /api/admin/primat-status svarar configured JA/NEJ utan nyckeln och anropar Primats GET /me (plan, dagsbudget, använda rader, reset) - rättelse: jag skrev tidigare att ingen kvot-endpoint fanns",
+  "VISAS INTE: ingenting i kontrollrummet läser endpointen. OVERIFIERAT: att /me svarar med de fälten mot det riktiga kontot - kräver admin-token. Varning nära gräns finns inte. Köp/uppgradering = ägarbeslut",
+  "Kodläsning primat_client.account_status", "—", "NEJ")
 k("O9", "Scheduler: schema, körningar, nästa körning", "delvis",
   "Operations-koll 07:00 med test att den ligger efter importerna", "Faktiska körningar och nästa körning i adminvyn", "1 test", "#8", "NEJ")
 k("O10", "Pricing audit med definierade nämnare", "delvis",
@@ -257,8 +258,10 @@ k("O13", "Mobilanpassad admin", "klart att testa",
   "Kontroll på riktig telefon (U79) och mot produktionsdata",
   "Mätt i browser: 375 px före/efter, 1 280 px utan regression", "#36", "NEJ")
 k("O14", "Testlista för Operations", "delvis", "21+ tester (chain_health 9, alerts 12)", "Samlad lista saknas", "—", "#8", "NEJ")
-k("O15", "Active stores + kvotmonitorering", "att göra", "—",
-  "De fyra definitionerna (register/valda/färska/kundtillgängliga) ska hållas isär", "—", "—", "NEJ")
+k("O15", "Active stores + kvotmonitorering", "delvis",
+  "BUTIKER: fyra skilda tal per kedja (i registret / aktiva / färska ≤ 4 dygn / kundtillgängliga = färska i släppt kedja) med källa och mättid, visade i kontrollrummet",
+  "KVOT: se O8 - endpointen finns men visas inte och är overifierad mot kontot. Butikstalen är inte kontrollerade mot produktionsdata",
+  "4 enhetstester; browser 375 + 1 280 px", "#37", "NEJ")
 
 # ---- U01-U06: första användningen ---------------------------------------
 k("U01", "Förklara budgetens omfattning", "verifierat",

@@ -268,6 +268,17 @@ function osäkraIngredienser(audit) {
     `Raderna hålls utanför säkra totaler och billigast-jämförelsen.</span></p>`;
 }
 
+// O15: FYRA TAL SOM ALLA HETER "BUTIKER". Ett register med tusentals
+// adresser är inte tusentals prissatta butiker. Talen visas i ordning från
+// störst till minst så att gapet syns: 412 i registret, 118 aktiva, 41
+// färska, 41 kundtillgängliga - och för en osläppt kedja är det sista noll
+// hur färsk datan än är.
+function butikerText(b) {
+  if (!b) return "—";
+  const rad = `${b.iRegistret} reg · ${b.aktiva} aktiva · ${b.farska} färska · ${b.kundtillgangliga} kund`;
+  return `<span title="${esc(`Färsk = ${b.farskGrans}. Kundtillgänglig = aktiv, färsk och släppt kedja. Källa: ${b.kalla}.`)}">${esc(rad)}</span>`;
+}
+
 function renderChains(providers, scheduler) {
   const next = Object.fromEntries((scheduler.schedule || []).map(entry => [entry.chain, entry]));
   $("chains").querySelector("tbody").innerHTML = providers.map(provider => {
@@ -286,6 +297,7 @@ function renderChains(providers, scheduler) {
       <td data-label="Drift">${healthPill(provider.health)}</td>
       <td data-label="Släppt">${provider.health?.released ? "JA" : `<span class="quiet">nej</span>`}</td>
       <td data-label="Provider"><span class="pill ${STATUS_CLASS[provider.status] || "off"}">${esc(provider.status)}</span></td>
+      <td data-label="Butiker">${butikerText(provider.butiker)}</td>
       <td data-label="Produkter">${provider.products}</td>
       <td data-label="Priser">${provider.prices}</td>
       <td data-label="GTIN">${provider.gtinPercent}%</td>
@@ -295,8 +307,8 @@ function renderChains(providers, scheduler) {
       <td data-label="Senaste försök">${last ? `${esc(last.status)} · ${when(last.finishedAt || last.startedAt)}` : "—"}</td>
       <td data-label="Nästa nattkörning">${nightly ? esc(nightly.time) : `<span style="color:var(--muted)">ingen</span>`}</td>
       <td data-label="Åtgärd">${action}</td>
-    </tr>${last?.errorMessage ? `<tr><td colspan="13" class="wrap">⚠ ${esc(last.errorMessage)}</td></tr>` : ""}
-    ${blocked ? `<tr><td colspan="13" class="wrap">Ingen nattkörning: ${esc(blocked)}</td></tr>` : ""}`;
+    </tr>${last?.errorMessage ? `<tr><td colspan="14" class="wrap">⚠ ${esc(last.errorMessage)}</td></tr>` : ""}
+    ${blocked ? `<tr><td colspan="14" class="wrap">Ingen nattkörning: ${esc(blocked)}</td></tr>` : ""}`;
   }).join("");
 
   $("chainNotes").innerHTML = providers

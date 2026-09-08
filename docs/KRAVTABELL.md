@@ -8,11 +8,11 @@ Genererad av `backend/scripts/kravtabell.py`. **129 krav**: masterinstruktionens
 |---|---:|
 | verifierat | 9 |
 | klart att testa | 12 |
-| delvis | 24 |
+| delvis | 26 |
 | behöver verifieras | 5 |
 | kräver beslut | 3 |
-| blockerat | 5 |
-| att göra | 71 |
+| blockerat | 4 |
+| att göra | 70 |
 | **summa** | **129** |
 
 **Färdiga (verifierat): 9 av 129.** 'Klart att testa' räknas inte som färdigt.
@@ -55,7 +55,7 @@ Verifierat i produktion = JA bara när något faktiskt lästes från matjakt.onr
 | O5 | Aktiva incidenter med kundpåverkan | delvis | Incidenter finns i alerts.py | Adminvy som visar dem saknas | — | #8 | NEJ |
 | O6 | Incidenthistorik, persistenta ID, dedupe | delvis | Dedupe + recovery, 7 dagars cooldown | Historikvy saknas | 12 enhetstester | #8 745d37e | NEJ |
 | O7 | Admin-mail: mottagare/transport/försök/leverans | delvis | recipientConfigured + transportConfigured + domän i health | Senaste skickförsök och faktisk leverans saknas | Live-läst adminAlerts | #10 6052735 | JA (delen som finns) |
-| O8 | Primat: configured JA/NEJ, kvot ur verklig API-data | blockerat | Inget | BLOCKERAT: ingen dokumenterad kvot-endpoint. SJÄLVSTÄNDIGT: configured-flaggan kan visas utan kvoten - inte gjort | — | — | NEJ |
+| O8 | Primat: configured JA/NEJ, kvot ur verklig API-data | delvis | FINNS: /api/admin/primat-status svarar configured JA/NEJ utan nyckeln och anropar Primats GET /me (plan, dagsbudget, använda rader, reset) - rättelse: jag skrev tidigare att ingen kvot-endpoint fanns | VISAS INTE: ingenting i kontrollrummet läser endpointen. OVERIFIERAT: att /me svarar med de fälten mot det riktiga kontot - kräver admin-token. Varning nära gräns finns inte. Köp/uppgradering = ägarbeslut | Kodläsning primat_client.account_status | — | NEJ |
 | O9 | Scheduler: schema, körningar, nästa körning | delvis | Operations-koll 07:00 med test att den ligger efter importerna | Faktiska körningar och nästa körning i adminvyn | 1 test | #8 | NEJ |
 | O10 | Pricing audit med definierade nämnare | delvis | Auditen körs vid start + efter import, namnger osäkra rader per ingrediens, rubriken i admin visar felet | Live-parsningsvägen granskas inte av auditen. Vad som händer med de 30 raderna = O10b | Enhetstester i båda riktningarna; live-läst | #16 b0e1202 | JA |
 | O10b | Beslut om korrekt märkt osäkerhet i grinden (tillägg) | kräver beslut | Ketchup fick verifierad densitet (LV tabell 10 s.16). Tomatpuré, sirap, currypasta, sambal oelek saknas i källan | BLOCKERAT: ska osäkerhet blockera grinden, eller mätas separat? SJÄLVSTÄNDIGT: ingen mer densitet utan källa | — | #34 (öppen) | NEJ |
@@ -63,7 +63,7 @@ Verifierat i produktion = JA bara när något faktiskt lästes från matjakt.onr
 | O12 | Skyddat admin-API, inte bara dold knapp | behöver verifieras | _admin_ok() finns på endpointerna | Negativa tester för hushållsmedlem saknas | — | — | NEJ |
 | O13 | Mobilanpassad admin | klart att testa | Under 720 px: Kedjor-tabellen (13 kolumner, 1 424 px) ritas som kort per kedja; knappar min 44 px; sidscroll med synlig kant | Kontroll på riktig telefon (U79) och mot produktionsdata | Mätt i browser: 375 px före/efter, 1 280 px utan regression | #36 | NEJ |
 | O14 | Testlista för Operations | delvis | 21+ tester (chain_health 9, alerts 12) | Samlad lista saknas | — | #8 | NEJ |
-| O15 | Active stores + kvotmonitorering | att göra | — | De fyra definitionerna (register/valda/färska/kundtillgängliga) ska hållas isär | — | — | NEJ |
+| O15 | Active stores + kvotmonitorering | delvis | BUTIKER: fyra skilda tal per kedja (i registret / aktiva / färska ≤ 4 dygn / kundtillgängliga = färska i släppt kedja) med källa och mättid, visade i kontrollrummet | KVOT: se O8 - endpointen finns men visas inte och är overifierad mot kontot. Butikstalen är inte kontrollerade mot produktionsdata | 4 enhetstester; browser 375 + 1 280 px | #37 | NEJ |
 | U01 | Förklara budgetens omfattning | verifierat | 'Gäller 4 middagar för 2 personer. Frukost, lunch och hushållsvaror ingår inte.' i onboarding + Justera veckan, aria-label på hemkortet | — | budget-scope.test.js (4), browser 375 px | #17 fc97052 | NEJ |
 | U02 | Nytta före kontokrav; bevara gästens plan | verifierat | Gäst får prissatt vecka; planen överlever kontoskapande | — | E2E | #22 560cbbf | NEJ |
 | U03 | Minimal start, mät tid till första listan | delvis | Mäts i E2E: 2,1-2,7 s till första användbara listan | Mätt i testmiljö, inte med riktiga användare - målet 'ungefär en minut' är inte påstått uppnått | E2E skriver ut måttet | #23 fea9fb6 | NEJ |
