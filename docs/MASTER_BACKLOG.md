@@ -139,7 +139,7 @@ Inventerat i koden, inte gissat:
 |---|---|---|
 | U07 lås middagar | **att göra** | Ingen låsning finns. `pinnedBranch` gäller butik, inte rätter |
 | U08 flytta mellan dagar | **att göra** | Ingen flyttfunktion |
-| U09 ångra vecka | **behöver verifieras** | `weekHistory` sparar 12 planer och går att återställa. Inget test |
+| U09 ångra vecka | **verifierat** | E2E: skapa vecka A, skapa vecka B, återställ → A tillbaka och historiken minskad med ett. Noterat: historiken är redan icke-tom efter första veckan, eftersom appen skapar en vecka under onboardingen som planvalet sedan ersätter - "förra veckan" kan alltså vara en användaren aldrig såg |
 | U10 portioner per dag | **att göra** | Portioner är ett värde för hela veckan |
 | U11 återkommande favoriter | **att göra** | Favoriter finns, men ingen återkomst med paus |
 | U12 nytt mot bekant | **att göra** | `recentlyEatenPenalty` finns i swap, men inget val för användaren |
