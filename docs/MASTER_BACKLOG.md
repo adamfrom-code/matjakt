@@ -39,7 +39,7 @@ Det här gäller allt nedan och ska inte behöva upprepas per rad:
 | ID | Krav | Status | Bevis / nästa steg |
 |---|---|---|---|
 | F1 | Ofullständig kasse får inte krönas billigast | **klart att testa** | Revaliderat mot `235958a`: felet fanns kvar. PR #9 mergad (`9d68f48`). Regressionstest med exakt scenariot. Kvar: bekräfta i produktion att ingen kröning sker vid olika kassar |
-| F2 | Veckoval ska prissättas med riktig prismotor, inte ungefärlig kostnad | att göra — **kräver beslut** | Se avsnittet nedan |
+| F2 | Veckoval ska prissättas med riktig prismotor, inte ungefärlig kostnad | **delvis** | Felet är nu MÄTT, inte resonerat: uppskattningen ligger median +4,6 % från riktigt pris, spann −12,9 % till +19,5 % (tolv veckor mot `/api/pricing/week`). Budgetfiltret förkastar inte längre en vecka på gissningen ensam. Kvar: att VÄLJA på riktigt pris kräver den asynkrona ändringen nedan |
 | F3 | Färskhet per prisrad | **klart att testa** (mergad `380a136`) | Åldern räknas nu på äldsta raden som faktiskt användes. Felet var värre än rapporterat: MAX() filtrerade bara på butik, inte på kassans varor |
 | F3b | Åldersgräns på referenspriser | att göra — **kräver beslut** | `store.py:869` hämtar referenspriser utan åldersgräns, och `pricing.py:1355` släpper ett för gammalt butikspris till förmån för ett referenspris som kan vara ÄLDRE. Kräver ett beslut om maxålder |
 | F4 | Skilj möjlig / planerad / genomförd besparing | **delvis, mergad** (`8103df5`) | "Billigaste butiken för dig" var läget av VALD butik - ingen prisjämförelse alls. Etiketten rättad, dedupering per vecka inlagd. Kvar: posten skrivs vid val, inte vid handling |
@@ -49,81 +49,43 @@ Det här gäller allt nedan och ska inte behöva upprepas per rad:
 
 ---
 
-### F2 i detalj — varför den inte är en enkel fix
+### F2 i detalj — vad som är mätt och vad som återstår
 
-Revaliderat mot `app.js:882`. Felet är kvar:
+`comboEstimatedCost` (`app.js:885`) summerar receptens separata inköpspriser
+och skalar linjärt med antal personer. Talet har tre kända fel:
 
-```js
-function comboEstimatedCost(combo) {
-  const factor = portionFactor(state.personer);
-  return combo.reduce((sum, recipe) =>
-    sum + (recipe.inkopspris ?? medianInkopspris()) * factor, 0);
-}
-```
+1. En förpackning som delas mellan två rätter räknas två gånger.
+2. Kostnaden skalas linjärt med personer fast hela förpackningar inte gör det.
+3. Receptens priser kommer från **olika kedjor** - 48 Willys, 7 Hemköp,
+   5 City Gross i banken - men summeras ändå.
 
-Två fel i samma rad. Receptens **separata** inköpspriser summeras, så en
-förpackning som delas mellan två rätter räknas två gånger. Och kostnaden
-skalas **linjärt** med antal personer, men hela förpackningar skalar inte
-så — en dubbelt så stor familj köper sällan dubbelt så många paket.
+**Felet är mätt, inte uppskattat.** Tolv slumpade veckor om fyra rätter för
+fyra personer, uppskattning mot `/api/pricing/week` i produktion:
 
-Talet används sedan på två ställen som båda gör skada:
+| | |
+|---|---|
+| Median | **+4,6 %** |
+| Spann | **−12,9 % till +19,5 %** |
+| På 800 kr budget | upp till ~160 kr fel åt vardera hållet |
 
-- `inBudgetPool(evaluated, budget)` förkastar veckor mot användarens
-  **riktiga** budget med ett **falskt** tal. En vecka som hade rymts
-  sorteras bort, en som inte ryms släpps igenom.
-- `pickCheapest` väljer billigast på samma falska tal.
+**Rättat:** `inBudgetPool` gav förut ett hårt `cost <= budget`. En vecka vars
+gissning låg strax över sållades bort fast den rymdes - och den veckan fick
+användaren aldrig se. Nu finns en marginal satt på den uppmätta
+överskattningen. En vecka som inte ryms kan komma med, men då står dess
+RIKTIGA pris på kortet innan man väljer (`syncPlanPricing`), så ingen luras.
 
-Veckan prissätts korrekt EFTER valet (`/api/pricing/week`), så användaren
-ser till slut rätt summa — men valet är redan gjort på fel grund.
+**Mindre allvarligt än backloggen först påstod.** Jag skrev att användaren
+väljer på fel grund. Kandidatveckorna prissätts redan på riktigt av
+`syncPlanPricing` och det priset står på kortet före valet - användaren ser
+alltså sant pris innan hen bestämmer sig. Skadan är att veckan inom varje
+typ inte nödvändigtvis är den billigaste möjliga, inte att summan ljuger.
 
-**Varför jag inte rättade den direkt.** `bestMenuCombo` är synkron och
-anropas från tre ställen (`app.js:1177`, `:1237`, `:4382`). En riktig fix
-kräver att kandidatval och prissättning skiljs åt: sålla snabbt, prissätta
-ett fåtal hela kassar med riktiga motorn, välja på det. Det gör funktionen
-asynkron, kräver laddningstillstånd i tre vyer och nätanrop mitt i
-planeringen. Det är en arkitekturändring, inte en rättelse — och
-browser-E2E:n är redan tidskänslig (två olika flakiga fall observerade).
-
-**Föreslagen ordning när den tas:**
-1. Bryt ut kandidatvalet så det går att testa utan DOM.
-2. Lägg till en prissättning av N kandidatkassar bakom ett explicit anrop.
-3. Gör budgetfiltret tolerant tills det riktiga priset finns — en
-   uppskattning får aldrig ensam förkasta en vecka mot en riktig budget.
-4. Visa det användaren behöver när budgeten inte går att hålla, med
-   konkreta ändringar (F2:s egen formulering).
-
-### O10b i detalj — de trettio osäkra raderna
-
-F5 rättade en regel som märkte osäkra rader som exakta. Följden är att
-revisionen nu är röd på `estimat: 30` (= 10 receptrader × 3 kedjor).
-**Ingen siffra har blivit sämre; en osanning har slutat döljas.**
-
-Mekanismen: ingrediensen mäts i volym (ml/msk/tsk), varan säljs i gram, och
-ingen densitet finns för just den ingrediensen. Motorn kan då inte veta hur
-många förpackningar som behövs och markerar raden som uppskattad. Raderna
-hålls redan utanför säkra totaler och billigast-jämförelsen — de ljuger
-alltså inte för användaren, de erkänner.
-
-Ur repots egen receptkälla går **en** av de tio att härleda: `Soja (30 ml)`
-i fem recept. Produktionen har 240 recept mot repots 58, så resten syns
-först när PR #16 är deployad.
-
-**Två vägar, och de är inte lika bra:**
-
-1. **Ge de ingredienser som har en verklig densitet sin densitet.** Motorn
-   har redan `DAIRY_DENSITY_ONE` för tunna såser (ketchup ~1,14, senap,
-   sriracha…). Soja ligger på ~1,15 och hör hemma i samma grupp. Det ger
-   ett *rättare* pris, inte ett grönare — ofta ett högre, för 30 ml soja är
-   34 g och kan behöva två flaskor där en gissades.
-2. **Acceptera att osäkerhet är ett giltigt tillstånd** och låt gaten mäta
-   det separat i stället för att kräva `estimat = 0`.
-
-**Det som INTE får göras:** utöka `DRY_SPICES` med honung, sirap eller olja
-för att få grönt. Det vore att återinföra precis den lögn F5 tog bort.
-Gaten är dessutom rådgivande — den blockerar ingenting, den rapporteras i
-`/api/health`.
-
----
+**Kvar, och det kräver fortfarande ett beslut:** att låta valet självt göras
+på riktigt pris. `bestMenuCombo` är synkron och anropas från tre ställen
+(`app.js:1177`, `:1237`, `:4382`). En riktig fix skiljer kandidatval från
+prissättning: sålla snabbt, prissätta ett fåtal hela kassar med riktiga
+motorn, välja på det. Det gör funktionen asynkron och kräver laddnings-
+tillstånd i tre vyer.
 
 ## O — Operations (Fas 2)
 
