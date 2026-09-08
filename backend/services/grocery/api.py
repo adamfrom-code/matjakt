@@ -189,6 +189,48 @@ def campaign_deals(per_chain: int = 10) -> dict:
     return payload
 
 
+# O15: FYRA OLIKA SAKER SOM ALLA HETER "BUTIKER".
+#
+# Ett register med tusentals adresser är inte tusentals prissatta butiker.
+# De fyra talen hålls isär, och varje svar bär källa, mättid och gräns så
+# att den som läser "41 butiker" vet vilket av de fyra talen det är.
+#
+#   iRegistret       rader i grocery_stores för kedjan
+#   aktiva           active = 1 - valda/aktiverade för import
+#   färska           aktiva med minst ett butikspris yngre än
+#                    MAX_STORE_PRICE_AGE_SECONDS (samma gräns som
+#                    prismotorn själv vägrar servera äldre priser vid)
+#   kundtillgängliga färska OCH kedjan i RELEASED_CHAINS - en färsk butik i
+#                    en osläppt kedja når ingen kund
+#
+# Ingen automatisk publicering följer av talen: RELEASED_CHAINS är orörd.
+def store_counts(store, chain: str, now: float | None = None) -> dict:
+    from .pricing import MAX_STORE_PRICE_AGE_SECONDS
+    now = time.time() if now is None else now
+    con = store.connection
+    i_registret = con.execute(
+        "SELECT COUNT(*) FROM grocery_stores WHERE chain = ?", (chain,)).fetchone()[0]
+    aktiva = con.execute(
+        "SELECT COUNT(*) FROM grocery_stores WHERE chain = ? AND active = 1", (chain,)).fetchone()[0]
+    farska = con.execute(
+        """SELECT COUNT(DISTINCT st.id) FROM grocery_stores st
+           JOIN grocery_current_prices cp ON cp.store_id = st.id
+           WHERE st.chain = ? AND st.active = 1
+             AND COALESCE(cp.verified_at, cp.fetched_at) >= ?""",
+        (chain, now - MAX_STORE_PRICE_AGE_SECONDS)).fetchone()[0]
+    slappt = chain in RELEASED_CHAINS
+    return {
+        "iRegistret": i_registret,
+        "aktiva": aktiva,
+        "farska": farska,
+        "kundtillgangliga": farska if slappt else 0,
+        "kalla": "grocery_stores + grocery_current_prices",
+        "mattVid": now,
+        "farskGrans": f"pris yngre än {MAX_STORE_PRICE_AGE_SECONDS // 86400} dygn",
+        "slapptKedja": slappt,
+    }
+
+
 def database_summary() -> dict:
     """What the price database actually holds, per chain.
 
@@ -256,6 +298,8 @@ def database_summary() -> dict:
                 "imagePercent": round(100 * (row["with_image"] or 0) / products) if products else 0,
                 "lastFetchedAt": fetched,
                 "ageSeconds": (time.time() - fetched) if fetched else None,
+                # O15: fyra tal som alla heter "butiker", hållna isär.
+                "butiker": store_counts(store, row["chain"]),
             })
         total = store.connection.execute("SELECT COUNT(*) FROM grocery_products").fetchone()[0]
         return {"totalProducts": total, "chains": chains}
@@ -421,6 +465,7 @@ def provider_status() -> list[dict]:
             "withCategory": held.get("withCategory", 0),
             "prices": held.get("prices", 0),
             "withGtin": held.get("withGtin", 0),
+            "butiker": held.get("butiker"),
             "withImage": held.get("withImage", 0),
             "categoryPercent": held.get("categoryPercent", 0),
             "gtinPercent": held.get("gtinPercent", 0),

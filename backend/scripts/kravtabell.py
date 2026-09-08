@@ -235,9 +235,10 @@ k("O6", "Incidenthistorik, persistenta ID, dedupe", "delvis",
 k("O7", "Admin-mail: mottagare/transport/försök/leverans", "delvis",
   "recipientConfigured + transportConfigured + domän i health",
   "Senaste skickförsök och faktisk leverans saknas", "Live-läst adminAlerts", "#10 6052735", "JA (delen som finns)")
-k("O8", "Primat: configured JA/NEJ, kvot ur verklig API-data", "blockerat",
-  "Inget", "BLOCKERAT: ingen dokumenterad kvot-endpoint. SJÄLVSTÄNDIGT: configured-flaggan kan visas utan kvoten - inte gjort",
-  "—", "—", "NEJ")
+k("O8", "Primat: configured JA/NEJ, kvot ur verklig API-data", "delvis",
+  "FINNS: /api/admin/primat-status svarar configured JA/NEJ utan nyckeln och anropar Primats GET /me (plan, dagsbudget, använda rader, reset) - rättelse: jag skrev tidigare att ingen kvot-endpoint fanns",
+  "VISAS INTE: ingenting i kontrollrummet läser endpointen. OVERIFIERAT: att /me svarar med de fälten mot det riktiga kontot - kräver admin-token. Varning nära gräns finns inte. Köp/uppgradering = ägarbeslut",
+  "Kodläsning primat_client.account_status", "—", "NEJ")
 k("O9", "Scheduler: schema, körningar, nästa körning", "delvis",
   "Operations-koll 07:00 med test att den ligger efter importerna", "Faktiska körningar och nästa körning i adminvyn", "1 test", "#8", "NEJ")
 k("O10", "Pricing audit med definierade nämnare", "delvis",

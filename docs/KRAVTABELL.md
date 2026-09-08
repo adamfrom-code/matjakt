@@ -8,10 +8,10 @@ Genererad av `backend/scripts/kravtabell.py`. **129 krav**: masterinstruktionens
 |---|---:|
 | verifierat | 9 |
 | klart att testa | 12 |
-| delvis | 24 |
+| delvis | 25 |
 | behöver verifieras | 5 |
 | kräver beslut | 3 |
-| blockerat | 5 |
+| blockerat | 4 |
 | att göra | 71 |
 | **summa** | **129** |
 
@@ -55,7 +55,7 @@ Verifierat i produktion = JA bara när något faktiskt lästes från matjakt.onr
 | O5 | Aktiva incidenter med kundpåverkan | delvis | Incidenter finns i alerts.py | Adminvy som visar dem saknas | — | #8 | NEJ |
 | O6 | Incidenthistorik, persistenta ID, dedupe | delvis | Dedupe + recovery, 7 dagars cooldown | Historikvy saknas | 12 enhetstester | #8 745d37e | NEJ |
 | O7 | Admin-mail: mottagare/transport/försök/leverans | delvis | recipientConfigured + transportConfigured + domän i health | Senaste skickförsök och faktisk leverans saknas | Live-läst adminAlerts | #10 6052735 | JA (delen som finns) |
-| O8 | Primat: configured JA/NEJ, kvot ur verklig API-data | blockerat | Inget | BLOCKERAT: ingen dokumenterad kvot-endpoint. SJÄLVSTÄNDIGT: configured-flaggan kan visas utan kvoten - inte gjort | — | — | NEJ |
+| O8 | Primat: configured JA/NEJ, kvot ur verklig API-data | delvis | FINNS: /api/admin/primat-status svarar configured JA/NEJ utan nyckeln och anropar Primats GET /me (plan, dagsbudget, använda rader, reset) - rättelse: jag skrev tidigare att ingen kvot-endpoint fanns | VISAS INTE: ingenting i kontrollrummet läser endpointen. OVERIFIERAT: att /me svarar med de fälten mot det riktiga kontot - kräver admin-token. Varning nära gräns finns inte. Köp/uppgradering = ägarbeslut | Kodläsning primat_client.account_status | — | NEJ |
 | O9 | Scheduler: schema, körningar, nästa körning | delvis | Operations-koll 07:00 med test att den ligger efter importerna | Faktiska körningar och nästa körning i adminvyn | 1 test | #8 | NEJ |
 | O10 | Pricing audit med definierade nämnare | delvis | Auditen körs vid start + efter import, namnger osäkra rader per ingrediens, rubriken i admin visar felet | Live-parsningsvägen granskas inte av auditen. Vad som händer med de 30 raderna = O10b | Enhetstester i båda riktningarna; live-läst | #16 b0e1202 | JA |
 | O10b | Beslut om korrekt märkt osäkerhet i grinden (tillägg) | kräver beslut | Ketchup fick verifierad densitet (LV tabell 10 s.16). Tomatpuré, sirap, currypasta, sambal oelek saknas i källan | BLOCKERAT: ska osäkerhet blockera grinden, eller mätas separat? SJÄLVSTÄNDIGT: ingen mer densitet utan källa | — | #34 (öppen) | NEJ |
