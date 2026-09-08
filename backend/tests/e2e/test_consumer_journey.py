@@ -629,6 +629,48 @@ class BrowserJourney(unittest.TestCase):
         self.assertLess(sekunder, 30.0,
                         f"flödet tog {sekunder:.1f} s till en användbar lista ({varor} varor)")
 
+    def test_angra_veckan_ger_tillbaka_den_forra(self):
+        """U09: ångra en skapad eller ändrad vecka, med förra planen bevarad.
+
+        Koden fanns men ingen väg prövade den. Knappen är dessutom dold
+        tills det finns en historik, så en trasig historik ser ut som en
+        medvetet gömd knapp - och då märks felet först när någon behöver
+        ångra sig.
+        """
+        page = self.page
+        page.goto(self.app())
+        self.complete_onboarding()
+        self.choose_standard_week()
+        första = list(self.local_state()["valda"])
+        self.assertTrue(första)
+
+        # OBS: historiken är redan icke-tom här. Appen skapar en vecka under
+        # onboardingen, och planvalet ersätter den - så den "förra veckan"
+        # är en användaren aldrig såg. Testet mäter därför att historiken
+        # MINSKAR med ett, inte att den börjar tom.
+        historik_innan = len(self.local_state().get("weekHistory") or [])
+
+        # En ny vecka lägger den förra i historiken. Knappen bor på hemvyn.
+        page.click('.bottom-nav-item[data-view="home"]')
+        expect(page.locator("#newWeekBtn")).to_be_visible()
+        page.click("#newWeekBtn")
+        self.choose_standard_week()
+        andra = self.wait_for_state(lambda s: list(s.get("valda") or []) != första,
+                                    what="en ny vecka")["valda"]
+        self.assertNotEqual(sorted(andra), sorted(första))
+
+        page.click('.bottom-nav-item[data-view="home"]')
+        page.click("#weekSheetOpen")
+        expect(page.locator("#restoreWeekBtn")).to_be_visible()
+        page.click("#restoreWeekBtn")
+
+        återställd = self.wait_for_state(
+            lambda s: sorted(s.get("valda") or []) == sorted(första),
+            what="förra veckan tillbaka")
+        self.assertEqual(sorted(återställd["valda"]), sorted(första))
+        # Historiken konsumeras - annars kunde man ångra samma vecka i evighet.
+        self.assertEqual(len(återställd.get("weekHistory") or []), historik_innan)
+
     def test_felaktiga_startval_gar_att_andra_utan_omstart(self):
         """U04: den som svarat fel i onboardingen ska inte behöva börja om.
 
