@@ -55,8 +55,27 @@ test("the three objectives can genuinely disagree on the same pool", () => {
   assert.notEqual(cheapest, balanced, "cheapest and balanced plans should differ when a varied option is nearly as cheap");
 });
 
+test("en vecka får inte förkastas för att GISSNINGEN ligger strax över budgeten", () => {
+  // F2: entry.cost är comboEstimatedCost, inte ett pris. Mätt spann mot
+  // riktiga priser: -12,9 % till +19,5 %. En uppskattning på 900 mot en
+  // budget på 800 kan mycket väl vara 780 i verkligheten.
+  const pool = [{ cost: 900 }, { cost: 2000 }];
+  assert.deepEqual(inBudgetPool(pool, 800), [pool[0]]);
+});
+
+test("marginalen är ändlig - en vecka som är dubbelt så dyr sållas fortfarande", () => {
+  const pool = [{ cost: 800 }, { cost: 1600 }];
+  assert.deepEqual(inBudgetPool(pool, 800), [pool[0]]);
+});
+
+test("marginalen går att stänga av för den som vill räkna hårt", () => {
+  const pool = [{ cost: 900 }, { cost: 700 }];
+  assert.deepEqual(inBudgetPool(pool, 800, 0), [pool[1]]);
+});
+
 test("inBudgetPool falls back to the full pool only when nothing fits budget", () => {
   const pool = [{ combo: [cheapVeg], cost: 100 }, { combo: [midFish], cost: 300 }];
+  // 150 + 20 % = 180, så bara den första ryms; 10 + 20 % rymmer ingen.
   assert.deepEqual(inBudgetPool(pool, 150), [pool[0]]);
   assert.deepEqual(inBudgetPool(pool, 10), pool);
 });

@@ -15,8 +15,32 @@ export function pickBest(pool, scoreFn) {
   return best;
 }
 
-export function inBudgetPool(evaluated, budget) {
-  const inBudget = evaluated.filter(entry => entry.cost <= budget);
+// UPPSKATTNINGEN ÄR INTE PRISET, och den får inte ensam förkasta en vecka
+// mot användarens riktiga budget (F2).
+//
+// entry.cost kommer från comboEstimatedCost: receptens separata inköpspriser
+// summerade. Det talet har tre kända fel. En förpackning som delas mellan två
+// rätter räknas två gånger. Kostnaden skalas linjärt med antal personer fast
+// hela förpackningar inte gör det. Och receptens priser kommer från OLIKA
+// kedjor (48 Willys, 7 Hemköp, 5 City Gross i banken) men summeras ändå.
+//
+// MÄTT MOT RIKTIGA PRISER, inte gissat: tolv veckor om fyra rätter för fyra
+// personer, uppskattning mot /api/pricing/week. Median +4,6 %, spann
+// -12,9 % till +19,5 %. På en budget om 800 kr är det upp till ~160 kr fel
+// åt vardera hållet.
+//
+// Marginalen är satt på den uppmätta överskattningen. Utan den sållades en
+// vecka som RYMS bort för att gissningen råkade landa strax över - och den
+// veckan fick användaren aldrig se. Med den kan en vecka som inte ryms komma
+// med, men då står dess RIKTIGA pris på kortet innan man väljer
+// (syncPlanPricing), så ingen luras. Att hellre visa ett dyrare alternativ
+// med sant pris än att tyst dölja ett som hade fungerat är rätt håll att
+// fela åt.
+export const BUDGET_ESTIMATE_MARGIN = 0.2;
+
+export function inBudgetPool(evaluated, budget, margin = BUDGET_ESTIMATE_MARGIN) {
+  const tak = budget * (1 + margin);
+  const inBudget = evaluated.filter(entry => entry.cost <= tak);
   return inBudget.length ? inBudget : evaluated;
 }
 
