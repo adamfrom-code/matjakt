@@ -592,6 +592,43 @@ class BrowserJourney(unittest.TestCase):
         self.assertEqual(self.console_errors, [])
         self.assertEqual(len(self.batch_requests), 0, "Free ska aldrig hämta livepriser per vara")
 
+    def test_tiden_till_forsta_anvandbara_listan(self):
+        """U03: sikta på ungefär en minut - och MÄT, påstå inte.
+
+        Kravet säger uttryckligen att målet ska mätas. Det som mäts är
+        vägen en riktig förstagångsanvändare tar: öppna appen, svara på
+        onboardingen, välja vecka, och få en inköpslista med riktiga priser.
+        Klockan startar när sidan öppnas och stannar när listan har både
+        varor och en prissatt total - inte när en spinner visas.
+
+        VAD SIFFRAN INTE ÄR. Maskinen skriver inte, den klickar direkt, och
+        servern är lokal utan nätlatens. Mätningen sätter alltså ett GOLV
+        för hur snabbt flödet kan gå, inte hur lång tid en människa
+        faktiskt behöver. Den fångar det den kan fånga: att appen inte
+        själv lägger in minuter av väntan. Gränsen är satt med marginal så
+        att en långsam CI-maskin inte gör testet till en lottning - det
+        som ska larma är en REGRESSION, inte en dålig dag hos GitHub.
+        """
+        page = self.page
+        start = time.monotonic()
+        page.goto(self.app())
+        self.complete_onboarding()
+        self.choose_standard_week()
+        page.click('.bottom-nav-item[data-view="basket"]')
+        expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
+        # "Användbar" = varor OCH ett riktigt pris. En lista utan pris går
+        # inte att handla efter, och en spinner är inte en lista.
+        expect(page.locator("#shoppingCost")).not_to_contain_text("pris hämtas", timeout=30_000)
+        sekunder = time.monotonic() - start
+
+        varor = page.locator("#shoppingList .shopping-item").count()
+        total = page.locator("#shoppingCost").inner_text()
+        self.assertGreater(varor, 0, "listan var tom")
+        self.assertRegex(total, r"\d+ kr", total)
+        print(f"\n[U03] första användbara listan: {sekunder:.1f} s, {varor} varor, total {total!r}")
+        self.assertLess(sekunder, 60.0,
+                        f"flödet tog {sekunder:.1f} s till en användbar lista ({varor} varor)")
+
     def test_gasten_ser_nyttan_och_far_behalla_sin_vecka(self):
         """U02: nyttan före kontokravet, och planen överlever registreringen.
 
