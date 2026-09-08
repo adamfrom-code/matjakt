@@ -1344,7 +1344,7 @@ class AuthHttpTest(unittest.TestCase):
         self.assertEqual(status, 201)
         token = payload["token"]
         self.assertEqual(payload["user"], {
-            "email": email, "premium": False, "plan": "free", "trialEndsAt": None, "trialUsed": False,
+            "email": email, "premium": False, "premiumSource": None, "plan": "free", "trialEndsAt": None, "trialUsed": False,
             "subscriptionStatus": None, "subscriptionPlan": None, "subscriptionPeriodEnd": None,
             "subscriptionCancelAtPeriodEnd": False, "emailVerified": False, "marketingConsent": False,
         })

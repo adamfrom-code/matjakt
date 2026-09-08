@@ -82,7 +82,14 @@ function renderInsights(data) {
     stat(t.registreradeSenaste7Dagarna, "nya senaste 7 dagarna") +
     stat(t.aktivaSenaste7Dagarna, "aktiva senaste 7 dagarna") +
     stat(t.aktivaSenaste28Dagarna, "aktiva senaste 28 dagarna") +
-    stat(t.premium, "Premium");
+    // A01: BETALANDE FÖRST, och kompenserad för sig. Ett samlat "Premium"
+    // svarar inte på frågan om affären bär - en inlöst kod och en betalande
+    // prenumerant såg likadana ut, och det är den enda siffran här som
+    // handlar om pengar. Ingen intäkt räknas fram; det här är konton.
+    stat(t.premiumBetalande, "betalande Premium") +
+    stat(t.premiumKompenserad, "kompenserad Premium") +
+    stat(t.premiumProv, "Premium på prov") +
+    stat(t.premium, "Premium totalt");
 
   const cohorts = data.tratt?.kohorter || [];
   const pct = (part, whole) => whole ? ` <span class="quiet">(${Math.round(100 * part / whole)}%)</span>` : "";

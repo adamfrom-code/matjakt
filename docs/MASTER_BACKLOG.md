@@ -218,14 +218,23 @@ vecka fast de är uppätna. Ändringen påverkar dessutom visade priser.
 
 ## X — ytterligare produktflöden
 
-`X01`–`X17` inventerade, alla `att göra`. X16 (köp hela listan) är
-**blockerat** av avtal/åtkomst: tidigare granskning visade tomt
-providerregister och hemsidefallback, inte färdig korgöverföring.
+| ID | Status | Vad som gäller |
+|---|---|---|
+| X02 vad äter vi ikväll | delvis | `cookModal` "Laga med det du har hemma" finns |
+| X07 dela vecka/recept | delvis | Receptdelning och hushållsinbjudan finns; mottagarens omräknade priser inte granskade |
+| X12 byt rätt med avsikt | **verifierat** | Fem avsikter (billigare, snabbare, barnvänligare, mer protein, använd hemma) matchar kravet, och kostnadsdeltat visas alltid sedan U21 - "Prisändring okänd" när data saknas |
+| X14 erbjudanden | delvis | Kampanjtext per rad och kampanjtorg finns |
+| X15 påminnelse | delvis | Notiskod finns; plattformsstöd och tillstånd inte granskade |
+| X16 köp hela listan | **blockerat, korrekt dokumenterat** | `cart.py` bär de fyra nivåer kravet namnger och säger själv "FÖRBEREDELSE, inte en färdig funktion". Registret är tomt på riktiga providers därför att ingen kedja har avtalad väg in. Tester finns som hindrar att den ljuger: en kedja får inte påstå mer än en hemsidelänk, och ett resultat är komplett bara när ingenting lämnats kvar |
+| X01, X03–X06, X08–X11, X13, X17 | att göra | Features |
 
 ## A — ägarpanelen utöver Operations
 
-`A01`–`A09` inventerade, alla `att göra`. A06 (ekonomi) kräver verifierad
-betaldata; ingen intäktssiffra får härledas ur antal Premium × pris.
+| ID | Status | Vad som gäller |
+|---|---|---|
+| A01 översikt | **klart att testa** | Tratten räknade EN boolean, så en inlöst kod och en betalande prenumerant blev samma siffra. Nu skiljs `premiumBetalande`, `premiumKompenserad` och `premiumProv` åt, och kontrollrummet visar dem var för sig. Datan fanns redan i kontomodellen - bara sammanslagen |
+| A06 ekonomi | **blockerat** | Kräver verifierad betaldata. Ingen intäktssiffra får härledas ur antal Premium × pris - uppdelningen i A01 är konton, inte kronor |
+| A02–A05, A07–A09 | att göra | |
 
 ---
 
