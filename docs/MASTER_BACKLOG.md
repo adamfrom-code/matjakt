@@ -1,5 +1,11 @@
 # Matjakt — kravmatris
 
+> **Den auktoritativa statusen per krav finns i [`KRAVTABELL.md`](KRAVTABELL.md)**, genererad av
+> `backend/scripts/kravtabell.py` med totaler räknade ur raderna. Det här dokumentet bär
+> resonemangen; tabellen bär statusen. Masterinstruktionen har 127 krav (F1–F7, O1–O15,
+> U01–U80, X01–X16, A01–A09); F3b och O10b är tillägg definierade under arbetet. Det finns
+> inget X17 — det var ett skrivfel här som nu är rättat.
+
 Beständig arbetslista från ägarens masterinstruktion 2026-09-07. **Inget krav
 får försvinna härifrån.** Nästa session fortsätter i den här filen i stället
 för att börja om.
@@ -226,7 +232,7 @@ vecka fast de är uppätna. Ändringen påverkar dessutom visade priser.
 | X14 erbjudanden | delvis | Kampanjtext per rad och kampanjtorg finns |
 | X15 påminnelse | delvis | Notiskod finns; plattformsstöd och tillstånd inte granskade |
 | X16 köp hela listan | **blockerat, korrekt dokumenterat** | `cart.py` bär de fyra nivåer kravet namnger och säger själv "FÖRBEREDELSE, inte en färdig funktion". Registret är tomt på riktiga providers därför att ingen kedja har avtalad väg in. Tester finns som hindrar att den ljuger: en kedja får inte påstå mer än en hemsidelänk, och ett resultat är komplett bara när ingenting lämnats kvar |
-| X01, X03–X06, X08–X11, X13, X17 | att göra | Features |
+| X01, X03–X06, X08–X11, X13 | att göra | Features |
 
 ## A — ägarpanelen utöver Operations
 
