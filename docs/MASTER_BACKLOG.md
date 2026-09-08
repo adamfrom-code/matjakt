@@ -236,8 +236,6 @@ vecka fast de är uppätna. Ändringen påverkar dessutom visade priser.
 | A06 ekonomi | **blockerat** | Kräver verifierad betaldata. Ingen intäktssiffra får härledas ur antal Premium × pris - uppdelningen i A01 är konton, inte kronor |
 | A02–A05, A07–A09 | att göra | |
 
-## A — ägarpanelen utöver Operations
-
 ---
 
 ## Mergat, driftsatt och verifierat är tre olika saker
