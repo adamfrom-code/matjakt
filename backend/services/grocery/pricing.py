@@ -790,28 +790,45 @@ def dairy_gram_ml_equivalent(ingredient: str) -> bool:
     return any(folded == name or folded.endswith(name) for name in DAIRY_DENSITY_ONE)
 
 
-# UPPMÄTTA VOLYMVIKTER, gram per milliliter.
+# UPPMÄTT VOLYMVIKT för tomatketchup.
 #
-# Källa: Livsmedelsverkets PM 2024 "Volymvikter, viktförändringsfaktorer och
-# avfall" - sammanställning av vägningar gjorda vid myndigheten 2008-2023.
+# KÄLLA, exakt: Livsmedelsverkets PM 2024 "Volymvikter,
+# viktförändringsfaktorer och avfall", tabell 10 på sidan 16, rubricerad
+# "Vikter (gram) för olika enheter av majonnässallader, röror och andra
+# tillbehör". Radens livsmedelsbeskrivning är "Tomatketchup" (engelska
+# utgåvan, sidan 35: "Tomato ketchup"). Referens 1 i rapportens
+# referenslista = "Volymviktsförsök utförda på Livsmedelsverket 2022-23",
+# alltså myndighetens egen mätning, inte ett citat ur annan litteratur.
 # https://www.livsmedelsverket.se/globalassets/publikationsdatabas/pm/2024/pm-2024-volymvikter-viktforandringsfaktorer-och-avfall.pdf
 #
-# VARFÖR DEN HÄR FINNS. DAIRY_DENSITY_ONE säger att 1 g = 1 ml för allt i
-# mängden. Det är en rimlig köksstandard men inte en mätning, och för
-# ketchup är den 17 % fel: myndigheten har vägt 1 msk till 18 g, inte 15.
+# UPPMÄTTA VÄRDEN:  tsk 6 g (n=20)   msk 18 g (n=20)   dl: INTE UPPMÄTT
 #
-# BARA MÄTTA VÄRDEN. Varje rad har ett n (antal vägningar) i kommentaren.
-# En ingrediens utan uppmätt värde står inte här - den behåller 1,0 via
-# DAIRY_DENSITY_ONE, vilket är ett antagande vi vet om, i stället för en
-# siffra som ser mätt ut. Tomatpuré, sirap, currypasta och sambal oelek
-# saknas i källan och förblir därför osäkra (se O10b i backloggen).
+# INGA MOTSTRIDIGA VÄGAR. Med _VOLUME:s mått (tsk 5 ml, msk 15 ml) ger båda
+# mätningarna samma tal: 6/5 = 1,20 och 18/15 = 1,20. Ett msk-recept och ett
+# tsk-recept får därför exakt samma vikt per mängd, och 1 msk = 3 tsk går
+# ihop (18 = 3 x 6). Hade de två mätningarna pekat åt olika håll vore en
+# enda densitet fel modell - då hade vikten per enhet behövt lagras var för
+# sig. Det gör de inte för ketchup.
+#
+# DL ÄR EN EXTRAPOLERING, inte en mätning. Källan lämnar dl-kolumnen tom.
+# 1 dl blir 120 g genom samma densitet som de två mätta enheterna ger. Det
+# är en rimlig grund men bär inte samma tyngd som raderna ovan, och det ska
+# stå här och inte upptäckas av någon senare.
+#
+# VAD DEN HÄR SIFFRAN ÄR OCH INTE ÄR. Ett uppmätt genomsnitt över 20
+# vägningar är en OMRÄKNINGSGRUND, inte ett löfte om att just den flaska
+# kunden lyfter ur hyllan väger så. Den gör paketräkningen bättre grundad;
+# den gör inte priset exakt. De två sakerna hålls isär: raden är
+# exactPackaging=True därför att enheterna GÅR att räkna om, medan
+# priskällan (VERIFIED_STORE_PRICE / referenspris) svarar för om priset
+# stämmer.
+#
+# BARA KETCHUP. Samma tabell har rader för crème fraiche, yoghurt, filmjölk
+# och kvarg, och en annan tabell för mjöl och havregryn. De är inte inlagda:
+# ett liknande namn i en tabell är inte en granskad produktmatchning. De
+# ligger i docs/VOLYMVIKTER_ATT_GRANSKA.md med källa och konsekvens.
 VERIFIED_DENSITY_G_PER_ML = {
-    "ketchup": 1.20,          # 18 g/msk, n=20
-    "creme fraiche": 0.95,    # 95 g/dl, n=10
-    "grekisk yoghurt": 1.08,  # 108 g/dl, n=10
-    "filmjolk": 1.10,         # 110 g/dl, n=20
-    "kvarg": 1.11,            # 111 g/dl, n=10
-    "mjolk": 0.98,            # lättmjölk 0,5 %, 98 g/dl, n=20
+    "ketchup": 1.20,
 }
 
 
@@ -900,16 +917,16 @@ LITER_PER_BULJONGTARNING = 0.5
 
 # Bakvarornas dl->gram enligt svensk kökstabell (varje recepthäfte bär
 # samma siffror): 1 dl vetemjöl väger 60 g, strösocker 85 g, osv.
-# Gram per deciliter. Värden märkta LV är uppmätta av Livsmedelsverket
-# (PM 2024, n = antal vägningar); övriga är köksstandard och har alltså
-# inte samma tyngd - skillnaden står här så ingen tror att hela tabellen
-# är mätt.
+#
+# Livsmedelsverkets PM 2024 har mätvärden som avviker (vetemjöl 56 g/dl,
+# havregryn 39). De är INTE inlagda här: en tabellrad med liknande namn är
+# inte en granskad produktmatchning, och "vetemjöl" i receptbanken kan vara
+# en annan sil- eller siktningsgrad än den myndigheten vägde. Skillnaderna
+# är samlade i docs/VOLYMVIKTER_ATT_GRANSKA.md för ett eget beslut.
 BAKING_GRAMS_PER_DL = {
-    "vetemjol": 56,           # LV, n=50 (var 60 - köksstandard)
-    "mjol": 56,               # samma vara
-    "rågmjol": 55, "grahamsmjol": 55,
+    "vetemjol": 60, "mjol": 60, "rågmjol": 55, "grahamsmjol": 55,
     "socker": 85, "strosocker": 85, "florsocker": 55, "farinsocker": 80,
-    "strobrod": 40, "havregryn": 39, "kokos": 40, "kakao": 40,   # havregryn: LV, n=30 (var 35)
+    "strobrod": 40, "havregryn": 35, "kokos": 40, "kakao": 40,
     "potatismjol": 80, "majsstarkelse": 70, "mannagryn": 70, "kornmjol": 55,
 }
 

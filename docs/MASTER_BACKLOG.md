@@ -307,34 +307,30 @@ releasegrinden? I dag kan grinden aldrig bli grön så länge något recept
 mäter en tät vara i msk. Alternativet är att recepten anger gram - det är
 receptdata, alltså ditt innehåll, inte prislogik.
 
-**Sidofynd med källa - ÅTGÄRDAT efter ägarbeslut 2026-09-08.** Samma PM
-väger flera av de varor motorn antog 1 g = 1 ml för. `VERIFIED_DENSITY_G_PER_ML`
-bär nu de uppmätta värdena, med n i kommentaren per rad:
+**Sidofynd med källa - ketchupen åtgärdad efter ägarbeslut 2026-09-08.**
 
-| Vara | Antaget | Uppmätt | n |
-|---|---|---|---|
-| Tomatketchup | 1,00 | **1,20** | 20 |
-| Crème fraiche | 1,00 | **0,95** | 10 |
-| Grekisk yoghurt | 1,00 | **1,08** | 10 |
-| Filmjölk | 1,00 | **1,10** | 20 |
-| Kvarg | 1,00 | **1,11** | 10 |
-| Mjölk | 1,00 | **0,98** | 20 |
-| Vetemjöl | 60 g/dl | **56 g/dl** | 50 |
-| Havregryn | 35 g/dl | **39 g/dl** | 30 |
+Källa, exakt: Livsmedelsverkets PM 2024, **tabell 10 på sidan 16**,
+"Vikter (gram) för olika enheter av majonnässallader, röror och andra
+tillbehör", raden **"Tomatketchup"**. Uppmätt **tsk 6 g (n=20)** och
+**msk 18 g (n=20)**; dl-kolumnen är TOM. Referens 1 = myndighetens egna
+volymviktsförsök 2022-23.
 
-Effekten syns först vid förpackningsgränsen, och går åt BÅDA hållen:
+Båda mätningarna ger samma tal - 6/5 = 1,20 och 18/15 = 1,20 - så ett
+msk-recept och ett tsk-recept får exakt samma vikt, och 1 msk = 3 tsk går
+ihop. Inga motstridiga omräkningsvägar. **1 dl = 120 g är en extrapolering**
+från samma densitet, inte en mätning, och det står i koden.
 
-| Fall | Antaget 1,0 | Uppmätt | Varför |
-|---|---|---|---|
-| 5 dl ketchup | 24,90 | **49,80** | väger 600 g, ryms inte i 500 g |
-| 2,05 dl crème fraiche | 37,00 | **18,50** | väger 195 g, ryms i 200 g |
-| 4,7 dl grekisk yoghurt | 22,00 | **44,00** | väger 508 g, ryms inte i 500 g |
-| 10,1 dl mjölk | 29,80 | **14,90** | väger 990 g, ryms i litern |
+Ett uppmätt genomsnitt över 20 vägningar är en **omräkningsgrund**, inte ett
+löfte om att just den flaskan väger så. Paketräkningens tillförlitlighet och
+prisets tillförlitlighet är skilda saker: raden är `exactPackaging=True`
+därför att enheterna GÅR att räkna om, medan `priceTier` svarar för om
+priset stämmer.
 
-Varor källan SAKNAR behåller 1,0 via `DAIRY_DENSITY_ONE` - senap, majonnäs,
-sriracha, gräddfil, keso. Ett antagande vi vet om är bättre än en siffra
-som ser mätt ut. De fyra osäkra (tomatpuré, sirap, currypasta, sambal
-oelek) står kvar som osäkra, och revisionen är fortsatt röd med rätta.
+**Bara ketchup är ändrad.** Samma rapport har avvikande mätvärden för crème
+fraiche, grekisk yoghurt, filmjölk, kvarg, mjölk, vetemjöl och havregryn.
+De är inte inlagda - fyra av dem kräver ett produktval receptbanken inte
+gör (fetthalt, naturell mot smaksatt). Samlade med källa, produktfråga och
+konsekvens i **`docs/VOLYMVIKTER_ATT_GRANSKA.md`**.
 
 ## Dubbla rader för samma vara
 
@@ -567,44 +563,6 @@ den får vänta. Frontendens aggregat känner inte till backendens
 | health visar om larmen går att skicka | #10 **mergad** | Live: mottagare och transport bekräftade |
 | Driftstatus + larm med dedupe och recovery | #8 **mergad** | 21 tester; ett av dem hittade att en API-nyckel kunde mejlas i klartext |
 | F1: ofullständig kasse krönas inte | #9 **mergad** | Regressionstest med exakt scenariot ur granskningen |
-
-## E2E-fallen — OLÖST
-
-Orsaken är inte funnen. Den här posten står kvar som olöst tills det finns
-ett reproducerbart fall och en verifierad förklaring.
-
-**Två slutsatser jag har dragit och tagit tillbaka.** Först skrev jag att
-fixturen tappade prissättningen — fel. Sedan att fixturens enhetsval var
-orsaken — också fel, och formulerat som om saken vore avgjord.
-
-**Vad modelleringen faktiskt visar.** Jag räknade täckning för 20 000
-slumpade veckor per storlek, aggregerat som appens lista gör, och ingen låg
-under 85 %. Det **utesluter ingenting**: modellen antog likformigt slumpade
-recept, en kedja, inga extravaror, inget skafferi och ingen tidsaspekt, och
-den återskapade aldrig den felande resan. Rätt formulering är **inte
-reproducerat i det modellerade urvalet** — receptbanken och fixturen är
-fortfarande möjliga bidragande orsaker.
-
-**Vad som är konstaterat i kod, inte antaget:**
-
-- `coveragePercent` räknar EXAKTA rader, inte prissatta
-  (`pricing.price_list`). Under `MIN_COVERAGE_FOR_COMPARISON = 85` slutar en
-  kedja vara jämförbar. CI:s diagnosrad visade `16/19 = 84,2 %`.
-- Skafferitäckta rader hoppas över före `requested = len(matched) +
-  len(missing)` (`pricing.py:1650`), så skafferiet sänker inte nämnaren.
-- Veckan är slumpad: `everydayRank` (`app.js:902`) lägger `Math.random()` på
-  rankningen, avsiktligt.
-- Fixturen hade två äkta defekter (`MIN(unit)` gav mjöl i literförpackning,
-  msk/tsk föll till "1 st"). Rättade i PR #19.
-
-**Hypoteser, inte slutsatser:** extravaror i kassen, hushållsrader, annan
-data i CI än lokalt, och tidsberoende (två prissättningsomgångar efter
-checkout). Ingen av dem är prövad mot ett verkligt felande anrop.
-
-**Nästa steg:** PR #20 skriver nu ut vilka rader som är osäkra respektive
-saknade, plus kassens innehåll. Det ska kompletteras så request och response
-kopplas ihop för exakt det felande anropet. Höj inte timeouten och sänk inte
-kvalitetskravet.
 
 ## Kvar för ägaren
 
