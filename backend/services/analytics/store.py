@@ -166,10 +166,16 @@ class AnalyticsStore:
                 entry["aktiverad"] = day
         return result
 
-    def funnel(self, weeks: int = 8, premium_of=None) -> dict:
+    def funnel(self, weeks: int = 8, premium_of=None, premium_source_of=None) -> dict:
         """Tratten per registreringsvecka plus totaler. `premium_of(row)`
         avgör om ett konto är Premium (kontotjänstens egen regel, så tratten
-        och /auth/me alltid är överens)."""
+        och /auth/me alltid är överens).
+
+        `premium_source_of(row)` säger VARFÖR: "subscription", "trial",
+        "comped" eller None. A01 kräver att gratis och kompenserad Premium
+        skiljs från faktiskt betalande - en boolean räckte inte, och den
+        som ska bedöma om affären bär behöver veta vilken sorts Premium
+        siffran består av."""
         today = datetime.now(timezone.utc).date()
         columns = {row[1] for row in self._connection.execute("PRAGMA table_info(users)")}
         has_last_active = "last_active_day" in columns
@@ -178,6 +184,7 @@ class AnalyticsStore:
 
         cohorts: dict[str, dict] = {}
         active_7, active_28, premium_total, registered_7 = set(), set(), 0, 0
+        per_kalla = {"subscription": 0, "trial": 0, "comped": 0}
         week_cutoff = today - timedelta(days=7 * weeks)
         for row in users:
             user_id = int(row["id"])
@@ -198,6 +205,10 @@ class AnalyticsStore:
             if created >= today - timedelta(days=6):
                 registered_7 += 1
             premium_total += 1 if is_premium else 0
+            if is_premium and premium_source_of:
+                källa = premium_source_of(row)
+                if källa in per_kalla:
+                    per_kalla[källa] += 1
             if created < week_cutoff:
                 continue
             cohort = cohorts.setdefault(_iso_week(created), {
@@ -221,12 +232,20 @@ class AnalyticsStore:
                 "aktivaSenaste7Dagarna": len(active_7),
                 "aktivaSenaste28Dagarna": len(active_28),
                 "premium": premium_total,
+                # Uppdelningen är ETT konto per rad, aldrig en uppskattning.
+                # Summan kan vara mindre än "premium" om källan är okänd -
+                # det är ärligare än att tvinga in resten någonstans.
+                "premiumBetalande": per_kalla["subscription"],
+                "premiumProv": per_kalla["trial"],
+                "premiumKompenserad": per_kalla["comped"],
             },
             "kohorter": ordered,
             "definitioner": {
                 "skapadeVecka": f"minst en händelse '{ACTIVATION_EVENT}' inloggad",
                 "tillbakaEfter7Dagar": f"aktiv någon dag minst {RETURN_AFTER_DAYS} dagar efter registreringen",
                 "mogen": "alla i kohorten har haft sju dagar på sig - först då är återkomstsiffran fullständig",
+                "premiumBetalande": "aktiv prenumeration hos betalleverantören - inte inlöst kod, inte prov",
+                "premiumKompenserad": "Premium given utan betalning, t.ex. inlöst kod",
             },
         }
 

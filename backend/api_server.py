@@ -554,7 +554,9 @@ def insights_payload() -> dict:
     registreringsvecka, händelserna dag för dag och fritextfeedbacken.
     Premium avgörs av kontotjänstens egen regel så tratten och /auth/me
     aldrig säger olika saker om samma konto."""
-    funnel = ANALYTICS.funnel(premium_of=lambda row: AccountStore._to_public(row)["premium"])
+    funnel = ANALYTICS.funnel(
+        premium_of=lambda row: AccountStore._to_public(row)["premium"],
+        premium_source_of=lambda row: AccountStore._to_public(row)["premiumSource"])
     events = ANALYTICS.daily_events(14)
     return {
         "tratt": funnel,

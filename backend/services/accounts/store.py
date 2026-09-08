@@ -182,9 +182,24 @@ class AccountStore:
         subscription_active = sub_status in BILLING_LIVE_STATUSES and not _period_expired(period_end)
         premium_active = bool(row["premium"]) or trial_active or subscription_active
         plan_raw = row["subscription_plan"] if "subscription_plan" in keys else None
+        # A01: VARFÖR kontot är Premium, inte bara ATT det är det.
+        #
+        # Tratten räknade en boolean, så en kod-inlöst Premium och en
+        # betalande Stripe-prenumerant blev samma siffra. För en ägare som
+        # vill veta om affären går ihop är det just den siffran som inte
+        # får blandas ihop.
+        #
+        # Ordningen är sanningsordning, inte prioritetsordning: den som HAR
+        # en aktiv prenumeration betalar, oavsett vilka andra flaggor som
+        # råkar vara satta på kontot.
+        premium_source = ("subscription" if subscription_active
+                          else "trial" if trial_active
+                          else "comped" if bool(row["premium"])
+                          else None)
         return {
             "email": row["email"],
             "premium": premium_active,
+            "premiumSource": premium_source,
             # The plan name the feature system keys on. Derived here so every
             # consumer (auth/me, entitlements, tests) agrees on one answer.
             "plan": ("premium_yearly" if premium_active and plan_raw and "year" in str(plan_raw).lower()
