@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   BUDGET_ALERT_MIN_WEEKS, SWAP_INTENTS, pantryOverlap, rankSwapOptions,
-  recentlyEatenPenalty, swapReasonText, weekCostAlert,
+  recentlyEatenPenalty, swapCostText, swapReasonText, weekCostAlert,
 } from "../frontend/app/src/services/swap.js";
 
 const current = { id: "nu", namn: "Lax", portionspris: 60, tid: 40, protein: 30, ingredienser: ["Laxfilé", "Potatis"] };
@@ -99,4 +99,22 @@ test("alla fem avsikter finns och har etiketter", () => {
   assert.equal(SWAP_INTENTS.length, 5);
   assert.ok(SWAP_INTENTS.every(intent => intent.id && intent.label));
   assert.equal(BUDGET_ALERT_MIN_WEEKS, 4);
+});
+
+test("prisändringen står FÖRE bytet, även när man byter av andra skäl", () => {
+  // U21. swapReasonText säger bara något om priset när avsikten är att
+  // spara pengar. Byter man för att det ska gå fortare kan veckan bli
+  // dyrare utan ett ord - och det är just det man behöver veta.
+  const current = { portionspris: 30 };
+  assert.equal(swapCostText({ price: 22 }, current), "8 kr billigare per portion");
+  assert.equal(swapCostText({ price: 41 }, current), "11 kr dyrare per portion");
+  assert.equal(swapCostText({ price: 30 }, current), "Samma pris per portion");
+});
+
+test("saknad prisdata sägs rakt ut, den ser inte ut som noll skillnad", () => {
+  // "Saknas data: ange det" står uttryckligen i kravet.
+  assert.equal(swapCostText({ price: null }, { portionspris: 30 }), "Prisändring okänd");
+  assert.equal(swapCostText({ price: 22 }, { portionspris: null }), "Prisändring okänd");
+  assert.equal(swapCostText({}, {}), "Prisändring okänd");
+  assert.equal(swapCostText(null, null), "Prisändring okänd");
 });

@@ -736,6 +736,7 @@ button{color:inherit}
 .household-shared-note{margin:0 4px 14px;color:var(--muted);font-size:13px}
 
 /* ---- Basvarufrågan: en fråga, inte en lista ---------------------------- */
+.swap-option-cost{display:block;color:var(--muted);font-size:12px}
 .assumed-home{margin:18px 0}
 .assumed-home .section-help{margin:0 0 10px}
 .assumed-home-list{display:flex;flex-wrap:wrap;gap:8px}

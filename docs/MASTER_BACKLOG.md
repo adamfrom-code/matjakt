@@ -149,7 +149,24 @@ Inventerat i koden, inte gissat:
 | U16 köksutrustning | **att göra** | Inget utrustningsbegrepp |
 | U17 säg när kraven inte går ihop | **klart att testa** | Allergier lättas ALDRIG tyst: `filterByDiet` körs först i återfallsvägen, med synonymexpansion. Ny varning när veckan blir kortare än begärt eller tom |
 | U18 inställning raderar inte planen | **verifierat** | `refreshAfterSettingsChange` renderar om en vecka finns och skapar bara när ingen finns. E2E i U04 bekräftar att veckan lever kvar |
-| Pengar | U19–U30 | att göra (U19 = F1, **pågår**) |
+| Pengar | U19–U30 | **delvis** — se raderna nedan |
+
+### U19–U30 i detalj
+
+| ID | Status | Vad som gäller |
+|---|---|---|
+| U19 rättvisa jämförelser | **verifierat** | F1 mergad: `compare_chains` kräver identiska saknade-mängder, annars `different_baskets` |
+| U20 delade förpackningar över veckan | **verifierat, mätt** | Servern aggregerar veckan före förpackningsräkningen. Två recept med Gräslök och Ägg gemensamt kostade **30,75 kr mindre** (3,1 %) prissatta tillsammans än var för sig |
+| U21 kostnadsförändring före byte | **klart att testa** | Priset stod bara när man bytte FÖR att spara pengar; bytte man för tid kunde veckan bli dyrare utan ett ord. Nu står prisändringen alltid, och "Prisändring okänd" när data saknas |
+| U22 jämför med vanlig butik | **att göra** | Inget begrepp för användarens vanliga butik |
+| U23 butiker användaren accepterar | behöver verifieras | `storeSelectionForPricing` och `pinnedBranch` finns; urvalsregeln inte granskad |
+| U24 avstånd intill prisskillnad | behöver verifieras | Avstånd visas i butikskorten; "genomförbar helhandling först" inte granskad |
+| U25 medlems- och flerköpspris | **delvis** | Konservativt RÄTT: `effective_price` använder aldrig medlems- eller flerköpspris, kampanj med passerat `valid_to` faller bort, orimliga värden saneras. Ingen summa underskattas. Frivilligt medlemskap saknas — feature |
+| U26 dyra engångsförpackningar | **att göra** | Ingen förklaring av varför en vara är dyr |
+| U27 billigare produktval | **att göra** | Inget alternativval per vara |
+| U28 extravaror separat men i totalen | **verifierat** | Egen sektion "Extra du lagt till"; `extrasCost` läggs till i handlingens total; portionspriserna kommer per recept från backend och kan strukturellt inte innehålla tvättmedel |
+| U29 rättvis besparingshistorik | **verifierat** | F4 mergad: dedupering per veckonyckel |
+| U30 kvarvarande mängd efter veckan | **att göra** | Ingen restmängd visas |
 | I butiken | U31–U42 | att göra |
 | Matlagning | U43–U52 | att göra |
 | Skafferi och rester | U53–U60 | att göra |
