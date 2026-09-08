@@ -51,6 +51,36 @@
   .bars i { display:inline-block; width:5px; background:#15803d; border-radius:1px; min-height:1px; opacity:.85; }
   .quiet { color:var(--muted); }
   .feedback li { margin:.35rem 0; white-space:normal; }
+
+  /* O13: MOBIL. Mätt vid 375 px innan något ändrades: sidan overflowade
+     inte (.scroll håller tabellerna inne), men Kedjor-tabellen var 1 424
+     px bred i ett 341 px kort och sju knappar låg under 44 px. Den
+     tabellen är driftens viktigaste vy och ska gå att läsa i handen. */
+  @media (max-width: 720px) {
+    body { padding:1rem .75rem 4rem; }
+    button { min-height:44px; }
+    .row > button, .row > select, .row > input { min-height:44px; }
+    /* Kedjor: kort i stället för tabell. Rubriken hämtas ur data-label. */
+    #chains thead { display:none; }
+    #chains, #chains tbody { display:block; }
+    #chains tr { display:block; padding:.55rem .8rem; margin:0 0 .6rem;
+                 border:1px solid var(--line); border-radius:12px; }
+    #chains td { display:flex; justify-content:space-between; align-items:center; gap:.8rem;
+                 padding:.3rem 0; border:0; white-space:normal; }
+    #chains td::before { content:attr(data-label); color:var(--muted); font-size:.74rem;
+                         text-transform:uppercase; letter-spacing:.03em; flex:0 0 auto; }
+    #chains td:first-child { font-size:1.05rem; padding-bottom:.45rem; border-bottom:1px solid var(--line); }
+    #chains td:first-child::before { content:none; }
+    #chains td[colspan] { display:block; }
+    #chains td[colspan]::before { content:none; }
+    #chains td[data-label="Åtgärd"] { justify-content:flex-end; padding-top:.5rem; }
+    #chains td[data-label="Åtgärd"]::before { content:none; }
+    #chains td[data-label="Åtgärd"] button { width:100%; }
+    /* De mindre tabellerna får behålla sin sidscroll, men scrollningen ska
+       synas: en högerkant som tonar bort säger "det finns mer". */
+    .scroll { -webkit-overflow-scrolling:touch;
+              mask-image:linear-gradient(to right, #000 calc(100% - 2rem), transparent); }
+  }
 </style>
 </head>
 <body>

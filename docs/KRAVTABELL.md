@@ -7,12 +7,12 @@ Genererad av `backend/scripts/kravtabell.py`. **129 krav**: masterinstruktionens
 | Status | Antal |
 |---|---:|
 | verifierat | 9 |
-| klart att testa | 11 |
+| klart att testa | 12 |
 | delvis | 24 |
 | behöver verifieras | 5 |
 | kräver beslut | 3 |
 | blockerat | 5 |
-| att göra | 72 |
+| att göra | 71 |
 | **summa** | **129** |
 
 **Färdiga (verifierat): 9 av 129.** 'Klart att testa' räknas inte som färdigt.
@@ -61,7 +61,7 @@ Verifierat i produktion = JA bara när något faktiskt lästes från matjakt.onr
 | O10b | Beslut om korrekt märkt osäkerhet i grinden (tillägg) | kräver beslut | Ketchup fick verifierad densitet (LV tabell 10 s.16). Tomatpuré, sirap, currypasta, sambal oelek saknas i källan | BLOCKERAT: ska osäkerhet blockera grinden, eller mätas separat? SJÄLVSTÄNDIGT: ingen mer densitet utan källa | — | #34 (öppen) | NEJ |
 | O11 | Deploy: commit, tider, avvikelse | delvis | health.commit; revisionen bär sin egen commit | Jämförelse mot förväntad deploy saknas | — | #16 | JA (fälten finns) |
 | O12 | Skyddat admin-API, inte bara dold knapp | behöver verifieras | _admin_ok() finns på endpointerna | Negativa tester för hushållsmedlem saknas | — | — | NEJ |
-| O13 | Mobilanpassad admin | att göra | — | Påbörjas nu | — | — | NEJ |
+| O13 | Mobilanpassad admin | klart att testa | Under 720 px: Kedjor-tabellen (13 kolumner, 1 424 px) ritas som kort per kedja; knappar min 44 px; sidscroll med synlig kant | Kontroll på riktig telefon (U79) och mot produktionsdata | Mätt i browser: 375 px före/efter, 1 280 px utan regression | #36 | NEJ |
 | O14 | Testlista för Operations | delvis | 21+ tester (chain_health 9, alerts 12) | Samlad lista saknas | — | #8 | NEJ |
 | O15 | Active stores + kvotmonitorering | att göra | — | De fyra definitionerna (register/valda/färska/kundtillgängliga) ska hållas isär | — | — | NEJ |
 | U01 | Förklara budgetens omfattning | verifierat | 'Gäller 4 middagar för 2 personer. Frukost, lunch och hushållsvaror ingår inte.' i onboarding + Justera veckan, aria-label på hemkortet | — | budget-scope.test.js (4), browser 375 px | #17 fc97052 | NEJ |
