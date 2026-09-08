@@ -129,7 +129,26 @@ först enligt ägarens egen faseordning.
 | U04 | **verifierat** | E2E: alla fyra startval ändras i Justera veckan - personer, middagar, budget, postnummer, butik - och slår igenom både i lagringen och i gränssnittet (omfattningstexten följer med). Veckan lever kvar, ingen omladdning |
 | U05 | **verifierat** | E2E bryter `/api/pricing/week` i nätlagret och kräver att beskedet "pris saknas just nu" kommer inom 45 s. Kontrollerar också att texten är fri från HTTP-koder, `undefined`, `NaN` och stacktrace, och att listan lever kvar. Felet som en gång strandade varje öppen telefon (synknyckeln låg kvar efter ett misslyckat anrop) har nu ett test |
 | U06 | **verifierat** | #21 mergad och driftsatt. `står redan på listan` och `lägg till i inköpslistan` bekräftade i bundlet. Kvarstående lucka i extravarornas pris är dokumenterad, inte dold |
-| Veckoplanering | U07–U18 | att göra |
+| Veckoplanering | U07–U18 | **delvis** — se raderna nedan |
+
+### U07–U18 i detalj
+
+Inventerat i koden, inte gissat:
+
+| ID | Status | Vad som finns |
+|---|---|---|
+| U07 lås middagar | **att göra** | Ingen låsning finns. `pinnedBranch` gäller butik, inte rätter |
+| U08 flytta mellan dagar | **att göra** | Ingen flyttfunktion |
+| U09 ångra vecka | **behöver verifieras** | `weekHistory` sparar 12 planer och går att återställa. Inget test |
+| U10 portioner per dag | **att göra** | Portioner är ett värde för hela veckan |
+| U11 återkommande favoriter | **att göra** | Favoriter finns, men ingen återkomst med paus |
+| U12 nytt mot bekant | **att göra** | `recentlyEatenPenalty` finns i swap, men inget val för användaren |
+| U13 egna middagar | **att göra** | Inga användarskapade recept |
+| U14 gäster | **att göra** | Ingen skalning av enskild rätt |
+| U15 aktiv arbetsinsats | **att göra** | Bara total tid (`maxTid`) |
+| U16 köksutrustning | **att göra** | Inget utrustningsbegrepp |
+| U17 säg när kraven inte går ihop | **klart att testa** | Allergier lättas ALDRIG tyst: `filterByDiet` körs först i återfallsvägen, med synonymexpansion. Ny varning när veckan blir kortare än begärt eller tom |
+| U18 inställning raderar inte planen | **verifierat** | `refreshAfterSettingsChange` renderar om en vecka finns och skapar bara när ingen finns. E2E i U04 bekräftar att veckan lever kvar |
 | Pengar | U19–U30 | att göra (U19 = F1, **pågår**) |
 | I butiken | U31–U42 | att göra |
 | Matlagning | U43–U52 | att göra |
