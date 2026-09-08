@@ -790,6 +790,42 @@ def dairy_gram_ml_equivalent(ingredient: str) -> bool:
     return any(folded == name or folded.endswith(name) for name in DAIRY_DENSITY_ONE)
 
 
+# UPPMÄTTA VOLYMVIKTER, gram per milliliter.
+#
+# Källa: Livsmedelsverkets PM 2024 "Volymvikter, viktförändringsfaktorer och
+# avfall" - sammanställning av vägningar gjorda vid myndigheten 2008-2023.
+# https://www.livsmedelsverket.se/globalassets/publikationsdatabas/pm/2024/pm-2024-volymvikter-viktforandringsfaktorer-och-avfall.pdf
+#
+# VARFÖR DEN HÄR FINNS. DAIRY_DENSITY_ONE säger att 1 g = 1 ml för allt i
+# mängden. Det är en rimlig köksstandard men inte en mätning, och för
+# ketchup är den 17 % fel: myndigheten har vägt 1 msk till 18 g, inte 15.
+#
+# BARA MÄTTA VÄRDEN. Varje rad har ett n (antal vägningar) i kommentaren.
+# En ingrediens utan uppmätt värde står inte här - den behåller 1,0 via
+# DAIRY_DENSITY_ONE, vilket är ett antagande vi vet om, i stället för en
+# siffra som ser mätt ut. Tomatpuré, sirap, currypasta och sambal oelek
+# saknas i källan och förblir därför osäkra (se O10b i backloggen).
+VERIFIED_DENSITY_G_PER_ML = {
+    "ketchup": 1.20,          # 18 g/msk, n=20
+    "creme fraiche": 0.95,    # 95 g/dl, n=10
+    "grekisk yoghurt": 1.08,  # 108 g/dl, n=10
+    "filmjolk": 1.10,         # 110 g/dl, n=20
+    "kvarg": 1.11,            # 111 g/dl, n=10
+    "mjolk": 0.98,            # lättmjölk 0,5 %, 98 g/dl, n=20
+}
+
+
+def verified_density(ingredient: str) -> float | None:
+    """Uppmätt densitet för varan, eller None när källan saknar den.
+
+    Längsta träffen vinner: "grekisk yoghurt" ska inte falla tillbaka på
+    "yoghurt", och "mjolk" får inte fånga "filmjolk"."""
+    folded = _fold(ingredient)
+    träffar = [(len(namn), täthet) for namn, täthet in VERIFIED_DENSITY_G_PER_ML.items()
+               if folded == namn or folded.endswith(namn)]
+    return max(träffar)[1] if träffar else None
+
+
 def convert_amount(amount: float | None, from_unit: str | None, to_unit: str | None) -> float | None:
     """Converts between mass units, or between volume units. Returns None when
     the two units aren't comparable (e.g. 'st' vs 'g') rather than assuming a
@@ -864,10 +900,16 @@ LITER_PER_BULJONGTARNING = 0.5
 
 # Bakvarornas dl->gram enligt svensk kökstabell (varje recepthäfte bär
 # samma siffror): 1 dl vetemjöl väger 60 g, strösocker 85 g, osv.
+# Gram per deciliter. Värden märkta LV är uppmätta av Livsmedelsverket
+# (PM 2024, n = antal vägningar); övriga är köksstandard och har alltså
+# inte samma tyngd - skillnaden står här så ingen tror att hela tabellen
+# är mätt.
 BAKING_GRAMS_PER_DL = {
-    "vetemjol": 60, "mjol": 60, "rågmjol": 55, "grahamsmjol": 55,
+    "vetemjol": 56,           # LV, n=50 (var 60 - köksstandard)
+    "mjol": 56,               # samma vara
+    "rågmjol": 55, "grahamsmjol": 55,
     "socker": 85, "strosocker": 85, "florsocker": 55, "farinsocker": 80,
-    "strobrod": 40, "havregryn": 35, "kokos": 40, "kakao": 40,
+    "strobrod": 40, "havregryn": 39, "kokos": 40, "kakao": 40,   # havregryn: LV, n=30 (var 35)
     "potatismjol": 80, "majsstarkelse": 70, "mannagryn": 70, "kornmjol": 55,
 }
 
@@ -1486,14 +1528,20 @@ class RecipePricingEngine:
                     and _fold(package_unit) in _MASS
                     and (grams := baking_grams(ingredient, amount, unit)) is not None):
                 effective_amount, effective_unit = grams, "g"
-            # Mejeri och släta såser: 1 g = 1 ml enligt köksstandard.
+            # Mejeri och släta såser. Uppmätt densitet där Livsmedelsverket
+            # har vägt varan, annars köksstandardens 1 g = 1 ml.
             elif dairy_gram_ml_equivalent(ingredient) and package_unit:
                 pf = _fold(package_unit)
                 uf = _fold(unit)
+                täthet = verified_density(ingredient) or 1.0
                 if uf in _VOLUME and pf in _MASS:
-                    effective_amount, effective_unit = convert_amount(amount, unit, "ml"), "g"
+                    ml = convert_amount(amount, unit, "ml")
+                    effective_amount = ml * täthet if ml is not None else None
+                    effective_unit = "g"
                 elif uf in _MASS and pf in _VOLUME:
-                    effective_amount, effective_unit = convert_amount(amount, unit, "g"), "ml"
+                    gram = convert_amount(amount, unit, "g")
+                    effective_amount = gram / täthet if gram is not None else None
+                    effective_unit = "ml"
             # Styckrecept mot gramvara: väg om via styckvikttabellen.
             if (_fold(unit) in ("st", "styck") and package_unit
                     and _fold(package_unit) in _MASS):

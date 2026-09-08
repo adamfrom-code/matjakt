@@ -307,11 +307,34 @@ releasegrinden? I dag kan grinden aldrig bli grön så länge något recept
 mäter en tät vara i msk. Alternativet är att recepten anger gram - det är
 receptdata, alltså ditt innehåll, inte prislogik.
 
-**Sidofynd med källa:** samma PM anger **tomatketchup till 18 g/msk**
-(n=20). Koden behandlar ketchup som 1 g/ml i `DAIRY_DENSITY_ONE`, alltså
-15 g - 17 % för lågt. Verifierat underlag finns alltså här, till skillnad
-från de fyra ovan. Inte ändrat: det påverkar priser och hör till samma
-beslut som raden ovan.
+**Sidofynd med källa - ÅTGÄRDAT efter ägarbeslut 2026-09-08.** Samma PM
+väger flera av de varor motorn antog 1 g = 1 ml för. `VERIFIED_DENSITY_G_PER_ML`
+bär nu de uppmätta värdena, med n i kommentaren per rad:
+
+| Vara | Antaget | Uppmätt | n |
+|---|---|---|---|
+| Tomatketchup | 1,00 | **1,20** | 20 |
+| Crème fraiche | 1,00 | **0,95** | 10 |
+| Grekisk yoghurt | 1,00 | **1,08** | 10 |
+| Filmjölk | 1,00 | **1,10** | 20 |
+| Kvarg | 1,00 | **1,11** | 10 |
+| Mjölk | 1,00 | **0,98** | 20 |
+| Vetemjöl | 60 g/dl | **56 g/dl** | 50 |
+| Havregryn | 35 g/dl | **39 g/dl** | 30 |
+
+Effekten syns först vid förpackningsgränsen, och går åt BÅDA hållen:
+
+| Fall | Antaget 1,0 | Uppmätt | Varför |
+|---|---|---|---|
+| 5 dl ketchup | 24,90 | **49,80** | väger 600 g, ryms inte i 500 g |
+| 2,05 dl crème fraiche | 37,00 | **18,50** | väger 195 g, ryms i 200 g |
+| 4,7 dl grekisk yoghurt | 22,00 | **44,00** | väger 508 g, ryms inte i 500 g |
+| 10,1 dl mjölk | 29,80 | **14,90** | väger 990 g, ryms i litern |
+
+Varor källan SAKNAR behåller 1,0 via `DAIRY_DENSITY_ONE` - senap, majonnäs,
+sriracha, gräddfil, keso. Ett antagande vi vet om är bättre än en siffra
+som ser mätt ut. De fyra osäkra (tomatpuré, sirap, currypasta, sambal
+oelek) står kvar som osäkra, och revisionen är fortsatt röd med rätta.
 
 ## Dubbla rader för samma vara
 
@@ -458,11 +481,34 @@ releasegrinden? I dag kan grinden aldrig bli grön så länge något recept
 mäter en tät vara i msk. Alternativet är att recepten anger gram - det är
 receptdata, alltså ditt innehåll, inte prislogik.
 
-**Sidofynd med källa:** samma PM anger **tomatketchup till 18 g/msk**
-(n=20). Koden behandlar ketchup som 1 g/ml i `DAIRY_DENSITY_ONE`, alltså
-15 g - 17 % för lågt. Verifierat underlag finns alltså här, till skillnad
-från de fyra ovan. Inte ändrat: det påverkar priser och hör till samma
-beslut som raden ovan.
+**Sidofynd med källa - ÅTGÄRDAT efter ägarbeslut 2026-09-08.** Samma PM
+väger flera av de varor motorn antog 1 g = 1 ml för. `VERIFIED_DENSITY_G_PER_ML`
+bär nu de uppmätta värdena, med n i kommentaren per rad:
+
+| Vara | Antaget | Uppmätt | n |
+|---|---|---|---|
+| Tomatketchup | 1,00 | **1,20** | 20 |
+| Crème fraiche | 1,00 | **0,95** | 10 |
+| Grekisk yoghurt | 1,00 | **1,08** | 10 |
+| Filmjölk | 1,00 | **1,10** | 20 |
+| Kvarg | 1,00 | **1,11** | 10 |
+| Mjölk | 1,00 | **0,98** | 20 |
+| Vetemjöl | 60 g/dl | **56 g/dl** | 50 |
+| Havregryn | 35 g/dl | **39 g/dl** | 30 |
+
+Effekten syns först vid förpackningsgränsen, och går åt BÅDA hållen:
+
+| Fall | Antaget 1,0 | Uppmätt | Varför |
+|---|---|---|---|
+| 5 dl ketchup | 24,90 | **49,80** | väger 600 g, ryms inte i 500 g |
+| 2,05 dl crème fraiche | 37,00 | **18,50** | väger 195 g, ryms i 200 g |
+| 4,7 dl grekisk yoghurt | 22,00 | **44,00** | väger 508 g, ryms inte i 500 g |
+| 10,1 dl mjölk | 29,80 | **14,90** | väger 990 g, ryms i litern |
+
+Varor källan SAKNAR behåller 1,0 via `DAIRY_DENSITY_ONE` - senap, majonnäs,
+sriracha, gräddfil, keso. Ett antagande vi vet om är bättre än en siffra
+som ser mätt ut. De fyra osäkra (tomatpuré, sirap, currypasta, sambal
+oelek) står kvar som osäkra, och revisionen är fortsatt röd med rätta.
 
 ## Dubbla rader för samma vara
 
