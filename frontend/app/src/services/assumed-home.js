@@ -23,13 +23,27 @@ export function assumedHomeItems(recipes) {
   return [...namn.values()].sort((a, b) => a.localeCompare(b, "sv"));
 }
 
-export const ASSUMED_STATE = { OFFER: "offer", ADDED: "added", AT_HOME: "at_home" };
+export const ASSUMED_STATE = {
+  OFFER: "offer", ON_LIST: "on_list", ADDED: "added", AT_HOME: "at_home",
+};
 
+// SAMMA NAMN KAN VARA BÅDA. Receptbanken har 21 varor som är antagna i ett
+// recept och köpta i ett annat: Ris antas i 1 recept och köps i 50, Vitlök
+// antas i 9 och köps i 70, Smör antas i 63 och köps i 16. En vecka med båda
+// sorternas recept satte alltså varan på inköpslistan OCH erbjöd den här -
+// ett dubbelköp med ett tryck. Därför vägs listan tyngst.
+//
+// Etiketten säger att varan KÖPS, inte att mängden räcker. Det antagna
+// receptets del har ingen mängd alls (pantryStaple bär amount = null), så
+// vi vet inte hur mycket extra det behövs - och att påstå något annat vore
+// att gissa.
+//
 // Varan försvinner ALDRIG ur listan när den hanterats. Den som undrar
 // "räknade ni med olja?" ska få samma svar oavsett vad hen redan gjort -
 // annars blir en tom lista tvetydig: antog vi inget, eller är allt klart?
-export function assumedState(namn, tillagda, iSkafferi) {
+export function assumedState(namn, tillagda, iSkafferi, påListan) {
   const nyckel = String(namn ?? "").trim().toLowerCase();
+  if (påListan?.has(nyckel)) return ASSUMED_STATE.ON_LIST;
   if (tillagda?.has(nyckel)) return ASSUMED_STATE.ADDED;
   if (iSkafferi?.has(nyckel)) return ASSUMED_STATE.AT_HOME;
   return ASSUMED_STATE.OFFER;

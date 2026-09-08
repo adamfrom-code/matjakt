@@ -24,6 +24,7 @@ import hmac
 import http.client
 import json
 import os
+import random
 import re
 import tempfile
 import threading
@@ -51,6 +52,8 @@ if test_mode_active():
     from services.recipes import api as recipes_api
     from services.recipes import prices as recipe_prices
     from tests.e2e import fixture
+    from tests.e2e.diagnos import (rader_som_saenker_taeckningen, sammanfatta_begaran,
+                                   sammanfatta_svar)
 
 ARTIFACTS = Path(os.environ.get("MATJAKT_E2E_ARTIFACTS") or Path(__file__).resolve().parent / "artifacts")
 MOBILE = {"width": 390, "height": 844}
@@ -217,60 +220,77 @@ class BrowserJourney(unittest.TestCase):
             cls.playwright.stop()
         cls.server.close()
 
-    @staticmethod
-    def _rader_som_saenker_taeckningen(result):
-        """VILKA rader som drar ner täckningen, inte hur många.
-
-        "16 av 19" säger att tre rader inte räknades, men inte vilka - och
-        utan namnen går felet inte att söka vidare på efter att CI-loggen
-        rullat förbi. Täckningen räknar EXAKTA rader (pricing.price_list),
-        så en rad kan falla ur på två sätt: ingen produkt alls, eller ett
-        gissat paketantal. De två betyder helt olika saker och hålls isär.
-        """
-        osaekra = [row.get("name") for row in (result.get("matchedItems") or [])
-                   if row.get("rowUncertain") or not row.get("exactPackaging", True)]
-        saknade = [row.get("name") for row in (result.get("missingItems") or [])]
-        return {"osäkra": sorted(n for n in osaekra if n),
-                "saknade": sorted(n for n in saknade if n)}
+    def _spara_prissattning(self, response):
+        """Begäran och svar, lästa medan de fortfarande finns kvar."""
+        try:
+            begäran = sammanfatta_begaran(response.request.post_data)
+        except Exception as error:          # noqa: BLE001
+            begäran = {"kropp": f"kunde inte läsas: {error!r}"}
+        try:
+            svar = sammanfatta_svar(response.status, response.json())
+        except Exception as error:          # noqa: BLE001
+            svar = {"status": response.status, "kropp": f"kunde inte läsas: {error!r}"}
+        self.pricing_responses.append({"väg": response.url.split("/api/", 1)[-1],
+                                       "begäran": begäran, "svar": svar})
 
     def _pricing_diagnosis(self):
-        """Vad servern svarade på prissättningen (låsta kedjor, täckning) och
-        vad korten visar - för att skilja klientrace från serverdata."""
-        summary = []
-        for response in self.pricing_responses[-3:]:
-            try:
-                data = response.json()
-                rader = []
-                for r in data.get("results", []):
-                    rad = {k: r.get(k) for k in
-                           ("chain", "locked", "comparable", "realPriceItems", "totalItems", "hasData")}
-                    # Bara för den kedja som faktiskt föll - annars blir
-                    # raden tre gånger så lång utan att säga tre gånger mer.
-                    if not r.get("locked") and r.get("comparable") is False:
-                        rad.update(self._rader_som_saenker_taeckningen(r))
-                    rader.append(rad)
-                summary.append({"status": response.status, "results": rader})
-            except Exception as error:   # noqa: BLE001
-                summary.append({"status": response.status, "error": repr(error)})
-        cards = self.page.evaluate("() => document.querySelector('#storeCards')?.innerText || ''")
-        # Kassen som klienten faktiskt bad om pris för. Modellering utifrån
-        # receptbanken räckte inte: 16 av 19 går inte att få fram ur
-        # recepten ensamma, så raderna måste komma någon annanstans ifrån.
+        """Vad prissättningen FRÅGADE om och vad den svarade, i anropsordning.
+
+        Begäran är beviset. Skärmens och localStorages tillstånd läses efter
+        att flera omgångar hunnit köra och säger därför ingenting säkert om
+        vad just det felande anropet innehöll - de tas med som komplettering,
+        tydligt märkta, inte som underlag.
+        """
+        anrop = [f"[{nummer}] POST /api/{a['väg']} begäran={a['begäran']} svar={a['svar']}"
+                 for nummer, a in enumerate(self.pricing_responses[-6:], start=1)]
+
+        # KOMPLETTERANDE, inte bevis: läget vid assertionen, inte vid anropet.
+        kort = self.page.evaluate("() => document.querySelector('#storeCards')?.innerText || ''")
         korg = self.page.evaluate(
             "() => [...document.querySelectorAll('#shoppingList .shopping-item')]"
             ".map(e => (e.innerText || '').split('\\n')[0].trim()).filter(Boolean)")
-        # Extravarorna nycklas på id i DOM:en, så namnen hämtas ur appens
-        # eget läge i stället för ur markupen.
         extra = self.page.evaluate(
-            "() => { try { return (JSON.parse(localStorage.getItem('matjakt-state') || '{}')"
-            ".extraItems || []).map(e => e.name); } catch (error) { return ['<olasbart läge>']; } }")
-        return (f"pricing/week-svar={summary} kort={cards!r} "
-                f"kassen({len(korg)})={korg!r} extravaror={extra!r}")
+            "() => { try { const s = JSON.parse(localStorage.getItem('matjakt-state') || '{}');"
+            " return {extra: (s.extraItems || []).map(e => e.name), personer: s.personer,"
+            " valda: s.valda, borttagna: s.removedItems, butik: s.butik}; }"
+            " catch (error) { return {fel: 'olasbart lage'}; } }")
+        return (f"frö={self.seed} (kör om exakt den här veckan med "
+                f"MATJAKT_E2E_SEED={self.seed})\nANROP I ORDNING:\n  " + "\n  ".join(anrop)
+                + f"\nEFTERÅT (komplettering, inte bevis): kort={kort!r}"
+                + f" kassen({len(korg)})={korg!r} läge={extra!r}")
 
     def setUp(self):
         ratelimit.reset()
         self.context = self.browser.new_context(viewport=MOBILE, locale="sv-SE", service_workers="block",
                                                 is_mobile=True, has_touch=True)
+        # VECKAN ÄR SLUMPAD, avsiktligt: everydayRank (app.js) lägger
+        # Math.random() på rankningen så att "Skapa ny vecka" ger en ny
+        # vecka. Följden är att resan lottar i receptbanken vid varje
+        # körning - och ett fel som bara vissa veckor utlöser går då inte
+        # att spela upp igen.
+        #
+        # Fröet SÄTTS men slumpas fortfarande per körning: variationen är
+        # poängen, det som saknades var att kunna återvända till den.
+        #
+        # VAD FRÖET RÄCKER TILL, mätt: samma frö ger samma FÖLJD av veckor,
+        # men körningarna kan hamna ur fas om antalet prisanrop skiljer sig
+        # (kör 1:s andra vecka var kör 2:s första). Fröet gör alltså
+        # uppspelning trolig, inte garanterad. Den exakta veckan står i
+        # diagnosens recipeIds - det är den som är det sparade urvalet.
+        # Ingen timeout höjs och inget kvalitetskrav sänks.
+        self.seed = int(os.environ.get("MATJAKT_E2E_SEED") or random.randrange(2**31))
+        self.context.add_init_script(f"""
+            (() => {{
+              let frö = {self.seed} >>> 0;
+              Math.random = () => {{
+                frö = (frö + 0x6D2B79F5) >>> 0;
+                let t = frö;
+                t = Math.imul(t ^ (t >>> 15), t | 1) >>> 0;
+                t = (t ^ (t + Math.imul(t ^ (t >>> 7), t | 61))) >>> 0;
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+              }};
+            }})();
+        """)
         self.page = self.context.new_page()
         self.page.set_default_timeout(20_000)
         self.console_errors = []
@@ -279,11 +299,22 @@ class BrowserJourney(unittest.TestCase):
         self.batch_requests = []
         self.page.on("request", lambda request: self.batch_requests.append(request.url)
                      if "/api/products/batch" in request.url else None)
-        # Diagnostik: varje svar från veckoprissättningen sparas så ett fel i
-        # butikskorten kan förklaras med vad servern faktiskt svarade.
+        # Diagnostik: varje prissättningsanrop sparas i ANROPSORDNING med
+        # både begäran och svar. Ett svar utan sin begäran går inte att
+        # tolka - "16 av 19" beror på vilka varor som frågades efter, med
+        # vilka mängder, med vilket skafferiavdrag och för vilken kedja.
+        # /pricing/list är med därför att extravarorna hämtar sina priser
+        # där, och de ingår i samma kasse som veckan.
+        #
+        # KROPPEN LÄSES DIREKT, inte vid assertionen. Playwright kastar bort
+        # svarskroppen så fort sidan navigerat ("Response body is not
+        # available for a response that was navigated away from"), och resan
+        # navigerar flera gånger - så de tidiga anropen, just de som skapade
+        # veckan, gick inte att läsa när de behövdes.
         self.pricing_responses = []
-        self.page.on("response", lambda response: self.pricing_responses.append(response)
-                     if "/api/pricing/week" in response.url else None)
+        self.page.on("response", lambda response: self._spara_prissattning(response)
+                     if ("/api/pricing/week" in response.url
+                         or "/api/pricing/list" in response.url) else None)
         self.page.on("pageerror", lambda error: self.console_errors.append(str(error)))
         # Riktiga sidfel (undantag) och konsolfel - men inte nätverksmissar
         # för bilder/kampanjer: E2E:n körs utan internet, och en bild som
@@ -560,6 +591,109 @@ class BrowserJourney(unittest.TestCase):
 
         self.assertEqual(self.console_errors, [])
         self.assertEqual(len(self.batch_requests), 0, "Free ska aldrig hämta livepriser per vara")
+
+    def test_antagna_hemmavaror_gar_att_lagga_till(self):
+        """U06 hela vägen: antagandet syns, går att lägga till, och tillägget
+        blir en riktig inköpsrad med pris - inte bara ett namn.
+
+        Receptbanken har 21 varor som är antagna i ett recept och köpta i
+        ett annat (Ris antas i 1 och köps i 50). En sådan vara får ALDRIG
+        erbjudas: den står redan på listan, och ett tryck vore ett dubbelköp.
+        """
+        page = self.page
+        # Receptlänken först: den öppnar appen utan onboarding, så kontot
+        # hinner skapas innan modalen tar över skärmen.
+        page.goto(self.app(f"?recept={self.any_recipe_id()}"))
+        expect(page.locator("#recipePage")).to_be_visible()
+        self.register(f"e2e-{uuid.uuid4().hex[:10]}@example.com")
+        self.close_account_modal()
+        page.goto(self.app())
+        self.complete_onboarding()
+        self.choose_standard_week()
+        page.click('.bottom-nav-item[data-view="basket"]')
+        self.wait_for_store_cards()
+
+        sektion = page.locator("#assumedHomeSection")
+        expect(sektion).to_be_visible()
+        expect(sektion.locator("h3")).to_have_text("Antas finnas hemma")
+
+        # Inget som står på inköpslistan får erbjudas.
+        #
+        # VAD DEN HÄR KONTROLLEN INTE BEVISAR: veckan är slumpad, så en
+        # vecka utan överlappande varor gör assertionen tom. Den är ett
+        # regressionsskydd, inte beviset. Tillståndsmaskinen prövas
+        # deterministiskt i tests/assumed-home.test.js.
+        på_listan = {namn.strip().lower() for namn in
+                     page.locator("#shoppingList .shopping-item strong").all_inner_texts()}
+        erbjudna = [text.strip().lower() for text in
+                    page.locator("#assumedHomeList [data-assumed-add]").all_inner_texts()]
+        krock = [namn for namn in erbjudna if namn.split("+")[0].strip() in på_listan]
+        self.assertEqual(krock, [], f"erbjöd varor som redan står på listan: {krock}")
+
+        knappar = page.locator("#assumedHomeList [data-assumed-add]")
+        self.assertGreater(knappar.count(), 0, "veckan hade inga antagna hemmavaror att pröva")
+        namn = knappar.first.get_attribute("data-assumed-add")
+        före = page.locator("#shoppingCost").inner_text()
+
+        knappar.first.click()
+        # Varan blir en riktig rad med mängd - inte bara ett namn.
+        läge = self.wait_for_state(lambda s: any(e.get("name") == namn for e in s.get("extraItems") or []),
+                                   what=f"{namn} som extravara")
+        rad = next(e for e in läge["extraItems"] if e["name"] == namn)
+        self.assertEqual(rad.get("qty"), 1, rad)
+        self.assertEqual(rad.get("source"), "assumed_home", rad)
+
+        # Chippet stannar kvar men byter tillstånd - det försvinner inte.
+        expect(page.locator("#assumedHomeList .assumed-chip.is-added")).to_contain_text(namn)
+        expect(page.locator(f'#assumedHomeList [data-assumed-add="{namn}"]')).to_have_count(0)
+
+        expect(page.locator("#extraItemsSection")).to_be_visible()
+        expect(page.locator("#extraItemsList")).to_contain_text(namn)
+
+        # DEN ÄRLIGA VARIANTEN, inte den önskade.
+        #
+        # Extravaror prissätts som "1 st" (syncExtraMatches). En vara som
+        # säljs i gram eller milliliter går inte att räkna om från styck, så
+        # price_list markerar raden osäker och nollar totalCost enligt regeln
+        # om säkra totaler - och klienten filtrerar bort rader utan total.
+        # Mätt mot fixturen: 13 av 35 antagna hemmavaror hamnar där, bland
+        # dem Olivolja, Smör, Vetemjöl, Ris, Honung och Sirap.
+        #
+        # Kontraktet som gäller i dag är alltså: raden får ETT PRIS ELLER en
+        # synlig upplysning om att pris saknas. Det som ALDRIG får hända är
+        # en tyst nolla - en rad som ser prissatt ut och bidrar med 0 kr.
+        # Se docs/MASTER_BACKLOG.md; luckan gäller alla extravaror, även de
+        # som skrivs in för hand, och är inte något U06 införde.
+        rad = page.locator("#extraItemsList")
+        expect(rad).to_be_visible()
+        text = rad.inner_text()
+        utan_pris = "Ingen säker prismatch" in text
+        totalen = page.locator("#shoppingCost").inner_text()
+        if utan_pris:
+            self.assertEqual(totalen, före,
+                             "oprissatt rad ändrade totalen - då är nollan inte ärlig")
+        else:
+            self.assertRegex(text, r"\d")            # ett pris syns på raden
+            self.assertNotEqual(totalen, före, "prissatt rad räknades inte in i totalen")
+
+        # BETALVÄGGEN HÅLLER FORTFARANDE. Gaten avgörs numera på veckan i
+        # stället för på extravarorna - det får inte betyda att Free får se
+        # alla kedjors listor. Exakt EN kedja ska svara 200, resten 403.
+        läge = self.local_state()
+        # Token bor i sin egen nyckel, inte i synkpayloaden - den ska aldrig
+        # följa med ett tillstånd som skickas till servern.
+        token = page.evaluate("() => localStorage.getItem('matjakt-auth-token')")
+        self.assertTrue(token, "kontot saknar token i webbläsarens lagring")
+        recept = [r["id"] for r in (läge.get("apiRecipes") or [])] or list(läge.get("valda") or [])
+        svar = {}
+        for kedja in ("Willys", "Hemköp", "City Gross"):
+            status, _ = self.server.request(
+                "POST", "/api/pricing/list",
+                {"chain": kedja, "recipeIds": recept, "people": läge.get("personer") or 2,
+                 "items": [{"name": namn, "amount": 1, "unit": "st"}]},
+                headers={"Authorization": f"Bearer {token}"})
+            svar[kedja] = status
+        self.assertEqual(sorted(svar.values()), [200, 403, 403], svar)
 
     def test_premium_paywall_and_stripe_testmode(self):
         page = self.page

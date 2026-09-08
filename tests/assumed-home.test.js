@@ -35,11 +35,33 @@ test("en hanterad vara byter tillstånd, den försvinner inte", () => {
   assert.equal(assumedState("Peppar", tillagda, iSkafferi), ASSUMED_STATE.OFFER);
 });
 
+test("en vara som redan står på veckans lista erbjuds ALDRIG igen", () => {
+  // Receptbanken har 21 namn som är antagna i ett recept och köpta i ett
+  // annat - Ris antas i 1 och köps i 50, Vitlök antas i 9 och köps i 70.
+  // Utan det här blev varan både inköpsrad och erbjudande: ett dubbelköp
+  // med ett tryck.
+  const påListan = new Set(["ris"]);
+  assert.equal(assumedState("Ris", new Set(), new Set(), påListan), ASSUMED_STATE.ON_LIST);
+  assert.equal(assumedState("Salt", new Set(), new Set(), påListan), ASSUMED_STATE.OFFER);
+});
+
+test("listan väger tyngst - den säger att varan faktiskt köps", () => {
+  const alla = new Set(["olja"]);
+  assert.equal(assumedState("Olja", alla, alla, alla), ASSUMED_STATE.ON_LIST);
+});
+
 test("tillagd väger tyngre än i skafferiet när varan är båda", () => {
   const båda = new Set(["olja"]);
   assert.equal(assumedState("Olja", båda, båda), ASSUMED_STATE.ADDED);
 });
 
+test("utan lista beter sig funktionen som förut", () => {
+  // Anropas den med tre argument ska inget krascha och inget bli ON_LIST.
+  assert.equal(assumedState("Peppar", new Set(), new Set()), ASSUMED_STATE.OFFER);
+  assert.equal(assumedState("Peppar", new Set(), new Set(), undefined), ASSUMED_STATE.OFFER);
+});
+
 test("jämförelsen bryr sig inte om skiftläge eller kantmellanslag", () => {
   assert.equal(assumedState("  OLJA ", new Set(["olja"]), new Set()), ASSUMED_STATE.ADDED);
+  assert.equal(assumedState(" Ris  ", new Set(), new Set(), new Set(["ris"])), ASSUMED_STATE.ON_LIST);
 });

@@ -3012,20 +3012,33 @@ function staplesToOffer(shoppingItems) {
 }
 
 // U06: säg vad vi ANTAR att du redan har - se src/services/assumed-home.js.
-const ASSUMED_ETIKETT = { [ASSUMED_STATE.ADDED]: "tillagd", [ASSUMED_STATE.AT_HOME]: "i skafferiet" };
+const ASSUMED_ETIKETT = {
+  [ASSUMED_STATE.ON_LIST]: "står redan på listan",
+  [ASSUMED_STATE.ADDED]: "tillagd",
+  [ASSUMED_STATE.AT_HOME]: "i skafferiet",
+};
+const ASSUMED_KLASS = {
+  [ASSUMED_STATE.ON_LIST]: "is-onlist",
+  [ASSUMED_STATE.ADDED]: "is-added",
+  [ASSUMED_STATE.AT_HOME]: "is-athome",
+};
 
-function renderAssumedHome() {
+function renderAssumedHome(shoppingItems) {
   const section = $("assumedHomeSection"), box = $("assumedHomeList");
   if (!section || !box) return;
   const items = assumedHomeItems(selectedRecipes());
   section.hidden = !items.length;
   if (!items.length) return;
   const tillagda = new Set(state.extraItems.map(e => String(e.name || "").trim().toLowerCase()));
-  const iSkafferi = new Set(pantryNamesForCooking().map(n => String(n || "").trim().toLowerCase()));
+  // pantryList(), inte pantryNamesForCooking(): den senare läser nycklarna
+  // rakt av och räknar ett tomt fack som "hemma". Ett skafferi med 0 kvar
+  // är inget skafferi.
+  const iSkafferi = new Set(pantryList().map(rad => String(rad.name || "").trim().toLowerCase()));
+  const påListan = new Set((shoppingItems || []).map(rad => String(rad.namn || rad.name || "").trim().toLowerCase()));
   box.innerHTML = items.map(namn => {
-    const läge = assumedState(namn, tillagda, iSkafferi);
+    const läge = assumedState(namn, tillagda, iSkafferi, påListan);
     if (läge !== ASSUMED_STATE.OFFER)
-      return `<span class="assumed-chip is-${läge === ASSUMED_STATE.ADDED ? "added" : "athome"}">`
+      return `<span class="assumed-chip ${ASSUMED_KLASS[läge]}">`
         + `${escapeHtml(namn)} · ${ASSUMED_ETIKETT[läge]}</span>`;
     return `<button type="button" class="assumed-chip" data-assumed-add="${escapeHtml(namn)}">`
       + `${escapeHtml(namn)}<span aria-hidden="true">+</span>`
@@ -3231,7 +3244,7 @@ function renderBasket() {
   if (total != null) lastRealWeekTotal = total;
   renderWeekCostAlert(total);
   renderStaplePrompt(shoppingItems);
-  renderAssumedHome();
+  renderAssumedHome(shoppingItems);
   renderAttribution(shoppingItems);
   renderStoreComparison(selected); renderStoreCards(); renderExtraItems(activeChain); renderPantry();
   renderWeekStoreTabs();

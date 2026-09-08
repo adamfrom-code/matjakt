@@ -155,7 +155,7 @@ först enligt ägarens egen faseordning.
 
 | Grupp | ID | Status |
 |---|---|---|
-| Första användningen | U01–U06 | **delvis** — U01 och U06 mergade i PR #17/#18, U02–U05 att göra |
+| Första användningen | U01–U06 | **delvis** — U01 mergad (#17), U06 öppen (#21) med blockerande fynd, U02–U05 att göra |
 | Veckoplanering | U07–U18 | att göra |
 | Pengar | U19–U30 | att göra (U19 = F1, **pågår**) |
 | I butiken | U31–U42 | att göra |
@@ -177,6 +177,91 @@ betaldata; ingen intäktssiffra får härledas ur antal Premium × pris.
 
 ---
 
+## Mergat, driftsatt och verifierat är tre olika saker
+
+Kontrollerat mot GitHub och `/api/health` 2026-09-08:
+
+| | Läge |
+|---|---|
+| Mergade till `main` | #16, #17, #19, #20 |
+| Faktiskt driftsatt | `6f8f2f4` — innehåller #16, #17, #19, #20 |
+| Öppen | #21 (U06) — **blockerande fynd, se nedan** |
+| Stängd utan merge | #18 — basgrenen togs bort vid mergen av #17; ersatt av #21 |
+| Verifierat i produktion | Bara #16: `estimatPerIngrediens` svarar live. #17 är driftsatt men inte kontrollerad mot riktig trafik |
+
+## Blockerande fynd: en tillagd extravara får ofta inget pris
+
+Gäller alla extravaror, även de som skrivs in för hand - inte något U06
+införde, men U06 gör vägen ett tryck lång.
+
+`syncExtraMatches` prissätter varje extravara som **1 st**. En vara som
+säljs i gram eller milliliter går inte att räkna om från styck, så
+`price_list` markerar raden osäker och nollar `totalCost` enligt regeln om
+säkra totaler - och klienten filtrerar bort rader utan total
+(`item.totalCost != null`). Raden visas som "Ingen säker prismatch – egen
+rad" och bidrar med 0 kr.
+
+**Mätt mot fixturen: 13 av 35 antagna hemmavaror hamnar där** - Olivolja,
+Smör, Vetemjöl, Ris, Honung, Sirap, Parmesan, Ströbröd, Sesamfrön,
+Ingefära, Paprikapulver, Spiskummin, Ättika.
+
+Vad som INTE är orsaken: en hypotes om att Free-gaten räknade på fel korg
+(`_free_chain_for` över enbart extravarorna). Den byggde jag och mätte:
+**8 gröna av 10 före ändringen, 8 av 10 efter** - alltså ingen effekt.
+Ändringen är återtagen. Betalväggskod ska inte ändras på en gissning.
+`_pricing_items` slår dessutom redan ihop `recipeIds` med `items`, så
+gaten ser veckan när klienten skickar med den.
+
+Kvar att avgöra: vad "1 st" ska betyda för en förpackad vara. Motorn kan
+inte skilja "1 st gul lök" (en styckvara) från "1 st flaska olja" (en
+förpackning), och att gissa fel åt något håll ger fel pris. Det är ett
+riktigt designval, inte en bugg att slarva bort.
+
+## O10b: de trettio osäkra raderna - underlag saknas
+
+De verkliga raderna, lästa ur `/api/health` efter att #16 driftsattes:
+
+| Ingrediens | Rader |
+|---|---|
+| Tomatpuré (msk) | 18 |
+| Sirap (msk) | 6 |
+| Currypasta (msk) | 3 |
+| Sambal oelek (tsk) | 3 |
+
+Alla är samma sak: ett volymmått mot en gramförpackning för en tjock pasta
+eller sirap. Ingen är en torr krydda, så F5-regeln gäller rätt.
+
+**Sökt verifierat underlag och inte hittat något.** Livsmedelsverkets
+[PM 2024 *Volymvikter, viktförändringsfaktorer och avfall*](https://www.livsmedelsverket.se/globalassets/publikationsdatabas/pm/2024/pm-2024-volymvikter-viktforandringsfaktorer-och-avfall.pdf)
+innehåller uppmätta gramvikter per tsk/msk/dl - men **ingen av de fyra
+finns med**. Alltså saknas underlag, och då ska raderna förbli osäkra.
+Att härleda en densitet ur ketchup eller ur eget omdöme vore att gissa.
+
+**Följden: revisionen är röd med rätta och förblir det.** Grinden kräver
+`estimat = 0`, och Matjakt kan i dag inte prissätta "2 msk tomatpuré"
+exakt. Det är ett sant besked, inte ett fel.
+
+**Ägarbeslut som behövs:** ska en känd och korrekt märkt osäkerhet blockera
+releasegrinden? I dag kan grinden aldrig bli grön så länge något recept
+mäter en tät vara i msk. Alternativet är att recepten anger gram - det är
+receptdata, alltså ditt innehåll, inte prislogik.
+
+**Sidofynd med källa:** samma PM anger **tomatketchup till 18 g/msk**
+(n=20). Koden behandlar ketchup som 1 g/ml i `DAIRY_DENSITY_ONE`, alltså
+15 g - 17 % för lågt. Verifierat underlag finns alltså här, till skillnad
+från de fyra ovan. Inte ändrat: det påverkar priser och hör till samma
+beslut som raden ovan.
+
+## Dubbla rader för samma vara
+
+Kassen i en verklig E2E-körning innehöll `Tomatpuré` **två gånger**.
+Aggregatet nycklar på namn + enhetsfamilj och vägrar summera msk med gram -
+avsiktligt, med motiveringen "2 st morötter plus 400 g morötter är inte
+402 st". Följden är ändå en lista som ber dig köpa två tuber.
+
+Dubbelraden och den osäkra raden har SAMMA rot: ingen densitet för
+tomatpuré. Löser man den ena löser man båda.
+
 ## Gjort i den här sessionen
 
 | Vad | PR | Verifiering |
@@ -188,45 +273,203 @@ betaldata; ingen intäktssiffra får härledas ur antal Premium × pris.
 | F5: kryddgenvägen gällde honung | #13 **mergad** | 2 msk honung fick "1 paket, exakt" mot 15 g |
 | F4: "billigaste butiken" var oftast vald | #14 **mergad** | Osant påstående i UI rättat, dedupe per vecka |
 | F3: kassans ålder från använda rader | #15 **mergad** | En färsk rad nollställde inte längre kassens ålder |
-| Revisionen namnger vad som är osäkert | #16 **öppen** | Rubriken kunde säga "alla system fungerar" över ett rött kort. Två tester i båda riktningarna |
-| U01: budgeten säger vad den räcker till | #17 **öppen, grön** | "Veckobudget" lästes rimligen som all mat. Verifierad i webbläsare, mobil |
-| U06: veckans antaganden syns och går att lägga till | #18 **öppen** | Appen antog tyst ris, smör och socker. Sju tester |
+| Revisionen namnger vad som är osäkert | #16 **mergad + driftsatt** (`6f8f2f4`) | Rubriken kunde säga "alla system fungerar" över ett rött kort. Två tester i båda riktningarna |
+| U01: budgeten säger vad den räcker till | #17 **mergad**, ej verifierad i produktion | "Veckobudget" lästes rimligen som all mat. Verifierad i webbläsare, mobil |
+| U06: veckans antaganden syns och går att lägga till | #21 **öppen** (#18 stängdes när dess basgren togs bort) | Appen antog tyst ris, smör och socker. Sju tester |
 | Kampanjtorget med bilder och hero | #12 **mergad** | Bilden bär aldrig budskapet |
 | Driftstatus i kontrollrummet | #11 **mergad** | Verifierad i webbläsare, desktop + mobil |
 | health visar om larmen går att skicka | #10 **mergad** | Live: mottagare och transport bekräftade |
 | Driftstatus + larm med dedupe och recovery | #8 **mergad** | 21 tester; ett av dem hittade att en API-nyckel kunde mejlas i klartext |
 | F1: ofullständig kasse krönas inte | #9 **mergad** | Regressionstest med exakt scenariot ur granskningen |
 
-## Den "flakiga" E2E:n — orsaken är ännu inte hittad
+## E2E-fallen — OLÖST
 
-**Rättelse av det jag skrev först.** Jag påstod att fixturen tappade
-prissättningen. Det var fel. Sedan trodde jag att fixturens enhetsval var
-orsaken. Det var också fel, och jag motbevisade det själv.
+Orsaken är inte funnen. Posten står kvar som olöst tills det finns ett
+reproducerbart fall och en verifierad förklaring.
 
-Vad som faktiskt är känt:
+**Tre slutsatser jag har dragit och tagit tillbaka.** Att fixturen tappade
+prissättningen (fel). Att fixturens enhetsval var orsaken (fel, och
+formulerat som avgjort). Att Free-gaten räknade på fel korg (fel, mätt:
+ingen effekt).
 
-- `coveragePercent` räknar **exakta** rader, inte prissatta (se
-  `pricing.price_list`). Under `MIN_COVERAGE_FOR_COMPARISON = 85` slutar en
-  kedja vara jämförbar och kortet blir "Pris ej tillgängligt". CI:s
-  diagnosrad visade `16/19 = 84,2 %` — 0,8 procentenheter under gränsen.
-- **Veckan är slumpad.** `everydayRank` (`app.js:902`) lägger
-  `Math.random()` på rankningen, avsiktligt, så att "Skapa ny vecka" ger en
-  ny vecka. E2E:n lottar alltså i receptbanken vid varje körning.
-- Skafferiet är **inte** inblandat: skafferitäckta rader hoppas över före
-  `requested = len(matched) + len(missing)` (`pricing.py:1650`).
+**Vad modelleringen visar och inte visar.** Täckning för 20 000 slumpade
+veckor per storlek, aggregerat med appens egen nyckel (namn + enhetsfamilj),
+ger ingen vecka under 85 %; sämsta är 87,5 % för två recept. Det
+**utesluter ingenting** - modellen antog likformigt slumpade recept, en
+kedja, inga extravaror, inget skafferi, ingen portionsskalning och ingen
+tidsaspekt, och den återskapade aldrig den felande resan. Rätt formulering
+är **inte reproducerat i det modellerade urvalet**.
+
+**Konstaterat i kod, inte antaget:**
+
+- `coveragePercent` räknar EXAKTA rader, inte prissatta (`price_list`).
+- Skafferitäckta rader hoppas över före `requested = len(matched) +
+  len(missing)` (`pricing.py:1650`) - skafferiet sänker inte nämnaren.
+- Veckan är slumpad: `everydayRank` (`app.js:902`).
+- Premiumtestet, det som faller, tar inte bort varor och rör inte skafferiet.
+- En verklig grön körning visade 20 av 21 exakta rader (95,2 %). Den
+  felande CI-körningen visade 16 av 19 (84,2 %). **Receptbanken ensam kan
+  inte ge det** enligt modellen ovan - men modellen är inte verkligheten.
+
+**Verktygen finns nu på plats:**
+
+- Diagnosen skriver ut begäran OCH svar per anrop, i anropsordning, med
+  recept-id, personer, mängder, enheter, skafferiavdrag, butiksval och
+  vilka rader som är osäkra respektive saknade. Kroppen läses direkt vid
+  svaret - annars kastar Playwright bort den vid nästa navigering, och just
+  de tidiga anropen gick inte att läsa.
+- Fälten är whitelistade, inte svartlistade, så inga tokens eller
+  personuppgifter kan följa med. Testat.
+- Ett frö per körning skrivs ut vid fel. Mätt räckvidd: samma frö ger samma
+  FÖLJD av veckor, men körningar kan hamna ur fas om antalet prisanrop
+  skiljer sig. Uppspelning blir trolig, inte garanterad; det exakta urvalet
+  står i diagnosens `recipeIds`.
+
+**Nästa steg:** vänta in ett verkligt fall och läsa diagnosen. Höj inte
+timeouten och sänk inte kvalitetskravet.
+
+## Mergat, driftsatt och verifierat är tre olika saker
+
+Kontrollerat mot GitHub och `/api/health` 2026-09-08:
+
+| | Läge |
+|---|---|
+| Mergade till `main` | #16, #17, #19, #20 |
+| Faktiskt driftsatt | `6f8f2f4` — innehåller #16, #17, #19, #20 |
+| Öppen | #21 (U06) — **blockerande fynd, se nedan** |
+| Stängd utan merge | #18 — basgrenen togs bort vid mergen av #17; ersatt av #21 |
+| Verifierat i produktion | Bara #16: `estimatPerIngrediens` svarar live. #17 är driftsatt men inte kontrollerad mot riktig trafik |
+
+## Blockerande fynd: en tillagd extravara får ofta inget pris
+
+Gäller alla extravaror, även de som skrivs in för hand - inte något U06
+införde, men U06 gör vägen ett tryck lång.
+
+`syncExtraMatches` prissätter varje extravara som **1 st**. En vara som
+säljs i gram eller milliliter går inte att räkna om från styck, så
+`price_list` markerar raden osäker och nollar `totalCost` enligt regeln om
+säkra totaler - och klienten filtrerar bort rader utan total
+(`item.totalCost != null`). Raden visas som "Ingen säker prismatch – egen
+rad" och bidrar med 0 kr.
+
+**Mätt mot fixturen: 13 av 35 antagna hemmavaror hamnar där** - Olivolja,
+Smör, Vetemjöl, Ris, Honung, Sirap, Parmesan, Ströbröd, Sesamfrön,
+Ingefära, Paprikapulver, Spiskummin, Ättika.
+
+Vad som INTE är orsaken: en hypotes om att Free-gaten räknade på fel korg
+(`_free_chain_for` över enbart extravarorna). Den byggde jag och mätte:
+**8 gröna av 10 före ändringen, 8 av 10 efter** - alltså ingen effekt.
+Ändringen är återtagen. Betalväggskod ska inte ändras på en gissning.
+`_pricing_items` slår dessutom redan ihop `recipeIds` med `items`, så
+gaten ser veckan när klienten skickar med den.
+
+Kvar att avgöra: vad "1 st" ska betyda för en förpackad vara. Motorn kan
+inte skilja "1 st gul lök" (en styckvara) från "1 st flaska olja" (en
+förpackning), och att gissa fel åt något håll ger fel pris. Det är ett
+riktigt designval, inte en bugg att slarva bort.
+
+## O10b: de trettio osäkra raderna - underlag saknas
+
+De verkliga raderna, lästa ur `/api/health` efter att #16 driftsattes:
+
+| Ingrediens | Rader |
+|---|---|
+| Tomatpuré (msk) | 18 |
+| Sirap (msk) | 6 |
+| Currypasta (msk) | 3 |
+| Sambal oelek (tsk) | 3 |
+
+Alla är samma sak: ett volymmått mot en gramförpackning för en tjock pasta
+eller sirap. Ingen är en torr krydda, så F5-regeln gäller rätt.
+
+**Sökt verifierat underlag och inte hittat något.** Livsmedelsverkets
+[PM 2024 *Volymvikter, viktförändringsfaktorer och avfall*](https://www.livsmedelsverket.se/globalassets/publikationsdatabas/pm/2024/pm-2024-volymvikter-viktforandringsfaktorer-och-avfall.pdf)
+innehåller uppmätta gramvikter per tsk/msk/dl - men **ingen av de fyra
+finns med**. Alltså saknas underlag, och då ska raderna förbli osäkra.
+Att härleda en densitet ur ketchup eller ur eget omdöme vore att gissa.
+
+**Följden: revisionen är röd med rätta och förblir det.** Grinden kräver
+`estimat = 0`, och Matjakt kan i dag inte prissätta "2 msk tomatpuré"
+exakt. Det är ett sant besked, inte ett fel.
+
+**Ägarbeslut som behövs:** ska en känd och korrekt märkt osäkerhet blockera
+releasegrinden? I dag kan grinden aldrig bli grön så länge något recept
+mäter en tät vara i msk. Alternativet är att recepten anger gram - det är
+receptdata, alltså ditt innehåll, inte prislogik.
+
+**Sidofynd med källa:** samma PM anger **tomatketchup till 18 g/msk**
+(n=20). Koden behandlar ketchup som 1 g/ml i `DAIRY_DENSITY_ONE`, alltså
+15 g - 17 % för lågt. Verifierat underlag finns alltså här, till skillnad
+från de fyra ovan. Inte ändrat: det påverkar priser och hör till samma
+beslut som raden ovan.
+
+## Dubbla rader för samma vara
+
+Kassen i en verklig E2E-körning innehöll `Tomatpuré` **två gånger**.
+Aggregatet nycklar på namn + enhetsfamilj och vägrar summera msk med gram -
+avsiktligt, med motiveringen "2 st morötter plus 400 g morötter är inte
+402 st". Följden är ändå en lista som ber dig köpa två tuber.
+
+Dubbelraden och den osäkra raden har SAMMA rot: ingen densitet för
+tomatpuré. Löser man den ena löser man båda.
+
+## Gjort i den här sessionen
+
+| Vad | PR | Verifiering |
+|---|---|---|
+| Jämförpris räknades som förpackningspris (Hemköp 6–18× fel) | #4 mergad | Bekräftat på 16 varor i produktion; fixen live-verifierad |
+| Publiceringsgrindens 95 %-gräns testad vid kanten | #6 mergad | 94,9 % nekas, 95,0 % publiceras, last-good behålls |
+| Cachade priser bär tolkningens version | #7 mergad | Gamla felpriser serveras inte längre i sex timmar efter en fix |
+| ICA/Coop dagligen via Primat | #5 mergad | `RELEASED_CHAINS` orörd — kedjorna blir inte publika av sig själva |
+| F5: kryddgenvägen gällde honung | #13 **mergad** | 2 msk honung fick "1 paket, exakt" mot 15 g |
+| F4: "billigaste butiken" var oftast vald | #14 **mergad** | Osant påstående i UI rättat, dedupe per vecka |
+| F3: kassans ålder från använda rader | #15 **mergad** | En färsk rad nollställde inte längre kassens ålder |
+| Revisionen namnger vad som är osäkert | #16 **mergad + driftsatt** (`6f8f2f4`) | Rubriken kunde säga "alla system fungerar" över ett rött kort. Två tester i båda riktningarna |
+| U01: budgeten säger vad den räcker till | #17 **mergad**, ej verifierad i produktion | "Veckobudget" lästes rimligen som all mat. Verifierad i webbläsare, mobil |
+| U06: veckans antaganden syns och går att lägga till | #21 **öppen** (#18 stängdes när dess basgren togs bort) | Appen antog tyst ris, smör och socker. Sju tester |
+| Kampanjtorget med bilder och hero | #12 **mergad** | Bilden bär aldrig budskapet |
+| Driftstatus i kontrollrummet | #11 **mergad** | Verifierad i webbläsare, desktop + mobil |
+| health visar om larmen går att skicka | #10 **mergad** | Live: mottagare och transport bekräftade |
+| Driftstatus + larm med dedupe och recovery | #8 **mergad** | 21 tester; ett av dem hittade att en API-nyckel kunde mejlas i klartext |
+| F1: ofullständig kasse krönas inte | #9 **mergad** | Regressionstest med exakt scenariot ur granskningen |
+
+## E2E-fallen — OLÖST
+
+Orsaken är inte funnen. Den här posten står kvar som olöst tills det finns
+ett reproducerbart fall och en verifierad förklaring.
+
+**Två slutsatser jag har dragit och tagit tillbaka.** Först skrev jag att
+fixturen tappade prissättningen — fel. Sedan att fixturens enhetsval var
+orsaken — också fel, och formulerat som om saken vore avgjord.
+
+**Vad modelleringen faktiskt visar.** Jag räknade täckning för 20 000
+slumpade veckor per storlek, aggregerat som appens lista gör, och ingen låg
+under 85 %. Det **utesluter ingenting**: modellen antog likformigt slumpade
+recept, en kedja, inga extravaror, inget skafferi och ingen tidsaspekt, och
+den återskapade aldrig den felande resan. Rätt formulering är **inte
+reproducerat i det modellerade urvalet** — receptbanken och fixturen är
+fortfarande möjliga bidragande orsaker.
+
+**Vad som är konstaterat i kod, inte antaget:**
+
+- `coveragePercent` räknar EXAKTA rader, inte prissatta
+  (`pricing.price_list`). Under `MIN_COVERAGE_FOR_COMPARISON = 85` slutar en
+  kedja vara jämförbar. CI:s diagnosrad visade `16/19 = 84,2 %`.
+- Skafferitäckta rader hoppas över före `requested = len(matched) +
+  len(missing)` (`pricing.py:1650`), så skafferiet sänker inte nämnaren.
+- Veckan är slumpad: `everydayRank` (`app.js:902`) lägger `Math.random()` på
+  rankningen, avsiktligt.
 - Fixturen hade två äkta defekter (`MIN(unit)` gav mjöl i literförpackning,
-  msk/tsk föll till "1 st"). Rättade i PR #19 — men **de förklarar inte
-  fallen**. Modellerat över 20 000 slumpade veckor per storlek, aggregerat
-  som appens lista gör, går ingen veckostorlek under 85 % ens med den gamla
-  fixturen; sämsta fyrareceptsveckan var 87,0 % före och 90,5 % efter.
-- 16 lokala körningar av konsumentresan gick igenom med **båda**
-  fixturerna. Felet går inte att reproducera lokalt.
+  msk/tsk föll till "1 st"). Rättade i PR #19.
 
-**Kvar att undersöka:** 16/19 kan receptbanken ensam inte producera, så
-kassen måste innehålla rader som inte kommer ur recepten — extravaror,
-hushållsrader eller något tillstånd resan når som modellen ovan inte
-återskapar. Nästa steg är att logga kassens faktiska rader i
-`_pricing_diagnosis` när den failar, inte att höja timeouten.
+**Hypoteser, inte slutsatser:** extravaror i kassen, hushållsrader, annan
+data i CI än lokalt, och tidsberoende (två prissättningsomgångar efter
+checkout). Ingen av dem är prövad mot ett verkligt felande anrop.
+
+**Nästa steg:** PR #20 skriver nu ut vilka rader som är osäkra respektive
+saknade, plus kassens innehåll. Det ska kompletteras så request och response
+kopplas ihop för exakt det felande anropet. Höj inte timeouten och sänk inte
+kvalitetskravet.
 
 ## Kvar för ägaren
 
