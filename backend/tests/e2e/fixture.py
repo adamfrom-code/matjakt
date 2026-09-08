@@ -86,10 +86,15 @@ def _base_price(name: str) -> float:
 
 def seed_grocery(grocery_db_path, recipe_db_path) -> dict:
     """Skapar butiker, produkter och priser. Returnerar en summering."""
+    # ÄVEN skafferivarorna. De prissätts aldrig som del av en vecka (motorn
+    # hoppar över pantry_staple), men butiken säljer förstås salt och olja -
+    # och användaren kan lägga till dem på listan när hen inte har dem hemma.
+    # Utan produkter för dem gick den vägen inte att pröva: varje tillägg
+    # blev en oprissatt rad, oavsett om koden fungerade eller inte.
+    # Veckans täckning påverkas inte, just för att raderna hoppas över.
     with sqlite3.connect(str(recipe_db_path)) as recipes:
         rows = recipes.execute(
-            """SELECT name, unit, COUNT(*) FROM recipe_ingredients
-               WHERE pantry_staple = 0 GROUP BY name, unit""").fetchall()
+            "SELECT name, unit, COUNT(*) FROM recipe_ingredients GROUP BY name, unit").fetchall()
     per_namn: dict[str, list] = {}
     for name, unit, antal in rows:
         if name:

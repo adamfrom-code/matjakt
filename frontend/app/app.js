@@ -26,6 +26,7 @@ import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swa
 import { RECIPE_FALLBACK_ART, RECIPE_FALLBACK_LABEL, kindFor as recipeFallbackKind } from "./src/services/recipe-fallback.js";
 import { recordWeekSaving, weekKeyFor } from "./src/services/savings-log.js";
 import { budgetScopeText as budgetScopeFor } from "./src/services/budget-scope.js";
+import { ASSUMED_STATE, assumedHomeItems, assumedState } from "./src/services/assumed-home.js";
 
 // The recipe bank is DATA, loaded from data/recipes.json - see
 // src/data/recipes.js. It used to be two hardcoded arrays right here, which
@@ -3010,6 +3011,45 @@ function staplesToOffer(shoppingItems) {
     .filter(item => state.stapleAsked[item.name] !== stamp);   // nej gäller veckan ut
 }
 
+// U06: säg vad vi ANTAR att du redan har - se src/services/assumed-home.js.
+const ASSUMED_ETIKETT = {
+  [ASSUMED_STATE.ON_LIST]: "står redan på listan",
+  [ASSUMED_STATE.ADDED]: "tillagd",
+  [ASSUMED_STATE.AT_HOME]: "i skafferiet",
+};
+const ASSUMED_KLASS = {
+  [ASSUMED_STATE.ON_LIST]: "is-onlist",
+  [ASSUMED_STATE.ADDED]: "is-added",
+  [ASSUMED_STATE.AT_HOME]: "is-athome",
+};
+
+function renderAssumedHome(shoppingItems) {
+  const section = $("assumedHomeSection"), box = $("assumedHomeList");
+  if (!section || !box) return;
+  const items = assumedHomeItems(selectedRecipes());
+  section.hidden = !items.length;
+  if (!items.length) return;
+  const tillagda = new Set(state.extraItems.map(e => String(e.name || "").trim().toLowerCase()));
+  // pantryList(), inte pantryNamesForCooking(): den senare läser nycklarna
+  // rakt av och räknar ett tomt fack som "hemma". Ett skafferi med 0 kvar
+  // är inget skafferi.
+  const iSkafferi = new Set(pantryList().map(rad => String(rad.name || "").trim().toLowerCase()));
+  const påListan = new Set((shoppingItems || []).map(rad => String(rad.namn || rad.name || "").trim().toLowerCase()));
+  box.innerHTML = items.map(namn => {
+    const läge = assumedState(namn, tillagda, iSkafferi, påListan);
+    if (läge !== ASSUMED_STATE.OFFER)
+      return `<span class="assumed-chip ${ASSUMED_KLASS[läge]}">`
+        + `${escapeHtml(namn)} · ${ASSUMED_ETIKETT[läge]}</span>`;
+    return `<button type="button" class="assumed-chip" data-assumed-add="${escapeHtml(namn)}">`
+      + `${escapeHtml(namn)}<span aria-hidden="true">+</span>`
+      + `<span class="sr-only">lägg till i inköpslistan</span></button>`;
+  }).join("");
+  box.querySelectorAll("[data-assumed-add]").forEach(knapp => knapp.addEventListener("click", () => {
+    addExtraItem({ name: knapp.dataset.assumedAdd, source: "assumed_home" });
+    render();
+  }));
+}
+
 function renderStaplePrompt(shoppingItems) {
   const box = $("staplePrompt");
   if (!box) return;
@@ -3204,6 +3244,7 @@ function renderBasket() {
   if (total != null) lastRealWeekTotal = total;
   renderWeekCostAlert(total);
   renderStaplePrompt(shoppingItems);
+  renderAssumedHome(shoppingItems);
   renderAttribution(shoppingItems);
   renderStoreComparison(selected); renderStoreCards(); renderExtraItems(activeChain); renderPantry();
   renderWeekStoreTabs();

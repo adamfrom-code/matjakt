@@ -736,6 +736,12 @@ button{color:inherit}
 .household-shared-note{margin:0 4px 14px;color:var(--muted);font-size:13px}
 
 /* ---- Basvarufrågan: en fråga, inte en lista ---------------------------- */
+.assumed-home{margin:18px 0}
+.assumed-home .section-help{margin:0 0 10px}
+.assumed-home-list{display:flex;flex-wrap:wrap;gap:8px}
+.assumed-chip{display:inline-flex;align-items:center;gap:5px;min-height:40px;padding:0 13px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text);font-size:14px;font-weight:600}
+.assumed-chip[data-assumed-add]{border-color:var(--primary);color:var(--primary)}
+.assumed-chip.is-added,.assumed-chip.is-athome,.assumed-chip.is-onlist{border-style:dashed;color:var(--muted);font-weight:500}
 .staple-prompt{padding:14px 16px;margin-bottom:16px;border:1px solid var(--border);border-radius:18px;background:var(--surface)}
 .staple-prompt p{margin:0 0 11px;font-size:15px}
 .staple-prompt-actions{display:flex;gap:9px}
