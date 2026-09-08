@@ -8,11 +8,11 @@ Genererad av `backend/scripts/kravtabell.py`. **129 krav**: masterinstruktionens
 |---|---:|
 | verifierat | 9 |
 | klart att testa | 12 |
-| delvis | 25 |
+| delvis | 26 |
 | behöver verifieras | 5 |
 | kräver beslut | 3 |
 | blockerat | 4 |
-| att göra | 71 |
+| att göra | 70 |
 | **summa** | **129** |
 
 **Färdiga (verifierat): 9 av 129.** 'Klart att testa' räknas inte som färdigt.
@@ -63,7 +63,7 @@ Verifierat i produktion = JA bara när något faktiskt lästes från matjakt.onr
 | O12 | Skyddat admin-API, inte bara dold knapp | behöver verifieras | _admin_ok() finns på endpointerna | Negativa tester för hushållsmedlem saknas | — | — | NEJ |
 | O13 | Mobilanpassad admin | klart att testa | Under 720 px: Kedjor-tabellen (13 kolumner, 1 424 px) ritas som kort per kedja; knappar min 44 px; sidscroll med synlig kant | Kontroll på riktig telefon (U79) och mot produktionsdata | Mätt i browser: 375 px före/efter, 1 280 px utan regression | #36 | NEJ |
 | O14 | Testlista för Operations | delvis | 21+ tester (chain_health 9, alerts 12) | Samlad lista saknas | — | #8 | NEJ |
-| O15 | Active stores + kvotmonitorering | att göra | — | De fyra definitionerna (register/valda/färska/kundtillgängliga) ska hållas isär | — | — | NEJ |
+| O15 | Active stores + kvotmonitorering | delvis | BUTIKER: fyra skilda tal per kedja (i registret / aktiva / färska ≤ 4 dygn / kundtillgängliga = färska i släppt kedja) med källa och mättid, visade i kontrollrummet | KVOT: se O8 - endpointen finns men visas inte och är overifierad mot kontot. Butikstalen är inte kontrollerade mot produktionsdata | 4 enhetstester; browser 375 + 1 280 px | #37 | NEJ |
 | U01 | Förklara budgetens omfattning | verifierat | 'Gäller 4 middagar för 2 personer. Frukost, lunch och hushållsvaror ingår inte.' i onboarding + Justera veckan, aria-label på hemkortet | — | budget-scope.test.js (4), browser 375 px | #17 fc97052 | NEJ |
 | U02 | Nytta före kontokrav; bevara gästens plan | verifierat | Gäst får prissatt vecka; planen överlever kontoskapande | — | E2E | #22 560cbbf | NEJ |
 | U03 | Minimal start, mät tid till första listan | delvis | Mäts i E2E: 2,1-2,7 s till första användbara listan | Mätt i testmiljö, inte med riktiga användare - målet 'ungefär en minut' är inte påstått uppnått | E2E skriver ut måttet | #23 fea9fb6 | NEJ |
