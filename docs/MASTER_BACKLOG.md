@@ -92,6 +92,39 @@ browser-E2E:n är redan tidskänslig (två olika flakiga fall observerade).
 4. Visa det användaren behöver när budgeten inte går att hålla, med
    konkreta ändringar (F2:s egen formulering).
 
+### O10b i detalj — de trettio osäkra raderna
+
+F5 rättade en regel som märkte osäkra rader som exakta. Följden är att
+revisionen nu är röd på `estimat: 30` (= 10 receptrader × 3 kedjor).
+**Ingen siffra har blivit sämre; en osanning har slutat döljas.**
+
+Mekanismen: ingrediensen mäts i volym (ml/msk/tsk), varan säljs i gram, och
+ingen densitet finns för just den ingrediensen. Motorn kan då inte veta hur
+många förpackningar som behövs och markerar raden som uppskattad. Raderna
+hålls redan utanför säkra totaler och billigast-jämförelsen — de ljuger
+alltså inte för användaren, de erkänner.
+
+Ur repots egen receptkälla går **en** av de tio att härleda: `Soja (30 ml)`
+i fem recept. Produktionen har 240 recept mot repots 58, så resten syns
+först när PR #16 är deployad.
+
+**Två vägar, och de är inte lika bra:**
+
+1. **Ge de ingredienser som har en verklig densitet sin densitet.** Motorn
+   har redan `DAIRY_DENSITY_ONE` för tunna såser (ketchup ~1,14, senap,
+   sriracha…). Soja ligger på ~1,15 och hör hemma i samma grupp. Det ger
+   ett *rättare* pris, inte ett grönare — ofta ett högre, för 30 ml soja är
+   34 g och kan behöva två flaskor där en gissades.
+2. **Acceptera att osäkerhet är ett giltigt tillstånd** och låt gaten mäta
+   det separat i stället för att kräva `estimat = 0`.
+
+**Det som INTE får göras:** utöka `DRY_SPICES` med honung, sirap eller olja
+för att få grönt. Det vore att återinföra precis den lögn F5 tog bort.
+Gaten är dessutom rådgivande — den blockerar ingenting, den rapporteras i
+`/api/health`.
+
+---
+
 ## O — Operations (Fas 2)
 
 | ID | Krav | Status | Bevis / nästa steg |
@@ -105,7 +138,8 @@ browser-E2E:n är redan tidskänslig (två olika flakiga fall observerade).
 | O7 | Admin-mail: skilj mottagare/transport/försök/leverans | delvis | **Verifierat live 2026-09-07:** `adminAlerts` visar recipientConfigured + transportConfigured = true, domän icloud.com. Kvar: senaste skickförsök och faktisk leverans |
 | O8 | Primat: configured JA/NEJ, kvot endast från verklig API-data | **blockerat** | Ingen dokumenterad kvot-endpoint hittad. Står `ej tillgängligt` tills motsatsen bevisas |
 | O9 | Scheduler: schema, faktiska körningar, nästa körning | delvis | Operations-koll 07:00 inkopplad med test som kräver att den ligger efter alla importer |
-| O10 | Pricing audit med definierade nämnare | behöver verifieras | Audit finns och är GRÖN i produktion. Live-parsningsvägen granskas INTE av den |
+| O10 | Pricing audit med definierade nämnare | **pågår** | Auditen är **RÖD** sedan F5 mergades: `estimat: 30`, allt annat 0, täckning 99,7 %. Inte en regression — F5 slutade märka osäkra rader som exakta. PR #16 får auditen att namnge vilka ingredienser som är osäkra; utan det går flaggan inte att åtgärda utan admin-token. Live-parsningsvägen granskas fortfarande INTE av auditen |
+| O10b | Besluta vad som ska hända med de osäkra raderna | **kräver beslut** | Se avsnittet nedan |
 | O11 | Deploy: commit, tider, avvikelse | delvis | `health.commit` finns; jämförelse mot förväntad deploy saknas |
 | O12 | Skyddat admin-API, inte bara dold knapp | behöver verifieras | `_admin_ok()` finns på endpointerna; negativa tester för household-medlem saknas |
 | O13 | Mobilanpassad admin | att göra | |
@@ -154,6 +188,7 @@ betaldata; ingen intäktssiffra får härledas ur antal Premium × pris.
 | F5: kryddgenvägen gällde honung | #13 **mergad** | 2 msk honung fick "1 paket, exakt" mot 15 g |
 | F4: "billigaste butiken" var oftast vald | #14 **mergad** | Osant påstående i UI rättat, dedupe per vecka |
 | F3: kassans ålder från använda rader | #15 **mergad** | En färsk rad nollställde inte längre kassens ålder |
+| Revisionen namnger vad som är osäkert | #16 **öppen** | Rubriken kunde säga "alla system fungerar" över ett rött kort. Två tester i båda riktningarna |
 | Kampanjtorget med bilder och hero | #12 **mergad** | Bilden bär aldrig budskapet |
 | Driftstatus i kontrollrummet | #11 **mergad** | Verifierad i webbläsare, desktop + mobil |
 | health visar om larmen går att skicka | #10 **mergad** | Live: mottagare och transport bekräftade |

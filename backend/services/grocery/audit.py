@@ -49,6 +49,14 @@ def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: 
                              "rad_over_500", "rad_over_1000", "otolkad_paketstorlek", "estimat",
                              "kilopris_som_paketpris", "smakords_misstanke", "saknade")}
     examples: dict[str, list] = {k: [] for k in counts}
+    # VILKA ingredienser som är osäkra - inte vilka produkter. Namn och enhet
+    # står redan i den publika receptkällan, så nedbrytningen får ligga i
+    # /api/health; produktnamnen i examples gör det inte och stannar hos
+    # admin-vägen. Utan den här är "estimat: 30" omöjlig att åtgärda för
+    # någon som saknar admin-token: siffran säger att något är fel men inte
+    # vad, och en flagga man inte kan följa upp blir en flagga man slutar
+    # tro på.
+    estimat_per_ingrediens: dict[str, int] = {}
     checks = 0
     # Per kedja: en hel kedja utan priser får inte försvinna i totalen.
     per_chain = {c: {"kontroller": 0, "saknade": 0} for c in store_rows}
@@ -77,6 +85,8 @@ def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: 
                 packages, total, exact = row.get("packages") or 0, row.get("totalCost"), row.get("exactPackaging", True)
                 if not exact:
                     note("estimat", recipe, ing, chain, row, f"({unit}->{row.get('packageUnit')})")
+                    nyckel = f"{ing['name']} ({unit})"
+                    estimat_per_ingrediens[nyckel] = estimat_per_ingrediens.get(nyckel, 0) + 1
                 if row.get("perKg") or dairy_gram_ml_equivalent(ing["name"]) or baking_grams(ing["name"], 1, "dl") is not None:
                     pass
                 elif folded_unit in _MASS and package_unit not in _MASS and exact:
@@ -107,4 +117,8 @@ def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: 
     return {"recept": len(recipes), "kedjor": list(store_rows), "kontroller": checks,
             "perKedja": per_chain,
             "flaggor": counts, "exempel": {k: v for k, v in examples.items() if v},
+            # Störst först, taket finns för att health ska ha en övre storlek
+            # även den dag något går riktigt fel och tusen rader blir osäkra.
+            "estimatPerIngrediens": dict(sorted(estimat_per_ingrediens.items(),
+                                                key=lambda kv: (-kv[1], kv[0]))[:20]),
             "gate": "GRÖN" if gate else "RÖD"}
