@@ -556,6 +556,26 @@ class BrowserJourney(unittest.TestCase):
             # andra. Förr gjorde en avbockning ingenting med skafferiet.
             expect(page.locator("#pantryCount")).to_have_text("2")
 
+            # U35: BORTTAGEN ÄR INTE SAMMA SAK SOM HEMMA.
+            #
+            # Antalet ovan utesluter den borttagna varan implicit - vore den
+            # med skulle det stå tre. Men en implicit kontroll säger inte
+            # VAD som gick fel när den brister, och det här är en invariant
+            # med konsekvenser: en vara som tyst hamnar i skafferiet gör att
+            # kommande veckor räknar bort den och underköper.
+            skafferiet = page.evaluate(
+                "() => [...document.querySelectorAll('#pantryList .pantry-item')]"
+                ".map(e => (e.innerText || '').split('\\n')[0].trim())")
+            # Två varor ska SYNAS - annars är assertionen nedan tomt sann
+            # och bevisar ingenting.
+            self.assertEqual(len(skafferiet), 2, f"skafferiet läste fel: {skafferiet}")
+            self.assertNotIn(removed_name, skafferiet,
+                             f"{removed_name!r} togs BORT ur listan men hamnade i skafferiet: {skafferiet}")
+            läge = self.local_state()
+            self.assertIn(removed_name, läge.get("removedItems") or [])
+            self.assertNotIn(removed_name, läge.get("harHemma") or [])
+            self.assertNotIn(removed_name, läge.get("avklarade") or [])
+
         with self.step("butiksjämförelse: Free ser spridningen, låsta butiker och paywallen"):
             page.click('.bottom-nav-item[data-view="basket"]')
             self.wait_for_store_cards()

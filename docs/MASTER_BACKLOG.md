@@ -167,9 +167,37 @@ Inventerat i koden, inte gissat:
 | U28 extravaror separat men i totalen | **verifierat** | Egen sektion "Extra du lagt till"; `extrasCost` läggs till i handlingens total; portionspriserna kommer per recept från backend och kan strukturellt inte innehålla tvättmedel |
 | U29 rättvis besparingshistorik | **verifierat** | F4 mergad: dedupering per veckonyckel |
 | U30 kvarvarande mängd efter veckan | **att göra** | Ingen restmängd visas |
-| I butiken | U31–U42 | att göra |
-| Matlagning | U43–U52 | att göra |
-| Skafferi och rester | U53–U60 | att göra |
+| I butiken | U31–U42 | **delvis** — U34/U35 verifierade, U32/U38/U40 delvis, resten features |
+| Matlagning | U43–U52 | **delvis** — U43 och U52 finns, U44–U51 saknas |
+| Skafferi och rester | U53–U60 | **U53 har ett mätt fel, se nedan**; U60 hanterad; resten saknas |
+
+### U53: en okänd mängd blir ett exakt avdrag
+
+`addLocalPantryItem` lagrar `{ amount: 1 }` när användaren bockar
+"Har hemma" utan att ange mängd. Den ettan går rakt in i prissättningen
+(`pantryForPricing` → `price_list`) och behandlas som ett exakt avdrag.
+
+**Mätt med riktiga priser**, 400 g köttfärs och 2 st gul lök:
+
+| Skafferi | Total | Kvar att köpa |
+|---|---|---|
+| inget | 68,00 kr | 400 g, 2 st |
+| "Har hemma" → `amount: 1` | **63,50 kr** | 399 g, **1 st** |
+| verklig mängd angiven | 0 kr | – |
+
+Ett tryck på "Har hemma" utan mängd drar alltså av exakt en lök och sänker
+priset 4,50 kr. Kravet säger uttryckligen att en okänd mängd inte får bli
+ett exakt avdrag.
+
+Inkonsekvensen är värre än siffran: varan markeras hanterad och lämnar den
+aktiva listan, medan priset fortfarande tar betalt för den andra löken.
+
+**Inte rättat, och det är avsiktligt.** Rätt fix beror på U55 (skilj köpt
+från förbrukat) och U56 (bekräfta förbrukning innan lager minskas), som
+inte finns. Utan dem flyttar en isolerad ändring bara felet: skriver vi in
+veckans hela behov i skafferiet i stället, dras samma varor av igen nästa
+vecka fast de är uppätna. Ändringen påverkar dessutom visade priser.
+**Kräver ett ägarbeslut om hur "finns hemma" ska betyda.**
 | Utseende och känsla | U61–U70 | att göra |
 | Teknik | U71–U80 | att göra (U72 delvis: cacheversion mergad i PR #7; U80 = F6, blockerat) |
 
