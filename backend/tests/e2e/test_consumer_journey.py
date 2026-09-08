@@ -629,6 +629,93 @@ class BrowserJourney(unittest.TestCase):
         self.assertLess(sekunder, 30.0,
                         f"flödet tog {sekunder:.1f} s till en användbar lista ({varor} varor)")
 
+    def test_felaktiga_startval_gar_att_andra_utan_omstart(self):
+        """U04: den som svarat fel i onboardingen ska inte behöva börja om.
+
+        Alla fyra startval - personer, middagar, postnummer och butik -
+        måste gå att ändra efteråt, och ändringen ska slå igenom direkt.
+        Ett val som kräver omstart är ett val användaren inte vågar göra.
+        """
+        page = self.page
+        page.goto(self.app())
+        self.complete_onboarding()
+        self.choose_standard_week()
+        före = self.local_state()
+
+        # Justera veckan nås från hemvyn - dit man kommer utan omstart.
+        page.click('.bottom-nav-item[data-view="home"]')
+        page.click("#weekSheetOpen")
+        expect(page.locator("#weekSheet")).to_be_visible()
+
+        # Personer och middagar: stegare, inte omstart.
+        page.click("#peoplePlus")
+        page.click("#mealsMinus")
+        # Budget skrivs in.
+        page.fill("#budgetInput", "1234")
+        # Plats och butik byts i samma vy.
+        page.fill("#postcodeInput", "11122")
+        page.select_option("#storeInput", "Hemköp")
+
+        efter = self.wait_for_state(
+            lambda s: s.get("budget") == 1234 and s.get("postnummer") == "11122"
+            and s.get("butik") == "Hemköp",
+            what="ändrade startval")
+        self.assertEqual(efter["personer"], före["personer"] + 1)
+        self.assertEqual(efter["middagar"], före["middagar"] - 1)
+
+        # Ingen omladdning har skett, och veckan lever kvar.
+        self.assertEqual(sorted(efter.get("valda") or []), sorted(före.get("valda") or []))
+        expect(page.locator("#onboardingModal")).to_be_hidden()
+
+        # Omfattningstexten (U01) följer de nya valen direkt - beviset för
+        # att ändringen slog igenom i gränssnittet, inte bara i lagringen.
+        expect(page.locator("#budgetScopeNote")).to_contain_text(
+            f"{efter['middagar']} middag", timeout=5_000)
+        expect(page.locator("#budgetScopeNote")).to_contain_text(f"{efter['personer']} personer")
+
+    def test_trasig_prissattning_ger_besked_inte_evig_spinner(self):
+        """U05: begriplig väntestatus - och ALDRIG en ändlös spinner.
+
+        Felet som en gång strandade varje öppen telefon står beskrivet i
+        app.js: när prissättningen misslyckades låg synknyckeln kvar, varje
+        senare rendering drog slutsatsen "redan hämtat", och rubriken sa
+        "pris hämtas…" tills någon laddade om. Fixen finns - men inget test
+        prövade den, och det är precis den sortens kod som tyst går sönder.
+
+        Här bryts prissättningen på riktigt: anropet avvisas i nätlagret.
+        Kravet är att användaren får ett BESKED inom rimlig tid, inte att
+        ordet "pris hämtas…" aldrig syns - det får synas medan ett nytt
+        försök pågår. Det som inte får hända är att beskedet aldrig kommer.
+        """
+        page = self.page
+        # Nätlagret säger nej FRÅN BÖRJAN. Ingen produktionskod ändras och
+        # inget mockas i appen - den möter samma sorts fel som ett tapp i
+        # mobilnätet. Rutten läggs före veckan skapas, annars hinner en
+        # lyckad prissättning cachas och felet visas aldrig.
+        page.route("**/api/pricing/week", lambda route: route.abort())
+        page.goto(self.app())
+        self.complete_onboarding()
+        self.choose_standard_week()
+        page.click('.bottom-nav-item[data-view="basket"]')
+        expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
+
+        # Beskedet ska komma. 45 s är gott om tid även med några omförsök
+        # och backoff - poängen är att det finns en ände, inte hur snabb den är.
+        try:
+            expect(page.locator("#shoppingCost")).to_contain_text("pris saknas just nu", timeout=45_000)
+        except AssertionError as error:
+            raise AssertionError(
+                f"{error} | rubriken visade {page.locator('#shoppingCost').inner_text()!r}"
+                f" efter 45 s - det är en ändlös spinner, inte ett besked") from None
+        # Och det ska vara ett besked på svenska, inte ett HTTP-fel eller en
+        # stacktrace: "inga tekniska detaljer" står uttryckligen i kravet.
+        text = page.locator("#shoppingCost").inner_text()
+        for teknik in ("HTTP", "Error", "undefined", "NaN", "500", "Failed"):
+            self.assertNotIn(teknik, text, f"tekniskt läckage i väntestatusen: {text!r}")
+
+        # Listan finns kvar - ett prisfel får inte ta med sig veckan i fallet.
+        self.assertGreater(page.locator("#shoppingList .shopping-item").count(), 0)
+
     def test_gasten_ser_nyttan_och_far_behalla_sin_vecka(self):
         """U02: nyttan före kontokravet, och planen överlever registreringen.
 
