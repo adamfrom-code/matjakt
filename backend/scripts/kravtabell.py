@@ -228,10 +228,14 @@ k("O3", "ICA/Coop: visa ej släppt, schema, ingen snapshot", "delvis",
   "Ingen import har någonsin körts - täckning 'ej verifierat'", "—", "#5 235958a", "NEJ")
 k("O4", "Lidl som Limited med orsak", "delvis",
   "limited-status finns och larmar aldrig", "Orsakstexten i adminvyn inte kontrollerad", "—", "#8", "NEJ")
-k("O5", "Aktiva incidenter med kundpåverkan", "delvis",
-  "Incidenter finns i alerts.py", "Adminvy som visar dem saknas", "—", "#8", "NEJ")
-k("O6", "Incidenthistorik, persistenta ID, dedupe", "delvis",
-  "Dedupe + recovery, 7 dagars cooldown", "Historikvy saknas", "12 enhetstester", "#8 745d37e", "NEJ")
+k("O5", "Aktiva incidenter med kundpåverkan", "klart att testa",
+  "overview(): per öppen incident vad är fel / påverkas kunder / vad göra; kundpåverkan ur släppt + ålder mot serveringsregeln, 'okänd' utan underlag; limited blir aldrig incident; kortet Incidenter i kontrollrummet",
+  "Kontroll mot en riktig incident i produktion; 'senaste försök' visas ur panelen men snapshot-serveringen är härledd ur regeln, inte observerad",
+  "7 nya + 1 uppdaterat test; browser 375 px", "#39", "NEJ")
+k("O6", "Incidenthistorik, persistenta ID, dedupe", "klart att testa",
+  "Tillstånd skrivs oavsett mejl; mejlstatus sent/failed/not_configured/pending sanningsenligt; recovery arkiverar start/recovery/duration/mejlstatus även om kvittot misslyckas; 50 poster i databasen, överlever omstart; cooldown bara för larm som gått ut",
+  "Kontroll mot riktig drift över tid",
+  "test_grocery_alerts.py (21)", "#8, #39", "NEJ")
 k("O7", "Admin-mail: mottagare/transport/försök/leverans", "delvis",
   "recipientConfigured + transportConfigured + domän i health",
   "Senaste skickförsök och faktisk leverans saknas", "Live-läst adminAlerts", "#10 6052735", "JA (delen som finns)")
