@@ -223,11 +223,13 @@ k("O1", "Driftstatus som adminförstasida", "klart att testa",
 k("O2", "Rad per kedja: health, released, scope, ålder, gate", "klart att testa",
   "chain_health() med healthy/stale/failed/limited/never_imported/ready_for_release; skilda kolumner",
   "Kontroll mot riktig data", "9 enhetstester", "#8 745d37e", "NEJ")
-k("O3", "ICA/Coop: visa ej släppt, schema, ingen snapshot", "delvis",
-  "Dagligt schema 05:30/06:30 mergat; RELEASED_CHAINS orörd",
-  "Ingen import har någonsin körts - täckning 'ej verifierat'", "—", "#5 235958a", "NEJ")
-k("O4", "Lidl som Limited med orsak", "delvis",
-  "limited-status finns och larmar aldrig", "Orsakstexten i adminvyn inte kontrollerad", "—", "#8", "NEJ")
+k("O3", "ICA/Coop: visa ej släppt, schema, ingen snapshot", "blockerat",
+  "SJÄLVSTÄNDIGT GJORT OCH VERIFIERAT LIVE: dagligt schema 05:30/06:30 körs varje natt; ej släppt visas; RELEASED_CHAINS orörd",
+  "BLOCKERAT PÅ ÅTKOMST: varje körning faller med 401 - PRIMAT_API_KEY saknas eller är ogiltig i produktionsmiljön. Sätts av ägaren i Render. Täckning 'ej verifierat' tills en import lyckats",
+  "Läst ur /api/grocery/status 2026-09-09: lastRun failed 05:30/06:30, error 401", "#5", "JA (schemat och felet)")
+k("O4", "Lidl som Limited med orsak", "klart att testa",
+  "limited larmar aldrig; orsaken (health.reason) visas som tooltip på pillret och i klartext i kedjenoten",
+  "Se den mot produktionens Lidl-rad", "admin-E2E", "#40", "NEJ")
 k("O5", "Aktiva incidenter med kundpåverkan", "klart att testa",
   "overview(): per öppen incident vad är fel / påverkas kunder / vad göra; kundpåverkan ur släppt + ålder mot serveringsregeln, 'okänd' utan underlag; limited blir aldrig incident; kortet Incidenter i kontrollrummet",
   "Kontroll mot en riktig incident i produktion; 'senaste försök' visas ur panelen men snapshot-serveringen är härledd ur regeln, inte observerad",
@@ -240,9 +242,9 @@ k("O7", "Admin-mail: mottagare/transport/försök/leverans", "delvis",
   "recipientConfigured + transportConfigured + domän i health",
   "Senaste skickförsök och faktisk leverans saknas", "Live-läst adminAlerts", "#10 6052735", "JA (delen som finns)")
 k("O8", "Primat: configured JA/NEJ, kvot ur verklig API-data", "delvis",
-  "FINNS: /api/admin/primat-status svarar configured JA/NEJ utan nyckeln och anropar Primats GET /me (plan, dagsbudget, använda rader, reset) - rättelse: jag skrev tidigare att ingen kvot-endpoint fanns",
-  "VISAS INTE: ingenting i kontrollrummet läser endpointen. OVERIFIERAT: att /me svarar med de fälten mot det riktiga kontot - kräver admin-token. Varning nära gräns finns inte. Köp/uppgradering = ägarbeslut",
-  "Kodläsning primat_client.account_status", "—", "NEJ")
+  "Primat-kortet: configured JA/NEJ utan nyckeln; kvot BARA ur Primats /me-fält, annars 'Ej tillgängligt'; ingen kvot räknas fram ur importerade rader",
+  "KVOTÖVERVAKNING SAKNAS: /me är overifierad mot det riktiga kontot (kräver nyckel i produktion), ingen varning nära gräns, inga trösklar. En presentationsruta är inte övervakning. Köp/uppgradering = ägarbeslut",
+  "admin-E2E (visar NEJ utan nyckel)", "#40", "NEJ")
 k("O9", "Scheduler: schema, körningar, nästa körning", "delvis",
   "Operations-koll 07:00 med test att den ligger efter importerna", "Faktiska körningar och nästa körning i adminvyn", "1 test", "#8", "NEJ")
 k("O10", "Pricing audit med definierade nämnare", "delvis",
@@ -260,14 +262,14 @@ k("O12", "Skyddat admin-API, inte bara dold knapp", "verifierat",
   "Ägarinloggning via roll (önskat spår i kravet) - inte påbörjat, och ska inte göras hastigt",
   "test_admin_api_negatives.py (3); produktionssond: 4 vägar × 2 identiteter = 404 med okänd-väg-kropp", "#38", "JA (negativa delen, live 2026-09-08)")
 k("O13", "Mobilanpassad admin", "klart att testa",
-  "Under 720 px: Kedjor-tabellen (13 kolumner, 1 424 px) ritas som kort per kedja; knappar min 44 px; sidscroll med synlig kant",
-  "Kontroll på riktig telefon (U79) och mot produktionsdata",
-  "Mätt i browser: 375 px före/efter, 1 280 px utan regression", "#36", "NEJ")
+  "Kedjor och incidenthistorik som kort under 720 px med alla 14 resp. 7 rubriker som data-label; knappar 44 px; felrader bryter (320 px klippte förut)",
+  "PRODUKTIONSVERIFIERING återstår: datakorten kräver admin-token och är bara prövade lokalt",
+  "LOKALT: admin-E2E mot riktig server vid 320/375/390, 20 px text och 1 280 - etikettfullständighet, inga dolda celler, Släppt≠Drift, inga undefined; 5 skärmdumpar märkta TESTDATA", "#36, #40", "NEJ")
 k("O14", "Testlista för Operations", "delvis", "21+ tester (chain_health 9, alerts 12)", "Samlad lista saknas", "—", "#8", "NEJ")
 k("O15", "Active stores + kvotmonitorering", "delvis",
-  "BUTIKER: fyra skilda tal per kedja (i registret / aktiva / färska ≤ 4 dygn / kundtillgängliga = färska i släppt kedja) med källa och mättid, visade i kontrollrummet",
-  "KVOT: se O8 - endpointen finns men visas inte och är overifierad mot kontot. Butikstalen är inte kontrollerade mot produktionsdata",
-  "4 enhetstester; browser 375 + 1 280 px", "#37", "NEJ")
+  "Fyra tal per kedja med källa, mättid och scope. Riksprissatt kedja räknas färsk i ALLA aktiva butiker när katalogen har ett färskt pris (samma regel som serveringen i nearby_stores/PricingTarget); butiksspecifik butik för butik. Produktionen visade '255 aktiva · 1 färsk' för Willys - sant om prisrader, falskt om butiker",
+  "KVOT: se O8. Talen inte kontrollerade mot produktionsdata efter rättelsen",
+  "7 enhetstester (båda scopen); browser", "#37, #40", "NEJ")
 
 # ---- U01-U06: första användningen ---------------------------------------
 k("U01", "Förklara budgetens omfattning", "verifierat",
