@@ -47,6 +47,18 @@ class AdminPanel(unittest.TestCase):
         if reason:
             raise unittest.SkipTest(reason)
         cls.server = _Server()
+        # BROWSERN FÖRST, TILLSTÅNDET SEDAN. Om Chromium saknas (backend-jobbet
+        # i CI har ingen) kastar launch, SkipTest reser sig och tearDownClass
+        # körs ALDRIG. Sattes ADMIN_TOKEN före den punkten läckte den till
+        # resten av sviten: test_the_mail_signing_key_is_not_the_admin_token
+        # slutade hoppa över och föll i CI med "1 231 tester, 5 skippade" -
+        # gröna lokalt där Chromium finns. Samma ordning som konsumentresan.
+        cls.playwright = sync_playwright().start()
+        try:
+            cls.browser = cls.playwright.chromium.launch(headless=True)
+        except Exception as error:  # pragma: no cover
+            cls.playwright.stop(); cls.server.close()
+            raise unittest.SkipTest(f"Chromium kunde inte startas: {str(error)[:120]}")
         cls._orig_admin = api_server.ADMIN_TOKEN
         api_server.ADMIN_TOKEN = ADMIN
         # En misslyckad ICA-körning med LÅNGT fel + en lyckad Willys-körning
@@ -68,12 +80,6 @@ class AdminPanel(unittest.TestCase):
                                                 "severity": "warning", "title": "Willys har inte uppdaterats",
                                                 "summary": "Willys har inte uppdaterats", "mail": {"status": "sent"}},
                          "chain:Willys:stale", time.time() - 3600, "failed")
-        cls.playwright = sync_playwright().start()
-        try:
-            cls.browser = cls.playwright.chromium.launch(headless=True)
-        except Exception as error:  # pragma: no cover
-            cls.playwright.stop(); cls.server.close()
-            raise unittest.SkipTest(f"Chromium kunde inte startas: {str(error)[:120]}")
 
     @classmethod
     def tearDownClass(cls):
