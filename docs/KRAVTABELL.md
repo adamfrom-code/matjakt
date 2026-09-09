@@ -7,8 +7,8 @@ Genererad av `backend/scripts/kravtabell.py`. **129 krav**: masterinstruktionens
 | Status | Antal |
 |---|---:|
 | verifierat | 9 |
-| klart att testa | 12 |
-| delvis | 26 |
+| klart att testa | 14 |
+| delvis | 24 |
 | behöver verifieras | 5 |
 | kräver beslut | 3 |
 | blockerat | 4 |
@@ -52,8 +52,8 @@ Verifierat i produktion = JA bara när något faktiskt lästes från matjakt.onr
 | O2 | Rad per kedja: health, released, scope, ålder, gate | klart att testa | chain_health() med healthy/stale/failed/limited/never_imported/ready_for_release; skilda kolumner | Kontroll mot riktig data | 9 enhetstester | #8 745d37e | NEJ |
 | O3 | ICA/Coop: visa ej släppt, schema, ingen snapshot | delvis | Dagligt schema 05:30/06:30 mergat; RELEASED_CHAINS orörd | Ingen import har någonsin körts - täckning 'ej verifierat' | — | #5 235958a | NEJ |
 | O4 | Lidl som Limited med orsak | delvis | limited-status finns och larmar aldrig | Orsakstexten i adminvyn inte kontrollerad | — | #8 | NEJ |
-| O5 | Aktiva incidenter med kundpåverkan | delvis | Incidenter finns i alerts.py | Adminvy som visar dem saknas | — | #8 | NEJ |
-| O6 | Incidenthistorik, persistenta ID, dedupe | delvis | Dedupe + recovery, 7 dagars cooldown | Historikvy saknas | 12 enhetstester | #8 745d37e | NEJ |
+| O5 | Aktiva incidenter med kundpåverkan | klart att testa | overview(): per öppen incident vad är fel / påverkas kunder / vad göra; kundpåverkan ur släppt + ålder mot serveringsregeln, 'okänd' utan underlag; limited blir aldrig incident; kortet Incidenter i kontrollrummet | Kontroll mot en riktig incident i produktion; 'senaste försök' visas ur panelen men snapshot-serveringen är härledd ur regeln, inte observerad | 7 nya + 1 uppdaterat test; browser 375 px | #39 | NEJ |
+| O6 | Incidenthistorik, persistenta ID, dedupe | klart att testa | Tillstånd skrivs oavsett mejl; mejlstatus sent/failed/not_configured/pending sanningsenligt; recovery arkiverar start/recovery/duration/mejlstatus även om kvittot misslyckas; 50 poster i databasen, överlever omstart; cooldown bara för larm som gått ut | Kontroll mot riktig drift över tid | test_grocery_alerts.py (21) | #8, #39 | NEJ |
 | O7 | Admin-mail: mottagare/transport/försök/leverans | delvis | recipientConfigured + transportConfigured + domän i health | Senaste skickförsök och faktisk leverans saknas | Live-läst adminAlerts | #10 6052735 | JA (delen som finns) |
 | O8 | Primat: configured JA/NEJ, kvot ur verklig API-data | delvis | FINNS: /api/admin/primat-status svarar configured JA/NEJ utan nyckeln och anropar Primats GET /me (plan, dagsbudget, använda rader, reset) - rättelse: jag skrev tidigare att ingen kvot-endpoint fanns | VISAS INTE: ingenting i kontrollrummet läser endpointen. OVERIFIERAT: att /me svarar med de fälten mot det riktiga kontot - kräver admin-token. Varning nära gräns finns inte. Köp/uppgradering = ägarbeslut | Kodläsning primat_client.account_status | — | NEJ |
 | O9 | Scheduler: schema, körningar, nästa körning | delvis | Operations-koll 07:00 med test att den ligger efter importerna | Faktiska körningar och nästa körning i adminvyn | 1 test | #8 | NEJ |

@@ -69,9 +69,37 @@ async function refresh() {
   renderOps(health, data.providers);
   renderChains(data.providers, data.scheduler);
   renderScheduler(data.scheduler);
+  // Incidenterna får inte falla med tratten, och tvärtom.
+  try { renderIncidents(await call("/admin/incidents")); }
+  catch (error) { $("incidentsActive").textContent = `Kunde inte läsa incidenter: ${error.message}`; }
   // Kontrollrummet får inte falla om prisdatan gör det, och tvärtom.
   try { renderInsights(await call("/admin/insights")); }
   catch (error) { $("totals").innerHTML = `<p class="note">Kunde inte läsa tratten: ${esc(error.message)}</p>`; }
+}
+
+// O5/O6. Mejlstatusen visas som den ÄR: sent, failed, not_configured,
+// pending. En oklar JA-markering för ett försök som misslyckats vore en lögn
+// i just den ruta ägaren tittar i när något är fel.
+const MAIL_LABEL = { sent: "skickat", failed: "MISSLYCKADES", not_configured: "e-post ej konfigurerad", pending: "väntar" };
+const mailPill = s => `<span class="pill ${s === "sent" ? "ok" : s === "failed" ? "bad" : "warn"}">${esc(MAIL_LABEL[s] || s || "—")}</span>`;
+const varade = sek => sek == null ? "—" : sek < 3600 ? `${Math.round(sek / 60)} min` : sek < 172800 ? `${(sek / 3600).toFixed(1)} h` : `${(sek / 86400).toFixed(1)} dygn`;
+
+function renderIncidents(data) {
+  const aktiva = data.active || [];
+  $("incidentsActive").innerHTML = aktiva.length
+    ? aktiva.map(a => `<div style="margin:.5rem 0;padding:.5rem .7rem;border:1px solid var(--line);border-radius:10px">
+        <div class="row" style="justify-content:space-between"><strong>${esc(a.chain || "Primat")}</strong>
+          <span>${mailPill(a.mail?.status)} <span class="quiet">${esc(a.ageHours)} h</span></span></div>
+        <div><b>Vad är fel:</b> ${esc(a.vadArFel)}</div>
+        <div><b>Påverkas kunder:</b> ${esc(a.paverkasKunder)}</div>
+        <div><b>Vad göra:</b> ${esc(a.vadGora)}</div>
+      </div>`).join("")
+    : `Inga öppna incidenter. <span class="quiet">Larm dedupliceras per problem, ett kvitto vid återställning, cooldown ${Math.round((data.cooldownSeconds || 0) / 86400)} dygn.</span>`;
+  $("incidentsHistory").querySelector("tbody").innerHTML = (data.history || []).map(h => `<tr>
+    <td>${when(h.openedAt)}</td><td>${when(h.recoveredAt)}</td><td>${varade(h.durationSeconds)}</td>
+    <td>${esc(h.chain || "Primat")}</td><td class="wrap">${esc(h.summary || h.title || h.key)}</td>
+    <td>${mailPill(h.mail?.opened)}</td><td>${mailPill(h.mail?.recovered)}</td></tr>`).join("")
+    || `<tr><td colspan="7" class="quiet">Ingen historik än</td></tr>`;
 }
 
 function renderInsights(data) {

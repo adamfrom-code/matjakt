@@ -2192,6 +2192,14 @@ class ApiHandler(SimpleHTTPRequestHandler):
                         break
                     self.wfile.write(chunk)
             return
+        if parsed.path == "/api/admin/incidents":
+            # O5/O6: öppna incidenter med "vad är fel / påverkas kunder / vad
+            # göra", plus historik med duration och mejlens öde. Admin-gated
+            # som allt annat driftinnehåll; health bär bara räknare.
+            if not self._admin_ok():
+                return
+            self.send_json(200, grocery_alerts.overview(KV_CACHE, grocery_api.provider_status()))
+            return
         if parsed.path == "/api/admin/primat-status":
             # Never a regular user's endpoint - gated by a separate admin
             # secret (see ADMIN_TOKEN), not account premium status. Refuses
