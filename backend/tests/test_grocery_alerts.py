@@ -125,14 +125,98 @@ class AlertTest(unittest.TestCase):
         self.assertEqual(resultat["skipped"], ["chain:ICA:failed"])
 
     def test_a_broken_mailer_never_stops_the_night_job(self):
-        """Om SMTP är nere får larmet försvinna - men körningen ska fortsätta,
-        annars byter vi ut ett driftproblem mot ett kundproblem."""
+        """Om SMTP är nere ska körningen fortsätta - annars byter vi ut ett
+        driftproblem mot ett kundproblem. Incidenten SPARAS (O6: tillståndet
+        är sanningen, mejlet ett kvitto), mejlet står som "failed" - aldrig
+        som skickat - och nästa körning försöker igen."""
         self.send.side_effect = RuntimeError("SMTP nere")
         resultat = self._kör([_entry("ICA", "failed")], now=1_000.0)
-        self.assertEqual(resultat["incidents"], [])
-        # Ingen incident sparad: nästa körning ska försöka igen, inte tro att
-        # larmet redan gått ut.
-        self.assertEqual(self.kv.keys(alerts.NAMESPACE), [])
+        self.assertEqual(resultat["incidents"], ["chain:ICA:failed"])
+        post = alerts.open_incidents(self.kv)["chain:ICA:failed"]
+        self.assertEqual(post["mail"]["status"], "failed")
+        self.assertIsNone(post.get("lastSent"), "ett misslyckat försök får inte räknas som skickat")
+        # Nästa körning, med fungerande SMTP: larmet går ut nu, ingen cooldown
+        # hindrar det, och incidenten är fortfarande EN.
+        self.send.side_effect = lambda cfg, to, subject, body, *a, **k: self.skickade.append((to, subject, body))
+        self._kör([_entry("ICA", "failed")], now=1_000.0 + 3600)
+        self.assertEqual(len(self.skickade), 1)
+        self.assertEqual(alerts.open_incidents(self.kv)["chain:ICA:failed"]["mail"]["status"], "sent")
+        self.assertEqual(len(alerts.open_incidents(self.kv)), 1)
+
+    def test_without_a_recipient_the_incident_is_still_tracked(self):
+        """O5: incidenten ska synas i kontrollrummet även utan e-post. Mejlet
+        står som pending - inte som skickat, inte som misslyckat."""
+        alerts.process([_entry("ICA", "failed")], self.kv, MAIL, now=1_000.0, to_email="")
+        post = alerts.open_incidents(self.kv)["chain:ICA:failed"]
+        self.assertEqual(post["mail"]["status"], "pending")
+        self.assertEqual(post["openedAt"], 1_000.0)
+        self.assertEqual(self.skickade, [])
+
+    def test_recovery_writes_history_with_duration_even_if_the_receipt_fails(self):
+        """O6: återställd är återställd. Signalen är borta, alltså stängs
+        incidenten - och historiken får start, recovery, duration och
+        mejlens öde. Ett misslyckat kvitto håller inte incidenten öppen."""
+        self._kör([_entry("ICA", "failed")], now=1_000.0)
+        self.send.side_effect = RuntimeError("SMTP nere vid recovery")
+        resultat = self._kör([_entry("ICA", "healthy")], now=1_000.0 + 5400)
+        self.assertEqual(resultat["recoveries"], ["chain:ICA:failed"])
+        self.assertEqual(alerts.open_incidents(self.kv), {})
+        hist = alerts.history(self.kv)
+        self.assertEqual(len(hist), 1)
+        rad = hist[0]
+        self.assertEqual((rad["openedAt"], rad["recoveredAt"], rad["durationSeconds"]), (1_000.0, 6_400.0, 5400))
+        self.assertEqual(rad["mail"], {"opened": "sent", "recovered": "failed"})
+        self.assertEqual(rad["chain"], "ICA")
+
+    def test_history_is_capped(self):
+        for i in range(alerts.HISTORY_LIMIT + 7):
+            t = 10_000.0 + i * 20_000
+            self._kör([_entry("ICA", "failed")], now=t)
+            self._kör([_entry("ICA", "healthy")], now=t + 3600)
+        hist = alerts.history(self.kv)
+        self.assertEqual(len(hist), alerts.HISTORY_LIMIT)
+        # Nyast först.
+        self.assertGreater(hist[0]["openedAt"], hist[-1]["openedAt"])
+
+    def test_a_legacy_record_without_mail_field_still_recovers(self):
+        """Poster skrivna före O6 hade bara openedAt/lastSent/severity."""
+        self.kv.set(alerts.NAMESPACE, "chain:ICA:failed",
+                    {"openedAt": 500.0, "lastSent": 500.0, "severity": "critical"})
+        resultat = self._kör([_entry("ICA", "healthy")], now=4_100.0)
+        self.assertEqual(resultat["recoveries"], ["chain:ICA:failed"])
+        rad = alerts.history(self.kv)[0]
+        self.assertEqual(rad["durationSeconds"], 3600)
+        self.assertEqual(rad["mail"]["opened"], "sent")
+
+    def test_overview_says_what_is_wrong_who_is_affected_and_what_to_do(self):
+        """O5: tre frågor per incident. Kundpåverkan härleds ur släppt +
+        ålder mot serveringsregeln, aldrig påstådd utan underlag."""
+        from services.grocery.pricing import MAX_STORE_PRICE_AGE_SECONDS
+        gräns_h = MAX_STORE_PRICE_AGE_SECONDS / 3600
+        panel = [
+            _entry("ICA", "failed", reason="429"),                    # inte släppt
+            _entry("Willys", "failed", reason="timeout", age=10),     # släppt, färskt
+            _entry("Hemköp", "failed", reason="timeout", age=gräns_h + 30),   # släppt, för gammalt
+            _entry("City Gross", "failed", reason="timeout"),          # släppt, ålder saknas
+        ]
+        for e, släppt in zip(panel, (False, True, True, True)):
+            e["health"]["released"] = släppt
+        self._kör(panel, now=1_000.0)
+        vy = alerts.overview(self.kv, panel, now=1_000.0 + 7200)
+        per = {a["chain"]: a for a in vy["active"]}
+        self.assertEqual(len(per), 4)
+        self.assertIn("inte släppt", per["ICA"]["paverkasKunder"])
+        self.assertIn("inom serveringsregeln", per["Willys"]["paverkasKunder"])
+        self.assertIn("KUNDPÅVERKAN", per["Hemköp"]["paverkasKunder"])
+        self.assertIn("okänd", per["City Gross"]["paverkasKunder"])
+        for a in vy["active"]:
+            self.assertTrue(a["vadArFel"] and a["vadGora"], a)
+            self.assertEqual(a["ageHours"], 2.0)
+        self.assertEqual(vy["history"], [])
+
+    def test_limited_never_becomes_an_incident_in_the_overview(self):
+        self._kör([_entry("Lidl", "limited", reason="inga per-produktpriser")], now=1_000.0)
+        self.assertEqual(alerts.overview(self.kv, [], now=1_000.0)["active"], [])
 
     def test_no_secrets_in_the_mail_body(self):
         panel = [_entry("ICA", "failed", reason="401 from https://primat.nu/api/v3?key=hemlig")]

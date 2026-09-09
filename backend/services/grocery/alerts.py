@@ -122,8 +122,33 @@ def _state(kv, key):
     return värde or None
 
 
+# O6: historiken är en egen nyckel i samma namnrymd, avgränsad från de öppna
+# incidenterna med ett prefix som inte kan vara en incidentnyckel.
+HISTORY_KEY = "_history"
+HISTORY_LIMIT = 50
+
+
+def history(kv):
+    värde, _ = kv.get(NAMESPACE, HISTORY_KEY)
+    return list(värde or [])
+
+
+def open_incidents(kv):
+    """Öppna incidenter ur databasen: {key: post}. Historiknyckeln är inte en."""
+    return {key: _state(kv, key) for key in (kv.keys(NAMESPACE) if hasattr(kv, "keys") else [])
+            if key != HISTORY_KEY and _state(kv, key)}
+
+
 def process(panel, kv, mail_config, quota=None, now=None, to_email=None):
     """Jämför nuläget mot öppna incidenter och skickar det som faktiskt är nytt.
+
+    TILLSTÅNDET ÄR SANNINGEN, MEJLET ÄR ETT KVITTO. Förut skrevs en incident
+    bara om larmet gick att skicka (kv.set låg inuti if _skicka). Utan
+    konfigurerad e-post spårades alltså ingen incident alls, och om
+    återställningsmejlet misslyckades låg incidenten öppen för evigt. Nu
+    skrivs incidenten oavsett, och mejlets öde står för sig: sent, failed,
+    not_configured eller pending (ingen mottagare). Ingen JA-markering för
+    ett försök som inte gick.
 
     Returnerar vad som gjordes, så nattjobbet kan logga det och testerna
     kontrollera det utan att läsa mejl.
@@ -131,48 +156,131 @@ def process(panel, kv, mail_config, quota=None, now=None, to_email=None):
     now = now if now is not None else time.time()
     to_email = to_email if to_email is not None else admin_email()
     aktuella = evaluate(panel, quota=quota)
-    öppna = {key for key in (kv.keys(NAMESPACE) if hasattr(kv, "keys") else [])}
+    öppna = open_incidents(kv)
     resultat = {"incidents": [], "recoveries": [], "suppressed": [], "skipped": []}
 
-    if not to_email:
-        # Utan mottagare uppdaterar vi ändå tillståndet, så att ett larm inte
-        # sparas upp och exploderar den dag adressen sätts.
-        resultat["skipped"] = sorted(aktuella)
-        return resultat
-
     for key, problem in sorted(aktuella.items()):
-        tidigare = _state(kv, key)
-        if tidigare and now - (tidigare.get("lastSent") or 0) < ALERT_COOLDOWN_SECONDS:
+        tidigare = öppna.get(key)
+        post = {
+            "key": key, "chain": problem.get("chain"), "severity": problem["severity"],
+            "title": problem["title"], "summary": _kort(problem["body"].split("\n")[0], 160),
+            "openedAt": (tidigare or {}).get("openedAt", now), "lastSeenAt": now,
+            "mail": (tidigare or {}).get("mail") or {"status": "pending", "lastAttemptAt": None, "lastSentAt": None},
+            # Äldre poster hade bara lastSent; behåll så cooldownen inte nollas.
+            "lastSent": (tidigare or {}).get("lastSent"),
+        }
+        if not to_email:
+            # Utan mottagare uppdaterar vi ändå tillståndet, så att ett larm
+            # inte sparas upp och exploderar den dag adressen sätts - och så
+            # att incidenten SYNS i kontrollrummet även utan e-post.
+            post["mail"] = {**post["mail"], "status": "pending"}
+            kv.set(NAMESPACE, key, post)
+            resultat["skipped"].append(key)
+            continue
+        # Cooldownen gäller bara ett larm som FAKTISKT gick ut. Ett misslyckat
+        # försök har inget lastSent, och "lastSent or 0" hade tystat det i sju
+        # dygn - testet för trasig SMTP fångade det. Försök igen nästa körning.
+        if tidigare and tidigare.get("lastSent") and now - tidigare["lastSent"] < ALERT_COOLDOWN_SECONDS:
+            kv.set(NAMESPACE, key, post)
             resultat["suppressed"].append(key)
             continue
-        if _skicka(mail_config, to_email, problem["title"], problem["body"], key):
-            kv.set(NAMESPACE, key, {"openedAt": (tidigare or {}).get("openedAt", now),
-                                    "lastSent": now, "severity": problem["severity"]})
+        utfall = _skicka(mail_config, to_email, problem["title"], problem["body"], key)
+        post["mail"] = {"status": utfall, "lastAttemptAt": now,
+                        "lastSentAt": now if utfall == "sent" else post["mail"].get("lastSentAt")}
+        if utfall == "sent":
+            post["lastSent"] = now
+        kv.set(NAMESPACE, key, post)
+        if not tidigare or utfall == "sent":
             resultat["incidents"].append(key)
 
     for key in sorted(öppna):
         if key in aktuella:
             continue
-        tidigare = _state(kv, key)
-        if not tidigare:
-            continue
+        tidigare = öppna[key]
         timmar = round((now - (tidigare.get("openedAt") or now)) / 3600, 1)
-        if _skicka(mail_config, to_email, f"Matjakt — löst: {key}",
-                   f"Problemet är borta igen efter {timmar} timmar.\n\n"
-                   f"Ingen åtgärd behövs - det här mejlet är bara kvittot.", key):
-            kv.delete(NAMESPACE, key)
-            resultat["recoveries"].append(key)
+        # Återställd är återställd: signalen är borta, alltså stängs
+        # incidenten - oavsett om kvittot går att skicka. Mejlets öde skrivs
+        # i historiken i stället för att hålla incidenten öppen.
+        utfall = ("pending" if not to_email else
+                  _skicka(mail_config, to_email, f"Matjakt — löst: {key}",
+                          f"Problemet är borta igen efter {timmar} timmar.\n\n"
+                          f"Ingen åtgärd behövs - det här mejlet är bara kvittot.", key))
+        _arkivera(kv, tidigare, key, now, utfall)
+        kv.delete(NAMESPACE, key)
+        resultat["recoveries"].append(key)
     return resultat
 
 
+def _arkivera(kv, post, key, now, recovery_mail):
+    öppnad = post.get("openedAt") or now
+    rad = {
+        "key": key, "chain": post.get("chain"), "severity": post.get("severity"),
+        "title": post.get("title"), "summary": post.get("summary"),
+        "openedAt": öppnad, "recoveredAt": now, "durationSeconds": max(0, round(now - öppnad)),
+        "mail": {"opened": (post.get("mail") or {}).get("status", "sent" if post.get("lastSent") else "pending"),
+                 "recovered": recovery_mail},
+    }
+    hist = [rad] + history(kv)
+    kv.set(NAMESPACE, HISTORY_KEY, hist[:HISTORY_LIMIT])
+
+
+# O5: vad är fel, påverkas kunderna, vad behöver jag göra - per öppen incident.
+#
+# Kundpåverkan härleds ur det panelen faktiskt vet: om kedjan är släppt och
+# hur gammal senaste lyckade import är, ställt mot serveringsregeln
+# (MAX_STORE_PRICE_AGE_SECONDS: äldre butikspriser serveras inte). Vi
+# påstår inte att kunder får ett snapshot - vi säger vad regeln ger vid den
+# åldern, och "okänd" när underlaget saknas.
+def overview(kv, panel, now=None):
+    from .pricing import MAX_STORE_PRICE_AGE_SECONDS
+    now = now if now is not None else time.time()
+    per_kedja = {e.get("chain"): e for e in (panel or [])}
+    aktiva = []
+    for key, post in sorted(open_incidents(kv).items()):
+        entry = per_kedja.get(post.get("chain")) or {}
+        health = entry.get("health") or {}
+        släppt = bool(health.get("released"))
+        ålder_h = health.get("ageHours")
+        if post.get("chain") is None:
+            påverkan, åtgärd = "ingen direkt", "Se kvoten i O8; nästa import kan bli ofullständig"
+        elif not släppt:
+            påverkan = "ingen - kedjan är inte släppt"
+            åtgärd = "Läs importfelet; ingen kund ser kedjan"
+        elif ålder_h is None:
+            påverkan = "okänd - ålder på senaste lyckade import saknas"
+            åtgärd = "Kontrollera senaste körningen manuellt"
+        elif ålder_h * 3600 < MAX_STORE_PRICE_AGE_SECONDS:
+            påverkan = (f"kunder ser senast godkända priser, {ålder_h} h gamla - "
+                        f"inom serveringsregeln ({MAX_STORE_PRICE_AGE_SECONDS // 86400} dygn)")
+            åtgärd = "Rätta importen innan regeln slår till"
+        else:
+            påverkan = (f"KUNDPÅVERKAN: senaste godkända priser är {ålder_h} h gamla, "
+                        f"över serveringsregeln - kedjan visas utan färska priser")
+            åtgärd = "Starta import manuellt nu"
+        aktiva.append({
+            **post,
+            "ageHours": round((now - (post.get("openedAt") or now)) / 3600, 1),
+            "released": släppt,
+            "lastAttempt": (entry.get("lastRun") or {}).get("status"),
+            "vadArFel": post.get("summary") or post.get("title"),
+            "paverkasKunder": påverkan,
+            "vadGora": åtgärd,
+        })
+    return {"active": aktiva, "history": history(kv), "historyLimit": HISTORY_LIMIT,
+            "cooldownSeconds": ALERT_COOLDOWN_SECONDS, "measuredAt": now}
+
+
 def _skicka(mail_config, to_email, subject, body, key):
+    """Skickar och säger SANNINGEN om hur det gick: "sent", "not_configured"
+    eller "failed". Ett misslyckat försök får aldrig se ut som ett skickat."""
     try:
         send_email(mail_config, to_email, subject, body)
-        return True
+        return "sent"
     except MailNotConfigured:
         logger.warning("Larm %s kunde inte skickas: e-post är inte konfigurerat", key)
+        return "not_configured"
     except Exception:
         # Ett trasigt larm får ALDRIG stoppa nattjobbet - då byter vi ut ett
         # driftproblem mot ett kundproblem.
         logger.exception("Larm %s kunde inte skickas", key)
-    return False
+        return "failed"
