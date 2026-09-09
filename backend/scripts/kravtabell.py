@@ -255,8 +255,10 @@ k("O10b", "Beslut om korrekt märkt osäkerhet i grinden (tillägg)", "kräver b
   "—", "#34 (öppen)", "NEJ")
 k("O11", "Deploy: commit, tider, avvikelse", "delvis",
   "health.commit; revisionen bär sin egen commit", "Jämförelse mot förväntad deploy saknas", "—", "#16", "JA (fälten finns)")
-k("O12", "Skyddat admin-API, inte bara dold knapp", "behöver verifieras",
-  "_admin_ok() finns på endpointerna", "Negativa tester för hushållsmedlem saknas", "—", "—", "NEJ")
+k("O12", "Skyddat admin-API, inte bara dold knapp", "verifierat",
+  "Alla 16 admin-vägar × GET/POST × utloggad, vanligt konto, Premium, hushållsmedlem och login-token-som-admin-token = 160 anrop, alla 404 med SAMMA kropp som en okänd väg; positiv kontroll 200; utan konfigurerad hemlighet är ingen admin",
+  "Ägarinloggning via roll (önskat spår i kravet) - inte påbörjat, och ska inte göras hastigt",
+  "test_admin_api_negatives.py (3); produktionssond: 4 vägar × 2 identiteter = 404 med okänd-väg-kropp", "#38", "JA (negativa delen, live 2026-09-08)")
 k("O13", "Mobilanpassad admin", "klart att testa",
   "Under 720 px: Kedjor-tabellen (13 kolumner, 1 424 px) ritas som kort per kedja; knappar min 44 px; sidscroll med synlig kant",
   "Kontroll på riktig telefon (U79) och mot produktionsdata",

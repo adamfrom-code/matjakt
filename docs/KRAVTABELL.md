@@ -6,16 +6,16 @@ Genererad av `backend/scripts/kravtabell.py`. **129 krav**: masterinstruktionens
 
 | Status | Antal |
 |---|---:|
-| verifierat | 9 |
+| verifierat | 10 |
 | klart att testa | 14 |
 | delvis | 24 |
-| behöver verifieras | 5 |
+| behöver verifieras | 4 |
 | kräver beslut | 3 |
 | blockerat | 4 |
 | att göra | 70 |
 | **summa** | **129** |
 
-**Färdiga (verifierat): 9 av 129.** 'Klart att testa' räknas inte som färdigt.
+**Färdiga (verifierat): 10 av 129.** 'Klart att testa' räknas inte som färdigt.
 
 Verifierat i produktion = JA bara när något faktiskt lästes från matjakt.onrender.com eller matjakt.store efter deploy.
 
@@ -60,7 +60,7 @@ Verifierat i produktion = JA bara när något faktiskt lästes från matjakt.onr
 | O10 | Pricing audit med definierade nämnare | delvis | Auditen körs vid start + efter import, namnger osäkra rader per ingrediens, rubriken i admin visar felet | Live-parsningsvägen granskas inte av auditen. Vad som händer med de 30 raderna = O10b | Enhetstester i båda riktningarna; live-läst | #16 b0e1202 | JA |
 | O10b | Beslut om korrekt märkt osäkerhet i grinden (tillägg) | kräver beslut | Ketchup fick verifierad densitet (LV tabell 10 s.16). Tomatpuré, sirap, currypasta, sambal oelek saknas i källan | BLOCKERAT: ska osäkerhet blockera grinden, eller mätas separat? SJÄLVSTÄNDIGT: ingen mer densitet utan källa | — | #34 (öppen) | NEJ |
 | O11 | Deploy: commit, tider, avvikelse | delvis | health.commit; revisionen bär sin egen commit | Jämförelse mot förväntad deploy saknas | — | #16 | JA (fälten finns) |
-| O12 | Skyddat admin-API, inte bara dold knapp | behöver verifieras | _admin_ok() finns på endpointerna | Negativa tester för hushållsmedlem saknas | — | — | NEJ |
+| O12 | Skyddat admin-API, inte bara dold knapp | verifierat | Alla 16 admin-vägar × GET/POST × utloggad, vanligt konto, Premium, hushållsmedlem och login-token-som-admin-token = 160 anrop, alla 404 med SAMMA kropp som en okänd väg; positiv kontroll 200; utan konfigurerad hemlighet är ingen admin | Ägarinloggning via roll (önskat spår i kravet) - inte påbörjat, och ska inte göras hastigt | test_admin_api_negatives.py (3); produktionssond: 4 vägar × 2 identiteter = 404 med okänd-väg-kropp | #38 | JA (negativa delen, live 2026-09-08) |
 | O13 | Mobilanpassad admin | klart att testa | Under 720 px: Kedjor-tabellen (13 kolumner, 1 424 px) ritas som kort per kedja; knappar min 44 px; sidscroll med synlig kant | Kontroll på riktig telefon (U79) och mot produktionsdata | Mätt i browser: 375 px före/efter, 1 280 px utan regression | #36 | NEJ |
 | O14 | Testlista för Operations | delvis | 21+ tester (chain_health 9, alerts 12) | Samlad lista saknas | — | #8 | NEJ |
 | O15 | Active stores + kvotmonitorering | delvis | BUTIKER: fyra skilda tal per kedja (i registret / aktiva / färska ≤ 4 dygn / kundtillgängliga = färska i släppt kedja) med källa och mättid, visade i kontrollrummet | KVOT: se O8 - endpointen finns men visas inte och är overifierad mot kontot. Butikstalen är inte kontrollerade mot produktionsdata | 4 enhetstester; browser 375 + 1 280 px | #37 | NEJ |
