@@ -73,9 +73,21 @@
     #chains td:first-child::before { content:none; }
     #chains td[colspan] { display:block; }
     #chains td[colspan]::before { content:none; }
+    /* Felmeddelanden bär URL:er utan brytpunkter. td.wrap har min-width 15rem
+       på desktop; vid 320 px är det 240 px i ett smalare kort och raden klipps
+       - upptäckt av admin-E2E:n. Innehåll som inte går att läsa är inte
+       "mobilanpassat", hur smal sidan än är. */
+    td.wrap { min-width:0; overflow-wrap:anywhere; word-break:break-word; }
     #chains td[data-label="Åtgärd"] { justify-content:flex-end; padding-top:.5rem; }
     #chains td[data-label="Åtgärd"]::before { content:none; }
     #chains td[data-label="Åtgärd"] button { width:100%; }
+    /* Incidenthistoriken: sju kolumner blir kort, av samma skäl som Kedjor. */
+    #incidentsHistory thead { display:none; }
+    #incidentsHistory, #incidentsHistory tbody { display:block; }
+    #incidentsHistory tr { display:block; padding:.5rem .7rem; margin:0 0 .5rem; border:1px solid var(--line); border-radius:10px; }
+    #incidentsHistory td { display:flex; justify-content:space-between; gap:.6rem; padding:.2rem 0; border:0; white-space:normal; }
+    #incidentsHistory td::before { content:attr(data-label); color:var(--muted); font-size:.74rem; text-transform:uppercase; flex:0 0 auto; }
+    #incidentsHistory td[colspan] { display:block; } #incidentsHistory td[colspan]::before { content:none; }
     /* De mindre tabellerna får behålla sin sidscroll, men scrollningen ska
        synas: en högerkant som tonar bort säger "det finns mer". */
     .scroll { -webkit-overflow-scrolling:touch;
@@ -200,6 +212,11 @@
         <tbody></tbody>
       </table>
       <div id="chainNotes"></div>
+    </div>
+
+    <div class="card">
+      <strong>Primat</strong>
+      <div id="primatStatus" class="note" style="margin-top:.5rem">Läser…</div>
     </div>
 
     <div class="card">

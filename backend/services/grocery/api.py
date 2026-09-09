@@ -212,19 +212,30 @@ def store_counts(store, chain: str, now: float | None = None) -> dict:
         "SELECT COUNT(*) FROM grocery_stores WHERE chain = ?", (chain,)).fetchone()[0]
     aktiva = con.execute(
         "SELECT COUNT(*) FROM grocery_stores WHERE chain = ? AND active = 1", (chain,)).fetchone()[0]
-    farska = con.execute(
+    butiker_med_farskt = con.execute(
         """SELECT COUNT(DISTINCT st.id) FROM grocery_stores st
            JOIN grocery_current_prices cp ON cp.store_id = st.id
            WHERE st.chain = ? AND st.active = 1
              AND COALESCE(cp.verified_at, cp.fetched_at) >= ?""",
         (chain, now - MAX_STORE_PRICE_AGE_SECONDS)).fetchone()[0]
+    # SAMMA REGEL SOM SERVERINGEN (nearby_stores / PricingTarget): en
+    # riksprissatt kedja är prisbar i ALLA aktiva butiker så snart katalogen
+    # har ett färskt pris - priset sitter på en katalogbutik men gäller
+    # överallt. Bara en butiksspecifik kedja räknas butik för butik. Utan
+    # den här skillnaden stod produktionen med "255 aktiva · 1 färsk" för
+    # Willys, vilket var sant om prisRADER och falskt om butiker.
+    from .register import CHAIN_PRICING_SCOPE
+    scope = CHAIN_PRICING_SCOPE.get(chain, "STORE_SPECIFIC")
+    farska = (aktiva if butiker_med_farskt else 0) if scope == "NATIONAL" else butiker_med_farskt
     slappt = chain in RELEASED_CHAINS
     return {
         "iRegistret": i_registret,
         "aktiva": aktiva,
         "farska": farska,
         "kundtillgangliga": farska if slappt else 0,
-        "kalla": "grocery_stores + grocery_current_prices",
+        "prisScope": scope,
+        "butikerMedEgnaFarskaPriser": butiker_med_farskt,
+        "kalla": "grocery_stores + grocery_current_prices; regel: register.CHAIN_PRICING_SCOPE",
         "mattVid": now,
         "farskGrans": f"pris yngre än {MAX_STORE_PRICE_AGE_SECONDS // 86400} dygn",
         "slapptKedja": slappt,

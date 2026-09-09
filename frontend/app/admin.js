@@ -69,6 +69,10 @@ async function refresh() {
   renderOps(health, data.providers);
   renderChains(data.providers, data.scheduler);
   renderScheduler(data.scheduler);
+  // O8: Primat visas ur sin egen endpoint - configured utan nyckeln, kvot
+  // bara ur Primats egna siffror (GET /me), annars "Ej tillgängligt".
+  try { renderPrimat(await call("/admin/primat-status")); }
+  catch (error) { $("primatStatus").textContent = `Kunde inte läsa Primat: ${error.message}`; }
   // Incidenterna får inte falla med tratten, och tvärtom.
   try { renderIncidents(await call("/admin/incidents")); }
   catch (error) { $("incidentsActive").textContent = `Kunde inte läsa incidenter: ${error.message}`; }
@@ -84,6 +88,23 @@ const MAIL_LABEL = { sent: "skickat", failed: "MISSLYCKADES", not_configured: "e
 const mailPill = s => `<span class="pill ${s === "sent" ? "ok" : s === "failed" ? "bad" : "warn"}">${esc(MAIL_LABEL[s] || s || "—")}</span>`;
 const varade = sek => sek == null ? "—" : sek < 3600 ? `${Math.round(sek / 60)} min` : sek < 172800 ? `${(sek / 3600).toFixed(1)} h` : `${(sek / 86400).toFixed(1)} dygn`;
 
+// O8. Configured JA/NEJ ur serverns svar - nyckeln själv finns inte i svaret.
+// Kvoten visas BARA om Primats /me svarat med den; vi räknar inte fram
+// någon ur antalet importerade rader, och 20 000/100 000 ur gamla repo-
+// anteckningar är inte bekräftad abonnemangsdata.
+function renderPrimat(data) {
+  const box = $("primatStatus");
+  if (!data.configured) { box.innerHTML = `Nyckel: <span class="pill warn">NEJ</span> <span class="quiet">ICA- och Coop-importen kan inte köras utan den.</span>`; return; }
+  const st = data.status || {};
+  const rad = (k, v) => v == null ? "" : `<div class="stat"><b>${esc(v)}</b><span>${esc(k)}</span></div>`;
+  const kvot = [rad("plan", st.plan), rad("rader använda i dag", st.rowsUsedToday ?? st.rows_used_today),
+                rad("dygnsgräns", st.dailyRowLimit ?? st.daily_row_limit), rad("nollställs", st.resetsAt ?? st.resets_at)].join("");
+  box.innerHTML = `Nyckel: <span class="pill ok">JA</span> ` +
+    (data.error ? `<span class="pill bad">Primat svarade inte: ${esc(data.error)}</span>` :
+     kvot ? `<div class="stats" style="margin-top:.5rem">${kvot}</div><p class="note">Siffrorna kommer från Primats eget /me-svar, inte från vår räkning.</p>`
+          : `<span class="quiet">Kvot: Ej tillgängligt - /me svarade utan kvotfält.</span>`);
+}
+
 function renderIncidents(data) {
   const aktiva = data.active || [];
   $("incidentsActive").innerHTML = aktiva.length
@@ -96,9 +117,9 @@ function renderIncidents(data) {
       </div>`).join("")
     : `Inga öppna incidenter. <span class="quiet">Larm dedupliceras per problem, ett kvitto vid återställning, cooldown ${Math.round((data.cooldownSeconds || 0) / 86400)} dygn.</span>`;
   $("incidentsHistory").querySelector("tbody").innerHTML = (data.history || []).map(h => `<tr>
-    <td>${when(h.openedAt)}</td><td>${when(h.recoveredAt)}</td><td>${varade(h.durationSeconds)}</td>
-    <td>${esc(h.chain || "Primat")}</td><td class="wrap">${esc(h.summary || h.title || h.key)}</td>
-    <td>${mailPill(h.mail?.opened)}</td><td>${mailPill(h.mail?.recovered)}</td></tr>`).join("")
+    <td data-label="Start">${when(h.openedAt)}</td><td data-label="Löst">${when(h.recoveredAt)}</td><td data-label="Varade">${varade(h.durationSeconds)}</td>
+    <td data-label="Kedja">${esc(h.chain || "Primat")}</td><td data-label="Vad" class="wrap">${esc(h.summary || h.title || h.key)}</td>
+    <td data-label="Larm">${mailPill(h.mail?.opened)}</td><td data-label="Kvitto">${mailPill(h.mail?.recovered)}</td></tr>`).join("")
     || `<tr><td colspan="7" class="quiet">Ingen historik än</td></tr>`;
 }
 
@@ -186,7 +207,11 @@ function healthPill(health) {
   if (!health) return `<span class="pill off">okänt</span>`;
   const ålder = health.ageHours == null ? "" :
     ` <span class="quiet">${health.ageHours} h</span>`;
-  return `<span class="pill ${HEALTH_CLASS[health.status] || "off"}">` +
+  // O4: orsaken följer med pillret. Limited ska inte larma, men den som
+  // undrar VARFÖR Lidl är begränsad ska inte behöva gissa - orsaken finns
+  // i API:t (health.reason) och visades förut ingenstans.
+  const orsak = health.reason ? ` title="${esc(health.reason)}"` : "";
+  return `<span class="pill ${HEALTH_CLASS[health.status] || "off"}"${orsak}>` +
          `${esc(HEALTH_LABEL[health.status] || health.status)}</span>${ålder}`;
 }
 
@@ -340,7 +365,12 @@ function renderChains(providers, scheduler) {
   }).join("");
 
   $("chainNotes").innerHTML = providers
-    .map(provider => `<p class="note"><strong>${esc(provider.chain)}:</strong> ${esc(provider.note)}</p>`)
+    .map(provider => `<p class="note"><strong>${esc(provider.chain)}:</strong> ${esc(provider.note)}` +
+      // O4: begränsad eller trasig kedja bär sin orsak även i klartext, inte
+      // bara i en tooltip som inte går att hovra på en telefon.
+      (provider.health?.reason && provider.health.status !== "healthy"
+        ? ` <em>${esc(HEALTH_LABEL[provider.health.status] || provider.health.status)}: ${esc(provider.health.reason)}</em>` : "") +
+      `</p>`)
     .join("");
 
   document.querySelectorAll("[data-import]").forEach(button =>
