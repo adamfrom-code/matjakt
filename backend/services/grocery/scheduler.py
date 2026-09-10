@@ -315,10 +315,15 @@ class GroceryScheduler:
             store = grocery_api.open_store()
             try:
                 stale = store.reconcile_interrupted_runs()
+                # Rader som lagrades innan skrubbningen fanns kan bära en
+                # hemlighet, och provider_status serverar dem publikt.
+                rensade = store.scrub_stored_errors()
             finally:
                 store.close()
             if stale:
                 logger.warning("Markerade %d avbruten körning(ar) från en tidigare process", stale)
+            if rensade:
+                logger.warning("Rensade hemligheter ur %d lagrat felmeddelande(n)", rensade)
         except Exception:
             logger.exception("Kunde inte städa avbrutna körningar")
 

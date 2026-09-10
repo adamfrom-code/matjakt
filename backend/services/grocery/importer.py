@@ -25,6 +25,7 @@ import logging
 import threading
 import time
 
+from ..secret_scrub import scrub
 from . import api as grocery_api
 from .errors import ProviderBlockedError
 
@@ -263,7 +264,7 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
             logger.exception("%s-importen kraschade", chain)
             db.finish_collector_run(run_record.id, status="failed",
                                     products_found=0, prices_updated=saved,
-                                    errors=1, error_message=str(error)[:300])
+                                    errors=1, error_message=scrub(str(error))[:300])
             try:
                 db.clear_staging(run_record.id)   # staging städas även på kraschvägen
             except Exception:

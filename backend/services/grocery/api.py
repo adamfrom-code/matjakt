@@ -50,6 +50,8 @@ DB_PATH = Path(os.environ.get("MATJAKT_DATA_DIR")
 #
 # Every consumer reads `comparable` off the response rather than re-deriving
 # this, so there is exactly one threshold in the system.
+from ..secret_scrub import scrub
+
 MIN_COVERAGE_FOR_COMPARISON = 85
 
 # A price this old is still shown (with its age), but a chain whose data is
@@ -418,7 +420,7 @@ def chain_health(entry: dict, now: float = None) -> dict:
     if not klar_vid:
         if senaste and senaste.get("status") != "success":
             return {**resultat, "status": "failed",
-                    "reason": senaste.get("errorMessage") or "Importen misslyckades"}
+                    "reason": scrub(senaste.get("errorMessage")) or "Importen misslyckades"}
         return {**resultat, "status": "never_imported",
                 "reason": "Ingen import har körts än"}
     if ålder is not None and ålder > CHAIN_STALE_AFTER_SECONDS:
@@ -454,7 +456,11 @@ def provider_status() -> list[dict]:
                 found[row["chain"]] = {
                     "status": row["status"], "startedAt": row["started_at"],
                     "finishedAt": row["finished_at"], "productsFound": row["products_found"],
-                    "pricesUpdated": row["prices_updated"], "errorMessage": row["error_message"],
+                    "pricesUpdated": row["prices_updated"],
+                    # Skrubbas ÄVEN vid utskick: rader som lagrades innan
+                    # lager 1 fanns ligger kvar, och en ny kodväg som glömmer
+                    # skrubba före lagring ska ändå inte kunna exponera något.
+                    "errorMessage": scrub(row["error_message"]),
                 }
             return found
 

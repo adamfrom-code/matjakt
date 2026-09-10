@@ -1180,5 +1180,28 @@ class GroceryStore:
             error_message=row["error_message"],
         )
 
+    def scrub_stored_errors(self) -> int:
+        """Rensa hemligheter ur redan lagrade felmeddelanden.
+
+        Skrubbningen vid lagring hindrar nya läckor, men raderna som skrevs
+        innan den fanns ligger kvar - och provider_status serverar dem via
+        det PUBLIKA /api/grocery/status. Körs vid uppstart; gör ingenting
+        när ingenting behöver ändras."""
+        from ..secret_scrub import scrub
+        rader = self.connection.execute(
+            "SELECT id, error_message FROM grocery_collector_runs "
+            "WHERE error_message IS NOT NULL AND error_message != ''").fetchall()
+        andrade = 0
+        for rad in rader:
+            rent = scrub(rad["error_message"])
+            if rent != rad["error_message"]:
+                self.connection.execute(
+                    "UPDATE grocery_collector_runs SET error_message = ? WHERE id = ?",
+                    (rent, rad["id"]))
+                andrade += 1
+        if andrade:
+            self.connection.commit()
+        return andrade
+
     def close(self):
         self._connection.close()
