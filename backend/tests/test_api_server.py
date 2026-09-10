@@ -1667,12 +1667,12 @@ class AuthHttpTest(unittest.TestCase):
             email = self._email()
             _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
             token = payload["token"]
-            status, payload = self.post("/api/billing/checkout", {"plan": "monthly"}, token=token)
+            status, payload = self.post("/api/billing/checkout", {"plan": "monthly", "withdrawalConsent": True}, token=token)
             self.assertEqual(status, 200)
             self.assertIn("cus_fake123", payload["url"])
             self.assertIn("price_month", payload["url"])
             # Second checkout call must reuse the same Stripe customer, not create a new one.
-            status, payload = self.post("/api/billing/checkout", {"plan": "monthly"}, token=token)
+            status, payload = self.post("/api/billing/checkout", {"plan": "monthly", "withdrawalConsent": True}, token=token)
             self.assertEqual(status, 200)
             self.assertEqual(calls["create_customer"], 1)
         finally:
@@ -1840,11 +1840,11 @@ class AuthHttpTest(unittest.TestCase):
             email = self._email()
             _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
             token = payload["token"]
-            status, payload = self.post("/api/billing/checkout", {"plan": "yearly"}, token=token)
+            status, payload = self.post("/api/billing/checkout", {"plan": "yearly", "withdrawalConsent": True}, token=token)
             self.assertEqual(status, 200)
             self.assertTrue(payload["url"].endswith("/price_year"))
             api_server.ACCOUNT_STORE.apply_subscription_event("cus_double", "sub_1", "active", None, False, "yearly")
-            status, payload = self.post("/api/billing/checkout", {"plan": "monthly"}, token=token)
+            status, payload = self.post("/api/billing/checkout", {"plan": "monthly", "withdrawalConsent": True}, token=token)
             self.assertEqual(status, 409)
             self.assertEqual(payload["code"], "ALREADY_SUBSCRIBED")
         finally:
@@ -1861,7 +1861,7 @@ class AuthHttpTest(unittest.TestCase):
         try:
             email = self._email()
             _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
-            status, payload = self.post("/api/billing/checkout", {"plan": "monthly"}, token=payload["token"])
+            status, payload = self.post("/api/billing/checkout", {"plan": "monthly", "withdrawalConsent": True}, token=payload["token"])
             self.assertEqual(status, 400)
             self.assertIn("Stripe svarar inte", payload["error"])
         finally:

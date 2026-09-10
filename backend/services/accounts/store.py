@@ -140,6 +140,12 @@ class AccountStore:
             # Samtycke till utskick (services/mailings). 0 tills personen
             # själv tackat ja; tidpunkten sparas för att kunna visa när.
             ("marketing_consent", "INTEGER NOT NULL DEFAULT 0"), ("marketing_consent_at", "TEXT"),
+            # B3, ångerrätten (distansavtalslagen 2 kap. 11 § p. 11): kundens
+            # uttryckliga godkännande av att Premium levereras direkt och att
+            # ångerrätten därmed upphör. Tidpunkten är beviset, versionen
+            # säger VILKEN ordalydelse som godkändes - se
+            # services/billing/withdrawal.py.
+            ("withdrawal_consent_at", "TEXT"), ("withdrawal_consent_version", "INTEGER"),
         ):
             try:
                 self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
@@ -372,6 +378,30 @@ class AccountStore:
         if not row:
             raise AccountError("Du måste vara inloggad")
         return row["id"], row["email"], row["stripe_customer_id"]
+
+    def record_withdrawal_consent(self, user_id, version) -> str:
+        """Sparar kundens godkännande av att ångerrätten upphör, med
+        tidsstämpel. Returnerar tidpunkten.
+
+        Skrivs om vid varje köpförsök: tidsstämpeln ska svara på "när
+        godkände hon det köp som pågår", inte "när klickade hon första
+        gången". Vilken ordalydelse som godkändes står i versionen."""
+        given_at = datetime.now(timezone.utc).isoformat()
+        self._connection.execute(
+            "UPDATE users SET withdrawal_consent_at = ?, withdrawal_consent_version = ? WHERE id = ?",
+            (given_at, int(version), int(user_id)))
+        self._connection.commit()
+        return given_at
+
+    def withdrawal_consent(self, user_id) -> dict:
+        """{"at": iso|None, "version": int|None} för ett konto. Sanningen om
+        samtycket bor i databasen, aldrig i det klienten råkar skicka med."""
+        row = self._connection.execute(
+            "SELECT withdrawal_consent_at, withdrawal_consent_version FROM users WHERE id = ?",
+            (int(user_id),)).fetchone()
+        if not row:
+            return {"at": None, "version": None}
+        return {"at": row["withdrawal_consent_at"], "version": row["withdrawal_consent_version"]}
 
     def email_for_user_id(self, user_id) -> str | None:
         """E-posten för ett användar-id. Anropas bara av kod som redan

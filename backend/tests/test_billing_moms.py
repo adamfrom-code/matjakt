@@ -229,7 +229,9 @@ class CheckoutVagenFoljerKontrollen(unittest.TestCase):
             token, _ = api_server.ACCOUNT_STORE.register(f"b2-{uuid.uuid4().hex[:10]}@example.com", "hemligt123")
             con = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
             try:
-                con.request("POST", "/api/billing/checkout", body=_json.dumps({"plan": "monthly"}).encode(),
+                con.request("POST", "/api/billing/checkout",
+                            # B3: köpet kräver samtycke till att ångerrätten upphör.
+                            body=_json.dumps({"plan": "monthly", "withdrawalConsent": True}).encode(),
                             headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"})
                 response = con.getresponse()
                 response.read()
