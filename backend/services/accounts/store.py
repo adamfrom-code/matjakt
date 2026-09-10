@@ -725,6 +725,58 @@ class AccountStore:
         self._connection.commit()
         return self._to_public(self._session_user_row(token))
 
+    def export_account(self, token: str) -> dict:
+        """Allt kontolagret vet om den inloggade - för art. 15/20.
+
+        VITLISTA, INTE SVARTLISTA. Fälten räknas upp ett i taget i stället
+        för "allt utom några". En kolumn som läggs till i framtiden hamnar då
+        utanför exporten tills någon medvetet tar in den - vilket är rätt
+        håll att fela åt när tabellen också innehåller `password_hash`,
+        `salt`, `reset_token` och `verification_token`. Sessionerna ingår
+        inte alls: en exportfil är inte en plats för levande inloggningar."""
+        row = self._session_user_row(token)
+        if not row:
+            raise AccountError("Du måste vara inloggad")
+        keys = row.keys()
+
+        def value(name, default=None):
+            return row[name] if name in keys else default
+
+        utskick = []
+        try:
+            utskick = [{"typ": r["kind"], "dag": r["day"], "skickat": r["sent_at"]}
+                       for r in self._connection.execute(
+                           "SELECT kind, day, sent_at FROM mail_log WHERE user_id = ? ORDER BY sent_at",
+                           (row["id"],))]
+        except sqlite3.OperationalError:
+            pass        # mail_log finns inte i den här processen
+        return {
+            "konto": {
+                "id": row["id"],
+                "epost": row["email"],
+                "skapat": value("created_at"),
+                "epostVerifierad": bool(value("email_verified", 0)),
+                "senastAktivDag": value("last_active_day"),
+                "utskickssamtycke": bool(value("marketing_consent", 0)),
+                # Tidpunkten är hela poängen med att spara samtycket: utan
+                # den kan vi inte visa NÄR personen tackade ja.
+                "utskickssamtyckeTidpunkt": value("marketing_consent_at"),
+                "utskick": utskick,
+            },
+            "prenumeration": {
+                "status": value("subscription_status"),
+                "plan": value("subscription_plan"),
+                "periodSlut": value("subscription_period_end"),
+                "sagsUppVidPeriodslut": bool(value("subscription_cancel_at_period_end", 0)),
+                "provperiodSlut": value("trial_ends_at"),
+                "provperiodAnvand": bool(value("trial_used", 0)),
+                "kompenseradPremium": bool(value("premium", 0)),
+                "stripeKundId": value("stripe_customer_id"),
+                "stripePrenumerationId": value("stripe_subscription_id"),
+            },
+            "syncedState": value("synced_state"),
+        }
+
     def delete_account(self, token: str):
         """Returns (stripe_customer_id, stripe_subscription_id) so the caller can
         cancel any active Stripe subscription before the account record is gone."""
@@ -739,6 +791,14 @@ class AccountStore:
             self._connection.execute("DELETE FROM analytics_user_days WHERE user_id = ?", (row["id"],))
         except sqlite3.OperationalError:
             pass  # tabellen finns inte i den här processen (t.ex. fristående test)
+        # B10: mail_log (services/mailings) rensades aldrig. Kvar blev en rad
+        # per utskick med user_id och datum - ett spår av ett konto som
+        # personen bett oss radera, och det spåret följde dessutom med i
+        # varje backupset. Samma tabell, samma anslutning, samma lås.
+        try:
+            self._connection.execute("DELETE FROM mail_log WHERE user_id = ?", (row["id"],))
+        except sqlite3.OperationalError:
+            pass
         self._connection.execute("DELETE FROM users WHERE id = ?", (row["id"],))
         self._connection.commit()
         return stripe_customer_id, stripe_subscription_id

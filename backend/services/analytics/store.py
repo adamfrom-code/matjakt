@@ -134,6 +134,18 @@ class AnalyticsStore:
         return imported
 
     # ---- Läsning ------------------------------------------------------------
+    def user_days(self, user_id) -> list[dict]:
+        """Kontots egna mätrader - vilken händelse, vilken dag, hur många.
+
+        B10: exporten ska visa allt vi vet, och det här är den enda tabellen
+        som håller något PER konto utöver kontoraden själv. Att kunna se den
+        är skillnaden mellan "vi mäter användning" och "vi kan visa exakt
+        vad vi mätt om just dig"."""
+        return [{"dag": row["day"], "handelse": row["event"], "antal": row["count"]}
+                for row in self._connection.execute(
+                    "SELECT day, event, count FROM analytics_user_days WHERE user_id = ? "
+                    "ORDER BY day, event", (user_id,))]
+
     def daily_events(self, days: int = 14) -> dict:
         """{event: {"total": n, "unikaKonton": u, "perDag": {dag: n}}} för
         de senaste `days` dagarna, plus dagarna i ordning."""
