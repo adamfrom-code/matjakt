@@ -1882,13 +1882,20 @@ class ApiHandler(SimpleHTTPRequestHandler):
         header = self.headers.get("Authorization", "")
         return header[7:] if header.lower().startswith("bearer ") else None
 
+    def _session_bucket(self):
+        """Rate-limit-nyckel för den anropande sessionen. B9: tidigare
+        `token[:16]`, som skrevs oförändrad till rate_limit_hits - en
+        levande bärartoken i klartext i en fil som följer med i backupen.
+        Se ratelimit.token_identifier."""
+        return ratelimit.token_identifier(self._bearer_token())
+
     def _handle_household(self, method, parsed, payload):
         """Alla /api/household-vägar. Routern byggs per begäran så att den
         alltid ser MODULENS aktuella lager - testerna byter ut dem, och en
         router som fångat gamla referenser vid uppstart hade tyst skrivit i
         fel databas."""
         limit = "household_invite" if parsed.path == "/api/household/invite" else "household"
-        if self._rate_limit(limit, (self._bearer_token() or "")[:16]):
+        if self._rate_limit(limit, self._session_bucket()):
             return
         router = HouseholdRouter(HOUSEHOLD_STORE, NOTIFICATION_STORE, ACCOUNT_STORE, APP_URL)
         status, body = router.handle(method, parsed.path, parse_qs(parsed.query), payload,
@@ -2756,7 +2763,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # Same brute-force treatment as login: a premium code is a
             # credential, and an unthrottled endpoint is an invitation to
             # guess it.
-            if self._rate_limit("redeem", (self._bearer_token() or "")[:16]):
+            if self._rate_limit("redeem", self._session_bucket()):
                 return
             try:
                 user = ACCOUNT_STORE.redeem_premium(self._bearer_token(), payload.get("code"), PREMIUM_CODE)
@@ -2821,7 +2828,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/auth/resend-verification":
             # Mejl på begäran är en mejlbombningsvektor utan spärr.
-            if self._rate_limit("resend_verification", (self._bearer_token() or "")[:16], self._client_ip()):
+            if self._rate_limit("resend_verification", self._session_bucket(), self._client_ip()):
                 return
             try:
                 email, verify_token = ACCOUNT_STORE.resend_verification(self._bearer_token())
