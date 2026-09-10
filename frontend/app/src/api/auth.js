@@ -74,11 +74,14 @@ export function redeemPremium(token, code) {
   }).then(parseJsonResponse);
 }
 
-export function startCheckout(token, plan) {
+// withdrawalConsent är kundens uttryckliga godkännande av att Premium
+// levereras direkt och att ångerrätten därmed upphör (distansavtalslagen).
+// Servern sparar det med tidsstämpel och vägrar skapa en Checkout utan det.
+export function startCheckout(token, plan, withdrawalConsent = false) {
   return fetch(`${API_BASE_URL}/billing/checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ plan }),
+    body: JSON.stringify({ plan, withdrawalConsent: Boolean(withdrawalConsent) }),
   }).then(parseJsonResponse);
 }
 

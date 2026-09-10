@@ -1045,9 +1045,19 @@ class BrowserJourney(unittest.TestCase):
             expect(paywall).to_be_visible()
             expect(paywall).to_contain_text("Matjakt Premium")
 
+        with self.step("ångerrätten måste kryssas i innan betalningen kan starta"):
+            # B3: distansavtalslagen. Utan rutan får Premium inte levereras
+            # direkt utan fjorton dagars ångerrätt - så köpet ska inte ens
+            # gå att starta, och det ska SYNAS varför.
+            page.click('#paywallModal [data-paywall-plan="yearly"]')
+            expect(page.locator("#paywallError")).to_contain_text("ångerrätten")
+            self.assertEqual(len(checkouts), 0, "en Checkout startades utan samtycke")
+            expect(page.locator("#paywallModal")).to_be_visible()
+
         with self.step("checkout (testläge, mockad Stripe) → tillbaka i appen"):
             week_before = list(self.local_state().get("weekPlan") or [])
             self.assertTrue(week_before)
+            page.check("#paywallWithdrawalConsent")
             with page.expect_navigation():
                 page.click('#paywallModal [data-paywall-plan="yearly"]')
             # Texten får inte PÅSTÅ att betalningen är gjord: användaren kan ha

@@ -51,6 +51,7 @@ from services.household.routes import HouseholdRouter
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
 from services.billing import matjakt_user_id as stripe_matjakt_user_id, orphan_subscriptions as stripe_orphan_subscriptions
 from services.billing import automatic_tax_allowed, price_verdict as stripe_price_verdict, tax_readiness as stripe_tax_readiness
+from services.billing import withdrawal
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.accounts import clientip  # noqa: E402
@@ -2365,7 +2366,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # idea of what Premium means.
             user = ACCOUNT_STORE.user_for_token(self._bearer_token())
             plan = plan_features.plan_for_user(user)
-            self.send_json(200, plan_features.entitlements(plan))
+            # B3: ångerrättstexten kommer härifrån, precis som priserna - så
+            # rutan i köpflödet aldrig kan säga en annan sak än den som sparas.
+            self.send_json(200, {**plan_features.entitlements(plan), "withdrawal": withdrawal.terms()})
             return
         if parsed.path == "/api/mail/unsubscribe":
             # Avsluta utskicken från länken i mejlet: ingen inloggning, bara
@@ -2878,6 +2881,18 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     # och uppsägning sker i Stripes portal.
                     self.send_json(409, {"error": "Du har redan en prenumeration. Byt plan eller säg upp under Hantera prenumeration.",
                                          "code": "ALREADY_SUBSCRIBED"})
+                    return
+                # B3, ångerrätten. Kryssrutan följer med köpet och sparas med
+                # tidsstämpel INNAN sessionen skapas - sanningen läses sedan ur
+                # databasen, aldrig ur det klienten råkade skicka. Utan ett
+                # aktuellt samtycke blir det ingen Checkout alls: en digital
+                # tjänst som levereras direkt får bara undantas från fjorton
+                # dagars ångerrätt om kunden uttryckligen avstått den.
+                if payload.get("withdrawalConsent") is True:
+                    ACCOUNT_STORE.record_withdrawal_consent(user_id, withdrawal.VERSION)
+                if not withdrawal.consent_is_current(ACCOUNT_STORE.withdrawal_consent(user_id)["version"]):
+                    self.send_json(400, {"error": withdrawal.ERROR_TEXT, "code": withdrawal.ERROR_CODE,
+                                         "withdrawal": withdrawal.terms()})
                     return
                 if not customer_id:
                     customer_id = create_customer(STRIPE_SECRET_KEY, email, user_id)

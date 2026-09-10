@@ -1010,6 +1010,27 @@ function premiumPricing() {
               savingsText: "Spara 309 kr jämfört med månadsbetalning", badge: "Bäst värde" },
   };
 }
+// Ångerrätten (distansavtalslagen). Texten kommer från backend precis som
+// priserna - reservvärdet gäller bara innan /api/entitlements svarat, och
+// bär samma sträng som services/billing/withdrawal.py. Kryssar användaren i
+// rutan mot reservtexten är det ändå backends version som sparas.
+function withdrawalTerms() {
+  return entitlements.withdrawal || {
+    text: "Jag vill få tillgång till Premium direkt och godkänner att min ångerrätt upphör när tjänsten levererats.",
+    note: "Utan det här kan vi inte öppna Premium direkt, eftersom du då har fjorton dagars ångerrätt på en tjänst som redan levererats.",
+  };
+}
+function withdrawalConsentMarkup(id) {
+  const terms = withdrawalTerms();
+  return `<label class="withdrawal-consent" for="${id}">
+    <input type="checkbox" id="${id}" data-withdrawal-consent>
+    <span>${escapeHtml(terms.text)}</span>
+  </label>
+  <p class="withdrawal-consent-note">${escapeHtml(terms.note || "")}</p>`;
+}
+function withdrawalConsentGiven(root) {
+  return Boolean(root?.querySelector("[data-withdrawal-consent]")?.checked);
+}
 
 // =============================================================================
 // LOCAL DEVELOPMENT ONLY - Premium UI unlock
@@ -3929,6 +3950,16 @@ function renderPriceTabs() {
     const extra = ["/år", pricing.yearly?.perMonthText, savings].filter(Boolean).join(" · ");
     year.innerHTML = `<span>År · Bäst värde</span><strong>${escapeHtml(perYear ? `${perYear} kr` : (pricing.yearly?.priceText || ""))}</strong><small>${escapeHtml(extra)}</small>`;
   }
+  // Ångerrättsrutan i kontoarket ritas härifrån av samma skäl som priserna:
+  // texten bor i backend, och hårdkodad HTML kan tyst börja ljuga om vad
+  // kunden godkände. Bocken nollställs inte vid omritning - det är ett
+  // aktivt val användaren just gjort, inte något vi ska ta ifrån henne.
+  const box = document.getElementById("premiumWithdrawal");
+  if (box) {
+    const wasChecked = withdrawalConsentGiven(box);
+    box.innerHTML = withdrawalConsentMarkup("premiumWithdrawalConsent");
+    if (wasChecked) box.querySelector("[data-withdrawal-consent]").checked = true;
+  }
 }
 let awaitingPremiumActivation = false;
 let premiumPollInFlight = false;
@@ -4942,13 +4973,15 @@ function openPaywall(triggerFeature = "") {
     <button type="button" class="btn btn-ghost paywall-monthly" data-paywall-plan="monthly">
       <strong>${escapeHtml(monthly.priceText || "59 kr/mån")}</strong>
     </button>
+    ${withdrawalConsentMarkup("paywallWithdrawalConsent")}
+    <p class="account-error" id="paywallError"></p>
     <button type="button" class="paywall-continue" data-paywall-close>Fortsätt gratis</button>
   </div>`;
   modal.hidden = false;
   modal.querySelectorAll("[data-paywall-close]").forEach(el =>
     el.addEventListener("click", () => { modal.hidden = true; }));
   modal.querySelectorAll("[data-paywall-plan]").forEach(el =>
-    el.addEventListener("click", () => beginCheckout(el.dataset.paywallPlan)));
+    el.addEventListener("click", () => beginCheckout(el.dataset.paywallPlan, modal)));
 }
 
 // I native-appen (Capacitor) ska Stripe öppnas i systemets webbläsare -
@@ -4988,18 +5021,32 @@ function openExternal(rawUrl) {
   }
   location.href = url;
 }
-async function beginCheckout(plan) {
+async function beginCheckout(plan, root = document.getElementById("paywallModal")) {
   if (!state.user) {
     document.getElementById("paywallModal").hidden = true;
     openAccountModal?.();
     return;
   }
+  const errorLine = root?.querySelector("#paywallError");
+  if (errorLine) errorLine.textContent = "";
+  // Ångerrätten kryssas i FÖRE knappen, inte bort efteråt: en digital tjänst
+  // som levereras direkt får bara undantas från fjorton dagars ångerrätt om
+  // kunden uttryckligen avstått den. Servern vägrar ändå utan samtycket -
+  // det här är bara för att slippa gå till servern för att få veta det.
+  const consent = withdrawalConsentGiven(root);
+  if (!consent) {
+    const text = "Kryssa i rutan om ångerrätten för att kunna gå vidare till betalningen.";
+    if (errorLine) errorLine.textContent = text; else alert(text);
+    root?.querySelector("[data-withdrawal-consent]")?.focus();
+    return;
+  }
   try {
     await flushServerSync();
-    const { url } = await startCheckout(getStoredToken(), plan);
+    const { url } = await startCheckout(getStoredToken(), plan, consent);
     if (url) { if (isNativeApp()) awaitingPremiumActivation = true; openExternal(url); }
   } catch (error) {
-    alert(error?.message || "Kunde inte starta betalningen just nu.");
+    const text = error?.message || "Kunde inte starta betalningen just nu.";
+    if (errorLine) errorLine.textContent = text; else alert(text);
   }
 }
 
@@ -5009,9 +5056,15 @@ document.querySelectorAll("[data-price-tab]").forEach(tab => tab.addEventListene
 $("subscribeBtn").addEventListener("click", async () => {
   $("checkoutError").textContent = "";
   if (!state.authToken) { $("checkoutError").textContent = "Skapa ett konto eller logga in först."; return; }
+  const consent = withdrawalConsentGiven($("premiumPitch"));
+  if (!consent) {
+    $("checkoutError").textContent = "Kryssa i rutan om ångerrätten för att kunna gå vidare till betalningen.";
+    $("premiumPitch").querySelector("[data-withdrawal-consent]")?.focus();
+    return;
+  }
   try {
     await flushServerSync();
-    const { url } = await startCheckout(state.authToken, selectedPlan);
+    const { url } = await startCheckout(state.authToken, selectedPlan, consent);
     if (isNativeApp()) awaitingPremiumActivation = true;
     openExternal(url);
   } catch (error) { $("checkoutError").textContent = error.message; }
