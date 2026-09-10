@@ -394,6 +394,24 @@ class AccountStore:
             raise AccountError("Ingen prenumeration hittades för det här kontot")
         return row["stripe_customer_id"]
 
+    def known_stripe_customer_ids(self, customer_ids) -> set:
+        """Vilka av de här Stripe-kund-id:na finns på ett konto hos oss?
+
+        Underlaget till GET /api/admin/stripe-reconcile: Stripe listar sina
+        levande prenumerationer, den här frågan säger vilka vi känner igen,
+        och skillnaden är de betalande kunder som inte fått något. Frågan är
+        skriven som ett uppslag på id och läcker aldrig hela användartabellen
+        till anroparen."""
+        wanted = [str(value) for value in customer_ids if value]
+        found = set()
+        for start in range(0, len(wanted), 400):           # SQLite tar max 999 parametrar
+            chunk = wanted[start:start + 400]
+            placeholders = ",".join("?" * len(chunk))
+            rows = self._connection.execute(
+                f"SELECT stripe_customer_id FROM users WHERE stripe_customer_id IN ({placeholders})", chunk)
+            found.update(row["stripe_customer_id"] for row in rows)
+        return found
+
     # ---- Testarfeedback (anonym) -------------------------------------------
     # Fri text + vilken skärm den skrevs från. INGEN användarkoppling, ingen
     # IP, inget konto - fem testpersoner ska kunna säga vad som skaver utan
@@ -455,7 +473,8 @@ class AccountStore:
             cancel_at_period_end=cancel_at_period_end, plan=plan) == "applied"
 
     def apply_stripe_event(self, *, event_id, event_created, customer_id, subscription_id,
-                          status, period_end_iso, cancel_at_period_end, plan) -> str:
+                          status, period_end_iso, cancel_at_period_end, plan,
+                          fallback_user_id=None) -> str:
         """Idempotens OCH applicering i EN transaktion.
 
         Returnerar "applied", "duplicate", "ignored" eller "unknown_customer".
@@ -464,6 +483,24 @@ class AccountStore:
         eventet i en egen commit först innebar att ett fel i appliceringen
         gjorde händelsen förlorad för alltid: nästa leverans svarades
         "duplicate" utan att någonsin ha ändrat något.)
+
+        SAMMA SAK GÄLLER OKÄND KUND (B1). Event-id:t registreras bara när
+        händelsen faktiskt fått ett avgörande - "applied" eller "ignored".
+        Hittas ingen kundrad rullas hela transaktionen tillbaka, så id:t är
+        oförbrukat och Stripes nästa leverans får en ny chans. Tidigare
+        commit:ades markeringen ändå: en kund vars stripe_customer_id aldrig
+        hann skrivas (servern startade om mellan create_customer och
+        set_stripe_customer_id) betalade 399 kr, blev kvar på Free, och
+        varje omleverans svarades "duplicate". Permanent.
+
+        fallback_user_id är den andra halvan av samma räddning: Checkout
+        bär matjakt_user_id i både client_reference_id och prenumerationens
+        metadata (stripe_client.create_checkout_session), så en händelse går
+        att knyta till rätt konto ÄVEN när kundraden saknas. Kontot får då
+        kund-id:t inskrivet - men bara om det inte redan har ett annat. Ett
+        konto som redan pekar på en annan Stripe-kund flyttas aldrig av en
+        webhook; det är en manuell fråga, och den listas av
+        GET /api/admin/stripe-reconcile.
 
         Ordning och ägarskap:
         * Äldre event.created än det senast applicerade -> ignoreras.
@@ -486,10 +523,24 @@ class AccountStore:
                         self._connection.commit()
                         return "duplicate"
                 row = self._connection.execute(
-                    """SELECT id, stripe_subscription_id, subscription_status, stripe_event_created
+                    """SELECT id, stripe_customer_id, stripe_subscription_id, subscription_status,
+                              stripe_event_created
                        FROM users WHERE stripe_customer_id = ?""", (customer_id,)).fetchone()
+                if row is None and fallback_user_id is not None:
+                    row = self._connection.execute(
+                        """SELECT id, stripe_customer_id, stripe_subscription_id, subscription_status,
+                                  stripe_event_created
+                           FROM users WHERE id = ?""", (fallback_user_id,)).fetchone()
+                    if row is not None and row["stripe_customer_id"] and row["stripe_customer_id"] != customer_id:
+                        row = None                       # kontot ägs av en annan Stripe-kund
+                    elif row is not None and customer_id:
+                        self._connection.execute(
+                            "UPDATE users SET stripe_customer_id = ? WHERE id = ?", (customer_id, row["id"]))
                 if row is None:
-                    self._connection.commit()
+                    # ROLLBACK, inte commit: event-id:t får inte förbrukas av
+                    # en händelse som ingenting ändrade. Anroparen svarar 500
+                    # så Stripe försöker igen i tre dygn.
+                    self._connection.rollback()
                     return "unknown_customer"
                 stored_created = row["stripe_event_created"]
                 stored_sub, stored_status = row["stripe_subscription_id"], row["subscription_status"]
