@@ -28,6 +28,16 @@ import { recordWeekSaving, weekKeyFor } from "./src/services/savings-log.js";
 import { budgetScopeText as budgetScopeFor } from "./src/services/budget-scope.js";
 import { planWarning } from "./src/services/plan-warning.js";
 import { ASSUMED_STATE, assumedHomeItems, assumedState } from "./src/services/assumed-home.js";
+import { takeUrlTokens } from "./src/services/url-tokens.js";
+
+// FÖRST AV ALLT, före en enda rad annan startkod: engångstoken ur
+// adressfältet. `?reset=` är ett fullständigt kontoövertagande i klartext
+// och låg kvar i adressfält, historik och sessionsåterställning ända tills
+// det nya lösenordet hunnit skickas in - och besöksstatistiken
+// (Plausible/Umami, tillåtna i CSP:n) skickar sidans FULLA URL som
+// sidvisning. Se src/services/url-tokens.js för hela resonemanget.
+// Värdena lever i minnet resten av besöket; adressraden får dem aldrig igen.
+const urlTokens = takeUrlTokens();
 
 // The recipe bank is DATA, loaded from data/recipes.json - see
 // src/data/recipes.js. It used to be two hardcoded arrays right here, which
@@ -4702,14 +4712,15 @@ $("forgotPasswordForm").addEventListener("submit", async event => {
     event.target.reset();
   } catch (error) { $("forgotError").textContent = mailErrorText(error); }
 });
-let pendingResetToken = new URLSearchParams(location.search).get("reset");
+// Redan ur adressfältet vid start (takeUrlTokens överst); härifrån och
+// framåt finns token bara i den här variabeln.
+let pendingResetToken = urlTokens.reset;
 $("resetPasswordForm").addEventListener("submit", async event => {
   event.preventDefault();
   $("resetError").textContent = "";
   try {
     await resetPassword(pendingResetToken, $("resetPasswordInput").value);
     pendingResetToken = null;
-    history.replaceState(null, "", location.pathname);
     showAccountForm("login");
     $("loginError").textContent = "Lösenordet är ändrat. Logga in med det nya lösenordet.";
     event.target.reset();
@@ -5233,15 +5244,13 @@ if (billingResult) {
   if (billingResult === "success") { activatePremiumAfterCheckout(); chooseMenu(false); }
 }
 if (pendingResetToken) { openAccountModal(); showAccountForm("reset"); }
-const pendingVerifyToken = new URLSearchParams(location.search).get("verify");
+const pendingVerifyToken = urlTokens.verify;      // också redan ur adressfältet
 if (pendingVerifyToken) {
   verifyEmail(pendingVerifyToken).then(({ user }) => {
     if (state.user) state.user = user;
-    history.replaceState(null, "", location.pathname);
     renderAccount();
     openAccountModal();
   }).catch(() => {
-    history.replaceState(null, "", location.pathname);
     openAccountModal();
     (state.user ? $("verifyError") : $("loginError")).textContent = "Verifieringslänken är ogiltig eller redan använd. Begär en ny under Ditt konto.";
   });
