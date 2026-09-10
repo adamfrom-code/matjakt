@@ -22,6 +22,7 @@ exakt som tidigare. `reset()` tömmer båda.
 """
 
 import contextlib
+import hashlib
 import sqlite3
 import threading
 import time
@@ -93,6 +94,35 @@ _connection: sqlite3.Connection | None = None
 _db_path: str | None = None
 _calls_since_prune = 0
 PRUNE_EVERY_CALLS = 200
+
+
+def token_identifier(token: str | None) -> str:
+    """Hinknyckeln för en session - aldrig ett fragment av tokenen själv.
+
+    WHY. Vägar som räknas per session skickade tidigare `token[:16]` hit,
+    och `_check_db` skriver identifieraren ORÖRD till `rate_limit_hits`. Den
+    filen ligger i datakatalogen, följer med i det nattliga backupsetet och i
+    tar.gz:en från /api/admin/backup-download. Sexton tecken av en levande
+    bärartoken i klartext, alltså - i den enda databasfil som inte omfattades
+    av regeln.
+
+    Det motsäger uttryckligen policyn i store.py: en sessionstoken lagras
+    ALDRIG i klartext, bara som hash, just för att en läckt backup annars
+    lämnar över levande sessioner och inte bara lösenordshashar. Skillnaden
+    mot en e-postadress är att adressen måste finnas i `users` för att
+    systemet ska fungera; en token behöver aldrig finnas någonstans.
+
+    Domänprefixet gör värdet OJÄMFÖRBART med `sessions.token` (som är
+    sha256 av samma sträng). Utan det kunde den som fick tag i båda filerna
+    para ihop rad för rad: den här sessionen gjorde de här anropen vid de
+    här tiderna - alltså den här användaren.
+
+    Tom token ger tom sträng, inte hashen av "": annars hamnar varje
+    anonym anropare i EN hink och den ena kan låsa ute alla andra."""
+    token = token or ""
+    if not token:
+        return ""
+    return hashlib.sha256(b"matjakt-ratelimit-v1:" + token.encode("utf-8")).hexdigest()[:32]
 
 
 class RateLimited(Exception):
