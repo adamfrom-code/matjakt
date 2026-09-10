@@ -106,7 +106,12 @@ class PrimatProvider(GroceryProvider):
             max_rows = int(os.environ.get("PRIMAT_MAX_ROWS_PER_RUN", "40000"))
         self.chain = chain
         self._primat_chain = CHAIN_KEYS[chain]
-        self._api_key = api_key or os.environ.get("PRIMAT_API_KEY") or None
+        # .strip(): en nyckel som klistrats in i Renders formulär bär ofta
+        # en radbrytning, och urllib vägrar då headern med "Invalid header
+        # value" - vars text bar hela nyckeln in i ett publikt felfält.
+        # api_server strippar sin egen kopia; den här vägen läste miljön själv
+        # och gick förbi den.
+        self._api_key = (api_key or os.environ.get("PRIMAT_API_KEY", "")).strip() or None
         # Tak för hur många datarader (prisrader + batchsvar) en körning får
         # kosta av dagskvoten. Nås taket avbryts hämtningen ÄRLIGT - det
         # hämtade behålls och körningen rapporteras "blocked", se
