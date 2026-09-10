@@ -2216,7 +2216,14 @@ class ApiHandler(SimpleHTTPRequestHandler):
             except PrimatError as error:
                 self.send_json(502, {"configured": True, "error": str(error)})
                 return
-            self.send_json(200, {"configured": True, "status": status})
+            # Kvoten normaliseras HÄR, inte i webbläsaren: fältnamnen i
+            # Primats svar är inte verifierade mot ett riktigt konto, och
+            # den osäkerheten hör hemma på ett ställe. Hittas de inte blir
+            # quota null och adminvyn skriver "Ej tillgängligt" - aldrig
+            # ett gissat tal (O8).
+            from services.grocery.alerts import quota_from_account_status
+            self.send_json(200, {"configured": True, "status": status,
+                                 "quota": quota_from_account_status(status)})
             return
         if parsed.path == "/api/grocery/status":
             if self._rate_limit("public"):

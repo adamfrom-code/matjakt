@@ -117,6 +117,62 @@ def evaluate(panel, quota=None):
     return problem
 
 
+# Primats /me-svar -> {"rowsUsedToday", "dailyRowLimit", "plan", "resetsAt"}
+# eller None när fälten inte går att hitta.
+#
+# VARFÖR EN NORMALISERARE OCH INTE DIREKT UPPSLAG. Primats exakta fältnamn i
+# GET /me är inte verifierade mot ett riktigt konto härifrån - nyckeln bor i
+# Renders miljö och kommer aldrig in i den här processen under utveckling.
+# Att gissa ett namn och tyst få None vore att visa "0 av 0 rader" som om det
+# vore mätt. Därför prövas ett fåtal rimliga stavningar, och hittas ingen
+# svarar funktionen None så att gränssnittet skriver "Ej tillgängligt" -
+# precis det O8 kräver. Loggraden namnger vilka nycklar svaret FAKTISKT bar,
+# så nästa person ser den riktiga formen utan att gissa en gång till.
+# Siffror är inte hemligheter; nyckeln loggas aldrig.
+ANVANDA_NYCKLAR = ("rowsUsedToday", "rows_used_today", "usedToday", "rowsUsed", "used")
+TAK_NYCKLAR = ("dailyRowLimit", "daily_row_limit", "rowLimit", "dailyLimit", "limit", "quota")
+PLAN_NYCKLAR = ("plan", "tier", "planName", "subscription")
+RESET_NYCKLAR = ("resetsAt", "resets_at", "resetAt", "nextReset")
+
+
+def _forsta(kalla, nycklar):
+    for nyckel in nycklar:
+        if isinstance(kalla, dict) and kalla.get(nyckel) is not None:
+            return kalla[nyckel]
+    return None
+
+
+def quota_from_account_status(status):
+    """Kvoten ur Primats eget svar, eller None när den inte finns där."""
+    if not isinstance(status, dict):
+        return None
+    # Fälten kan ligga i roten eller under en nivå (data/account/usage/quota).
+    kandidater = [status]
+    for nyckel in ("data", "account", "usage", "quota"):
+        if isinstance(status.get(nyckel), dict):
+            kandidater.append(status[nyckel])
+    for kalla in kandidater:
+        anvant, tak = _forsta(kalla, ANVANDA_NYCKLAR), _forsta(kalla, TAK_NYCKLAR)
+        if anvant is None or tak is None:
+            continue
+        try:
+            anvant, tak = int(anvant), int(tak)
+        except (TypeError, ValueError):
+            continue
+        if tak <= 0:
+            continue
+        # plan och reset söks i ALLA nivåer, inte bara den som bar kvoten:
+        # ett vanligt svar har {"plan": "app", "usage": {...}}, alltså
+        # planen i roten och siffrorna en nivå ner.
+        plan = next((v for k in kandidater if (v := _forsta(k, PLAN_NYCKLAR)) is not None), None)
+        reset = next((v for k in kandidater if (v := _forsta(k, RESET_NYCKLAR)) is not None), None)
+        return {"rowsUsedToday": anvant, "dailyRowLimit": tak,
+                "plan": plan, "resetsAt": reset}
+    logger.info("Primats /me bar inga kvotfält vi känner igen; nycklar i svaret: %s",
+                sorted(status)[:20])
+    return None
+
+
 def _state(kv, key):
     värde, _ = kv.get(NAMESPACE, key)
     return värde or None

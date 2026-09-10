@@ -66,7 +66,10 @@ async function refresh() {
   // den inte kunde läsas, inte tyst se frisk ut.
   let health = null;
   try { health = await (await fetch(`${API}/health`)).json(); } catch { /* visas som okänt */ }
-  renderOps(health, data.providers);
+  // Primat får inte fälla driftstatusen om den är långsam eller nere.
+  let primat = null;
+  try { primat = await call("/admin/primat-status"); } catch { /* visas som okänt */ }
+  renderOps(health, data.providers, primat);
   renderChains(data.providers, data.scheduler);
   renderScheduler(data.scheduler);
   // O8: Primat visas ur sin egen endpoint - configured utan nyckeln, kvot
@@ -223,13 +226,13 @@ function opsCard(label, klass, värde, detalj) {
          `<span>${esc(detalj || "")}</span></div>`;
 }
 
-function renderOps(health, providers) {
+function renderOps(health, providers, primat) {
   const nu = new Date().toLocaleTimeString("sv-SE", { timeStyle: "short" });
   $("opsCheckedAt").textContent = `kontrollerad ${nu}`;
 
   if (!health) {
     $("opsSummary").textContent = "Kunde inte läsa driftstatus";
-    $("opsSystems").innerHTML = opsCard("Backend", "bad", "svarar inte", "");
+    $("opsSystems").innerHTML = opsCard("Backend", "bad", "svarar inte", "") + primatKort(primat);
     return;
   }
 
@@ -281,6 +284,7 @@ function renderOps(health, providers) {
             larmText, larm.recipientDomain ? `till ${larm.recipientDomain}` : "") +
     opsCard("Utgående mejl", health.mail ? "ok" : "warn", health.mail ? "konfigurerat" : "saknas",
             health.mailFrom ? `från ${health.mailFrom}` : "") +
+    primatKort(primat) +
     opsCard("Utvecklingslåset", health.gate ? "warn" : "ok", health.gate ? "på" : "av",
             health.gate ? "appen är inte öppen" : "appen är öppen");
 
@@ -299,6 +303,24 @@ const GATE_FLAGGOR = {
   estimat: "osäkra rader", otolkad_paketstorlek: "otolkade paket",
   kilopris_som_paketpris: "kilopris som paketpris",
 };
+
+// O8: PRIMAT. Configured JA/NEJ går alltid att svara på. Kvoten gör det
+// INTE - den kommer ur Primats eget /me, och hittas fälten inte där står
+// "Ej tillgängligt". Ett tal som ser mätt ut men är gissat är värre än en
+// tom ruta, för det går inte att skilja från ett riktigt.
+function primatKort(primat) {
+  if (!primat) return opsCard("Primat", "off", "okänt", "kunde inte läsas");
+  if (!primat.configured) return opsCard("Primat", "off", "ej konfigurerad", "ingen API-nyckel");
+  if (primat.error) return opsCard("Primat", "bad", "svarar inte", esc(String(primat.error).slice(0, 60)));
+  const q = primat.quota;
+  if (!q) return opsCard("Primat", "ok", "konfigurerad", "kvot: Ej tillgängligt");
+  const andel = Math.round(100 * q.rowsUsedToday / q.dailyRowLimit);
+  // Samma tröskel som driftlarmet (QUOTA_WARN_FRACTION 0,85), så kortet och
+  // mejlet aldrig säger olika saker om samma dygn.
+  return opsCard("Primat", andel >= 85 ? "warn" : "ok", `${andel}%`,
+                 `${q.rowsUsedToday} av ${q.dailyRowLimit} rader i dag`
+                 + (q.plan ? ` · ${esc(String(q.plan))}` : ""));
+}
 
 function auditDetalj(audit) {
   const kontroller = audit.kontroller ? `${audit.kontroller} kontroller` : "inga kontroller";
