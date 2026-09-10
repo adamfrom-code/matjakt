@@ -56,6 +56,7 @@ from services.accounts import ratelimit  # noqa: E402
 from services.accounts import clientip  # noqa: E402
 from services import admin_audit  # noqa: E402
 from services import backup_crypto  # noqa: E402
+from services.bounded_server import BoundedThreadingHTTPServer  # noqa: E402
 from services.grocery import alerts as grocery_alerts  # noqa: E402
 from services.grocery import api as grocery_api  # noqa: E402
 from services.recipes import api as recipes_api
@@ -153,6 +154,15 @@ ADMIN_TOKEN = secret_from_env("MATJAKT_ADMIN_TOKEN")
 # commit (27edd8a); allas personuppgifter ska inte hänga på samma sträng.
 # Sätts den inte finns vägen inte - 404 som allt annat okänt.
 BACKUP_TOKEN = secret_from_env("MATJAKT_BACKUP_TOKEN")
+# B8: tak för samtidiga anslutningar. ThreadingHTTPServer startade en tråd
+# per anslutning utan gräns - femtusen tysta sockets räckte för att döda en
+# 512 MB-instans. Se services/bounded_server.py.
+try:
+    MAX_CONNECTIONS = max(1, int(os.environ.get("MATJAKT_MAX_CONNECTIONS", "64") or 64))
+except ValueError:
+    MAX_CONNECTIONS = 64
+# Sätts i main() så /api/health kan visa hur nära taket vi ligger.
+SERVER = None
 PRIMAT_API_KEY = secret_from_env("PRIMAT_API_KEY")
 PRIMAT_STORE_CACHE_TTL_SECONDS = 86400
 PRIMAT_CIRCUIT_COOLDOWN_SECONDS = 60
@@ -2187,6 +2197,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
         # krypteringen. Utan detta upptäcks en obrukbar backupväg först den
         # dag någon behöver backupen - vilket är exakt fel dag.
         "backupTokenConfigured": bool(BACKUP_TOKEN),
+        # B8: hur nära anslutningstaket vi ligger. "Servern svarar inte" och
+        # "servern har fullt" ser likadana ut utifrån; här syns skillnaden.
+        "connections": SERVER.stats() if SERVER is not None else {"max": MAX_CONNECTIONS},
         "backupEncryption": backup_crypto.status(),
         # Stripe-läge utan hemligheter: bara om nyckeln är en TEST- eller
         # LIVE-nyckel (prefix) och vilka delar som är satta. Svarar på
@@ -2359,6 +2372,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
             })
             return
         if parsed.path == "/api/entitlements":
+            # B8: läsvägarna gick genom AccountStore utan spärr - och lagret
+            # har EN delad anslutning bakom ett processglobalt lås.
+            if self._rate_limit("public"):
+                return
             # The whole Free/Premium contract in one answer: plan, feature
             # flags, dinner cap and the central pricing copy. Anonymous =
             # free. The frontend renders locks from THIS, never from its own
@@ -2394,6 +2411,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 f"<p><a href=\"{APP_URL}\" style=\"color:#1c1b18;\">Öppna Matjakt</a></p></div></body></html>")
             return
         if parsed.path == "/api/auth/me":
+            if self._rate_limit("public"):     # B8
+                return
             user = ACCOUNT_STORE.user_for_token(self._bearer_token())
             if not user:
                 self.send_json(401, {"error": "Inte inloggad"})
@@ -2401,6 +2420,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(200, {"user": user})
             return
         if parsed.path == "/api/account/state":
+            if self._rate_limit("public"):     # B8
+                return
             try:
                 stored = ACCOUNT_STORE.get_synced_state(self._bearer_token())
                 self.send_json(200, {"state": json.loads(stored) if stored else None})
@@ -2855,6 +2876,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": str(error)})
             return
         if parsed.path == "/api/account/state":
+            # B8: egen, trängre hink än läsvägarna - den här skriver upp till
+            # 200 kB genom det låsta kontolagret för varje anrop.
+            if self._rate_limit("state"):
+                return
             if not isinstance(payload, dict):
                 self.send_json(400, {"error": "Ogiltigt format"})
                 return
@@ -3092,6 +3117,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/account/marketing":
             # Tacka ja/nej till utskick från Konto-vyn. Servern äger svaret.
+            if self._rate_limit("state"):      # B8: skrivväg genom kontolagret
+                return
             try:
                 user = ACCOUNT_STORE.set_marketing_consent_for_token(
                     self._bearer_token(), bool((payload or {}).get("consent")))
@@ -3660,7 +3687,11 @@ if __name__ == "__main__":
     from services import backup as backup_service
     backup_service.start_nightly(DATA_DIR)
     try:
-        ThreadingHTTPServer((HOST, PORT), ApiHandler).serve_forever()
+        SERVER = BoundedThreadingHTTPServer(
+            (HOST, PORT), ApiHandler, max_connections=MAX_CONNECTIONS,
+            on_refused=lambda: METRICS.incr("connections_refused"))
+        logger.info("Anslutningstak: %d samtidiga", MAX_CONNECTIONS)
+        SERVER.serve_forever()
     finally:
         for _ in range(MAX_CONCURRENT_SCRAPES):
             _scrape_executor.submit(_close_thread_browser)

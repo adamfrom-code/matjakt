@@ -75,6 +75,12 @@ LIMITS = {
     "household_invite": (20, 3600),
     "verify_email": (20, 3600),
     "delete_account": (5, 3600),
+    # Kontots synkade tillstånd: en POST skriver upp till 200 kB genom
+    # AccountStore, som har EN delad SQLite-anslutning bakom ett
+    # processglobalt lås. En klient som hamrar den vägen serialiserar hela
+    # kontolagret för alla andra. Taket är generöst för en app som synkar
+    # efter varje ändring, och trångt för en loop.
+    "state": (60, 60),
 }
 
 # Minnesläget: key -> [timestamps]. Hårt tak så en flod av olika nycklar inte
