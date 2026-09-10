@@ -46,6 +46,15 @@ services:
         sync: false
       - key: MATJAKT_ADMIN_TOKEN
         sync: false
+      # B5: nedladdningen av HELA kontodatabasen har en egen hemlighet, skild
+      # från kontrollrummets. Sätts den inte finns vägen inte (404).
+      - key: MATJAKT_BACKUP_TOKEN
+        sync: false
+      # Den PUBLIKA halvan av backupnyckeln (certifikat-PEM, age1... eller ett
+      # PGP-block). Servern kan kryptera men aldrig läsa arkivet - den privata
+      # nyckeln sätts ALDRIG här. Se docs/BACKUP.md.
+      - key: MATJAKT_BACKUP_PUBLIC_KEY
+        sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
