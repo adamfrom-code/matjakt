@@ -67,14 +67,29 @@ def create_customer(secret_key, email, user_id):
     return result["id"]
 
 
-def create_checkout_session(secret_key, customer_id, price_id, success_url, cancel_url, user_id=None):
+def create_checkout_session(secret_key, customer_id, price_id, success_url, cancel_url, user_id=None,
+                            automatic_tax=False):
     """Kund-id:t är den vanliga vägen tillbaka från en betalning till ett
     konto. Den vägen kan brista (servern startar om mellan create_customer
     och set_stripe_customer_id), och därför bär sessionen ETT ANDRA spår:
     matjakt_user_id i client_reference_id, i sessionens metadata OCH i
     prenumerationens metadata. Just det sista är det som räknas, för det är
     prenumerationsobjektet webhooken får - sessionen är borta när
-    customer.subscription.created landar hos oss."""
+    customer.subscription.created landar hos oss.
+
+    MOMS (B2). tax_id_collection och customer_update går alltid med: de
+    kräver ingenting av Stripe-kontot och gör att kunden kan fylla i adress
+    och momsregistreringsnummer, som sparas på kunden i stället för att
+    kastas bort när sessionen stängs. `customer_update[name]` måste vara
+    "auto" så snart tax_id_collection är på och en befintlig kund skickas
+    med - annars avvisar Stripe hela sessionen.
+
+    automatic_tax är däremot villkorat, och det är med avsikt: skickas
+    automatic_tax[enabled]=true till ett konto där Stripe Tax inte är
+    aktiverat vägrar Stripe skapa sessionen, och köpknappen slutar fungera
+    för alla. Anroparen (services/billing/tax.py via api_server) skickar
+    därför true först när Stripe självt sagt att skatteinställningarna är
+    aktiva och priserna är satta inklusive moms."""
     payload = {
         "mode": "subscription",
         "customer": customer_id,
@@ -83,13 +98,29 @@ def create_checkout_session(secret_key, customer_id, price_id, success_url, canc
         "success_url": success_url,
         "cancel_url": cancel_url,
         "allow_promotion_codes": "true",
+        "customer_update[address]": "auto",
+        "customer_update[name]": "auto",
+        "tax_id_collection[enabled]": "true",
     }
+    if automatic_tax:
+        payload["automatic_tax[enabled]"] = "true"
     if user_id is not None:
         payload["client_reference_id"] = str(user_id)
         payload["metadata[matjakt_user_id]"] = str(user_id)
         payload["subscription_data[metadata][matjakt_user_id]"] = str(user_id)
     result = _request(secret_key, "POST", "/checkout/sessions", payload)
     return result["url"]
+
+
+def fetch_tax_settings(secret_key):
+    """Stripe Tax-inställningarna för kontot (GET /v1/tax/settings).
+
+    `status` är "active" när Stripe Tax är påslaget och en
+    ursprungsadress är ifylld, annars "pending" med orsaken i
+    status_details. Det är den enda frågan som säkert svarar på om
+    automatic_tax går att skicka - att priserna har tax_behavior säger
+    ingenting om huruvida Stripe Tax självt är aktiverat."""
+    return _request(secret_key, "GET", "/tax/settings")
 
 
 def list_subscriptions(secret_key, status="all", limit=100, starting_after=None):

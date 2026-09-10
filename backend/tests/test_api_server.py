@@ -1515,14 +1515,17 @@ class AuthHttpTest(unittest.TestCase):
         admin-token och utan att något hemligt visas."""
         originals = (api_server.STRIPE_SECRET_KEY, api_server.STRIPE_PRICE_MONTHLY,
                      api_server.STRIPE_PRICE_YEARLY, api_server.fetch_stripe_price,
-                     dict(api_server.STRIPE_PRICE_CHECK))
+                     api_server.stripe_tax_readiness, dict(api_server.STRIPE_PRICE_CHECK))
         api_server.STRIPE_SECRET_KEY = "sk_test_hemlig"
         api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY = "price_m", "price_saknas"
+        # B2: momsdelen har egna tester (test_billing_moms.py). Här är Stripe
+        # Tax aktivt så att just prisdelen är det som prövas.
+        api_server.stripe_tax_readiness = lambda key: {"active": True, "status": "active", "reason": None}
 
         def fake_price(secret_key, price_id):
             if price_id == "price_m":
                 return {"unit_amount": 5900, "currency": "sek", "active": True,
-                        "recurring": {"interval": "month"}}
+                        "tax_behavior": "inclusive", "recurring": {"interval": "month"}}
             raise StripeError(f"No such price: '{price_id}'")
         api_server.fetch_stripe_price = fake_price
         try:
@@ -1536,9 +1539,11 @@ class AuthHttpTest(unittest.TestCase):
 
             api_server.STRIPE_PRICE_YEARLY = "price_y"
             api_server.fetch_stripe_price = lambda k, pid: (
-                {"unit_amount": 5900, "currency": "sek", "active": True, "recurring": {"interval": "month"}}
+                {"unit_amount": 5900, "currency": "sek", "active": True, "tax_behavior": "inclusive",
+                 "recurring": {"interval": "month"}}
                 if pid == "price_m" else
-                {"unit_amount": 39900, "currency": "sek", "active": True, "recurring": {"interval": "year"}})
+                {"unit_amount": 39900, "currency": "sek", "active": True, "tax_behavior": "inclusive",
+                 "recurring": {"interval": "year"}})
             api_server.verify_stripe_prices()
             payload = self.get("/api/health")[1]
             self.assertTrue(payload["stripe"]["pricesVerified"])
@@ -1549,7 +1554,8 @@ class AuthHttpTest(unittest.TestCase):
             self.assertIsNone(self.get("/api/health")[1]["stripe"]["pricesVerified"])
         finally:
             (api_server.STRIPE_SECRET_KEY, api_server.STRIPE_PRICE_MONTHLY,
-             api_server.STRIPE_PRICE_YEARLY, api_server.fetch_stripe_price, restore) = originals
+             api_server.STRIPE_PRICE_YEARLY, api_server.fetch_stripe_price,
+             api_server.stripe_tax_readiness, restore) = originals
             api_server.STRIPE_PRICE_CHECK.clear()
             api_server.STRIPE_PRICE_CHECK.update(restore)
 
@@ -1559,14 +1565,19 @@ class AuthHttpTest(unittest.TestCase):
         400 först när en kund tryckte "Prenumerera". Kontrollen frågar
         Stripe i förväg - och läcker aldrig nyckelmaterial."""
         originals = (api_server.ADMIN_TOKEN, api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET,
-                     api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY, api_server.fetch_stripe_price)
+                     api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY, api_server.fetch_stripe_price,
+                     api_server.stripe_tax_readiness, dict(api_server.STRIPE_PRICE_CHECK))
         api_server.ADMIN_TOKEN = "admin-hemlighet"
         api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET = "sk_test_x", "whsec_x"
         api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY = "price_m", "price_saknas"
+        # B2: momsen har egna tester (test_billing_moms.py); här är Stripe Tax
+        # aktivt så att just pris-id:t är det som prövas.
+        api_server.stripe_tax_readiness = lambda key: {"active": True, "status": "active", "reason": None}
 
         def fake_price(secret_key, price_id):
             if price_id == "price_m":
                 return {"id": "price_m", "unit_amount": 5900, "currency": "sek", "active": True,
+                        "tax_behavior": "inclusive",
                         "recurring": {"interval": "month", "trial_period_days": None}}
             raise StripeError(f"No such price: '{price_id}'")
         api_server.fetch_stripe_price = fake_price
@@ -1587,9 +1598,10 @@ class AuthHttpTest(unittest.TestCase):
 
             def both_ok(secret_key, price_id):
                 return ({"unit_amount": 5900, "currency": "sek", "active": True,
-                         "recurring": {"interval": "month"}} if price_id == "price_m" else
+                         "tax_behavior": "inclusive", "recurring": {"interval": "month"}}
+                        if price_id == "price_m" else
                         {"unit_amount": 39900, "currency": "sek", "active": True,
-                         "recurring": {"interval": "year"}})
+                         "tax_behavior": "inclusive", "recurring": {"interval": "year"}})
             api_server.fetch_stripe_price = both_ok
             status, payload = self.get("/api/admin/stripe-check", headers={"X-Admin-Token": "admin-hemlighet"})
             self.assertEqual(status, 200)
@@ -1599,6 +1611,7 @@ class AuthHttpTest(unittest.TestCase):
             # En provperiod på priset motsäger "ingen trial" -> underkänt.
             api_server.fetch_stripe_price = lambda k, pid: {
                 "unit_amount": 5900 if pid == "price_m" else 39900, "currency": "sek", "active": True,
+                "tax_behavior": "inclusive",
                 "recurring": {"interval": "month" if pid == "price_m" else "year", "trial_period_days": 14}}
             status, payload = self.get("/api/admin/stripe-check", headers={"X-Admin-Token": "admin-hemlighet"})
             self.assertEqual(status, 502)
@@ -1611,7 +1624,10 @@ class AuthHttpTest(unittest.TestCase):
             self.assertNotIn("hemlig", json.dumps(payload))
         finally:
             (api_server.ADMIN_TOKEN, api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET,
-             api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY, api_server.fetch_stripe_price) = originals
+             api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY, api_server.fetch_stripe_price,
+             api_server.stripe_tax_readiness, restore) = originals
+            api_server.STRIPE_PRICE_CHECK.clear()
+            api_server.STRIPE_PRICE_CHECK.update(restore)
 
     def test_checkout_rejects_when_stripe_not_configured(self):
         # Uttryckligen okonfigurerat: annars kunde en riktig nyckel i .env
@@ -1640,7 +1656,9 @@ class AuthHttpTest(unittest.TestCase):
             calls["create_customer"] += 1
             return "cus_fake123"
 
-        def fake_create_checkout_session(secret_key, customer_id, price_id, success_url, cancel_url, user_id=None):
+        # **kwargs: den riktiga signaturen växer (user_id i B1, automatic_tax
+        # i B2) och testdubbeln ska inte behöva följa med varje gång.
+        def fake_create_checkout_session(secret_key, customer_id, price_id, success_url, cancel_url, **kwargs):
             return f"https://checkout.stripe.com/fake/{customer_id}/{price_id}"
 
         api_server.create_customer = fake_create_customer
@@ -1817,7 +1835,7 @@ class AuthHttpTest(unittest.TestCase):
                      api_server.create_customer, api_server.create_checkout_session)
         api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY, api_server.STRIPE_SECRET_KEY = "price_month", "price_year", "sk_test_fake"
         api_server.create_customer = lambda secret_key, email, user_id: "cus_double"
-        api_server.create_checkout_session = lambda secret_key, customer_id, price_id, success_url, cancel_url, user_id=None: f"https://checkout.stripe.com/fake/{price_id}"
+        api_server.create_checkout_session = lambda secret_key, customer_id, price_id, success_url, cancel_url, **kwargs: f"https://checkout.stripe.com/fake/{price_id}"
         try:
             email = self._email()
             _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
