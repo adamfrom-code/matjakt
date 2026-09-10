@@ -32,7 +32,10 @@ DB_PATH = ROOT / "backend" / "data" / "recipes.db"
 # Units the pricing engine can convert between, plus the ones a recipe
 # legitimately uses that it cannot ("msk" of tomato purée is not worth
 # converting - the package maths falls back to one package and says so).
-KNOWN_UNITS = {"g", "kg", "ml", "l", "dl", "msk", "tsk", "st", "krm", "knippe"}
+# "klyfta" är vitlökens egen enhet. Banken skrev "Vitlök 3 st" och menade
+# tre KLYFTOR; motorn läste tre knoppar (3 × 70 g). Se KLYFT_VIKT_G i
+# services/grocery/pricing.py och scripts/migrate_vitloksklyftor.py.
+KNOWN_UNITS = {"g", "kg", "ml", "l", "dl", "msk", "tsk", "st", "krm", "knippe", "klyfta"}
 
 
 def validate(recipe: dict, seen_ids: set, seen_names: set) -> list[str]:

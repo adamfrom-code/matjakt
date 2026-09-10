@@ -38,7 +38,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Spenat",
@@ -140,7 +140,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Tomatpuré",
@@ -234,7 +234,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Parmesan",
@@ -350,7 +350,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Jasminris",
@@ -544,7 +544,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Ingefära",
@@ -651,7 +651,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Tomatpuré",
@@ -744,7 +744,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Fetaost",
@@ -861,7 +861,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Salt",
@@ -945,7 +945,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Riven ost",
@@ -1047,7 +1047,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Sesamfrön",
@@ -1140,7 +1140,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Paprikapulver",
@@ -1327,7 +1327,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Paprikapulver",
@@ -1424,7 +1424,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Parmesan",
@@ -1589,7 +1589,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Gul lök",
@@ -1764,7 +1764,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Persilja",
@@ -2355,7 +2355,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Oregano",

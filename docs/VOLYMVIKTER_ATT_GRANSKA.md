@@ -73,3 +73,62 @@ banken, så det här slår bredare än mejerivarorna.
 
 Tomatpuré, sirap, currypasta och sambal oelek — de fyra rader som gör
 prisrevisionen röd (se O10b i `MASTER_BACKLOG.md`). De förblir osäkra.
+
+---
+
+# Styckvikter att granska (`STYCK_VIKT_G`)
+
+Samma princip, annan tabell. `STYCK_VIKT_G` i
+`backend/services/grocery/pricing.py` säger vad "N st" av en vara väger, och
+den siffran avgör hur många förpackningar veckan kräver. Tre rader
+granskades i samband med C3 (vitlöksklyftorna). Bara den som gick att belägga
+mot receptbankens egna rader ändrades.
+
+## Ändrad: vitlök
+
+`"vitlok": 70` står kvar — **en hel knopp väger 70 g, och "1 st vitlök" ÄR en
+knopp**. Felet låg inte i talet utan i att receptbanken skrev "Vitlök 3 st"
+och menade tre *klyftor*. Klyftan har fått en egen enhet och en egen vikt
+(`KLYFT_VIKT_G`, 5 g) och banken normaliserades till den. Se C3.
+
+## Att granska: `korv: 60`
+
+**Fynd mot receptbanken: regeln träffar aldrig banken.** Ingen rad i
+receptbanken har `Korv` med enheten `st`. Samtliga korvrader är i gram:
+Falukorv 300/400/500 g (13 recept), Wienerkorv 480 g, Grillkorv 600 g,
+Korvbröd 270 g.
+
+**Produktfrågan.** 60 g är en grillkorv eller en wienerkorv. Men "korv" i en
+inköpslista kan lika gärna vara en falukorv på 800 g — mer än tretton gånger
+så mycket. Talet gäller därför bara varor som en *användare* själv lägger
+till, och där vet vi inte vilken korv som menas.
+
+**Varför det inte är ändrat.** Ett tal som aldrig används av banken går inte
+att belägga mot banken, och att välja korvsort åt användaren är ett
+produktbeslut. Rätt åtgärd är sannolikt att skilja `grillkorv`/`prinskorv`
+(styckvaror) från `falukorv` (gramvara) — inte att justera 60 uppåt eller
+nedåt.
+
+## Att granska: `brod: 35`
+
+**Fynd mot receptbanken: två rader, och de kan mena olika saker.** `Bröd 8 st`
+(ett recept) och `Bröd 4 st` (ett recept). Åtta bröd i ett recept är skivor —
+varma mackor eller toast — och 35 g per skiva är rätt. Fyra kan vara skivor,
+men kan lika gärna vara fyra frallor på 60–80 g.
+
+**Konsekvens.** Skillnaden är 140 g mot 280 g på en rad. Mot en 800 g-limpa
+flyttar det inte förpackningsantalet, så priset är detsamma i båda fallen —
+det är därför den här raden är låg prioritet trots att den är osäker.
+
+**Varför det inte är ändrat.** Talet stämmer för det ena receptet och
+möjligen inte för det andra. Rätt åtgärd är att skriva ut vad recepten menar
+(`brödskiva` finns redan i tabellen på 35 g), inte att gissa ett medelvärde.
+
+## Granskad och oförändrad: `dill: 20`
+
+**Receptbanken belägger talet själv.** Sju recept skriver `Dill 1 st`, och
+banken skriver samma ört i gram i tio andra recept: 15 g (ett), 20 g (sex),
+25 g (tre). En örtkruka eller ett knippe om ~20 g är alltså precis vad
+recepten menar med "1 st dill". Ingen ändring behövs. Samma resonemang
+gäller de övriga örterna på 20 g i tabellen, men bara dillen är belagd med
+gramrader ur banken.

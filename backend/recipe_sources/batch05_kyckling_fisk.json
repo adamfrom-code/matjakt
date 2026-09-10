@@ -319,7 +319,7 @@
       {
         "name": "Vitlök",
         "amount": 4,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Timjan",
@@ -500,7 +500,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Ris",
@@ -877,7 +877,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Tomater",
@@ -990,7 +990,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Ingefära",
@@ -1178,7 +1178,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Persilja",
@@ -1282,7 +1282,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Olja",
@@ -1452,7 +1452,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Ingefära",
@@ -1655,7 +1655,7 @@
       {
         "name": "Vitlök",
         "amount": 1,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Salt",
@@ -1816,7 +1816,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Citron",
@@ -2280,7 +2280,7 @@
       {
         "name": "Vitlök",
         "amount": 4,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Chili",

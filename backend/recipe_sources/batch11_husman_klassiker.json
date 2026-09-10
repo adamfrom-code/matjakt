@@ -136,7 +136,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Tomatpuré",
@@ -463,7 +463,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Crème fraiche",
@@ -556,7 +556,7 @@
       {
         "name": "Vitlök",
         "amount": 1,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Svartpeppar",

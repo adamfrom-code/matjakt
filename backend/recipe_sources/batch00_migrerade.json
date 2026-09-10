@@ -201,7 +201,7 @@
       {
         "name": "Vitlök",
         "amount": 1.0,
-        "unit": "st",
+        "unit": "klyfta",
         "normalizedId": "vitlok"
       },
       {
@@ -3132,7 +3132,7 @@
       {
         "name": "Vitlök",
         "amount": 1.0,
-        "unit": "st",
+        "unit": "klyfta",
         "normalizedId": "vitlok"
       },
       {
@@ -3225,7 +3225,7 @@
       {
         "name": "Vitlök",
         "amount": 1.0,
-        "unit": "st",
+        "unit": "klyfta",
         "normalizedId": "vitlok"
       },
       {
@@ -3827,7 +3827,7 @@
       {
         "name": "Vitlök",
         "amount": 1.0,
-        "unit": "st",
+        "unit": "klyfta",
         "normalizedId": "vitlok"
       },
       {
@@ -3905,7 +3905,7 @@
       {
         "name": "Vitlök",
         "amount": 1.0,
-        "unit": "st",
+        "unit": "klyfta",
         "normalizedId": "vitlok"
       },
       {

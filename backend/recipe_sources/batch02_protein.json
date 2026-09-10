@@ -33,7 +33,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Soja",
@@ -208,7 +208,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Persilja",
@@ -564,7 +564,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Tomatpuré",
@@ -746,7 +746,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Currypasta",
@@ -832,7 +832,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Ingefära",

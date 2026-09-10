@@ -757,7 +757,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Krossade tomater",
@@ -869,7 +869,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Spiskummin",
@@ -948,7 +948,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Krossade tomater",
@@ -1596,7 +1596,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Salt",
@@ -1679,7 +1679,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Rödlök",
@@ -1763,7 +1763,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Röd currypasta",
