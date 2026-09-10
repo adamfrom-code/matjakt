@@ -315,7 +315,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Curry",
@@ -681,7 +681,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Paprika",
@@ -877,7 +877,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Buljongtärning",
@@ -1345,7 +1345,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Ingefära",
@@ -1460,7 +1460,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Ättika",
@@ -1736,7 +1736,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Spiskummin",
@@ -1842,7 +1842,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Ingefära",

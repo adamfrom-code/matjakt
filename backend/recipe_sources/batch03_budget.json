@@ -206,7 +206,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Buljong",
@@ -371,7 +371,7 @@
       {
         "name": "Vitlök",
         "amount": 4,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Gul lök",
@@ -547,7 +547,7 @@
       {
         "name": "Vitlök",
         "amount": 3,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Morötter",
@@ -640,7 +640,7 @@
       {
         "name": "Vitlök",
         "amount": 2,
-        "unit": "st"
+        "unit": "klyfta"
       },
       {
         "name": "Smör",

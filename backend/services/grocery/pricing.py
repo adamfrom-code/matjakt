@@ -843,6 +843,11 @@ def verified_density(ingredient: str) -> float | None:
     return max(träffar)[1] if träffar else None
 
 
+# Styckfamiljen: st, förp, p, pack, pk är samma räknesort - "Ägg 6p" mot
+# receptets "3 st" är exakt jämförbart, inte ett estimat.
+COUNT_UNITS = frozenset({"st", "forp", "frp", "p", "pack", "pk", "styck"})
+
+
 def convert_amount(amount: float | None, from_unit: str | None, to_unit: str | None) -> float | None:
     """Converts between mass units, or between volume units. Returns None when
     the two units aren't comparable (e.g. 'st' vs 'g') rather than assuming a
@@ -850,10 +855,7 @@ def convert_amount(amount: float | None, from_unit: str | None, to_unit: str | N
     if amount is None or not from_unit or not to_unit:
         return None
     source, target = _fold(from_unit), _fold(to_unit)
-    # Styckfamiljen: st, förp, p, pack, pk är samma räknesort - "Ägg 6p"
-    # mot receptets "3 st" är exakt jämförbart, inte ett estimat.
-    count_units = {"st", "forp", "frp", "p", "pack", "pk", "styck"}
-    if source in count_units and target in count_units:
+    if source in COUNT_UNITS and target in COUNT_UNITS:
         return float(amount)
     if source == target:
         return float(amount)
@@ -937,6 +939,27 @@ STYCK_VIKT_G = {
 
 def styck_vikt_for(ingredient: str) -> float | None:
     return STYCK_VIKT_G.get(_fold(ingredient))
+
+
+# EN KLYFTA ÄR INTE EN KNOPP. Receptbanken skrev "Vitlök 3 st" och menade
+# tre KLYFTOR; motorn läste det som tre hela knoppar och räknade 3 × 70 =
+# 210 g. En vecka med fem vitlöksrecept blev ~840 g vitlök - cirka 125 kr
+# på en veckobudget som skulle varit 15, och en påse som ruttnar.
+#
+# Knoppen är kvar i STYCK_VIKT_G (70 g) därför att "1 st vitlök" ÄR en
+# knopp - det är varan man lyfter ur hyllan. Klyftan är ett eget mått med
+# en egen enhet, och receptbanken normaliserades till den (se
+# backend/scripts/migrate_vitloksklyftor.py). Fem gram är kökets
+# standardklyfta, samma tal varje matkasseleverantör räknar med.
+KLYFTA_UNITS = frozenset({"klyfta", "klyftor"})
+
+KLYFT_VIKT_G = {
+    "vitlok": 5,
+}
+
+
+def klyft_vikt_for(ingredient: str) -> float | None:
+    return KLYFT_VIKT_G.get(_fold(ingredient))
 
 
 # Buljong säljs som tärningar (paket märkta i liter färdig buljong),
@@ -1602,6 +1625,21 @@ class RecipePricingEngine:
                 per_piece = styck_vikt_for(ingredient)
                 if per_piece:
                     effective_amount, effective_unit = amount * per_piece, "g"
+            # Klyftrecept mot varan. "3 klyftor vitlök" är 15 g, inte tre
+            # knoppar. Mot en gramvara vägs klyftorna om direkt; mot en
+            # STYCKVARA räknas de om till knoppar via knoppens egen
+            # styckvikt, så tre klyftor blir 0,21 knopp - en förpackning,
+            # inte tre. Saknas klyftvikten faller raden igenom till
+            # fail-closed nedan och blir ärligt osäker.
+            elif _fold(unit) in KLYFTA_UNITS and package_unit:
+                per_clove = klyft_vikt_for(ingredient)
+                per_piece = styck_vikt_for(ingredient)
+                package_folded = _fold(package_unit)
+                if per_clove and package_folded in _MASS:
+                    effective_amount, effective_unit = amount * per_clove, "g"
+                elif per_clove and per_piece and package_folded in COUNT_UNITS:
+                    effective_amount = amount * per_clove / per_piece
+                    effective_unit = "st"
             count = packages_needed(effective_amount, effective_unit, package_amount, package_unit)
             per_kg_cost = None
             if loose_weight:
