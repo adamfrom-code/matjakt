@@ -5,6 +5,13 @@ Skriven så nästa session kan fortsätta utan att bygga om något. Allt nedan
 koden "finns". Föregående checkpointar (2026-09-01, master-auditen samma
 dag) gäller i grunden; det här är vad som ändrats och vad som är sant nu.
 
+> **Redigera inte den här filen direkt.** Den är en enda fil som alla vill
+> skriva i, och med många parallella agenter blir varje ändring en konflikt i
+> samma stycke. Lägg i stället en ny fil i `docs/changelog.d/<paket-ID>.md` —
+> två agenter som skapar var sin fil kan git slå ihop utan att fråga. Vid
+> release vävs de in här av `node scripts/weave_checkpoint.mjs --apply "<release>"`.
+> Formatet står i `docs/changelog.d/README.md`.
+
 ## Läget i ett stycke
 
 Matjakt är live på **matjakt.store** (GitHub Pages, bundlad frontend) mot
