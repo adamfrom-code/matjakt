@@ -50,6 +50,7 @@ from services.household import HouseholdStore, NotificationStore
 from services.household.routes import HouseholdRouter
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
 from services.billing import matjakt_user_id as stripe_matjakt_user_id, orphan_subscriptions as stripe_orphan_subscriptions
+from services.billing import automatic_tax_allowed, price_verdict as stripe_price_verdict, tax_readiness as stripe_tax_readiness
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.accounts import clientip  # noqa: E402
@@ -168,40 +169,56 @@ STRIPE_PRICE_YEARLY = os.environ.get("STRIPE_PRICE_YEARLY", "")
 STRIPE_PRICE_CHECK = {"checked": False}
 
 
+STRIPE_PLANS = (("monthly", 5900, "month"), ("yearly", 39900, "year"))
+
+
+def stripe_price_id(plan: str) -> str:
+    return STRIPE_PRICE_YEARLY if plan == "yearly" else STRIPE_PRICE_MONTHLY
+
+
 def verify_stripe_prices():
     """Frågar Stripe om de konfigurerade priserna finns och stämmer
-    (59 kr/mån, 399 kr/år, ingen provperiod). Körs vid uppstart i bakgrunden
-    och får aldrig stoppa servern."""
+    (59 kr/mån, 399 kr/år, ingen provperiod, angivna INKLUSIVE moms) och om
+    Stripe Tax är aktiverat. Körs vid uppstart i bakgrunden och får aldrig
+    stoppa servern.
+
+    Domen per pris fälls av services/billing/tax.py, samma modul som
+    kontrollrummet läser - de två får aldrig säga olika saker om samma
+    pris. Resultatet av momsdelen styr dessutom om checkout skickar
+    automatic_tax: se stripe_client.create_checkout_session."""
     if not STRIPE_SECRET_KEY:
-        STRIPE_PRICE_CHECK.update(checked=True, ok=None, reason="Stripe är inte konfigurerat")
+        STRIPE_PRICE_CHECK.update(checked=True, ok=None, reason="Stripe är inte konfigurerat",
+                                  automaticTax={"ready": False, "reason": "Stripe är inte konfigurerat"})
         return STRIPE_PRICE_CHECK
     result = {"checked": True, "checkedAt": time.time(), "plans": {}}
-    for plan, price_id, amount, interval in (("monthly", STRIPE_PRICE_MONTHLY, 5900, "month"),
-                                             ("yearly", STRIPE_PRICE_YEARLY, 39900, "year")):
+    for plan, amount, interval in STRIPE_PLANS:
+        price_id = stripe_price_id(plan)
         if not price_id:
             result["plans"][plan] = "saknas i miljön"
             continue
         try:
-            price = fetch_stripe_price(STRIPE_SECRET_KEY, price_id)
-            recurring = price.get("recurring") or {}
-            if (price.get("unit_amount") == amount and (price.get("currency") or "").lower() == "sek"
-                    and recurring.get("interval") == interval and not recurring.get("trial_period_days")
-                    and price.get("active")):
-                result["plans"][plan] = "ok"
-            else:
-                result["plans"][plan] = (f"fel pris: {(price.get('unit_amount') or 0) / 100:.0f} "
-                                         f"{(price.get('currency') or '').upper()}/{recurring.get('interval')}")
+            result["plans"][plan] = stripe_price_verdict(
+                fetch_stripe_price(STRIPE_SECRET_KEY, price_id), amount, interval)
         except Exception as error:                       # nätfel, fel id, allt
             # Kategori, inte råtext: /api/health är öppen och ska inte eka
             # tillbaka konfigurationsvärden. Detaljen hamnar i loggen.
             logger.exception("Stripe-priset för %s kunde inte hämtas", plan)
             result["plans"][plan] = ("finns inte i Stripe-kontot" if "no such price" in str(error).lower()
                                      else "kunde inte hämtas")
-    result["ok"] = all(value == "ok" for value in result["plans"].values())
+    prices_ok = all(value == "ok" for value in result["plans"].values())
+    tax = stripe_tax_readiness(STRIPE_SECRET_KEY)
+    # automatic_tax kräver BÅDA halvorna. Skickas det utan aktiverad Stripe
+    # Tax vägrar Stripe skapa sessionen och köpknappen slutar fungera för
+    # alla - därför är klartecknet villkorat, och synligt i /api/health.
+    result["automaticTax"] = {"ready": bool(prices_ok and tax["active"]), "taxSettings": tax["status"],
+                              "reason": tax["reason"] if not tax["active"] else
+                              (None if prices_ok else "priserna är inte satta inklusive moms")}
+    result["ok"] = prices_ok and result["automaticTax"]["ready"]
     STRIPE_PRICE_CHECK.clear()
     STRIPE_PRICE_CHECK.update(result)
     if not result["ok"]:
-        logger.error("Stripe-priserna stämmer inte: %s", result["plans"])
+        logger.error("Stripe-konfigurationen stämmer inte: priser=%s moms=%s",
+                     result["plans"], result["automaticTax"])
     return STRIPE_PRICE_CHECK
 MAIL_CONFIG = {
     "host": os.environ.get("SMTP_HOST", ""),
@@ -2184,7 +2201,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
                    # riktigt? Svarar på "är årspriset rätt i den här miljön?"
                    # utan att någon behöver admin-token.
                    "pricesVerified": STRIPE_PRICE_CHECK.get("ok"),
-                   "priceCheck": STRIPE_PRICE_CHECK.get("plans")},
+                   "priceCheck": STRIPE_PRICE_CHECK.get("plans"),
+                   # B2: är momsen påslagen på riktigt? Utan den här raden
+                   # var "ingen moms" osynligt tills en revisor frågade.
+                   "automaticTax": STRIPE_PRICE_CHECK.get("automaticTax")},
         "recipeProviders": sorted(RECIPE_SERVICE.providers),
                                  "recipeCount": recipes_api.stats().get("total", 0),
                                  "productCount": grocery_api.database_summary().get("totalProducts", 0),
@@ -2193,9 +2213,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/admin/stripe-check":
             # Fråga Stripe om konfigurationen VERKLIGEN stämmer: rätt läge,
             # att båda pris-id:na finns, att de kostar 59 respektive 399 kr,
-            # att ingen provperiod ligger på dem. Ett pris-id som inte finns
-            # ger annars ett 400 först när en riktig kund trycker "Prenumerera".
-            # Svaret innehåller aldrig nyckelmaterial.
+            # att ingen provperiod ligger på dem, och att de är angivna
+            # INKLUSIVE moms med Stripe Tax aktiverat. Ett pris-id som inte
+            # finns ger annars ett 400 först när en riktig kund trycker
+            # "Prenumerera". Svaret innehåller aldrig nyckelmaterial.
+            #
+            # Vägen kör om hela uppstartskontrollen, så den är också hur
+            # Adam ser att dashboard-stegen för momsen tagit - utan omstart.
             if not self._admin_ok():
                 return
             mode = (("test" if STRIPE_SECRET_KEY.startswith("sk_test_") else
@@ -2203,10 +2227,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     if STRIPE_SECRET_KEY else None)
             report = {"configured": bool(STRIPE_SECRET_KEY), "mode": mode,
                       "webhookSecret": bool(STRIPE_WEBHOOK_SECRET), "prices": {}, "ok": False}
-            expected = {"monthly": (STRIPE_PRICE_MONTHLY, 5900, "month"),
-                        "yearly": (STRIPE_PRICE_YEARLY, 39900, "year")}
             all_ok = bool(STRIPE_SECRET_KEY) and bool(STRIPE_WEBHOOK_SECRET)
-            for plan, (price_id, amount, interval) in expected.items():
+            for plan, amount, interval in STRIPE_PLANS:
+                price_id = stripe_price_id(plan)
                 entry = {"configured": bool(price_id), "exists": False, "matches": False}
                 if price_id:
                     try:
@@ -2218,17 +2241,24 @@ class ApiHandler(SimpleHTTPRequestHandler):
                             currency=(price.get("currency") or "").upper(),
                             interval=recurring.get("interval"),
                             trialDays=recurring.get("trial_period_days"),
+                            taxBehavior=price.get("tax_behavior"),
                         )
-                        entry["matches"] = (price.get("unit_amount") == amount
-                                            and (price.get("currency") or "").lower() == "sek"
-                                            and recurring.get("interval") == interval
-                                            and not recurring.get("trial_period_days")
-                                            and bool(price.get("active")))
+                        entry["verdict"] = stripe_price_verdict(price, amount, interval)
+                        entry["matches"] = entry["verdict"] == "ok"
                     except StripeError as error:
                         entry["error"] = str(error)
                 report["prices"][plan] = entry
                 all_ok = all_ok and entry["matches"]
+            tax = stripe_tax_readiness(STRIPE_SECRET_KEY)
+            report["automaticTax"] = {"ready": bool(all_ok and tax["active"]),
+                                      "taxSettings": tax["status"],
+                                      "reason": tax["reason"] if not tax["active"] else
+                                      (None if all_ok else "priserna är inte satta inklusive moms")}
+            all_ok = all_ok and report["automaticTax"]["ready"]
             report["ok"] = all_ok
+            # Samma svar som uppstartskontrollen skulle gett: skriv in det, så
+            # checkout börjar skicka automatic_tax så fort dashboarden är klar.
+            verify_stripe_prices()
             self.send_json(200 if all_ok else 502, report)
             return
         if parsed.path == "/api/admin/stripe-reconcile":
@@ -2832,7 +2862,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if self._rate_limit("billing"):
                 return
             try:
-                price_id = STRIPE_PRICE_YEARLY if payload.get("plan") == "yearly" else STRIPE_PRICE_MONTHLY
+                price_id = stripe_price_id(payload.get("plan"))
                 if not price_id:
                     raise StripeError("Stripe-priser är inte konfigurerade på servern ännu")
                 user_id, email, customer_id = ACCOUNT_STORE.billing_identity_for_token(self._bearer_token())
@@ -2852,6 +2882,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     cancel_url=f"{APP_URL}/?billing=cancelled",
                     # B1: andra spåret tillbaka till kontot om kundraden brister.
                     user_id=user_id,
+                    # B2: bara när Stripe självt sagt att Stripe Tax är aktivt
+                    # och priserna är satta inklusive moms - annars vägrar
+                    # Stripe skapa sessionen och köpknappen dör för alla.
+                    automatic_tax=automatic_tax_allowed(STRIPE_PRICE_CHECK),
                 )
                 self.send_json(200, {"url": url})
             except (AccountError, StripeError) as error:
