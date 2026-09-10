@@ -2113,6 +2113,20 @@ class ApiHandler(SimpleHTTPRequestHandler):
             "recipientDomain": _admin_alert_domain(),
             "transportConfigured": mail_is_configured(MAIL_CONFIG),
         },
+        # ATT en admin-token är satt, aldrig vilken.
+        #
+        # Admin-vägarna svarar 404 på tre helt olika saker: fel token, rätt
+        # token som inte matchar på grund av ett blanksteg, och ingen token
+        # alls i miljön. Det är med flit - admin-ytan ska inte synas utifrån
+        # - men det gjorde också ägarens egen felsökning omöjlig: samma svar
+        # oavsett orsak, och ingenting i loggen. En kväll gick åt till att
+        # skilja dem åt för hand.
+        #
+        # Booleanen läcker ingenting en angripare kan använda. Att Matjakt
+        # HAR en adminyta står i ett publikt repo, gissningsbudgeten är
+        # oförändrad, och längden avslöjas inte. Men den gör skillnad mellan
+        # "du skrev fel" och "ingen kan komma in" synlig på en sekund.
+        "adminTokenConfigured": bool(ADMIN_TOKEN),
         # Stripe-läge utan hemligheter: bara om nyckeln är en TEST- eller
         # LIVE-nyckel (prefix) och vilka delar som är satta. Svarar på
         # "används inga live-nycklar?" utan att någonsin visa nyckeln.

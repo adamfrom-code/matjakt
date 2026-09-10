@@ -57,5 +57,25 @@ class HemligheterStrippas(unittest.TestCase):
             self.assertIn(rad, kalla)
 
 
+class HealthSagerOmEnTokenFinns(unittest.TestCase):
+    """Utan det här är "du skrev fel" och "ingen kan komma in" samma 404."""
+
+    def test_flaggan_speglar_om_token_ar_satt_men_avslojar_inte_vilken(self):
+        import api_server
+        original = api_server.ADMIN_TOKEN
+        try:
+            for varde, vantat in (("en-riktig-token", True), ("", False)):
+                api_server.ADMIN_TOKEN = varde
+                self.assertEqual(bool(api_server.ADMIN_TOKEN), vantat)
+        finally:
+            api_server.ADMIN_TOKEN = original
+
+    def test_health_bar_flaggan_och_aldrig_vardet(self):
+        kalla = (Path(__file__).resolve().parents[1] / "api_server.py").read_text(encoding="utf-8")
+        self.assertIn('"adminTokenConfigured": bool(ADMIN_TOKEN)', kalla)
+        # Värdet självt får aldrig läggas i ett publikt svar.
+        self.assertNotIn('"adminToken": ADMIN_TOKEN', kalla)
+
+
 if __name__ == "__main__":
     unittest.main()
