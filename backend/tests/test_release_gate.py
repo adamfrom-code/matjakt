@@ -304,5 +304,62 @@ class LoosePiecesAtKiloPrice(unittest.TestCase):
             db.close(); tmp.cleanup()
 
 
+class CampaignPricedWeightGoods(unittest.TestCase):
+    """C4: kilopris-signaturen jämförs mot priset som GÄLLER, inte ordinarie.
+
+    City Gross sätter unit_price = kampanjens kr/kg medan regular_price är
+    ordinariepriset. Under kampanj skiljde de sig alltid åt, signaturen föll,
+    och kilopriset användes rakt av som paketpris. Felet gick alltid nedåt -
+    och drabbade just kampanjvaror, vilket gjorde kedjan med kampanjen
+    orättvist billigast."""
+
+    def test_a_campaign_priced_cut_costs_kilo_price_times_weight(self):
+        """Fläskkarré ca 1,2 kg, ordinarie 99 kr/kg, kampanj 79 kr/kg.
+        Kassan: 94,80 kr. Före C4: 79 kr, som om 79 vore paketpriset."""
+        engine, store_id, tmp, db = _engine_with([{
+            "id": "kar", "name": "Fläskkarré Benfri", "size": "ca 1,2kg",
+            "quantity": None, "unit": None,
+            "price": 99.0, "campaign": 79.0, "unit_price": 79.0,
+            "category": "Kött & chark > Fläsk"}])
+        try:
+            row = engine.price_item("Fläskkarré", 1000, "g", "Willys", store_id)
+            self.assertTrue(row["weightPriced"], "kampanjens kr/kg ÄR ett kilopris")
+            self.assertEqual(row["packages"], 1)
+            self.assertTrue(row["exactPackaging"])
+            self.assertAlmostEqual(row["totalCost"], 94.80, places=2)  # 79 × 1,2
+        finally:
+            db.close(); tmp.cleanup()
+
+    def test_the_same_cut_without_a_campaign_is_unchanged(self):
+        """Regressionslås: utan kampanj är ordinarie priset som gäller, och
+        signaturen fungerar precis som förut."""
+        engine, store_id, tmp, db = _engine_with([{
+            "id": "kar", "name": "Fläskkarré Benfri", "size": "ca 1,2kg",
+            "quantity": None, "unit": None,
+            "price": 99.0, "unit_price": 99.0,
+            "category": "Kött & chark > Fläsk"}])
+        try:
+            row = engine.price_item("Fläskkarré", 1000, "g", "Willys", store_id)
+            self.assertTrue(row["weightPriced"])
+            self.assertAlmostEqual(row["totalCost"], 118.80, places=2)  # 99 × 1,2
+        finally:
+            db.close(); tmp.cleanup()
+
+    def test_a_package_price_that_is_not_a_kilo_price_is_still_a_package_price(self):
+        """Motpolen: skiljer sig jämförpriset från det man betalar är raden
+        ett vanligt paketpris och får inte skalas med cirkavikten."""
+        engine, store_id, tmp, db = _engine_with([{
+            "id": "kar", "name": "Fläskkarré Benfri", "size": "ca 1,2kg",
+            "quantity": None, "unit": None,
+            "price": 99.0, "campaign": 79.0, "unit_price": 65.8,
+            "category": "Kött & chark > Fläsk"}])
+        try:
+            row = engine.price_item("Fläskkarré", 1000, "g", "Willys", store_id)
+            self.assertFalse(row["weightPriced"])
+            self.assertEqual(row["totalCost"], 79.0)
+        finally:
+            db.close(); tmp.cleanup()
+
+
 if __name__ == "__main__":
     unittest.main()
