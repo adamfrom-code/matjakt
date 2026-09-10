@@ -11,6 +11,7 @@ around:
 
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -18,8 +19,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from services.grocery import GroceryStore, RawProduct  # noqa: E402
 from services.grocery import api as grocery_api  # noqa: E402
 from services.grocery.pricing import (  # noqa: E402
-    RecipePricingEngine, convert_amount, effective_price, packages_needed,
-    product_matches_ingredient,
+    MAX_CAMPAIGN_AGE_SECONDS, RecipePricingEngine, convert_amount,
+    effective_price, packages_needed, product_matches_ingredient,
 )
 from services.recipes import RecipeStore  # noqa: E402
 from services.recipes import api as recipes_api  # noqa: E402
@@ -120,9 +121,14 @@ class IngredientMatchingTest(unittest.TestCase):
 
 class EffectivePriceTest(unittest.TestCase):
     class P:
-        def __init__(self, regular=None, campaign=None, member=None, multibuy=None):
+        # fetched_at som standard: varje riktig prisrad bär en tidsstämpel
+        # (upsert_current_price skriver den vid varje import), och en kampanj
+        # utan slutdatum dateras mot den - se _campaign_expired.
+        def __init__(self, regular=None, campaign=None, member=None, multibuy=None,
+                     fetched_at=None):
             self.regular_price, self.campaign_price = regular, campaign
             self.member_price, self.multibuy_price = member, multibuy
+            self.fetched_at = time.time() if fetched_at is None else fetched_at
 
     def test_uses_campaign_when_cheaper(self):
         self.assertEqual(effective_price(self.P(regular=30.0, campaign=25.0)), 25.0)
@@ -142,6 +148,25 @@ class EffectivePriceTest(unittest.TestCase):
     def test_no_price_at_all_is_none(self):
         self.assertIsNone(effective_price(self.P()))
         self.assertIsNone(effective_price(None))
+
+    def test_a_campaign_nobody_has_confirmed_in_over_eight_days_is_gone(self):
+        """C5: bara Primat och partnerfeeden sätter valid_to. Axfood, City
+        Gross och ICA gör det aldrig, så en kampanj utan slutdatum försvann
+        först vid nästa LYCKADE import - och när importen dör händer det
+        aldrig. Nu åldras den i stället."""
+        fresh = self.P(regular=30.0, campaign=25.0,
+                       fetched_at=time.time() - MAX_CAMPAIGN_AGE_SECONDS + 3600)
+        stale = self.P(regular=30.0, campaign=25.0,
+                       fetched_at=time.time() - MAX_CAMPAIGN_AGE_SECONDS - 3600)
+        self.assertEqual(effective_price(fresh), 25.0)
+        self.assertEqual(effective_price(stale), 30.0, "utgången kampanj -> ordinarie")
+
+    def test_a_campaign_that_cannot_be_dated_at_all_is_not_used(self):
+        """Fail closed: utan både slutdatum och tidsstämpel går kampanjen
+        inte att gå i god för, och fallbacken är det HÖGRE priset."""
+        undateable = self.P(regular=30.0, campaign=25.0)
+        undateable.fetched_at = None
+        self.assertEqual(effective_price(undateable), 30.0)
 
 
 def raw(chain, external_id, name, *, gtin=None, brand=None, quantity=None, unit=None, size=None):

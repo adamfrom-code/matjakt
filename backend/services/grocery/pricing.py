@@ -1328,6 +1328,19 @@ def product_matches_ingredient(product_name: str, ingredient: str, brand: str | 
 # "verifierat lokalt pris" inte längre ett sant påstående.
 MAX_STORE_PRICE_AGE_SECONDS = 4 * 24 * 3600
 
+# Hur gammal en KAMPANJ UTAN SLUTDATUM får vara innan ordinariepriset tar
+# över. Bara Primat och partnerfeeden sätter valid_to; Axfood (Willys,
+# Hemköp), City Gross och ICA gör det aldrig. En sådan kampanj försvann
+# därför först vid nästa LYCKADE import - och publish.py behåller medvetet
+# gårdagens dataset när prisgaten faller. Faller Willys-importen fem dygn i
+# rad fick kunden fortsatt torsdagens extrapris på fläskfilé, gick till
+# butiken och betalade ordinarie.
+#
+# Åtta dygn: en svensk veckokampanj löper måndag-söndag, så åtta dygn
+# rymmer en hel kampanjvecka plus en missad nattsynk utan att sträcka sig
+# in i nästa veckas priser.
+MAX_CAMPAIGN_AGE_SECONDS = 8 * 24 * 3600
+
 PRICING_BASIS_VERIFIED = "VERIFIED"
 PRICING_BASIS_REFERENCE = "REFERENCE"
 PRICING_BASIS_MIXED = "MIXED"
@@ -1353,6 +1366,38 @@ def _per_pack(value, pack_kg: float):
     return round(value * pack_kg, 2)
 
 
+def campaign_age_stamp(price) -> float | None:
+    """När källan senast bekräftade den här prisraden.
+
+    verified_at för referensnivån (butiksuppslaget aliasar den till
+    fetched_at), fetched_at för verifierade butikspriser. Båda skrivs om vid
+    varje import, även när priset är oförändrat - så stämpeln säger "senast
+    sedd", vilket är precis vad en kampanj utan slutdatum behöver."""
+    for attribute in ("verified_at", "fetched_at"):
+        value = getattr(price, attribute, None)
+        if value:
+            return float(value)
+    return None
+
+
+def _campaign_expired(price) -> bool:
+    """Är kampanjen slut? Med slutdatum: har dagen passerat. Utan: har ingen
+    källa bekräftat raden på över MAX_CAMPAIGN_AGE_SECONDS.
+
+    En rad som saknar både slutdatum OCH tidsstämpel går inte att datera,
+    och en kampanj vi inte kan datera är ingen kampanj vi kan gå i god för -
+    fail closed betyder här att falla tillbaka på ordinarie, alltså det
+    HÖGRE priset."""
+    now = time.time()
+    valid_to = getattr(price, "valid_to", None)
+    if valid_to is not None:
+        return valid_to < now
+    stamp = campaign_age_stamp(price)
+    if stamp is None:
+        return True
+    return stamp < now - MAX_CAMPAIGN_AGE_SECONDS
+
+
 def effective_price(price) -> float | None:
     """What a normal shopper actually pays today: the campaign price when one
     is running, otherwise the ordinary price. Member and multibuy prices are
@@ -1370,10 +1415,12 @@ def effective_price(price) -> float | None:
         return value if value is not None and 0 < value <= 30000 else None
     campaign, regular = _sane(campaign), _sane(regular)
     # KAMPANJDATUM: en kampanj vars sista dag passerat är inget pris längre.
-    # Utan datum gäller den tills källan säger annat (nattsynken tar bort
-    # den); med passerat datum faller vi tillbaka på ordinarie.
-    valid_to = getattr(price, "valid_to", None)
-    if campaign is not None and valid_to is not None and valid_to < time.time():
+    # UTAN datum gäller kampanjen bara så länge källan NYLIGEN sagt att den
+    # gäller - "tills nattsynken tar bort den" var inget skydd alls, för när
+    # importen dör tar nattsynken aldrig bort någonting (publish.py behåller
+    # gårdagens dataset med flit när prisgaten faller). En kampanj som ingen
+    # källa bekräftat på över åtta dygn faller därför tillbaka på ordinarie.
+    if campaign is not None and _campaign_expired(price):
         campaign = None
     if campaign is not None and regular is not None:
         return min(campaign, regular)

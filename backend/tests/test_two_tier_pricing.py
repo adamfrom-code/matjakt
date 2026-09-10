@@ -28,7 +28,8 @@ from services.grocery import partners  # noqa: E402
 from services.grocery import register  # noqa: E402
 from services.grocery.models import RawProduct  # noqa: E402
 from services.grocery.pricing import (  # noqa: E402
-    MAX_STORE_PRICE_AGE_SECONDS, RecipePricingEngine, effective_price)
+    MAX_CAMPAIGN_AGE_SECONDS, MAX_STORE_PRICE_AGE_SECONDS, RecipePricingEngine,
+    effective_price)
 from services.grocery.publish import gate_row, publish_run  # noqa: E402
 from services.grocery.store import GroceryStore  # noqa: E402
 
@@ -142,6 +143,35 @@ class ReferenceAndStorePrices(_Base):
                          valid_to=time.time() + 86400)
         price = self.db.get_current_price(product.id, maxi.id)
         self.assertEqual(effective_price(price), 9.9)
+
+    def test_7b_a_campaign_without_an_end_date_is_not_used_forever(self):
+        """C5: Axfood, City Gross och ICA sätter aldrig valid_to. Kampanjen
+        försvann därför först vid nästa LYCKADE import - och publish.py
+        behåller medvetet gårdagens dataset när prisgaten faller. Faller
+        Willys-importen fem dygn i rad fick kunden fortsatt torsdagens
+        extrapris, gick till butiken och betalade ordinarie.
+
+        Referensnivån är där det syns tydligast: den har ingen egen
+        åldersgräns alls, så en kampanj där kunde visas i månader."""
+        product = self.milk_product("ICA", "1003987")
+        self.store("ICA", "1000123", "ICA Maxi Lindhagen")
+        self.reference("ICA", product.id, 15.0, campaign_price=9.9,
+                       verified_at=time.time() - MAX_CAMPAIGN_AGE_SECONDS - 3600)
+
+        row = self.price_milk("ICA", "1000123")["matchedItems"][0]
+        self.assertEqual(row["totalCost"], 15.0,
+                         "en kampanj som ingen källa bekräftat på över åtta "
+                         "dygn får inte prissätta veckan")
+
+    def test_7c_a_recently_confirmed_campaign_without_an_end_date_still_counts(self):
+        """Motpolen: gränsen får inte slå ut levande kampanjer."""
+        product = self.milk_product("ICA", "1003987")
+        self.store("ICA", "1000123", "ICA Maxi Lindhagen")
+        self.reference("ICA", product.id, 15.0, campaign_price=9.9,
+                       verified_at=time.time() - 86400)
+
+        row = self.price_milk("ICA", "1000123")["matchedItems"][0]
+        self.assertEqual(row["totalCost"], 9.9)
 
     def test_8_member_price_is_carried_but_never_the_checkout_price(self):
         product = self.milk_product("ICA", "1003987")
