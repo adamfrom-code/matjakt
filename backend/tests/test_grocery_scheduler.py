@@ -136,6 +136,43 @@ class NextRunTest(unittest.TestCase):
         self.assertIsNone(next_run_at("Matpriskollen", DEFAULT_SCHEDULE))
 
 
+class BootstrapFortsatterEfterEttFel(unittest.TestCase):
+    """En kedja som kastar får inte ta de övriga med sig.
+
+    Sett i produktion 2026-09-10: Coop hämtade 12 079 varor, sedan hände
+    ingenting med ICA och Lidl. Metoden kör på en daemon-tråd utan handler,
+    så undantaget dödade tråden tyst - inget fel i loggen, ingen körning."""
+
+    def test_ett_undantag_stoppar_inte_resten(self):
+        from unittest import mock
+        startade = []
+
+        def start(chain, *a, **kw):
+            startade.append(chain)
+            if chain == "Coop":
+                raise RuntimeError("Primat svarade inte")
+            return {"started": True}
+
+        sched = scheduler_module.GroceryScheduler({"Coop": "01:00", "ICA": "02:00",
+                                                   "Lidl": "03:00"})
+        sched.enabled = True   # enabled läses ur miljön i __init__
+        tomma = [{"chain": c, "products": 0, "lastSuccessfulRun": None}
+                 for c in ("Coop", "ICA", "Lidl")]
+        with mock.patch.dict(os.environ, {"PRIMAT_API_KEY": "x"}), \
+             mock.patch.object(scheduler_module.importer, "start", side_effect=start), \
+             mock.patch.object(scheduler_module.importer, "status", return_value={"running": False}), \
+             mock.patch("services.grocery.api.database_summary", return_value={"chains": []}), \
+             mock.patch("services.grocery.api.provider_status", return_value=tomma):
+            sched.bootstrap_if_empty()
+        # Bootstrapen går över SCHEDULABLE_CHAINS, inte bara de tre här -
+        # det som prövas är att de EFTER den som kastade ändå startades.
+        for kedja in ("Coop", "ICA", "Lidl"):
+            self.assertIn(kedja, startade, f"{kedja} startades aldrig")
+        self.assertLess(startade.index("Coop"), startade.index("ICA"),
+                        "ICA ska ha försökts efter Coop")
+        self.assertLess(startade.index("ICA"), startade.index("Lidl"))
+
+
 class TickTest(unittest.TestCase):
     def setUp(self):
         self.started = []
