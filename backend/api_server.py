@@ -127,8 +127,23 @@ PREMIUM_CODE = os.environ.get("MATJAKT_PREMIUM_CODE", "")
 # has no admin-role concept on accounts, and building one just for this one
 # read-only diagnostic would be more machinery than the need warrants). When
 # unset, the endpoint refuses every request rather than falling open.
-ADMIN_TOKEN = os.environ.get("MATJAKT_ADMIN_TOKEN", "")
-PRIMAT_API_KEY = os.environ.get("PRIMAT_API_KEY", "")
+# .strip() ÄR INTE KOSMETIK. Jämförelsen är hmac.compare_digest, tecken för
+# tecken. Klistrar man in en hemlighet i Renders formulär följer det lätt med
+# en radbrytning eller ett mellanslag på slutet - och då är "hemlighet\n" inte
+# lika med "hemlighet", fast de ser identiska ut på skärmen. Resultatet blir
+# 404 på varje försök med RÄTT värde, utan att något i loggen säger varför.
+# MATJAKT_MAIL_SECRET strippades redan; de här två glömdes.
+#
+# Ingen hemlighet har ett meningsfullt inledande eller avslutande blanksteg,
+# så det finns ingenting att förlora. HTTP tar redan bort blanksteg runt
+# headervärden, så det är miljösidan som behövde det här.
+def secret_from_env(name: str) -> str:
+    """En hemlighet ur miljön, utan omgivande blanksteg."""
+    return os.environ.get(name, "").strip()
+
+
+ADMIN_TOKEN = secret_from_env("MATJAKT_ADMIN_TOKEN")
+PRIMAT_API_KEY = secret_from_env("PRIMAT_API_KEY")
 PRIMAT_STORE_CACHE_TTL_SECONDS = 86400
 PRIMAT_CIRCUIT_COOLDOWN_SECONDS = 60
 OFF_IMAGE_CACHE_TTL_SECONDS = 7 * 86400
@@ -2098,6 +2113,20 @@ class ApiHandler(SimpleHTTPRequestHandler):
             "recipientDomain": _admin_alert_domain(),
             "transportConfigured": mail_is_configured(MAIL_CONFIG),
         },
+        # ATT en admin-token är satt, aldrig vilken.
+        #
+        # Admin-vägarna svarar 404 på tre helt olika saker: fel token, rätt
+        # token som inte matchar på grund av ett blanksteg, och ingen token
+        # alls i miljön. Det är med flit - admin-ytan ska inte synas utifrån
+        # - men det gjorde också ägarens egen felsökning omöjlig: samma svar
+        # oavsett orsak, och ingenting i loggen. En kväll gick åt till att
+        # skilja dem åt för hand.
+        #
+        # Booleanen läcker ingenting en angripare kan använda. Att Matjakt
+        # HAR en adminyta står i ett publikt repo, gissningsbudgeten är
+        # oförändrad, och längden avslöjas inte. Men den gör skillnad mellan
+        # "du skrev fel" och "ingen kan komma in" synlig på en sekund.
+        "adminTokenConfigured": bool(ADMIN_TOKEN),
         # Stripe-läge utan hemligheter: bara om nyckeln är en TEST- eller
         # LIVE-nyckel (prefix) och vilka delar som är satta. Svarar på
         # "används inga live-nycklar?" utan att någonsin visa nyckeln.
