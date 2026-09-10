@@ -9,18 +9,52 @@
 | Nattlig backup (`services/backup.py`) | Renders disk, `backend/data/backups/<UTC-stämpel>/` | 1 gång/dygn, första direkt efter deploy om set saknas | 7 set | Programfel, dålig migrering, "tabellen försvann" |
 | Off-site-kopia (`scripts/pull_backup.py`) | Adams dator (eller valfri annan maskin) | Dagligen via schemaläggaren | 30 set (konfigurerbart) | Disk borta, Render-konto borta, ransomware på servern |
 
+Nedladdningen har en **egen** hemlighet (`MATJAKT_BACKUP_TOKEN`) och arkivet krypteras med en publik nyckel innan det lämnar servern — se nästa avsnitt. Kontrollrummets `MATJAKT_ADMIN_TOKEN` ger 404 på `/api/admin/backup-download`.
+
 Varje set tas med sqlite:s backup-API (säkert mot samtidiga skrivningar), integritetskontrolleras och rensas till de 7 senaste. Filerna är databaserna som de är: `grocery.db` (priser, produkter, butiker, partner), `matjakt.db` (konton med **hashade** lösenord och **hashade** sessionstoken, synkat tillstånd), `prices.db`, `recipes.db`. Inga API-nycklar, inga Stripe-hemligheter, ingen admin-token finns i databaserna.
+
+## Nyckelparet (B5): servern kan låsa, bara du kan låsa upp
+
+Arkivet krypteras **innan det lämnar processen**. Servern har bara den publika
+delen, så ett arkiv på vift är en binärklump — också för den som tagit över
+servern. Skapa paret på **din egen maskin**, en gång:
+
+```bash
+openssl req -x509 -newkey rsa:4096 -nodes -days 3650 \
+  -subj "/CN=matjakt-backup" \
+  -keyout matjakt-backup-key.pem \      # PRIVAT — bara här, backas upp separat
+  -out    matjakt-backup-cert.pem        # publik — den här går till servern
+```
+
+* `matjakt-backup-cert.pem` → Render → Environment → `MATJAKT_BACKUP_PUBLIC_KEY`
+  (hela PEM-blocket; `sync: false` i `render.yaml`, värdet sätts i dashboarden).
+  En rad går också bra: `base64 -w0 matjakt-backup-cert.pem`.
+* `matjakt-backup-key.pem` sätts **aldrig** som miljövariabel någonstans. Den
+  ligger på hämtmaskinen och i ett kassaskåp/en lösenordshanterare. Tappas den
+  är alla krypterade arkiv förlorade — det är priset för att servern inte kan
+  läsa dem.
+
+`age` går lika bra: `age-keygen -o matjakt-backup-key.txt` och lägg `age1…`-raden
+i `MATJAKT_BACKUP_PUBLIC_KEY`. Formen på nyckeln väljer verktyget automatiskt
+(certifikat → `openssl cms`, `age1…` → `age`, PGP-block → `gpg`). `openssl` är
+rekommendationen: binären finns redan överallt vi kör.
+
+Utan konfigurerad nyckel skickas **ingenting** — vägen svarar 503 med vad som
+saknas. `GET /api/health` visar `backupEncryption.ready`.
 
 ## Off-site-kopian: så här (kostar 0 kr, ingen tredje part)
 
-1. `MATJAKT_ADMIN_TOKEN` som miljövariabel på hämtmaskinen (aldrig i skript, aldrig i repo).
+1. Två miljövariabler på hämtmaskinen (aldrig i skript, aldrig i repo):
+   `MATJAKT_BACKUP_TOKEN` (öppnar vägen — **egen hemlighet, inte**
+   `MATJAKT_ADMIN_TOKEN`) och `MATJAKT_BACKUP_IDENTITY` (sökväg till
+   `matjakt-backup-key.pem`, öppnar innehållet).
 2. Kör manuellt en gång:
    ```bash
    python backend/scripts/pull_backup.py --dest D:\MatjaktBackups --keep 30
    ```
-   Skriptet hämtar `GET /api/admin/backup-download` (admin-token, 404 utan), verifierar att arkivet går att packa upp och att varje databas klarar `PRAGMA integrity_check`, och rensar till 30 set. Fel ⇒ exit 1 och filen döps till `.corrupt`.
+   Skriptet hämtar `GET /api/admin/backup-download` (backup-token, 404 utan), dekrypterar med den privata nyckeln, verifierar att arkivet går att packa upp och att varje databas klarar `PRAGMA integrity_check`, och rensar till 30 set. Fel ⇒ exit 1 och filen döps till `.corrupt`.
 3. Schemalägg dagligen: Windows Schemaläggaren → "Skapa aktivitet" → trigger dagligen 06:30 (efter nattens import och backup 05:xx svensk tid) → åtgärd `python C:\APPAR\matjakt\backend\scripts\pull_backup.py --dest D:\MatjaktBackups` → "Kör oavsett om användaren är inloggad".
-4. Destinationen ska ligga på en **krypterad volym** (BitLocker på Windows). Transporten är TLS. Det är krypteringen i planen: vi lägger ingen egen kryptering ovanpå eftersom backend är stdlib-only (ingen AES i standardbiblioteket) och ett hemligt lager till vore ännu en nyckel att tappa bort.
+4. Destinationen bör ändå ligga på en **krypterad volym** (BitLocker på Windows): det *uppackade* setet innehåller kontons e-postadresser. Transporten är TLS, arkivet är krypterat med din publika nyckel, och volymkrypteringen skyddar det du packat upp.
 
 Storlek: ett set är i dag ~100–150 MB okomprimerat, ~25–40 MB som tar.gz. 30 set ≈ 1 GB.
 

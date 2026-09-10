@@ -53,6 +53,8 @@ from services.billing import matjakt_user_id as stripe_matjakt_user_id, orphan_s
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.accounts import clientip  # noqa: E402
+from services import admin_audit  # noqa: E402
+from services import backup_crypto  # noqa: E402
 from services.grocery import alerts as grocery_alerts  # noqa: E402
 from services.grocery import api as grocery_api  # noqa: E402
 from services.recipes import api as recipes_api
@@ -145,6 +147,11 @@ def secret_from_env(name: str) -> str:
 
 
 ADMIN_TOKEN = secret_from_env("MATJAKT_ADMIN_TOKEN")
+# B5: nedladdningen av HELA kontodatabasen har en egen hemlighet. Kontroll-
+# rumstoken sitter i en webbläsare, i utvecklarverktyg och i minst en gammal
+# commit (27edd8a); allas personuppgifter ska inte hänga på samma sträng.
+# Sätts den inte finns vägen inte - 404 som allt annat okänt.
+BACKUP_TOKEN = secret_from_env("MATJAKT_BACKUP_TOKEN")
 PRIMAT_API_KEY = secret_from_env("PRIMAT_API_KEY")
 PRIMAT_STORE_CACHE_TTL_SECONDS = 86400
 PRIMAT_CIRCUIT_COOLDOWN_SECONDS = 60
@@ -1802,11 +1809,34 @@ class ApiHandler(SimpleHTTPRequestHandler):
         presented = self.headers.get("X-Admin-Token", "")
         if ADMIN_TOKEN and hmac.compare_digest(presented, ADMIN_TOKEN):
             ratelimit.clear_on_success("admin", self._client_ip())
+            self._log_admin_access("control-room")
             return True
         if hidden:
             self.send_json(404, {"error": "Okänd endpoint"})
         else:
             self.send_json(403, {"error": "Admin-token krävs"})
+        return False
+
+    def _log_admin_access(self, scope):
+        """B5: varje GODKÄND admin-kontroll får en revisionsrad - väg,
+        maskerad IP, request-id. Se services/admin_audit.py för varför."""
+        admin_audit.log_admin_access(path=urlparse(self.path).path, client_ip=self._client_ip(), scope=scope)
+
+    def _backup_download_authorized(self) -> bool:
+        """B5: nedladdningen av hela kontodatabasen har en EGEN hemlighet.
+
+        Kontrollrumstoken duger inte här - den räcker till driftsiffror, inte
+        till varje användares e-postadress. Samma gissningsbudget och samma
+        404 som resten av admin-ytan, så vägen inte ens går att kartlägga.
+        Ingen `MATJAKT_BACKUP_TOKEN` i miljön = ingen kommer in."""
+        if self._rate_limit("admin"):
+            return False
+        presented = self.headers.get("X-Backup-Token") or self.headers.get("X-Admin-Token", "")
+        if BACKUP_TOKEN and hmac.compare_digest(presented, BACKUP_TOKEN):
+            ratelimit.clear_on_success("admin", self._client_ip())
+            self._log_admin_access("backup-download")
+            return True
+        self.send_json(404, {"error": "Okänd endpoint"})
         return False
 
     def send_html(self, status, body_html):
@@ -2136,6 +2166,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
         # oförändrad, och längden avslöjas inte. Men den gör skillnad mellan
         # "du skrev fel" och "ingen kan komma in" synlig på en sekund.
         "adminTokenConfigured": bool(ADMIN_TOKEN),
+        # B5: samma "ATT, aldrig vilken" för nedladdningshemligheten och för
+        # krypteringen. Utan detta upptäcks en obrukbar backupväg först den
+        # dag någon behöver backupen - vilket är exakt fel dag.
+        "backupTokenConfigured": bool(BACKUP_TOKEN),
+        "backupEncryption": backup_crypto.status(),
         # Stripe-läge utan hemligheter: bara om nyckeln är en TEST- eller
         # LIVE-nyckel (prefix) och vilka delar som är satta. Svarar på
         # "används inga live-nycklar?" utan att någonsin visa nyckeln.
@@ -2213,38 +2248,16 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json(502, {"error": str(error)})
             return
         if parsed.path == "/api/admin/backup-download":
-            # OFF-SITE-KOPIA UTAN TREDJE PART: admin hämtar senaste verifierade
-            # backupsetet (services/backup.py) som tar.gz och lägger det på en
-            # annan maskin - scripts/pull_backup.py gör det dagligen. Samma
-            # admin-hemlighet som övriga admin-vägar; 404 utan den. Innehållet
-            # är databaserna (hashade lösenord/tokens, inga nycklar).
-            if not self._admin_ok():
+            # OFF-SITE-KOPIA UTAN TREDJE PART: senaste verifierade backupsetet
+            # (services/backup.py) hämtas till en annan maskin -
+            # scripts/pull_backup.py gör det dagligen. B5: EGEN hemlighet
+            # (MATJAKT_BACKUP_TOKEN, inte kontrollrummets), och arkivet
+            # krypteras med publik nyckel innan det lämnar processen. Utan
+            # nyckel skickas ingenting. Se services/backup_download.py.
+            if not self._backup_download_authorized():
                 return
-            from services import backup as backup_service
-            newest = backup_service.newest_set(DATA_DIR)
-            if newest is None:
-                self.send_json(404, {"error": "Ingen backup finns ännu"})
-                return
-            import tarfile
-            import tempfile as _tempfile
-            # Arkivet byggs på disk, inte i minnet - grocery.db är stor.
-            with _tempfile.TemporaryFile() as spool:
-                with tarfile.open(fileobj=spool, mode="w:gz") as archive:
-                    for db_file in sorted(newest.glob("*.db")):
-                        archive.add(db_file, arcname=f"{newest.name}/{db_file.name}")
-                size = spool.tell()
-                spool.seek(0)
-                self.send_response(200)
-                self.send_header("Content-Type", "application/gzip")
-                self.send_header("Content-Disposition", f'attachment; filename="matjakt-backup-{newest.name}.tar.gz"')
-                self.send_header("Content-Length", str(size))
-                self.send_header("Cache-Control", "no-store")
-                self.end_headers()
-                while True:
-                    chunk = spool.read(1024 * 1024)
-                    if not chunk:
-                        break
-                    self.wfile.write(chunk)
+            from services import backup_download
+            backup_download.serve(self, DATA_DIR)
             return
         if parsed.path == "/api/admin/incidents":
             # O5/O6: öppna incidenter med "vad är fel / påverkas kunder / vad

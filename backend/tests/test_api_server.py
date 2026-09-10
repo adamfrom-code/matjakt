@@ -1493,37 +1493,20 @@ class AuthHttpTest(unittest.TestCase):
         status, payload = self.post("/api/auth/login", {"email": email, "password": "hemligt123"})
         self.assertEqual(status, 401)
 
-    def test_backup_download_needs_admin_token_and_streams_a_verified_set(self):
-        import gzip
-        import io as _io
-        import tarfile
-        from services import backup as backup_service
-        original_token = api_server.ADMIN_TOKEN
-        api_server.ADMIN_TOKEN = "admin-hemlighet"
+    def test_backup_download_has_its_own_secret_not_the_control_rooms(self):
+        """B5: vägen bär hela kontodatabasen och har därför en EGEN hemlighet.
+        Kontrollrumstoken - som sitter i en webbläsare och i en gammal commit -
+        ger 404 här, precis som ingen token alls. Själva nedladdningen och
+        krypteringen bevisas i test_backup_download.py."""
+        original = (api_server.ADMIN_TOKEN, api_server.BACKUP_TOKEN)
+        api_server.ADMIN_TOKEN, api_server.BACKUP_TOKEN = "admin-hemlighet", "backup-hemlighet"
         try:
-            status, payload = self.get("/api/admin/backup-download")
-            self.assertEqual(status, 404)                       # utan token: som om vägen inte fanns
-            status, _ = self.get("/api/admin/backup-download", headers={"X-Admin-Token": "fel"})
-            self.assertEqual(status, 404)                             # fel token: samma 404
-            report = backup_service.take_backup(api_server.DATA_DIR)   # DATA_DIR är sviten temp (data_guard)
-            self.assertTrue(report["copied"])
-            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
-            try:
-                conn.request("GET", "/api/admin/backup-download", headers={"X-Admin-Token": "admin-hemlighet"})
-                response = conn.getresponse()
-                body = response.read()
-                self.assertEqual(response.status, 200)
-                self.assertEqual(response.getheader("Content-Type"), "application/gzip")
-                self.assertIn("matjakt-backup-", response.getheader("Content-Disposition"))
-            finally:
-                conn.close()
-            self.assertEqual(body[:2], b"\x1f\x8b")                  # gzip-magi
-            with tarfile.open(fileobj=_io.BytesIO(body), mode="r:gz") as archive:
-                names = archive.getnames()
-            self.assertTrue(any(name.endswith(".db") for name in names), names)
-            self.assertTrue(all("/" in name for name in names), "filerna ligger under <stämpel>/")
+            for headers in (None, {"X-Admin-Token": "fel"}, {"X-Admin-Token": "admin-hemlighet"},
+                            {"X-Backup-Token": "admin-hemlighet"}):
+                status, _ = self.get("/api/admin/backup-download", headers=headers)
+                self.assertEqual(status, 404, headers)
         finally:
-            api_server.ADMIN_TOKEN = original_token
+            api_server.ADMIN_TOKEN, api_server.BACKUP_TOKEN = original
 
     def test_startup_check_reports_a_wrong_price_in_health_without_secrets(self):
         """Fel STRIPE_PRICE_YEARLY märktes annars först när en kund tryckte
