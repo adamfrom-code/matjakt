@@ -207,7 +207,15 @@ def clear_on_success(action: str, *identifiers: str) -> None:
 
     Without this a person who mistypes their password a few times and then
     gets it right stays throttled for the rest of the window - punishing the
-    legitimate user for the attacker's behaviour."""
+    legitimate user for the attacker's behaviour.
+
+    ALDRIG PÅ EN DELAD IDENTIFIERARE. Ett konto är den som lyckades; en
+    IP-adress är det inte. Nollställdes IP-hinken på en lyckad inloggning
+    räckte det att angriparen hade ett EGET konto: nio gissningar mot offret,
+    en inloggning på sitt eget, och budgeten var tillbaka på noll - i all
+    evighet. Den enda hink som ska glömmas är den som pekar på den som
+    faktiskt bevisade vem hen är. Se `uncount` för den som inte ska straffas
+    av sin egen framgång."""
     wanted = [identifier for identifier in identifiers if identifier]
     with _lock:
         for identifier in wanted:
@@ -216,6 +224,36 @@ def clear_on_success(action: str, *identifiers: str) -> None:
             with contextlib.suppress(sqlite3.Error):
                 _connection.executemany("DELETE FROM rate_limit_hits WHERE action = ? AND identifier = ?",
                                         [(action, identifier) for identifier in wanted])
+                _connection.commit()
+
+
+def uncount(action: str, *identifiers: str) -> None:
+    """Tar bort EN registrerad träff per identifierare - den senaste.
+
+    Mellanläget mellan "glöm allt" och "räkna som ett misslyckande". En
+    lyckad inloggning ska inte nollställa IP-hinken (då upphävs spärren, se
+    `clear_on_success`), men den ska inte heller äta av budgeten: annars
+    delar en familj bakom en router, eller tusen abonnenter bakom operatörens
+    NAT, på tio inloggningar per fem minuter - och blir utelåsta av att
+    lyckas.
+
+    Angriparens nio felgissningar ligger kvar. Bara den träff hans egen
+    lyckade inloggning just skrev försvinner, så nettot av att lyckas är
+    noll - inte en nollställning."""
+    wanted = [identifier for identifier in identifiers if identifier]
+    with _lock:
+        for identifier in wanted:
+            hits = _attempts.get(f"{action}:{identifier}")
+            if hits:
+                hits.pop()
+        if _connection is not None and wanted:
+            with contextlib.suppress(sqlite3.Error):
+                for identifier in wanted:
+                    _connection.execute(
+                        "DELETE FROM rate_limit_hits WHERE rowid = ("
+                        "SELECT rowid FROM rate_limit_hits WHERE action = ? AND identifier = ? "
+                        "ORDER BY ts DESC, rowid DESC LIMIT 1)",
+                        (action, identifier))
                 _connection.commit()
 
 
