@@ -4,10 +4,12 @@
     python backend/scripts/audit_pricing.py            (lokal databas)
 
 Samma kärna (services/grocery/audit.run_pricing_audit) körs i produktion via
-POST /api/admin/pricing-audit. Skriver flaggrapport till stdout.
+POST /api/admin/pricing-audit. Skriver flaggrapport till stdout och
+resultatet som JSON till MATJAKT_DATA_DIR/audit/ (backend/data/audit/).
 """
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,6 +17,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend"))
 sys.stdout.reconfigure(encoding="utf-8")
+
+# Resultatet låg i repo-roten. Det är genererad data, och varje agent som
+# körde auditen fick därmed en diff i roten - den perfekta konfliktgeneratorn
+# när tjugo grenar är igång samtidigt. Nu skrivs det bredvid databaserna det
+# beskriver, i den gitignorerade datakatalogen.
+#
+# Samma MATJAKT_DATA_DIR-override som resten av backenden, av samma skäl: en
+# audit mot en testdatakatalog får inte skriva över produktionens senaste
+# resultat, och två auditer i olika datakataloger ska inte kunna förväxlas.
+AUDIT_DIR = Path(os.environ.get("MATJAKT_DATA_DIR") or (ROOT / "backend" / "data")) / "audit"
 
 from services.grocery import api as gapi  # noqa: E402
 from services.grocery.audit import run_pricing_audit  # noqa: E402
@@ -55,7 +67,10 @@ def main() -> int:
     result["produkter"] = product_count
     result["prisdata_senast"] = newest_price
     result["kord"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    (ROOT / "audit_result.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+    AUDIT_DIR.mkdir(parents=True, exist_ok=True)
+    utdata = AUDIT_DIR / "audit_result.json"
+    utdata.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"\nResultatet skrivet till {utdata}")
     return 0 if result["gate"] == "GRÖN" else 1
 
 

@@ -31,6 +31,14 @@ marketing/
 # Nattliga backupset (services/backup.py) - aldrig i repot.
 backend/data/backups/
 
+# Prisauditens utdata (backend/scripts/audit_pricing.py). Låg tidigare som
+# audit_result.json och audit_flags.tsv i repo-roten: genererad data som gav
+# varje agent som körde auditen en diff i roten. De två rotfilerna står kvar
+# här för att en gammal lokal kopia inte ska smyga tillbaka in.
+backend/data/audit/
+/audit_result.json
+/audit_flags.tsv
+
 # Skärmdumpar från browser-E2E vid fel (tests/e2e/) - aldrig i repot.
 backend/tests/e2e/artifacts/
 
