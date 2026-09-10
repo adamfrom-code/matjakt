@@ -75,6 +75,18 @@ jobs:
         run: |
           tracked=$(git ls-files '*.db' '*.sqlite' '*.sqlite3' '*.db-wal' '*.db-shm')
           if [ -n "$tracked" ]; then echo "Spårade databasfiler:"; echo "$tracked"; exit 1; fi
+      - name: Inga genererade artefakter är spårade
+        # audit_pricing.py skrev sitt resultat till repo-roten: varje agent
+        # som körde prisauditen fick en diff där - den perfekta
+        # konfliktgeneratorn när tjugo grenar är igång. Auditen skriver
+        # numera till backend/data/audit/.
+        # marketing/build/ låg dessutom spårad med 73 MB video TROTS raden
+        # "marketing/" i .gitignore, för gitignore avspårar inget som redan
+        # är spårat. Det är precis den sortens fel en regel i en fil inte
+        # fångar och en grind i CI gör.
+        run: |
+          tracked=$(git ls-files '*.tsv' 'audit_*.json' 'backend/data/*' 'marketing/build/*' 'dist/*' 'build/*')
+          if [ -n "$tracked" ]; then echo "Spårade genererade artefakter:"; echo "$tracked"; exit 1; fi
       - name: Versionsnumren följs åt (sw.js, app.js?v=, styles.css?v=)
         run: python backend/scripts/check_frontend_version.py
       - name: Juridiska platshållare (varning - släppgrind, inte byggfel)
@@ -110,6 +122,42 @@ jobs:
         with:
           name: e2e-skarmdumpar
           path: backend/tests/e2e/artifacts/
+          if-no-files-found: ignore
+
+  prisaudit:
+    name: Prisaudit (manuell - resultatet publiceras som artifact)
+    # Bara på begäran. Auditen behöver en prisdatabas med kedjedata och den
+    # finns inte i en ren checkout; kör jobbet mot en återställd databas via
+    # MATJAKT_DATA_DIR, eller kör POST /api/admin/pricing-audit mot
+    # produktion. Poängen med jobbet är VART resultatet tar vägen: upp som
+    # artifact, aldrig ner i en commit i repo-roten.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements.txt
+      - name: Kör auditen
+        run: |
+          set +e
+          python backend/scripts/audit_pricing.py
+          kod=$?
+          set -e
+          # 2 är skriptets egen fail-closed: tom prisdatabas. Det är en
+          # saknad förutsättning, inte ett auditfel - inget att publicera,
+          # men inget att larma om heller. 1 är en RÖD gate och ska synas.
+          if [ "$kod" = "2" ]; then
+            echo "::notice::Ingen prisdata i checkouten - auditen kördes inte."
+            exit 0
+          fi
+          exit $kod
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prisaudit
+          path: backend/data/audit/
           if-no-files-found: ignore
 
   # ENDA vägen till Render. Auto-Deploy i Render-dashboarden ska vara AV;
