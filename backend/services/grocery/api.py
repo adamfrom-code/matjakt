@@ -27,7 +27,7 @@ import threading
 import time
 from pathlib import Path
 
-from .pricing import RecipePricingEngine
+from .pricing import RecipePricingEngine, comparability_reasons
 from .store import GroceryStore
 
 logger = logging.getLogger("matjakt.grocery.api")
@@ -1059,6 +1059,12 @@ def format_chain_result(result: dict, store_row=None, comparison: dict | None = 
         price_label = f"{chain} referenspris"
     else:
         price_label = None
+    reasons = comparability_reasons(
+        coverage_percent=result.get("coveragePercent", 0),
+        real_price_items=result.get("realPriceItems", 0),
+        age_seconds=age,
+        min_coverage=MIN_COVERAGE_FOR_COMPARISON,
+        max_age_seconds=MAX_AGE_SECONDS_FOR_COMPARISON)
     return {
         "store": {
             "chain": chain,
@@ -1089,9 +1095,12 @@ def format_chain_result(result: dict, store_row=None, comparison: dict | None = 
         # i stället för att härleda själva; två olika definitioner gjorde
         # löftet till en fälla (frontend byggde egen billigast-beräkning på
         # kedjor som kröningen just diskvalificerat för ålder).
-        "comparable": (result.get("coveragePercent", 0) >= MIN_COVERAGE_FOR_COMPARISON
-                       and result.get("realPriceItems", 0) > 0
-                       and (age is None or age <= MAX_AGE_SECONDS_FOR_COMPARISON)),
+        "comparable": not reasons,
+        # VARFÖR den inte är jämförbar. Flaggan ovan slog ihop täckning och
+        # ålder, och UI:t hade därför bara en mening att säga - "För få av
+        # varorna har aktuellt pris" - som är rätt text i hälften av fallen
+        # och fel i resten. Koderna hålls isär hela vägen ut.
+        "comparableReasons": reasons,
         "items": items,
     }
 

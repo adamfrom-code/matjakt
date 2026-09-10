@@ -2346,6 +2346,23 @@ function priceStatusLabel(status) {
   return '<span class="price-status missing">Pris saknas</span>';
 }
 
+// Orsakskoderna från backend (comparability_reasons i grocery/pricing.py),
+// en mening var. Åldern nämns först när båda gäller: den förklarar varför
+// summan inte går att lita på ens där varorna FINNS.
+const COMPARABILITY_WARNINGS = {
+  too_old: "Priserna för den här butiken är för gamla för att summan ska gå att jämföra med en annan butik.",
+  low_coverage: "För få av varorna har aktuellt pris för att den här summan ska gå att jämföra med en annan butik.",
+  no_real_prices: "Ingen av varorna har ett säkert pris hos den här butiken, så summan går inte att jämföra.",
+};
+
+function comparabilityWarning(reasons) {
+  const list = Array.isArray(reasons) ? reasons : [];
+  for (const code of ["no_real_prices", "too_old", "low_coverage"]) {
+    if (list.includes(code)) return COMPARABILITY_WARNINGS[code];
+  }
+  return COMPARABILITY_WARNINGS.low_coverage;
+}
+
 function chainShoppingListMarkup(data, branch = null) {
   if (data.error === "no_data_for_chain") {
     return `<p class="live-loading">Matjakt har ingen prisdata för ${escapeHtml(data.chain || "den här kedjan")} ännu.</p>`;
@@ -2356,9 +2373,12 @@ function chainShoppingListMarkup(data, branch = null) {
   const savings = data.savings != null && data.savings > 1
     ? `<span class="chain-list-savings">Du sparar ${money(data.savings)} mot dyraste jämförbara butik</span>` : "";
   // Said plainly rather than left for the user to infer from a total that
-  // looks suspiciously low.
+  // looks suspiciously low - och med RÄTT anledning. Flaggan comparable slog
+  // förr ihop täckning och ålder i ett enda nej, så en kedja vars priser var
+  // för GAMLA fick ändå texten "för få av varorna har aktuellt pris".
+  // Orsakskoderna kommer nu med i svaret (comparability_reasons i pricing.py).
   const warning = !data.comparable
-    ? `<p class="chain-list-warning">För få av varorna har aktuellt pris för att den här summan ska gå att jämföra med en annan butik.</p>` : "";
+    ? `<p class="chain-list-warning">${escapeHtml(comparabilityWarning(data.comparableReasons))}</p>` : "";
   // Summed from the rows actually rendered below, not taken from the payload.
   // The two agree today (the server builds the total the same way), and this
   // guarantees they keep agreeing: a header that quietly disagreed with its
