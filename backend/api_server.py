@@ -2657,8 +2657,14 @@ class ApiHandler(SimpleHTTPRequestHandler):
             try:
                 token, user = ACCOUNT_STORE.login(payload.get("email"), payload.get("password"))
                 # A person who mistypes twice and then gets it right must not
-                # stay throttled for the rest of the window.
-                ratelimit.clear_on_success("login", self._client_ip(), email)
+                # stay throttled for the rest of the window - men bara sin EGEN
+                # hink. B6: att nollställa IP-hinken lät en angripare med eget
+                # konto gissa hur länge som helst - nio försök mot offret, en
+                # inloggning på sitt eget, budgeten tillbaka på noll. IP-hinken
+                # tappar bara den träff den här lyckade inloggningen just skrev,
+                # så framgång varken förlåter eller straffar.
+                ratelimit.clear_on_success("login", email)
+                ratelimit.uncount("login", self._client_ip())
                 self.send_json(200, {"token": token, "user": user})
             except AccountError as error:
                 METRICS.incr("auth_login_failed")
