@@ -8,6 +8,13 @@
      frontend till GitHub Pages, som inte sätter någon CSP-header - skyddet
      får därför inte hänga på vem som råkar servera filen. Inga inline-skript
      finns här; admin.js laddas från samma origin. -->
+<!-- Backendens adress, tom i källan och ifylld vid deploy - samma tagg och
+     samma sed-rad som index.html. UTAN DEN föll admin.js tillbaka på "/api",
+     som på GitHub Pages pekar på Pages självt: varje anrop svarade 404, och
+     admin.js översätter 404 till "Fel admin-token". Felet pekade alltså på
+     token medan problemet var adressen, och lokalt syntes ingenting eftersom
+     fixturservern serverar /api på samma origin. -->
+<meta name="matjakt-api-url" content="">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://matjakt.onrender.com; base-uri 'self'; form-action 'self'">
 <title>Matjakt · Kontrollrum</title>
 <style>
