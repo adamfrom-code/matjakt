@@ -14,10 +14,30 @@
 // vi med ett begripligt fel i stället för ett nakent ENOENT.
 
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// PROJEKTETS EGEN TOLK FÖRST. backend/venv har beroendena - playwright,
+// requests och resten ur requirements.txt. En python3 ur PATH har dem
+// nästan aldrig: på den här Macen är det Apples 3.9, och
+// `npm run kontrollrum` dog med "ModuleNotFoundError: No module named
+// 'playwright'" innan servern ens hann lyssna. Att välja fel tolk är inte
+// ett fel användaren ska behöva läsa en traceback för att förstå.
+//
+// Venv:en är gitignorerad, så finns den inte faller vi tillbaka som förut.
+const ROT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const VENV = [
+  join(ROT, "backend", "venv", "bin", "python"),           // macOS/Linux
+  join(ROT, "backend", "venv", "Scripts", "python.exe"),   // Windows
+];
 
 const KANDIDATER = ["python3", "python"];
 
 function hittaTolk() {
+  for (const sokvag of VENV) {
+    if (existsSync(sokvag)) return sokvag;
+  }
   for (const namn of KANDIDATER) {
     // --version är ofarligt och svarar snabbt; finns inte binären får vi
     // error (ENOENT) i stället för en statuskod.

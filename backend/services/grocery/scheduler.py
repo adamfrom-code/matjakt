@@ -290,15 +290,26 @@ class GroceryScheduler:
                        ", ".join(needy))
         started_any = False
         for chain in needy:
-            if not importer.start(chain).get("started"):
-                continue
-            started_any = True
-            # One at a time, waited for, not fired in parallel: the importer
-            # refuses concurrent runs anyway, and three simultaneous walks on
-            # a booting 512 MB instance is how the last OOM happened. Waiting
-            # here is free - this whole method runs on its own daemon thread.
-            while importer.status().get("running"):
-                time.sleep(30)
+            # EN KEDJA FÅR INTE TA DE ÖVRIGA MED SIG. Metoden körs på en
+            # daemon-tråd utan handler: ett undantag här dödade tråden tyst,
+            # och de kedjor som stod på tur importerades aldrig. Sett i
+            # produktion 2026-09-10: Coop hämtade 12 079 varor, sedan hände
+            # ingenting med ICA och Lidl - inget fel i loggen, ingen körning,
+            # bara tystnad tills nästa nattjobb.
+            try:
+                if not importer.start(chain).get("started"):
+                    logger.warning("Bootstrap hoppade över %s: en import pågick redan", chain)
+                    continue
+                started_any = True
+                # One at a time, waited for, not fired in parallel: the
+                # importer refuses concurrent runs anyway, and three
+                # simultaneous walks on a booting 512 MB instance is how the
+                # last OOM happened. Waiting here is free - this whole method
+                # runs on its own daemon thread.
+                while importer.status().get("running"):
+                    time.sleep(30)
+            except Exception:
+                logger.exception("Bootstrap av %s misslyckades - fortsätter med nästa", chain)
         return started_any
 
     def start(self):
