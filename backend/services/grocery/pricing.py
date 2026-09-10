@@ -1341,6 +1341,53 @@ MAX_STORE_PRICE_AGE_SECONDS = 4 * 24 * 3600
 # in i nästa veckas priser.
 MAX_CAMPAIGN_AGE_SECONDS = 8 * 24 * 3600
 
+# Hur gammalt ett REFERENSPRIS får vara innan varan faller ur prisbilden
+# helt. Referensnivån hade ingen åldersgräns alls: fyradygnsgränsen ovan
+# gäller bara verifierade butikspriser, och referenspriserna lades in utan
+# cutoff. Enda spärren var jämförelsens fjortondygnsgräns - och den
+# blockerade bara KRÖNINGEN, inte visningen. Dog City Gross-importen i tre
+# månader såg kunden fortfarande fulla priser och en total.
+#
+# Fjorton dygn med avsikt: exakt samma två veckor som redan diskvalificerar
+# en kedja från att kröas billigast. Ett pris vi inte skulle jämföra är
+# inget pris vi ska visa en total för heller. Att välja ett NYTT tal här
+# hade bara lagt en tredje siffra i systemet.
+MAX_REFERENCE_PRICE_AGE_SECONDS = 14 * 24 * 3600
+
+
+def _older_than(price, cutoff: float) -> bool:
+    """Är prisraden äldre än cutoff? En rad utan tidsstämpel går inte att
+    datera, och odaterad data får inte prissätta en vecka - fail closed."""
+    stamp = campaign_age_stamp(price)
+    return stamp is None or stamp < cutoff
+
+
+# ORSAKSKODER. "comparable" var en enda flagga som slog ihop TÄCKNING och
+# ÅLDER, och UI:t hade därför bara en mening att säga: "För få av varorna
+# har aktuellt pris..." - vilket är fel text när problemet är att priserna
+# är gamla, och rätt text bara i hälften av fallen. Koderna hålls isär hela
+# vägen ut, så texten kan säga vad som faktiskt är fel.
+COMPARISON_TOO_OLD = "too_old"
+COMPARISON_LOW_COVERAGE = "low_coverage"
+COMPARISON_NO_REAL_PRICES = "no_real_prices"
+
+
+def comparability_reasons(*, coverage_percent, real_price_items, age_seconds,
+                          min_coverage: float, max_age_seconds: float) -> list[str]:
+    """Vad som hindrar den här kedjans total från att jämföras - tom lista
+    betyder jämförbar. Flera skäl kan gälla samtidigt och redovisas då alla:
+    en kedja kan vara både gammal och tunt täckt, och att bara nämna det ena
+    gör att den som åtgärdar det får samma varning igen."""
+    reasons = []
+    if not real_price_items:
+        reasons.append(COMPARISON_NO_REAL_PRICES)
+    elif (coverage_percent or 0) < min_coverage:
+        reasons.append(COMPARISON_LOW_COVERAGE)
+    if age_seconds is not None and age_seconds > max_age_seconds:
+        reasons.append(COMPARISON_TOO_OLD)
+    return reasons
+
+
 PRICING_BASIS_VERIFIED = "VERIFIED"
 PRICING_BASIS_REFERENCE = "REFERENCE"
 PRICING_BASIS_MIXED = "MIXED"
@@ -1536,7 +1583,13 @@ class RecipePricingEngine:
         Ett verifierat butikspris äldre än MAX_STORE_PRICE_AGE_SECONDS
         används inte: hellre kedjans aktuella referenspris än ett lokalt
         pris ingen sett på en vecka. store_id None = bara referenspriser
-        (användaren har ingen vald butik, eller kedjan bara referens)."""
+        (användaren har ingen vald butik, eller kedjan bara referens).
+
+        REFERENSNIVÅN HAR NUMERA OCKSÅ EN ÅLDERSGRÄNS
+        (MAX_REFERENCE_PRICE_AGE_SECONDS). Den saknade en helt: fyradygns-
+        gränsen gällde bara verifierade butikspriser och referenspriserna
+        lades in utan cutoff. Dog City Gross-importen i tre månader såg
+        kunden fortfarande fulla priser och en total."""
         # En instansnivå-stub av _prices_for (tester som bygger motorn med
         # __new__ och byter ut prisuppslaget) respekteras: den ÄR prisbilden.
         override = self.__dict__.get("_prices_for")
@@ -1553,7 +1606,11 @@ class RecipePricingEngine:
             return cached
         prices = {}
         if chain and hasattr(self.store, "reference_prices_for_chain"):
-            prices.update(self.store.reference_prices_for_chain(chain))
+            reference_cutoff = time.time() - MAX_REFERENCE_PRICE_AGE_SECONDS
+            prices.update({
+                product_id: price
+                for product_id, price in self.store.reference_prices_for_chain(chain).items()
+                if not _older_than(price, reference_cutoff)})
         if store_id is not None:
             cutoff = time.time() - MAX_STORE_PRICE_AGE_SECONDS
             for row in self.store.connection.execute(
