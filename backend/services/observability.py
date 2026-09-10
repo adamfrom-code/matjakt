@@ -53,6 +53,19 @@ def mask_ip(ip: str) -> str:
     return ip[:16]
 
 
+def email_domain(address: str) -> str:
+    """Domändelen av en adress - aldrig adressen.
+
+    B10: två rader i registreringsflödet loggade användarens fulla
+    e-postadress när verifieringsmejlet inte kunde skickas. De var de enda
+    två ställena i hela backenden, och de motsade rubriken högst upp i den
+    här filen. En misslyckad utskickskonfiguration behöver veta VILKEN
+    domän som strular (fångar Gmail? avvisar en hel operatör?) - aldrig
+    vem personen är."""
+    address = (address or "").strip()
+    return address.rsplit("@", 1)[1].lower() if "@" in address else "-"
+
+
 class RequestIdFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         record.request_id = request_id_var.get()

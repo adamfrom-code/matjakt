@@ -55,6 +55,7 @@ from services.billing import withdrawal
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.accounts import clientip  # noqa: E402
+from services.accounts import data_export  # noqa: E402
 from services import admin_audit  # noqa: E402
 from services import backup_crypto  # noqa: E402
 from services.bounded_server import BoundedThreadingHTTPServer  # noqa: E402
@@ -69,7 +70,7 @@ from services.pricing import CHAIN_TO_PRIMAT, KeyValueCacheStore, OpenFoodFactsE
 from services.recipe_providers import RecipeService, TheMealDbProvider
 
 from services.observability import (  # noqa: E402
-    METRICS, configure_logging, log_access, new_request_id, request_id_var)
+    METRICS, configure_logging, email_domain, log_access, new_request_id, request_id_var)
 configure_logging()
 logger = logging.getLogger("matjakt.api")
 
@@ -2429,6 +2430,19 @@ class ApiHandler(SimpleHTTPRequestHandler):
             else:
                 self.send_json(200, {"user": user})
             return
+        if parsed.path == "/api/account/export":
+            # B10: dataportabilitet (GDPR art. 20). Allt vi vet om kontot i
+            # ETT maskinläsbart svar - inte bara appstaten. Innehåll och
+            # kategorier bestäms i services/accounts/data_export.py; aldrig
+            # lösenordshash, salt, token eller sessioner.
+            if self._rate_limit("export", self._session_bucket()):
+                return
+            try:
+                self.send_json(200, data_export.build(
+                    ACCOUNT_STORE, HOUSEHOLD_STORE, ANALYTICS, self._bearer_token()))
+            except AccountError as error:
+                self.send_json(401, {"error": str(error)})
+            return
         if parsed.path == "/api/account/state":
             if self._rate_limit("public"):     # B8
                 return
@@ -2702,11 +2716,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     )
                 except MailNotConfigured:
                     mail_status = "not_configured"
-                    logger.info("Verification email skipped for %s: mail not configured", user["email"])
+                    # B10: domänen, aldrig adressen - se observability.email_domain.
+                    logger.info("Verification email skipped for a %s address: mail not configured",
+                                email_domain(user["email"]))
                 except (AccountError, MailError):
                     mail_status = "failed"
                     METRICS.incr("mail_send_failed")
-                    logger.exception("Verification email failed for %s", user["email"])
+                    logger.exception("Verification email failed for a %s address", email_domain(user["email"]))
                 self.send_json(201, {"token": token, "user": user, "verificationMail": mail_status})
             except AccountError as error:
                 self.send_json(400, {"error": str(error)})

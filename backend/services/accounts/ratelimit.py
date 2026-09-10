@@ -82,6 +82,10 @@ LIMITS = {
     # kontolagret för alla andra. Taket är generöst för en app som synkar
     # efter varje ändring, och trångt för en loop.
     "state": (60, 60),
+    # Dataexport (B10): läser HELA kontot, hushållet och mätraderna i ett
+    # svar. Generöst för en människa som vill ha sin fil, trångt för en
+    # loop som vill använda den som förstärkare.
+    "export": (10, 3600),
 }
 
 # Minnesläget: key -> [timestamps]. Hårt tak så en flod av olika nycklar inte

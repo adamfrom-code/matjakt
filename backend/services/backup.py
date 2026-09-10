@@ -20,8 +20,15 @@ RESTORE: stoppa tjänsten (Render: Manual Deploy -> Suspend eller skala till
 starta tjänsten. Databaserna är självbärande - ingenting mer behövs.
 Lokalt: samma sak mot backend/data/.
 
-Secrets never enter these files - the databases hold hashed passwords and
-hashed session tokens only.
+INNEHÅLLET, ÄRLIGT (B10). Inga CREDENTIALS finns i filerna: lösenord och
+sessionstoken ligger som hashar, och API-nycklar, Stripe-hemligheter och
+admin-token finns över huvud taget inte i någon databas. Men PERSONUPPGIFTER
+finns det gott om - varje kontos e-postadress, hela det synkade
+apptillståndet, hushållens listor och skafferier och all fritextfeedback.
+Docstringen påstod tidigare bara det första och lät läsa som om ett set var
+ofarligt att skicka runt. Det är det inte: ett backupset ska behandlas som
+kontodatabasen, för det ÄR kontodatabasen. Nedladdningen (B5) krypteras
+därför med en publik nyckel innan den lämnar processen.
 """
 
 import logging
