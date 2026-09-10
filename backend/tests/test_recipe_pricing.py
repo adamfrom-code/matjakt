@@ -16,10 +16,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from services.grocery import GroceryStore, RawProduct  # noqa: E402
+from services.grocery import api as grocery_api  # noqa: E402
 from services.grocery.pricing import (  # noqa: E402
     RecipePricingEngine, convert_amount, effective_price, packages_needed,
     product_matches_ingredient,
 )
+from services.recipes import RecipeStore  # noqa: E402
+from services.recipes import api as recipes_api  # noqa: E402
+from services.recipes import prices as recipe_prices  # noqa: E402
 
 
 class UnitConversionTest(unittest.TestCase):
@@ -291,6 +295,86 @@ class PricingEngineTest(unittest.TestCase):
         self.assertFalse(item["exactPackaging"])
         self.assertEqual(item["packages"], 1)
         self.assertIsNone(item.get("totalCost"), "osäker rad får ingen radtotal")
+
+
+class PortionPriceOmitsNothingTest(unittest.TestCase):
+    """C1: portionspriset får aldrig vara lägre än kassan.
+
+    price_list ger en rad med gissat paketantal totalCost=None - den bidrar
+    med noll kronor till totalCheckoutCost. Räknas den ändå som "täckt"
+    passerar receptet full-match-spärren och kortet visar ett portionspris
+    där en hel ingrediens kostnad saknas. Modulens egen docstring kallar det
+    "the worst direction to be wrong in".
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        root = Path(self._tmp.name)
+
+        self._saved = (grocery_api.DB_PATH, recipes_api.DB_PATH)
+        self.addCleanup(self._restore)
+        grocery_api.DB_PATH = root / "grocery.db"
+        recipes_api.DB_PATH = root / "recipes.db"
+        grocery_api.clear_cache()
+        recipes_api.clear_cache()
+
+        self.db = GroceryStore(grocery_api.DB_PATH)
+        self.addCleanup(self.db.close)
+        # Willys ligger i RELEASED_CHAINS - priceable_chains() plockar bara
+        # upp släppta kedjor med produkter.
+        self.store = self.db.upsert_store(chain="Willys", external_store_id="2132",
+                                          name="Willys Test")
+        self._add("Kycklingfilé Naturell", 79.90, 700, "g")
+        self._add("Halloumi Grill", 30.0, 200, "g")
+
+        self.recipes = RecipeStore(recipes_api.DB_PATH)
+        self.addCleanup(self.recipes.close)
+
+    def _restore(self):
+        grocery_api.DB_PATH, recipes_api.DB_PATH = self._saved
+        grocery_api.clear_cache()
+        recipes_api.clear_cache()
+
+    def _add(self, name, price, quantity, unit):
+        product = self.db.find_or_create_product(raw(
+            "Willys", name, name, quantity=quantity, unit=unit, size=f"{quantity}{unit}"))
+        self.db.upsert_current_price(product_id=product.id, store_id=self.store.id,
+                                     regular_price=price)
+        return product
+
+    def _recipe(self, recipe_id, ingredients):
+        self.recipes.upsert_recipe({
+            "id": recipe_id, "name": recipe_id, "servings": 4, "totalTime": 30,
+            "ingredients": ingredients, "instructions": ["Laga."],
+            "categories": [], "tags": [], "allergens": [], "dietFlags": [],
+        })
+
+    def test_a_recipe_with_one_uncertain_row_gets_no_portion_price(self):
+        """Halloumi "1 st" saknar styckvikt: paketantalet är en gissning, och
+        radens kostnad räknas inte in. Då finns inget ärligt portionspris."""
+        self._recipe("osaker", [
+            {"name": "Kycklingfilé", "amount": 600, "unit": "g"},
+            {"name": "Halloumi", "amount": 1, "unit": "st"},
+        ])
+
+        recipe_prices.reprice_all()
+
+        priced = self.recipes.get("osaker")
+        self.assertIsNone(
+            priced["pricePerPortion"],
+            "ett recept med en osäker rad får inget portionspris - inte ett "
+            "för lågt tal där halloumin kostar noll")
+
+    def test_a_recipe_where_every_row_is_exact_still_gets_a_price(self):
+        """Motpolen: spärren får inte nolla allt. Alla rader säkra -> pris."""
+        self._recipe("saker", [{"name": "Kycklingfilé", "amount": 600, "unit": "g"}])
+
+        recipe_prices.reprice_all()
+
+        priced = self.recipes.get("saker")
+        self.assertEqual(priced["pricePerPortion"], round(79.90 / 4, 2))
+        self.assertEqual(priced["priceChain"], "Willys")
 
 
 if __name__ == "__main__":
