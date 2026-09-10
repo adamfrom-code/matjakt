@@ -1020,10 +1020,20 @@ def is_variable_weight(product) -> bool:
 
 
 def kilo_price_signature(price) -> bool:
-    """Pris == jämförpris (kr/kg): prisraden ÄR ett kilopris."""
+    """Pris == jämförpris (kr/kg): prisraden ÄR ett kilopris.
+
+    JÄMFÖRT MOT PRISET SOM FAKTISKT GÄLLER, inte mot ordinarie. City Gross
+    sätter unit_price = currentPrice.comparativePrice, alltså KAMPANJENS
+    kr/kg, medan regular_price är ordinariepriset (providers/citygross.py).
+    Under kampanj skiljde de sig därför alltid åt, signaturen föll, och
+    kilopriset användes rakt av som paketpris: fläskkarré ca 1,2 kg med
+    ordinarie 99 kr/kg och kampanj 79 kr/kg blev "en förpackning, 79 kr" när
+    kassan säger 94,80. Felet gick alltid NEDÅT och drabbade just
+    kampanjvaror - vilket gjorde kedjan med kampanjen orättvist billigast i
+    jämförelsen."""
     unit_price = getattr(price, "unit_price", None)
-    regular = getattr(price, "regular_price", None)
-    return bool(unit_price and regular and abs(unit_price - regular) < 0.01)
+    paid = effective_price(price)
+    return bool(unit_price and paid and abs(unit_price - paid) < 0.01)
 
 
 def effective_package(product) -> tuple[float | None, str | None]:
@@ -1649,14 +1659,14 @@ class RecipePricingEngine:
                     count, exact = 1, True
             if per_kg_cost is None and count is None and package_amount is None:
                 unit_price = getattr(price, "unit_price", None)
-                regular = getattr(price, "regular_price", None)
                 required_g = convert_amount(effective_amount, effective_unit, "g")
-                if (required_g and unit_price and regular
-                        and abs(unit_price - regular) < 0.01):
-                    # Lösviktssignaturen: pris == jämförpris betyder att
-                    # priset ÄR per kilo. Kostnaden är exakt: kr/kg × behov.
-                    # (Utan denna modell blev en grillad rostbiff-bit
-                    # "1 paket × 1 125 kr".)
+                # Lösviktssignaturen: pris == jämförpris betyder att priset
+                # ÄR per kilo. Kostnaden är exakt: kr/kg × behov. (Utan
+                # denna modell blev en grillad rostbiff-bit "1 paket ×
+                # 1 125 kr".) Samma signatur som viktvarorna ovan, och
+                # därför samma funktion - den låg förr duplicerad här med
+                # regular_price och föll alltså också under kampanj.
+                if required_g and kilo_price_signature(price):
                     per_kg_cost = unit_price * required_g / 1000.0
                     count, exact = 1, True
             if per_kg_cost is not None:
