@@ -1657,7 +1657,7 @@ class AuthHttpTest(unittest.TestCase):
             calls["create_customer"] += 1
             return "cus_fake123"
 
-        def fake_create_checkout_session(secret_key, customer_id, price_id, success_url, cancel_url):
+        def fake_create_checkout_session(secret_key, customer_id, price_id, success_url, cancel_url, user_id=None):
             return f"https://checkout.stripe.com/fake/{customer_id}/{price_id}"
 
         api_server.create_customer = fake_create_customer
@@ -1834,7 +1834,7 @@ class AuthHttpTest(unittest.TestCase):
                      api_server.create_customer, api_server.create_checkout_session)
         api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY, api_server.STRIPE_SECRET_KEY = "price_month", "price_year", "sk_test_fake"
         api_server.create_customer = lambda secret_key, email, user_id: "cus_double"
-        api_server.create_checkout_session = lambda secret_key, customer_id, price_id, success_url, cancel_url: f"https://checkout.stripe.com/fake/{price_id}"
+        api_server.create_checkout_session = lambda secret_key, customer_id, price_id, success_url, cancel_url, user_id=None: f"https://checkout.stripe.com/fake/{price_id}"
         try:
             email = self._email()
             _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})

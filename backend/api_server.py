@@ -49,6 +49,7 @@ from services import mailings
 from services.household import HouseholdStore, NotificationStore
 from services.household.routes import HouseholdRouter
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
+from services.billing import matjakt_user_id as stripe_matjakt_user_id, orphan_subscriptions as stripe_orphan_subscriptions
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.accounts import clientip  # noqa: E402
@@ -2000,6 +2001,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 event_id=event_id, event_created=event_created, customer_id=customer_id,
                 subscription_id=data.get("id"), status=data.get("status"), period_end_iso=period_end_iso,
                 cancel_at_period_end=bool(data.get("cancel_at_period_end")), plan=plan,
+                fallback_user_id=stripe_matjakt_user_id(data),
             )
         except Exception:
             # Inget är sparat (transaktionen rullades tillbaka). 500 gör att
@@ -2010,6 +2012,17 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return
         if outcome != "applied":
             logger.info("Stripe event %s (%s) för %s: %s", event_id, event_type, customer_id, outcome)
+        if outcome == "unknown_customer":
+            # B1: 200 här var slutet för betalningen. Stripe återlevererar
+            # aldrig ett kvitterat event, och kunden - som är debiterad -
+            # blev kvar på Free för alltid. 500 ger i stället tre dygns
+            # omleveranser, och under tiden hinner kundraden skrivas.
+            METRICS.incr("stripe_webhook_unknown_customer")
+            logger.error("Stripe-webhook %s: ingen kundrad för %s - svarar 500 så Stripe försöker igen. "
+                         "GET /api/admin/stripe-reconcile listar betalande kunder utan konto.",
+                         event_id, customer_id)
+            self.send_json(500, {"error": "Kunden hör inte ihop med något konto ännu"})
+            return
         self.send_json(200, {"received": True, **({"duplicate": True} if outcome == "duplicate" else {}),
                              **({"outcome": outcome} if outcome not in ("applied", "duplicate") else {})})
 
@@ -2182,6 +2195,22 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 all_ok = all_ok and entry["matches"]
             report["ok"] = all_ok
             self.send_json(200 if all_ok else 502, report)
+            return
+        if parsed.path == "/api/admin/stripe-reconcile":
+            # B1: vem betalar utan att ha fått något? Stripe listar sina
+            # levande prenumerationer, kontolagret säger vilka kund-id vi
+            # känner igen, och skillnaden är kunder som debiterats men står
+            # kvar på Free. Logiken bor i services/billing/reconcile.py.
+            if not self._admin_ok():
+                return
+            if not STRIPE_SECRET_KEY:
+                self.send_json(503, {"error": "Stripe är inte konfigurerat på servern"})
+                return
+            try:
+                self.send_json(200, stripe_orphan_subscriptions(
+                    STRIPE_SECRET_KEY, ACCOUNT_STORE.known_stripe_customer_ids))
+            except StripeError as error:
+                self.send_json(502, {"error": str(error)})
             return
         if parsed.path == "/api/admin/backup-download":
             # OFF-SITE-KOPIA UTAN TREDJE PART: admin hämtar senaste verifierade
@@ -2808,6 +2837,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     STRIPE_SECRET_KEY, customer_id, price_id,
                     success_url=f"{APP_URL}/?billing=success",
                     cancel_url=f"{APP_URL}/?billing=cancelled",
+                    # B1: andra spåret tillbaka till kontot om kundraden brister.
+                    user_id=user_id,
                 )
                 self.send_json(200, {"url": url})
             except (AccountError, StripeError) as error:

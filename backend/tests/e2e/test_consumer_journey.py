@@ -1022,7 +1022,7 @@ class BrowserJourney(unittest.TestCase):
         api_server.APP_URL = f"{server.base}/app"
         api_server.create_customer = lambda key, mail, user_id: f"cus_e2e_{uuid.uuid4().hex[:8]}"
 
-        def fake_checkout(key, customer_id, price_id, success_url, cancel_url):
+        def fake_checkout(key, customer_id, price_id, success_url, cancel_url, user_id=None):
             checkouts.append({"customer": customer_id, "price": price_id})
             return success_url
         api_server.create_checkout_session = fake_checkout

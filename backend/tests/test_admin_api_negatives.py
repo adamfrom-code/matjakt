@@ -30,6 +30,7 @@ ADMIN_VAGAR = (
     "/api/admin/partner", "/api/admin/partner-feed", "/api/admin/partner-overview",
     "/api/admin/partner-stats", "/api/admin/platform-activate", "/api/admin/pricing-audit",
     "/api/admin/primat-status", "/api/admin/store-register-sync", "/api/admin/stripe-check",
+    "/api/admin/stripe-reconcile",
     "/api/admin/testresultat",
 )
 ADMIN_HEMLIGHET = "admin-test-o12"
