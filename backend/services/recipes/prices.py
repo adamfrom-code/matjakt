@@ -86,18 +86,29 @@ def _reprice_locked() -> dict:
             best = None  # (portion_price, chain, covered, total)
             for chain, store_id in stores.items():
                 result = engine.price_list(items, chain, store_id)
-                # Matchade rader räcker här - även de vars PAKETANTAL är en
-                # gissning (kryddmått mot gram-burkar). Portionspriset är
-                # uttryckligen ett cirkapris per portion; det är BUTIKS-
-                # JÄMFÖRELSEN som aldrig får räkna en gissning som säker,
-                # och den läser realPriceItems, inte det här kriteriet.
-                # (Skärpningen av realPriceItems 2026-09-01 nollade annars
-                # portionspriset för varje recept med en kryddrad.)
-                covered = result.get("realPriceItems", 0) + result.get("estimatedItems", 0)
+                # BARA säkert prissatta rader räknas som täckning. En rad vars
+                # PAKETANTAL är en gissning (kryddmått mot gram-burk) får
+                # totalCost=None av price_list och bidrar därför med NOLL
+                # kronor till totalCheckoutCost. Räknades den ändå som täckt
+                # (covered = realPriceItems + estimatedItems) passerade
+                # receptet "full match or nothing"-spärren och fick ett
+                # portionspris där en hel ingrediens kostnad saknades -
+                # exakt det den här modulens docstring förbjuder.
+                # Kriteriet är alltså med flit strängare än förut: hellre ett
+                # recept helt utan pris än ett portionspris som är lägre än
+                # kassan.
+                covered = result.get("realPriceItems", 0)
                 total = result.get("totalItems", len(items))
                 # Full match or nothing: a partially-matched week total is
                 # a smaller number than the real one, presented as smaller.
                 if total == 0 or covered < total:
+                    continue
+                # Bälte och hängslen: en osäker rad någonstans i listan gör
+                # totalen okänd, och totalCheckoutCost kan dessutom vara None
+                # (inga säkra rader alls). Ingetdera får bli ett tal.
+                if result.get("estimatedItems", 0) > 0:
+                    continue
+                if result.get("totalCheckoutCost") is None:
                     continue
                 portion = result["totalCheckoutCost"] / servings
                 if portion <= 0:
