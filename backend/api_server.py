@@ -51,6 +51,7 @@ from services.household.routes import HouseholdRouter
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
+from services.accounts import clientip  # noqa: E402
 from services.grocery import alerts as grocery_alerts  # noqa: E402
 from services.grocery import api as grocery_api  # noqa: E402
 from services.recipes import api as recipes_api
@@ -227,6 +228,9 @@ COOP_STORE_SEARCH_TTL_SECONDS = 86400
 # sits in front of us and overwrites it (Render does); false by default so a
 # directly-exposed instance cannot be fooled about who is calling.
 TRUST_PROXY_HEADERS = str(os.environ.get("MATJAKT_TRUST_PROXY", "")).strip().lower() in {"1", "true", "yes", "on"}
+# Hur många led i X-Forwarded-For som är VÅRA proxies, räknat bakifrån.
+# Render har ett; en CDN framför gör det två. Se services/accounts/clientip.py.
+TRUSTED_PROXY_HOPS = clientip.trusted_hops()
 
 STORE_LIST_RESPONSE_CACHE_SECONDS = 900
 
@@ -1760,27 +1764,19 @@ class ApiHandler(SimpleHTTPRequestHandler):
     def _client_ip(self):
         """The caller's address, honouring the proxy header Render sets.
 
-        Behind a proxy every request appears to come from the proxy, which
-        would put every user of the app in ONE rate-limit bucket - the first
-        ten failed logins anywhere would lock out the whole world. Only the
-        FIRST entry of X-Forwarded-For is used: the rest are attacker-supplied
-        and trivially spoofed."""
-        # X-Forwarded-For is only believed when we are actually behind a
-        # proxy that sets it. A client talking to us directly can put
-        # anything in that header, so trusting it unconditionally would let
-        # an attacker rotate it and walk straight past the per-IP limit -
-        # turning the rate limiter into decoration. Render terminates TLS at
-        # its own proxy, so MATJAKT_TRUST_PROXY=1 is set there and nowhere
-        # else. Only the FIRST entry is used; the rest are appended by
-        # upstream hops and are attacker-controlled.
-        if TRUST_PROXY_HEADERS:
-            forwarded = self.headers.get("X-Forwarded-For", "")
-            if forwarded:
-                return forwarded.split(",")[0].strip()[:64]
+        The reading of X-Forwarded-For lives in services/accounts/clientip.py
+        with the full argument for why the LAST entries are the trustworthy
+        ones. Short version: a proxy that appends writes the client's own
+        text first, so entry [0] is whatever the attacker typed - and reading
+        it turns the rate limiter into decoration."""
         # getattr: handlern instansieras utan socket i enhetstester av
         # gate- och admin-logiken - då finns ingen adress, och ingen räknare.
         address = getattr(self, "client_address", None)
-        return (address[0] if address else "") or ""
+        return clientip.client_ip(
+            self.headers.get("X-Forwarded-For", ""),
+            (address[0] if address else "") or "",
+            trust_proxy=TRUST_PROXY_HEADERS,
+            hops=TRUSTED_PROXY_HOPS)
 
     def _rate_limit(self, action, *identifiers):
         """Returns True when the request must be refused. Sends the 429."""
