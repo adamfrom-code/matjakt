@@ -20,21 +20,30 @@ is welcome. Only three chains have earned it:
   Coop        Same: Coop's own portal is locked to their internal Azure AD
               and we do not authenticate with someone else's key. Runs daily
               via Primat.
-  Lidl        never runs. Lidl Sweden publishes no per-product prices at
-              all - there is nothing to fetch, and nothing to fake. Primat's
-              Lidl feed is national and ~200-400 rows, too thin for a basket.
+  Lidl        runs daily via Primat since 2026-09-10. Lidl Sweden publishes
+              no per-product prices at all, so their own site is not a route
+              - Primat is. The feed is national and has been described as
+              ~200-400 rows, which would be too thin for a whole basket, but
+              nobody has run an import and counted. Importing it is how that
+              gets measured; RELEASED_CHAINS keeps it invisible to customers
+              until the number is known and the quality gate passed.
 
 PRIMAT_ONLY_CHAINS holds the line the WAF ban was really about: without
 PRIMAT_API_KEY those two are skipped entirely, because importer._provider_for
 would otherwise fall back to the direct scraper for ICA - the exact repeated
 fetching this module refuses to do.
 
-QUOTA. Primat's free tier allows 20 000 rows a day and ICA's catalogue alone
-is ~11 000, so running both chains in one night will likely exhaust it. That
-is safe, not broken: the provider stops at the ceiling, keeps what it fetched
-and marks the run "blocked", which publish.py merges rather than refuses - so
-coverage builds up over successive nights. Full same-night coverage for both
-would need the App tier (100 000 rows/day).
+QUOTA. Koden har INGET eget radtak: providern hämtar tills Primat säger
+stopp, behåller det som hunnit komma in och märker körningen "blocked", som
+publish.py slår ihop i stället för att förkasta - så täckningen byggs upp
+över flera nätter i stället för att en natt misslyckas helt.
+
+Dygnsbudgetens storlek står därför ingenstans i koden, och ska inte göra
+det. Den läses ur Primats eget GET /me (se _primat_quota nedan) och matas
+in i driftkollen, som varnar vid 85 %. Går den inte att läsa blir svaret
+"Ej tillgängligt" - aldrig ett antaget tal. Tidigare stod här att gratis-
+nivån ger 20 000 rader och App-nivån 100 000; de siffrorna kom från ett
+äldre repo och var aldrig verifierade mot kontot.
 
 Times are Europe/Stockholm, which is the point: a "03:00" job that silently
 means 03:00 UTC would drift an hour twice a year against the shelf prices it
@@ -79,21 +88,36 @@ DEFAULT_SCHEDULE = {
     # 02:00 svensk sommartid, så båda ligger efter den. Importeraren kör en
     # kedja i taget, så tiderna är startfönster - inte parallella jobb.
     #
-    # KVOTVARNING: Primats gratisnivå ger 20 000 rader/dygn och ICAs katalog
-    # är ensam ~11 000. Kör båda samma natt slår den andra sannolikt i taket.
+    # KVOT: ICAs katalog är ensam ~11 000 rader. Hur många som ryms per dygn
+    # avgörs av kontots nivå, som läses ur Primats /me - inte av något tal
+    # här. Slår en kedja i taket behålls det den hann hämta.
     # Det är ofarligt - providern slutar hämta, behåller det den fått och
     # märker körningen "blocked", vilket publiceringen slår ihop i stället
-    # för att förkasta - men full täckning för båda kan kräva App-nivån
-    # (100 000 rader/dygn). Se docs/RELEASE.md.
+    # för att förkasta. Driftkollen varnar vid 85 % av den kvot Primat
+    # själv rapporterar, så taket syns innan det slår i.
     "ICA": "05:30",
     "Coop": "06:30",
+    # Lidl gick redan att importera - PrimatProvider stödjer kedjan och
+    # importer.py bär ett butiks-id - men den saknades i schemat, så den
+    # hämtades aldrig. Sist i ordningen därför att dess feed är den minsta:
+    # slår kvoten i taket är Lidl den kedja som gör minst skada att missa.
+    #
+    # ATT IMPORTERA ÄR INTE ATT SLÄPPA. RELEASED_CHAINS är orörd, så Lidl
+    # syns fortfarande inte för kunder. Poängen med att hämta den är att
+    # kunna MÄTA hur stor feeden faktiskt är - PROVIDER_STATUS påstår
+    # "~200-400 varor" utan att någon kört en import och räknat.
+    "Lidl": "07:00",
 }
 
 # Kedjor som BARA får importeras via Primat. Utan nyckeln väljer
 # importer._provider_for() den direkta skrap-providern för ICA, och ett
 # nattjobb får aldrig hamna där - det är precis den upprepade hämtningen som
 # triggar ICAs WAF. Saknas nyckeln hoppas de över, tyst och avsiktligt.
-PRIMAT_ONLY_CHAINS = frozenset({"ICA", "Coop"})
+# Lidl hör hit av samma skäl: utan nyckel finns ingen laglig väg till Lidls
+# priser alls, och _provider_for kastar. Stod kedjan inte här skulle den
+# schemaläggas ändå, falla varje natt och skicka ett driftlarm om saken -
+# ett larm om något vi själva valt att inte konfigurera.
+PRIMAT_ONLY_CHAINS = frozenset({"ICA", "Coop", "Lidl"})
 
 
 def _får_köras(chain: str) -> bool:
@@ -106,9 +130,15 @@ def _får_köras(chain: str) -> bool:
         return False
     return True
 
-# Deliberately not configurable to include Lidl - see the module docstring.
-# A config typo must not be able to start hammering a chain that has told us
-# no, and Lidl has no per-product prices to fetch in the first place.
+# Allow-listan är fortfarande poängen: ett stavfel i en miljövariabel får
+# inte sätta en kedja som sagt nej på en nattlig timer. Den härleds ur
+# DEFAULT_SCHEDULE, så att lägga till en kedja är ett medvetet kodbeslut -
+# aldrig en konfigurationsrad.
+#
+# Lidl kom med 2026-09-10 av samma skäl som ICA och Coop: Primat är en
+# licensierad tredjepart som aldrig rör kedjans egna servrar. Skyddet som
+# spelade roll - att en Lidl-total aldrig får fejkas fram - ligger inte här
+# utan i RELEASED_CHAINS och täckningsgrinden, och står kvar.
 SCHEDULABLE_CHAINS = frozenset(DEFAULT_SCHEDULE)
 
 CHECK_INTERVAL_SECONDS = 60
@@ -132,7 +162,10 @@ DABAS_ENRICHMENT_AT = "05:00"
 # Driftkollen: EFTER nattens alla importer (Willys 02 ... Coop 06:30), så
 # larmet bedömer nattens resultat och inte gårdagens. Skickar bara när något
 # faktiskt är fel, och som mest ett mejl per incident - se alerts.py.
-OPS_ALERT_AT = "07:00"
+# Efter sista importen, inte före. Låg kollen kvar på 07:00 när Lidl fick
+# sitt jobb där hade nattens sista körning aldrig bedömts av den - ett test
+# fångade det. Halvtimmen efter Lidl räcker: feeden är den minsta av alla.
+OPS_ALERT_AT = "07:30"
 
 # Which chain fills an empty database first. Willys: the largest verified
 # catalogue (10 842 products, 100 % with category), plain HTTP with no
@@ -421,18 +454,17 @@ class GroceryScheduler:
             # Named explicitly so the admin panel can say WHY a chain has no
             # nightly job, instead of leaving a blank that reads as an
             # oversight.
-            "notScheduled": {
-                "Lidl": "Bakom feature gate: Primats Lidl-feed är för liten för en hel matkorg",
-            },
-            # ICA och Coop HAR ett jobb men kan behöva flera körningar innan
-            # katalogen är hel: gratisnivån ger 20 000 rader/dygn och en
-            # körning som slår i taket märks "blocked", behåller det den hann
-            # hämta och slås ihop nästa gång. App-nivån (100 000/dygn) gör
-            # det till en körning i stället för flera. Sagt rakt ut här så
-            # adminvyn inte ser en halv katalog som ett fel.
+            "notScheduled": {},
+            # ICA, Coop och Lidl HAR ett jobb men kan behöva flera körningar
+            # innan katalogen är hel: en körning som slår i kvottaket märks
+            # "blocked", behåller det den hann hämta och slås ihop nästa
+            # gång. Hur stor kvoten är står inte här - den läses ur Primats
+            # /me. Sagt rakt ut så adminvyn inte ser en halv katalog som ett
+            # fel.
             "partialUntilFullTier": {
-                "ICA": "Primat gratisnivå: full katalog kan kräva flera körningar",
-                "Coop": "Primat gratisnivå: samma som ICA",
+                "ICA": "Primat: full katalog kan kräva flera körningar om kvoten tar slut",
+                "Coop": "Primat: samma villkor som ICA",
+                "Lidl": "Primat: feedens verkliga storlek är inte uppmätt än",
             },
             "registerSyncAt": REGISTER_SYNC_AT,
         }
@@ -444,7 +476,18 @@ class GroceryScheduler:
         try:
             from . import alerts, api as grocery_api
             from api_server import KV_CACHE, MAIL_CONFIG
-            resultat = alerts.process(grocery_api.provider_status(), KV_CACHE, MAIL_CONFIG)
+            # KVOTEN MED I KOLLEN. alerts.evaluate har haft en färdig
+            # 85 %-varning sedan den skrevs, men anropet skickade aldrig
+            # någon quota - grenen var alltså död kod och kunde aldrig
+            # larma. Med en betald nivå är det just den vakten som gör
+            # nytta: slår kvoten i taket byggs täckningen upp över flera
+            # nätter i stället för en, och det ska synas innan det händer.
+            #
+            # Uppslaget får ALDRIG fälla driftkollen: utan nyckel, vid
+            # nätfel eller okänt svarsformat blir quota None och resten
+            # körs som förut.
+            resultat = alerts.process(grocery_api.provider_status(), KV_CACHE, MAIL_CONFIG,
+                                      quota=_primat_quota())
             if resultat["incidents"] or resultat["recoveries"]:
                 logger.warning("Driftlarm: %d nya, %d lösta",
                                len(resultat["incidents"]), len(resultat["recoveries"]))
@@ -452,6 +495,7 @@ class GroceryScheduler:
                 logger.info("Driftkoll: inget att larma om")
         except Exception:
             logger.exception("Driftkollen kunde inte köras")
+
 
     def _loop(self):
         while not self._stop.wait(CHECK_INTERVAL_SECONDS):
@@ -550,3 +594,17 @@ def _truthy(value) -> bool:
 
 
 SCHEDULER = GroceryScheduler()
+
+
+def _primat_quota():
+    """Primats egen kvot, eller None. Aldrig ett gissat tal."""
+    try:
+        from api_server import PRIMAT_API_KEY
+        from services.pricing import primat_account_status
+        from . import alerts
+        if not PRIMAT_API_KEY:
+            return None
+        return alerts.quota_from_account_status(primat_account_status(PRIMAT_API_KEY))
+    except Exception:
+        logger.info("Primats kvot kunde inte läsas - driftkollen fortsätter utan den")
+        return None

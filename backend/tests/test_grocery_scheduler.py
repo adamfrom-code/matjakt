@@ -31,21 +31,34 @@ from services.grocery.scheduler import (  # noqa: E402
 
 class SchedulableChainsTest(unittest.TestCase):
     def test_only_the_verified_chains_are_schedulable(self):
-        """ICA och Coop kom till när Primat-vägen fanns: den rör aldrig
-        kedjornas egna servrar, så WAF-skälet gäller inte den. Lidl står
-        kvar utanför - det finns inga per-produkt-priser att hämta."""
-        self.assertEqual(set(SCHEDULABLE_CHAINS),
-                         {"Willys", "Hemköp", "City Gross", "ICA", "Coop"})
+        """ICA, Coop och Lidl kom till när Primat-vägen fanns: den rör aldrig
+        kedjornas egna servrar, så WAF-skälet gäller inte den.
 
-    def test_lidl_can_never_be_scheduled_by_config(self):
+        Lidl stod utanför till 2026-09-10 med motiveringen "det finns inga
+        per-produkt-priser att hämta". Det gäller lidl.se - Primat har en
+        Lidl-feed, precis som för de två andra. Att den kan vara för liten
+        för en hel matkorg är ett TÄCKNINGSPROBLEM, och det löses av
+        jämförelsegrinden, inte av att aldrig hämta."""
+        self.assertEqual(set(SCHEDULABLE_CHAINS),
+                         {"Willys", "Hemköp", "City Gross", "ICA", "Coop", "Lidl"})
+
+    def test_a_chain_that_said_no_can_never_be_scheduled_by_config(self):
         """Allow-listans kvarvarande poäng: ett stavfel i en miljövariabel
-        får inte sätta Lidl på en nattlig timer. Det finns ingenting att
-        hämta där, och en Lidl-total får aldrig fejkas fram."""
-        schedule = parse_schedule("Lidl=02:00")
-        self.assertNotIn("Lidl", schedule)
+        får inte sätta en kedja som sagt nej på en nattlig timer. Att lägga
+        till en kedja ska kräva en kodändring."""
+        schedule = parse_schedule("Matpriskollen=02:00")
+        self.assertNotIn("Matpriskollen", schedule)
         # Falls back to the safe default rather than to an empty schedule
         # that would silently stop all imports.
         self.assertEqual(schedule, DEFAULT_SCHEDULE)
+
+    def test_importing_lidl_is_not_releasing_it(self):
+        """Det skydd som verkligen betydde något när Lidl stod utanför
+        schemat: kunden får aldrig se en Lidl-total som inte bär. Det ligger
+        i RELEASED_CHAINS och täckningsgrinden - inte i att aldrig hämta."""
+        from services.grocery.api import RELEASED_CHAINS
+        self.assertIn("Lidl", SCHEDULABLE_CHAINS)
+        self.assertNotIn("Lidl", RELEASED_CHAINS)
 
     def test_primat_chains_are_skipped_without_the_key(self):
         """Utan PRIMAT_API_KEY väljer importer._provider_for() den DIREKTA
@@ -118,8 +131,9 @@ class NextRunTest(unittest.TestCase):
                          datetime(2026, 9, 1, 2, 0))
 
     def test_unscheduled_chain_has_no_next_run(self):
-        # Lidl, inte ICA: ICA har ett Primat-schema numera.
-        self.assertIsNone(next_run_at("Lidl", DEFAULT_SCHEDULE))
+        # Varken ICA, Coop eller Lidl duger som exempel längre - alla tre
+        # har ett Primat-schema. En kedja vi inte hämtar alls får svara.
+        self.assertIsNone(next_run_at("Matpriskollen", DEFAULT_SCHEDULE))
 
 
 class TickTest(unittest.TestCase):
@@ -160,7 +174,10 @@ class TickTest(unittest.TestCase):
         """A blank next-run for a blocked chain would read as an oversight.
         Bara Lidl är kvar utan jobb: ICA och Coop går via Primat numera."""
         status = self.scheduler.status()
-        self.assertEqual(set(status["notScheduled"]), {"Lidl"})
+        # Ingen kedja står utan jobb längre - Lidl fick sitt 2026-09-10.
+        # Raden finns kvar i svaret så adminvyn kan säga "inga" i stället
+        # för att visa en tom yta som läses som ett fel.
+        self.assertEqual(status["notScheduled"], {})
         self.assertEqual(status["timezone"], "Europe/Stockholm")
 
     def test_disabled_by_default(self):
