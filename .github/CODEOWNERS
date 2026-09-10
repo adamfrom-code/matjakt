@@ -1,0 +1,86 @@
+# CODEOWNERS — zonkartan i maskinläsbar form.
+#
+# Zonerna står i §2 i docs/UPPDRAG-MATJAKT.md och i CLAUDE.md. Två paket i
+# samma zon körs aldrig samtidigt; paket i olika zoner kan köras parallellt.
+# Den här filen är samma karta uttryckt så att GitHub kan läsa den: varje
+# zon får sitt eget avsnitt, och varje ändrad fil i en PR pekar ut vilken
+# zon PR:en rör.
+#
+# LÄSORDNING: GitHub låter DEN SISTA matchande raden vinna. Ordningen nedan
+# går därför från bredast till smalast — `*` först, den skyddade Z-CI-tratten
+# sist. Flyttas ett avsnitt uppåt tappar det sin ägare tyst.
+#
+# backend/api_server.py och frontend/app/app.js står med flit UTAN egen zon.
+# De är konfliktzoner som varje våg rör; de faller på `*`. Ny logik hör hemma
+# i en ny modul — i den stora filen ändrar man bara inkopplingsraden.
+#
+# Testet som håller kartan sann: backend/tests/test_codeowners.py.
+
+# Standard. Allt som inte har en mer specifik rad nedan.
+*                                       @adamfrom-code
+
+# ── Z-AUTH — konton, sessioner, rate limit ──────────────────────────────
+/backend/services/accounts/             @adamfrom-code
+
+# ── Z-BILLING — Stripe, entitlements, paketering ────────────────────────
+/backend/services/billing/              @adamfrom-code
+
+# ── Z-GROCERY — kedjor, kollektorer, providers, schemaläggning ──────────
+/backend/services/grocery/              @adamfrom-code
+/backend/services/recipe_providers/     @adamfrom-code
+/backend/services/recipes/              @adamfrom-code
+
+# ── Z-PRICING — prismotorn och auditen ──────────────────────────────────
+# Ligger EFTER Z-GROCERY med avsikt: prissättningen och auditen bor inuti
+# grocery-katalogen men är en egen zon, och sista matchande raden vinner.
+/backend/services/pricing/              @adamfrom-code
+/backend/services/grocery/pricing.py    @adamfrom-code
+/backend/services/grocery/audit.py      @adamfrom-code
+/backend/scripts/audit_pricing.py       @adamfrom-code
+
+# ── Z-MAIL — utskick och mallar ─────────────────────────────────────────
+/backend/services/email/                @adamfrom-code
+/backend/services/mailings.py           @adamfrom-code
+
+# ── Z-FRONT-CORE — appens tillstånd, tjänster, API-lager, sw ────────────
+/frontend/app/app.js                    @adamfrom-code
+/frontend/app/sw.js                     @adamfrom-code
+/frontend/app/src/                      @adamfrom-code
+
+# ── Z-FRONT-VIEW — vyer och rendering ───────────────────────────────────
+# Efter Z-FRONT-CORE: utils/ är renderingens halva av src/.
+/frontend/app/index.html                @adamfrom-code
+/frontend/app/src/utils/                @adamfrom-code
+
+# ── Z-STYLE — designsystem och tokens ───────────────────────────────────
+/frontend/app/styles.css                @adamfrom-code
+/frontend/styles.css                    @adamfrom-code
+
+# ── Z-SITE — matjakt.store, SEO, butikstexter, marknadsföring ───────────
+/frontend/*.html                        @adamfrom-code
+/frontend/site/                         @adamfrom-code
+/frontend/sitemap.xml                   @adamfrom-code
+/frontend/robots.txt                    @adamfrom-code
+/marketing/                             @adamfrom-code
+/store/                                 @adamfrom-code
+
+# ── Z-INFRA — arbetsinstruktion, changelog, dokumentation, skript ───────
+/CLAUDE.md                              @adamfrom-code
+/CHECKPOINT.md                          @adamfrom-code
+/.gitignore                             @adamfrom-code
+/docs/                                  @adamfrom-code
+/scripts/                               @adamfrom-code
+
+# ── Z-CI — bygge och leverans ───────────────────────────────────────────
+/scripts/build_frontend.mjs             @adamfrom-code
+#
+# EN ENDA ÄGARE, OCH RÖRS ALDRIG AV ETT ARBETSPAKET.
+# De tre raderna nedan är vägen till produktion: CI-grinden som avgör vad
+# som får mergas, deploy-hooken som avgör vad Render bygger, och bilden
+# servern körs i. Ett arbetspaket i vilken annan zon som helst som ändrar
+# något här ändrar reglerna det självt bedöms efter. Behövs en ändring:
+# ett eget paket, uttalat i PR-beskrivningen, minimalt, och inget annat i
+# katalogen. Måste ligga SIST i filen för att vinna över allt ovan.
+/.github/                               @adamfrom-code
+/render.yaml                            @adamfrom-code
+/backend/Dockerfile                     @adamfrom-code
