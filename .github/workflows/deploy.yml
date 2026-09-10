@@ -57,7 +57,19 @@ jobs:
         with:
           node-version: 20
       - name: Point the deployed site at the live backend
-        run: sed -i 's#<meta name="matjakt-api-url" content="">#<meta name="matjakt-api-url" content="https://matjakt.onrender.com/api">#' frontend/app/index.html
+        # BÅDA filerna. admin.html glömdes, föll tillbaka på "/api" och fick
+        # 404 från GitHub Pages - vilket admin.js visade som "Fel admin-token".
+        # Misslyckas sed:en tyst är kontrollrummet trasigt utan att någon ser
+        # det, så vi kontrollerar att ingen tom tagg blev kvar.
+        run: |
+          for f in frontend/app/index.html frontend/app/admin.html; do
+            sed -i 's#<meta name="matjakt-api-url" content="">#<meta name="matjakt-api-url" content="https://matjakt.onrender.com/api">#' "$f"
+            if grep -q '<meta name="matjakt-api-url" content="">' "$f"; then
+              echo "::error::$f har kvar en tom matjakt-api-url - deployen skulle peka på fel backend"; exit 1
+            fi
+            grep -q 'matjakt-api-url" content="https://' "$f" || {
+              echo "::error::$f saknar matjakt-api-url helt"; exit 1; }
+          done
       # Bundlad + minifierad kopia i dist/frontend (källorna orörda):
       # samma kod, en fil i stället för tretton moduler.
       - run: npm ci
