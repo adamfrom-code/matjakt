@@ -39,3 +39,6 @@ dist/
 
 # xcodebuild (scripts/ios_mac_pass.sh) - derived data, aldrig i repot.
 build/
+
+# Agenternas arbetsträd - aldrig i git
+.claude/worktrees/
