@@ -873,6 +873,38 @@ _SIZE_MASS_VOL_RE = re.compile(
     re.IGNORECASE)
 _SIZE_COUNT_RE = re.compile(r"(\d+)\s*[-]?\s*(?:pack|pk|p|st)\b", re.IGNORECASE)
 
+# MULTIPACK. "450 g 2-pack" är två förpackningar om 450 g, alltså 900 g -
+# inte 450. Mass/volymuttrycket lästes förr rakt av och returnerade direkt;
+# _SIZE_COUNT_RE provades bara när strängen INTE bar någon massa alls. Så
+# blev "Krossade Tomater 390 g 4-pack" 390 g, och en vecka som behövde
+# 1 500 g fick fyra FYRPACK - sexton burkar för en rätt som behövde fyra,
+# på en rad som ändå var märkt exactPackaging=True och därmed gick in i
+# den "säkra" totalen och i Billigast-underlaget.
+#
+# ORDNINGEN BÄR BETYDELSEN, och därför läses bara ett EFTERFÖLJANDE antal:
+#   "390 g 4-pack"     -> fyra burkar à 390 g       -> 1 560 g
+#   "18-pack 750 g"    -> arton kakor som TILLSAMMANS väger 750 g -> 750 g
+# Antalet före massan är ett styckantal inuti förpackningen och får aldrig
+# multiplicera. "st" räknas inte heller som multipack ("Köttbullar 500 g
+# 25 st" är 25 bullar i ett paket) - bara pack/pk/p, som dokumentet säger.
+_MULTIPACK_AFTER_RE = re.compile(r"(\d+)\s*[-–]?\s*(?:pack|pk|p)\b", re.IGNORECASE)
+
+# Fler än så här är inte ett konsumentmultipack utan ett feltolkat tal i en
+# produkttext. Ett "1-pack" ändrar heller ingenting.
+_MULTIPACK_MIN, _MULTIPACK_MAX = 2, 100
+
+
+def _multipack_after(text: str, position: int) -> int | None:
+    """Antal förpackningar angivet EFTER mass/volymuttrycket i samma sträng."""
+    match = _MULTIPACK_AFTER_RE.search(text, position)
+    if not match:
+        return None
+    try:
+        count = int(match.group(1))
+    except ValueError:
+        return None
+    return count if _MULTIPACK_MIN <= count <= _MULTIPACK_MAX else None
+
 
 # Ett "2 st tomater"-recept mot en 200 g-förpackning behöver en VIKT per
 # styck för att räknas exakt. Detta är kökets standardvikter (samma tabell
@@ -980,26 +1012,31 @@ def effective_package(product) -> tuple[float | None, str | None]:
     osäker och hålls utanför säkra totaler - fail closed.
 
     "400/240g" läses som 240 g (avrunnen vikt - det är maten, inte lagen).
-    "2x120g" blir 240 g. "CA 750G" blir 750 g - cirkavikt på en bit är
-    rätt modell för antalet; PRISET per paket blir kr/kg × cirkavikten när
-    prisraden bär kilopris-signaturen (se price_item). Hittas bara ett
-    styckantal ("Ägg 6p") blir det N st. Hittas inget alls: (None, None),
-    och raden förblir ärligt osäker."""
+    "2x120g" blir 240 g. "450 g 2-pack" blir 900 g - ett efterföljande
+    N-pack är N förpackningar, inte en. "CA 750G" blir 750 g - cirkavikt på
+    en bit är rätt modell för antalet; PRISET per paket blir kr/kg ×
+    cirkavikten när prisraden bär kilopris-signaturen (se price_item).
+    Hittas bara ett styckantal ("Ägg 6p") blir det N st. Hittas inget alls:
+    (None, None), och raden förblir ärligt osäker."""
     if getattr(product, "package_conflict", None):
         return None, None
     if product.quantity:
         return product.quantity, product.unit
     for text in (product.size or "", product.name or ""):
-        matches = _SIZE_MASS_VOL_RE.findall(text)
+        matches = list(_SIZE_MASS_VOL_RE.finditer(text))
         if matches:
-            multiplier, amount, unit = matches[-1]
+            match = matches[-1]
+            multiplier, amount, unit = match.groups()
             try:
                 value = float(amount.replace(",", "."))
                 if multiplier:
                     value *= float(multiplier.replace(",", "."))
-                return value, unit.lower()
             except ValueError:
-                pass
+                continue
+            packs = _multipack_after(text, match.end())
+            if packs:
+                value *= packs
+            return value, unit.lower()
     for text in (product.size or "", product.name or ""):
         match = _SIZE_COUNT_RE.search(text)
         if match:
