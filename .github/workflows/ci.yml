@@ -8,6 +8,11 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Merge queue: kön bygger PR:en mot main-HEAD som den kommer att se ut
+  # vid merge och kräver att sviten är grön DÄR. Utan den här triggern
+  # väntar kön på checkar som aldrig körs och varje PR fastnar.
+  # deploy-backend rör den inte - den kräver github.event_name == 'push'.
+  merge_group:
   workflow_dispatch:
 
 permissions:
