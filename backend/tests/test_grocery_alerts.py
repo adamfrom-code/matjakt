@@ -94,6 +94,55 @@ class AlertTest(unittest.TestCase):
         self.assertEqual(resultat["incidents"], ["chain:Coop:stale"])
         self.assertIn("inte ett kundproblem", self.skickade[0][2])
 
+    def test_a_failed_attempt_alarms_the_same_night(self):
+        """D4:s acceptanskriterium, hela vägen från körningsstatus till mejl.
+
+        Willys hämtade noll rader i natt. Körningen föll på publiceringsgaten
+        och märktes "failed" - men i går natt lyckades den, och därför såg
+        panelen frisk ut hela dagen. Nu larmar det första morgonen, med samma
+        dedupering som allt annat: ett mejl, inte ett per natt."""
+        from services.grocery import api as grocery_api
+        nu = 1_000_000.0
+        rad = {"chain": "Willys", "status": "working",
+               "lastRun": {"status": "failed", "finishedAt": nu - 3 * 3600,
+                           "errorMessage": "inga rader att publicera"},
+               "lastSuccessfulRun": {"status": "success", "finishedAt": nu - 26 * 3600}}
+        panel = [{**rad, "health": grocery_api.chain_health(rad, now=nu)}]
+
+        resultat = self._kör(panel, now=nu)
+        self.assertEqual(resultat["incidents"], ["chain:Willys:failing"])
+        self.assertEqual(len(self.skickade), 1)
+        _, ämne, brödtext = self.skickade[0]
+        self.assertIn("Willys", ämne)
+        self.assertIn("inga rader att publicera", brödtext)
+        self.assertIn("senast godkända priser", brödtext)
+
+        # Andra natten: tystnad, precis som för varje annan kvarstående
+        # incident.
+        andra = self._kör(panel, now=nu + 86400)
+        self.assertEqual(andra["incidents"], [])
+        self.assertEqual(len(self.skickade), 1)
+
+    def test_a_repaired_import_closes_the_failing_incident(self):
+        """Nästa natt går igenom: incidenten ska stängas, inte ligga kvar."""
+        from services.grocery import api as grocery_api
+        nu = 1_000_000.0
+        trasig = {"chain": "Willys", "status": "working",
+                  "lastRun": {"status": "failed", "finishedAt": nu - 60,
+                              "errorMessage": "timeout"},
+                  "lastSuccessfulRun": {"status": "success", "finishedAt": nu - 26 * 3600}}
+        self._kör([{**trasig, "health": grocery_api.chain_health(trasig, now=nu)}], now=nu)
+        self.skickade.clear()
+
+        lagad = {"chain": "Willys", "status": "working",
+                 "lastRun": {"status": "success", "finishedAt": nu + 86400},
+                 "lastSuccessfulRun": {"status": "success", "finishedAt": nu + 86400}}
+        resultat = self._kör(
+            [{**lagad, "health": grocery_api.chain_health(lagad, now=nu + 86400)}],
+            now=nu + 86400)
+        self.assertEqual(resultat["recoveries"], ["chain:Willys:failing"])
+        self.assertIn("löst", self.skickade[0][1])
+
     def test_a_limited_chain_never_alarms(self):
         """Lidl har för lite data per definition. Det är inte ett fel och får
         aldrig mejla någon."""

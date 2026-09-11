@@ -45,7 +45,13 @@ NAMESPACE = "ops_incident"
 ALERT_COOLDOWN_SECONDS = 7 * 24 * 3600
 
 # Fel som betyder att kedjan inte uppdateras alls. Röda.
-CRITICAL_STATUSES = {"failed"}
+#
+# "failing" kom till med D4: senaste FÖRSÖKET misslyckades trots att det finns
+# äldre godkänd data. Det larmet fanns inte alls förut, och det är just det
+# fallet som var tystast - en natt som gav noll rader syntes inte förrän
+# stale-gränsen passerats, ett och ett halvt dygn senare, och då bara som en
+# varning. Ett trasigt nattjobb är rött från första natten.
+CRITICAL_STATUSES = {"failed", "failing"}
 # Fel som betyder att den uppdateras för sällan. Orange.
 WARNING_STATUSES = {"stale"}
 
@@ -84,7 +90,21 @@ def evaluate(panel, quota=None):
         chain = entry.get("chain")
         health = entry.get("health") or {}
         status = health.get("status")
-        if status in CRITICAL_STATUSES:
+        if status == "failing":
+            # Egen nyckel och egen text: det HÄR fallet är det som ser friskt
+            # ut i varje annat fält. Produktantalet står kvar, åldern är
+            # rimlig, kunderna får last-good - och kedjan uppdateras inte.
+            problem[f"chain:{chain}:failing"] = {
+                "severity": "critical", "chain": chain,
+                "title": f"Matjakt — {chain} slutade uppdateras i natt",
+                "body": (f"{chain}s senaste importförsök misslyckades. Kedjan har "
+                         f"äldre godkänd data kvar, så varje annan siffra i panelen "
+                         f"ser normal ut - men inga nya priser kommer in.\n\n"
+                         f"Orsak: {_kort(health.get('reason'))}\n\n"
+                         f"Användarna får senast godkända priser under tiden. Rättas "
+                         f"inte importen blir de till slut för gamla för att serveras."),
+            }
+        elif status in CRITICAL_STATUSES:
             problem[f"chain:{chain}:failed"] = {
                 "severity": "critical", "chain": chain,
                 "title": f"Matjakt — {chain} importerar inte",
