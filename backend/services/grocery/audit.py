@@ -6,18 +6,52 @@ admin-endpointen. Releasegaten är grön först när produktionens siffror är
 kategorikonflikter)."""
 
 from .pricing import (UNREASONABLE_PACKAGE_COUNT, UNREASONABLE_ROW_COST, RecipePricingEngine,
-                      _MASS, _VOLUME, _fold, baking_grams, dairy_gram_ml_equivalent,
-                      kilo_price_as_pack_price)
+                      _MASS, _VOLUME, _exclusion_hit, _fold, _words, baking_grams,
+                      dairy_gram_ml_equivalent, kilo_price_as_pack_price)
 
+# SMAKSORD: produktnamn som ser ut som en smaksatt eller söt VARIANT av
+# råvaran i stället för råvaran själv - "Kanel" prissatt mot kanelbullar,
+# "Havregryn" mot färdig gröt.
+#
+# Orden bär svenska sammansättningar (kanelBULLE, havreGRÖT, chokladKAKA), så
+# matchningen måste gå på ORDGRÄNS: motorns egen _exclusion_hit. Den var förut
+# `any(word in namnet)` - ren delsträngsmatchning - och det gav 75 av 114
+# flaggor i produktionsauditen på en enda falsk träff: "te " ryms i "penne
+# rigaTE Pasta". Exakt den bugg motorn själv övergav när _exclusion_hit
+# skrevs ("läsk" inuti "fläskfilé").
 FLAVOR_SUSPECTS = ["knäcke", "bulle", "kaka", "skorpa", "müsli", "godis",
-                   "glass", "te ", "dryck", "yoghurt", "gröt", "chips"]
+                   "glass", "te", "dryck", "yoghurt", "gröt", "chips"]
+
+# Ordgränsen räcker ändå inte för "te". Två bokstäver kan inte bära ett
+# sammansättningsled: suffixregeln säger sant om rigaTE, latTE och
+# arrabiaTE, prefixregeln om TEquila. Ett så kort ord flaggas därför bara
+# som HELT ORD - "Grönt Te" och "Earl Grey Te" fångas fortfarande, medan
+# "Kanelte" slipper undan. Det är rätt byte: flaggan är en VARNING som
+# ingen ska behöva sålla i, och 114 larm som ingen orkar läsa döljer det
+# enda riktiga.
+FLAVOR_MIN_COMPOUND_LENGTH = 3
+
+_FOLDED_FLAVOR_SUSPECTS = [_fold(word) for word in FLAVOR_SUSPECTS]
+
+
+def flavor_suspect(product_name: str) -> bool:
+    """Om produktnamnet ser ut som en smaksatt variant snarare än råvaran."""
+    folded = _fold(product_name)
+    if not folded:
+        return False
+    words = _words(product_name)
+    return any(term in words if len(term) < FLAVOR_MIN_COMPOUND_LENGTH
+               else _exclusion_hit(folded, words, term)
+               for term in _FOLDED_FLAVOR_SUSPECTS)
+
 
 # kilo_price_as_pack_price BODDE här. Den flyttade till pricing.py (C8) så
 # att motorn dömer efter samma regel som auditen i stället för att auditen
 # ensam vet vad som är fel - en orimlig rad blir numera osäker i
 # price_item() i stället för att prissättas som säker och dyr. Namnet står
 # kvar i den här modulens yta för allt som importerar det härifrån.
-__all__ = ["FLAVOR_SUSPECTS", "kilo_price_as_pack_price", "run_pricing_audit"]
+__all__ = ["FLAVOR_SUSPECTS", "flavor_suspect", "kilo_price_as_pack_price",
+           "run_pricing_audit"]
 
 
 def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: int = 4,
@@ -90,7 +124,7 @@ def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: 
                     note("rad_over_500", recipe, ing, chain, row, f"{total} kr")
                 if not row.get("packageAmount") and not row.get("perKg"):
                     note("otolkad_paketstorlek", recipe, ing, chain, row, f"size={row.get('packageSize')!r}")
-                if any(word in _fold(row.get("productName") or "") for word in FLAVOR_SUSPECTS):
+                if flavor_suspect(row.get("productName") or ""):
                     note("smakords_misstanke", recipe, ing, chain, row)
                 # Viktvara ("ca: 850g") vars PAKETPRIS fortfarande är kilopriset:
                 # 125 kr/kg visat som 125 kr paketet. Fel pris - gaten är röd.
