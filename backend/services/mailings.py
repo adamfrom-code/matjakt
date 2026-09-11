@@ -610,19 +610,27 @@ def deals_menu(deals_by_chain: dict, recipes, *, matcher=None, count: int = 4) -
     for chain, deal in ranked:
         if len(menu) >= count:
             break
-        for recipe in recipes or []:
-            name = recipe.get("name") or recipe.get("title")
-            if not name or name in used:
-                continue
-            for ingredient in recipe.get("ingredients") or recipe.get("ingredientNames") or []:
-                if matcher(deal.get("name") or "", str(ingredient), deal.get("brand")):
-                    menu.append({"recipe": name, "slug": recipe.get("slug"),
-                                 "ingredient": str(ingredient), "chain": chain, "deal": deal})
-                    used.add(name)
-                    break
-            if len(menu) and menu[-1]["recipe"] == name:
-                break
+        post = _first_recipe_for(deal, recipes or [], used, matcher)
+        if post:
+            post["chain"] = chain
+            post["deal"] = deal
+            menu.append(post)
+            used.add(post["recipe"])
     return menu
+
+
+def _first_recipe_for(deal, recipes, used, matcher):
+    """Första rätten som kan använda varan. Ett recept hamnar på menyn en
+    gång, oavsett hur många av veckans fynd det matchar - fyra middagar som
+    alla är samma rätt är inte en meny."""
+    for recipe in recipes:
+        name = recipe.get("name") or recipe.get("title")
+        if not name or name in used:
+            continue
+        for ingredient in recipe.get("ingredients") or recipe.get("ingredientNames") or []:
+            if matcher(deal.get("name") or "", str(ingredient), deal.get("brand")):
+                return {"recipe": name, "slug": recipe.get("slug"), "ingredient": str(ingredient)}
+    return None
 
 
 def _menu_section(menu: list) -> tuple:
