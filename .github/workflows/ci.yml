@@ -171,12 +171,19 @@ jobs:
     concurrency:
       group: render-deploy
       cancel-in-progress: false
+    outputs:
+      # Saknas hooken deployas ingenting, och då finns inget att hälsokolla.
+      # Utan den här flaggan hade health-gate pollat en oförändrad drift i
+      # åtta minuter och blivit röd av en helt korrekt körning.
+      triggad: ${{ steps.hook.outputs.triggad }}
     steps:
       - name: Trigga Renders deploy-hook för exakt den gröna committen
+        id: hook
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
           if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "triggad=false" >> "$GITHUB_OUTPUT"
             echo "RENDER_DEPLOY_HOOK saknas i repo-secrets - ingen deploy triggad."
             exit 0
           fi
@@ -185,4 +192,49 @@ jobs:
           # visa samma SHA-prefix.
           case "$RENDER_DEPLOY_HOOK" in *\?*) sep='&';; *) sep='?';; esac
           curl -fsS -X POST "${RENDER_DEPLOY_HOOK}${sep}ref=${GITHUB_SHA}" -o /dev/null
+          echo "triggad=true" >> "$GITHUB_OUTPUT"
           echo "Render-deploy triggad för ${GITHUB_SHA}"
+
+  # K3 — GRINDEN MELLAN BACKEND-DEPLOY OCH FRONTEND-DEPLOY.
+  #
+  # Render-hooken ovan och Pages-deployen i deploy.yml fyrade tidigare av
+  # samma händelse. Pages är live på ~3 minuter, Render på ~5: det fanns ett
+  # fönster på ett par minuter i VARJE release där den nya frontenden talade
+  # med den gamla backenden, och klienten har inget API-versionskontrakt som
+  # upptäcker det.
+  #
+  # Ordningen är nu backend -> hälsokontroll -> frontend, och den hålls av
+  # två saker som båda måste gälla:
+  #
+  #   1. Det här jobbet ligger i CI-körningen och behöver deploy-backend.
+  #   2. deploy.yml triggas av `workflow_run: types: [completed]` och kräver
+  #      `conclusion == 'success'`. En CI-körning är inte "completed" förrän
+  #      det HÄR jobbet är klart, och inte "success" om det failade.
+  #
+  # Alltså: ingen Pages-deploy förrän drift bevisligen kör committen. Failar
+  # grinden blir CI röd på main och frontenden står kvar på föregående
+  # version - gammal frontend mot gammal backend, vilket är ett par som har
+  # fungerat, till skillnad från ny frontend mot gammal backend.
+  #
+  # Samma concurrency-grupp som deploy-backend: nästa push får inte fyra en
+  # ny Render-deploy medan den här väntar på att den förra ska bli frisk.
+  health-gate:
+    name: Hälsokontroll (drift kör den gröna committen)
+    needs: [deploy-backend]
+    if: needs.deploy-backend.outputs.triggad == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: render-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Polla /api/health tills commit == GITHUB_SHA (max 8 min)
+        env:
+          # Repo-variabel om drift någon gång byter adress; annars produktion.
+          HALSO_URL: ${{ vars.MATJAKT_HEALTH_URL || 'https://matjakt.onrender.com/api/health' }}
+        run: |
+          python backend/scripts/wait_for_deploy.py \
+            --url "$HALSO_URL" --commit "$GITHUB_SHA" --timeout 480 --interval 15
