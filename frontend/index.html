@@ -3,50 +3,322 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#f6f3ea">
+  <meta name="theme-color" content="#ECEEEF">
   <meta name="description" content="Matjakt planerar veckans middagar efter din budget och räknar ut var de blir billigast - med riktiga butikspriser.">
   <title>Matjakt</title>
   <link rel="icon" href="app/assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="app/assets/icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root{--bg:#f6f7f4;--primary:#146c43;--accent:#146c43;--border:#e6e9e6;--muted:#6b756e}
-    *{box-sizing:border-box}
-    body{margin:0;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:var(--bg);font-family:"Manrope",system-ui,sans-serif;color:var(--primary)}
-    main{width:min(320px,calc(100vw - 48px))}
-    h1{font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;font-weight:700;font-size:34px;text-align:center;margin:0 0 28px;letter-spacing:-.02em}
-    h1 span{color:var(--accent)}
-    label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 6px}
-    input{width:100%;padding:13px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;font:inherit;font-size:16px;color:var(--primary)}
-    input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
-    button{width:100%;margin-top:22px;padding:14px;border:0;border-radius:12px;background:var(--primary);color:#fff;font:inherit;font-size:16px;font-weight:600;cursor:pointer}
-    button:hover{background:#24563e}
-    button[disabled]{opacity:.6;cursor:default}
-    .lead{margin:0 0 26px;text-align:center;font-size:16px;line-height:1.5;color:var(--muted)}
-    a.open{display:block;text-align:center;text-decoration:none;margin-top:0;padding:14px;border-radius:12px;background:var(--primary);color:#fff;font-size:16px;font-weight:600}
-    a.open:hover{background:#24563e}
-    .legal{margin:22px 0 0;text-align:center;font-size:13px;color:var(--muted)}
-    .legal a{color:var(--muted)}
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=4">
   <!-- Besöksstatistik utan kakor: "plausible:matjakt.store" eller "umami:<website-id>". Tomt = av. -->
   <meta name="matjakt-traffic" content="">
   <script src="traffic.js" defer></script>
 </head>
 <body>
-  <main>
-    <h1>Matjakt<span>.</span></h1>
-    <p class="lead">Säg din budget. Matjakt väljer veckans middagar och räknar ut var de blir billigast - med riktiga priser från butikerna nära dig.</p>
-    <a class="open" id="openApp" href="app/">Öppna Matjakt</a>
-    <p class="legal"><a href="integritetspolicy.html">Integritetspolicy</a> · <a href="anvandarvillkor.html">Användarvillkor</a> · <a href="mailto:adamfrom@icloud.com">Support</a></p>
+  <header class="site-topbar">
+    <a class="site-wordmark" href="#top">Matjakt</a>
+    <nav class="site-nav" aria-label="Huvudmeny">
+      <a href="#sa-fungerar-det">Så funkar det</a>
+      <a href="#pris">Pris</a>
+      <a href="#vanliga-fragor">Vanliga frågor</a>
+    </nav>
+    <a class="site-btn site-btn-primary site-btn-sm" id="openApp" href="app/" data-track="cta_testa_gratis">Öppna appen</a>
+  </header>
+
+  <main id="top">
+    <!-- 2. HJÄLTEN. Klippet ligger BAKOM orden och är dekorativt: inget ljud,
+         inga kontroller, ingenting att missa om det aldrig laddas.
+         site-video.js avgör om det ska laddas alls - Data Saver eller
+         prefers-reduced-motion behåller stillbilden. -->
+    <section class="site-hero">
+      <div class="site-hero-media" aria-hidden="true">
+        <video class="site-hero-video is-active" data-hero-clip
+               poster="site/video/matjakt-hero.jpg"
+               muted playsinline loop preload="none" disablepictureinpicture></video>
+        <video class="site-hero-video" data-hero-clip
+               poster="site/video/matjakt-vecka.jpg"
+               muted playsinline loop preload="none" disablepictureinpicture></video>
+        <span class="site-hero-scrim"></span>
+      </div>
+      <div class="site-hero-inner">
+        <p class="site-eyebrow">Riktiga butikspriser, inte uppskattningar</p>
+        <h1>Säg vad maten får kosta. Matjakt planerar veckan och visar var den blir billigast.</h1>
+        <p class="site-lead">Sju middagar, en inköpslista och ett verkligt pris hos Willys, Hemköp och City Gross. Du bestämmer budgeten – vi räknar.</p>
+        <div class="site-actions">
+          <a class="site-btn site-btn-primary" href="app/" data-track="cta_testa_gratis">Kom igång gratis</a>
+          <a class="site-btn site-btn-on-photo" href="#filmen" data-track="cta_se_hur_det_fungerar">Se hur det fungerar</a>
+        </div>
+        <p class="site-note">Gratis att använda. Inget kort. Inget konto krävs för att prova.</p>
+      </div>
+    </section>
+
+    <!-- 3. BEVISET, direkt under vecket. Det första en besökare undrar är om
+         priserna är riktiga. Svaret ska stå före allt annat vi vill säga. -->
+    <section class="site-section site-proof site-wrap" id="priserna">
+      <h2>Priserna kommer från butikerna, inte från en gissning.</h2>
+      <p>Matjakt läser in Willys, Hemköps och City Gross priser varje natt. Kan vi inte prissätta en vara säger appen det rakt ut – hellre inget pris än ett fel pris. Och en butik som inte går att jämföra rättvist märks aldrig som billigast.</p>
+    </section>
+
+    <!-- 4. SÅ FUNGERAR DET -->
+    <section class="site-section site-steps site-wrap" id="sa-fungerar-det">
+      <h2>Så fungerar det</h2>
+      <ol class="site-steps-list">
+        <li>
+          <span class="site-step-number">Steg 1</span>
+          <h3>Sätt ramarna</h3>
+          <p>Hur många ni är, vad veckan får kosta, var ni handlar.</p>
+        </li>
+        <li>
+          <span class="site-step-number">Steg 2</span>
+          <h3>Få veckan</h3>
+          <p>Middagar som håller budgeten, byt de du inte gillar.</p>
+        </li>
+        <li>
+          <span class="site-step-number">Steg 3</span>
+          <h3>Handla</h3>
+          <p>Listan är sorterad som hyllorna och räknar bort det du har hemma.</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- 5. FILMEN. Sju scener, ett klipp var, laddade först när de syns
+         (site-video.js). Rubrikerna kommer ur site/video/clips.json. -->
+    <section class="site-section site-film site-wrap" id="filmen">
+      <p class="site-eyebrow">På en halv minut</p>
+      <h2>Så gör Matjakt jobbet åt dig</h2>
+      <div class="site-film-track">
+        <article class="site-film-scene">
+          <div class="site-film-media">
+            <video class="site-film-video" data-film-src="site/video/matjakt-hero.mp4"
+                   poster="site/video/matjakt-hero.jpg"
+                   muted playsinline loop preload="none" disablepictureinpicture
+                   aria-hidden="true"></video>
+            <span class="site-film-scrim"></span>
+            <div class="site-film-copy"><span class="site-film-step">Steg 1</span><h3>Planera veckan.</h3></div>
+          </div>
+          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/a-woman-mixing-using-a-wire-whisk-8176824/" rel="noopener nofollow" target="_blank">Ron Lach</a> · Pexels</p>
+        </article>
+        <article class="site-film-scene">
+          <div class="site-film-media">
+            <video class="site-film-video" data-film-src="site/video/matjakt-valj.mp4"
+                   poster="site/video/matjakt-valj.jpg"
+                   muted playsinline loop preload="none" disablepictureinpicture
+                   aria-hidden="true"></video>
+            <span class="site-film-scrim"></span>
+            <div class="site-film-copy"><span class="site-film-step">Steg 2</span><h3>Välj vad du vill äta.</h3><p>Du säger vad du är sugen på.</p></div>
+          </div>
+          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/person-serving-food-on-the-table-5765844/" rel="noopener nofollow" target="_blank">Andi Farruku</a> · Pexels</p>
+        </article>
+        <article class="site-film-scene">
+          <div class="site-film-media">
+            <video class="site-film-video" data-film-src="site/video/matjakt-vecka.mp4"
+                   poster="site/video/matjakt-vecka.jpg"
+                   muted playsinline loop preload="none" disablepictureinpicture
+                   aria-hidden="true"></video>
+            <span class="site-film-scrim"></span>
+            <div class="site-film-copy"><span class="site-film-step">Steg 3</span><h3>Matjakt bygger veckan.</h3><p>Sju middagar som håller din budget.</p></div>
+          </div>
+          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/woman-writing-in-notebook-8845453/" rel="noopener nofollow" target="_blank">Yaroslav Shuraev</a> · Pexels</p>
+        </article>
+        <article class="site-film-scene">
+          <div class="site-film-media">
+            <video class="site-film-video" data-film-src="site/video/matjakt-lista.mp4"
+                   poster="site/video/matjakt-lista.jpg"
+                   muted playsinline loop preload="none" disablepictureinpicture
+                   aria-hidden="true"></video>
+            <span class="site-film-scrim"></span>
+            <div class="site-film-copy"><span class="site-film-step">Steg 4</span><h3>Recepten blir en inköpslista.</h3><p>Allt du behöver, i rätt mängd.</p></div>
+          </div>
+          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/a-woman-writing-on-a-notebook-5449990/" rel="noopener nofollow" target="_blank">Gustavo Fring</a> · Pexels</p>
+        </article>
+        <article class="site-film-scene">
+          <div class="site-film-media">
+            <video class="site-film-video" data-film-src="site/video/matjakt-produkter.mp4"
+                   poster="site/video/matjakt-produkter.jpg"
+                   muted playsinline loop preload="none" disablepictureinpicture
+                   aria-hidden="true"></video>
+            <span class="site-film-scrim"></span>
+            <div class="site-film-copy"><span class="site-film-step">Steg 5</span><h3>Riktiga produkter och förpackningar.</h3><p>Rätt förpackning, inte ett cirkapris.</p></div>
+          </div>
+          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/dairy-aisle-shopping-in-supermarket-39221961/" rel="noopener nofollow" target="_blank">Kiwi and Camera</a> · Pexels</p>
+        </article>
+        <article class="site-film-scene">
+          <div class="site-film-media">
+            <video class="site-film-video" data-film-src="site/video/matjakt-butiker.mp4"
+                   poster="site/video/matjakt-butiker.jpg"
+                   muted playsinline loop preload="none" disablepictureinpicture
+                   aria-hidden="true"></video>
+            <span class="site-film-scrim"></span>
+            <div class="site-film-copy"><span class="site-film-step">Steg 6</span><h3>Jämför riktiga matpriser.</h3><p>Samma lista, flera butiker.</p></div>
+          </div>
+          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/a-couple-buying-groceries-4121625/" rel="noopener nofollow" target="_blank">Jack Sparrow</a> · Pexels</p>
+        </article>
+        <article class="site-film-scene">
+          <div class="site-film-media">
+            <video class="site-film-video" data-film-src="site/video/matjakt-billigast.mp4"
+                   poster="site/video/matjakt-billigast.jpg"
+                   muted playsinline loop preload="none" disablepictureinpicture
+                   aria-hidden="true"></video>
+            <span class="site-film-scrim"></span>
+            <div class="site-film-copy"><span class="site-film-step">Steg 7</span><h3>Spara pengar varje vecka.</h3><p>Du ser var veckan blir billigast.</p></div>
+          </div>
+          <p class="site-film-credit">Film: <a href="https://www.pexels.com/video/woman-getting-things-out-of-grocery-basket-at-billing-counter-5103988/" rel="noopener nofollow" target="_blank">Gustavo Fring</a> · Pexels</p>
+        </article>
+      </div>
+      <div class="site-film-closing">
+        <p class="site-film-closing-line">Matjakt gör jobbet åt dig.</p>
+        <a class="site-btn site-btn-primary" href="app/" data-track="cta_testa_gratis">Kom igång gratis</a>
+      </div>
+    </section>
+
+    <!-- 6. SKILLNADEN MOT ATT HANDLA SOM VANLIGT -->
+    <section class="site-section site-diff site-wrap" id="skillnaden">
+      <h2>Skillnaden mot att handla som vanligt</h2>
+      <ul class="site-diff-list">
+        <li>
+          <h3>Du planerar inte i butiken</h3>
+          <p>Impulsköpen är det dyra. Veckan är redan bestämd när du går in genom dörren.</p>
+        </li>
+        <li>
+          <h3>Du vet vad veckan kostar innan du går</h3>
+          <p>Summan står på listan, räknad på riktiga produkter och förpackningar – inte på ett cirkapris.</p>
+        </li>
+        <li>
+          <h3>Kampanjerna hamnar i maten du faktiskt lagar</h3>
+          <p>Ett fynd du inte använder är inget fynd. Veckans erbjudanden byggs in i middagarna.</p>
+        </li>
+      </ul>
+    </section>
+
+    <!-- 7. PRIS -->
+    <section class="site-section site-plans site-wrap" id="pris">
+      <h2>Pris</h2>
+      <div class="site-plan-grid">
+        <article class="site-plan">
+          <h3>Gratis för alltid</h3>
+          <p class="site-plan-price">0&nbsp;kr</p>
+          <ul>
+            <li>Veckoplan efter din budget och ditt hushåll</li>
+            <li>Upp till fyra middagar i veckan</li>
+            <li>Inköpslista sorterad som hyllorna</li>
+            <li>Riktigt totalpris hos den billigaste butiken</li>
+            <li>Skafferi, receptsök och favoriter</li>
+          </ul>
+        </article>
+        <article class="site-plan">
+          <p class="site-plan-badge">Bäst värde: 399&nbsp;kr/år</p>
+          <h3>Premium</h3>
+          <p class="site-plan-price">59&nbsp;kr/mån <small>eller 399&nbsp;kr/år – motsvarar 33&nbsp;kr/mån</small></p>
+          <ul>
+            <li>Alla sju middagar i veckan</li>
+            <li>Alla veckotyper: familj, budget, träning, vegetariskt</li>
+            <li>Priser hos alla butiker och full jämförelse</li>
+            <li>Näringsmål per måltid</li>
+            <li>Laga med det jag har hemma</li>
+          </ul>
+          <a class="site-btn site-btn-primary" href="app/" data-track="cta_testa_gratis">Börja gratis, uppgradera sen</a>
+        </article>
+      </div>
+    </section>
+
+    <!-- 8. VANLIGA FRÅGOR. Frågorna är också underlaget för FAQPage-schemat. -->
+    <section class="site-section site-faq site-wrap" id="vanliga-fragor">
+      <h2>Vanliga frågor</h2>
+      <div class="site-faq-list">
+        <details>
+          <summary>Var kommer priserna ifrån?</summary>
+          <p>Från butikernas egna prisuppgifter, inlästa varje natt. Går en vara inte att prissätta säkert säger appen det rakt ut i stället för att gissa, och antalet varor med kontrollerat pris räknas alltid upp öppet.</p>
+        </details>
+        <details>
+          <summary>Behöver jag konto?</summary>
+          <p>Nej. Du kan prova Matjakt direkt i webbläsaren utan att skapa något. Konto behövs först när veckan ska följa med mellan telefon och dator, eller delas med resten av hushållet.</p>
+        </details>
+        <details>
+          <summary>Vad kostar det?</summary>
+          <p>Att planera veckan, få inköpslistan och se totalpriset hos den billigaste butiken är gratis, för alltid. Premium kostar 59&nbsp;kr/mån eller 399&nbsp;kr/år och öppnar alla sju middagar, alla veckotyper och jämförelsen mellan samtliga butiker.</p>
+        </details>
+        <details>
+          <summary>Vilka butiker stöds?</summary>
+          <p>Willys, Hemköp och City Gross. Fler kedjor läggs till i takt med att vi får tillgång till deras priser. Täckningen kan variera med var du bor och vad som ligger i din lista.</p>
+        </details>
+        <details>
+          <summary>Kan familjen dela samma vecka?</summary>
+          <p>Ja. Ett hushåll bjuder in sina medlemmar med en länk, och sedan ser alla samma vecka, samma inköpslista och samma skafferi. Bockar någon av en vara i butiken försvinner den hos de andra också.</p>
+        </details>
+        <details>
+          <summary>Hur raderar jag mitt konto?</summary>
+          <p>Under Konto i appen, i två steg: först en export av allt vi har om dig, sedan radering. Kontot, veckorna, skafferiet och mätdatan tas bort. Har du en pågående prenumeration säger du upp den först.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- 9. AVSLUTNING -->
+    <section class="site-section site-cta site-wrap" id="borja">
+      <h2>Nästa vecka kan vara planerad om fem minuter.</h2>
+      <div class="site-actions">
+        <a class="site-btn site-btn-primary" href="app/" data-track="cta_testa_gratis">Kom igång gratis</a>
+      </div>
+    </section>
   </main>
+
+  <!-- 10. FOOTER -->
+  <footer class="site-footer site-wrap">
+    <a class="site-wordmark" href="#top">Matjakt</a>
+    <nav aria-label="Sidfot">
+      <a href="mailto:support@matjakt.store">support@matjakt.store</a>
+      <a href="integritetspolicy.html">Integritetspolicy</a>
+      <a href="anvandarvillkor.html">Användarvillkor</a>
+    </nav>
+    <p>Produktinformation delvis från Dabas. Klipp från Pexels.</p>
+  </footer>
+
   <script>
     // Djuplänkar (?verify=, ?reset=, ?invite=) som landar här följer med in
     // i appen - query-strängen får aldrig tappas på vägen.
     (function () {
-      var link = document.getElementById("openApp");
-      if (location.search) link.setAttribute("href", "app/" + location.search);
+      if (!location.search) return;
+      document.querySelectorAll('a[href="app/"]').forEach(function (link) {
+        link.setAttribute("href", "app/" + location.search);
+      });
+    })();
+
+    // Anonym produkthändelseräknare (se ANALYTICS_ALLOWED_EVENTS i
+    // backend/api_server.py) - blockerar aldrig ett klick, kastar aldrig,
+    // fördröjer aldrig en navigering. Blockeras anropet (annonsblockerare,
+    // offline) fungerar knappen exakt likadant; bara räkningen uteblir.
+    (function () {
+      var ANALYTICS_URL = "https://matjakt.onrender.com/api/analytics/event";
+      function trackEvent(name) {
+        try {
+          fetch(ANALYTICS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ event: name }),
+            keepalive: true,
+          }).catch(function () {});
+        } catch (err) { /* mätning får aldrig störa sidan */ }
+      }
+      document.querySelectorAll("[data-track]").forEach(function (el) {
+        el.addEventListener("click", function () { trackEvent(el.getAttribute("data-track")); });
+      });
+      // "Visning av prissidan" - en gång, första gången prissektionen
+      // faktiskt rullar in i bild, inte vid sidladdning.
+      var pris = document.getElementById("pris");
+      if (pris && "IntersectionObserver" in window) {
+        var fired = false;
+        var observer = new IntersectionObserver(function (entries) {
+          if (!fired && entries[0].isIntersecting) {
+            fired = true;
+            trackEvent("view_premium");
+            observer.disconnect();
+          }
+        }, { threshold: 0.3 });
+        observer.observe(pris);
+      }
     })();
   </script>
+  <script src="site-video.js?v=3" defer></script>
 </body>
 </html>
