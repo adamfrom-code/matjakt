@@ -1,161 +1,272 @@
-:root{--bg:#f6f7f4;--surface:#fff;--primary:#146c43;--primary-2:#0f5233;--primary-soft:#e4efe7;--accent:#146c43;--accent-2:#0f5233;--accent-3:#0f5233;--accent-soft:#e4efe7;--text:#17211b;--muted:#6b756e;--border:#e6e9e6;--r-md:16px;--r-lg:20px;--shadow:none}
+/* Landningssidan — matjakt.store
+ *
+ * Samma designsystem som appen (docs/DESIGNSYSTEM-D.md, riktning D,
+ * "Middagskortet"): sval pappersvit, oxblod som ENDA accent, Newsreader mot
+ * Archivo, noll radie, noll skuggor. En besökare som klickar "Kom igång
+ * gratis" ska känna igen sig i det som öppnas — en sajt som ser ut som en
+ * annan produkt än appen är en kostnad, inte en stil.
+ *
+ * Klassnamnen är desamma som site-video.js känner till
+ * (.site-hero-video/.is-active, .site-film-scene/.is-visible,
+ * [data-video="motion"]). Byt inte namn utan att läsa den filen.
+ */
+
+/* ---- Tokens (2.1) ------------------------------------------------------
+   Ljust läge definieras komplett på bar :root. Mörkt omdefinierar ENDAST
+   det som ändras, två gånger: prefers-color-scheme och [data-theme="dark"].
+   Ingen färg får ha sin enda definition inuti ett av de blocken.          */
+:root{
+  --paper:#ECEEEF; --paper-2:#E2E5E7;
+  --ink:#16191B; --ink-2:#5A6367; --ink-3:#626B6F;
+  --rule:#CBD1D3; --rule-2:#B3BBBE;
+  --accent:#8A1F42; --accent-press:#6E1935; --accent-soft:#EBDDE2; --on-accent:#FFFFFF;
+  --shot:#D2D7D9; --shadow:rgba(18,24,26,.22); --scrim:rgba(10,12,13,.78);
+  --f-disp:"Newsreader",Georgia,"Times New Roman",serif;
+  --f-ui:"Archivo","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --sp-1:2px; --sp-2:5px; --sp-3:7px; --sp-4:10px;
+  --sp-5:12px; --sp-6:16px; --sp-7:20px; --sp-8:28px;
+  --gutter:20px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#111416; --paper-2:#191D1F;
+    --ink:#E9ECEE; --ink-2:#A6AFB3; --ink-3:#7E888C;
+    --rule:#272C2F; --rule-2:#3A4145;
+    --accent:#EE93AB; --accent-press:#F5B7C6; --accent-soft:#2A1720; --on-accent:#26060F;
+    --shot:#1E2325; --shadow:rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#111416; --paper-2:#191D1F;
+  --ink:#E9ECEE; --ink-2:#A6AFB3; --ink-3:#7E888C;
+  --rule:#272C2F; --rule-2:#3A4145;
+  --accent:#EE93AB; --accent-press:#F5B7C6; --accent-soft:#2A1720; --on-accent:#26060F;
+  --shot:#1E2325; --shadow:rgba(0,0,0,.6);
+}
+
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:"Manrope",system-ui,sans-serif;line-height:1.55}
-h1,h2,h3{font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-weight:700;color:var(--primary);line-height:1.15;margin:0 0 .5em}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+body{
+  margin:0;
+  background:var(--paper);          /* obligatorisk — en genomskinlig body lånar värdens tema */
+  color:var(--ink);
+  font:400 14px/1.5 var(--f-ui);
+  font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* Rubriker är Newsreader i 400. Vikt över 600 finns inte i systemet — en
+   Newsreader i 400 på 38px är redan tyngre än omgivningen. */
+h1,h2,h3{font-family:var(--f-disp);font-weight:400;line-height:1.05;margin:0 0 var(--sp-4);color:var(--ink)}
+p{margin:0 0 var(--sp-5)}
 a{color:inherit}
 ul,ol{margin:0;padding:0;list-style:none}
-main{max-width:1080px;margin:0 auto;padding:0 20px}
-section{margin:64px auto;scroll-margin-top:84px}
-a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent-2);outline-offset:2px;border-radius:4px}
 
-.site-topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;background:rgba(246,247,244,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)}
-.site-wordmark{font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-weight:700;font-size:22px;color:var(--primary);text-decoration:none}
-.site-wordmark span{color:var(--accent)}
-.site-nav{display:none;gap:24px;font-size:14px;font-weight:500}
-.site-nav a{text-decoration:none;color:var(--text);opacity:.8}
-.site-nav a:hover{opacity:1}
-.site-topbar-actions{display:flex;gap:8px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-.site-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 18px;border-radius:99px;font-size:14px;font-weight:700;text-decoration:none;white-space:nowrap;transition:transform .15s ease,opacity .15s ease}
-.site-btn:active{transform:scale(.97)}
-.site-btn-primary{background:var(--accent);color:#2b1a08}
-.site-btn-primary:hover{background:var(--accent-2)}
-.site-btn-ghost{background:transparent;border:1px solid var(--border);color:var(--primary)}
-.site-btn-ghost:hover{background:var(--primary-soft)}
-.site-btn-lg{min-height:52px;padding:0 26px;font-size:15px}
+.site-wrap{max-width:960px;margin:0 auto;padding-inline:var(--gutter)}
+@media (max-width:400px){.site-wrap{padding-inline:var(--sp-6)}}
 
-.site-hero{text-align:center;padding-top:56px}
-.site-eyebrow{color:var(--accent-3);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 12px}
-.site-hero h1{font-size:36px;max-width:760px;margin-left:auto;margin-right:auto}
-.site-hero-lead{max-width:600px;margin:16px auto 28px;color:var(--muted);font-size:17px}
-.site-hero-actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
-.site-hero-note{margin-top:14px;color:var(--muted);font-size:13px}
-.site-hero-visual{display:flex;flex-direction:column;gap:10px;max-width:340px;margin:40px auto 0;text-align:left}
-.site-mock-card{background:var(--surface);border-radius:var(--r-md);padding:16px;box-shadow:var(--shadow)}
-.site-mock-row{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--muted)}
-.site-mock-row strong{color:var(--primary);font-size:15px}
-.site-mock-bar{margin-top:10px;height:6px;border-radius:99px;background:var(--primary-soft);overflow:hidden}
-.site-mock-bar i{display:block;height:100%;background:var(--accent);border-radius:inherit}
-.site-mock-tag{margin-top:8px;display:inline-block;background:var(--accent-soft);color:var(--accent-3);font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px}
-.site-hero-visual-caption{margin:10px auto 0;max-width:340px;text-align:left;color:var(--muted);font-size:12px}
-.site-savings-tag{display:inline-block;background:rgba(255,255,255,.14);color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:99px;margin:0 0 12px}
+/* Sektionerna skiljs med en linje, inte med kort. En mattidning har inte
+   upphöjda rutor. */
+.site-section{padding-block:56px;border-top:1px solid var(--rule-2);scroll-margin-top:64px}
+.site-section > h2{font-size:30px;letter-spacing:-.02em;max-width:20ch}
 
-.site-savings{background:var(--primary);background-image:linear-gradient(155deg,var(--primary-2),var(--primary) 65%);border-radius:var(--r-lg);color:#fff}
-.site-savings-inner{max-width:640px;margin:0 auto;padding:48px 28px;text-align:center}
-.site-savings h2{color:#fff}
-.site-savings p{color:rgba(255,255,255,.82);font-size:16px;margin:0}
-
-.site-features h2,.site-steps h2,.site-premium h2,.site-faq h2{text-align:center;font-size:28px;margin-bottom:36px}
-.site-feature-grid{display:grid;grid-template-columns:1fr;gap:16px}
-.site-feature-card{background:var(--surface);border-radius:var(--r-md);padding:22px;box-shadow:var(--shadow)}
-.site-feature-icon{font-size:26px}
-.site-feature-card h3{font-size:18px;margin:10px 0 6px}
-.site-feature-card p{color:var(--muted);font-size:14px;margin:0}
-
-.site-steps-list{display:grid;grid-template-columns:1fr;gap:24px;counter-reset:step}
-.site-step-number{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-weight:700;font-size:15px}
-.site-steps-list h3{font-size:17px;margin:12px 0 4px}
-.site-steps-list p{color:var(--muted);font-size:14px;margin:0}
-
-.site-plan-grid{display:grid;grid-template-columns:1fr;gap:16px;max-width:680px;margin:0 auto}
-.site-plan-card{background:var(--surface);border-radius:var(--r-lg);padding:28px;box-shadow:var(--shadow);border:1px solid transparent}
-.site-plan-card ul{display:flex;flex-direction:column;gap:10px;margin:18px 0 0;font-size:14px;color:var(--text)}
-.site-plan-card li{padding-left:22px;position:relative}
-.site-plan-card li::before{content:"✓";position:absolute;left:0;color:var(--primary-2);font-weight:700}
-.site-plan-price{font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-size:26px;color:var(--primary);margin:4px 0 0}
-.site-plan-price small{font-family:"Manrope",sans-serif;font-size:13px;color:var(--muted);font-weight:400}
-.site-plan-featured{border-color:var(--accent);position:relative}
-.site-plan-badge{display:inline-block;background:var(--accent-soft);color:var(--accent-3);font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;margin:0 0 6px}
-.site-plan-featured .site-btn{margin-top:20px;width:100%}
-
-.site-faq{max-width:680px}
-.site-faq details{background:var(--surface);border-radius:14px;padding:16px 18px;margin-bottom:10px;box-shadow:var(--shadow)}
-.site-faq summary{font-weight:700;cursor:pointer;font-size:15px;color:var(--primary)}
-.site-faq p{margin:10px 0 0;color:var(--muted);font-size:14px}
-.site-faq a{color:var(--primary-2);font-weight:600}
-
-.site-cta{text-align:center;background:var(--primary-soft);border-radius:var(--r-lg);padding:48px 20px}
-.site-cta h2{font-size:26px}
-
-.site-footer{border-top:1px solid var(--border);padding:28px 20px;margin-top:80px}
-.site-footer-inner{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center;font-size:13px;color:var(--muted)}
-.site-footer-inner>span{font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-weight:700;color:var(--primary);font-size:16px}
-.site-footer-dot{color:var(--accent)}
-.site-footer nav{display:flex;flex-wrap:wrap;gap:16px;justify-content:center}
-.site-footer nav a{text-decoration:none;color:var(--muted)}
-.site-footer nav a:hover{color:var(--primary)}
-
-@media (min-width:640px){
-  .site-hero-visual{flex-direction:row;max-width:520px}
-  .site-mock-card{flex:1}
-  .site-plan-grid{grid-template-columns:1fr 1fr}
-}
-@media (min-width:760px){
-  .site-nav{display:flex}
-  .site-hero h1{font-size:46px}
-  .site-feature-grid{grid-template-columns:repeat(3,1fr)}
-  .site-steps-list{grid-template-columns:repeat(3,1fr)}
-  .site-footer-inner{flex-direction:row;justify-content:space-between;text-align:left}
+/* Kapitäletikett (3.2). --ink-3 gäller ENDAST på --paper. */
+.site-eyebrow{
+  margin:0 0 var(--sp-4);
+  font:600 10px/1.5 var(--f-ui);letter-spacing:.2em;text-transform:uppercase;
+  color:var(--ink-3);
 }
 
-/* ---- Hero med film ------------------------------------------------------
-   The clip is background: the words sit on top of it and must stay readable
-   whether the video has loaded, failed, or been turned off by the visitor.
-   That is what the scrim is for, and why every text colour here is set
-   against the scrim rather than against the footage. */
-.site-hero{position:relative;isolation:isolate;text-align:center;padding:72px 20px 76px;margin:-1px calc(50% - 50vw) 0;width:100vw;overflow:hidden;background:var(--primary)}
+/* Kursiv Newsreader är en egen röst — aldrig betoning i löpande text. */
+.site-kicker{font:400 16px/1.3 var(--f-disp);font-style:italic;color:var(--accent);margin:0 0 var(--sp-5)}
+
+.site-lead{font-size:16px;line-height:1.55;color:var(--ink-2);max-width:56ch}
+.site-note{font-size:12.5px;color:var(--ink-3);margin:var(--sp-5) 0 0}
+
+/* ---- Knappar (5.1) -----------------------------------------------------
+   Radie 0. Ingen skalning, ingen transform på tryck — bara färgbyte.
+   Minsta träffyta 44x44; primärknappen är 52px hög som i appen.           */
+.site-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-4);
+  min-height:52px;padding:0 var(--sp-7);
+  border:0;border-radius:0;
+  font:500 15px/1.2 var(--f-ui);letter-spacing:.02em;
+  text-decoration:none;white-space:nowrap;cursor:pointer;
+}
+.site-btn-primary{background:var(--accent);color:var(--on-accent)}
+.site-btn-primary:active{background:var(--accent-press)}
+.site-btn-secondary{background:transparent;border:1px solid var(--ink);color:var(--ink)}
+.site-btn-secondary:active{background:var(--paper-2)}
+.site-btn-sm{min-height:44px;padding:0 var(--sp-6);font-size:14px}
+/* På foto: låst vitt, aldrig --ink. Ett foto har inget tema. */
+.site-btn-on-photo{background:transparent;border:1px solid rgba(255,255,255,.72);color:#FFFFFF}
+.site-btn-on-photo:active{background:rgba(255,255,255,.16)}
+.site-btn-on-photo:focus-visible{outline-color:#FFFFFF}
+
+.site-actions{display:flex;flex-wrap:wrap;gap:var(--sp-5)}
+
+/* ---- 1. Topprad --------------------------------------------------------- */
+.site-topbar{
+  position:sticky;top:0;z-index:10;
+  display:flex;align-items:center;justify-content:space-between;gap:var(--sp-6);
+  padding:var(--sp-4) var(--gutter);
+  background:var(--paper);border-bottom:1px solid var(--rule-2);
+}
+.site-wordmark{
+  font:600 10.5px/1 var(--f-ui);letter-spacing:.26em;text-transform:uppercase;
+  color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;min-height:44px;
+}
+.site-nav{display:none;gap:var(--sp-8)}
+.site-nav a{
+  display:inline-flex;align-items:center;min-height:44px;
+  font:500 13px/1 var(--f-ui);color:var(--ink-2);text-decoration:none;
+}
+.site-nav a:hover{color:var(--ink)}
+
+/* ---- 2. Hjälte med film (5.2) -------------------------------------------
+   Klippet ligger BAKOM orden, aldrig framför. Skärmen är obligatorisk:
+   utan den sitter vit text på vilken bildruta klippet råkar visa.          */
+.site-hero{
+  position:relative;isolation:isolate;overflow:hidden;
+  background:var(--shot);
+  padding:72px var(--gutter) 76px;
+}
 .site-hero-media{position:absolute;inset:0;z-index:-1}
-.site-hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.4s ease}
+.site-hero-video{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  opacity:0;transition:opacity 1.4s ease;
+}
 .site-hero-video.is-active{opacity:1}
-/* Dark at the bottom where the buttons are, lighter at the top so the food
-   is still visible. Without this the white text sits on whatever the clip
-   happens to show, which on a pale frame is unreadable. */
-.site-hero-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,26,19,.62) 0%,rgba(12,26,19,.5) 35%,rgba(12,26,19,.82) 100%)}
+.site-hero-scrim{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(10,12,13,.58) 0%,rgba(10,12,13,.5) 34%,var(--scrim) 100%);
+}
 .site-hero-inner{position:relative;max-width:820px;margin:0 auto}
-.site-hero-logo{border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.35);margin-bottom:20px}
-.site-hero .site-eyebrow{color:#ffd9ac}
-.site-hero h1{color:#fff;font-size:38px;max-width:760px;margin-left:auto;margin-right:auto;text-shadow:0 2px 24px rgba(0,0,0,.35)}
-.site-hero-lead{max-width:620px;margin:16px auto 28px;color:rgba(255,255,255,.9);font-size:17px}
-.site-hero-note{margin-top:14px;color:rgba(255,255,255,.72);font-size:13px}
-.site-btn-glass{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.5);color:#fff;backdrop-filter:blur(6px)}
-.site-btn-glass:hover{background:rgba(255,255,255,.24)}
+.site-hero .site-eyebrow{color:rgba(255,255,255,.86)}
+.site-hero h1{
+  color:#FFFFFF;                      /* låst vitt — inte --ink */
+  font-size:34px;line-height:1.06;letter-spacing:-.02em;
+  max-width:18ch;margin-bottom:var(--sp-6);
+}
+.site-hero .site-lead{color:rgba(255,255,255,.9);max-width:52ch}
+.site-hero .site-note{color:rgba(255,255,255,.74)}
+.site-hero .site-actions{margin-top:var(--sp-8)}
 
-/* ---- Presentationen ----------------------------------------------------- */
-.site-film{padding-top:64px;text-align:center}
-.site-film-track{display:flex;flex-direction:column;gap:18px;margin-top:32px}
-.site-film-scene{margin:0;text-align:left}
-.site-film-media{position:relative;border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow);
-  /* Taller than 16:9 on a phone so the scene fills the screen properly, and
-     wider on a laptop where a tall tile would push the next scene off. */
-  aspect-ratio:4/5;background:var(--primary)}
+/* ---- 3. Beviset --------------------------------------------------------- */
+.site-proof p{max-width:62ch;font-size:15.5px;line-height:1.6;color:var(--ink-2)}
+
+/* ---- 4. Så fungerar det ------------------------------------------------- */
+.site-steps-list{display:grid;grid-template-columns:1fr;gap:0}
+.site-steps-list li{padding-block:var(--sp-7);border-top:1px solid var(--rule)}
+.site-steps-list li:first-child{border-top:0}
+.site-step-number{
+  display:block;margin:0 0 var(--sp-2);
+  font:600 10px/1.4 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+}
+.site-steps-list h3{font-size:20px;letter-spacing:-.01em;margin:0 0 var(--sp-3)}
+.site-steps-list p{margin:0;color:var(--ink-2);font-size:14px}
+
+/* ---- 5. Filmen ---------------------------------------------------------- */
+.site-film-track{display:flex;flex-direction:column;gap:var(--sp-7);margin-top:var(--sp-8)}
+.site-film-scene{margin:0}
+.site-film-media{
+  position:relative;overflow:hidden;border-radius:0;
+  /* Högre än 16:9 på en telefon så scenen fyller skärmen, bredare på en
+     laptop där en hög ruta hade tryckt nästa scen ur bild. */
+  aspect-ratio:4/5;background:var(--shot);
+}
 .site-film-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.site-film-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,26,19,.05) 30%,rgba(12,26,19,.86) 100%)}
-.site-film-copy{position:absolute;left:22px;right:22px;bottom:22px;color:#fff}
-.site-film-copy h3{color:#fff;font-size:25px;margin:10px 0 6px;text-shadow:0 2px 18px rgba(0,0,0,.4)}
-.site-film-copy p{margin:0;color:rgba(255,255,255,.88);font-size:15px}
-.site-film-step{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 9px;border-radius:99px;background:var(--accent);color:#2b1a08;font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-weight:700;font-size:14px}
-.site-film-credit{margin:8px 4px 0;font-size:11px;color:var(--muted)}
-.site-film-credit a{color:var(--muted)}
-.site-film-scene-plain .site-film-copy{position:static;color:var(--text);padding:26px;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow)}
-.site-film-scene-plain h3{color:var(--primary);text-shadow:none}
-.site-film-scene-plain p{color:var(--muted)}
-.site-film-closing{margin-top:36px;padding:36px 20px;background:var(--primary);background-image:linear-gradient(155deg,var(--primary-2),var(--primary) 65%);border-radius:var(--r-lg);color:#fff}
-.site-film-closing-line{font-family:"Bricolage Grotesque","Manrope",system-ui,sans-serif;letter-spacing:-.02em;font-size:27px;font-weight:700;margin:0 0 20px}
+.site-film-scrim{position:absolute;inset:0;background:linear-gradient(180deg,transparent 34%,var(--scrim) 100%)}
+.site-film-copy{position:absolute;left:var(--gutter);right:var(--gutter);bottom:var(--sp-6);color:#FFFFFF}
+.site-film-copy h3{color:#FFFFFF;font-size:26px;letter-spacing:-.02em;margin:var(--sp-3) 0 var(--sp-2)}
+.site-film-copy p{margin:0;color:rgba(255,255,255,.88);font-size:14px}
+.site-film-step{
+  font:600 10px/1 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(255,255,255,.86);
+}
+.site-film-credit{margin:var(--sp-2) 0 0;font-size:11px;color:var(--ink-3)}
+.site-film-credit a{color:var(--ink-3)}
+.site-film-closing{margin-top:var(--sp-8);padding-top:var(--sp-8);border-top:1px solid var(--rule-2)}
+.site-film-closing-line{font:400 27px/1.1 var(--f-disp);letter-spacing:-.02em;margin:0 0 var(--sp-7);color:var(--ink)}
 
-/* A scene lifts into place as it arrives. Purely decorative, so it is off
-   entirely for anyone who asked for less motion - and the starting state is
-   only ever applied when the observer is there to undo it. */
+/* En scen lyfts på plats när den kommer fram. Rent dekorativt, så den är
+   helt av för den som bett om mindre rörelse — och starttillståndet läggs
+   bara på när observatören finns där för att ta bort det igen. */
 [data-video="motion"] .site-film-scene{opacity:.001;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
 [data-video="motion"] .site-film-scene.is-visible{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){
   .site-film-scene{opacity:1 !important;transform:none !important;transition:none !important}
   .site-hero-video{transition:none}
 }
-@media (min-width:760px){
-  .site-hero{padding:104px 20px 108px}
-  .site-hero h1{font-size:52px}
+
+/* ---- 6. Skillnaden mot att handla som vanligt --------------------------- */
+.site-diff-list{display:grid;grid-template-columns:1fr;gap:0;margin-top:var(--sp-7)}
+.site-diff-list li{padding-block:var(--sp-7);border-top:1px solid var(--rule)}
+.site-diff-list li:first-child{border-top:0}
+.site-diff-list h3{font-size:20px;letter-spacing:-.01em;margin:0 0 var(--sp-3)}
+.site-diff-list p{margin:0;color:var(--ink-2)}
+
+/* ---- 7. Pris ------------------------------------------------------------ */
+.site-plan-grid{display:grid;grid-template-columns:1fr;gap:var(--sp-8);margin-top:var(--sp-7)}
+.site-plan{padding-top:var(--sp-7);border-top:1px solid var(--rule-2)}
+.site-plan h3{font-size:24px;letter-spacing:-.01em;margin:0 0 var(--sp-2)}
+/* Priset är ett belopp: display-familjen, och tabularsiffror återdeklarerade
+   (font-kortformen nollställer font-variant-numeric). */
+.site-plan-price{
+  font:400 26px/1.1 var(--f-disp);font-variant-numeric:tabular-nums;
+  margin:0 0 var(--sp-5);color:var(--ink);
+}
+.site-plan-price small{font:400 13px/1.4 var(--f-ui);color:var(--ink-2);display:block;margin-top:var(--sp-2)}
+.site-plan-badge{
+  display:inline-block;margin:0 0 var(--sp-4);padding:var(--sp-2) var(--sp-4);
+  background:var(--paper-2);color:var(--ink);
+  font:600 10px/1 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;
+}
+.site-plan ul{display:flex;flex-direction:column;gap:var(--sp-4);margin:0 0 var(--sp-7);font-size:14px}
+.site-plan li{padding-left:var(--sp-7);position:relative;color:var(--ink-2)}
+.site-plan li::before{content:"";position:absolute;left:0;top:.62em;width:var(--sp-4);height:1px;background:var(--ink-3)}
+
+/* ---- 8. Vanliga frågor -------------------------------------------------- */
+.site-faq-list{margin-top:var(--sp-7)}
+.site-faq-list details{border-top:1px solid var(--rule)}
+.site-faq-list details:first-of-type{border-top:0}
+.site-faq-list summary{
+  display:flex;align-items:center;min-height:52px;
+  font:400 18px/1.25 var(--f-disp);color:var(--ink);cursor:pointer;
+  padding-right:var(--sp-7);
+}
+.site-faq-list summary::-webkit-details-marker{display:none}
+.site-faq-list p{margin:0 0 var(--sp-7);color:var(--ink-2);max-width:62ch}
+.site-faq-list a{color:var(--accent)}
+
+/* ---- 9. Avslutning ------------------------------------------------------ */
+.site-cta h2{font-size:30px;letter-spacing:-.02em;max-width:18ch}
+
+/* ---- 10. Footer --------------------------------------------------------- */
+.site-footer{border-top:1px solid var(--rule-2);padding-block:var(--sp-8) 56px}
+.site-footer nav{display:flex;flex-wrap:wrap;gap:var(--sp-7);margin-bottom:var(--sp-6)}
+.site-footer nav a{
+  display:inline-flex;align-items:center;min-height:44px;
+  font-size:13px;color:var(--ink-2);text-decoration:none;
+}
+.site-footer nav a:hover{color:var(--ink)}
+.site-footer p{margin:0;font-size:12px;color:var(--ink-3);max-width:48ch}
+.site-footer .site-wordmark{margin-bottom:var(--sp-4)}
+
+@media (min-width:700px){
+  .site-nav{display:flex}
+  .site-hero{padding:104px var(--gutter) 108px}
+  .site-hero h1{font-size:48px}
+  .site-section > h2,.site-cta h2{font-size:38px}
+  .site-steps-list,.site-diff-list{grid-template-columns:repeat(3,1fr);gap:var(--sp-8)}
+  .site-steps-list li,.site-diff-list li{border-top:1px solid var(--rule);padding-block:var(--sp-7) 0}
+  .site-plan-grid{grid-template-columns:1fr 1fr}
   .site-film-media{aspect-ratio:16/9}
-  .site-film-copy{left:38px;right:38px;bottom:34px}
   .site-film-copy h3{font-size:32px}
   .site-film-closing-line{font-size:36px}
 }
