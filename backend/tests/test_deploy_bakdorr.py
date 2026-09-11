@@ -118,10 +118,20 @@ class TackningenMats(unittest.TestCase):
         # som kräver att HELA körningen blev grön - vägrar publicera
         # frontenden. Ny backend, gammal frontend: exakt det omaka par K3
         # byggdes för att förhindra.
+        #
+        # Medlemskap, inte en ordagrann rad: K1 lade till `lint` i samma lista
+        # av samma skäl, och nästa paket kommer att lägga till sitt. Ett test
+        # som kräver exakt strängen hade gjort varje sådant tillägg till en
+        # falsk röd - och den sortens test lär folk att ändra testet i stället
+        # för att läsa det.
         ci = CI.read_text(encoding="utf-8")
         efter = ci.split("  deploy-staging:", 1)[1].split("\n  smoke-staging:", 1)[0]
-        self.assertIn("needs: [backend, frontend, security, e2e, coverage]", efter,
+        rad = next(r for r in efter.splitlines() if r.strip().startswith("needs:"))
+        behov = {namn.strip() for namn in rad.split("[", 1)[1].rstrip("]").split(",")}
+        self.assertIn("coverage", behov,
                       "en röd täckning skulle deploya backenden men inte frontenden")
+        for jobb in ("backend", "frontend", "security", "e2e"):
+            self.assertIn(jobb, behov, f"{jobb} är borta ur releasekedjan")
 
     def test_tackningen_mats_alltid_pa_samma_sak(self):
         # Samma commit mäter 74,7 % med browser-E2E:n och 73,8 % utan. Ett golv

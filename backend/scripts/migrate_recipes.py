@@ -155,7 +155,7 @@ def main():
         no_steps = store.connection.execute(
             """SELECT COUNT(*) FROM recipes WHERE id NOT IN
                (SELECT DISTINCT recipe_id FROM recipe_steps)""").fetchone()[0]
-        print(f"\nLUCKOR ATT FYLLA:")
+        print("\nLUCKOR ATT FYLLA:")
         print(f"  ingredienser utan mängd: {no_amount}/{total_ing}")
         print(f"  recept utan instruktioner: {no_steps}/{stats['total']}")
         print(f"  recept utan beskrivning: {stats['total']}/{stats['total']}")

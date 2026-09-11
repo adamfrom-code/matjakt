@@ -25,6 +25,64 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ── K1 · LINT SOM FAILAR PÅ FEL, INTE PÅ FORMATERING ───────────────────
+  #
+  # Jobben nedan körde `node --check` och `compileall`. Det är SYNTAX: att
+  # filen går att parsa. Ingen av dem säger något om att koden gör något
+  # ANNAT än det som står skrivet - och det var precis där felen låg.
+  #
+  # Första ruff-körningen i det här repots historia hittade sex LITERALA
+  # backsteg-tecken (0x08) i backend/scripts/secret_scan.py där någon menat
+  # \b. Fem av hemlighetsskannerns mönster - GitHub-token, AWS-nyckel,
+  # Anthropic/OpenAI-nyckel, Slack-token, Google-nyckel - krävde alltså ett
+  # tecken som aldrig kommer, och kunde ALDRIG matcha. I ett publikt repo som
+  # redan läckt en token i klartext en gång. Skannern körde grön varje gång:
+  # en regex som aldrig matchar ser i loggen ut precis som en som inte hittade
+  # något.
+  #
+  # Regelverken (pyproject.toml, eslint.config.js) räknar upp varje regel en
+  # och en, aldrig som familj, och bara de som svarar på frågan "gör koden
+  # något annat än det som står skrivet?". Radlängd, importordning, semikolon
+  # och citattecken är AV med flit: en lint som failar på sjuhundra ställen
+  # dag ett stängs av dag två, och då fångas inte heller de fel som betyder
+  # något.
+  lint:
+    name: Lint (ruff + eslint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      # PINNAD version. En olåst linter ändrar grindens innebörd av sig
+      # själv: nästa ruff-release kan lägga till en regel i en vald familj
+      # och göra varje öppen PR röd utan att någon rört en rad kod. Samma
+      # skäl som playwright==1.62.0 i K2. eslint är pinnad i package.json.
+      - name: Installera ruff
+        run: pip install --quiet "ruff==0.15.4"
+      - name: ruff - fel som gör att koden gör något annat än det som står
+        run: python -m ruff check .
+      - run: npm ci
+      # --max-warnings: no-unused-vars är en VARNING, inte ett fel. Elva av
+      # dagens tolv ligger i frontend/app/app.js, som F-vågen refaktorerar
+      # just nu, och en grind som är röd på filer man inte får röra blir
+      # avstängd. Taket är det som gör att kategorin ändå inte kan tredubblas
+      # i tysthet.
+      - name: eslint - fel som gör att appen kastar i webbläsaren
+        run: npx eslint . --max-warnings 20
+      # Rapport, inte grind. Död kod är inte fel kod, och de 35 träffarna
+      # ligger i frontendens och backendens konfliktfiler mitt under F-vågens
+      # refaktorering. De syns som annotationer på PR:en; blockerar man dem
+      # dag ett blir hela grinden avstängd dag två.
+      - name: Död kod (oanvända importer och variabler - rapporteras)
+        if: always()
+        run: |
+          python -m ruff check . --select F401,F841 --output-format concise \
+            | sed 's/^/::warning::/' || true
   backend:
     name: Backend-tester (isolerad data, inga riktiga anrop)
     runs-on: ubuntu-latest
@@ -326,7 +384,8 @@ jobs:
     # en PR syns det som rött utan att blockera, enligt planen ("rapporteras
     # första månaden, blockerar sedan på delta"). Raden gäller bara pushar till
     # main, där en halv release är värre än ingen.
-    needs: [backend, frontend, security, e2e, coverage]
+    # K1: `lint` står med av exakt samma skäl som `coverage` ovan.
+    needs: [lint, backend, frontend, security, e2e, coverage]
     if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     concurrency:

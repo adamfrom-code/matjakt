@@ -35,6 +35,7 @@
     "@capacitor/keyboard": "^8.0.5"
   },
   "devDependencies": {
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "eslint": "9.39.1"
   }
 }

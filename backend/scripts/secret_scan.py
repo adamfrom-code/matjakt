@@ -21,11 +21,11 @@ PATTERNS = {
     "stripe webhook secret": re.compile(r"whsec_[A-Za-z0-9]{16,}"),
     "resend api key": re.compile(r"\bre_[A-Za-z0-9]{20,}"),
     "privat nyckel": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
-    "github token": re.compile(r"(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}"),
-    "aws access key": re.compile(r"(?:AKIA|ASIA)[A-Z0-9]{16}"),
-    "anthropic/openai key": re.compile(r"sk-(?:ant-)?[A-Za-z0-9_\-]{24,}"),
-    "slack token": re.compile(r"xox[baprs]-[A-Za-z0-9-]{10,}"),
-    "google api key": re.compile(r"AIza[0-9A-Za-z_\-]{35}"),
+    "github token": re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}"),
+    "aws access key": re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
+    "anthropic/openai key": re.compile(r"\bsk-(?:ant-)?[A-Za-z0-9_\-]{24,}"),
+    "slack token": re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}"),
+    "google api key": re.compile(r"\bAIza[0-9A-Za-z_\-]{35}"),
     # Bara ett CITERAT literal räknas: `PRIMAT_API_KEY = original_key` är kod,
     # `PRIMAT_API_KEY = "abcd…"` är en ifylld hemlighet.
     "ifylld hemlighet": re.compile(
