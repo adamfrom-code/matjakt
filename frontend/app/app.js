@@ -7,33 +7,36 @@ if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "functi
     return controller.signal;
   };
 }
-import { addToWeekPlan, applySyncBlob, buildSyncPayload, flushServerSync, initAppState, persistLocally, removeFromWeekPlan, saveState, selectedRecipes, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
+import { applySyncBlob, buildSyncPayload, flushServerSync, initAppState, persistLocally, saveState, selectedRecipes, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
 import { aggregateShopping, chainListTotal, chainRowAmount, initShoppingView, prunePhantomItemNames, renderBasket, wireReportPriceButtons } from "./src/views/shopping.js";
 import { watchOtherTabs } from "./src/state/tab-sync.js";
 import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
-import { createDebouncedSearch, filterRecipes, mergeRecipeResults } from "./src/services/recipe-search.js";
+import { createDebouncedSearch, mergeRecipeResults } from "./src/services/recipe-search.js";
 import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/nutrition.js";
 import { PANTRY_LOCATIONS, expiryStatus, matchLocalRecipesToPantry, pantryAmounts } from "./src/services/pantry.js";
 import { extrasTotal, newExtraItem } from "./src/services/extras.js";
 import { ALLERGENS, filterByDiet, mergeDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
-import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
+import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
 import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
 // errorText: inget rått fetch-fel når skärmen. "Failed to fetch" är inte
 // svenska, och en användare kan inte göra något åt ett "HTTP 500" (E7).
 import { errorText } from "./src/api/http.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
-import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
+import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.js";
+import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
 import { adjustInventory, createHousehold, createInvite, fetchHousehold, fetchNotifications, joinHousehold, leaveHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, removeMember, replaceWeekItems, saveHouseholdProfile, saveNotificationPrefs, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, pantryEntriesFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor } from "./src/services/categories.js";
 import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swapCostText, swapReasonText, weekCostAlert } from "./src/services/swap.js";
-import { RECIPE_FALLBACK_ART, RECIPE_FALLBACK_LABEL, kindFor as recipeFallbackKind } from "./src/services/recipe-fallback.js";
 import { recordWeekSaving, weekKeyFor } from "./src/services/savings-log.js";
 import { budgetScopeText as budgetScopeFor } from "./src/services/budget-scope.js";
 import { planWarning } from "./src/services/plan-warning.js";
 import { ASSUMED_STATE, assumedHomeItems, assumedState } from "./src/services/assumed-home.js";
 import { takeUrlTokens } from "./src/services/url-tokens.js";
+import { branchChoiceKey, canPlanWeek, chooseBranch } from "./src/services/branch-choice.js";
+import { createSeededRandom, newSeed } from "./src/services/seeded-random.js";
+import { debounce } from "./src/services/debounce.js";
 
 // FÖRST AV ALLT, före en enda rad annan startkod: engångstoken ur
 // adressfältet. `?reset=` är ett fullständigt kontoövertagande i klartext
@@ -50,20 +53,6 @@ const urlTokens = takeUrlTokens();
 // everything below reads it exactly as it did before.
 const RECEPT = [];
 
-// Kort och rader ritar bilden i som mest ~400 px - att ladda 940px-varianten
-// där är 3x bandbredd för ingenting (85 kB -> 27 kB per kort, mätt).
-// Pexels CDN skalar via query-parametrar; receptdetaljen behåller originalet.
-const cardImageUrl = url => typeof url === "string" && url.includes("images.pexels.com")
-  ? url.replace(/([?&])h=\d+&w=\d+/, "$1h=330&w=480")
-  : url;
-function recipeFallbackMarkup(recipe) {
-  const kind = recipeFallbackKind(recipe);
-  const label = RECIPE_FALLBACK_LABEL[kind];
-  // aria-label säger att bilden saknas, inte vad ikonen föreställer: en
-  // skärmläsare ska inte tro att vi visar ett foto av rätten.
-  return `<span class="recipe-photo recipe-fallback kind-${kind}" role="img" aria-label="Ingen matbild tillgänglig"><svg viewBox="0 0 64 64">${RECIPE_FALLBACK_ART[kind]}</svg><small>${label}</small></span>`;
-}
-const recipePhoto = recipe => recipe.bild ? `<img class="recipe-photo" src="${escapeHtml(safeHttpUrl(cardImageUrl(recipe.bild)) || "")}" alt="${escapeHtml(recipe.namn)}" loading="lazy" decoding="async">` : recipeFallbackMarkup(recipe);
 // A photo URL that 404s or is blocked must degrade into the same calm icon
 // as "no photo at all". Without this the card showed the browser's
 // broken-image glyph with the alt text spilled across it - which reads as a
@@ -692,13 +681,6 @@ const RECIPE_QUANTITIES = {
   sparrispastacitron: { Sparris: [300, "g"], Pasta: [250, "g"], Citron: [1, "st"], Vitlök: [1, "st"] },
   morotscurry: { Morötter: [400, "g"], Kikärtor: [380, "g"], "Curry & grönsaker": [28, "g"], Ris: [250, "g"] }
 };
-function mapApiRecipe(recipe) {
-  // Rå text i state - escapas vid rendering som allt annat. Escape vid
-  // intag gav dubbelescapade namn i Vecka/Hem och skickade "&amp;" som
-  // varunamn till prismotorn.
-  const ingredients = (recipe.ingredients || []).map(item => `${item.measure || ""} ${item.name || ""}`.trim()).filter(Boolean);
-  return { id: recipe.id, provider: recipe.provider, providerRecipeId: recipe.providerRecipeId, namn: String(recipe.title || ""), butik: "alla", tid: Number(recipe.prepMinutes) || 0, typ: "Provider-recept", portionspris: null, inkopspris: null, sparar: 0, ingredienser: ingredients, hemma: [], beskrivning: "Recept från extern receptkälla. Pris beräknas först när ingredienserna har matchats mot svenska butikprodukter.", steg: (recipe.instructions || []).map(escapeHtml), bild: safeHttpUrl(recipe.imageUrl), imageSource: recipe.imageSource, sourceUrl: safeHttpUrl(recipe.sourceUrl), servings: recipe.servings, priceStatus: "unavailable" };
-}
 
 // The recipe bank's OWN text always wins - description and steps written
 // for the recipe beat the legacy hand-typed map, which only still exists as
@@ -833,6 +815,15 @@ function comboEstimatedCost(combo) {
   return combo.reduce((sum, recipe) =>
     sum + (recipe.inkopspris ?? medianInkopspris()) * factor, 0);
 }
+// E9: ETT FRÖ PER "SKAPA VECKA"-TILLFÄLLE.
+//
+// Slumpen i everydayRank låg i Math.random(), och rankningen kördes om vid
+// varje omritning - samma vecka, samma budget, samma butiker kunde ge olika
+// svar. Nu dras ett frö när användaren faktiskt ber om en ny vecka, och allt
+// som händer inom det tillfället läser samma ström: samma fråga ger samma
+// svar, en ny fråga ger en ny vecka. Se src/services/seeded-random.js.
+let planRandom = createSeededRandom(newSeed());
+function newWeekSeed() { planRandom = createSeededRandom(newSeed()); }
 function evaluateCombos(recipes, count, branch) {
   // minTotal: however hard the pool is capped, a `count`-dinner week needs
   // at least count+1 candidates or there is nothing to choose between.
@@ -847,7 +838,11 @@ function evaluateCombos(recipes, count, branch) {
     // vecka" gav exakt samma vecka varje gång. Slumpen väljer bara vilka
     // kandidater av samma klass som får tävla; budget och kostnader räknas
     // oförändrat på riktiga priser nedströms.
-    return (tags.includes("vardagsmat") || tags.includes("husmanskost") ? 0 : 10) + Math.random();
+    //
+    // E9: den kommer ur en SEEDAD ström, inte ur Math.random(). Förut kunde
+    // samma indata ge olika svar - i en app vars hela löfte är "vem är
+    // billigast" är det en trovärdighetsfråga, inte en smaksak.
+    return (tags.includes("vardagsmat") || tags.includes("husmanskost") ? 0 : 10) + planRandom();
   };
   const pool = limitCandidatePool(recipes, 6, CANDIDATE_POOL_FOR_COUNT[count] || 24,
                                   "proteinkalla", "inkopspris", count + 1, everydayRank);
@@ -1157,31 +1152,34 @@ function updateNutritionWarning(nutritionShortfall, fick = null) {
   $("nutritionWarning").hidden = !text;
   if (text) $("nutritionWarning").textContent = text;
 }
-function cheapestBranch(chain = null) {
-  const branches = nearbyBranches().filter(branch => !chain || branch.kedja === chain);
-  const candidates = candidateRecipesForUser();
-  const scored = branches.map(branch => {
-    const recipes = bestMenuCombo(candidates, state.middagar, state.budget, branch);
-    const avstandKm = state.position ? distanceKm(state.position.lat, state.position.lon, branch.lat, branch.lon) : branch.avstandKm;
-    return { ...branch, avstandKm, recipes, total: shoppingListCost(recipes, branch) };
-  }).filter(result => result.recipes.length);
-  if (!scored.length) return null;
-  // Without Premium, every branch shares the same flat price estimate (no real
-  // per-chain data exists until live prices are fetched, which only happens after
-  // a week is chosen) - sorting that by "total" would just be an arbitrary tie,
-  // which is exactly how a wrong "X is cheapest" claim happens. Pick by distance
-  // instead and never claim it's the cheapest; real cross-store comparison lives
-  // in renderStoreComparison() using live data, gated to Premium.
-  if (!hasPremium()) return scored.sort((a, b) => a.avstandKm - b.avstandKm)[0];
-  // Premium auto-pick: the server's own comparison decides which CHAIN is
-  // cheapest (real prices, real coverage guards, see compare_chains); the
-  // nearest branch of that chain wins. The static estimates all share
-  // prisfaktor 1, so sorting by their "total" was an arbitrary tie - the
-  // very thing the "Billigast" guards exist to prevent.
-  const winnerChain = state.dbComparison?.cheapestChain;
-  const ofWinner = winnerChain ? scored.filter(branch => branch.kedja === winnerChain) : [];
-  const pool = ofWinner.length ? ofWinner : scored;
-  return pool.sort((a, b) => a.avstandKm - b.avstandKm)[0];
+// E9: BUTIKSVALET BYGGER INTE LÄNGRE EN VECKOPLAN PER BUTIK.
+//
+// cheapestBranch() körde en fullständig kombinationssökning för VARJE
+// närbutik - 30-40k kombinationer per filial, 300-400k med tio - plus en
+// shoppingListCost per resultat. Allt det arbetet slängdes: veckoplanen
+// användes till ett `total` ingen läste och till frågan "går det att bygga
+// en vecka alls?", som är samma svar för varje filial. Sorteringen som
+// faktiskt avgjorde vilken butik det blev var avståndet, i båda grenarna.
+//
+// Kvar här är bara att plocka ihop appens tillstånd till modulens indata.
+// Själva valet - och nyckeln som säger när det behöver göras om - bor i
+// src/services/branch-choice.js, där det går att prova utan webbläsare.
+function branchChoiceInput() {
+  return {
+    branches: nearbyBranches(),
+    // "auto" är inte en kedja utan frånvaron av ett kedjeval.
+    chain: state.butik === "auto" ? null : state.butik,
+    position: state.position,
+    distanceTo: branch => (state.position
+      ? distanceKm(state.position.lat, state.position.lon, branch.lat, branch.lon) : null),
+    premium: hasPremium(),
+    cheapestChain: state.dbComparison?.cheapestChain || null,
+    // Enda kvarvarande beroendet till receptbanken: utan recept finns ingen
+    // vecka att handla till, och då ingen butik att visa. Precis som förut,
+    // när noll kandidater tömde filiallistan.
+    hasMenu: canPlanWeek(candidateRecipesForUser().length, state.middagar),
+    pinned: state.pinnedBranch,
+  };
 }
 // A branch the user explicitly picked from the store comparison list (e.g.
 // "Coop Tullhuset" over the auto-picked "Coop Nian") overrides the normal
@@ -1197,8 +1195,11 @@ function pinnedBranchMatch() {
 }
 let branchCache = { key: null, value: null };
 function selectedBranch() {
-  const key = JSON.stringify([state.budget, state.middagar, state.butik, state.postnummer, state.position, RECEPT.length, state.apiRecipes.length, hasPremium(), state.naringsmal, state.pinnedBranch, state.branches.length]);
-  if (branchCache.key !== key) branchCache = { key, value: pinnedBranchMatch() || (state.butik === "auto" ? cheapestBranch() : cheapestBranch(state.butik)) };
+  // Nyckeln bärs av exakt det valet beror på, och state.budget är inte
+  // längre en av dem: budgetfältet kan därför inte trigga ett omval.
+  const input = branchChoiceInput();
+  const key = branchChoiceKey(input);
+  if (branchCache.key !== key) branchCache = { key, value: pinnedBranchMatch() || chooseBranch(input) };
   return branchCache.value;
 }
 function cheapestStore() {
@@ -1218,6 +1219,9 @@ function sanitizeApiPayload(payload) {
 const availableRecipes = () => candidateRecipesForUser();
 
 function chooseMenu(shouldScroll = true) {
+  // Ett nytt frö = en ny vecka. Utan det här anropet hade seedningen gjort
+  // "Skapa ny vecka" till en knapp som gav samma vecka varje gång.
+  newWeekSeed();
   const branch = selectedBranch();
   const { candidates, nutritionShortfall } = weekPlanCandidates();
   const combo = bestMenuCombo(candidates, state.middagar, state.budget, branch);
@@ -1259,245 +1263,12 @@ function renderRecipeTagFilters() {
     button.addEventListener("click", () => {
       const tag = button.dataset.recipeTag;
       state.receptTaggar.has(tag) ? state.receptTaggar.delete(tag) : state.receptTaggar.add(tag);
-      renderRecipes();
+      invalidate("recipes");
     }));
 }
 
-// True when the user is browsing rather than looking for something specific.
-// Shelves answer "what should we eat this week"; a flat list answers "show me
-// the quick vegetarian ones". Showing both at once would be noise.
-function recipeBrowsingMode() {
-  return !state.sokning.trim() && !state.receptTaggar.size && !state.maxTid
-    && !state.minProtein && !state.maxKcal && !state.baraFavoriter
-    && state.kategori === "alla";
-}
-
-async function syncRecipeShelves() {
-  if (state.hyllor.length) return;
-  state.hyllor = await loadShelves(12);
-  if (state.hyllor.length) renderRecipes();
-}
-
-function renderRecipeShelves() {
-  const container = $("recipeShelves");
-  if (!container) return;
-  if (!recipeBrowsingMode()) { container.innerHTML = ""; return; }
-  syncRecipeShelves();
-  container.innerHTML = state.hyllor.map(shelf => `
-    <section class="recipe-shelf">
-      <h2>${escapeHtml(shelf.title)}</h2>
-      <div class="recipe-shelf-row">${shelf.recipes.map(recipeShelfCard).join("")}</div>
-    </section>`).join("");
-  container.querySelectorAll("[data-shelf-recipe]").forEach(card =>
-    card.addEventListener("click", () => openRecipeTab(card.dataset.shelfRecipe)));
-}
-
-function recipeShelfCard(recipe) {
-  const time = recipe.tid ? `${recipe.tid} min` : "";
-  const kcal = recipe.kcal ? `${Math.round(recipe.kcal)} kcal` : "";
-  return `<button type="button" class="recipe-shelf-card" data-shelf-recipe="${escapeHtml(recipe.id)}">
-    <span class="recipe-shelf-photo">${recipePhoto(recipe)}</span>
-    <strong>${escapeHtml(recipe.namn)}</strong>
-    <small>${escapeHtml([time, kcal].filter(Boolean).join(" · "))}</small>
-  </button>`;
-}
-
-function renderRecipes() {
-  const search = state.sokning.trim();
-  const dietFilterActive = dietFilterIsActive();
-  const recipes = filterRecipes(search ? [...localRecipesForUser(), ...(dietFilterActive ? [] : state.apiRecipes)] : availableRecipes(), search).filter(recipe => (state.kategori === "alla" || recipe.typ === state.kategori)
-      && (!state.maxTid || recipe.tid <= state.maxTid)
-      && (!state.minProtein || (recipe.protein || 0) >= state.minProtein)
-      && (!state.maxKcal || (recipe.kcal || 0) <= state.maxKcal)
-      && matchesAllTags(recipe, [...state.receptTaggar])
-      && (!state.baraFavoriter || state.favoriter.has(recipe.id)));
-  const branch = selectedBranch();
-  // "Billigast" in a label is a claim; it is only made when the server's
-  // real comparison crowned this branch's chain. Otherwise the honest word
-  // is "närmast", which is how the branch was actually picked.
-  const autoIsWinner = hasPremium() && state.dbComparison?.cheapestChain
-    && branch?.kedja === state.dbComparison.cheapestChain;
-  const storeLabel = state.butik === "auto" ? `${branch?.namn || "ingen butik hittades"}${autoIsWinner ? " (billigast för din lista)" : " (närmast)"}` : state.butik === "alla" ? "alla butiker" : `${branch?.namn || state.butik}`;
-  const loading = !state.branches.length && branchesSync.loading;
-  // avstandKm can be null (e.g. a branch source that doesn't report distance,
-  // or no state.position yet to measure from) - .toFixed() on that used to
-  // throw and silently abort the rest of this render pass.
-  const distanceText = Number.isFinite(branch?.avstandKm) ? ` och ligger ${branch.avstandKm.toFixed(1)} km bort` : "";
-  $("locationHint").textContent = branch ? `${nearbyBranches().length} butiksprofiler jämförda${loading ? " (hämtar riktiga butiker nära dig...)" : ""} · ${branch.namn} ${autoIsWinner ? "är billigast för din lista just nu" : "ligger närmast"}${distanceText}.` : (state.postnummer ? `Hittade inga inlästa butiker nära ${state.postnummer} ännu.` : "Ange ditt postnummer så hittar vi butiker nära dig.");
-  $("menuSummary").textContent = search ? (dietFilterActive ? `${recipes.length} recept hittades. Externa recept visas inte när kost-/allergifilter är aktivt, eftersom de inte har kontrollerade allergiuppgifter.` : `${recipes.length} recept hittades. Externa recept kan vara på engelska och sakna svenska butikspriser.`) : `${plural(Math.min(state.middagar, recipes.length), "middag", "middagar")} för ${plural(state.personer, "person", "personer")} från ${storeLabel}. Priserna är uppskattningar.`;
-  renderRecipeTagFilters();
-  renderRecipeShelves();
-  // The flat list is hidden while browsing - the shelves ARE the list then.
-  const browsing = recipeBrowsingMode();
-  $("recipeScroll").hidden = browsing;
-  if (browsing) { $("menuSummary").textContent = ""; return; }
-  $("recipeScroll").innerHTML = recipes.length ? recipes.map(recipe => {
-    const selected = state.valda.has(recipe.id), expanded = state.expanded === recipe.id;
-    const details = detailsFor(recipe);
-    return `<article class="recipe-card ${selected ? "selected" : ""}">
-      <button class="recipe-details" data-details="${escapeHtml(recipe.id)}" aria-expanded="${expanded}">
-        <span class="recipe-photo-wrap">${recipePhoto(recipe)}<span class="saving">${recipe.sparar ? `Spara ca ${money(recipe.sparar)}` : "Från receptdatabas"}</span></span>
-        <span class="recipe-name">${escapeHtml(recipe.namn)}</span><span class="recipe-meta">${escapeHtml(recipe.tid)} min · ${escapeHtml(recipe.typ)}</span><span class="recipe-store">Billigast på ${escapeHtml(recipe.butik)}</span>
-        <span class="price-tag">${recipe.inkopspris ? `${money(scaledPurchasePrice(recipe))} i butik` : "Pris hämtas från butik"}</span><span class="portion-price">${recipe.portionspris ? `ca ${money(recipe.portionspris)} per portion` : "Ingredienser och instruktioner finns"}</span>
-        ${recipe.kcal ? `<span class="recipe-macros">${macroLine(recipe)}</span>` : ""}
-      </button>
-      ${expanded ? `<div class="ingredients"><p class="recipe-description">${escapeHtml(details.beskrivning || "En god vardagsrätt med enkla råvaror.")}</p><strong>Du behöver köpa</strong><p>${escapeHtml(recipe.ingredienser.join(", "))}</p><small>Hemma: ${escapeHtml(recipe.hemma.join(", "))}</small>${details.steg ? `<ol class="recipe-steps">${details.steg.map(step => `<li>${escapeHtml(step)}</li>`).join("")}</ol>` : ""}${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${escapeHtml(details.tips)}</p>` : ""}</div>` : ""}
-      <button class="favorite-btn ${state.favoriter.has(recipe.id) ? "is-favorite" : ""}" data-favorite="${escapeHtml(recipe.id)}" aria-label="${state.favoriter.has(recipe.id) ? "Ta bort favorit" : "Spara som favorit"}">${state.favoriter.has(recipe.id) ? "★" : "☆"}</button><button class="add-btn" data-add="${escapeHtml(recipe.id)}">${selected ? "✓ Tillagd" : "+ Lägg till"}</button>
-    </article>`;
-  }).join("") : `<p class="empty-state">Inga recept matchar din sökning eller butik ännu.</p>`;
-  document.querySelectorAll("[data-details]").forEach(btn => btn.addEventListener("click", () => openRecipeTab(btn.dataset.details)));
-  document.querySelectorAll("[data-add]").forEach(btn => btn.addEventListener("click", () => { const id = btn.dataset.add; state.valda.has(id) ? removeFromWeekPlan(id) : addToWeekPlan(id); saveState(); render(); }));
-  document.querySelectorAll("[data-favorite]").forEach(btn => btn.addEventListener("click", () => { const id = btn.dataset.favorite; state.favoriter.has(id) ? state.favoriter.delete(id) : state.favoriter.add(id); saveState(); renderRecipes(); }));
-}
-
-// U65: kom ihåg var i listan man var.
-//
-// Att öppna ett recept ska börja överst i receptet - men att gå TILLBAKA
-// ska lämna en där man stod. Förut gjorde tillbakavägen scrollTo(0, 0),
-// alltså nollställdes platsen med flit, och den som bläddrade i en lång
-// receptlista fick börja om efter varje titt. Filtren låg redan kvar i
-// state; det enda som tappades var raden man tittade på.
-let listScrollY = 0;
-// Webbläsaren återställer SIN ihågkomna position vid bakåtnavigering, och
-// den positionen är var man stod INNE i receptet. Den slogs mot appens egen
-// återställning och landade emellan - 1200 px före, 1472 px efter i test.
-// Med "manual" äger appen scrollen, vilket är enda sättet att göra löftet i
-// U65 sant.
-if ("scrollRestoration" in history) history.scrollRestoration = "manual";
-
-function openRecipeTab(id) {
-  listScrollY = window.scrollY;
-  history.pushState({ recept: id }, "", `${location.pathname}?recept=${encodeURIComponent(id)}`);
-  renderRecipePage();
-}
 const FAVORITE_ICON = '<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.5-9C.7 8.2 2.4 5 5.7 5c2 0 3.4 1.1 4.3 2.4C11 6.1 12.4 5 14.4 5c3.3 0 5 3.2 3.2 7-2.5 4.4-9.5 9-9.5 9Z"/></svg>';
 const PRICE_TAG_ICON = '<svg viewBox="0 0 24 24"><path d="M20 12 12.5 4.5a2 2 0 0 0-1.4-.5H5a1 1 0 0 0-1 1v6.1a2 2 0 0 0 .6 1.4L12 20"/><circle cx="8" cy="8" r="1.3"/></svg>';
-function formatMeasure(amount) {
-  if (amount == null) return "";
-  const whole = Math.floor(amount);
-  const fraction = Math.round((amount - whole) * 100) / 100;
-  const parts = { 0.25: "¼", 0.33: "⅓", 0.5: "½", 0.67: "⅔", 0.75: "¾" };
-  if (parts[fraction]) return whole ? `${whole} ${parts[fraction]}` : parts[fraction];
-  return Number.isInteger(amount) ? String(amount) : String(Math.round(amount * 10) / 10);
-}
-
-// Ingrediensmängderna skalas till HUSHÅLLET - receptbankens rader gäller
-// recipe.servings portioner, men veckan lagas för state.personer.
-function scaledIngredientRows(recipe) {
-  const structured = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
-  if (!structured.length) return null;
-  const scale = state.personer / (recipe.servings || 4);
-  const rows = { buy: [], home: [] };
-  structured.forEach(item => {
-    const target = item.pantryStaple ? rows.home : rows.buy;
-    const amount = item.amount != null && !item.pantryStaple ? formatMeasure(item.amount * scale) : "";
-    target.push({ amount, unit: item.pantryStaple ? "" : (item.unit || ""), name: item.name, optional: item.optional });
-  });
-  return rows;
-}
-
-async function renderRecipePage() {
-  const id = new URLSearchParams(location.search).get("recept");
-  if (!id) {
-    $("top").hidden = false;
-    $("recipePage").hidden = true;
-    // Efter renderingen, annars är sidan ännu för kort och scrollen klipps
-    // till noll. setView() scrollar också till toppen, så återställningen
-    // måste komma efter den - därför två bildrutor, inte en.
-    // MOMENTAN, inte mjuk. styles.css sätter html{scroll-behavior:smooth},
-    // så ett vanligt scrollTo blir en animation över ~300 ms - och en
-    // animation går att störa. Mätt: återställningen landade rätt på 1198 px
-    // och drogs sedan vidare till 1477 av något annat som hann emellan.
-    // Att komma tillbaka dit man var ska inte se ut som en resa.
-    const mål = listScrollY;
-    requestAnimationFrame(() => requestAnimationFrame(
-      () => window.scrollTo({ top: mål, left: 0, behavior: "instant" })));
-    return;
-  }
-  let allRecipes = [...RECEPT, ...state.apiRecipes];
-  // A card deliberately ships without steps and structured ingredients (the
-  // list payload stays small). The detail PAGE is the one place that needs
-  // everything, so fetch the full recipe once and merge it into the same
-  // object every list references.
-  const found = allRecipes.find(r => r.id === new URLSearchParams(location.search).get("recept"));
-  if (found && found.priceStatus !== "unavailable"
-      && (!Array.isArray(found.steg) || !found.steg.length)
-      && !recipeDetailFetches.has(found.id)) {
-    recipeDetailFetches.add(found.id);
-    loadRecipe(found.id).then(detail => {
-      // Samma regel som i ensureWeekRecipeDetails: null är ett definitivt
-      // "finns inte" och frågas aldrig om igen; ett kastat fel är okänt och
-      // släpper id:t fritt för nästa försök.
-      if (!detail) return;
-      Object.assign(found, detail, { steg: detail.instructions || detail.steg || [] });
-      renderRecipePage();
-    }).catch(() => recipeDetailFetches.delete(found.id));
-  }
-  let recipe = allRecipes.find(item => item.id === id);
-  if (!recipe && id.includes(":")) {
-    try { const response = await fetch(recipeDetailApiUrl(id)); if (response.ok) { const data = await response.json(); recipe = mapApiRecipe(data.recipe); state.apiRecipes.push(recipe); allRecipes = [...RECEPT, ...state.apiRecipes]; } } catch { /* The friendly not-found state below remains visible. */ }
-  }
-  if (!recipe) {
-    // A deep link (?recept=...) arrives BEFORE the recipe bank has loaded.
-    // Returning to Hem here made every shared recipe link land on the start
-    // page; show the page in a calm loading state instead - the bank's
-    // loadRecipes().then() re-runs this render the moment recipes exist.
-    $("top").hidden = true;
-    $("recipePage").hidden = false;
-    $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe"><div class="full-recipe-fallback">${recipePhoto({})}</div><h1>Hämtar receptet…</h1><p class="full-recipe-description">Ett ögonblick.</p></article>`;
-    $("recipePage").querySelector(".recipe-back").addEventListener("click", () => { history.pushState(null, "", location.pathname); renderRecipePage(); setView("recipes"); });
-    return;
-  }
-  const details = detailsFor(recipe);
-  $("top").hidden = true;
-  document.querySelectorAll(".bottom-nav-item").forEach(item =>
-    item.classList.toggle("active", item.dataset.view === "recipes")); /* bottennavigeringen följer med in på receptsidan - flikarna ska alltid
-     vara ett tryck bort */ $("recipePage").hidden = false;
-  const chips = [
-    recipe.tid ? `${recipe.tid} min` : null,
-    `${state.personer} portioner`,
-    recipe.difficulty || null,
-    recipe.priceStatus !== "unavailable" && recipe.portionspris ? `${money(recipe.portionspris)}/portion` : null,
-  ].filter(Boolean);
-  const ingredientRows = scaledIngredientRows(recipe);
-  const ingredientsMarkup = ingredientRows
-    ? `${ingredientRows.buy.map(row => `<div class="ing-row${row.optional ? " ing-optional" : ""}"><strong>${escapeHtml([row.amount, row.unit].filter(Boolean).join(" "))}</strong><span>${escapeHtml(row.name)}${row.optional ? " <em>(valfritt)</em>" : ""}</span></div>`).join("")}${ingredientRows.home.length ? `<p class="ing-home-label">Har du säkert hemma</p>${ingredientRows.home.map(row => `<div class="ing-row ing-home"><strong></strong><span>${escapeHtml(row.name)}</span></div>`).join("")}` : ""}`
-    : `${recipe.ingredienser.map(item => `<div class="ing-row"><strong></strong><span>${escapeHtml(item)}</span></div>`).join("")}`;
-  const stepsMarkup = (details.steg || []).map((step, index) => `<label class="step-row"><input type="checkbox" data-step-check="${index}"><span class="step-number">${index + 1}</span><span class="step-text">${escapeHtml(step)}</span></label>`).join("");
-  $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe">${recipe.bild ? `<img class="recipe-photo full-recipe-hero" src="${escapeHtml(safeHttpUrl(recipe.bild) || "")}" alt="${escapeHtml(recipe.namn)}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${escapeHtml(recipe.typ)}</p><h1>${escapeHtml(recipe.namn)}</h1><div class="recipe-chips">${chips.map(chip => `<span class="recipe-chip">${escapeHtml(chip)}</span>`).join("")}</div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${escapeHtml(details.beskrivning || "En god svensk vardagsrätt.")}</p><div class="recipe-cta-row"><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${escapeHtml(recipe.id)}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button><button type="button" class="recipe-share-btn" data-recipe-share aria-label="Dela receptet">Dela</button></div><section class="recipe-block"><div class="ing-head"><h2>Ingredienser</h2><span>${state.personer} portioner</span></div>${ingredientsMarkup}</section><section class="recipe-block"><h2>Gör så här</h2><div class="steps">${stepsMarkup}</div></section>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${escapeHtml(details.tips)}</p>` : ""}<div class="recipe-block">${recipeRatingMarkup(recipe.id)}${feedbackMarkup(recipe.id)}</div></article>`;
-  $("recipePage").querySelector(".recipe-back").addEventListener("click", () => history.back());
-  // Avbockade steg medan man lagar - sparas lokalt per recept så ett
-  // vridet-bort-och-tillbaka på telefonen inte tappar var man var.
-  const stepKey = `matjakt-steps-${recipe.id}`;
-  let done = [];
-  try { done = JSON.parse(localStorage.getItem(stepKey) || "[]"); } catch { /* trasig lagring = börja om */ }
-  $("recipePage").querySelectorAll("[data-step-check]").forEach(box => {
-    const index = Number(box.dataset.stepCheck);
-    box.checked = done.includes(index);
-    box.closest(".step-row").classList.toggle("step-done", box.checked);
-    box.addEventListener("change", () => {
-      box.checked ? done.push(index) : (done = done.filter(x => x !== index));
-      box.closest(".step-row").classList.toggle("step-done", box.checked);
-      try { localStorage.setItem(stepKey, JSON.stringify(done)); } catch { /* full lagring - bocken lever ändå i DOM */ }
-    });
-  });
-  $("recipePage").querySelector("[data-recipe-share]")?.addEventListener("click", async () => {
-    const url = `https://matjakt.store/app/?recept=${encodeURIComponent(recipe.id)}`;
-    trackEvent("recept_delat");
-    // Web Share där det finns (mobilen), annars urklipp - båda vägarna
-    // slutar i samma delbara djuplänk.
-    if (navigator.share) {
-      try { await navigator.share({ title: recipe.namn, url }); } catch { /* avbruten delning är inget fel */ }
-    } else {
-      try { await navigator.clipboard.writeText(url); showUndoToast("Länk kopierad", () => {}); } catch { /* utan urklippsrättighet finns adressfältet */ }
-    }
-  });
-  $("recipePage").querySelector("[data-recipe-add]").addEventListener("click", event => { state.valda.has(recipe.id) ? removeFromWeekPlan(recipe.id) : addToWeekPlan(recipe.id); saveState(); render(); event.currentTarget.querySelector("span").textContent = state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"; });
-  wireRatingStars($("recipePage"), recipe.id);
-  wireFeedbackButtons($("recipePage"), recipe.id);
-  requestAnimationFrame(() => window.scrollTo(0, 0));
-  let touchStartX = 0; $("recipePage").ontouchstart = event => { touchStartX = event.changedTouches[0].screenX; }; $("recipePage").ontouchend = event => { const distance = event.changedTouches[0].screenX - touchStartX; if (Math.abs(distance) < 70) return; const ids = allRecipes.map(item => item.id), currentIndex = ids.indexOf(id), targetIndex = distance < 0 ? currentIndex + 1 : currentIndex - 1; if (targetIndex >= 0 && targetIndex < ids.length) openRecipeTab(ids[targetIndex]); else if (distance > 0) history.back(); };
-}
 
 function branchLiveTotal(shoppingItems, chainProducts) {
   return calculateLiveShoppingTotal(shoppingItems, chainProducts, pantryForPricing());
@@ -1918,8 +1689,8 @@ function hasUsablePrice(result) {
   return !(result.isLive && result.certain === 0);
 }
 
-// cheapestBranch() builds a NEW object ({...branch, avstandKm, recipes,
-// total}), so an identity check against a row's own branch never matched and
+// Butiksvalet returnerar ett NYTT objekt ({...branch, avstandKm}), så en
+// identitetskontroll mot en rads egen butik aldrig matchade och
 // every caller silently fell through to "the cheapest row" instead. That is
 // why the week view could show "Pris hos ICA Nära Stortorget" while the
 // shopping list below it listed Willys products. Compare on a stable
@@ -1973,7 +1744,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
   const updatedLabel = anyLive && state.liveUpdatedAt ? `<small class="store-compare-updated">Uppdaterad ${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}</small>` : "";
   if (!premium) {
     // Free tier never claims a store is "cheapest" - without live data for every
-    // chain that would just be a guess (see cheapestBranch()'s flat estimate),
+    // chain that would just be a guess (see shoppingListCost's flat estimate),
     // and showing it as fact is exactly the kind of mismatch users have reported.
     // Show only the price at the store actually in use, plainly labeled.
     const current = results.find(r => sameBranch(r.branch, selectedBranch())) || results[0];
@@ -3408,6 +3179,36 @@ function flushRender() {
 // "Allt är inaktuellt". Varje anropsplats som inte vet bättre beter sig
 // exakt som förut - bara samlad till en bildruta i stället för direkt.
 function render() { invalidate("account", "recipes", "basket"); }
+// Receptvyn (F4) ritar banan "recipes". Den känner inte app.js - allt den
+// behöver av butiker, priser, premium och navigering skickas in här, en
+// gång. Raden står EFTER render-bussen med flit: recipeDetailFetches och
+// formatterarna ovan måste vara deklarerade när objektet byggs.
+initRecipesView({
+  recipeBank: RECEPT,
+  recipeDetailFetches,
+  invalidate,
+  render,
+  money,
+  plural,
+  macroLine,
+  detailsFor,
+  availableRecipes,
+  localRecipesForUser,
+  dietFilterIsActive,
+  selectedBranch,
+  nearbyBranches,
+  branchesLoading: () => branchesSync.loading,
+  hasPremium,
+  scaledPurchasePrice,
+  renderRecipeTagFilters,
+  recipeRatingMarkup,
+  feedbackMarkup,
+  wireRatingStars,
+  wireFeedbackButtons,
+  trackEvent,
+  showUndoToast,
+  setView,
+});
 function step(key, delta, min, max) { state[key] = Math.min(max, Math.max(min, state[key] + delta)); $(`${key === "personer" ? "people" : "meals"}Value`).textContent = state[key]; saveState(); render(); }
 const DISLIKE_SUGGESTIONS = ["Lök", "Svamp", "Fisk", "Skaldjur", "Nötter", "Inälvsmat", "Stark mat", "Kokosmjölk"];
 function renderDislikeChips() {
@@ -3445,7 +3246,16 @@ function syncSettingsInputs() {
   if (autoOption) autoOption.textContent = hasPremium() ? "Billigast automatiskt" : "Närmast automatiskt (Premium: billigast)";
 }
 syncSettingsInputs();
-$("budgetInput").addEventListener("input", e => { state.budget = clampBudget(e.target.value); saveState(); updateSummary(); renderBasket(); });
+// E9: budgetfältets lyssnare körde hela omräkningen vid VARJE tangenttryck -
+// och innan butiksvalet gjordes om bar cache-nyckeln state.budget, så varje
+// tecken drog igång en kombinationssökning per närbutik. Talet syns direkt i
+// fältet; det är bara räkningen som väntar 250 ms på att skrivandet ska ta
+// slut. Lämnas fältet (change fyras vid blur, alltså före varje knapptryck
+// någon annanstans) gäller det sista värdet omedelbart.
+const applyBudget = value => { state.budget = clampBudget(value); saveState(); updateSummary(); renderBasket(); };
+const budgetTyped = debounce(applyBudget, 250);
+$("budgetInput").addEventListener("input", e => budgetTyped(e.target.value));
+$("budgetInput").addEventListener("change", e => budgetTyped.flush(e.target.value));
 const debouncedGeocode = createDebouncedSearch((zip, signal) => fetch(geocodeApiUrl(zip), { signal }).then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }), 400);
 $("changePasswordForm")?.addEventListener("submit", async event => {
   event.preventDefault();
@@ -4247,6 +4057,9 @@ async function syncPlanPricing(plans) {
   }));
 }
 function openPlanComparison() {
+  // Samma tillfälle, ett frö: de sju veckotyperna nedan drar ur samma ström
+  // och korten går därför att räkna fram igen exakt som de visades.
+  newWeekSeed();
   const branch = selectedBranch();
   const { candidates, nutritionShortfall } = weekPlanCandidates();
   updateNutritionWarning(nutritionShortfall);
