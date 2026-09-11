@@ -42,6 +42,12 @@ backend/data/audit/
 # Skärmdumpar från browser-E2E vid fel (tests/e2e/) - aldrig i repot.
 backend/tests/e2e/artifacts/
 
+# Butiksskärmbilderna (backend/scripts/make_store_screenshots.py). Arton
+# PNG:er på några megabyte som byter innehåll varje gång appens utseende
+# ändras - de byggs om inför varje inlämning och laddas upp, de lagras inte.
+store/appstore/screenshots/
+store/play/screenshots/
+
 # Byggd frontend (scripts/build_frontend.mjs) - byggs i deploy-jobbet.
 dist/
 
