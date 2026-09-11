@@ -193,29 +193,36 @@ class KedjanIWorkflowfilerna(unittest.TestCase):
         self.ci = CI.read_text(encoding="utf-8")
         self.deploy = DEPLOY.read_text(encoding="utf-8")
 
+    def _krav(self, text, bit, varför):
+        # assertIn dumpar hela YAML-filen i felutskriften - 200 rader i
+        # CI-loggen för ett saknat ord. Här står bara vad som fattas.
+        self.assertTrue(bit in text, f"saknas i workflowen: {bit!r} - {varför}")
+
     def test_health_gate_finns_och_behover_deploy_backend(self):
-        self.assertIn("health-gate:", self.ci, "hälsogrinden saknas i ci.yml")
+        self._krav(self.ci, "health-gate:", "hälsogrinden är borta ur ci.yml")
         efter = self.ci.split("health-gate:", 1)[1][:400]
-        self.assertIn("needs: [deploy-backend]", efter,
-                      "health-gate måste ligga EFTER deploy-backend, annars mäter den ingenting")
+        self._krav(efter, "needs: [deploy-backend]",
+                   "health-gate måste ligga EFTER deploy-backend, annars mäter den ingenting")
 
     def test_health_gate_anropar_skriptet_som_testas_har(self):
-        self.assertIn("backend/scripts/wait_for_deploy.py", self.ci,
-                      "hälsogrinden måste köra just det skript som testerna ovan prövar")
+        self._krav(self.ci, "backend/scripts/wait_for_deploy.py",
+                   "hälsogrinden måste köra just det skript som testerna ovan prövar")
 
     def test_deploy_backend_villkoret_ar_orort(self):
         # De tio andra paketen mergar genom samma CI. Fyrar deploy-backend på
         # fel event deployas en PR-gren till produktion.
-        self.assertIn("if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'",
-                      self.ci)
+        self._krav(self.ci, "if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'",
+                   "deploy-backend får bara fyra på en push till main")
 
     def test_pages_publicerar_bara_pa_gron_ci_korning(self):
         # Det HÄR villkoret är det som gör att Pages hamnar efter
         # hälsokontrollen: en CI-körning är inte klar förrän health-gate är
         # klar, och inte 'success' om den failade.
-        self.assertIn("github.event.workflow_run.conclusion == 'success'", self.deploy)
-        self.assertIn("workflows: [CI]", self.deploy)
-        self.assertIn("types: [completed]", self.deploy)
+        self._krav(self.deploy, "github.event.workflow_run.conclusion == 'success'",
+                   "utan det publicerar Pages även när hälsogrinden failade")
+        self._krav(self.deploy, "workflows: [CI]", "Pages måste hänga på CI-körningen")
+        self._krav(self.deploy, "types: [completed]",
+                   "completed är det som gör att Pages väntar på HELA CI, health-gate inräknad")
 
 
 if __name__ == "__main__":
