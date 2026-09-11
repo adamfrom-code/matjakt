@@ -1,4 +1,8 @@
-import { API_BASE_URL } from "./config.js";
+import { request } from "./http.js";
+
+// Varje anrop härifrån går genom request() i http.js: tidsgräns på 15 s och
+// ett svenskt felmeddelande. Ropa aldrig fetch direkt här - då tappar just
+// det anropet båda delarna (E6, E7). tests/http.test.js vaktar regeln.
 
 export const AUTH_TOKEN_KEY = "matjakt-auth-token";
 
@@ -17,139 +21,75 @@ export function storeToken(token, storage = localStorage) {
   } catch { /* localStorage unavailable (private mode, quota) - session stays in-memory only */ }
 }
 
-async function parseJsonResponse(response) {
-  const data = await response.json().catch(() => ({}));
-  // status + code följer med så UI:t kan växla på orsak, inte på text.
-  if (!response.ok) throw Object.assign(new Error(data.error || `HTTP ${response.status}`), { status: response.status, code: data.code });
-  return data;
-}
-
 export function register(email, password, marketing = false) {
-  return fetch(`${API_BASE_URL}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, marketing: Boolean(marketing) }),
-  }).then(parseJsonResponse);
+  return request("/auth/register", { method: "POST", body: { email, password, marketing: Boolean(marketing) } });
 }
 
 // Tacka ja/nej till utskick. Servern äger svaret; UI:t ritar om från `user`.
 export function setMarketingConsent(token, consent) {
-  return fetch(`${API_BASE_URL}/account/marketing`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ consent: Boolean(consent) }),
-  }).then(parseJsonResponse);
+  return request("/account/marketing", { method: "POST", token, body: { consent: Boolean(consent) } });
 }
 
 export function login(email, password) {
-  return fetch(`${API_BASE_URL}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  }).then(parseJsonResponse);
+  return request("/auth/login", { method: "POST", body: { email, password } });
 }
 
 export function logout(token, deviceToken = null) {
   // deviceToken följer med så servern kan glömma just DEN här enheten:
   // annars fortsätter det utloggade kontots hushållsnotiser till en telefon
   // som nu tillhör någon annan.
-  return fetch(`${API_BASE_URL}/auth/logout`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(deviceToken ? { deviceToken } : {}),
-  }).then(parseJsonResponse);
+  return request("/auth/logout", { method: "POST", token, body: deviceToken ? { deviceToken } : {} });
 }
 
 export function fetchCurrentUser(token) {
-  return fetch(`${API_BASE_URL}/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).then(parseJsonResponse);
+  return request("/auth/me", { token });
 }
 
 export function redeemPremium(token, code) {
-  return fetch(`${API_BASE_URL}/auth/redeem`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ code }),
-  }).then(parseJsonResponse);
+  return request("/auth/redeem", { method: "POST", token, body: { code } });
 }
 
 // withdrawalConsent är kundens uttryckliga godkännande av att Premium
 // levereras direkt och att ångerrätten därmed upphör (distansavtalslagen).
 // Servern sparar det med tidsstämpel och vägrar skapa en Checkout utan det.
 export function startCheckout(token, plan, withdrawalConsent = false) {
-  return fetch(`${API_BASE_URL}/billing/checkout`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ plan, withdrawalConsent: Boolean(withdrawalConsent) }),
-  }).then(parseJsonResponse);
+  return request("/billing/checkout", { method: "POST", token, body: { plan, withdrawalConsent: Boolean(withdrawalConsent) } });
 }
 
 export function openBillingPortal(token) {
-  return fetch(`${API_BASE_URL}/billing/portal`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  }).then(parseJsonResponse);
+  return request("/billing/portal", { method: "POST", token });
 }
 
 export function changePassword(token, currentPassword, newPassword) {
-  return fetch(`${API_BASE_URL}/auth/change-password`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ currentPassword, newPassword }),
-  }).then(parseJsonResponse);
+  return request("/auth/change-password", { method: "POST", token, body: { currentPassword, newPassword } });
 }
 
 export function requestPasswordReset(email) {
-  return fetch(`${API_BASE_URL}/auth/request-password-reset`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  }).then(parseJsonResponse);
+  return request("/auth/request-password-reset", { method: "POST", body: { email } });
 }
 
 export function resetPassword(token, password) {
-  return fetch(`${API_BASE_URL}/auth/reset-password`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, password }),
-  }).then(parseJsonResponse);
+  return request("/auth/reset-password", { method: "POST", body: { token, password } });
 }
 
 export function verifyEmail(token) {
-  return fetch(`${API_BASE_URL}/auth/verify-email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token }),
-  }).then(parseJsonResponse);
+  return request("/auth/verify-email", { method: "POST", body: { token } });
 }
 
 export function resendVerification(token) {
-  return fetch(`${API_BASE_URL}/auth/resend-verification`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  }).then(parseJsonResponse);
+  return request("/auth/resend-verification", { method: "POST", token });
 }
 
 export function deleteAccount(token) {
-  return fetch(`${API_BASE_URL}/auth/delete-account`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  }).then(parseJsonResponse);
+  return request("/auth/delete-account", { method: "POST", token });
 }
 
 export function fetchAccountState(token) {
-  return fetch(`${API_BASE_URL}/account/state`, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).then(parseJsonResponse);
+  return request("/account/state", { token });
 }
 
 export function saveAccountState(token, stateBlob, { keepalive = false } = {}) {
-  // keepalive: anropet får överleva att sidan stängs/lämnas (pagehide).
-  return fetch(`${API_BASE_URL}/account/state`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(stateBlob),
-    keepalive,
-  }).then(parseJsonResponse);
+  // keepalive: anropet får överleva att sidan stängs/lämnas (pagehide), och
+  // får därför ingen tidsgräns - se request().
+  return request("/account/state", { method: "POST", token, body: stateBlob, keepalive });
 }
