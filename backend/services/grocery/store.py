@@ -14,15 +14,86 @@ reads as "these tables are the grocery backend" without needing the filename
 for context.
 """
 
+import os
 import re
 import contextlib
 import sqlite3
+import threading
 import time
 from pathlib import Path
 
 from ..data_guard import guard_database_path
 
 from .models import CollectorRun, CurrentPrice, PriceHistoryEntry, Product, RawProduct, Store
+
+# D8. HUR LÄNGE EN SKRIVNING VÄNTAR PÅ SKRIVLÅSET INNAN DEN GER UPP.
+# SQLites standard är noll: den andra skrivaren får "database is locked"
+# direkt. bulk_transaction håller låset under hela publiceringen av ~10 000
+# upserts, och varje HTTP-anrop som råkar skriva under den minuten dog med
+# OperationalError mitt i nattens import. 15 sekunder är längre än en
+# publicering behöver och kortare än en HTTP-timeout.
+#
+# (Python sätter också en egen `timeout` på anslutningen - 5 s som standard -
+# men den gäller bara låset vid transaktionsstart. PRAGMA busy_timeout gäller
+# varje låst steg, inklusive uppgraderingen från läs- till skrivlås mitt i en
+# transaktion, vilket är precis där en samtidig skrivare fastnar.)
+BUSY_TIMEOUT_MS = int(os.environ.get("MATJAKT_SQLITE_BUSY_TIMEOUT_MS") or 15000)
+
+# D8. Schemat läggs upp EN gång per process och databasfil, inte en gång per
+# HTTP-anrop. Varje open_store() körde _init_schema (ett executescript med
+# hela schemat) plus _migrate_schema (fyra PRAGMA table_info, ett
+# executescript till och en seedning av kedjetabellen) - per request som rörde
+# grocery.
+_SCHEMA_READY: set[str] = set()
+_SCHEMA_LOCK = threading.Lock()
+
+# D8. En anslutning per TRÅD, inte en per anrop. sqlite3-anslutningar är
+# billiga men inte gratis, och den dyra delen var schemat ovanför. Trådlokal
+# lagring städar sig själv när tråden dör.
+_POOL = threading.local()
+
+
+def _thread_stores() -> dict:
+    stores = getattr(_POOL, "stores", None)
+    if stores is None:
+        stores = _POOL.stores = {}
+    return stores
+
+
+def shared_store(db_path: Path) -> "GroceryStore":
+    """Trådens egen GroceryStore för den här filen.
+
+    Anroparen behöver inte veta om den är delad: close() på en delad store
+    är en no-op (se GroceryStore.close), så det inbäddade mönstret
+    `store = open_store() ... finally: store.close()` fungerar oförändrat -
+    även när ett anrop öppnar en store medan en yttre redan har en.
+
+    Anslutningen ges upp så fort filen bytts ut under den. En raderad eller
+    ersatt databas (tester gör det, och en återställning från backup gör det
+    i drift) ska inte fortsätta serveras ur en anslutning som håller kvar den
+    gamla inoden."""
+    key = str(db_path)
+    stores = _thread_stores()
+    store = stores.get(key)
+    if store is not None:
+        try:
+            if os.stat(key).st_ino == store.file_inode and not store.closed:
+                return store
+        except OSError:
+            pass
+        store.close(force=True)
+        stores.pop(key, None)
+    store = GroceryStore(db_path, pooled=True)
+    stores[key] = store
+    return store
+
+
+def release_thread_stores():
+    """Stänger den här trådens delade anslutningar. Drift behöver den inte -
+    trådlokalen dör med tråden - men tester som byter datakatalog gör det."""
+    for store in list(_thread_stores().values()):
+        store.close(force=True)
+    _thread_stores().clear()
 
 
 def _normalize_text(value: str | None) -> str:
@@ -44,7 +115,7 @@ def _normalized_key(brand: str | None, name: str, size: str | None) -> str:
 
 
 class GroceryStore:
-    def __init__(self, db_path: Path):
+    def __init__(self, db_path: Path, pooled: bool = False):
         # Testläge får aldrig nå en riktig databas - se services/data_guard.py.
         guard_database_path(db_path, purpose="grocery-databasen")
         db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -54,12 +125,48 @@ class GroceryStore:
         # one cache entry and answer for each other.
         self.db_path = str(db_path)
         self._in_bulk = False
+        self._pooled = pooled
+        self._closed = False
         self._connection = sqlite3.connect(db_path, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
         self._connection.execute("PRAGMA journal_mode=WAL")
         self._connection.execute("PRAGMA foreign_keys=ON")
-        self._init_schema()
-        self._migrate_schema()
+        # D8: vänta på skrivlåset i stället för att kasta OperationalError
+        # mitt i nattens publicering. Se BUSY_TIMEOUT_MS.
+        self._connection.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_MS}")
+        self._prepare_schema()
+        self.file_inode = self._inode()
+
+    def _inode(self):
+        try:
+            return os.stat(self.db_path).st_ino
+        except OSError:
+            return None
+
+    def _prepare_schema(self):
+        """Schema och migrering EN gång per process och databasfil.
+
+        Förut kördes båda i varje __init__, alltså i varje HTTP-anrop som
+        rörde grocery: fyra PRAGMA table_info, två executescript och en
+        seedning av kedjetabellen. Allt är idempotent, men idempotent är inte
+        samma sak som gratis.
+
+        Sanningen är databasen, inte minnet: har en annan process (eller ett
+        test, eller en återställning) lagt en ny fil på samma sökväg ser den
+        billiga sentinelfrågan det, och schemat läggs upp igen. Ett
+        uppslag i sqlite_master mot ett bokfört 'klart' är skillnaden mellan
+        en indexträff och ett helt schema per anrop."""
+        if self.db_path in _SCHEMA_READY and self._schema_present():
+            return
+        with _SCHEMA_LOCK:
+            self._init_schema()
+            self._migrate_schema()
+            _SCHEMA_READY.add(self.db_path)
+
+    def _schema_present(self) -> bool:
+        return bool(self._connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='grocery_current_prices'"
+        ).fetchone())
 
     # Additiva kolumner per tabell. CREATE TABLE IF NOT EXISTS rör aldrig en
     # tabell som redan finns, så nya kolumner läggs till här - idempotent,
@@ -1203,5 +1310,19 @@ class GroceryStore:
             self.connection.commit()
         return andrade
 
-    def close(self):
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    def close(self, force: bool = False):
+        """En delad (trådlokal) store stängs INTE av sin anropare.
+
+        Anropsmönstret i api.py är `store = open_store()` följt av ett
+        `finally: store.close()`, och två sådana kan ligga i varandra - den
+        yttre skulle då plötsligt ha en stängd anslutning. Trådens store
+        stängs av tråden själv (den dör med trådlokalen) eller av
+        release_thread_stores(force)."""
+        if self._pooled and not force:
+            return
         self._connection.close()
+        self._closed = True
