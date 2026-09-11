@@ -46,11 +46,27 @@ class Gate:
     för ett gratiskonto: {"method", "path", "query"|"body"}. Testet kör den
     mot en riktig server. Utan probe går grinden inte att bevisa, och därför
     är den obligatorisk.
+
+    `setup` (J3) är begäranden som körs FÖRE proben, för de grindar som
+    vaktar ett TILLSTÅND i stället för en enskild fråga. Hushållsgrinden är
+    hela skälet: ett nytt konto har ett hushåll med en medlem, och att bjuda
+    in den andra är gratis - det är den TREDJE som möter betalväggen. Utan
+    setup går den grinden inte att pröva alls, och en grind som inte går att
+    pröva är tillbaka till att vara en åsikt.
+
+    Varje steg är {"method", "path", "body"|"query", "as", "capture"}:
+
+    * `as` är "self" (samma konto som proben) eller "other" (ett andra
+      gratiskonto, som behövs för att fylla ett hushåll).
+    * `capture` namnger ett fält i svaret att komma ihåg. Ett senare steg
+      som skriver "$namn" får värdet insatt - inbjudningstoken finns bara i
+      det ena svaret som lämnade ut den.
     """
 
-    __slots__ = ("feature", "route", "kind", "message", "probe")
+    __slots__ = ("feature", "route", "kind", "message", "probe", "setup")
 
-    def __init__(self, feature: str, route: str, kind: str, message: str, probe: dict):
+    def __init__(self, feature: str, route: str, kind: str, message: str, probe: dict,
+                 setup=()):
         if feature not in plan_features.FEATURES:
             raise ValueError(f"Okänd funktion i grinden: {feature}")
         if kind not in (DENY, MASK):
@@ -62,6 +78,7 @@ class Gate:
         self.kind = kind
         self.message = message
         self.probe = probe
+        self.setup = tuple(setup)
         _GATES.append(self)
 
     def blocks(self, plan: str) -> bool:
@@ -77,12 +94,12 @@ class Gate:
         return f"<Gate {self.feature} {self.kind} {self.route}>"
 
 
-def deny(feature: str, route: str, message: str, probe: dict) -> Gate:
-    return Gate(feature, route, DENY, message, probe)
+def deny(feature: str, route: str, message: str, probe: dict, setup=()) -> Gate:
+    return Gate(feature, route, DENY, message, probe, setup)
 
 
-def mask(feature: str, route: str, message: str, probe: dict) -> Gate:
-    return Gate(feature, route, MASK, message, probe)
+def mask(feature: str, route: str, message: str, probe: dict, setup=()) -> Gate:
+    return Gate(feature, route, MASK, message, probe, setup)
 
 
 def all_gates() -> list[Gate]:
@@ -222,6 +239,73 @@ LIVE_PRICES = _optional(lambda: deny(
     {"method": "POST", "path": "/api/products/batch",
      "body": {"butik": "Willys", "zip": "80252", "varor": ["mjölk"]}},
 ), "live_prices")
+
+# -----------------------------------------------------------------------------
+# J3: hushållet och sparhistoriken
+# -----------------------------------------------------------------------------
+
+HOUSEHOLD_MESSAGE = (f"Fler än {plan_features.FREE_MAX_HOUSEHOLD_MEMBERS} personer i "
+                     f"hushållet ingår i Premium")
+
+# ATT BJUDA IN ÄR DEN HANDLING SOM MÖTER BETALVÄGGEN.
+#
+# Det här är hela svaret på "vad händer med ett befintligt gratishushåll som
+# redan har fler än två medlemmar". Grinden sitter på inbjudan och på
+# anslutningen - aldrig på att LÄSA hushållet, aldrig på att synka, aldrig på
+# medlemsraderna. Ett gratishushåll med fem personer fortsätter alltså dela
+# vecka, lista och skafferi precis som förut, i all evighet. Först när någon
+# vill bli den sjätte möter familjen priset.
+#
+# Alternativet - att kasta ut medlem tre till fem när paketeringen ändras -
+# vore att ta tillbaka något folk redan använder. Det säljer inga
+# prenumerationer; det säljer avinstallationer.
+#
+# Proben behöver ett hushåll som redan är fullt, och därför ett andra konto:
+# se `setup`.
+HOUSEHOLD_SHARING = _optional(lambda: deny(
+    "household_sharing", "POST /api/household/invite + /api/household/join",
+    HOUSEHOLD_MESSAGE,
+    {"method": "POST", "path": "/api/household/invite", "body": {}},
+    setup=(
+        {"method": "POST", "path": "/api/household/create", "body": {"name": "Probehushållet"}},
+        {"method": "POST", "path": "/api/household/invite", "body": {}, "capture": "token"},
+        {"method": "POST", "path": "/api/household/join", "body": {"token": "$token"},
+         "as": "other"},
+    ),
+), "household_sharing")
+
+# Sparhistoriken maskas i stället för att nekas: Free ska SE att siffran
+# finns - senaste veckan - men inte trenden och inte månadsrapporten. En
+# tom historik hade gjort grinden omöjlig att pröva, så proben lägger in
+# två veckor först.
+SAVINGS_HISTORY = _optional(lambda: mask(
+    "savings_history", "GET /api/savings",
+    "Full sparhistorik och månadsrapport ingår i Premium",
+    {"method": "GET", "path": "/api/savings"},
+    setup=(
+        {"method": "POST", "path": "/api/savings/week",
+         "body": {"weekKey": "2026-W36", "cheapestTotal": 1120.5, "priciestTotal": 1334.0,
+                  "chain": "Willys"}},
+        {"method": "POST", "path": "/api/savings/week",
+         "body": {"weekKey": "2026-W37", "cheapestTotal": 980.0, "priciestTotal": 1194.5,
+                  "chain": "Hemköp"}},
+    ),
+), "savings_history")
+
+
+def household_member_cap(plan: str) -> int:
+    """Hur många medlemmar planen får ha. Samma tal som /api/entitlements."""
+    return plan_features.max_household_members(plan)
+
+
+def household_is_full(plan: str, member_count: int) -> bool:
+    """Får det här hushållet ta emot EN till?
+
+    Grandfathering faller ut av jämförelsen i stället för att vara ett
+    undantag: ett gratishushåll med fem medlemmar är "fullt" (5 >= 2) och
+    får inte bjuda in fler, men ingenting i den här funktionen tar bort en
+    enda av de fem."""
+    return int(member_count) >= household_member_cap(plan)
 
 
 def week_type_gate(week_type) -> Gate | None:

@@ -43,6 +43,8 @@ import api_server  # noqa: E402
 from services.accounts import AccountStore, ratelimit  # noqa: E402
 from services.accounts import features as plan_features  # noqa: E402
 from services.billing import gate as paywall  # noqa: E402
+from services.billing.savings import SavingsStore  # noqa: E402
+from services.household import HouseholdStore, NotificationStore  # noqa: E402
 
 
 def _fake_week(*args, **kwargs):
@@ -80,12 +82,24 @@ class ServerSidePaywall(unittest.TestCase):
         self.addCleanup(ratelimit.reset)
         self._tmpdir = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmpdir.cleanup)
-        self._original_store = api_server.ACCOUNT_STORE
-        api_server.ACCOUNT_STORE = AccountStore(Path(self._tmpdir.name) / "paywall.db")
+        # Kontona, hushållet och sparhistoriken byts ALLA ut. J3 lade grindar
+        # på hushållet, och ett hushållslager som pekar på den riktiga filen
+        # medan kontona ligger i en tempkatalog gör user_id till en lott:
+        # grindarna såg då andra testers hushåll.
+        path = Path(self._tmpdir.name) / "paywall.db"
+        self._original_stores = (api_server.ACCOUNT_STORE, api_server.HOUSEHOLD_STORE,
+                                 api_server.NOTIFICATION_STORE, api_server.SAVINGS)
+        api_server.ACCOUNT_STORE = AccountStore(path)
+        api_server.HOUSEHOLD_STORE = HouseholdStore(path)
+        api_server.NOTIFICATION_STORE = NotificationStore(path)
+        api_server.SAVINGS = SavingsStore(api_server.ACCOUNT_STORE.connection,
+                                          lock=api_server.ACCOUNT_STORE.lock)
 
         def restore():
             api_server.ACCOUNT_STORE.close()
-            api_server.ACCOUNT_STORE = self._original_store
+            api_server.HOUSEHOLD_STORE.close()
+            (api_server.ACCOUNT_STORE, api_server.HOUSEHOLD_STORE,
+             api_server.NOTIFICATION_STORE, api_server.SAVINGS) = self._original_stores
         self.addCleanup(restore)
 
         # INGEN UTGÅENDE TRAFIK. Varenda väg en grind sitter på hämtar
@@ -104,6 +118,16 @@ class ServerSidePaywall(unittest.TestCase):
         api_server.PANTRY_RECIPE_CACHE.clear()
 
     # -- kontoskapande -----------------------------------------------------
+
+    def _fresh_account(self, premium=False):
+        """Ett eget konto per grind. Grindar som vaktar ett TILLSTÅND (J3:
+        hushållet) ställer om kontot i sin setup, och ett delat konto hade
+        låtit en grinds setup avgöra nästa grinds utfall.
+
+        Rate limitern nollställs först: registreringstaket är fem konton i
+        timmen, och det är inte det den här sviten prövar."""
+        ratelimit.reset()
+        return self._account(premium=premium)
 
     def _account(self, premium=False):
         email = f"gate-{uuid.uuid4().hex}@example.com"
@@ -137,14 +161,48 @@ class ServerSidePaywall(unittest.TestCase):
         status, payload, _ = self._request("POST", path, body, token)
         return status, payload
 
+    def _send(self, spec, token):
+        path = spec["path"]
+        if spec.get("query"):
+            path = f"{path}?{spec['query']}"
+        return self._request(spec["method"], path, spec.get("body"), token)
+
+    def _run_setup(self, gate, token):
+        """Kör grindens `setup` (J3): begäranden som ställer kontot i det
+        tillstånd grinden vaktar.
+
+        Hushållsgrinden är skälet att det här finns. Ett nytt konto har ett
+        hushåll med en medlem, och att bjuda in den ANDRA är gratis - det är
+        den tredje som möter betalväggen. Utan setup gick den grinden inte
+        att pröva alls, och en grind som inte går att pröva är tillbaka till
+        att vara en åsikt."""
+        captured, other = {}, None
+        for step in gate.setup:
+            body = step.get("body")
+            if isinstance(body, dict):
+                body = {key: captured.get(str(value)[1:], value)
+                        if isinstance(value, str) and value.startswith("$") else value
+                        for key, value in body.items()}
+            if step.get("as") == "other":
+                other = other or self._account()
+                step_token = other
+            else:
+                step_token = token
+            status, payload, _ = self._send({**step, "body": body}, step_token)
+            self.assertLess(status, 400,
+                            f"setup-steget {step['method']} {step['path']} för "
+                            f"{gate.feature} föll: {status} {payload}")
+            if step.get("capture") and isinstance(payload, dict):
+                captured[step["capture"]] = payload.get(step["capture"])
+
     def _probe(self, gate, token=None):
         """Kör grindens egen probe. Det är grinden som beskriver hur den ska
         bevisas - beskrivningen bor på raden som utför kontrollen."""
-        probe = gate.probe
-        path = probe["path"]
-        if probe.get("query"):
-            path = f"{path}?{probe['query']}"
-        return self._request(probe["method"], path, probe.get("body"), token)
+        if gate.setup:
+            if not token:
+                return None, None, None   # anonym kan inte nå tillståndet alls
+            self._run_setup(gate, token)
+        return self._send(gate.probe, token)
 
     # -- 1: ingen premiumfunktion utan grind -------------------------------
 
@@ -164,35 +222,40 @@ class ServerSidePaywall(unittest.TestCase):
     # -- 2: varje grind nekar ett gratiskonto ------------------------------
 
     def test_every_deny_gate_refuses_a_free_account(self):
-        token = self._account()
         for gate in paywall.all_gates():
             if gate.kind != paywall.DENY:
                 continue
             with self.subTest(feature=gate.feature, route=gate.route):
-                status, payload, _ = self._probe(gate, token)
+                status, payload, _ = self._probe(gate, self._fresh_account())
                 self.assertEqual(status, 403, f"{gate.route} släppte igenom Free: {payload}")
                 self.assertTrue(payload.get("locked"))
                 self.assertEqual(payload.get("feature"), gate.feature)
 
     def test_every_deny_gate_refuses_an_anonymous_caller(self):
-        """Anonym är Free. Att slippa logga in får inte vara vägen runt."""
+        """Anonym är Free. Att slippa logga in får inte vara vägen runt.
+
+        Kravet är "aldrig ett lyckat svar", inte "exakt 403": en väg som
+        kräver inloggning för att ens nå det grindade tillståndet (hushållet)
+        svarar 401, och 401 är minst lika stängt som 403. Det som INTE får
+        hända är 2xx."""
         for gate in paywall.all_gates():
             if gate.kind != paywall.DENY:
                 continue
             with self.subTest(feature=gate.feature, route=gate.route):
-                status, payload, _ = self._probe(gate)
-                self.assertEqual(status, 403, f"{gate.route} släppte igenom anonym: {payload}")
+                status, payload, _ = self._send(gate.probe, None)
+                self.assertGreaterEqual(status, 400,
+                                        f"{gate.route} släppte igenom anonym: {status} {payload}")
 
     def test_every_mask_gate_answers_a_free_account_with_less_than_premium(self):
-        """En maskad väg svarar, men inte med samma svar. Prövas mot en
-        prissatt vecka med tre kedjor, så det finns något att maska."""
-        free, premium = self._account(), self._account(premium=True)
+        """En maskad väg svarar, men inte med samma svar. Prövas mot ett
+        underlag som FAKTISKT har något att maska - en prissatt vecka med tre
+        kedjor, eller två inskrivna sparveckor."""
         for gate in paywall.all_gates():
             if gate.kind != paywall.MASK:
                 continue
             with self.subTest(feature=gate.feature, route=gate.route):
-                free_status, free_body, _ = self._probe(gate, free)
-                paid_status, paid_body, _ = self._probe(gate, premium)
+                free_status, free_body, _ = self._probe(gate, self._fresh_account())
+                paid_status, paid_body, _ = self._probe(gate, self._fresh_account(premium=True))
                 self.assertEqual((free_status, paid_status), (200, 200))
                 self.assertNotEqual(free_body, paid_body,
                                     f"{gate.route} gav Free exakt Premiums svar")
@@ -201,10 +264,9 @@ class ServerSidePaywall(unittest.TestCase):
 
     def test_no_gate_blocks_a_premium_account(self):
         """"Neka alla" vore också ett grönt test. Premium ska aldrig se 403."""
-        token = self._account(premium=True)
         for gate in paywall.all_gates():
             with self.subTest(feature=gate.feature, route=gate.route):
-                status, payload, _ = self._probe(gate, token)
+                status, payload, _ = self._probe(gate, self._fresh_account(premium=True))
                 self.assertNotEqual(status, 403, f"{gate.route} nekade Premium: {payload}")
 
     # -- 4: svaren får inte ligga i en delad cache -------------------------
@@ -212,28 +274,36 @@ class ServerSidePaywall(unittest.TestCase):
     def test_a_plan_dependent_answer_is_never_publicly_cacheable(self):
         """En "public, max-age"-header på ett svar som beror på planen låter
         en mellanhand dela ut Premiums svar till nästa gratiskonto."""
-        premium = self._account(premium=True)
         for gate in paywall.all_gates():
             with self.subTest(feature=gate.feature, route=gate.route):
-                _, _, cache = self._probe(gate, premium)
+                _, _, cache = self._probe(gate, self._fresh_account(premium=True))
                 self.assertNotIn("public", cache,
                                  f"{gate.route} svarar Premium med delbar cache: {cache!r}")
 
     # -- Det som J1 pekar ut med namn --------------------------------------
 
-    def test_by_pantry_is_refused_for_free_and_served_for_premium(self):
-        """Fyndet i klartext: hela "Laga med det jag har" var gratis."""
-        free, premium = self._account(), self._account(premium=True)
+    def test_by_pantry_follows_the_business_model_and_nothing_else(self):
+        """J1 hittade att "Laga med det jag har" saknade kontroll helt och
+        byggde grinden. J3 flyttade sedan funktionen NER till gratis - och
+        då ska grinden vara borta, inte kvar och tyst nekande.
+
+        Det är hela poängen med att härleda grindarna ur FEATURES: vägen
+        följer affärsmodellen automatiskt, åt båda hållen. Testet frågar
+        därför features.py vad som gäller, inte sitt eget minne."""
+        free = self._fresh_account()
         path = "/api/v1/recipes/by-pantry?items=kyckling,ris"
         status, payload, _ = self._request("GET", path, token=free)
-        self.assertEqual(status, 403)
-        self.assertEqual(payload["feature"], "full_pantry")
-        status, payload, _ = self._request("GET", path, token=premium)
-        self.assertEqual(status, 200)
-        self.assertIn("recipes", payload)
+        if plan_features.allowed(plan_features.FREE, "full_pantry"):
+            self.assertEqual(status, 200, payload)
+            self.assertIn("recipes", payload)
+            self.assertEqual(paywall.gates_for("full_pantry"), [],
+                             "full_pantry är gratis men har ändå en grind kvar")
+        else:
+            self.assertEqual(status, 403, payload)
+            self.assertEqual(payload["feature"], "full_pantry")
 
     def test_a_free_account_cannot_price_more_dinners_than_it_pays_for(self):
-        free, premium = self._account(), self._account(premium=True)
+        free, premium = self._fresh_account(), self._fresh_account(premium=True)
         ids = [f"r{n}" for n in range(plan_features.FREE_MAX_DINNERS + 1)]
         status, payload = self._post("/api/pricing/week",
                                      {"recipeIds": ids, "people": 2}, token=free)
@@ -250,7 +320,7 @@ class ServerSidePaywall(unittest.TestCase):
         self.assertNotEqual(status, 403, payload)
 
     def test_the_shopping_list_is_not_a_back_door_past_the_dinner_cap(self):
-        free = self._account()
+        free = self._fresh_account()
         ids = [f"r{n}" for n in range(plan_features.PREMIUM_MAX_DINNERS)]
         status, payload = self._post(
             "/api/pricing/list", {"chain": "Willys", "recipeIds": ids, "people": 2}, token=free)
@@ -258,7 +328,7 @@ class ServerSidePaywall(unittest.TestCase):
         self.assertEqual(payload["feature"], "seven_dinners")
 
     def test_a_free_account_cannot_price_a_premium_week_type(self):
-        free = self._account()
+        free = self._fresh_account()
         for key, feature in paywall.WEEK_TYPE_FEATURES.items():
             if plan_features.allowed(plan_features.FREE, feature):
                 continue
@@ -273,13 +343,13 @@ class ServerSidePaywall(unittest.TestCase):
         """Grinden får inte svälja standardveckan - den ÄR gratisprodukten."""
         status, payload = self._post(
             "/api/pricing/week",
-            {"weekType": "standard", "recipeIds": ["r1"], "people": 2}, token=self._account())
+            {"weekType": "standard", "recipeIds": ["r1"], "people": 2}, token=self._fresh_account())
         self.assertNotEqual(status, 403, payload)
 
     def test_an_unknown_week_type_unlocks_nothing(self):
         """En okänd nyckel prissätts som en standardvecka - men den får
         förstås inte heller kunna användas för att komma förbi taket."""
-        free = self._account()
+        free = self._fresh_account()
         status, payload = self._post(
             "/api/pricing/week",
             {"weekType": "påhittad", "recipeIds": ["r1"], "people": 2}, token=free)

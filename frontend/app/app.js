@@ -910,16 +910,22 @@ function distanceKm(lat1, lon1, lat2, lon2) {
 // broken business model.
 // Speglar Free-svaret i backend/services/accounts/features.py. Om
 // /api/entitlements inte kan nås gäller detta - inte "allt öppet".
+// SPEGEL av backend/services/accounts/features.py FEATURES. Reservvärdet
+// innan /api/entitlements svarat - aldrig en andra affärsmodell.
+// test_frontend_contract faller om de två listorna skiljer sig. Uppdaterad
+// av J3 (ny paketering): veckotyperna, skafferiet och näringsfiltret ner
+// till gratis, hushåll bortom två personer och sparhistoriken upp.
 const FREE_FEATURES = {
-  standard_week: true, family_week: false, budget_week: false, training_week: false,
-  bulk_week: false, quick_week: false, vegetarian_week: false, balanced_week: false,
+  standard_week: true, family_week: true, budget_week: true, training_week: true,
+  bulk_week: true, quick_week: true, vegetarian_week: true, balanced_week: true,
   seven_dinners: false, cheapest_store_price: true, cheapest_store_basket: true,
   all_store_prices: false, all_store_baskets: false, store_comparison: false,
   live_prices: false,
-  recipe_search: true, advanced_nutrition: false, meal_prep: false,
-  basic_pantry: true, full_pantry: false, favorites: true,
+  recipe_search: true, advanced_nutrition: true, meal_prep: true,
+  basic_pantry: true, full_pantry: true, favorites: true,
+  household_sharing: false, savings_history: false,
 };
-const FREE_ENTITLEMENTS = { plan: "free", isPremium: false, maxDinners: 4, features: FREE_FEATURES, pricing: null };
+const FREE_ENTITLEMENTS = { plan: "free", isPremium: false, maxDinners: 5, features: FREE_FEATURES, pricing: null };
 let entitlements = FREE_ENTITLEMENTS;
 // Starts as "free" (the boot assumption), so a premium user's first fetch
 // counts as a plan CHANGE and clears any persisted free-masked snapshot.
