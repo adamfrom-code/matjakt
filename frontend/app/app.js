@@ -7,33 +7,37 @@ if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "functi
     return controller.signal;
   };
 }
-import { addToWeekPlan, applySyncBlob, buildSyncPayload, flushServerSync, initAppState, persistLocally, removeFromWeekPlan, saveState, selectedRecipes, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
+import { applySyncBlob, buildSyncPayload, flushServerSync, initAppState, persistLocally, saveState, selectedRecipes, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
 import { aggregateShopping, chainListTotal, chainRowAmount, initShoppingView, prunePhantomItemNames, renderBasket, wireReportPriceButtons } from "./src/views/shopping.js";
 import { watchOtherTabs } from "./src/state/tab-sync.js";
-import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
-import { createDebouncedSearch, filterRecipes, mergeRecipeResults } from "./src/services/recipe-search.js";
+import { aggregateIngredients, budgetRemaining, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
+import { branchLiveKey, branchesLoading, clearLocationDerivedState, createRetryGate, initPricingSync, livePricesLoading, pricingHeaders, pricingIsPending, resetExtraMatchSync, resetPricingSync, syncBranchComparison, syncDatabasePricing, syncExtraMatches, syncLivePrices, syncNearbyBranches, storeSelectionForPricing, weekPricingBody } from "./src/pricing/sync.js";
+import { createDebouncedSearch, mergeRecipeResults } from "./src/services/recipe-search.js";
 import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/nutrition.js";
 import { PANTRY_LOCATIONS, expiryStatus, matchLocalRecipesToPantry, pantryAmounts } from "./src/services/pantry.js";
 import { extrasTotal, newExtraItem } from "./src/services/extras.js";
 import { ALLERGENS, filterByDiet, mergeDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
-import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
+import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl } from "./src/api/config.js";
 import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
 // errorText: inget rått fetch-fel når skärmen. "Failed to fetch" är inte
 // svenska, och en användare kan inte göra något åt ett "HTTP 500" (E7).
 import { errorText } from "./src/api/http.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
-import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
+import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.js";
+import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
 import { adjustInventory, createHousehold, createInvite, fetchHousehold, fetchNotifications, joinHousehold, leaveHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, removeMember, replaceWeekItems, saveHouseholdProfile, saveNotificationPrefs, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, pantryEntriesFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor } from "./src/services/categories.js";
 import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swapCostText, swapReasonText, weekCostAlert } from "./src/services/swap.js";
-import { RECIPE_FALLBACK_ART, RECIPE_FALLBACK_LABEL, kindFor as recipeFallbackKind } from "./src/services/recipe-fallback.js";
 import { recordWeekSaving, weekKeyFor } from "./src/services/savings-log.js";
 import { budgetScopeText as budgetScopeFor } from "./src/services/budget-scope.js";
 import { planWarning } from "./src/services/plan-warning.js";
 import { ASSUMED_STATE, assumedHomeItems, assumedState } from "./src/services/assumed-home.js";
 import { takeUrlTokens } from "./src/services/url-tokens.js";
+import { branchChoiceKey, canPlanWeek, chooseBranch } from "./src/services/branch-choice.js";
+import { createSeededRandom, newSeed } from "./src/services/seeded-random.js";
+import { debounce } from "./src/services/debounce.js";
 
 // FÖRST AV ALLT, före en enda rad annan startkod: engångstoken ur
 // adressfältet. `?reset=` är ett fullständigt kontoövertagande i klartext
@@ -50,20 +54,6 @@ const urlTokens = takeUrlTokens();
 // everything below reads it exactly as it did before.
 const RECEPT = [];
 
-// Kort och rader ritar bilden i som mest ~400 px - att ladda 940px-varianten
-// där är 3x bandbredd för ingenting (85 kB -> 27 kB per kort, mätt).
-// Pexels CDN skalar via query-parametrar; receptdetaljen behåller originalet.
-const cardImageUrl = url => typeof url === "string" && url.includes("images.pexels.com")
-  ? url.replace(/([?&])h=\d+&w=\d+/, "$1h=330&w=480")
-  : url;
-function recipeFallbackMarkup(recipe) {
-  const kind = recipeFallbackKind(recipe);
-  const label = RECIPE_FALLBACK_LABEL[kind];
-  // aria-label säger att bilden saknas, inte vad ikonen föreställer: en
-  // skärmläsare ska inte tro att vi visar ett foto av rätten.
-  return `<span class="recipe-photo recipe-fallback kind-${kind}" role="img" aria-label="Ingen matbild tillgänglig"><svg viewBox="0 0 64 64">${RECIPE_FALLBACK_ART[kind]}</svg><small>${label}</small></span>`;
-}
-const recipePhoto = recipe => recipe.bild ? `<img class="recipe-photo" src="${escapeHtml(safeHttpUrl(cardImageUrl(recipe.bild)) || "")}" alt="${escapeHtml(recipe.namn)}" loading="lazy" decoding="async">` : recipeFallbackMarkup(recipe);
 // A photo URL that 404s or is blocked must degrade into the same calm icon
 // as "no photo at all". Without this the card showed the browser's
 // broken-image glyph with the alt text spilled across it - which reads as a
@@ -177,6 +167,26 @@ initAppState({
   onSyncStatus: (status, message) => setSyncStatus(status, message),
   saveRemote: saveAccountState,
   weekTotal: () => lastRealWeekTotal,
+});
+// Prishämtningen (prisdatabasen, livepriserna, filialjämförelsen,
+// extravarorna och butikslistan) bor i src/pricing/sync.js. Den känner inte
+// till skärmen: vem som frågar, vilken butik och vilken vecka det gäller
+// skickas in, och omritningar beställs via render-bussen. Allt skickas som
+// funktioner, inte som värden - de flesta av dem deklareras längre ner i den
+// här filen.
+initPricingSync({
+  hasPremium: () => hasPremium(),
+  chosenStore: () => chosenStore(),
+  selectedBranch: () => selectedBranch(),
+  nearbyBranches: () => nearbyBranches(),
+  plannedRecipes: () => plannedRecipes(),
+  pantryForPricing: () => pantryForPricing(),
+  pantryForServer: () => pantryForServer(),
+  isPricedChain: chain => VALID_CHAINS.includes(chain),
+  onPricesChanged: () => renderBasket(),
+  onLiveStatusChanged: () => updateWeekStoreStatus(),
+  onBranchesChanged: () => render(),
+  onBranchesLoaded: () => chooseMenu(false),
 });
 // Sparat / synkar / kunde inte synka - sanningen om var datat är, visad
 // diskret i kontovyn. Lokalt sparas ALLTID (localStorage, synkront);
@@ -692,13 +702,6 @@ const RECIPE_QUANTITIES = {
   sparrispastacitron: { Sparris: [300, "g"], Pasta: [250, "g"], Citron: [1, "st"], Vitlök: [1, "st"] },
   morotscurry: { Morötter: [400, "g"], Kikärtor: [380, "g"], "Curry & grönsaker": [28, "g"], Ris: [250, "g"] }
 };
-function mapApiRecipe(recipe) {
-  // Rå text i state - escapas vid rendering som allt annat. Escape vid
-  // intag gav dubbelescapade namn i Vecka/Hem och skickade "&amp;" som
-  // varunamn till prismotorn.
-  const ingredients = (recipe.ingredients || []).map(item => `${item.measure || ""} ${item.name || ""}`.trim()).filter(Boolean);
-  return { id: recipe.id, provider: recipe.provider, providerRecipeId: recipe.providerRecipeId, namn: String(recipe.title || ""), butik: "alla", tid: Number(recipe.prepMinutes) || 0, typ: "Provider-recept", portionspris: null, inkopspris: null, sparar: 0, ingredienser: ingredients, hemma: [], beskrivning: "Recept från extern receptkälla. Pris beräknas först när ingredienserna har matchats mot svenska butikprodukter.", steg: (recipe.instructions || []).map(escapeHtml), bild: safeHttpUrl(recipe.imageUrl), imageSource: recipe.imageSource, sourceUrl: safeHttpUrl(recipe.sourceUrl), servings: recipe.servings, priceStatus: "unavailable" };
-}
 
 // The recipe bank's OWN text always wins - description and steps written
 // for the recipe beat the legacy hand-typed map, which only still exists as
@@ -833,6 +836,15 @@ function comboEstimatedCost(combo) {
   return combo.reduce((sum, recipe) =>
     sum + (recipe.inkopspris ?? medianInkopspris()) * factor, 0);
 }
+// E9: ETT FRÖ PER "SKAPA VECKA"-TILLFÄLLE.
+//
+// Slumpen i everydayRank låg i Math.random(), och rankningen kördes om vid
+// varje omritning - samma vecka, samma budget, samma butiker kunde ge olika
+// svar. Nu dras ett frö när användaren faktiskt ber om en ny vecka, och allt
+// som händer inom det tillfället läser samma ström: samma fråga ger samma
+// svar, en ny fråga ger en ny vecka. Se src/services/seeded-random.js.
+let planRandom = createSeededRandom(newSeed());
+function newWeekSeed() { planRandom = createSeededRandom(newSeed()); }
 function evaluateCombos(recipes, count, branch) {
   // minTotal: however hard the pool is capped, a `count`-dinner week needs
   // at least count+1 candidates or there is nothing to choose between.
@@ -847,7 +859,11 @@ function evaluateCombos(recipes, count, branch) {
     // vecka" gav exakt samma vecka varje gång. Slumpen väljer bara vilka
     // kandidater av samma klass som får tävla; budget och kostnader räknas
     // oförändrat på riktiga priser nedströms.
-    return (tags.includes("vardagsmat") || tags.includes("husmanskost") ? 0 : 10) + Math.random();
+    //
+    // E9: den kommer ur en SEEDAD ström, inte ur Math.random(). Förut kunde
+    // samma indata ge olika svar - i en app vars hela löfte är "vem är
+    // billigast" är det en trovärdighetsfråga, inte en smaksak.
+    return (tags.includes("vardagsmat") || tags.includes("husmanskost") ? 0 : 10) + planRandom();
   };
   const pool = limitCandidatePool(recipes, 6, CANDIDATE_POOL_FOR_COUNT[count] || 24,
                                   "proteinkalla", "inkopspris", count + 1, everydayRank);
@@ -913,9 +929,9 @@ async function fetchEntitlements() {
   // upgrade), and a Premium snapshot must not leak into Free. Throw the
   // whole price picture away and fetch it again under the new plan.
   if (lastEntitlementPlan !== entitlements.plan) {
-    databasePricingSync = { key: null, pending: false };
+    resetPricingSync();
     state.dbChainTotals = {}; state.dbLockedChains = []; state.dbComparison = null;
-    state.dbPricedAt = null; state.extraMatches = {}; extraMatchSync = {};
+    state.dbPricedAt = null; state.extraMatches = {}; resetExtraMatchSync();
   }
   lastEntitlementPlan = entitlements.plan;
   // Priserna kommer med svaret - rita om flikarna nu, annars står de kvar
@@ -1012,72 +1028,10 @@ function hasPremium() {
 }
 
 function nearbyBranches() { return state.branches.length ? state.branches : FALLBACK_BRANCH; }
-// Everything that describes WHERE the user shops. A new postcode invalidates
-// all of it: keeping Gävle's branches, Gävle's fetched prices or a pinned
-// Gävle store after a move to Stockholm would show the user a shop they
-// cannot walk into and a total they cannot pay.
-function clearLocationDerivedState() {
-  state.branches = [];
-  state.liveBranchTotals = {};
-  state.livePriser = {};
-  state.dbChainTotals = {};
-  state.dbComparison = null;
-  state.dbPricedAt = null;
-  state.liveUpdatedAt = null;
-  // A branch pinned in the old town is not reachable from the new one.
-  state.pinnedBranch = null;
-  // Both sync guards must forget their old key, or the refetch for the new
-  // postcode is skipped as "already done".
-  databasePricingSync = { key: null, pending: false };
-  branchComparisonSync = { key: null, branches: new Set() };
-}
-
-let branchesSync = { key: null, loading: false };
-async function syncNearbyBranches() {
-  const zip = state.postnummer;
-  if (!/^\d{5}$/.test(zip) || branchesSync.key === zip) return;
-  // A fetch already in flight used to make this return outright, so a
-  // postcode typed while the previous one was loading was dropped and never
-  // retried - the old town's stores simply stayed on screen. Remember the
-  // pending postcode instead and pick it up when the current fetch settles.
-  if (branchesSync.loading) { branchesSync.pending = zip; return; }
-  branchesSync = { key: zip, loading: true, pending: null };
-  clearLocationDerivedState();
-  render();
-  try {
-    // Always revalidate. A store list served from the browser's own cache is
-    // how a user ends up looking at shops that are no longer near them (and
-    // how a chain we just started carrying stays invisible). The server's own
-    // cache still absorbs the cost - this only stops the CLIENT from holding
-    // a stale copy.
-    const response = await fetch(storesApiUrl(zip), { cache: "no-cache", signal: AbortSignal.timeout(20000) });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    if (state.postnummer !== zip) return;
-    state.branches = (data.butiker || []).map(store => ({ kedja: store.kedja, namn: store.namn, ort: store.ort || "", lat: store.lat, lon: store.lon, avstandKm: store.avstandKm, prisfaktor: 1, primatKey: store.primatKey || "",
-      // Nationella butiksmodellen: butikens eget id + hur kedjan prissätter
-      // (nationellt/per butik) + om den här butikens priser går att få.
-      externalStoreId: store.externalStoreId || "", pricingScope: store.pricingScope || "", prisbar: store.prisbar !== false }));
-    state.liveBranchTotals = {};
-    // Only auto-pick a week here when the user doesn't already have one (same
-    // guard as the startup call below) - this resolves on every single app
-    // open once real branch data replaces the FALLBACK_BRANCH estimate, and
-    // unconditionally regenerating would silently discard checked-off items,
-    // cached prices, and even reshuffle an already-chosen week on every visit.
-    if (!state.valda.size) chooseMenu(false); else render();
-  } catch {
-    // The network did not answer. The estimated fallback branch is shown
-    // until this can be retried - but the key is cleared so the next attempt
-    // is not skipped as "already fetched".
-    branchesSync.key = null;
-  }
-  finally {
-    branchesSync.loading = false;
-    const pending = branchesSync.pending;
-    if (pending && pending !== state.postnummer) branchesSync.pending = null;
-    if (pending) { branchesSync.pending = null; syncNearbyBranches(); }
-  }
-}
+// clearLocationDerivedState() och syncNearbyBranches() bor i
+// src/pricing/sync.js tillsammans med resten av prishämtningen - de delar
+// synkgrindarna med den, och butikshämtningen har samma omförsöksbehov som
+// prishämtningen (E13).
 // Vad veckan ska ta hänsyn till: enhetens egen kost OCH hushållets
 // allergier. Uppgifterna familjen fyller i ska påverka maten - annars är
 // formuläret ett löfte som aldrig hålls.
@@ -1157,31 +1111,34 @@ function updateNutritionWarning(nutritionShortfall, fick = null) {
   $("nutritionWarning").hidden = !text;
   if (text) $("nutritionWarning").textContent = text;
 }
-function cheapestBranch(chain = null) {
-  const branches = nearbyBranches().filter(branch => !chain || branch.kedja === chain);
-  const candidates = candidateRecipesForUser();
-  const scored = branches.map(branch => {
-    const recipes = bestMenuCombo(candidates, state.middagar, state.budget, branch);
-    const avstandKm = state.position ? distanceKm(state.position.lat, state.position.lon, branch.lat, branch.lon) : branch.avstandKm;
-    return { ...branch, avstandKm, recipes, total: shoppingListCost(recipes, branch) };
-  }).filter(result => result.recipes.length);
-  if (!scored.length) return null;
-  // Without Premium, every branch shares the same flat price estimate (no real
-  // per-chain data exists until live prices are fetched, which only happens after
-  // a week is chosen) - sorting that by "total" would just be an arbitrary tie,
-  // which is exactly how a wrong "X is cheapest" claim happens. Pick by distance
-  // instead and never claim it's the cheapest; real cross-store comparison lives
-  // in renderStoreComparison() using live data, gated to Premium.
-  if (!hasPremium()) return scored.sort((a, b) => a.avstandKm - b.avstandKm)[0];
-  // Premium auto-pick: the server's own comparison decides which CHAIN is
-  // cheapest (real prices, real coverage guards, see compare_chains); the
-  // nearest branch of that chain wins. The static estimates all share
-  // prisfaktor 1, so sorting by their "total" was an arbitrary tie - the
-  // very thing the "Billigast" guards exist to prevent.
-  const winnerChain = state.dbComparison?.cheapestChain;
-  const ofWinner = winnerChain ? scored.filter(branch => branch.kedja === winnerChain) : [];
-  const pool = ofWinner.length ? ofWinner : scored;
-  return pool.sort((a, b) => a.avstandKm - b.avstandKm)[0];
+// E9: BUTIKSVALET BYGGER INTE LÄNGRE EN VECKOPLAN PER BUTIK.
+//
+// cheapestBranch() körde en fullständig kombinationssökning för VARJE
+// närbutik - 30-40k kombinationer per filial, 300-400k med tio - plus en
+// shoppingListCost per resultat. Allt det arbetet slängdes: veckoplanen
+// användes till ett `total` ingen läste och till frågan "går det att bygga
+// en vecka alls?", som är samma svar för varje filial. Sorteringen som
+// faktiskt avgjorde vilken butik det blev var avståndet, i båda grenarna.
+//
+// Kvar här är bara att plocka ihop appens tillstånd till modulens indata.
+// Själva valet - och nyckeln som säger när det behöver göras om - bor i
+// src/services/branch-choice.js, där det går att prova utan webbläsare.
+function branchChoiceInput() {
+  return {
+    branches: nearbyBranches(),
+    // "auto" är inte en kedja utan frånvaron av ett kedjeval.
+    chain: state.butik === "auto" ? null : state.butik,
+    position: state.position,
+    distanceTo: branch => (state.position
+      ? distanceKm(state.position.lat, state.position.lon, branch.lat, branch.lon) : null),
+    premium: hasPremium(),
+    cheapestChain: state.dbComparison?.cheapestChain || null,
+    // Enda kvarvarande beroendet till receptbanken: utan recept finns ingen
+    // vecka att handla till, och då ingen butik att visa. Precis som förut,
+    // när noll kandidater tömde filiallistan.
+    hasMenu: canPlanWeek(candidateRecipesForUser().length, state.middagar),
+    pinned: state.pinnedBranch,
+  };
 }
 // A branch the user explicitly picked from the store comparison list (e.g.
 // "Coop Tullhuset" over the auto-picked "Coop Nian") overrides the normal
@@ -1197,8 +1154,11 @@ function pinnedBranchMatch() {
 }
 let branchCache = { key: null, value: null };
 function selectedBranch() {
-  const key = JSON.stringify([state.budget, state.middagar, state.butik, state.postnummer, state.position, RECEPT.length, state.apiRecipes.length, hasPremium(), state.naringsmal, state.pinnedBranch, state.branches.length]);
-  if (branchCache.key !== key) branchCache = { key, value: pinnedBranchMatch() || (state.butik === "auto" ? cheapestBranch() : cheapestBranch(state.butik)) };
+  // Nyckeln bärs av exakt det valet beror på, och state.budget är inte
+  // längre en av dem: budgetfältet kan därför inte trigga ett omval.
+  const input = branchChoiceInput();
+  const key = branchChoiceKey(input);
+  if (branchCache.key !== key) branchCache = { key, value: pinnedBranchMatch() || chooseBranch(input) };
   return branchCache.value;
 }
 function cheapestStore() {
@@ -1218,6 +1178,9 @@ function sanitizeApiPayload(payload) {
 const availableRecipes = () => candidateRecipesForUser();
 
 function chooseMenu(shouldScroll = true) {
+  // Ett nytt frö = en ny vecka. Utan det här anropet hade seedningen gjort
+  // "Skapa ny vecka" till en knapp som gav samma vecka varje gång.
+  newWeekSeed();
   const branch = selectedBranch();
   const { candidates, nutritionShortfall } = weekPlanCandidates();
   const combo = bestMenuCombo(candidates, state.middagar, state.budget, branch);
@@ -1259,403 +1222,18 @@ function renderRecipeTagFilters() {
     button.addEventListener("click", () => {
       const tag = button.dataset.recipeTag;
       state.receptTaggar.has(tag) ? state.receptTaggar.delete(tag) : state.receptTaggar.add(tag);
-      renderRecipes();
+      invalidate("recipes");
     }));
 }
 
-// True when the user is browsing rather than looking for something specific.
-// Shelves answer "what should we eat this week"; a flat list answers "show me
-// the quick vegetarian ones". Showing both at once would be noise.
-function recipeBrowsingMode() {
-  return !state.sokning.trim() && !state.receptTaggar.size && !state.maxTid
-    && !state.minProtein && !state.maxKcal && !state.baraFavoriter
-    && state.kategori === "alla";
-}
-
-async function syncRecipeShelves() {
-  if (state.hyllor.length) return;
-  state.hyllor = await loadShelves(12);
-  if (state.hyllor.length) renderRecipes();
-}
-
-function renderRecipeShelves() {
-  const container = $("recipeShelves");
-  if (!container) return;
-  if (!recipeBrowsingMode()) { container.innerHTML = ""; return; }
-  syncRecipeShelves();
-  container.innerHTML = state.hyllor.map(shelf => `
-    <section class="recipe-shelf">
-      <h2>${escapeHtml(shelf.title)}</h2>
-      <div class="recipe-shelf-row">${shelf.recipes.map(recipeShelfCard).join("")}</div>
-    </section>`).join("");
-  container.querySelectorAll("[data-shelf-recipe]").forEach(card =>
-    card.addEventListener("click", () => openRecipeTab(card.dataset.shelfRecipe)));
-}
-
-function recipeShelfCard(recipe) {
-  const time = recipe.tid ? `${recipe.tid} min` : "";
-  const kcal = recipe.kcal ? `${Math.round(recipe.kcal)} kcal` : "";
-  return `<button type="button" class="recipe-shelf-card" data-shelf-recipe="${escapeHtml(recipe.id)}">
-    <span class="recipe-shelf-photo">${recipePhoto(recipe)}</span>
-    <strong>${escapeHtml(recipe.namn)}</strong>
-    <small>${escapeHtml([time, kcal].filter(Boolean).join(" · "))}</small>
-  </button>`;
-}
-
-function renderRecipes() {
-  const search = state.sokning.trim();
-  const dietFilterActive = dietFilterIsActive();
-  const recipes = filterRecipes(search ? [...localRecipesForUser(), ...(dietFilterActive ? [] : state.apiRecipes)] : availableRecipes(), search).filter(recipe => (state.kategori === "alla" || recipe.typ === state.kategori)
-      && (!state.maxTid || recipe.tid <= state.maxTid)
-      && (!state.minProtein || (recipe.protein || 0) >= state.minProtein)
-      && (!state.maxKcal || (recipe.kcal || 0) <= state.maxKcal)
-      && matchesAllTags(recipe, [...state.receptTaggar])
-      && (!state.baraFavoriter || state.favoriter.has(recipe.id)));
-  const branch = selectedBranch();
-  // "Billigast" in a label is a claim; it is only made when the server's
-  // real comparison crowned this branch's chain. Otherwise the honest word
-  // is "närmast", which is how the branch was actually picked.
-  const autoIsWinner = hasPremium() && state.dbComparison?.cheapestChain
-    && branch?.kedja === state.dbComparison.cheapestChain;
-  const storeLabel = state.butik === "auto" ? `${branch?.namn || "ingen butik hittades"}${autoIsWinner ? " (billigast för din lista)" : " (närmast)"}` : state.butik === "alla" ? "alla butiker" : `${branch?.namn || state.butik}`;
-  const loading = !state.branches.length && branchesSync.loading;
-  // avstandKm can be null (e.g. a branch source that doesn't report distance,
-  // or no state.position yet to measure from) - .toFixed() on that used to
-  // throw and silently abort the rest of this render pass.
-  const distanceText = Number.isFinite(branch?.avstandKm) ? ` och ligger ${branch.avstandKm.toFixed(1)} km bort` : "";
-  $("locationHint").textContent = branch ? `${nearbyBranches().length} butiksprofiler jämförda${loading ? " (hämtar riktiga butiker nära dig...)" : ""} · ${branch.namn} ${autoIsWinner ? "är billigast för din lista just nu" : "ligger närmast"}${distanceText}.` : (state.postnummer ? `Hittade inga inlästa butiker nära ${state.postnummer} ännu.` : "Ange ditt postnummer så hittar vi butiker nära dig.");
-  $("menuSummary").textContent = search ? (dietFilterActive ? `${recipes.length} recept hittades. Externa recept visas inte när kost-/allergifilter är aktivt, eftersom de inte har kontrollerade allergiuppgifter.` : `${recipes.length} recept hittades. Externa recept kan vara på engelska och sakna svenska butikspriser.`) : `${plural(Math.min(state.middagar, recipes.length), "middag", "middagar")} för ${plural(state.personer, "person", "personer")} från ${storeLabel}. Priserna är uppskattningar.`;
-  renderRecipeTagFilters();
-  renderRecipeShelves();
-  // The flat list is hidden while browsing - the shelves ARE the list then.
-  const browsing = recipeBrowsingMode();
-  $("recipeScroll").hidden = browsing;
-  if (browsing) { $("menuSummary").textContent = ""; return; }
-  $("recipeScroll").innerHTML = recipes.length ? recipes.map(recipe => {
-    const selected = state.valda.has(recipe.id), expanded = state.expanded === recipe.id;
-    const details = detailsFor(recipe);
-    return `<article class="recipe-card ${selected ? "selected" : ""}">
-      <button class="recipe-details" data-details="${escapeHtml(recipe.id)}" aria-expanded="${expanded}">
-        <span class="recipe-photo-wrap">${recipePhoto(recipe)}<span class="saving">${recipe.sparar ? `Spara ca ${money(recipe.sparar)}` : "Från receptdatabas"}</span></span>
-        <span class="recipe-name">${escapeHtml(recipe.namn)}</span><span class="recipe-meta">${escapeHtml(recipe.tid)} min · ${escapeHtml(recipe.typ)}</span><span class="recipe-store">Billigast på ${escapeHtml(recipe.butik)}</span>
-        <span class="price-tag">${recipe.inkopspris ? `${money(scaledPurchasePrice(recipe))} i butik` : "Pris hämtas från butik"}</span><span class="portion-price">${recipe.portionspris ? `ca ${money(recipe.portionspris)} per portion` : "Ingredienser och instruktioner finns"}</span>
-        ${recipe.kcal ? `<span class="recipe-macros">${macroLine(recipe)}</span>` : ""}
-      </button>
-      ${expanded ? `<div class="ingredients"><p class="recipe-description">${escapeHtml(details.beskrivning || "En god vardagsrätt med enkla råvaror.")}</p><strong>Du behöver köpa</strong><p>${escapeHtml(recipe.ingredienser.join(", "))}</p><small>Hemma: ${escapeHtml(recipe.hemma.join(", "))}</small>${details.steg ? `<ol class="recipe-steps">${details.steg.map(step => `<li>${escapeHtml(step)}</li>`).join("")}</ol>` : ""}${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${escapeHtml(details.tips)}</p>` : ""}</div>` : ""}
-      <button class="favorite-btn ${state.favoriter.has(recipe.id) ? "is-favorite" : ""}" data-favorite="${escapeHtml(recipe.id)}" aria-label="${state.favoriter.has(recipe.id) ? "Ta bort favorit" : "Spara som favorit"}">${state.favoriter.has(recipe.id) ? "★" : "☆"}</button><button class="add-btn" data-add="${escapeHtml(recipe.id)}">${selected ? "✓ Tillagd" : "+ Lägg till"}</button>
-    </article>`;
-  }).join("") : `<p class="empty-state">Inga recept matchar din sökning eller butik ännu.</p>`;
-  document.querySelectorAll("[data-details]").forEach(btn => btn.addEventListener("click", () => openRecipeTab(btn.dataset.details)));
-  document.querySelectorAll("[data-add]").forEach(btn => btn.addEventListener("click", () => { const id = btn.dataset.add; state.valda.has(id) ? removeFromWeekPlan(id) : addToWeekPlan(id); saveState(); render(); }));
-  document.querySelectorAll("[data-favorite]").forEach(btn => btn.addEventListener("click", () => { const id = btn.dataset.favorite; state.favoriter.has(id) ? state.favoriter.delete(id) : state.favoriter.add(id); saveState(); renderRecipes(); }));
-}
-
-// U65: kom ihåg var i listan man var.
-//
-// Att öppna ett recept ska börja överst i receptet - men att gå TILLBAKA
-// ska lämna en där man stod. Förut gjorde tillbakavägen scrollTo(0, 0),
-// alltså nollställdes platsen med flit, och den som bläddrade i en lång
-// receptlista fick börja om efter varje titt. Filtren låg redan kvar i
-// state; det enda som tappades var raden man tittade på.
-let listScrollY = 0;
-// Webbläsaren återställer SIN ihågkomna position vid bakåtnavigering, och
-// den positionen är var man stod INNE i receptet. Den slogs mot appens egen
-// återställning och landade emellan - 1200 px före, 1472 px efter i test.
-// Med "manual" äger appen scrollen, vilket är enda sättet att göra löftet i
-// U65 sant.
-if ("scrollRestoration" in history) history.scrollRestoration = "manual";
-
-function openRecipeTab(id) {
-  listScrollY = window.scrollY;
-  history.pushState({ recept: id }, "", `${location.pathname}?recept=${encodeURIComponent(id)}`);
-  renderRecipePage();
-}
 const FAVORITE_ICON = '<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.5-9C.7 8.2 2.4 5 5.7 5c2 0 3.4 1.1 4.3 2.4C11 6.1 12.4 5 14.4 5c3.3 0 5 3.2 3.2 7-2.5 4.4-9.5 9-9.5 9Z"/></svg>';
 const PRICE_TAG_ICON = '<svg viewBox="0 0 24 24"><path d="M20 12 12.5 4.5a2 2 0 0 0-1.4-.5H5a1 1 0 0 0-1 1v6.1a2 2 0 0 0 .6 1.4L12 20"/><circle cx="8" cy="8" r="1.3"/></svg>';
-function formatMeasure(amount) {
-  if (amount == null) return "";
-  const whole = Math.floor(amount);
-  const fraction = Math.round((amount - whole) * 100) / 100;
-  const parts = { 0.25: "¼", 0.33: "⅓", 0.5: "½", 0.67: "⅔", 0.75: "¾" };
-  if (parts[fraction]) return whole ? `${whole} ${parts[fraction]}` : parts[fraction];
-  return Number.isInteger(amount) ? String(amount) : String(Math.round(amount * 10) / 10);
-}
 
-// Ingrediensmängderna skalas till HUSHÅLLET - receptbankens rader gäller
-// recipe.servings portioner, men veckan lagas för state.personer.
-function scaledIngredientRows(recipe) {
-  const structured = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
-  if (!structured.length) return null;
-  const scale = state.personer / (recipe.servings || 4);
-  const rows = { buy: [], home: [] };
-  structured.forEach(item => {
-    const target = item.pantryStaple ? rows.home : rows.buy;
-    const amount = item.amount != null && !item.pantryStaple ? formatMeasure(item.amount * scale) : "";
-    target.push({ amount, unit: item.pantryStaple ? "" : (item.unit || ""), name: item.name, optional: item.optional });
-  });
-  return rows;
-}
-
-async function renderRecipePage() {
-  const id = new URLSearchParams(location.search).get("recept");
-  if (!id) {
-    $("top").hidden = false;
-    $("recipePage").hidden = true;
-    // Efter renderingen, annars är sidan ännu för kort och scrollen klipps
-    // till noll. setView() scrollar också till toppen, så återställningen
-    // måste komma efter den - därför två bildrutor, inte en.
-    // MOMENTAN, inte mjuk. styles.css sätter html{scroll-behavior:smooth},
-    // så ett vanligt scrollTo blir en animation över ~300 ms - och en
-    // animation går att störa. Mätt: återställningen landade rätt på 1198 px
-    // och drogs sedan vidare till 1477 av något annat som hann emellan.
-    // Att komma tillbaka dit man var ska inte se ut som en resa.
-    const mål = listScrollY;
-    requestAnimationFrame(() => requestAnimationFrame(
-      () => window.scrollTo({ top: mål, left: 0, behavior: "instant" })));
-    return;
-  }
-  let allRecipes = [...RECEPT, ...state.apiRecipes];
-  // A card deliberately ships without steps and structured ingredients (the
-  // list payload stays small). The detail PAGE is the one place that needs
-  // everything, so fetch the full recipe once and merge it into the same
-  // object every list references.
-  const found = allRecipes.find(r => r.id === new URLSearchParams(location.search).get("recept"));
-  if (found && found.priceStatus !== "unavailable"
-      && (!Array.isArray(found.steg) || !found.steg.length)
-      && !recipeDetailFetches.has(found.id)) {
-    recipeDetailFetches.add(found.id);
-    loadRecipe(found.id).then(detail => {
-      // Samma regel som i ensureWeekRecipeDetails: null är ett definitivt
-      // "finns inte" och frågas aldrig om igen; ett kastat fel är okänt och
-      // släpper id:t fritt för nästa försök.
-      if (!detail) return;
-      Object.assign(found, detail, { steg: detail.instructions || detail.steg || [] });
-      renderRecipePage();
-    }).catch(() => recipeDetailFetches.delete(found.id));
-  }
-  let recipe = allRecipes.find(item => item.id === id);
-  if (!recipe && id.includes(":")) {
-    try { const response = await fetch(recipeDetailApiUrl(id)); if (response.ok) { const data = await response.json(); recipe = mapApiRecipe(data.recipe); state.apiRecipes.push(recipe); allRecipes = [...RECEPT, ...state.apiRecipes]; } } catch { /* The friendly not-found state below remains visible. */ }
-  }
-  if (!recipe) {
-    // A deep link (?recept=...) arrives BEFORE the recipe bank has loaded.
-    // Returning to Hem here made every shared recipe link land on the start
-    // page; show the page in a calm loading state instead - the bank's
-    // loadRecipes().then() re-runs this render the moment recipes exist.
-    $("top").hidden = true;
-    $("recipePage").hidden = false;
-    $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe"><div class="full-recipe-fallback">${recipePhoto({})}</div><h1>Hämtar receptet…</h1><p class="full-recipe-description">Ett ögonblick.</p></article>`;
-    $("recipePage").querySelector(".recipe-back").addEventListener("click", () => { history.pushState(null, "", location.pathname); renderRecipePage(); setView("recipes"); });
-    return;
-  }
-  const details = detailsFor(recipe);
-  $("top").hidden = true;
-  document.querySelectorAll(".bottom-nav-item").forEach(item =>
-    item.classList.toggle("active", item.dataset.view === "recipes")); /* bottennavigeringen följer med in på receptsidan - flikarna ska alltid
-     vara ett tryck bort */ $("recipePage").hidden = false;
-  const chips = [
-    recipe.tid ? `${recipe.tid} min` : null,
-    `${state.personer} portioner`,
-    recipe.difficulty || null,
-    recipe.priceStatus !== "unavailable" && recipe.portionspris ? `${money(recipe.portionspris)}/portion` : null,
-  ].filter(Boolean);
-  const ingredientRows = scaledIngredientRows(recipe);
-  const ingredientsMarkup = ingredientRows
-    ? `${ingredientRows.buy.map(row => `<div class="ing-row${row.optional ? " ing-optional" : ""}"><strong>${escapeHtml([row.amount, row.unit].filter(Boolean).join(" "))}</strong><span>${escapeHtml(row.name)}${row.optional ? " <em>(valfritt)</em>" : ""}</span></div>`).join("")}${ingredientRows.home.length ? `<p class="ing-home-label">Har du säkert hemma</p>${ingredientRows.home.map(row => `<div class="ing-row ing-home"><strong></strong><span>${escapeHtml(row.name)}</span></div>`).join("")}` : ""}`
-    : `${recipe.ingredienser.map(item => `<div class="ing-row"><strong></strong><span>${escapeHtml(item)}</span></div>`).join("")}`;
-  const stepsMarkup = (details.steg || []).map((step, index) => `<label class="step-row"><input type="checkbox" data-step-check="${index}"><span class="step-number">${index + 1}</span><span class="step-text">${escapeHtml(step)}</span></label>`).join("");
-  $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe">${recipe.bild ? `<img class="recipe-photo full-recipe-hero" src="${escapeHtml(safeHttpUrl(recipe.bild) || "")}" alt="${escapeHtml(recipe.namn)}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${escapeHtml(recipe.typ)}</p><h1>${escapeHtml(recipe.namn)}</h1><div class="recipe-chips">${chips.map(chip => `<span class="recipe-chip">${escapeHtml(chip)}</span>`).join("")}</div>${recipe.kcal ? `<p class="full-recipe-macros">${macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${escapeHtml(details.beskrivning || "En god svensk vardagsrätt.")}</p><div class="recipe-cta-row"><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${escapeHtml(recipe.id)}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button><button type="button" class="recipe-share-btn" data-recipe-share aria-label="Dela receptet">Dela</button></div><section class="recipe-block"><div class="ing-head"><h2>Ingredienser</h2><span>${state.personer} portioner</span></div>${ingredientsMarkup}</section><section class="recipe-block"><h2>Gör så här</h2><div class="steps">${stepsMarkup}</div></section>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${escapeHtml(details.tips)}</p>` : ""}<div class="recipe-block">${recipeRatingMarkup(recipe.id)}${feedbackMarkup(recipe.id)}</div></article>`;
-  $("recipePage").querySelector(".recipe-back").addEventListener("click", () => history.back());
-  // Avbockade steg medan man lagar - sparas lokalt per recept så ett
-  // vridet-bort-och-tillbaka på telefonen inte tappar var man var.
-  const stepKey = `matjakt-steps-${recipe.id}`;
-  let done = [];
-  try { done = JSON.parse(localStorage.getItem(stepKey) || "[]"); } catch { /* trasig lagring = börja om */ }
-  $("recipePage").querySelectorAll("[data-step-check]").forEach(box => {
-    const index = Number(box.dataset.stepCheck);
-    box.checked = done.includes(index);
-    box.closest(".step-row").classList.toggle("step-done", box.checked);
-    box.addEventListener("change", () => {
-      box.checked ? done.push(index) : (done = done.filter(x => x !== index));
-      box.closest(".step-row").classList.toggle("step-done", box.checked);
-      try { localStorage.setItem(stepKey, JSON.stringify(done)); } catch { /* full lagring - bocken lever ändå i DOM */ }
-    });
-  });
-  $("recipePage").querySelector("[data-recipe-share]")?.addEventListener("click", async () => {
-    const url = `https://matjakt.store/app/?recept=${encodeURIComponent(recipe.id)}`;
-    trackEvent("recept_delat");
-    // Web Share där det finns (mobilen), annars urklipp - båda vägarna
-    // slutar i samma delbara djuplänk.
-    if (navigator.share) {
-      try { await navigator.share({ title: recipe.namn, url }); } catch { /* avbruten delning är inget fel */ }
-    } else {
-      try { await navigator.clipboard.writeText(url); showUndoToast("Länk kopierad", () => {}); } catch { /* utan urklippsrättighet finns adressfältet */ }
-    }
-  });
-  $("recipePage").querySelector("[data-recipe-add]").addEventListener("click", event => { state.valda.has(recipe.id) ? removeFromWeekPlan(recipe.id) : addToWeekPlan(recipe.id); saveState(); render(); event.currentTarget.querySelector("span").textContent = state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"; });
-  wireRatingStars($("recipePage"), recipe.id);
-  wireFeedbackButtons($("recipePage"), recipe.id);
-  requestAnimationFrame(() => window.scrollTo(0, 0));
-  let touchStartX = 0; $("recipePage").ontouchstart = event => { touchStartX = event.changedTouches[0].screenX; }; $("recipePage").ontouchend = event => { const distance = event.changedTouches[0].screenX - touchStartX; if (Math.abs(distance) < 70) return; const ids = allRecipes.map(item => item.id), currentIndex = ids.indexOf(id), targetIndex = distance < 0 ? currentIndex + 1 : currentIndex - 1; if (targetIndex >= 0 && targetIndex < ids.length) openRecipeTab(ids[targetIndex]); else if (distance > 0) history.back(); };
-}
-
-function branchLiveTotal(shoppingItems, chainProducts) {
-  return calculateLiveShoppingTotal(shoppingItems, chainProducts, pantryForPricing());
-}
-// A branch's stable identity for state.liveBranchTotals - primatKey, not
-// chain name, since two branches of the same chain can genuinely have
-// different prices (member deals, local campaigns - see cache_scope's
-// docstring server-side). A branch with no primatKey (pure scrape fallback,
-// nothing concrete to target) has no branch-specific live price to key -
-// callers must check for that and leave it out rather than fetch it.
-function branchLiveKey(branch) { return branch.primatKey ? `${branch.kedja}#${branch.primatKey}` : null; }
-let branchComparisonSync = { key: null, branches: new Set() };
-async function syncBranchComparison(shoppingItems, branches) {
-  const names = shoppingItems.map(item => item.namn).sort();
-  const key = `${state.postnummer}|${names.join(",")}`;
-  if (branchComparisonSync.key !== key) { branchComparisonSync = { key, branches: new Set() }; state.liveBranchTotals = {}; }
-  if (!names.length) return;
-  // Filialpriser är Premium (servern nekar Free med 403) och pausas efter
-  // 429/403 - annars blev varje filial ett avvisat anrop till.
-  if (!hasPremium() || Date.now() < livePriceCooldownUntil) return;
-  // Every nearby branch gets its own live fetch, keyed by its own primatKey -
-  // this used to fetch once per CHAIN and let every branch of that chain
-  // show that single result as if it were each branch's own live price
-  // (found live 2026-08-30: four different Coop branches all showing an
-  // identical "20 kr LIVE"). primatOnly:true because a scrape genuinely
-  // can't answer "this specific branch" any differently from another branch
-  // of the same chain (only Primat's store_key can) - with up to a dozen
-  // nearby branches, this keeps every one of these calls on the fast
-  // Primat/cache path and never triggers Playwright.
-  const targets = branches.filter(branch => branch.primatKey && !branchComparisonSync.branches.has(branchLiveKey(branch)));
-  targets.forEach(branch => branchComparisonSync.branches.add(branchLiveKey(branch)));
-  // Each branch is fetched independently and in parallel - a slow/timed-out
-  // one must not delay the others from starting or completing.
-  await Promise.allSettled(targets.map(async branch => {
-    if (branchComparisonSync.key !== key) return;
-    try {
-      const produkter = await fetchProductsBatch(branch.kedja, state.postnummer, names, undefined, branch.primatKey, true);
-      if (branchComparisonSync.key !== key) return;
-      const matched = Object.values(produkter).filter(Boolean);
-      if (matched.length) { state.liveBranchTotals[branchLiveKey(branch)] = branchLiveTotal(shoppingItems, produkter); state.liveUpdatedAt = Date.now(); renderBasket(); }
-    } catch { /* den här filialen visar kvar den statiska uppskattningen om livehämtningen misslyckas */ }
-  }));
-}
-// =============================================================================
-// REAL CHECKOUT PRICES FROM MATJAKT'S OWN PRICE DATABASE
-// =============================================================================
-// This is the good source. Everything else on this screen is either a flat
-// static estimate or a best-effort text search of a store's site; this one
-// prices the week against products actually collected into grocery.db, with
-// real package maths (600 g of a 700 g pack costs a whole pack) and a
-// coverage figure saying how much of the list it could really price.
-//
-// It is keyed by CHAIN, not by branch, because that is what the data
-// honestly supports: Willys and Hemköp prices are verified national (the
-// same query with two different storeIds returns byte-identical responses).
-// Claiming a branch-specific number here would be inventing precision.
-let databasePricingSync = { key: null, pending: false };
-// Nya försök efter nätfel glesas ut (8 s, 16 s, ... max 2 min) och nollställs
-// vid lyckat svar: offline på tåget ska inte ge ett anrop var åttonde
-// sekund tills täckningen är tillbaka.
-const RETRY_BASE_MS = 8000;
-const RETRY_MAX_MS = 120_000;
-let pricingRetryCount = 0;
-let campaignRetryCount = 0;
-function retryDelay(count) { return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** count); }
-// The pricing request for the week's recipes: recipe IDS, not a client-built
-// item list. The server aggregates from its own recipe rows - the same rows
-// the recipe page shows - so the priced list can never drift from the
-// recipes. Legacy/offline recipes without a bank id fall back to item lines.
-function pricingHeaders() {
-  // The pricing endpoints decide Free vs Premium SERVER-SIDE - but only if
-  // they know who is asking. Without the token every user was anonymous,
-  // and a paying customer got the masked Free response.
-  const token = getStoredToken();
-  return { "Content-Type": "application/json",
-           ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-}
-function storeSelectionForPricing() {
-  // Användarens butiker till prissättningen: närmaste butik per kedja (listan
-  // är avståndssorterad från servern), pinnad butik vinner över närmaste.
-  // Servern gör resten ärligt: nationellt prissatta kedjor etiketteras med
-  // butiken, butiksspecifika prissätts BARA om just den butikens katalog
-  // finns - annars rapporteras kedjan som otillgänglig i stället för att en
-  // annan butiks priser visas under fel namn.
-  const selection = {};
-  for (const branch of nearbyBranches()) {
-    if (branch.externalStoreId && !selection[branch.kedja]) selection[branch.kedja] = branch.externalStoreId;
-  }
-  const pinned = state.pinnedBranch;
-  if (pinned?.externalStoreId && pinned.kedja) selection[pinned.kedja] = pinned.externalStoreId;
-  return selection;
-}
-
-function weekPricingBody(shoppingItems) {
-  const selected = plannedRecipes();
-  const bankRecipes = selected.filter(recipe => recipe.priceStatus !== "unavailable"
-    && (!Array.isArray(recipe.ingredients) || recipe.ingredients.length || recipe.slug));
-  const recipeIds = bankRecipes.map(recipe => recipe.id);
-  const body = { people: state.personer, pantry: pantryForServer() };
-  // Borttagna varor måste följa med: recipeIds-vägen aggregerar om veckan på
-  // servern, och utan denna lista skulle butiksjämförelsen fortsätta prissätta
-  // varor användaren tagit bort.
-  if (state.removedItems.size) body.excludeItems = [...state.removedItems].sort();
-  if (recipeIds.length) body.recipeIds = recipeIds;
-  else body.items = shoppingItems.map(item => ({ name: item.namn, amount: item.total, unit: item.unit }));
-  const stores = storeSelectionForPricing();
-  if (Object.keys(stores).length) body.stores = stores;
-  return body;
-}
-async function syncDatabasePricing(shoppingItems) {
-  const body = weekPricingBody(shoppingItems);
-  if (!body.recipeIds?.length && !body.items?.length) return;
-  // Planen ingår i nyckeln: servern maskar Free-svaret (låsta kedjor), och
-  // utan planen i nyckeln låg det maskade svaret kvar efter att Premium
-  // aktiverats tills veckan råkade ändras (sett i E2E efter checkout).
-  const key = `${hasPremium() ? "premium" : "free"}|${JSON.stringify(body)}`;
-  if (databasePricingSync.key === key || databasePricingSync.pending) return;
-  databasePricingSync = { key, pending: true };
-  try {
-    const response = await fetch(pricingWeekApiUrl(), {
-      method: "POST",
-      headers: pricingHeaders(),
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(20000),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    if (databasePricingSync.key !== key) return;
-    state.dbChainTotals = {};
-    state.dbLockedChains = [];
-    (data.results || []).forEach(result => {
-      // Free's masked view: locked chains carry name + status only. They go
-      // in their own list for the store cards; only full results may ever
-      // enter dbChainTotals, so nothing downstream can mistake a silhouette
-      // for a priced chain.
-      if (result.locked) state.dbLockedChains.push(result);
-      else state.dbChainTotals[result.chain] = result;
-    });
-    state.dbComparison = data.comparison || null;
-    state.dbPricedAt = Date.now();
-    pricingRetryCount = 0;
-    renderBasket();
-  } catch {
-    // The price database being unreachable must never break the week view.
-    // Nothing fake fills the gap - the views show "pris saknas", and this
-    // timestamp is how they know the fetch actually failed rather than
-    // simply not having finished yet.
-    state.dbPricingFailedAt = Date.now();
-    // A failure must not park the key forever: with the key left in place,
-    // every later render concluded "already fetched" and the header said
-    // "pris hämtas…" until a full reload. One deploy window was enough to
-    // strand every open phone. Clear the key and retry shortly.
-    databasePricingSync.key = null;
-    setTimeout(() => renderBasket(), retryDelay(pricingRetryCount++));
-  } finally {
-    databasePricingSync.pending = false;
-  }
-}
+// Prisdatabasen, filialjämförelsen och deras synkgrindar bor i
+// src/pricing/sync.js: syncBranchComparison, syncDatabasePricing,
+// pricingHeaders, storeSelectionForPricing och weekPricingBody importeras
+// därifrån. Omförsöken efter nätfel går genom modulens omförsöksgrind i
+// stället för en egen setTimeout-kedja per fel (E5).
 
 // The real product the price database picked for one shopping line at the
 // chain currently in use - the actual thing to put in the basket, with its
@@ -1698,39 +1276,7 @@ function databaseResultFor(branch) {
 // the current chain, or the item's own campaign price at its own chain,
 // or nothing. state.extraMatches[chain][id] = { unitPrice, productName,
 // imageUrl } - fetched from the same pricing API as everything else.
-let extraMatchSync = {};
-async function syncExtraMatches(chain) {
-  const extras = state.extraItems;
-  if (!extras.length || !chain || chain === "alla") return;
-  const key = `${chain}|${extras.map(e => e.id + ":" + e.name).sort().join(",")}`;
-  if (extraMatchSync[chain] === key) return;
-  extraMatchSync[chain] = key;
-  try {
-    const response = await fetch(pricingListApiUrl(), {
-      method: "POST",
-      headers: pricingHeaders(),
-      body: JSON.stringify({ chain, items: extras.map(e => ({ name: e.name, amount: 1, unit: "st" })) }),
-      signal: AbortSignal.timeout(20000),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    const byName = {};
-    (data.items || []).forEach(item => {
-      if (item.priceStatus !== "missing" && item.totalCost != null) byName[item.ingredient] = item;
-    });
-    state.extraMatches[chain] = {};
-    extras.forEach(extra => {
-      const hit = byName[extra.name];
-      if (hit) state.extraMatches[chain][extra.id] = {
-        unitPrice: hit.totalCost, productName: hit.productName, imageUrl: hit.imageUrl,
-        packageSize: hit.packageSize,
-      };
-    });
-    renderBasket();
-  } catch {
-    extraMatchSync[chain] = null; // försök igen nästa render
-  }
-}
+// Själva hämtningen (syncExtraMatches) bor i src/pricing/sync.js.
 
 function currentPricedChain() {
   const chain = chosenStore();
@@ -1776,7 +1322,7 @@ function addExtraItem(fields) {
   }
   const extra = newExtraItem(fields);
   state.extraItems = [...state.extraItems, extra];
-  state.extraMatches = {}; extraMatchSync = {};
+  state.extraMatches = {}; resetExtraMatchSync();
   saveState(); renderBasket();
   return extra;
 }
@@ -1918,8 +1464,8 @@ function hasUsablePrice(result) {
   return !(result.isLive && result.certain === 0);
 }
 
-// cheapestBranch() builds a NEW object ({...branch, avstandKm, recipes,
-// total}), so an identity check against a row's own branch never matched and
+// Butiksvalet returnerar ett NYTT objekt ({...branch, avstandKm}), så en
+// identitetskontroll mot en rads egen butik aldrig matchade och
 // every caller silently fell through to "the cheapest row" instead. That is
 // why the week view could show "Pris hos ICA Nära Stortorget" while the
 // shopping list below it listed Willys products. Compare on a stable
@@ -1973,14 +1519,14 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
   const updatedLabel = anyLive && state.liveUpdatedAt ? `<small class="store-compare-updated">Uppdaterad ${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}</small>` : "";
   if (!premium) {
     // Free tier never claims a store is "cheapest" - without live data for every
-    // chain that would just be a guess (see cheapestBranch()'s flat estimate),
+    // chain that would just be a guess (see shoppingListCost's flat estimate),
     // and showing it as fact is exactly the kind of mismatch users have reported.
     // Show only the price at the store actually in use, plainly labeled.
     const current = results.find(r => sameBranch(r.branch, selectedBranch())) || results[0];
     // A flat estimate is never printed as a store price. While the real
     // fetch is still under way the head says so; if it came back empty the
     // head says that instead. A made-up "ca 512 kr" says neither.
-    const stillFetching = databasePricingSync.pending || (!state.dbPricedAt && !state.dbPricingFailedAt);
+    const stillFetching = pricingIsPending() || (!state.dbPricedAt && !state.dbPricingFailedAt);
     const currentPriceText = current.source === "estimate"
       ? `<strong class="price-missing">${stillFetching ? "pris hämtas…" : "pris saknas just nu"}</strong>`
       : hasUsablePrice(current)
@@ -2102,7 +1648,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
   // a price. "Uppskattat pris Coop Nian - ca 578 kr" is the exact banner the
   // no-fabricated-totals rule exists to kill.
   const headIsEstimate = cheapest.source === "estimate";
-  const headFetching = headIsEstimate && (databasePricingSync.pending || (!state.dbPricedAt && !state.dbPricingFailedAt));
+  const headFetching = headIsEstimate && (pricingIsPending() || (!state.dbPricedAt && !state.dbPricingFailedAt));
   container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${comparisonIsReal && winner && winner.branch.kedja === cheapest.branch.kedja ? "Lägst pris" : "Pris hos"}</span><strong>${escapeHtml(cheapest.branch.namn)}${headIsEstimate ? ` · ${headFetching ? "pris hämtas…" : "pris saknas just nu"}` : ` · ca ${money(cheapest.cost)}`}</strong>${savingsAreReal ? (winner && winner.branch.kedja !== cheapest.branch.kedja
       ? `<small>Billigast: ${escapeHtml(winner.branch.namn)} ${money(winner.cost)} · du sparar ${money(savings)}</small>`
       : `<small>Du sparar ${money(savings)}${state.dbComparison?.priciestTotal ? ` · ${Math.round(100 * savings / state.dbComparison.priciestTotal)} % billigare än dyraste jämförbara butik` : ""}</small>`)
@@ -2979,7 +2525,7 @@ function updateWeekStoreStatus() {
   const shoppingItems = aggregateShopping(selected);
   const liveCount = shoppingItems.filter(item => state.livePriser[item.namn]).length;
   const chain = chosenStore();
-  const fetchingLive = livePriceSync.loading;
+  const fetchingLive = livePricesLoading();
   $("weekStoreStatus").textContent = fetchingLive ? `Hämtar priser hos ${chain}...` : VALID_CHAINS.includes(chain) ? (liveCount ? `Visar priser hos ${chain}` : `Uppskattat pris - hämtar priser hos ${chain}...`) : chain === "alla" ? "Visar uppskattade priser, jämfört mot alla butiker" : "Visar uppskattade priser";
   $("weekStoreStatus").classList.toggle("loading", fetchingLive);
 }
@@ -3034,9 +2580,11 @@ const VALID_CHAINS = RELEASED_CHAINS;
 //
 // Står EFTER VALID_CHAINS med flit: allt nedan som är en const (money,
 // plural, itemCategory, PANTRY_TAB_LABELS, VALID_CHAINS) måste vara
-// deklarerat innan det går att skicka vidare. Det som är `let` och byts ut
-// (databasePricingSync, livePriceSync, lastRealWeekTotal) skickas som
-// funktioner, aldrig som värden - annars fryses det första värdet fast.
+// deklarerat innan det går att skicka vidare. Det som byts ut under körningen
+// (prishämtningens synkgrindar, lastRealWeekTotal) skickas som funktioner,
+// aldrig som värden - annars fryses det första värdet fast. Grindarna bor
+// numera i src/pricing/sync.js och frågas via pricingIsPending och
+// livePricesLoading.
 // ---------------------------------------------------------------------------
 initShoppingView({
   $, money, plural,
@@ -3048,8 +2596,8 @@ initShoppingView({
   removedRowsForView, restoreRemovedRows,
   householdActive,
   chosenStore, currentPricedChain, headerPricedChain, validChains: VALID_CHAINS,
-  pricingPending: () => databasePricingSync.pending,
-  livePricesLoading: () => livePriceSync.loading,
+  pricingPending: pricingIsPending,
+  livePricesLoading,
   nearbyBranches, computeStoreResults, sameBranch, selectedBranch, hasUsablePrice,
   extrasTotalForChain, syncExtraMatches,
   ensureWeekRecipeDetails,
@@ -3078,103 +2626,9 @@ function renderWeekStoreTabs() {
   tabs.querySelectorAll("[data-week-store]").forEach(button =>
     button.classList.toggle("active", button.dataset.weekStore === state.butik));
 }
-// Matches the backend's MATJAKT_MAX_SCRAPES (production runs 2) - one item
-// per request, up to this many in flight at once via a small worker pool
-// below. One item per request (not several bundled into one) because a
-// single item's scrape can itself take close to the request timeout (Coop in
-// particular runs 18-25s even with nothing else competing for the backend's
-// CPU) - bundling several into one request used to make the whole request
-// fail together even when most of those items would have succeeded alone.
-// Sending more in flight than the backend can actually run concurrently
-// wouldn't help (they'd just queue there instead of here), and sending only
-// one at a time would leave the backend's second worker idle the whole sync.
-// Flera varor per anrop, ett anrop i taget. Varje anrop räknas mot
-// serverns skrapspärr (30/min per IP) - ett anrop per vara gjorde en
-// veckolista till tjugo anrop och produktionsloggen till en 429-storm.
-// Vid 429/403 pausas live-hämtningen en minut i stället för att loopa.
-// Skrapvägen tar fem varor per anrop så priserna landar löpande; den snabba
-// Primat-/cachevägen (primatOnly) tar serverns max (20) - en filial, ett anrop.
-const LIVE_PRICE_CHUNK = 5;
-const LIVE_PRICE_CHUNK_FAST = 20;
-const LIVE_PRICE_COOLDOWN_MS = 60_000;
-let livePriceCooldownUntil = 0;
-async function fetchProductsBatch(chain, zip, names, onItem, storeKey, primatOnly) {
-  const produkter = {};
-  const size = primatOnly ? LIVE_PRICE_CHUNK_FAST : LIVE_PRICE_CHUNK;
-  for (let start = 0; start < names.length; start += size) {
-    if (Date.now() < livePriceCooldownUntil) break;
-    const chunk = names.slice(start, start + size);
-    try {
-      const response = await fetch(productsBatchApiUrl(), {
-        method: "POST", headers: pricingHeaders(),
-        body: JSON.stringify({ butik: chain, zip, varor: chunk, ...(storeKey ? { butiksnyckel: storeKey } : {}), ...(primatOnly ? { primatOnly: true } : {}) }),
-        signal: AbortSignal.timeout(35000),
-      });
-      if (response.status === 429 || response.status === 403) {
-        livePriceCooldownUntil = Date.now() + LIVE_PRICE_COOLDOWN_MS;
-        break;
-      }
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const found = (await response.json()).produkter || {};
-      Object.assign(produkter, found);
-      onItem?.(found);
-    } catch { /* den här gruppen missade - nästa grupp hämtas ändå */ }
-  }
-  return produkter;
-}
-function mapLiveProducts(produkter) {
-  // pris_kr stays null when the backend genuinely has no confident price for
-  // a matched product (Primat has the item but no current price, or -
-  // filtered([, product]) => product) below keeps this - the entry is
-  // entirely absent (null) rather than a wrongly-forced 0. Every downstream
-  // reader (shoppingItemMarkup, weekShoppingRowMarkup, branchLiveTotal) must
-  // treat pris_kr === null as "Pris saknas", never as a spendable price.
-  return Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: product.pris_kr == null ? null : Number(product.pris_kr), produktnamn: String(product.produktnamn || namn), markeOchStorlek: String(product.marke_och_storlek || ""), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "", kalla: product.kalla || "", bildKalla: product.bild_kalla || "", kampanj: product.kampanj?.text ? { text: String(product.kampanj.text) } : null }]));
-}
-let livePriceSync = { key: null, loading: false };
-async function syncLivePrices(shoppingItems) {
-  const chain = chosenStore();
-  // A pinned branch only applies here once selectedBranch() actually
-  // resolved to it (i.e. its chain matches the chain being shopped) -
-  // otherwise this is a plain chain-level fetch, same as always.
-  const branch = selectedBranch();
-  const storeKey = branch?.kedja === chain ? branch.primatKey : "";
-  // ONLY the lines Matjakt's own price database could not answer. Everything
-  // it CAN answer is already on screen, from our own collected data, with no
-  // request to a chain at all.
-  //
-  // This is the line between the two halves of the system: collecting from
-  // the chains is slow background work, and using Matjakt must never wait on
-  // it. Before this, opening Handla fired a live per-item lookup for the
-  // whole week even when every single item was already priced from our
-  // database - a minute of requests to a chain, to arrive at prices we
-  // already had.
-  const priced = state.dbChainTotals[chain];
-  const answered = new Set((priced?.items || [])
-    .filter(item => item.priceStatus !== "missing")
-    .map(item => item.ingredient));
-  const names = shoppingItems.map(item => item.namn).filter(name => !answered.has(name)).sort();
-  const key = `${chain}|${storeKey}|${state.postnummer}|${names.join(",")}`;
-  // Free får aldrig live-priser: prisdatabasen svarar för den billigaste
-  // butiken, och servern nekar ändå (403). Cooldown efter 429/403.
-  if (!hasPremium()) return;
-  if (Date.now() < livePriceCooldownUntil) return;
-  if (!names.length || !VALID_CHAINS.includes(chain) || livePriceSync.loading || livePriceSync.key === key) return;
-  livePriceSync = { key, loading: true };
-  updateWeekStoreStatus();
-  try {
-    // Applied per item as it arrives (not once at the end) - a full week can
-    // take over a minute even when every item eventually succeeds, and
-    // showing prices land one by one is a much better wait than a blank
-    // "Hämtar..." the whole time.
-    await fetchProductsBatch(chain, state.postnummer, names, found => {
-      if (chosenStore() !== chain) return;
-      const mapped = mapLiveProducts(found);
-      if (Object.keys(mapped).length) { Object.assign(state.livePriser, mapped); state.liveUpdatedAt = Date.now(); renderBasket(); }
-    }, storeKey);
-  } catch { /* live-priser är ett tillägg ovanpå uppskattningen - misslyckas det visas bara uppskattningen kvar */ }
-  finally { livePriceSync.loading = false; updateWeekStoreStatus(); }
-}
+// fetchProductsBatch, mapLiveProducts och syncLivePrices - hämtningen av
+// livepriser hos den valda kedjan, med sin gruppstorlek och sin cooldown
+// efter 429/403 - bor i src/pricing/sync.js.
 // The chosen week's recipes need their STRUCTURED ingredients (a card
 // deliberately ships without them) before the shopping list can render its
 // lines. Fetched once per recipe, in the background; each arrival re-renders.
@@ -3408,6 +2862,38 @@ function flushRender() {
 // "Allt är inaktuellt". Varje anropsplats som inte vet bättre beter sig
 // exakt som förut - bara samlad till en bildruta i stället för direkt.
 function render() { invalidate("account", "recipes", "basket"); }
+// Receptvyn (F4) ritar banan "recipes". Den känner inte app.js - allt den
+// behöver av butiker, priser, premium och navigering skickas in här, en
+// gång. Raden står EFTER render-bussen med flit: recipeDetailFetches och
+// formatterarna ovan måste vara deklarerade när objektet byggs.
+initRecipesView({
+  recipeBank: RECEPT,
+  recipeDetailFetches,
+  invalidate,
+  render,
+  money,
+  plural,
+  macroLine,
+  detailsFor,
+  availableRecipes,
+  localRecipesForUser,
+  dietFilterIsActive,
+  selectedBranch,
+  nearbyBranches,
+  // branchesSync bor i src/pricing/sync.js sedan F1 - receptvyn frågar
+  // modulen i stället för en modulvariabel som inte längre finns här.
+  branchesLoading,
+  hasPremium,
+  scaledPurchasePrice,
+  renderRecipeTagFilters,
+  recipeRatingMarkup,
+  feedbackMarkup,
+  wireRatingStars,
+  wireFeedbackButtons,
+  trackEvent,
+  showUndoToast,
+  setView,
+});
 function step(key, delta, min, max) { state[key] = Math.min(max, Math.max(min, state[key] + delta)); $(`${key === "personer" ? "people" : "meals"}Value`).textContent = state[key]; saveState(); render(); }
 const DISLIKE_SUGGESTIONS = ["Lök", "Svamp", "Fisk", "Skaldjur", "Nötter", "Inälvsmat", "Stark mat", "Kokosmjölk"];
 function renderDislikeChips() {
@@ -3445,7 +2931,16 @@ function syncSettingsInputs() {
   if (autoOption) autoOption.textContent = hasPremium() ? "Billigast automatiskt" : "Närmast automatiskt (Premium: billigast)";
 }
 syncSettingsInputs();
-$("budgetInput").addEventListener("input", e => { state.budget = clampBudget(e.target.value); saveState(); updateSummary(); renderBasket(); });
+// E9: budgetfältets lyssnare körde hela omräkningen vid VARJE tangenttryck -
+// och innan butiksvalet gjordes om bar cache-nyckeln state.budget, så varje
+// tecken drog igång en kombinationssökning per närbutik. Talet syns direkt i
+// fältet; det är bara räkningen som väntar 250 ms på att skrivandet ska ta
+// slut. Lämnas fältet (change fyras vid blur, alltså före varje knapptryck
+// någon annanstans) gäller det sista värdet omedelbart.
+const applyBudget = value => { state.budget = clampBudget(value); saveState(); updateSummary(); renderBasket(); };
+const budgetTyped = debounce(applyBudget, 250);
+$("budgetInput").addEventListener("input", e => budgetTyped(e.target.value));
+$("budgetInput").addEventListener("change", e => budgetTyped.flush(e.target.value));
 const debouncedGeocode = createDebouncedSearch((zip, signal) => fetch(geocodeApiUrl(zip), { signal }).then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }), 400);
 $("changePasswordForm")?.addEventListener("submit", async event => {
   event.preventDefault();
@@ -4247,6 +3742,9 @@ async function syncPlanPricing(plans) {
   }));
 }
 function openPlanComparison() {
+  // Samma tillfälle, ett frö: de sju veckotyperna nedan drar ur samma ström
+  // och korten går därför att räkna fram igen exakt som de visades.
+  newWeekSeed();
   const branch = selectedBranch();
   const { candidates, nutritionShortfall } = weekPlanCandidates();
   updateNutritionWarning(nutritionShortfall);
@@ -4537,11 +4035,19 @@ async function refreshUser() {
   if (hasPremium() && hasActiveNutritionGoals(currentNutritionGoals()) && !state.valda.size) chooseMenu(false);
   renderCampaignSection();
 }
-let ownCampaignFetchKey = null;
+// Hämtad, pågående eller avvaktande. Det var en sträng ("done") som nollades
+// vid fel, och eftersom render-bussen körs vid varje interaktion sköt nästa
+// rendering iväg ett nytt /grocery/campaigns-anrop - ett per knapptryck,
+// ovanpå en exponentiell omförsökskedja som aldrig avbröts (E5). Grinden
+// nedan håller takten i stället: ETT försök per backoff-period, EN väntande
+// timer.
+let ownCampaignFetch = { done: false, inFlight: false };
+const ownCampaignsRetry = createRetryGate(() => renderOwnCampaigns());
 let ownCampaignDeals = [];
 async function renderOwnCampaigns() {
-  if (ownCampaignFetchKey === "done") return;
-  ownCampaignFetchKey = "done";
+  if (ownCampaignFetch.done || ownCampaignFetch.inFlight) return;
+  if (!ownCampaignsRetry.ready()) return;
+  ownCampaignFetch.inFlight = true;
   // Ett lugnt laddläge - utan det står rubriken över en tom rad i upp till
   // 15 sekunder innan hämtningen svarar.
   $("campaignList").innerHTML = `<p class="live-loading">Hämtar veckans fynd…</p>`;
@@ -4549,7 +4055,8 @@ async function renderOwnCampaigns() {
     const response = await fetch(`${API_BASE_URL}/grocery/campaigns`, { signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    campaignRetryCount = 0;
+    ownCampaignFetch.done = true;
+    ownCampaignsRetry.succeeded();
     const all = Object.values(data.deals || {}).flat()
       .sort((a, b) => b.discountPercent - a.discountPercent);
     if (!all.length) { $("campaignList").innerHTML = `<p class="live-loading">Inga kampanjer i butikernas data just nu.</p>`; return; }
@@ -4588,10 +4095,13 @@ async function renderOwnCampaigns() {
       button.textContent = "✓ Tillagd"; button.disabled = true; button.classList.add("added");
     }));
   } catch {
-    ownCampaignFetchKey = null;
     $("campaignList").innerHTML = `<p class="live-loading">Kunde inte hämta erbjudanden just nu - försöker igen strax.</p>`;
     // Utan egen omstart låg felet kvar tills någon annan render råkade ske.
-    setTimeout(() => renderOwnCampaigns(), retryDelay(campaignRetryCount++));
+    // Grinden avbryter den förra väntande timern innan den sätter en ny, så
+    // tio fel ger tio försök i följd - inte tio parallella kedjor.
+    ownCampaignsRetry.failed();
+  } finally {
+    ownCampaignFetch.inFlight = false;
   }
 }
 

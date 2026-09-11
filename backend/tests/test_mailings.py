@@ -2,6 +2,7 @@
 """Utskicken (services/mailings): samtycke, verifiering, en gång, aldrig
 tomt, av tills vidare - och avprenumerationslänken."""
 
+import html as html_lib
 import tempfile
 import re
 import unittest
@@ -9,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from services.accounts import AccountStore
+from services.email import mailer
 from services import mailings
 
 RELEASED = ("Willys", "Hemköp", "City Gross")
@@ -104,9 +106,13 @@ class MailingsTest(unittest.TestCase):
         # tre: dag 3-fönstret. sju: bara dag 7 (dag 3-fönstret är passerat -
         # ingen får "tre dagar"-mejlet nio dagar in). gammal och ny: inget.
         self.assertEqual(first["skickat"], {"welcome_3": 1, "welcome_7": 1})
-        subjects = sorted(m["subject"] for m in self.sender.sent)
-        self.assertEqual(subjects.count("Tre dagar med Matjakt: tre saker som sparar mest"), 1)
-        self.assertEqual(subjects.count("En vecka med Matjakt"), 1)
+        subjects = [m["subject"] for m in self.sender.sent]
+        # Ämnesraden är en av mallens A/B-varianter - vilken avgörs av
+        # kontots id, inte av slumpen. Exakt vilken är inte det här testets
+        # sak; att det är ETT mejl per steg ur RÄTT mall är det.
+        for step in ("welcome_3", "welcome_7"):
+            variants = mailings.subject_variants(step)
+            self.assertEqual(sum(1 for s in subjects if s in variants), 1, step)
         # Samma dag igen, och nästa dag: inget dubbleras.
         again = self.scheduler.run_due(monday)
         self.assertEqual(again["skickat"], {"welcome_3": 0, "welcome_7": 0})
@@ -141,9 +147,12 @@ class MailingsTest(unittest.TestCase):
         self.assertEqual(summary["skickat"]["kampanjtorget"], 3)
         self.assertEqual(self.deals_calls, 1, "fynden hämtas en gång per körning, inte per mottagare")
         by_to = {m["to"]: m for m in self.sender.sent}
-        self.assertIn("bästa fynden hos Willys", by_to["willys@example.com"]["subject"])
+        # Ämnesraden bär fyndet, inte kedjeregistret: bästa rabatten över de
+        # kedjor personen får är Kycklingfilé (-33 %) hos Willys i båda fallen.
+        for mail in (by_to["willys@example.com"], by_to["alla@example.com"]):
+            self.assertEqual(mail["subject"], "Veckans bästa fynd: Kycklingfilé för 79,90 kr hos Willys")
         self.assertNotIn("Hemköp", by_to["willys@example.com"]["text"])
-        self.assertIn("Willys och Hemköp", by_to["alla@example.com"]["subject"])
+        self.assertNotIn("Willys och Hemköp", by_to["alla@example.com"]["subject"])
         self.assertIn("Vispgrädde 5 dl, Arla: 19,90 kr (ord. 27,90 kr, -29 %)", by_to["alla@example.com"]["text"])
         self.assertIn("Lägsta vi sett", by_to["willys@example.com"]["text"])
         self.assertNotIn("Lägsta vi sett", by_to["alla@example.com"]["html"].split("Vispgr")[1][:200])
@@ -200,6 +209,36 @@ class MailingsTest(unittest.TestCase):
         self.assertEqual(status["mottagare"], {"tackatJa": 2, "tackatJaOchVerifierade": 1})
         self.scheduler.enabled = False
         self.assertIn("MATJAKT_MAILINGS_ENABLED", self.scheduler.status()["blockerat"])
+
+    # ---- elva mallar, tre utskick ----
+    def test_the_eight_new_templates_do_not_widen_what_actually_goes_out(self):
+        """Att skriva en mall är inte att börja skicka den.
+
+        KINDS växte från tre till elva. Utskicksreglerna gjorde det inte:
+        schemaläggaren rör bara SCHEDULED_KINDS, och en mall utan
+        mottagarregel vägrar svara på frågan "vem ska ha det här?" i stället
+        för att gissa fram en mottagarkrets."""
+        self.assertEqual(len(mailings.KINDS), 11)
+        self.assertEqual(mailings.SCHEDULED_KINDS, ("welcome_3", "welcome_7", "kampanjtorget"))
+        self._user("alla@example.com", days_ago=3, butik="Willys")
+        summary = self.scheduler.run_due(self._thursday())
+        self.assertEqual(set(summary["skickat"]), set(mailings.SCHEDULED_KINDS))
+        for kind in mailings.KINDS:
+            if kind in mailings.SCHEDULED_KINDS:
+                continue
+            with self.assertRaises(ValueError, msg=kind):
+                self.store.recipients(kind, self._thursday().date())
+
+    def test_every_template_can_be_rendered_without_sending_anything(self):
+        """Ett mejl man inte har tittat på är inte klart - och det gäller
+        även de åtta som väntar på data. Exempelvärdena är påhittade."""
+        self.scheduler.enabled = False
+        for kind in mailings.KINDS:
+            subject, text, html = self.scheduler.render(kind, self._thursday())
+            self.assertTrue(subject.strip(), kind)
+            self.assertTrue(text.strip(), kind)
+            self.assertIn("<!doctype html>", html, kind)
+            self.assertEqual(self.sender.sent, [], "render skickar aldrig")
 
 
 if __name__ == "__main__":
@@ -278,3 +317,217 @@ class KampanjtorgetBilderTest(unittest.TestCase):
         self.assertNotIn('alt="Kaffe Mellanrost 450 g"', html)
         # Namnet finns kvar som text - det är det som bär budskapet.
         self.assertIn("Kaffe Mellanrost 450 g", re.sub(r"<img[^>]*>", "", html))
+
+
+class MallarnasFormTest(unittest.TestCase):
+    """I4: formen på mejlen, prövad mall för mall.
+
+    Acceptanskriteriet för paketet är det här testet, inte en åsikt om att
+    mejlen "känns bättre". Fyra saker ska gälla för ALLA elva mallarna, och
+    en femte bara för Kampanjtorget:
+
+      1. en dold preheader först - annars skriver inkorgen sin egen
+      2. CTA som <table>-knapp, minst 44 px, aldrig en textlänk i brödtexten
+      3. samma copy i text- och HTML-utgåvan
+      4. avsändare Matjakt <hej@matjakt.store>, Reply-To support@matjakt.store
+      5. Kampanjtorgets ämnesrad bär fyndets NAMN och PRIS
+    """
+
+    APP = "https://matjakt.store/app"
+    UNSUB = "https://api.example/api/mail/unsubscribe?u=1&t=abc"
+    # TESTDATA. Aldrig riktiga kunduppgifter - repot är publikt.
+    DEALS = {
+        "Willys": [{"name": "Kycklingfilé", "brand": "Kronfågel", "size": "900 g",
+                    "campaignPrice": 79.9, "regularPrice": 119.0, "discountPercent": 33,
+                    "lowestSeen": 79.9},
+                   {"name": "Krossade tomater", "brand": "Mutti", "size": "400 g",
+                    "campaignPrice": 9.9, "regularPrice": 14.9, "discountPercent": 34,
+                    "lowestSeen": None}],
+        "Hemköp": [{"name": "GB Glass Daim", "brand": "GB", "size": "4-pack",
+                    "campaignPrice": 29.0, "regularPrice": 59.0, "discountPercent": 51,
+                    "lowestSeen": 29.0}],
+    }
+    RECIPES = [
+        {"name": "Kycklinggryta med paprika", "ingredients": ["kycklingfilé", "paprika", "ris"]},
+        {"name": "Pasta med tomatsås", "ingredients": ["krossade tomater", "pasta", "vitlök"]},
+        {"name": "Pannkakor", "ingredients": ["mjöl", "ägg", "mjölk"]},
+    ]
+
+    def _render(self, kind, variant=0):
+        return mailings.render_preview(kind, self.APP, self.UNSUB, deals=self.DEALS,
+                                       week=37, recipes=self.RECIPES, variant=variant)
+
+    # ---- 1. preheadern ----
+    def test_every_template_opens_with_a_hidden_preheader(self):
+        """Preheadern är den tredje raden inkorgen visar. Utan den plockar
+        Gmail den första synliga texten - som här var ordmärket MATJAKT
+        följt av rubriken en gång till."""
+        for kind in mailings.KINDS:
+            _, _, html = self._render(kind)
+            head = html.split("<body", 1)[1]
+            first = head.split("<div", 1)[1].split("</div>", 1)[0]
+            self.assertIn("display:none", first, kind)
+            self.assertIn("mso-hide:all", first, kind)
+            # Preheadern ligger FÖRE ordmärket, annars läser klienten fel rad.
+            self.assertLess(head.index("display:none"), head.index("MATJAKT"), kind)
+            # Och det är mallens egen preheadertext som står där.
+            stomme = re.sub(r"\{[^}]*\}", "", mailings.TEMPLATES[kind]["preheader"])
+            self.assertIn(html_lib.escape(stomme.split("{")[0].strip()[:40]), first, kind)
+
+    # ---- 2. knappen ----
+    def _buttons(self, html):
+        return re.findall(r'<table role="presentation".*?</table>', html, re.S)
+
+    def test_every_cta_is_a_table_button_of_at_least_44_pixels(self):
+        """En <div> med padding är ingen knapp i Outlook - Word-motorn
+        ignorerar både padding och border-radius, och kvar blir den
+        understrukna textrad vi försökte komma bort ifrån. Höjden mäts där
+        den faktiskt uppstår: 13 + 18 + 13 = 44."""
+        for kind in mailings.KINDS:
+            _, _, html = self._render(kind)
+            buttons = self._buttons(html)
+            self.assertTrue(buttons, f"{kind} saknar knapp")
+            for button in buttons:
+                self.assertRegex(button, r'<td[^>]*height="(\d+)"', kind)
+                self.assertGreaterEqual(int(re.search(r'<td[^>]*height="(\d+)"', button).group(1)), 44, kind)
+                padding = int(re.search(r"padding:(\d+)px", button).group(1))
+                line = int(re.search(r"line-height:(\d+)px", button).group(1))
+                self.assertGreaterEqual(2 * padding + line, 44, f"{kind}: knappen är för låg")
+                self.assertIn("text-decoration:none", button, kind)
+
+    def test_the_body_has_no_naked_cta_link_left_in_it(self):
+        """Knappen ersätter textlänken, den kompletterar den inte. Enda
+        länkarna utanför knapparna får vara fotens."""
+        for kind in mailings.KINDS:
+            _, _, html = self._render(kind)
+            body = html.split("<hr")[0]
+            for button in self._buttons(body):
+                body = body.replace(button, "")
+            self.assertNotIn("<a ", body, f"{kind} har kvar en textlänk i brödtexten")
+
+    def test_the_button_target_is_repeated_in_the_text_version(self):
+        """Den som läser utan HTML ska kunna göra samma sak. Knapptexten och
+        adressen står därför i klartext sist i textutgåvan."""
+        for kind in mailings.KINDS:
+            _, text, _ = self._render(kind)
+            label = mailings.TEMPLATES[kind]["button"].split("{")[0].strip()
+            self.assertIn(label, text, kind)
+            self.assertIn("https://", text, kind)
+
+    # ---- 3. copyn ----
+    def test_the_copy_is_the_one_from_bilaga_1(self):
+        """Stickprov, en rad ur varje mall. Bilagan är skriven, inte
+        utkastad - en omskrivning här är en regression."""
+        prov = {
+            "verify": "Roligt att du är här.",
+            "welcome_3": "Ta två minuter i kväll. Nästa vecka går det på trettio sekunder.",
+            "welcome_7": "Har du redan en vecka igång? Då är du längre än de flesta.",
+            "kampanjtorget": "Trycker du in ett fynd i veckan byter Matjakt ut en rätt",
+            "veckoplan": "Gillar du inte torsdagen byter du den.",
+            "manadsrapport": "Siffran är en uppskattning",
+            "vinn_tillbaka": "Allt ditt står kvar: budgeten, skafferiet",
+            "overgiven_vecka": "sorterad efter hyllorna, inte efter recepten",
+            "premium_uppgradering": "Sju middagar i stället för fem.",
+            "hushallsinbjudan": "Ingen köper mjölk två gånger.",
+            "dunning": "Det är oftast ett kort som gått ut, inget mer.",
+        }
+        self.assertEqual(set(prov), set(mailings.KINDS))
+        for kind, rad in prov.items():
+            _, text, html = self._render(kind)
+            self.assertIn(rad, text, kind)
+            self.assertIn(html_lib.escape(rad), html, kind)
+
+    def test_every_ab_variant_from_bilaga_1_is_reachable_and_stable(self):
+        """A/B betyder att varianten är vald, inte slumpad: samma konto får
+        samma rad vid ett omtag, annars mäter man sin egen slump."""
+        for kind in mailings.KINDS:
+            variants = mailings.subject_variants(kind, {
+                "vara": "x", "pris": "1 kr", "kedja": "y", "procent": 1, "v": 37, "n": 2,
+                "belopp": 1, "månad": "maj", "namn": "A", "antal": 1, "hushåll": "H"})
+            self.assertTrue(all(v.strip() for v in variants), kind)
+            for user_id in range(1, 60):
+                index = mailings.variant_for(kind, user_id)
+                self.assertEqual(index, mailings.variant_for(kind, user_id), kind)
+                self.assertLess(index, len(variants))
+        # Över ett rimligt antal konton används alla armar, inte bara den första.
+        arms = {mailings.variant_for("welcome_3", i) for i in range(1, 200)}
+        self.assertEqual(arms, {0, 1, 2})
+
+    # ---- 4. avsändaren ----
+    def test_the_sender_is_matjakt_and_replies_go_to_support(self):
+        """Ett svar på ett utskick ska landa i en läst brevlåda. hej@ skickar,
+        support@ tar emot - och From-huvudet har ett namn, inte bara en
+        adress, för det är namnet inkorgen visar."""
+        _, message = mailer.build_message({"from_email": mailer.SENDER_EMAIL},
+                                          "mottagare@example.com", "Ämne", "text")
+        self.assertEqual(message["From"], "Matjakt <hej@matjakt.store>")
+        self.assertEqual(message["Reply-To"], "support@matjakt.store")
+        self.assertNotEqual(message["From"], message["Reply-To"])
+        # Ett eget visningsnamn i konfigurationen vinner; en naken adress får
+        # Matjakt som namn i stället för att visas som "hej@matjakt.store".
+        _, named = mailer.build_message({"from_email": "Matjakt Drift <drift@matjakt.store>"},
+                                        "m@example.com", "Ä", "t")
+        self.assertEqual(named["From"], "Matjakt Drift <drift@matjakt.store>")
+        # Marknadsföring bär List-Unsubscribe; ett kvitto gör det inte.
+        _, marknad = mailer.build_message({"from_email": mailer.SENDER_EMAIL}, "m@example.com",
+                                          "Ä", "t", "<p>t</p>", self.UNSUB)
+        self.assertEqual(marknad["List-Unsubscribe"], f"<{self.UNSUB}>")
+        self.assertEqual(marknad["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click")
+        self.assertIsNone(message["List-Unsubscribe"])
+
+    def test_transactional_mail_has_no_unsubscribe_link_and_marketing_always_has_one(self):
+        """Det går inte att avsäga sig ett kvitto. En avsluta-knapp som inte
+        betyder något lär mottagaren att våra knappar inte betyder något."""
+        for kind in mailings.KINDS:
+            _, text, html = self._render(kind)
+            if mailings.TEMPLATES[kind].get("transactional"):
+                self.assertNotIn("Avsluta utskicken", html, kind)
+                self.assertIn("support@matjakt.store", text, kind)
+            else:
+                self.assertIn("Avsluta utskicken", html, kind)
+                self.assertIn(html_lib.escape(self.UNSUB), html, kind)
+
+    # ---- 5. Kampanjtorgets ämnesrad ----
+    def test_the_kampanjtorget_subject_carries_the_best_deals_name_and_price(self):
+        """"bästa fynden hos Willys, Hemköp och City Gross" säger VAR något
+        finns. "Kycklingfilé för 79,90 kr" säger VAD. Det senare öppnas.
+
+        Regeln gäller varje ämnesrad mallen kan skicka, inte bara den första
+        - därför roteras inte Kampanjtorgets A/B-varianter (två av bilagans
+        tre bär varken vara eller pris)."""
+        subject, _, _ = self._render("kampanjtorget")
+        self.assertEqual(subject, "Veckans bästa fynd: GB Glass Daim för 29,00 kr hos Hemköp")
+        for user_id in range(1, 80):
+            self.assertEqual(mailings.variant_for("kampanjtorget", user_id), 0)
+        for index in range(len(mailings.TEMPLATES["kampanjtorget"]["subjects"])):
+            if index and mailings.TEMPLATES["kampanjtorget"].get("ab", True):
+                skickad, _, _ = self._render("kampanjtorget", variant=index)
+                self.assertIn("GB Glass Daim", skickad)
+                self.assertIn("29,00 kr", skickad)
+        # Och kedjeregistret är borta ur ämnesraden.
+        self.assertNotIn("Willys och Hemköp", subject)
+
+    # ---- låt fynden välja menyn ----
+    def test_the_deals_pick_the_menu_and_skip_what_no_recipe_can_use(self):
+        """Det omvända greppet mättes och höll inte: 19 av 240 recept berörs
+        av en normal kampanjvecka, så "så många av veckans fynd finns i DIN
+        plan" blir noll sju gånger av tio. Den här riktningen utgår från
+        fynden i stället, och glassen - som vinner rabattävlingen varje vecka
+        - faller bort av sig själv eftersom inget recept använder den."""
+        menu = mailings.deals_menu(self.DEALS, self.RECIPES)
+        self.assertEqual([post["recipe"] for post in menu],
+                         ["Pasta med tomatsås", "Kycklinggryta med paprika"])
+        self.assertNotIn("GB Glass Daim", [post["deal"]["name"] for post in menu])
+        # Ett recept hamnar på menyn en gång, oavsett hur många fynd det matchar.
+        self.assertEqual(len({post["recipe"] for post in menu}), len(menu))
+        _, text, html = self._render("kampanjtorget")
+        self.assertIn("TVÅ MIDDAGAR BYGGDA PÅ VECKANS REOR", text)   # versal som hero-etiketten
+        self.assertIn("Två middagar byggda på veckans reor", html)
+        self.assertIn("Pasta med tomatsås", text)
+        # Utan receptbank ser mejlet ut som förut - menyn är en bonus, inte
+        # ett krav, och ett fynd utan rätt tystar inte hela utskicket.
+        utan = mailings.render_kampanjtorget(self.DEALS, list(self.DEALS), self.APP,
+                                             self.UNSUB, 37)[2]
+        self.assertNotIn("byggda på veckans reor", utan)
+        self.assertEqual(mailings.deals_menu({}, self.RECIPES), [])
+        self.assertEqual(mailings.deals_menu(self.DEALS, []), [])

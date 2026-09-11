@@ -31,7 +31,19 @@ class GroceryProvider(ABC):
         provider can reach in one collector run. store_id is this chain's
         OWN store identifier (Store.external_store_id), not GroceryStore's
         internal database id - a provider never needs to know about the
-        shared database at all."""
+        shared database at all.
+
+        VALFRITT: `on_products`. En provider som kan lämna ifrån sig
+        produkter medan den samlar in dem tar emot en callback och anropar
+        den med en batch i taget; returvärdet är då det som ÄNNU INTE
+        lämnats vidare, alltså normalt en tom lista. Importern läser
+        signaturen (`importer.streams_products`), så en provider utan
+        parametern anropas precis som förut och behöver inte ändras.
+
+        Skälet är minne, inte elegans: hela katalogen i en lista är ~8 700
+        RawProduct för City Gross och en full Maxi-katalog för Primat, på en
+        512 MB-instans som samtidigt kör Chromium. Se
+        services/grocery/streaming.py."""
 
     @abstractmethod
     def get_product_details(self, product_id: str, store_id: str) -> RawProduct | None:

@@ -1018,14 +1018,17 @@ class ApiServerHttpTest(unittest.TestCase):
         finally:
             conn.close()
 
+    # J1: "Laga med det jag har" säljs som full_pantry och kontrolleras numera
+    # på servern, så vägen måste frågas som Premium för att alls svara.
     def test_recipes_by_pantry_rejects_empty_items(self):
-        status, payload = self.get("/api/v1/recipes/by-pantry?items=")
+        status, payload = self.get("/api/v1/recipes/by-pantry?items=", token=self._premium_token())
         self.assertEqual(status, 400)
         self.assertIn("error", payload)
 
     def test_recipes_by_pantry_returns_matches_and_caches(self):
         original = api_server.RECIPE_SERVICE.search_by_pantry
         calls = []
+        token = self._premium_token()
 
         class FakeRecipe:
             def to_dict(self):
@@ -1033,10 +1036,10 @@ class ApiServerHttpTest(unittest.TestCase):
 
         api_server.RECIPE_SERVICE.search_by_pantry = lambda items: calls.append(items) or [(FakeRecipe(), ["Lök"])]
         try:
-            status, payload = self.get(f"/api/v1/recipes/by-pantry?items={urllib.parse.quote('Lök,Pasta')}")
+            status, payload = self.get(f"/api/v1/recipes/by-pantry?items={urllib.parse.quote('Lök,Pasta')}", token=token)
             self.assertEqual(status, 200)
             self.assertEqual(payload["recipes"][0]["matchedIngredients"], ["Lök"])
-            status2, payload2 = self.get(f"/api/v1/recipes/by-pantry?items={urllib.parse.quote('Pasta,Lök')}")
+            status2, payload2 = self.get(f"/api/v1/recipes/by-pantry?items={urllib.parse.quote('Pasta,Lök')}", token=token)
             self.assertEqual(status2, 200)
             self.assertEqual(payload2["recipes"], payload["recipes"])
             self.assertEqual(len(calls), 1, "second request with the same ingredient set (different order) should hit the cache")
@@ -1904,15 +1907,29 @@ class AuthHttpTest(unittest.TestCase):
 
             api_server.MAIL_CONFIG = {"host": "smtp.example", "from_email": "noreply@example"}
 
-            def broken(config, to_email, subject, body):
+            # Dubbeln måste tåla hela den riktiga signaturen. Verifieringsmejlet
+            # skickas med både text och HTML sedan I4, och en dubbel med för få
+            # parametrar failar på TypeError - alltså inte på det testet mäter.
+            def broken(config, to_email, subject, body, body_html=None, unsubscribe_url=None):
                 raise MailSendFailed("SMTP 451 try later")
             api_server.send_email = broken
             _, payload = self.post("/api/auth/register", {"email": self._email(), "password": "hemligt123"})
             self.assertEqual(payload["verificationMail"], "failed")
 
-            api_server.send_email = lambda config, to_email, subject, body: None
+            from services import mailings
+            sent = []
+            api_server.send_email = lambda config, to_email, subject, body, body_html=None, unsubscribe_url=None: \
+                sent.append((subject, body, body_html))
             _, payload = self.post("/api/auth/register", {"email": self._email(), "password": "hemligt123"})
             self.assertEqual(payload["verificationMail"], "sent")
+            # I4: verifieringsmejlet går genom mallen i services/mailings -
+            # dold preheader, riktig knapp, och verifieringslänken i knappen.
+            subject, body, body_html = sent[0]
+            self.assertIn(subject, mailings.subject_variants("verify"))
+            self.assertIn("display:none", body_html)
+            self.assertIn('<table role="presentation"', body_html)
+            self.assertIn("Verifiera min adress", body_html)
+            self.assertIn("/?verify=", body)
         finally:
             api_server.send_email, api_server.MAIL_CONFIG = original_send, original_config
 

@@ -52,6 +52,7 @@ if test_mode_active():
     from services.recipes import api as recipes_api
     from services.recipes import prices as recipe_prices
     from tests.e2e import fixture
+    from tests.e2e import vantan
     from tests.e2e.diagnos import (rader_som_saenker_taeckningen, sammanfatta_begaran,
                                    sammanfatta_svar)
 
@@ -291,6 +292,10 @@ class BrowserJourney(unittest.TestCase):
               }};
             }})();
         """)
+        # Skrivboken FÖRE första sidan: varje skrivning av matjakt-state
+        # bokförs i sidan, och wait_for_state väcks av den i stället för att
+        # stickprova localStorage på en klocka (se e2e/vantan.py).
+        self.context.add_init_script(vantan.SKRIVBOKEN)
         self.page = self.context.new_page()
         self.page.set_default_timeout(20_000)
         self.console_errors = []
@@ -349,15 +354,22 @@ class BrowserJourney(unittest.TestCase):
         raw = self.page.evaluate("() => localStorage.getItem('matjakt-state')")
         return json.loads(raw) if raw else {}
 
-    def wait_for_state(self, predicate, timeout=15.0, what="tillstånd"):
-        deadline = time.time() + timeout
-        last = None
-        while time.time() < deadline:
-            last = self.local_state()
-            if predicate(last):
-                return last
-            time.sleep(0.25)
-        self.fail(f"{what} nådde aldrig förväntat värde; senast: {json.dumps(last)[:600]}")
+    def wait_for_state(self, predicate, tystnad=vantan.TYSTNAD, what="tillstånd"):
+        """Väntar tills predikatet är sant om något tillstånd appen SKRIVIT.
+
+        Väcks av skrivningen, inte av en klocka: `tystnad` är hur länge
+        appen får vara helt tyst innan väntan ger upp, inte hur lång tid
+        väntan totalt får ta. Skillnaden är hela poängen - en lastad
+        CI-maskin gör varje nätvända långsammare, men den gör inte appen
+        tyst. Och ett värde som skrivs över några millisekunder senare
+        missas inte längre, för varje skrivning prövas.
+        """
+        nulage, nasta = vantan.sidans_skrivbok(self.page)
+        # Vantan ÄR ett AssertionError, så ett uteblivet tillstånd
+        # rapporteras som ett fel i testet - inte som en krasch i hjälparen,
+        # och utan en omslagen traceback ovanpå beskedet.
+        return vantan.vanta_pa_tillstand(nulage, nasta, predicate,
+                                         vad=what, tystnad=tystnad)
 
     def wait_for_server_state(self, predicate, timeout=15.0, what="serversynk"):
         """Väntar in den debouncade synken till kontot (1,5 s efter sista
@@ -455,6 +467,64 @@ class BrowserJourney(unittest.TestCase):
         expect(cards.first).to_be_visible(timeout=30_000)
         expect(self.page.locator("#shoppingCost")).not_to_contain_text("pris hämtas", timeout=30_000)
         return cards
+
+    # ---- vaktposten: väntan själv ----
+    def test_vantan_vaknar_pa_skrivningen_och_missar_inte_en_overskriven(self):
+        """Att väntan väcks av skrivningen prövas i en riktig sida.
+
+        Loopen har sina egna tester (tests/test_e2e_vantan.py, utan
+        browser). Det den halvan inte kan svara på är om init-skriptet
+        verkligen ligger före app.js och verkligen bokför rätt nyckel - och
+        en väntan som tyst slutat se skrivningar hade sett ut precis som en
+        grön svit ända tills den dagen den behövdes.
+        """
+        page = self.page
+        with self.step("skrivboken ligger före app.js"):
+            page.goto(self.app())
+            # Appens egen boot-sparning måste vara bokförd. Låg skriptet
+            # efter app.js vore boken tom här, och varje väntan i sviten
+            # hade väntat på skrivningar den aldrig fick se.
+            page.wait_for_function("() => (window.__matjaktSkrivbok || {}).nummer > 0")
+
+        # De två fällorna prövas på landningssidan: samma origin, alltså
+        # samma localStorage och samma skrivbok, men ingen app som skriver
+        # i bakgrunden. Det är avsiktligt - vaktposten ska falla på väntan,
+        # aldrig på vad veckan råkade göra just då.
+        # domcontentloaded: landningssidans film behöver inte hämtas för att
+        # localStorage ska gå att skriva i.
+        page.goto(f"{self.server.base}/", wait_until="domcontentloaded")
+        with self.step("en sen skrivning"):
+            # Senare än något stickprovsfönster, tidigare än tystnaden.
+            page.evaluate("""() => setTimeout(() => {
+                localStorage.setItem("matjakt-state", JSON.stringify({ weekPlan: ["prov-sent"] }));
+            }, 2000)""")
+            läge = self.wait_for_state(lambda s: s.get("weekPlan") == ["prov-sent"],
+                                       what="en sen skrivning")
+            self.assertEqual(läge["weekPlan"], ["prov-sent"])
+
+        with self.step("en skrivning som skrivs över i nästa andetag"):
+            # Precis det pullAccountState gör med klientens egen skrivning:
+            # värdet finns i en millisekund. Ett stickprov däremellan ser
+            # ingenting - värdet fanns, men ingen tittade.
+            page.evaluate("""() => setTimeout(() => {
+                localStorage.setItem("matjakt-state", JSON.stringify({ weekPlan: ["prov-flyktig"] }));
+                localStorage.setItem("matjakt-state", JSON.stringify({ weekPlan: ["prov-efterat"] }));
+            }, 100)""")
+            läge = self.wait_for_state(lambda s: s.get("weekPlan") == ["prov-flyktig"],
+                                       what="en överskriven skrivning")
+            self.assertEqual(läge["weekPlan"], ["prov-flyktig"])
+            # Och lagringen står kvar på det som skrevs SIST: väntan svarade
+            # om ett läge som inte längre går att läsa av.
+            self.assertNotEqual(self.local_state().get("weekPlan"), ["prov-flyktig"])
+
+        with self.step("tystnad är ett eget besked"):
+            # Inte "tiden gick ut" - beskedet ska säga att appen slutade
+            # skriva, och vad den skrev sist.
+            with self.assertRaises(AssertionError) as fångat:
+                self.wait_for_state(lambda s: s.get("weekPlan") == ["kommer-aldrig"],
+                                    tystnad=1.0, what="något som aldrig skrivs")
+            self.assertIn("tyst i 1 s", str(fångat.exception))
+            self.assertIn("prov-efterat", str(fångat.exception))
 
     # ---- resan ----
     def test_full_consumer_journey(self):
@@ -617,7 +687,7 @@ class BrowserJourney(unittest.TestCase):
             state = self.wait_for_state(lambda s: not s.get("weekPlan"), what="rensad vecka")
             self.assertFalse(state.get("pantry"))
             self.login(email)
-            state = self.wait_for_state(lambda s: s.get("weekPlan") == swapped_week, timeout=20, what="återställd vecka")
+            state = self.wait_for_state(lambda s: s.get("weekPlan") == swapped_week, what="återställd vecka")
             self.assertEqual(state["removedItems"], [removed_name])
             self.assertEqual(len(state["avklarade"]), 1)
             self.assertEqual(len(state["pantry"]), 2)     # köpt vara + ris
@@ -1110,7 +1180,7 @@ class BrowserJourney(unittest.TestCase):
             # väntande synken måste ha nått servern innan sidan lämnades,
             # annars hämtar återkomsten en äldre blob och allt är borta.
             state = self.wait_for_state(lambda s: s.get("weekPlan") == week_before and s.get("onboardingComplete"),
-                                        timeout=20, what="veckan efter checkout")
+                                        what="veckan efter checkout")
             self.assertEqual(state.get("postnummer"), fixture.POSTCODE)
 
         with self.step("Premium: alla butiker prissatta och jämförelsesidan"):

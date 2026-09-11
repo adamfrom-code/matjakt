@@ -60,6 +60,7 @@ from .. import quota
 from ..base import GroceryProvider
 from ..errors import ProviderBlockedError
 from ..models import RawProduct, Store
+from ..streaming import ProductSink
 from .citygross import normalize_gtin14
 
 logger = logging.getLogger("matjakt.grocery.primat")
@@ -213,7 +214,27 @@ class PrimatProvider(GroceryProvider):
         return stores
 
     # -------------------------------------------------------------- products
-    def get_products(self, store_id: str) -> list[RawProduct]:
+    def get_products(self, store_id: str, on_products=None) -> list[RawProduct]:
+        """Butikens katalog: prisrader från /prices, paketdata från /batch.
+
+        D7 - STEG 1 OCH 2 ÄR FLÄTADE, INTE STAPLADE. Förut hämtades hela
+        prislistan till en lista, sedan slogs allt upp mot /batch till en
+        `details`-dict, och först därefter normaliserades katalogen. En hel
+        Maxi-katalog låg alltså i minnet tre gånger om samtidigt som
+        processen kör Chromium på 512 MB. Nu slås varje färdig klump om
+        BATCH_SIZE prisrader upp direkt, normaliseras och lämnas vidare -
+        minnet blir O(BATCH_SIZE) i stället för O(katalog).
+
+        Radbokföringen är oförändrad, och det är avsiktligt: prisraderna får
+        halva budgeten (`price_budget`), uppslagen resten, och varje rad
+        bokförs mot dygnskvoten medan körningen pågår (D5). Flätningen
+        kräver bara att prisloopen räknar SINA rader för sig - `_rows_spent`
+        innehåller numera även uppslagsrader när prisloopen fortfarande
+        snurrar.
+
+        `on_products` fungerar som hos City Gross och Axfood: med callback
+        strömmas katalogen och returvärdet är tomt, utan callback returneras
+        allt."""
         store_key = f"{self._primat_chain}:{store_id}"
 
         # Steg 1: butikens prisrader (flata: pris/gtin/namn, ingen paket-
@@ -221,60 +242,87 @@ class PrimatProvider(GroceryProvider):
         # produkt kostar en batchrad till, och en katalog UTAN paketdata
         # vore bara fail-closed-rader.
         price_budget = self._max_rows // 2
-        price_rows: list[dict] = []
+        sink = ProductSink(on_products)
+        # Prisrader som väntar på sitt uppslag. Töms ned till under BATCH_SIZE
+        # efter varje sida, så den här listan är hela minnesavtrycket.
+        pending: list[dict] = []
+        price_rows_spent = 0
         cursor = None
         truncated = False
+        capped = False
+
+        def resolve(chunk: list[dict]) -> None:
+            """Slår upp en klump prisrader, normaliserar och lämnar vidare."""
+            nonlocal truncated, capped
+            details: dict[str, dict] = {}
+            # `+ len(chunk)`, inte bara ">=": ett uppslag kostar en rad per
+            # prisrad, och ett tak som kollas efter att raderna redan
+            # spenderats är ett tak som överskrids med en klump varje gång.
+            if capped or self._rows_spent + len(chunk) > self._max_rows:
+                # Radtaket nått: resten normaliseras UTAN paketdata i stället
+                # för att tappas. Samma sak som förut, där /batch-loopen
+                # bröt men alla prisrader ändå normaliserades.
+                if not capped:
+                    logger.warning("Primat %s: radtaket %d nått under /batch - "
+                                   "resterande rader saknar paketdata", store_key, self._max_rows)
+                truncated = True
+                capped = True
+            else:
+                lookups = [{"chain": self._primat_chain, "store_id": store_id,
+                            "product_id": row.get("product_id")} for row in chunk]
+                result = self._call("POST", "/batch", body={"lookups": lookups})
+                for entry in result.get("data", []):
+                    for product in entry.get("results", []) or []:
+                        pid = product.get("product_id")
+                        if pid:
+                            details[pid] = product
+                self._spend(len(chunk))
+            for row in chunk:
+                normalized = self.normalize_product(
+                    (row, details.get(row.get("product_id")), store_id))
+                if normalized is not None:
+                    sink.add(normalized)
+
         while True:
             params = {"stores": store_key, "limit": PAGE_LIMIT}
             if cursor:
                 params["cursor"] = cursor
             page = self._call("GET", "/prices", params=params)
             rows = page.get("data") or []
-            price_rows.extend(rows)
+            pending.extend(rows)
+            price_rows_spent += len(rows)
             self._spend(len(rows))
             cursor = page.get("next_cursor")
+            while len(pending) >= BATCH_SIZE:
+                resolve(pending[:BATCH_SIZE])
+                del pending[:BATCH_SIZE]
             if not cursor or not rows:
                 break
-            if self._rows_spent >= price_budget:
+            # price_rows_spent, inte _rows_spent: den senare bär numera även
+            # uppslagsraderna, och hade klippt prishämtningen på halva
+            # budgeten långt innan prisraderna faktiskt ätit upp den.
+            if price_rows_spent >= price_budget:
                 truncated = True
                 logger.warning("Primat %s: radbudgeten (%d för priser av %d totalt) "
                                "nådd - katalogen blir partiell men komplett per rad",
                                store_key, price_budget, self._max_rows)
                 break
+        if pending:
+            resolve(pending)
+            pending = []
 
-        # Steg 2: paketstorlek/kategori/jämförpris via /batch för ALLT som
-        # hämtades - även vid trunkering, så en partiell katalog består av
-        # kompletta rader i stället för många paketlösa.
-        details: dict[str, dict] = {}
-        for start in range(0, len(price_rows), BATCH_SIZE):
-            if self._rows_spent >= self._max_rows:
-                truncated = True
-                logger.warning("Primat %s: radtaket %d nått under /batch - "
-                               "resterande rader saknar paketdata", store_key, self._max_rows)
-                break
-            chunk = price_rows[start:start + BATCH_SIZE]
-            lookups = [{"chain": self._primat_chain, "store_id": store_id,
-                        "product_id": row.get("product_id")} for row in chunk]
-            result = self._call("POST", "/batch", body={"lookups": lookups})
-            for entry in result.get("data", []):
-                for product in entry.get("results", []) or []:
-                    pid = product.get("product_id")
-                    if pid:
-                        details[pid] = product
-            self._spend(len(chunk))
+        products = sink.drain()
 
-        products = []
-        for row in price_rows:
-            normalized = self.normalize_product((row, details.get(row.get("product_id")), store_id))
-            if normalized is not None:
-                products.append(normalized)
-
+        logger.info("Primat %s: %d produkter, som mest %d samtidigt i minnet",
+                    store_key, sink.count, sink.peak_buffered)
         if truncated:
             # Ärligt avbrott i stället för tyst partiell katalog: det som
             # hämtats sparas av importern (partial_products), körningen
-            # märks "blocked" och beskedet säger varför.
+            # märks "blocked" och beskedet säger varför. sink.count, inte
+            # len(products): under streaming ÄR products tom - allt utom
+            # sista batchen ligger redan i staging.
             raise ProviderBlockedError(
-                f"Primats radtak ({self._max_rows} rader) nåddes - {len(products)} "
+                f"Primats radtak ({self._max_rows} rader) nåddes - {sink.count} "
                 f"produkter sparade, resten av katalogen väntar på nästa körning/kvot",
                 partial_products=products)
         return products
