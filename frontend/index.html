@@ -4,16 +4,122 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#ECEEEF">
-  <meta name="description" content="Matjakt planerar veckans middagar efter din budget och räknar ut var de blir billigast - med riktiga butikspriser.">
-  <title>Matjakt</title>
+  <title>Matjakt – veckans middagar efter din budget, till riktiga butikspriser</title>
+  <meta name="description" content="Matjakt planerar veckans middagar efter din budget och visar var de blir billigast – med riktiga priser hos Willys, Hemköp och City Gross. Gratis att använda.">
+  <link rel="canonical" href="https://matjakt.store/">
+  <!-- Delningskortet. og:image MÅSTE vara en PNG: ingen plattform renderar
+       SVG, och en delad länk utan bild är en tom grå ruta. og-image.svg är
+       källan man redigerar, og-image.png den som delas - kör
+       backend/scripts/make_og_image.py efter en ändring. Absoluta URL:er,
+       för en relativ og:image plockas inte upp av någon skrapa. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Matjakt">
+  <meta property="og:locale" content="sv_SE">
+  <meta property="og:url" content="https://matjakt.store/">
+  <meta property="og:title" content="Matjakt – veckans middagar efter din budget, till riktiga butikspriser">
+  <meta property="og:description" content="Sju middagar, en inköpslista och ett verkligt pris hos Willys, Hemköp och City Gross. Du bestämmer budgeten – vi räknar.">
+  <meta property="og:image" content="https://matjakt.store/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Matjakt: säg vad maten får kosta – vi planerar veckan och visar var den blir billigast.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Matjakt – veckans middagar efter din budget, till riktiga butikspriser">
+  <meta name="twitter:description" content="Sju middagar, en inköpslista och ett verkligt pris hos Willys, Hemköp och City Gross. Du bestämmer budgeten – vi räknar.">
+  <meta name="twitter:image" content="https://matjakt.store/og-image.png">
   <link rel="icon" href="app/assets/icons/icon-192.png">
   <link rel="apple-touch-icon" href="app/assets/icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=4">
-  <!-- Besöksstatistik utan kakor: "plausible:matjakt.store" eller "umami:<website-id>". Tomt = av. -->
-  <meta name="matjakt-traffic" content="">
+  <!-- Strukturerad data. FAQPage-svaren måste ordagrant vara de som syns på
+       sidan - Google underkänner schema som lovar något sidan inte säger.
+       backend/tests/test_seo.py jämför dem tecken för tecken. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Matjakt",
+    "url": "https://matjakt.store/",
+    "applicationCategory": "LifestyleApplication",
+    "operatingSystem": "Web, iOS, Android",
+    "inLanguage": "sv-SE",
+    "description": "Matjakt planerar veckans middagar efter din budget och visar var de blir billigast, med riktiga priser hos Willys, Hemköp och City Gross.",
+    "offers": {
+      "@type": "AggregateOffer",
+      "priceCurrency": "SEK",
+      "lowPrice": "0",
+      "highPrice": "399",
+      "offerCount": "3",
+      "offers": [
+        { "@type": "Offer", "name": "Gratis", "price": "0", "priceCurrency": "SEK" },
+        { "@type": "Offer", "name": "Premium, månad", "price": "59", "priceCurrency": "SEK" },
+        { "@type": "Offer", "name": "Premium, år", "price": "399", "priceCurrency": "SEK" }
+      ]
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Var kommer priserna ifrån?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Från butikernas egna prisuppgifter, inlästa varje natt. Går en vara inte att prissätta säkert säger appen det rakt ut i stället för att gissa, och antalet varor med kontrollerat pris räknas alltid upp öppet."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Behöver jag konto?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Nej. Du kan prova Matjakt direkt i webbläsaren utan att skapa något. Konto behövs först när veckan ska följa med mellan telefon och dator, eller delas med resten av hushållet."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Vad kostar det?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Att planera veckan, få inköpslistan och se totalpriset hos den billigaste butiken är gratis, för alltid. Premium kostar 59 kr/mån eller 399 kr/år och öppnar alla sju middagar, alla veckotyper och jämförelsen mellan samtliga butiker."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Vilka butiker stöds?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Willys, Hemköp och City Gross. Fler kedjor läggs till i takt med att vi får tillgång till deras priser. Täckningen kan variera med var du bor och vad som ligger i din lista."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Kan familjen dela samma vecka?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ja. Ett hushåll bjuder in sina medlemmar med en länk, och sedan ser alla samma vecka, samma inköpslista och samma skafferi. Bockar någon av en vara i butiken försvinner den hos de andra också."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Hur raderar jag mitt konto?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Under Konto i appen, i två steg: först en export av allt vi har om dig, sedan radering. Kontot, veckorna, skafferiet och mätdatan tas bort. Har du en pågående prenumeration säger du upp den först."
+        }
+      }
+    ]
+  }
+  </script>
+  <!-- Besöksstatistik utan kakor: "plausible:matjakt.store" eller "umami:<website-id>". Tomt = av.
+       Plausible är kakfritt och kräver ingen samtyckesbanner; värden ligger
+       redan i CSP:n (script-src + connect-src). Kontot måste finnas hos
+       Plausible med domänen matjakt.store för att siffrorna ska landa. -->
+  <meta name="matjakt-traffic" content="plausible:matjakt.store">
   <script src="traffic.js" defer></script>
 </head>
 <body>

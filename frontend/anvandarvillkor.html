@@ -4,21 +4,50 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Användarvillkor – Matjakt</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:opsz,wght@6..72,300..700&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#f6f3ea;--surface:#fff;--primary:#173b2a;--muted:#6e786f;--border:rgba(22,32,25,.1);--accent:#d96a1c}
+  /* Samma designsystem som appen och landningssidan (docs/DESIGNSYSTEM-D.md).
+     En juridisk sida som ser ut som en annan produkt är en sida man
+     misstänker. */
+  :root{
+    --paper:#ECEEEF; --paper-2:#E2E5E7;
+    --ink:#16191B; --ink-2:#5A6367; --ink-3:#626B6F;
+    --rule:#CBD1D3; --rule-2:#B3BBBE;
+    --accent:#8A1F42; --accent-soft:#EBDDE2;
+    --f-disp:"Newsreader",Georgia,"Times New Roman",serif;
+    --f-ui:"Archivo","Helvetica Neue",Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --paper:#111416; --paper-2:#191D1F;
+      --ink:#E9ECEE; --ink-2:#A6AFB3; --ink-3:#7E888C;
+      --rule:#272C2F; --rule-2:#3A4145;
+      --accent:#EE93AB; --accent-soft:#2A1720;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#111416; --paper-2:#191D1F;
+    --ink:#E9ECEE; --ink-2:#A6AFB3; --ink-3:#7E888C;
+    --rule:#272C2F; --rule-2:#3A4145;
+    --accent:#EE93AB; --accent-soft:#2A1720;
+  }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--primary);font:16px/1.65 "DM Sans",system-ui,sans-serif}
+  body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.65 var(--f-ui);font-variant-numeric:tabular-nums}
   .wrap{max-width:680px;margin:0 auto;padding:40px 20px 80px}
   a{color:var(--accent)}
-  h1{font:700 34px/1.15 "Fraunces",serif;letter-spacing:-.02em;margin:0 0 6px}
-  h2{font:700 21px "Fraunces",serif;margin:36px 0 10px}
-  .updated{color:var(--muted);font-size:14px;margin:0 0 30px}
-  .placeholder{background:#fff0df;padding:2px 6px;border-radius:4px}
-  .notice{margin:0 0 30px;padding:16px 18px;border-radius:12px;background:#fff8ea;border:1px solid rgba(184,137,60,.3);font-size:14px}
+  h1{font:400 34px/1.1 var(--f-disp);letter-spacing:-.02em;margin:0 0 6px;color:var(--ink)}
+  h2{font:400 22px/1.15 var(--f-disp);margin:36px 0 10px;color:var(--ink)}
+  .updated{color:var(--ink-3);font-size:14px;margin:0 0 30px}
+  /* Platshållarna ska SYNAS att de är platshållare. Accenten får inte bära
+     status (DESIGNSYSTEM-D 2.3), så markeringen är en nedsänkt yta. */
+  .placeholder{background:var(--paper-2);padding:2px 6px;border-bottom:1px solid var(--ink-3)}
+  .notice{margin:0 0 30px;padding:16px 18px;background:var(--paper-2);border-top:1px solid var(--rule-2);font-size:14px}
   ul{padding-left:22px}
   li{margin-bottom:6px}
-  .back{display:inline-block;margin-bottom:20px;font-size:14px;font-weight:600}
+  .back{display:inline-flex;align-items:center;min-height:44px;margin-bottom:12px;font-size:13px;font-weight:500;text-decoration:none}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -58,7 +87,7 @@
   <p>Vi kan uppdatera dessa villkor. Väsentliga ändringar meddelas i appen eller via e-post.</p>
 
   <h2>Kontakt</h2>
-  <p><a href="mailto:adamfrom@icloud.com">adamfrom@icloud.com</a></p>
+  <p><a href="mailto:support@matjakt.store">support@matjakt.store</a></p>
 </div>
 </body>
 </html>
