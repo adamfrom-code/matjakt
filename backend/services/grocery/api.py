@@ -27,7 +27,7 @@ import threading
 import time
 from pathlib import Path
 
-from .pricing import RecipePricingEngine, comparability_reasons
+from .pricing import RecipePricingEngine, comparability_reasons, pantry_entry
 from .store import GroceryStore
 
 logger = logging.getLogger("matjakt.grocery.api")
@@ -804,8 +804,14 @@ def price_week(items: list[dict], chains: list[str] | None = None,
     try:
         # Butiksvalet MÅSTE in i cachenyckeln - utan det delade en
         # Stockholmsanvändares jämförelse cache med en Gävleanvändares.
+        # Skafferiet normaliseras in i nyckeln: en post är antingen ett tal
+        # eller {"amount", "unit"}, och två dictar med samma innehåll i olika
+        # ordning har olika repr. Utan normaliseringen hade samma skafferi
+        # kunnat missa sin egen cache.
         key = repr((sorted((i.get("name"), i.get("amount"), i.get("unit")) for i in items),
-                    tuple(sorted(chains)), tuple(sorted((pantry or {}).items())),
+                    tuple(sorted(chains)),
+                    tuple(sorted((str(name), *pantry_entry(value))
+                                 for name, value in (pantry or {}).items())),
                     tuple(sorted(store_selection.items()))))
     except TypeError:
         key = None  # unhashable input - price it, just don't cache it
