@@ -143,6 +143,11 @@ SCHEDULABLE_CHAINS = frozenset(DEFAULT_SCHEDULE)
 
 CHECK_INTERVAL_SECONDS = 60
 
+# Namnrymden i KV-storen där dygnsmarkeringarna ligger ("kördes jobbet X i
+# dag?"). Egen namnrymd, inte "cache": det här är driftfakta, och en post som
+# försvinner betyder att ett nattjobb kan starta en gång till.
+SCHEDULE_STATE_NAMESPACE = "grocery_schedule"
+
 
 # Veckodag + klockslag (Europe/Stockholm, strftime "%a %H:%M") för den
 # nationella butiksregistersynken.
@@ -227,15 +232,135 @@ class GroceryScheduler:
     is stdlib-only by design, and one sleeping thread is enough for three
     jobs a day."""
 
-    def __init__(self, schedule: dict | None = None):
+    def __init__(self, schedule: dict | None = None, kv=None):
         self.schedule = schedule if schedule is not None else parse_schedule(
             os.environ.get("MATJAKT_GROCERY_SCHEDULE"))
         self.enabled = _truthy(os.environ.get("MATJAKT_GROCERY_SCHEDULE_ENABLED", "0"))
         self._thread = None
         self._stop = threading.Event()
         # The minute a chain last fired, so a job cannot run twice inside the
-        # same minute if the loop wakes up more than once in it.
+        # same minute if the loop wakes up more than once in it. För kedjorna
+        # är det numera bara en RESERV: dygnsmarkeringen ligger i KV-storen,
+        # se _last_run_day.
         self._last_fired = {}
+        self._kv_store = kv
+
+    # ------------------------------------------------- dygnsmarkeringen (D3)
+    #
+    # Markeringen låg tidigare BARA i minnet, och sattes dessutom FÖRE
+    # importer.start(). Tre saker följde av det:
+    #
+    #   en kedja som fick "already_running" markerades som körd ändå, och
+    #   dygnets körning var därmed förbrukad utan att någonting hämtats;
+    #
+    #   en omstart mitt i startfönstret nollställde minnet, så samma jobb
+    #   kunde starta två gånger samma natt;
+    #
+    #   och fönstret var fem minuter brett, så en deploy 02:03-02:05 tog
+    #   Willys hela den natten. Det syntes först som ett stale-larm efter
+    #   36 timmar - om larmen hade haft en mottagare (D1).
+    #
+    # Nu: markera FÖRST när en import faktiskt startade, skriv markeringen
+    # till databasen, och kör så fort klockslaget passerat om jobbet inte
+    # kört i dag. Ingen övre gräns behövs - dygnsmarkeringen ÄR gränsen.
+    def _kv(self):
+        """KV-storen för dygnsmarkeringarna, eller None när den inte går att
+        nå. Lat och guardad med flit: schemaläggaren instansieras även i
+        miljöer där api_server inte är importerbar (tester, skript), och en
+        oåtkomlig store får aldrig stoppa nattjobben - då gäller minnet,
+        precis som förut."""
+        if self._kv_store is None:
+            try:
+                from api_server import KV_CACHE
+                self._kv_store = KV_CACHE
+            except Exception:
+                logger.info("Schemamarkeringarna kunde inte persisteras - "
+                            "kör vidare mot minnet")
+                return None
+        return self._kv_store
+
+    def _last_run_day(self, key: str) -> str | None:
+        """Dygnet jobbet senast hanterades, "YYYY-MM-DD", eller None."""
+        kv = self._kv()
+        if kv is not None:
+            try:
+                värde, _ = kv.get(SCHEDULE_STATE_NAMESPACE, key)
+            except Exception:
+                logger.exception("Kunde inte läsa schemamarkeringen för %s", key)
+                värde = None
+            if värde:
+                return str(värde)
+        return self._last_fired.get(key)
+
+    def _mark_run(self, key: str, day: str):
+        """Markerar jobbet som hanterat i dag. Minnet skrivs alltid, så en
+        databas som inte svarar degraderar till gamla beteendet i stället
+        för att låta samma jobb starta varje minut."""
+        self._last_fired[key] = day
+        kv = self._kv()
+        if kv is None:
+            return
+        try:
+            kv.set(SCHEDULE_STATE_NAMESPACE, key, day)
+        except Exception:
+            logger.exception("Kunde inte spara schemamarkeringen för %s", key)
+
+    def _is_due(self, now, when: str, key: str, day_stamp: str) -> bool:
+        """"Klockslaget har passerat i dag och jobbet har inte kört i dag."
+
+        Inget fönster. Ett jobb som missades för att processen startade om
+        klockan 02:04 går klockan 02:05 i stället för att utebli till nästa
+        natt.
+
+        `when` får bära ett veckodagsprefix ("Sun 01:00"); stämmer inte dagen
+        är jobbet inte aktuellt alls."""
+        weekday, _, klockslag = str(when or "").rpartition(" ")
+        if weekday and now.strftime("%a") != weekday:
+            return False
+        due = _due_today(now, klockslag)
+        if due is None:
+            return False
+        # I UTC, uttryckligen: två datetime med SAMMA tzinfo jämförs naivt i
+        # Python, och då syns inte sommartidshoppet alls.
+        late = ((now.astimezone(timezone.utc) - due.astimezone(timezone.utc))
+                if now.tzinfo else (now - due))
+        if late < timedelta(0):
+            return False
+        return self._last_run_day(key) != day_stamp
+
+    def _chain_already_started_today(self, chain: str, day_start: float) -> bool:
+        """Har kedjan redan en körning som STARTADE i dag?
+
+        Markeringen i KV-storen räcker inte ensam, av två skäl. Första gången
+        den här koden deployas finns inga markeringar alls, och då skulle
+        varje kedja vars klockslag passerat starta direkt - en deploy klockan
+        tolv hade dragit igång sex importer och bränt Primat-kvoten på en
+        gång. Och en markering som inte gick att skriva (databasen upptagen)
+        skulle ge samma sak vid nästa omstart.
+
+        Körningsraden i databasen är det som faktiskt hände, så den får
+        avgöra när markeringen saknas - och markeringen skrivs då så att
+        frågan ställs en gång per kedja och dygn, inte varje minut.
+
+        Att en MANUELL import samma dygn också räknas är avsiktligt: kedjan
+        har färsk data och nattjobbet skulle bara kosta kvot om igen."""
+        try:
+            from . import api as grocery_api
+            store = grocery_api.open_store()
+            try:
+                rad = store.connection.execute(
+                    "SELECT 1 FROM grocery_collector_runs "
+                    "WHERE chain = ? AND started_at >= ? LIMIT 1",
+                    (chain, day_start)).fetchone()
+            finally:
+                store.close()
+            return rad is not None
+        except Exception:
+            # Går databasen inte att läsa vet vi ingenting - och "vet inte"
+            # får inte betyda "kör". Ett uteblivet nattjobb syns i
+            # driftkollen; en dubblerad kostar kvot vi inte får tillbaka.
+            logger.exception("Kunde inte läsa körningshistoriken för %s", chain)
+            return True
 
     def bootstrap_if_empty(self):
         """Runs the first import immediately when the price database is empty.
@@ -525,72 +650,80 @@ class GroceryScheduler:
 
     def _tick(self, now=None):
         now = now or _now()
-        stamp = now.strftime("%Y-%m-%d %H:%M")
+        day_stamp = now.strftime("%Y-%m-%d")
+        # Klockslaget har passerat i dag, och jobbet har inte kört i dag. Det
+        # är hela regeln, för varje jobb i loopen. Tidigare låg ett fönster
+        # på fem minuter runt varje klockslag: en deploy 02:03-02:05 tog
+        # Willys hela den natten, och en tick som blev försenad av last tog
+        # driftkollen med sig.
+        for nyckel, klockslag, mål, trådnamn, args in (
+            # Saknas registret helt (första synken föll t.ex. på dagens
+            # Primat-kvot) görs ett nytt försök varje natt tills det sitter -
+            # utan att vänta på nästa deploy eller söndag.
+            ("__register_retry__", REGISTER_RETRY_AT, self._sync_register_if_missing,
+             "grocery-register-retry", ()),
+            # Referensnivån läks varje natt efter prisjobben, inte bara vid
+            # boot: en kedja vars referens släpar efter sina verifierade
+            # priser fylls.
+            ("__reference_heal__", REFERENCE_HEAL_AT, self.activate_platform,
+             "grocery-reference-heal", ()),
+            # Dabas-berikning efter nattens prisjobb: nya GTIN får masterdata,
+            # gamla omprövas i sitt fönster. Bara när den uttryckligen är
+            # aktiverad (nyckel + MATJAKT_DABAS_ENRICHMENT_ENABLED=1).
+            ("__dabas__", DABAS_ENRICHMENT_AT, self._run_dabas_enrichment,
+             "grocery-dabas-enrichment", ()),
+            # Driftkollen efter nattens importer. Egen tråd och egen try: ett
+            # trasigt larm får aldrig fälla schemaläggaren - då byter vi ut
+            # ett driftproblem mot ett kundproblem.
+            ("__ops__", OPS_ALERT_AT, self._run_ops_alerts,
+             "grocery-ops-alerts", ()),
+        ):
+            # Alla fyra är idempotenta och körs dessutom redan vid boot, så
+            # att ta igen ett missat pass kostar ingenting utom några
+            # sekunders arbete. Kedjorna nedan är dyra och behandlas därför
+            # strängare.
+            if self._is_due(now, klockslag, nyckel, day_stamp):
+                self._mark_run(nyckel, day_stamp)
+                threading.Thread(target=mål, args=args, name=trådnamn, daemon=True).start()
         # Butiksregistret: veckovis (söndag 01:00), separat från prisjobben -
         # butiker byter inte adress varje natt och synken kostar ~2 800 rader
-        # av Primat-kvoten.
+        # av Primat-kvoten. Just därför får den INTE tas igen i efterhand: en
+        # deploy en söndagseftermiddag ska inte kosta en registersynk, och en
+        # missad söndag kostar ingenting alls - adresser ändras inte på en
+        # vecka, och _sync_register_if_missing ovan fångar ett register som
+        # saknas helt redan nästa natt.
         if (now.strftime("%a %H:%M") == REGISTER_SYNC_AT
-                and self._last_fired.get("__register__") != stamp):
-            self._last_fired["__register__"] = stamp
+                and self._last_run_day("__register__") != day_stamp):
+            self._mark_run("__register__", day_stamp)
             threading.Thread(target=self._sync_register, args=("veckosynk",),
                              name="grocery-register-sync", daemon=True).start()
-        # Saknas registret helt (första synken föll t.ex. på dagens Primat-
-        # kvot) görs ett nytt försök varje natt tills det sitter - utan att
-        # vänta på nästa deploy eller söndag.
-        if (now.strftime("%H:%M") == REGISTER_RETRY_AT
-                and self._last_fired.get("__register_retry__") != stamp):
-            self._last_fired["__register_retry__"] = stamp
-            threading.Thread(target=self._sync_register_if_missing,
-                             name="grocery-register-retry", daemon=True).start()
-        # Referensnivån läks varje natt efter prisjobben, inte bara vid boot:
-        # en kedja vars referens släpar efter sina verifierade priser fylls.
-        if (now.strftime("%H:%M") == REFERENCE_HEAL_AT
-                and self._last_fired.get("__reference_heal__") != stamp):
-            self._last_fired["__reference_heal__"] = stamp
-            threading.Thread(target=self.activate_platform,
-                             name="grocery-reference-heal", daemon=True).start()
-        # Dabas-berikning efter nattens prisjobb: nya GTIN får masterdata,
-        # gamla omprövas i sitt fönster. Bara när den uttryckligen är
-        # aktiverad (nyckel + MATJAKT_DABAS_ENRICHMENT_ENABLED=1).
-        if (now.strftime("%H:%M") == DABAS_ENRICHMENT_AT
-                and self._last_fired.get("__dabas__") != stamp):
-            self._last_fired["__dabas__"] = stamp
-            threading.Thread(target=self._run_dabas_enrichment,
-                             name="grocery-dabas-enrichment", daemon=True).start()
-        # Driftkollen efter nattens importer. Egen tråd och egen try: ett
-        # trasigt larm får aldrig fälla schemaläggaren - då byter vi ut ett
-        # driftproblem mot ett kundproblem.
-        if (now.strftime("%H:%M") == OPS_ALERT_AT
-                and self._last_fired.get("__ops__") != stamp):
-            self._last_fired["__ops__"] = stamp
-            threading.Thread(target=self._run_ops_alerts,
-                             name="grocery-ops-alerts", daemon=True).start()
+
+        day_start = now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
         for chain, when in self.schedule.items():
-            # Ett FÖNSTER (inte exakt minut) efter jobbets klockslag, en gång
-            # per dygn. Exakt minutmatchning missade jobbet vid sommartids-
-            # omställningen (02:00 finns inte den natten) och vid en tick
-            # som blev försenad av last.
-            due = _due_today(now, when)
-            day_stamp = now.strftime("%Y-%m-%d")
-            if due is None:
+            if not self._is_due(now, when, chain, day_stamp):
                 continue
-            # I UTC, uttryckligen: två datetime med SAMMA tzinfo jämförs
-            # naivt i Python, och då syns inte sommartidshoppet alls.
-            late = (now.astimezone(timezone.utc) - due.astimezone(timezone.utc)) if now.tzinfo else (now - due)
-            if late < timedelta(0) or late > timedelta(minutes=5):
-                continue
-            if self._last_fired.get(chain) == day_stamp:
-                continue
-            self._last_fired[chain] = day_stamp
             if not _får_köras(chain):
+                # Ingen markering: kedjan hoppades över för att nyckeln
+                # saknas, inte för att den kördes. Får nyckeln komma på plats
+                # i kväll ska jobbet kunna gå i natt.
+                continue
+            if self._chain_already_started_today(chain, day_start):
+                self._mark_run(chain, day_stamp)
                 continue
             result = importer.start(chain)
             if result.get("started"):
+                # MARKERAS FÖRST NU. Låg markeringen före start() räknades en
+                # kedja som fick "already_running" som körd, och dygnets
+                # körning var förbrukad utan att någonting hämtats.
+                self._mark_run(chain, day_stamp)
                 logger.info("Nattjobb startade import för %s", chain)
             else:
                 # Not an error: the importer allows one run at a time on
-                # purpose, and a still-running job is the normal reason.
-                logger.info("Nattjobb hoppade över %s: %s", chain, result.get("reason"))
+                # purpose, and a still-running job is the normal reason. Utan
+                # markering står jobbet kvar som oskött och tas om vid nästa
+                # tick, när den pågående importen är klar.
+                logger.info("Nattjobb hoppade över %s: %s - försöker igen vid nästa tick",
+                            chain, result.get("reason"))
 
 
 def _due_today(now, when: str):
