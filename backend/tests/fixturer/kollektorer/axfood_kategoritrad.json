@@ -1,0 +1,60 @@
+{
+  "id": "root",
+  "category": "N00",
+  "title": "Alla varor",
+  "url": "/",
+  "valid": true,
+  "children": [
+    {
+      "id": "n01",
+      "category": "N01",
+      "title": "Kött, chark & fågel",
+      "url": "/c/kott-chark-fagel",
+      "valid": true,
+      "children": [
+        {
+          "id": "n0101",
+          "category": "N0101",
+          "title": "Fågel",
+          "url": "/c/kott-chark-fagel/fagel",
+          "valid": true,
+          "children": [
+            {
+              "id": "n010101",
+              "category": "N010101",
+              "title": "Färsk fågel",
+              "url": "/c/kott-chark-fagel/fagel/farsk-fagel",
+              "valid": true,
+              "children": []
+            },
+            {
+              "id": "n010102",
+              "category": "N010102",
+              "title": "Fryst fågel",
+              "url": "/c/kott-chark-fagel/fagel/fryst-fagel",
+              "valid": false,
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n02",
+      "category": "N02",
+      "title": "Mejeri, ost & ägg",
+      "url": "/c/mejeri-ost-agg",
+      "valid": true,
+      "children": [
+        {
+          "id": "n0201",
+          "category": "N0201",
+          "title": "Mjölk",
+          "url": "/c/mejeri-ost-agg/mjolk",
+          "valid": true,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

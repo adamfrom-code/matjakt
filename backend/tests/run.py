@@ -40,4 +40,34 @@ if __name__ == "__main__":
             pattern = sys.argv[2]
         tests = unittest.defaultTestLoader.discover(str(here), pattern=pattern, top_level_dir=str(here))
         result = unittest.TextTestRunner(verbosity=1).run(tests)
-        sys.exit(0 if result.wasSuccessful() else 1)
+
+        # K6 - SKIP-BUDGETEN. unittest skriver "skipped=8" och går vidare, så
+        # dagen de blir nio ser likadan ut som dagen de var åtta, och dagen de
+        # blir trettio också. Två saker här:
+        #
+        #   1. ORSAKERNA SKRIVS ALLTID UT. "skipped=8" är ett tal ingen kan
+        #      agera på; åtta rader med testnamn och orsak går att läsa på tio
+        #      sekunder. Det gäller även utan strikt läge.
+        #   2. MATJAKT_STRICT=1 (satt i CI) kräver dessutom att varje orsak
+        #      står i tillatna_skip.txt.
+        #
+        # Importeras per sökväg: tests/ ligger inte på sys.path och ska inte
+        # läggas där bara för det här.
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("skipbudget", here / "skipbudget.py")
+        skipbudget = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(skipbudget)
+        skippade = [(str(test), orsak) for test, orsak in result.skipped]
+        if skippade:
+            print("\nÖverhoppade tester:")
+            for namn, orsak in skippade:
+                print(f"    {namn}\n        {orsak}")
+        # Budgeten döms ÄVEN när sviten redan är röd, och skrivs ut före
+        # exitkoden: den som felsöker en röd körning ska inte behöva laga
+        # felet först för att få veta att tolv tester dessutom hoppades över.
+        budget_kod = 0
+        if skipbudget.strikt_läge():
+            lista = os.environ.get("MATJAKT_SKIP_LISTA") or skipbudget.LISTA
+            tillåtna = skipbudget.läs_tillåtna(Path(lista).read_text(encoding="utf-8"))
+            budget_kod = skipbudget.döm(skippade, tillåtna)
+        sys.exit(1 if not result.wasSuccessful() else budget_kod)

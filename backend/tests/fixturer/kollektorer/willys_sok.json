@@ -1,0 +1,79 @@
+{
+  "results": [
+    {
+      "code": "101150",
+      "name": "Mellanmjölk 1,5% 1,5l Arla Ko",
+      "manufacturer": "Arla Ko",
+      "productLine2": "Färsk mjölk",
+      "displayVolume": "1,5l",
+      "priceValue": 16.5,
+      "comparePrice": "11,00 kr/l",
+      "image": {
+        "url": "https://assets.axfood.se/image/upload/f_auto,t_200/07340083443893_C1L1_s01"
+      },
+      "thumbnail": {
+        "url": "https://assets.axfood.se/image/upload/f_auto,t_60/07340083443893_C1N1_s01"
+      },
+      "googleAnalyticsCategory": "",
+      "potentialPromotions": []
+    },
+    {
+      "code": "202320",
+      "name": "Kycklingfilé 700g Kronfågel",
+      "manufacturer": "Kronfågel",
+      "productLine2": "Färsk kyckling",
+      "displayVolume": "700g",
+      "priceValue": 89.9,
+      "comparePrice": "128,43 kr/kg",
+      "image": {
+        "url": "https://assets.axfood.se/image/upload/f_auto,t_200/07310865005168_C1L1_s01"
+      },
+      "googleAnalyticsCategory": "",
+      "potentialPromotions": [
+        {
+          "campaignType": "OFFER",
+          "qualifyingCount": 1,
+          "conditionLabelFormatted": "",
+          "rewardLabel": "69 kr",
+          "price": {"value": 69.0, "currencyIso": "SEK"}
+        },
+        {
+          "campaignType": "LOYALTY",
+          "qualifyingCount": 1,
+          "conditionLabelFormatted": "",
+          "rewardLabel": "59 kr",
+          "price": {"value": 59.0, "currencyIso": "SEK"}
+        }
+      ]
+    },
+    {
+      "code": "303011",
+      "name": "Krossade tomater 390g Mutti",
+      "manufacturer": "Mutti",
+      "productLine2": "Konserverade tomater",
+      "displayVolume": "390g",
+      "priceValue": 16.95,
+      "comparePrice": "43,46 kr/kg",
+      "image": {
+        "url": "https://assets.axfood.se/image/upload/f_auto,t_200/08005110123450_C1L1_s01"
+      },
+      "googleAnalyticsCategory": "",
+      "potentialPromotions": [
+        {
+          "campaignType": "OFFER",
+          "qualifyingCount": 4,
+          "conditionLabelFormatted": "4 för",
+          "rewardLabel": "50 kr",
+          "price": {"value": 12.5, "currencyIso": "SEK"}
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "currentPage": 0,
+    "numberOfPages": 1,
+    "pageSize": 30,
+    "totalNumberOfResults": 3
+  },
+  "breadcrumbs": []
+}

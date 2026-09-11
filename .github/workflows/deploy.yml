@@ -17,12 +17,25 @@ name: Deploy frontend to GitHub Pages
 # Det betyder också att `conclusion == 'success'` nedan numera betyder "koden
 # är grön OCH drift kör den". Tas health-gate bort ur ci.yml öppnas fönstret
 # igen, tyst; backend/tests/test_deploy_ordning.py håller fast kedjan.
+#
+# K6 - DEN MANUELLA VÄGEN ÄR BORTTAGEN. Här stod `workflow_dispatch:`, och
+# den publicerade till matjakt.store med `npm test` som enda grind: ingen
+# hemlighetsskanning, ingen versionskontroll, ingen browser-E2E, ingen
+# kontroll av att backenden kör samma commit. `github.sha` kunde dessutom
+# peka på vilken gren som helst, så vem som helst med skrivrättighet kunde
+# publicera otestad kod från en featuregren till produktion med två klick,
+# förbi hela grinden som resten av det här dokumentet handlar om.
+#
+# Det fanns en poäng med den: att kunna publicera om när en Pages-deploy
+# misslyckats av sig själv. Den poängen finns kvar utan bakdörren - i
+# Actions-vyn kör man "Re-run failed jobs" på den ursprungliga körningen,
+# som behåller sin workflow_run-kontext och alltså fortfarande är den
+# commit CI godkände.
 on:
   workflow_run:
     workflows: [CI]
     types: [completed]
     branches: [main]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -34,40 +47,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    # Bara en GRÖN CI-körning för en PUSH till main får publicera; PR-körningar
-    # (även från forkar vars gren heter main) släpps inte igenom.
-    # workflow_dispatch är en medveten manuell väg som bara har npm test som
-    # grind - inte e2e, hemlighetsskanning eller versionskontroll.
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
+  # K6 - JOBBET `test` ÄR BORTTAGET. Det körde hela backendsviten en gång
+  # till, på exakt samma SHA som CI redan hade godkänt, i ungefär två och en
+  # halv minut. Grinden var redan passerad: den här workflowen startar bara
+  # av en GRÖN CI-körning, och den checkar ut just den körningens head_sha.
+  # En andra körning av samma tester på samma kod svarar på samma fråga en
+  # gång till - och fördröjer varje release med den tiden.
+  #
+  # Villkoret som stod på `test` har flyttat hit, ordagrant utom att den
+  # manuella vägen är borta: bara en GRÖN CI-körning för en PUSH till main
+  # får publicera. PR-körningar släpps inte igenom, inte heller sådana från
+  # forkar vars gren råkar heta main.
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       # EXAKT den commit CI testade - inte main-HEAD när det här jobbet råkar
       # starta (en senare push kunde annars publiceras otestad).
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install -r backend/requirements.txt
-      # npm test kör tests/build-native.test.js som behöver esbuild (devDependency).
-      - run: npm ci
-      - run: npm test
-
-  deploy:
-    needs: test
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20

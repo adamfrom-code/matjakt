@@ -50,3 +50,10 @@ build/
 
 # Agenternas arbetsträd - aldrig i git
 .claude/worktrees/
+
+# K6: coverage-mätningens datafil och HTML-rapport. Genereras av
+# `coverage run` (CI-jobbet "Täckning") och av var och en som mäter lokalt -
+# aldrig i git. CI:s artefaktgrind vägrar den numera också.
+.coverage
+.coverage.*
+htmlcov/

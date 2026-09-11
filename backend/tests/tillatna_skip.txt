@@ -1,0 +1,55 @@
+# KÄNDA OCH ACCEPTERADE SKIP — en orsak per rad, prefixmatchning.
+#
+# Sviten hoppar över ett par tester i varje körning. Var och en av dem är
+# rimlig; problemet var att ingen räknade dem, så dagen de blev trettio hade
+# sett likadan ut som dagen de var tre. Med MATJAKT_STRICT=1 (satt i CI)
+# fäller en skip vars orsak inte står här hela körningen.
+#
+# LÄGGER DU TILL EN RAD: skriv varför under den. Nästa person ska se att det
+# var ett beslut och inte ett förbiseende. Rätt svar är nästan alltid att
+# göra testet körbart i stället.
+
+ingen admin-token i den här miljön
+# backend/tests/run.py nollar MATJAKT_ADMIN_TOKEN med flit, så sviten aldrig
+# kan nå en riktig adminyta. Testet mäter beteendet NÄR en token finns och
+# kan därför inte köra i den isolerade miljön.
+
+ingen Willys-data lokalt
+# Kräver en prisdatabas med kedjedata. En ren checkout har ingen, och att
+# committa en är uteslutet (databasfiler är förbjudna i det här repot).
+
+clips.json saknas
+# marketing/build/ är gitignorerad sedan A3. Manifestet byggs av
+# fetch_site_video.py och finns inte i en ren checkout.
+
+täcks av HouseholdReleaseE2ETest
+# Medveten dubblettspärr: samma resa körs redan av den andra klassen, och
+# två körningar av samma browser-E2E kostar två minuter för samma bevis.
+
+inget git-arbetsträd att fråga
+# test_codeowners, test_genererade_filer och test_agentinstruktion frågar
+# git om vad som är spårat. I CI finns git och testerna KÖR; raden finns för
+# den som packar upp en tarball utan .git.
+
+openssl saknas
+# Backupkrypteringens CMS-väg prövas mot riktiga openssl-anrop.
+
+age saknas
+age-keygen saknas
+# Den andra backupkrypteringsvägen. age finns inte på en GitHub-runner som
+# standard; CMS-vägen ovan täcker samma kontrakt.
+
+e2e-modulen kan inte importeras här
+# test_admin_panel_leak lånar browser-E2E:ns uppsättning. Utan playwright
+# installerat finns den inte.
+
+Chromium kunde inte startas
+Playwright saknas
+MATJAKT_E2E=0
+körs bara via backend/tests/run.py
+# Browser-E2E:n. I CI:s backend-jobb installeras playwright-PAKETET men
+# ingen webbläsare - browsern startas i e2e-jobbet, som har
+# `playwright install --with-deps chromium`. Det är med flit: en
+# Chromium-nedladdning i varje jobb kostar en minut för samma bevis. De här
+# fyra orsakerna är alltså "resan körs i ett annat jobb", inte "resan körs
+# inte". Blir e2e-jobbet självt tyst syns det där, inte här.

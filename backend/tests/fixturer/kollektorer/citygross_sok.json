@@ -1,0 +1,81 @@
+{
+  "searchResults": {
+    "products": [
+      {
+        "id": "101233933_ST",
+        "gtin": "7340083443893",
+        "name": "Mellanmjölk",
+        "subtitle": "1,5L 1,5% GARANT",
+        "description": "Mellanmjölk 1,5% fetthalt",
+        "brand": "GARANT",
+        "superCategory": "Mejeri, ost & ägg",
+        "category": "Mjölk & dryck",
+        "bfCategory": "Mellanmjölk",
+        "countryOfOrigin": "Sverige",
+        "descriptiveSize": "1,5L",
+        "netContent": {"unitOfMeasure": "L", "value": 1.5},
+        "url": "/produkter/mejeri-ost-agg/mjolk-dryck/mellanmjolk-101233933_ST",
+        "images": [
+          {"url": "VI_7340083443893_C1L1.jpeg", "alt": "Mellanmjölk", "type": "primary"}
+        ],
+        "productStoreDetails": {
+          "prices": {
+            "currentPrice": {
+              "price": 16.9,
+              "unit": "st",
+              "comparativePrice": 11.27,
+              "comparativePriceUnit": "kr/l"
+            },
+            "ordinaryPrice": {"price": 16.9, "unit": "st"},
+            "memberPrice": null,
+            "promotions": [],
+            "hasDiscount": false,
+            "hasPromotion": false,
+            "lowestPriceLast30Days": 16.9
+          }
+        }
+      },
+      {
+        "id": "101487002_ST",
+        "gtin": "7310865005168",
+        "name": "Kycklingfilé",
+        "subtitle": "700g Kronfågel",
+        "description": "Färsk kycklingfilé",
+        "brand": "Kronfågel",
+        "superCategory": "Kött, chark & fågel",
+        "category": "Fågel",
+        "bfCategory": "Kycklingfilé",
+        "countryOfOrigin": "Sverige",
+        "descriptiveSize": "700g",
+        "netContent": {"unitOfMeasure": "g", "value": 700},
+        "url": "/produkter/kott-chark-fagel/fagel/kycklingfile-101487002_ST",
+        "images": [
+          {"url": "VI_7310865005168_C1L1.jpeg", "alt": "Kycklingfilé", "type": "primary"}
+        ],
+        "productStoreDetails": {
+          "prices": {
+            "currentPrice": {
+              "price": 74.9,
+              "unit": "st",
+              "comparativePrice": 107.0,
+              "comparativePriceUnit": "kr/kg"
+            },
+            "ordinaryPrice": {"price": 94.9, "unit": "st"},
+            "memberPrice": {"price": 69.9, "unit": "st"},
+            "promotions": [{"name": "Veckans klipp"}],
+            "activePromotion": {"name": "Veckans klipp"},
+            "hasDiscount": true,
+            "hasPromotion": true,
+            "lowestPriceLast30Days": 74.9
+          }
+        }
+      }
+    ],
+    "totalCount": 2,
+    "pageSize": 30,
+    "currentPage": 0,
+    "totalPages": 1,
+    "categories": [],
+    "facets": []
+  }
+}
