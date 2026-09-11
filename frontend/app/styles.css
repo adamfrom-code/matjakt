@@ -924,6 +924,25 @@ button{color:inherit}
 .saknas{display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:20px;padding:0 7px;border:1px solid var(--ink-3);color:var(--ink-3);font:600 10px/1 var(--f-ui);letter-spacing:.14em;text-transform:uppercase}
 .saknas::before{content:"—";margin-right:6px;color:var(--ink-3)}
 
+/* GOLVET (C7). Inget fjärde tillstånd - en modifierare på de två som visar
+   ett tal. Så fort någon rad saknar radtotal är summan ett GOLV och inte ett
+   belopp: "minst 612 kr", aldrig ett exakt tal. Markören sätts i --ink-2 och
+   inte i --ink-3 som .cirka, därför att golvet hör hemma i summeringsblocket
+   och det ligger på --paper-2, där --ink-3 ger 4,31:1 och är förbjudet
+   (RÄTTELSE 1). --ink-2 håller på båda ytorna: 5,28:1 och 4,86:1. */
+.pris--golv .minst{margin-right:5px;vertical-align:.08em;font:600 9.5px/1 var(--f-ui);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+
+/* TECKENFÖRKLARINGEN (§5.7). Inte dekoration: den är hela skälet till att
+   prisreglerna går att LÄRA SIG i stället för att behöva memoreras. Glyferna
+   är samma tre former som prislapparna - hel linje, streckad linje, tom ram -
+   och ritas i --ink/--ink-3, aldrig i --rule-2: de bär betydelse och är
+   grafiska objekt med 3:1-krav (RÄTTELSE 2). Foten på Handla, under listan. */
+.prisnyckel{display:flex;flex-direction:column;gap:5px;margin:0 4px;padding:12px 0 0;border-top:1px solid var(--rule)}
+.prisnyckel .not{display:flex;align-items:center;gap:9px;color:var(--ink-2);font-size:11px}
+.prick{flex:0 0 22px;width:22px;height:1.5px;background:var(--ink)}
+.streck{flex:0 0 22px;width:22px;height:0;border-bottom:1.5px dashed var(--ink-3)}
+.fyrkant{flex:0 0 22px;width:22px;height:12px;border:1px solid var(--ink-3)}
+
 /* ---- Träffytor och fokus (DESIGNSYSTEM-D.md kap. 5) -------------------
    Minsta träffyta är 44x44 CSS-px. Ska kontrollen SE mindre ut används
    .tapmin: den vidgar träffytan utan att flytta något visuellt. */

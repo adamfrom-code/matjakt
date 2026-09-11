@@ -30,6 +30,7 @@ import { extraLineTotal, extraUnitPrice, removeExtra, setQty } from "../services
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, foldName, shoppingRows } from "../services/household-state.js";
 import { saveState, selectedRecipes, state } from "../state/app-state.js";
 import { escapeHtml, safeHttpUrl } from "../utils/html.js";
+import { teckenförklaringMarkup } from "./pris.js";
 
 // Allt vyn behöver men inte äger. Skickas in en gång vid uppstart; namnen
 // är exakt de app.js använder, så varje flyttad rad står oförändrad nedan.
@@ -498,6 +499,13 @@ export function renderBasket() {
     dabasNote.hidden = !fromDabas;
     dabasNote.textContent = fromDabas ? "Produktinformation från Dabas" : "";
   }
+  // L0 · TECKENFÖRKLARINGEN. Prisets säkerhet bärs av form, och en form som
+  // ingen har fått förklarad för sig är bara en tystare version av att inte
+  // säga något. Nyckeln står därför kvar i foten oavsett vad listan innehåller
+  // - också när varje pris är kontrollerat (§5.7). Markupen är statisk och
+  // skrivs en gång, inte vid varje omritning.
+  const prisnyckel = app.$("prisnyckel");
+  if (prisnyckel && !prisnyckel.firstChild) prisnyckel.innerHTML = teckenförklaringMarkup();
   const sourceNote = app.$("priceSourceNote");
   if (sourceNote) {
     if (sourceResult?.updatedAt) {
