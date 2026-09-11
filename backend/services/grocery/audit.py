@@ -5,36 +5,19 @@ admin-endpointen. Releasegaten är grön först när produktionens siffror är
 0/0/0/0/0 (gram som styck, volym som styck, estimat, otolkade paket,
 kategorikonflikter)."""
 
-from .pricing import (RecipePricingEngine, _MASS, _VOLUME, _VARIABLE_WEIGHT_RE, _fold, baking_grams,
-                      convert_amount, dairy_gram_ml_equivalent)
+from .pricing import (UNREASONABLE_PACKAGE_COUNT, UNREASONABLE_ROW_COST, RecipePricingEngine,
+                      _MASS, _VOLUME, _fold, baking_grams, dairy_gram_ml_equivalent,
+                      kilo_price_as_pack_price)
 
 FLAVOR_SUSPECTS = ["knäcke", "bulle", "kaka", "skorpa", "müsli", "godis",
                    "glass", "te ", "dryck", "yoghurt", "gröt", "chips"]
 
-
-def kilo_price_as_pack_price(row: dict):
-    """Paketpriset som konsumenten ser (totalCost/packages) för en viktvara
-    ("ca: 850g") som ändå är exakt kilopriset fast paketet inte väger 1 kg -
-    dvs. motorn har glömt kr/kg × cirkavikt. Returnerar paketpriset när det
-    är fel, annars None.
-
-    LÖSVIKT (perKg) är inte det här felet: där finns inget paket, kostnaden
-    är kr/kg × behov och unitPrice ÄR kilopriset per definition. Att jämföra
-    unitPrice i stället för paketpriset gjorde varje tomat och ingefära till
-    ett falskt larm (316 rader i produktion 2026-09-06) och gav röd gate på
-    en prissättning som var rätt."""
-    if row.get("perKg") or row.get("weightPriced"):
-        return None
-    size = row.get("packageSize") or ""
-    package_unit = _fold(row.get("packageUnit") or "")
-    if not _VARIABLE_WEIGHT_RE.match(size) or package_unit not in _MASS:
-        return None
-    comparison, total, packages = row.get("comparisonPrice"), row.get("totalCost"), row.get("packages") or 0
-    pack_g = convert_amount(row.get("packageAmount") or 0, row.get("packageUnit") or "g", "g")
-    if not comparison or total is None or not packages or not pack_g or abs(pack_g - 1000) <= 1:
-        return None
-    pack_cost = round(total / packages, 2)
-    return pack_cost if abs(pack_cost - comparison) < 0.01 else None
+# kilo_price_as_pack_price BODDE här. Den flyttade till pricing.py (C8) så
+# att motorn dömer efter samma regel som auditen i stället för att auditen
+# ensam vet vad som är fel - en orimlig rad blir numera osäker i
+# price_item() i stället för att prissättas som säker och dyr. Namnet står
+# kvar i den här modulens yta för allt som importerar det härifrån.
+__all__ = ["FLAVOR_SUSPECTS", "kilo_price_as_pack_price", "run_pricing_audit"]
 
 
 def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: int = 4,
@@ -93,13 +76,17 @@ def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: 
                     note("gram_som_styck", recipe, ing, chain, row)
                 if folded_unit in _VOLUME and package_unit not in _VOLUME and package_unit not in _MASS and exact:
                     note("volym_som_styck", recipe, ing, chain, row)
+                # Gränserna är motorns (UNREASONABLE_*) och inte auditens egna
+                # tal: rimlighetsspärren i price_item() dömer efter samma
+                # siffra, och två kopior av "vad som är orimligt" hade genast
+                # börjat glida isär.
                 if packages > 50:
                     note("paket_over_50", recipe, ing, chain, row, f"{packages} paket")
-                elif packages > 10:
+                elif packages > UNREASONABLE_PACKAGE_COUNT:
                     note("paket_over_10", recipe, ing, chain, row, f"{packages} paket")
                 if total is not None and total > 1000:
                     note("rad_over_1000", recipe, ing, chain, row, f"{total} kr")
-                elif total is not None and total > 500:
+                elif total is not None and total > UNREASONABLE_ROW_COST:
                     note("rad_over_500", recipe, ing, chain, row, f"{total} kr")
                 if not row.get("packageAmount") and not row.get("perKg"):
                     note("otolkad_paketstorlek", recipe, ing, chain, row, f"size={row.get('packageSize')!r}")

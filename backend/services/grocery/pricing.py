@@ -700,6 +700,12 @@ INGREDIENT_RULES = {
     # Biff = a beef steak cut. Not roast beef, not the fat-cap trim, not a
     # grill patty, and never another animal.
     "biff": {"exclude": ["rostbiff", "skinka", "fläsk", "kyckling", "kalkon", "vego", "vegansk", "sallad"]},
+    # Rostbiff är STEKEN, inte delikatessdisken. "Rostbiff i Skivor Sverige"
+    # ligger på ~673 kr/kg mot styckens ~150, och avdelningsspärren räddar
+    # inte: kategorin mappar till meat, inte coldcuts, så
+    # WHOLE_CUT_FORBIDDEN_DEPARTMENTS släpper igenom den. 400 g blev 2 paket
+    # och 538 kr för en ingrediensrad i en husmansrätt.
+    "rostbiff": {"exclude": ["skivor", "deliskivor", "i skivor"]},
     # "Tortilla med/utan Lök" är spansk potatisomelett (färdigrätt) och
     # tortillachips är snacks - brödet är brödet.
     "tortillabröd": {"exclude": ["chips", "med lök", "utan lök", "dipp", "corn"]},
@@ -1017,6 +1023,65 @@ LOOSE_PIECE_MAX_GRAMS = 150
 def is_variable_weight(product) -> bool:
     """Viktvara med cirkavikt i size-texten ("ca: 850g")."""
     return bool(_VARIABLE_WEIGHT_RE.match(product.size or ""))
+
+
+# RIMLIGHETSSPÄRR. De här gränserna fanns bara i offline-auditen: den visste
+# vad som var orimligt medan price_item() prissatte det ändå och skickade
+# talet rakt in i den "säkra" totalen och i Billigast-underlaget. Verkligt
+# fall ur produktionsauditen: rostbiff-potatissallad, 400 g rostbiff hos
+# Willys, matchad mot "Rostbiff i Skivor Sverige" (~673 kr/kg delikatess) -
+# 2 paket, 538,00 kr för en ingrediensrad i en husmansrätt.
+#
+# En orimlig rad blir nu OSÄKER i stället för dyr: produkten och styckpriset
+# står kvar, men radtotalen är ärligt okänd. Exakt samma mekanism som redan
+# fanns för gissade paketantal, och den är fail-closed åt rätt håll - ett
+# saknat radpris är ett tomt fack, ett hittepåpris på 538 kr är en lögn.
+UNREASONABLE_ROW_COST = 500.0
+UNREASONABLE_PACKAGE_COUNT = 10
+
+
+def kilo_price_as_pack_price(row: dict):
+    """Paketpriset som konsumenten ser (totalCost/packages) för en viktvara
+    ("ca: 850g") som ändå är exakt kilopriset fast paketet inte väger 1 kg -
+    dvs. motorn har glömt kr/kg × cirkavikt. Returnerar paketpriset när det
+    är fel, annars None.
+
+    LÖSVIKT (perKg) är inte det här felet: där finns inget paket, kostnaden
+    är kr/kg × behov och unitPrice ÄR kilopriset per definition. Att jämföra
+    unitPrice i stället för paketpriset gjorde varje tomat och ingefära till
+    ett falskt larm (316 rader i produktion 2026-09-06) och gav röd gate på
+    en prissättning som var rätt.
+
+    Bodde i audit.py; flyttad hit så att BÅDE motorn och auditen dömer efter
+    samma regel i stället för att auditen ensam vet vad som är fel."""
+    if row.get("perKg") or row.get("weightPriced"):
+        return None
+    size = row.get("packageSize") or ""
+    package_unit = _fold(row.get("packageUnit") or "")
+    if not _VARIABLE_WEIGHT_RE.match(size) or package_unit not in _MASS:
+        return None
+    comparison, total, packages = row.get("comparisonPrice"), row.get("totalCost"), row.get("packages") or 0
+    pack_g = convert_amount(row.get("packageAmount") or 0, row.get("packageUnit") or "g", "g")
+    if not comparison or total is None or not packages or not pack_g or abs(pack_g - 1000) <= 1:
+        return None
+    pack_cost = round(total / packages, 2)
+    return pack_cost if abs(pack_cost - comparison) < 0.01 else None
+
+
+def unreasonable_row(row: dict) -> str | None:
+    """Varför den här raden inte går att tro på - eller None när den gör det.
+
+    Samma tre kontroller som prisauditen har kört offline sedan länge:
+    orimlig radkostnad, orimligt många förpackningar, och ett kilopris som
+    presenteras som paketpris."""
+    total = row.get("totalCost")
+    if total is not None and total > UNREASONABLE_ROW_COST:
+        return "row_cost"
+    if (row.get("packages") or 0) > UNREASONABLE_PACKAGE_COUNT:
+        return "package_count"
+    if kilo_price_as_pack_price(row) is not None:
+        return "kilo_price_as_pack_price"
+    return None
 
 
 def kilo_price_signature(price) -> bool:
@@ -1808,6 +1873,19 @@ class RecipePricingEngine:
             else:
                 exact = True
             total = per_kg_cost if per_kg_cost is not None else count * unit_cost
+            # RIMLIGHETSSPÄRREN, i motorn och inte bara i offline-auditen.
+            # Auditen visste sedan länge att 538 kr för 400 g rostbiff var
+            # fel; price_item prissatte det ändå och skickade talet vidare
+            # som en SÄKER rad. Nu blir en orimlig rad osäker i stället för
+            # dyr - samma mekanism som gissade paketantal redan använder.
+            unreasonable = unreasonable_row({
+                "totalCost": total, "packages": count,
+                "perKg": per_kg_cost is not None, "weightPriced": weight_priced,
+                "packageSize": product.size, "packageAmount": package_amount,
+                "packageUnit": package_unit,
+                "comparisonPrice": getattr(price, "unit_price", None)})
+            if unreasonable:
+                exact = False
             # EXAKT SLÅR ESTIMAT i kandidatvalet. En gissad "1 förpackning"
             # ser billig ut och vann annars över korrekt räknade varor - det
             # var så "Smör-&rapsolja Flytande" (ml, gissat antal) slog
@@ -1852,6 +1930,11 @@ class RecipePricingEngine:
                     "weightPriced": weight_priced,
                     "fetchedAt": getattr(price, "fetched_at", None),
                     "exactPackaging": exact,
+                    # Varför raden är osäker när den är det av rimlighetsskäl
+                    # (row_cost / package_count / kilo_price_as_pack_price) -
+                    # så en flagga går att följa upp i stället för att bara
+                    # vara ett nej. None när raden är rimlig.
+                    "unreasonable": unreasonable,
                     # Vilken NIVÅ priset är: verifierat i just den här butiken
                     # eller kedjans referenspris. Går hela vägen till UI:t.
                     "priceTier": getattr(price, "tier", "VERIFIED_STORE_PRICE"),
