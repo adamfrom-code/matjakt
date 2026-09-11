@@ -2,6 +2,21 @@ name: Deploy frontend to GitHub Pages
 
 # Körs när CI (ci.yml) är GRÖN på main - inte på pushen. En röd svit
 # deployar varken backend (Render-hooken i ci.yml) eller frontend (här).
+#
+# K3 - ORDNINGEN MOT BACKENDEN. Den här workflowen är SIST i kedjan, inte
+# först. `workflow_run: types: [completed]` fyrar när HELA CI-körningen är
+# klar, och CI-körningen innehåller sedan K3 två jobb efter testerna:
+#
+#     deploy-backend  -> Render-hooken för exakt den gröna committen
+#     health-gate     -> pollar /api/health tills commit == GITHUB_SHA
+#
+# Därför kan Pages inte längre gå live före backenden. Före K3 startade båda
+# av samma händelse och Pages vann med ett par minuter - ett fönster i varje
+# release där ny frontend talade med gammal backend.
+#
+# Det betyder också att `conclusion == 'success'` nedan numera betyder "koden
+# är grön OCH drift kör den". Tas health-gate bort ur ci.yml öppnas fönstret
+# igen, tyst; backend/tests/test_deploy_ordning.py håller fast kedjan.
 on:
   workflow_run:
     workflows: [CI]
