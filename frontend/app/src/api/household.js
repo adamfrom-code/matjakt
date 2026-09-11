@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config.js";
+import { request } from "./http.js";
 
 /**
  * Hushållets API-klient.
@@ -6,29 +6,17 @@ import { API_BASE_URL } from "./config.js";
  * En regel genom hela filen: klienten skickar ALDRIG med ett household_id.
  * Servern slår upp hushållet från sessionen, så det finns ingenting här att
  * manipulera - se services/household/routes.py.
+ *
+ * Andra regeln: allt går genom request() i http.js, som ger tidsgräns och
+ * svenskt felmeddelande (E6, E7). Ingen bar fetch i den här filen.
  */
 
-async function parseJsonResponse(response) {
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw Object.assign(new Error(data.error || `HTTP ${response.status}`), { status: response.status, code: data.code });
-  return data;
-}
-
-function authed(token, extra = {}) {
-  return { Authorization: `Bearer ${token}`, ...extra };
-}
-
 function post(path, token, body) {
-  return fetch(`${API_BASE_URL}/household${path}`, {
-    method: "POST",
-    headers: authed(token, { "Content-Type": "application/json" }),
-    body: JSON.stringify(body || {}),
-  }).then(parseJsonResponse);
+  return request(`/household${path}`, { method: "POST", token, body: body || {} });
 }
 
 function get(path, token) {
-  return fetch(`${API_BASE_URL}/household${path}`, { headers: token ? authed(token) : {} })
-    .then(parseJsonResponse);
+  return request(`/household${path}`, { token });
 }
 
 export const fetchHousehold = token => get("", token);

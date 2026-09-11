@@ -17,6 +17,9 @@ import { ALLERGENS, filterByDiet, mergeDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
 import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeDetailApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
 import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
+// errorText: inget rått fetch-fel når skärmen. "Failed to fetch" är inte
+// svenska, och en användare kan inte göra något åt ett "HTTP 500" (E7).
+import { errorText } from "./src/api/http.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
 import { adjustInventory, createHousehold, createInvite, fetchHousehold, fetchNotifications, joinHousehold, leaveHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, removeMember, replaceWeekItems, saveHouseholdProfile, saveNotificationPrefs, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
@@ -4062,7 +4065,7 @@ function renderHousehold() {
     const userId = Number(button.dataset.removeMember);
     removeMember(state.authToken, userId)
       .then(({ household }) => { state.household = applySync(state.household, { household, revision: state.household.revision }); state.household.members = household.members; renderHousehold(); })
-      .catch(error => { $("householdInviteError").textContent = error.message; });
+      .catch(error => { $("householdInviteError").textContent = errorText(error); });
   }));
   // Bara administratören kan bjuda in - samma regel som servern håller.
   $("householdInviteBtn").hidden = !isAdmin;
@@ -4142,7 +4145,7 @@ function wireHouseholdUi() {
       loadNotifications();
       render();
     } catch (error) {
-      $("householdCreateError").textContent = error.message;
+      $("householdCreateError").textContent = errorText(error);
     }
   });
 
@@ -4167,7 +4170,7 @@ function wireHouseholdUi() {
         }
       };
     } catch (error) {
-      $("householdInviteError").textContent = error.message;
+      $("householdInviteError").textContent = errorText(error);
     }
   });
 
@@ -4187,7 +4190,7 @@ function wireHouseholdUi() {
       state.household.members = household.members;
       renderHousehold();
     } catch (error) {
-      $("householdProfileError").textContent = error.message;
+      $("householdProfileError").textContent = errorText(error);
     }
   });
 
@@ -4261,7 +4264,7 @@ async function handlePendingInvite() {
       render();
       setView("week");
     } catch (error) {
-      $("inviteLandingError").textContent = error.message;
+      $("inviteLandingError").textContent = errorText(error);
     }
   };
 }
@@ -4763,7 +4766,7 @@ $("backToLoginLink").addEventListener("click", () => showAccountForm("login"));
 function mailErrorText(error) {
   if (error.code === "MAIL_NOT_CONFIGURED") return "E-postutskick är inte aktiverat på servern ännu. Kontakta support så hjälper vi dig.";
   if (error.code === "MAIL_SEND_FAILED") return "Mejlservern svarar inte just nu. Försök igen om en stund.";
-  return error.message;
+  return errorText(error);
 }
 $("forgotPasswordForm").addEventListener("submit", async event => {
   event.preventDefault();
@@ -4786,7 +4789,7 @@ $("resetPasswordForm").addEventListener("submit", async event => {
     showAccountForm("login");
     $("loginError").textContent = "Lösenordet är ändrat. Logga in med det nya lösenordet.";
     event.target.reset();
-  } catch (error) { $("resetError").textContent = error.message; }
+  } catch (error) { $("resetError").textContent = errorText(error); }
 });
 $("marketingToggle").addEventListener("change", async event => {
   if (!state.authToken) return;
@@ -4814,7 +4817,7 @@ $("deleteAccountBtn").addEventListener("click", async () => {
     state.authToken = null; state.user = null; storeToken(null);
     clearHouseholdSession();
     closeAccountModal(); renderAccount();
-  } catch (error) { $("deleteError").textContent = error.message; }
+  } catch (error) { $("deleteError").textContent = errorText(error); }
 });
 async function refreshUser() {
   fetchEntitlements();
@@ -4936,13 +4939,18 @@ async function resumePendingInvite() {
 $("accountLoginForm").addEventListener("submit", async event => {
   event.preventDefault();
   $("loginError").textContent = "";
+  // Knappen var aldrig avstängd under anropet: på ett segt nät tryckte
+  // användaren igen, och igen, och startade en ny inloggning per tryck (E6).
+  const submit = event.target.querySelector('button[type="submit"]');
+  if (submit) submit.disabled = true;
   try {
     const { token, user } = await login($("loginEmail").value, $("loginPassword").value);
     state.authToken = token; state.user = user; storeToken(token);
     await pullAccountState();
     event.target.reset(); renderAccount(); closeAccountModal();
     await resumePendingInvite();
-  } catch (error) { $("loginError").textContent = error.message; }
+  } catch (error) { $("loginError").textContent = errorText(error); }
+  finally { if (submit) submit.disabled = false; }
 });
 $("accountRegisterForm").addEventListener("submit", async event => {
   event.preventDefault();
@@ -4961,7 +4969,7 @@ $("accountRegisterForm").addEventListener("submit", async event => {
       closeAccountModal();
     }
     await resumePendingInvite();
-  } catch (error) { $("registerError").textContent = error.message; }
+  } catch (error) { $("registerError").textContent = errorText(error); }
 });
 $("accountRedeemForm").addEventListener("submit", async event => {
   event.preventDefault();
@@ -4969,7 +4977,7 @@ $("accountRedeemForm").addEventListener("submit", async event => {
   try {
     const { user } = await redeemPremium(state.authToken, $("premiumCode").value);
     state.user = user; renderAccount(); event.target.reset(); chooseMenu(false); renderCampaignSection();
-  } catch (error) { $("redeemError").textContent = error.message; }
+  } catch (error) { $("redeemError").textContent = errorText(error); }
 });
 // The paywall sells VALUE, never just says "Premium krävs". Opened from
 // every locked control; prices come from the central config via
@@ -5076,7 +5084,7 @@ async function beginCheckout(plan, root = document.getElementById("paywallModal"
     const { url } = await startCheckout(getStoredToken(), plan, consent);
     if (url) { if (isNativeApp()) awaitingPremiumActivation = true; openExternal(url); }
   } catch (error) {
-    const text = error?.message || "Kunde inte starta betalningen just nu.";
+    const text = error ? errorText(error) : "Kunde inte starta betalningen just nu.";
     if (errorLine) errorLine.textContent = text; else alert(text);
   }
 }
@@ -5098,7 +5106,7 @@ $("subscribeBtn").addEventListener("click", async () => {
     const { url } = await startCheckout(state.authToken, selectedPlan, consent);
     if (isNativeApp()) awaitingPremiumActivation = true;
     openExternal(url);
-  } catch (error) { $("checkoutError").textContent = error.message; }
+  } catch (error) { $("checkoutError").textContent = errorText(error); }
 });
 $("manageBillingBtn").addEventListener("click", async () => {
   $("portalError").textContent = "";
@@ -5106,7 +5114,7 @@ $("manageBillingBtn").addEventListener("click", async () => {
     await flushServerSync();
     const { url } = await openBillingPortal(state.authToken);
     openExternal(url);
-  } catch (error) { $("portalError").textContent = error.message; }
+  } catch (error) { $("portalError").textContent = errorText(error); }
 });
 $("logoutBtn").addEventListener("click", async () => {
   if (state.authToken) { try { await logoutRequest(state.authToken, state.pushDeviceToken || null); } catch { /* session redan ogiltig server-side, städa lokalt ändå */ } }

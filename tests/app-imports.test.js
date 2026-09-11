@@ -39,15 +39,29 @@ function exportedNames(text) {
   return names;
 }
 
+// Prosa i en kommentar är ingen anropsplats. Meningen "One item per request
+// (not several bundled into one)" i app.js läses annars som ett anrop till
+// request() i src/api/http.js - och ju vanligare engelska ord en modul
+// exporterar, desto oftare slår det till. Bara hela kommentarsrader tas bort;
+// en rad med kod kvar rörs inte, så ingen riktig anropsplats kan gömma sig.
+function withoutComments(text) {
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n")
+    .filter(line => !/^\s*\/\//.test(line))
+    .join("\n");
+}
+
 test("varje modulfunktion som app.js anropar är importerad", () => {
   const imported = importedNames(source);
+  const code = withoutComments(source);
   const missing = [];
   for (const module of ownModules()) {
     const relative = module.pathname.split("/frontend/app/")[1];
     for (const name of exportedNames(readFileSync(module, "utf8"))) {
       if (imported.has(name)) continue;
-      const calledHere = new RegExp(`(?<![\\w.$])${name}\\s*\\(`).test(source);
-      const declaredHere = new RegExp(`(?:function|const|let|var)\\s+${name}\\b`).test(source);
+      const calledHere = new RegExp(`(?<![\\w.$])${name}\\s*\\(`).test(code);
+      const declaredHere = new RegExp(`(?:function|const|let|var)\\s+${name}\\b`).test(code);
       if (calledHere && !declaredHere) missing.push(`${relative}: ${name}`);
     }
   }
