@@ -46,6 +46,22 @@ self.addEventListener("fetch", event => {
         }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      // OFFLINE MED QUERY I ADRESSEN.
+      //
+      // caches.match(request) matchar på EXAKT URL, query och allt. Varje
+      // djuplänk appen själv delar ut bär en - ?recept=, ?invite=, ?verify=,
+      // ?reset=, ?billing=success - och ingen av dem finns i cachen, för de
+      // har aldrig hämtats förut. Offline gav därför webbläsarens felsida på
+      // precis de adresser som skickas i mejl och delas vidare.
+      //
+      // En NAVIGERING vill åt appskalet. Det är samma dokument oavsett query,
+      // och appen läser sin egen adress när den startat (takeUrlTokens m.fl.).
+      // Så: exakt träff först, sedan samma adress utan query, sist skalet på
+      // scopets rot. Allt som inte är en navigering beter sig som förut - att
+      // svara med HTML-skalet på en produktbild vore värre än inget svar.
+      .catch(() => caches.match(event.request).then(hit => hit
+        || (event.request.mode === "navigate"
+          ? caches.match(event.request, { ignoreSearch: true }).then(shell => shell || caches.match("./"))
+          : undefined)))
   );
 });
