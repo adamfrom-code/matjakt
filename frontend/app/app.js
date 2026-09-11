@@ -2582,7 +2582,7 @@ function storeOptionsMarkup(selected, autoLabel) {
 // ett test (backend/tests/test_frontend_contract.py) låser att listorna är
 // lika. ICA, Coop och Lidl finns i butiksregistret men är gated tills
 // kvalitet och rättigheter räcker; de ska inte gå att välja i appen.
-const RELEASED_CHAINS = ["Willys", "Hemköp", "City Gross"];
+const RELEASED_CHAINS = ["Willys", "Hemköp", "City Gross", "ICA"];
 const VALID_CHAINS = RELEASED_CHAINS;
 
 // ---------------------------------------------------------------------------

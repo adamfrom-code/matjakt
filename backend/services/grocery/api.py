@@ -302,6 +302,10 @@ def store_counts(store, chain: str, now: float | None = None) -> dict:
         "mattVid": now,
         "farskGrans": f"pris yngre än {MAX_STORE_PRICE_AGE_SECONDS // 86400} dygn",
         "slapptKedja": slappt,
+        # En STORE_SPECIFIC-kedja som är släppt vilar på sin referensnivå i
+        # alla butiker utom de partnertecknade. Är den noll når kunden inga
+        # priser alls, och det ska synas utan admin-token.
+        "referenspriser": store.reference_price_count(chain),
     }
 
 
@@ -446,12 +450,39 @@ CHAIN_STALE_AFTER_SECONDS = 36 * 3600
 #
 # Uppåt finns gott om marginal: en kedja som kör varje natt har som mest ~24
 # timmar gammal data precis innan nästa körning, plus körningens egen längd
-# (tiotals minuter). 27 timmar nås aldrig av en kedja som fungerar.
+# (tiotals minuter). 25 timmar nås aldrig av en kedja som fungerar - ICA:s
+# lyckade import är två timmar gammal när driftkollen går.
+#
+# SIFFRAN ÄR RÄKNAD UR SCHEMAT, INTE VALD. En utebliven natt upptäcks först
+# när kedjans senaste lyckade import passerat gränsen, och den åldern är
+# 24 + driftkollen - kedjans körtid. Den snävaste SLÄPPTA kedjan sätter taket:
+#
+#   Willys     02:00 -> 29,5 h      City Gross 04:00 -> 27,5 h
+#   Hemköp     03:00 -> 28,5 h      ICA        05:30 -> 26,0 h
+#
+# Gränsen låg på 27 h, räknad när bara de tre första var släppta. D11 släppte
+# ICA, som går 05:30 - en utebliven ICA-natt hade då inte upptäckts förrän
+# nästa morgon, vilket är precis det D4 byggdes för att förhindra. Därför 25 h.
+#
+# FÖNSTRET ÄR EN TIMME BRETT OCH DET ÄR TRÅNGT. Nedåt får siffran inte gå
+# under 25 h: precis före nästa körning är en fungerande kedjas data ~24 h
+# gammal plus körningens längd (ICA:s tar ~10 min), och larmar vi där larmar
+# vi varje natt. Uppåt sätter ICA:s 26,0 h taket. 25,5 h ger 1,3 h marginal
+# mot falsklarm och 0,5 h mot missad upptäckt.
+#
+# Den tunna marginalen är en följd av att ICA kör sent (05:30), och den
+# ordningen kom av att Primat-kedjorna lades efter de fria. Nu när ICA är
+# släppt hör den hemma bland de släppta: flyttas den till 04:30 blir åldern
+# 27,0 h och gränsen kan gå tillbaka till 26 h med råge åt båda håll. Den
+# ändringen ligger i scheduler.py, som vågen D arbetar i just nu.
+#
+# Släpps Coop (06:30 -> 25,0 h) eller Lidl (07:00 -> 24,5 h) räcker ingen
+# siffra alls - då MÅSTE kedjan flyttas tidigare i schemat.
 #
 # test_the_stale_window_catches_a_skipped_night (test_grocery_scheduler.py)
-# håller ihop siffran med schemat: flyttas en släppt kedja tidigare, eller
-# driftkollen senare, failar testet.
-RELEASED_CHAIN_STALE_AFTER_SECONDS = 27 * 3600
+# håller ihop siffran med schemat: flyttas en släppt kedja senare, eller
+# driftkollen tidigare, failar testet.
+RELEASED_CHAIN_STALE_AFTER_SECONDS = int(25.5 * 3600)
 
 # Körningsstatusar som betyder "försöket gav ingen ny data".
 #
@@ -628,14 +659,35 @@ def provider_status() -> list[dict]:
     return panel
 
 
-# Kedjor som är SLÄPPTA mot användare. ICA, Coop och Lidl har en färdig
-# provider (Primat, se providers/primat.py) och kan importeras manuellt, men
-# de får inte dyka upp i jämförelsen förrän de klarat samma kvalitetsgate som
-# de tre befintliga: kanonisk matchning, paketmatte, fail-closed, full audit
-# på full katalog. En partiell katalog i databasen får ALDRIG räcka för att
-# en kedja ska börja kröna "Billigast" - därav uttrycklig lista i stället
-# för "allt som råkar ha rader".
-RELEASED_CHAINS = ("Willys", "Hemköp", "City Gross")
+# Kedjor som är SLÄPPTA mot användare. Coop och Lidl har en färdig provider
+# (Primat, se providers/primat.py) och kan importeras, men de får inte dyka
+# upp i jämförelsen förrän de klarat samma kvalitetsgate som de övriga:
+# kanonisk matchning, paketmatte, fail-closed, full audit på full katalog.
+# En partiell katalog i databasen får ALDRIG räcka för att en kedja ska
+# börja kröna "Billigast" - därav uttrycklig lista i stället för "allt som
+# råkar ha rader".
+#
+# ICA SLÄPPS PÅ REFERENSNIVÅ, OCH DET ÄR ETT ANNAT LÖFTE ÄN DE ANDRA TRE.
+#
+# Willys och Hemköp är centralt prissatta: ett rikspris ÄR priset, i varje
+# butik. ICA är handlarägt (CHAIN_OWNERSHIP["ICA"] = "FRANCHISE") och
+# priserna skiljer sig bevisat mellan butiker. Att hålla alla 463 aktiva
+# ICA-butiker butiksverifierade är dessutom omöjligt på dagens Primat-kvot:
+# en butikskatalog kostar ~19 700 rader mot en dygnsbudget på 100 000, så
+# en full omgång tar ~91 dygn och priserna hinner bli 23 gånger för gamla.
+#
+# Därför får ICA i stället ett RIKTPRIS på kedjenivå, byggt ur
+# CHAIN_REFERENCE_STORE["ICA"] (Maxi ICA Stormarknad Gävle, full täckning)
+# och publicerat som REFERENCE_PRICE. Varje ICA-butik i landet blir därmed
+# prissatt - vilket är poängen - men _pricing_basis och _comparison_basis
+# märker korgen som "reference", så kunden ser vad "Billigast" vilar på.
+# Motorn ljuger alltså inte; den säger "ungefär så här" i stället för att
+# låtsas veta.
+#
+# Uppgraderingsvägen finns: en ICA-handlare som tecknar partneravtal skickar
+# sin prisfil genom partner_feed och får VERIFIED_STORE_PRICE för sin butik,
+# som då slutar vila på riktpriset.
+RELEASED_CHAINS = ("Willys", "Hemköp", "City Gross", "ICA")
 
 
 def priceable_chains() -> list[str]:

@@ -70,8 +70,11 @@ class SchematsKedjor(unittest.TestCase):
         self.assertIn("Lidl", PRIMAT_ONLY_CHAINS)
 
     def test_att_hamta_ar_inte_att_slappa(self):
+        # ICA är släppt sedan D11, men på REFERENSNIVÅ och efter ett beslut -
+        # inte för att den råkade importeras. Coop och Lidl importeras med
+        # samma provider och samma schema, och får inte följa med av misstag.
         from services.grocery.api import RELEASED_CHAINS
-        for kedja in ("ICA", "Coop", "Lidl"):
+        for kedja in ("Coop", "Lidl"):
             self.assertNotIn(kedja, RELEASED_CHAINS, f"{kedja} blev publik av en schemaändring")
 
 
