@@ -27,6 +27,7 @@ import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { kopplaSvepBort } from "./src/utils/swipe-remove.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.js";
 import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
+import { weekPlanDays } from "./src/views/week.js";
 import { adjustInventory, fetchHousehold, fetchNotifications, joinHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, replaceWeekItems, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, pantryEntriesFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor } from "./src/services/categories.js";
@@ -2135,8 +2136,10 @@ function firstPlannedDayFrom(selected, startIndex) {
   }
   return startIndex;
 }
-let weekPlanExpanded = false;
-const WEEK_PLAN_PREVIEW_COUNT = 4;
+// G3: veckolistan har ingen förhandsvisning längre. Den VAR fyra rader bakom
+// en "Visa hela veckan"-knapp, i en sektion som dessutom var `hidden` - två
+// lager mellan användaren och det enda hon öppnade appen för. Antalet rader
+// bestäms nu av weekPlanDays() i src/views/week.js: sju, alltid.
 const WEEK_SHOPPING_PREVIEW_COUNT = 4;
 // Small line icons reused everywhere a "time" or "portions" fact is shown
 // next to a recipe (Vecka's Dagens middag, the full recipe page) - one
@@ -2304,11 +2307,12 @@ function renderWeekOverview(selected, shoppingItems, total) {
   const todayRecipe = selected[weekOverviewDay];
   $("weekTodayCard").innerHTML = todayRecipe ? weekTodayCardMarkup(todayRecipe) : weekEmptyDayMarkup();
 
-  const planVisibleCount = weekPlanExpanded ? selected.length : Math.min(selected.length, WEEK_PLAN_PREVIEW_COUNT);
-  $("weekPlanList").innerHTML = selected.slice(0, planVisibleCount).map(weekPlanRowMarkup).join("");
-  $("weekPlanToggle").hidden = selected.length <= WEEK_PLAN_PREVIEW_COUNT;
-  $("weekPlanToggle").textContent = weekPlanExpanded ? "Visa färre" : "Visa hela veckan";
-  $("weekPlanToggle").onclick = () => { weekPlanExpanded = !weekPlanExpanded; renderWeekOverview(selected, shoppingItems, total); };
+  // G3: HELA veckan, i en lista som syns utan att någon klickar. Sju rader -
+  // weekPlan är bara så lång som antalet middagar, medan dagflikarna ovanför
+  // alltid ritar sju dagar, så en vecka med fyra middagar sa två olika saker
+  // om samma vecka. En dag utan rätt är en rad som säger just det, med en
+  // väg tillbaka till den ("+ Lägg till").
+  $("weekPlanList").innerHTML = weekPlanDays(selected).map(weekPlanRowMarkup).join("");
 
   const remainingItems = shoppingItems.filter(item => itemStatus(item.namn) === NEED_TO_BUY);
   $("weekShoppingSummary").textContent = shoppingItems.length ? `${plural(remainingItems.length, "vara kvar", "varor kvar")}${total == null ? "" : ` · ${money(total)}`}` : "";

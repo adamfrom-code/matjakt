@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=108">
+  <link rel="stylesheet" href="styles.css?v=109">
 </head>
 <body>
   <div class="phone-shell">
@@ -218,12 +218,14 @@
           </div>
           <div class="week-day-tabs" id="weekDayTabs" role="tablist" aria-label="Välj dag"></div>
           <div id="weekTodayCard"></div>
-          <!-- Dold: dagflikarna + dagens kort ÄR veckan. Listan dubblerade dem.
-               Elementen finns kvar för renderWeekOverview, men visas aldrig. -->
-          <div class="week-overview-section week-plan-section" hidden>
+          <!-- G3: HELA VECKAN SYNLIG. Listan var permanent dold, och kvar
+               fanns sju dagflikar och ETT dagskort i taget - alltså gick
+               frågan appen finns för, "vad äter vi i veckan", inte att
+               besvara med ögonen. Sju rader, alla synliga, ingen knapp
+               emellan. (L2 bygger om raderna till design D.) -->
+          <div class="week-overview-section week-plan-section">
             <div class="section-heading"><h2>Veckans plan</h2></div>
             <div class="week-plan-list" id="weekPlanList"></div>
-            <button type="button" class="btn-ghost week-overview-toggle" id="weekPlanToggle" hidden></button>
           </div>
           <div class="week-overview-section">
             <div class="section-heading"><h2>Handla-listan</h2><span id="weekShoppingSummary"></span></div>
@@ -615,6 +617,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=108"></script>
+  <script type="module" src="app.js?v=109"></script>
 </body>
 </html>
