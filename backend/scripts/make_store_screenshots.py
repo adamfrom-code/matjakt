@@ -39,6 +39,7 @@ Kräver Playwright: pip install playwright && python -m playwright install chrom
 """
 
 import argparse
+import itertools
 import os
 import re
 import sys
@@ -267,13 +268,18 @@ def main() -> int:
         bas = server.base
         print(f"fixturserver på {bas} (data i {temp})")
 
-        def konto(sida, _räknare=[0]):
+        # itertools.count i stället för en muterbar standardparameter: samma
+        # räknare, men utan listan som delas mellan anrop och som ruff (B006)
+        # med rätta kallar en fälla - den som råkar kalla konto(sida, [0])
+        # nollställer den tyst för alla.
+        löpnummer = itertools.count(1)
+
+        def konto(sida):
             """Registrerar ett engångskonto och ger det Premium direkt i
             fixturdatabasen. Butiksjämförelsen och sparkortet är
             Premium-funktioner; utan det här fotograferar skriptet en
             gratisvy och rapporterar två saknade scener."""
-            _räknare[0] += 1
-            epost = f"skarmbild-{_räknare[0]}-{int(time.time())}@matjakt.local"
+            epost = f"skarmbild-{next(löpnummer)}-{int(time.time())}@matjakt.local"
             logga_in(sida, epost, "Skarmbild!2026", registrera=True)
             with api_server.ACCOUNT_STORE.connection as anslutning:
                 anslutning.execute("UPDATE users SET premium = 1 WHERE email = ?", (epost,))
