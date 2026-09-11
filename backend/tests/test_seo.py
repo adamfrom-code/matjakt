@@ -37,6 +37,24 @@ DOMÄN = "https://matjakt.store"
 SITEMAP_NS = "{http://www.sitemaps.org/schemas/sitemap/0.9}"
 
 
+def publika_sidor() -> list[Path]:
+    """Varje indexerbar sida på domänen, oavsett djup.
+
+    Låg först som `FRONTEND.glob("*.html")` - en glob på toppnivån. Den
+    missade fyndsidorna (I6), som ligger i `fynd/vecka-N/index.html`, och en
+    ny sida som varken hålls till varumärket eller hamnar i sitemapen är
+    precis den sortens fel ingen upptäcker. `app/` och `site/` är undantagna:
+    appskalet har inget innehåll att indexera, och de sidorna bär
+    `noindex`."""
+    sidor = sorted(FRONTEND.glob("*.html")) + sorted(FRONTEND.glob("fynd/**/*.html"))
+    return [sida for sida in sidor
+            if 'name="robots" content="noindex"' not in sida.read_text(encoding="utf-8")]
+
+
+def relativ(sida: Path) -> str:
+    return sida.relative_to(FRONTEND).as_posix()
+
+
 def index_html() -> str:
     return INDEX.read_text(encoding="utf-8")
 
@@ -135,7 +153,10 @@ class Sitemapen(unittest.TestCase):
     def _fil_för(self, loc: str) -> Path:
         self.assertTrue(loc.startswith(f"{DOMÄN}/"), f"{loc} ligger utanför domänen")
         stig = loc[len(DOMÄN) + 1:]
-        return FRONTEND / (stig or "index.html")
+        # "/fynd/vecka-37/" är en katalog på Pages; filen är dess index.html.
+        if stig == "" or stig.endswith("/"):
+            stig += "index.html"
+        return FRONTEND / stig
 
     def test_sitemapen_ar_inte_tom(self):
         self.assertGreaterEqual(len(self.urler), 3,
@@ -154,12 +175,11 @@ class Sitemapen(unittest.TestCase):
     def test_varje_publik_sida_star_med(self):
         """Den grind som faktiskt betyder något: en ny publik sida som inte
         hamnar i sitemapen indexeras inte, och ingen märker det."""
-        listade = {self._fil_för(url.findtext(f"{SITEMAP_NS}loc")).name for url in self.urler}
-        for sida in sorted(FRONTEND.glob("*.html")):
-            html = sida.read_text(encoding="utf-8")
-            if 'name="robots" content="noindex"' in html:
-                continue
-            self.assertIn(sida.name, listade, f"{sida.name} är indexerbar men saknas i sitemapen")
+        listade = {relativ(self._fil_för(url.findtext(f"{SITEMAP_NS}loc")))
+                   for url in self.urler}
+        for sida in publika_sidor():
+            self.assertIn(relativ(sida), listade,
+                          f"{relativ(sida)} är indexerbar men saknas i sitemapen")
 
     def test_robots_pekar_hit_och_slapper_in(self):
         robots = (FRONTEND / "robots.txt").read_text(encoding="utf-8")
@@ -234,14 +254,14 @@ class EttVarumarkeIHelaDomanen(unittest.TestCase):
         """Varje publik sida, med den CSS den faktiskt laddar. En sida med
         extern stilmall bär inga hex själv - att bara läsa HTML:en hade
         friat den utan att ha tittat."""
-        for sida in sorted(FRONTEND.glob("*.html")):
+        for sida in publika_sidor():
             html = sida.read_text(encoding="utf-8")
             text = html
             for stilmall in re.findall(r'<link rel="stylesheet" href="([^":?]+)', html):
-                fil = FRONTEND / stilmall
+                fil = FRONTEND / stilmall.lstrip("/")
                 if fil.exists():
                     text += fil.read_text(encoding="utf-8")
-            yield sida.name, html, text
+            yield relativ(sida), html, text
 
     def test_ingen_sida_pa_domanen_bar_ett_gammalt_typsnitt(self):
         for namn, _, text in self.sidor():
@@ -277,19 +297,15 @@ class KontaktadressenGarFram(unittest.TestCase):
     domänen tills brevlådan finns. Byts den, byts den på alla sidor samtidigt
     och det här testet med."""
 
-    SIDOR = ("index.html", "integritetspolicy.html", "anvandarvillkor.html")
-
     def test_varje_publik_sida_bar_en_adress_som_nar_nagon(self):
-        for namn in self.SIDOR:
-            html = (FRONTEND / namn).read_text(encoding="utf-8")
-            self.assertIn("mailto:adamfrom@icloud.com", html,
-                          f"{namn} saknar en kontaktadress som går fram")
+        for sida in publika_sidor():
+            self.assertIn("mailto:adamfrom@icloud.com", sida.read_text(encoding="utf-8"),
+                          f"{relativ(sida)} saknar en kontaktadress som går fram")
 
     def test_ingen_sida_utlovar_en_brevlada_som_inte_finns(self):
-        for sida in sorted(FRONTEND.glob("*.html")):
-            html = sida.read_text(encoding="utf-8")
-            self.assertNotIn("support@matjakt.store", html,
-                             f"{sida.name} ber om support till en adress utan mottagare")
+        for sida in sorted(FRONTEND.glob("*.html")) + sorted(FRONTEND.glob("fynd/**/*.html")):
+            self.assertNotIn("support@matjakt.store", sida.read_text(encoding="utf-8"),
+                             f"{relativ(sida)} ber om support till en adress utan mottagare")
 
 
 class SlappgrindenArPasserad(unittest.TestCase):
@@ -300,12 +316,12 @@ class SlappgrindenArPasserad(unittest.TestCase):
     varna om."""
 
     def test_inga_platshallare_kvar_pa_nagon_publik_sida(self):
-        for sida in sorted(FRONTEND.glob("*.html")):
+        for sida in sorted(FRONTEND.glob("*.html")) + sorted(FRONTEND.glob("fynd/**/*.html")):
             html = sida.read_text(encoding="utf-8")
             self.assertNotIn('class="placeholder"', html,
-                             f"{sida.name} har kvar en juridisk platshållare")
-            self.assertNotIn("[FÖRETAGSNAMN", html, f"{sida.name}: platshållartext kvar")
-            self.assertNotIn("[ORGANISATIONSNUMMER", html, f"{sida.name}: platshållartext kvar")
+                             f"{relativ(sida)} har kvar en juridisk platshållare")
+            self.assertNotIn("[FÖRETAGSNAMN", html, f"{relativ(sida)}: platshållartext kvar")
+            self.assertNotIn("[ORGANISATIONSNUMMER", html, f"{relativ(sida)}: platshållartext kvar")
 
     def test_ci_steget_ar_en_varning_inte_ett_byggfel(self):
         ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
