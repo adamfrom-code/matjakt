@@ -21,6 +21,7 @@ SAFETY RULES (the same ones the collectors follow):
   - Import is gated by the admin token, never by a user account.
 """
 
+import inspect
 import logging
 import threading
 import time
@@ -301,6 +302,19 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
         _set(running=False, finishedAt=time.time(), status="failed", message=str(error))
 
 
+def streams_products(provider) -> bool:
+    """True om providerns get_products kan lämna produkter vidare löpande.
+
+    Frågan ställs till signaturen och inte till en lista med kedjenamn:
+    en ny provider som tar `on_products` får streaming utan att någon
+    kommer ihåg att ändra här, och en som inte gör det får det gamla
+    beteendet i stället för ett TypeError."""
+    try:
+        return "on_products" in inspect.signature(provider.get_products).parameters
+    except (TypeError, ValueError):   # C-funktion, mock utan signatur
+        return False
+
+
 def _collect(provider, store_id: str, limit_per_category: int | None, on_products=None):
     """Category walk where the provider supports one, term search otherwise.
 
@@ -308,6 +322,12 @@ def _collect(provider, store_id: str, limit_per_category: int | None, on_product
     for a streaming category walk, and the full list for a provider that can
     only return everything at once."""
     if not hasattr(provider, "get_products_by_category"):
+        # D7. City Gross och Primat byggde hela katalogen i minnet och
+        # lämnade den på slutet; nu tar de emot samma on_products som
+        # Axfood-vägen och stagear löpande. Utan callback (eller mot en
+        # provider som inte kan strömma) är beteendet oförändrat.
+        if on_products is not None and streams_products(provider):
+            return provider.get_products(store_id, on_products=on_products) or []
         return provider.get_products(store_id)
 
     categories = provider.get_categories()
