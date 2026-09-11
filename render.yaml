@@ -40,6 +40,16 @@ services:
         value: "0"
       - key: MATJAKT_MAIL_SECRET
         sync: false
+      # D1: MOTTAGAREN FÖR DRIFTLARMEN. Hela larmkedjan i
+      # services/grocery/alerts.py - dedupering, incident, recovery - var
+      # byggd och testad men saknade adress här, så varje incident hamnade
+      # tyst i "skipped" och inget mejl gick någonsin ut. sync: false: en
+      # e-postadress är inte en hemlighet men hör inte hemma i ett publikt
+      # repo, och den sätts i Renders dashboard. Saknas den syns det numera
+      # som adminAlerts.recipientConfigured=false i /api/health i stället för
+      # att tigas ihjäl.
+      - key: MATJAKT_ADMIN_EMAIL
+        sync: false
       - key: MATJAKT_PUBLIC_API_URL
         value: https://matjakt.onrender.com/api
       - key: PRIMAT_API_KEY
