@@ -29,6 +29,31 @@ from services.grocery.scheduler import (  # noqa: E402
 )
 
 
+class MinnesKV:
+    """KV-store i minnet med samma yta som KeyValueCacheStore.
+
+    Schemaläggarens dygnsmarkeringar ligger numera i databasen, och två
+    tester som delar markeringar skulle dölja precis det de prövar - det
+    andra testet skulle se det första som "kedjan har redan kört i dag"."""
+
+    def __init__(self):
+        self.data = {}
+
+    def get(self, namespace, key):
+        return self.data.get((namespace, key), (None, None))
+
+    def set(self, namespace, key, value, updated_at=None):
+        self.data[(namespace, key)] = (value, updated_at or 0.0)
+
+
+def schemalaggare(schedule, kv=None, kort_i_dag=False):
+    """En schemaläggare isolerad från den riktiga databasen: egna
+    dygnsmarkeringar, och körningshistoriken svarar det testet ber om."""
+    sched = GroceryScheduler(schedule, kv=kv if kv is not None else MinnesKV())
+    sched._chain_already_started_today = lambda chain, day_start: kort_i_dag
+    return sched
+
+
 class SchedulableChainsTest(unittest.TestCase):
     def test_only_the_verified_chains_are_schedulable(self):
         """ICA, Coop och Lidl kom till när Primat-vägen fanns: den rör aldrig
@@ -180,14 +205,17 @@ class TickTest(unittest.TestCase):
         scheduler_module.importer.start = lambda chain, **kwargs: (
             self.started.append(chain) or {"started": True, "chain": chain})
         self.addCleanup(lambda: setattr(scheduler_module.importer, "start", self._real_start))
-        self.scheduler = GroceryScheduler({"Willys": "02:00", "Hemköp": "03:00"})
+        self.scheduler = schemalaggare({"Willys": "02:00", "Hemköp": "03:00"})
 
     def test_fires_the_chain_whose_time_it_is(self):
         self.scheduler._tick(datetime(2026, 8, 31, 2, 0))
         self.assertEqual(self.started, ["Willys"])
 
-    def test_fires_nothing_at_another_time(self):
-        self.scheduler._tick(datetime(2026, 8, 31, 2, 30))
+    def test_fires_nothing_before_its_time(self):
+        """Ett klockslag som inte passerat är inte ett missat jobb. (Efter
+        klockslaget gäller motsatsen: se MissadKorningTasIgen - en tick 02:30
+        TAR igen 02:00-jobbet i stället för att skjuta det ett dygn.)"""
+        self.scheduler._tick(datetime(2026, 8, 31, 1, 30))
         self.assertEqual(self.started, [])
 
     def test_does_not_fire_twice_within_the_same_minute(self):
@@ -362,7 +390,7 @@ class DaylightSavingAndLateTicks(unittest.TestCase):
 
     def setUp(self):
         self.started = []
-        self.scheduler = GroceryScheduler({"Willys": "02:00"})
+        self.scheduler = schemalaggare({"Willys": "02:00"})
         self._original = scheduler_module.importer.start
         scheduler_module.importer.start = lambda chain: (self.started.append(chain) or {"started": True, "chain": chain})
 
@@ -381,11 +409,127 @@ class DaylightSavingAndLateTicks(unittest.TestCase):
         self.scheduler._tick(datetime(2026, 3, 29, 3, 1, tzinfo=tz))
         self.assertEqual(self.started, ["Willys"], "en gång per dygn")
 
-    def test_a_tick_a_few_minutes_late_still_fires_but_half_an_hour_late_does_not(self):
+    def test_en_sen_tick_kor_jobbet_oavsett_hur_sen_den_ar(self):
+        """Fönstret på fem minuter är borta (D3). Det var ett tak på hur sent
+        ett jobb fick gå, och en deploy 02:03-02:05 räckte för att slå i det
+        - då uteblev Willys hela natten. Dygnsmarkeringen är gränsen nu: en
+        tick klockan 02:30 tar igen jobbet som skulle gått 02:00."""
         self.scheduler._tick(datetime(2026, 8, 31, 2, 3))
         self.assertEqual(self.started, ["Willys"])
         self.scheduler._tick(datetime(2026, 9, 1, 2, 30))
-        self.assertEqual(self.started, ["Willys"], "30 minuter sent är inte samma jobb")
+        self.assertEqual(self.started, ["Willys", "Willys"])
+
+
+class MissadKorningTasIgen(unittest.TestCase):
+    """D3. Dygnets körning ska konsumeras av en import som FAKTISKT startade
+    - ingenting annat.
+
+    Tre fel satt i samma loop. `_last_fired[chain]` sattes FÖRE
+    `importer.start()`, så en kedja som fick "already_running" räknades som
+    körd fast ingenting hämtats. Markeringen låg bara i minnet, så en omstart
+    mitt i startfönstret kunde köra samma jobb två gånger samma natt. Och
+    fönstret var fem minuter brett, så en deploy 02:03-02:05 tog Willys hela
+    den natten - vilket syntes först som ett stale-larm efter 36 timmar."""
+
+    def setUp(self):
+        self.started = []
+        self.svar = {"started": True}
+        self._real_start = scheduler_module.importer.start
+        scheduler_module.importer.start = lambda chain, **kw: (
+            self.started.append(chain) or dict(self.svar, chain=chain))
+        self.addCleanup(lambda: setattr(scheduler_module.importer, "start", self._real_start))
+
+    def test_already_running_konsumerar_inte_dygnets_korning(self):
+        """Acceptanskriteriet. En Willys-import som drog över till 03:00 tog
+        med sig Hemköp för hela dygnet: Hemköp markerades som körd, fick
+        "already_running", och nästa försök låg ett dygn bort."""
+        sched = schemalaggare({"Hemköp": "03:00"})
+        self.svar = {"started": False, "reason": "already_running"}
+        sched._tick(datetime(2026, 8, 31, 3, 0))
+        self.assertEqual(self.started, ["Hemköp"], "försöket ska ha gjorts")
+
+        # Den pågående importen blir klar. Nästa tick ska ta jobbet, inte
+        # vänta till i morgon.
+        self.svar = {"started": True}
+        sched._tick(datetime(2026, 8, 31, 3, 1))
+        self.assertEqual(self.started, ["Hemköp", "Hemköp"])
+
+        # ... och när det väl startade är dygnets körning förbrukad.
+        sched._tick(datetime(2026, 8, 31, 3, 2))
+        self.assertEqual(self.started, ["Hemköp", "Hemköp"])
+
+    def test_ett_missat_klockslag_tas_igen_samma_dygn(self):
+        """En deploy under startminuten ska kosta minuter, inte ett dygn."""
+        sched = schemalaggare({"Willys": "02:00"})
+        # Processen var nere 02:00-02:04 och första ticken kommer 02:05.
+        sched._tick(datetime(2026, 8, 31, 2, 5))
+        self.assertEqual(self.started, ["Willys"])
+
+    def test_markeringen_overlever_en_omstart(self):
+        """Markeringen låg i minnet: en omstart 02:02 nollställde den och
+        samma jobb startade en gång till samma natt - dubbel hämtning mot
+        kedjan, och för Primat-kedjorna dubbel kvot."""
+        kv = MinnesKV()
+        fore = schemalaggare({"Willys": "02:00"}, kv=kv)
+        fore._tick(datetime(2026, 8, 31, 2, 0))
+        self.assertEqual(self.started, ["Willys"])
+
+        efter = schemalaggare({"Willys": "02:00"}, kv=kv)   # ny process, tomt minne
+        efter._tick(datetime(2026, 8, 31, 2, 2))
+        self.assertEqual(self.started, ["Willys"], "samma natt, samma jobb, en gång")
+
+        efter._tick(datetime(2026, 9, 1, 2, 0))
+        self.assertEqual(self.started, ["Willys", "Willys"], "nästa dygn är ett nytt jobb")
+
+    def test_en_kedja_som_redan_kort_i_dag_startas_inte_om(self):
+        """Markeringen är inte den enda sanningen. Första gången koden
+        deployas finns inga markeringar alls, och en deploy mitt på dagen
+        skulle då starta varje kedja vars klockslag passerat. Databasens
+        körningshistorik får säga ifrån."""
+        sched = schemalaggare({"Willys": "02:00"}, kort_i_dag=True)
+        sched._tick(datetime(2026, 8, 31, 14, 0))
+        self.assertEqual(self.started, [])
+
+    def test_en_olasbar_historik_startar_ingen_import(self):
+        """"Vet inte" får inte betyda "kör". En dubblerad Primat-körning
+        kostar kvot som inte kommer tillbaka; ett uteblivet nattjobb syns i
+        driftkollen."""
+        sched = GroceryScheduler({"Willys": "02:00"}, kv=MinnesKV())
+        with mock.patch("services.grocery.api.open_store", side_effect=OSError("disken")):
+            sched._tick(datetime(2026, 8, 31, 2, 0))
+        self.assertEqual(self.started, [])
+
+    def test_en_kedja_utan_nyckel_markeras_inte_som_kord(self):
+        """Att hoppa över ICA för att PRIMAT_API_KEY saknas är inte en
+        körning. Kommer nyckeln på plats klockan 05:31 ska jobbet gå."""
+        sched = schemalaggare({"ICA": "05:30"})
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("PRIMAT_API_KEY", None)
+            sched._tick(datetime(2026, 8, 31, 5, 30))
+        self.assertEqual(self.started, [])
+        with mock.patch.dict(os.environ, {"PRIMAT_API_KEY": "x"}):
+            sched._tick(datetime(2026, 8, 31, 5, 31))
+        self.assertEqual(self.started, ["ICA"])
+
+    def test_driftkollen_tas_ocksa_igen(self):
+        """Exakt minutmatchning gjorde att en tick som blev försenad av last
+        hoppade över hela driftkollen den dagen - larmen tystnade utan att
+        någon incident var löst."""
+        sched = schemalaggare({})
+        startade = []
+        for namn in ("_sync_register_if_missing", "activate_platform",
+                     "_run_dabas_enrichment", "_run_ops_alerts"):
+            setattr(sched, namn, (lambda n: lambda *a: startade.append(n))(namn))
+        # Trådarna körs på plats, så testet mäter VAD som startades och inte
+        # hur snabbt en daemon-tråd hinner.
+        with mock.patch.object(scheduler_module.threading, "Thread",
+                               lambda target, args=(), name=None, daemon=None:
+                               mock.Mock(start=lambda: target(*args))):
+            sched._tick(datetime(2026, 8, 31, 7, 44))   # 14 minuter efter 07:30
+            self.assertIn("_run_ops_alerts", startade)
+            startade.clear()
+            sched._tick(datetime(2026, 8, 31, 7, 45))
+            self.assertEqual(startade, [], "en gång per dygn")
 
 
 if __name__ == "__main__":
