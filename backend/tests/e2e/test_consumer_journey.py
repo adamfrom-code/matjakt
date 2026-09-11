@@ -448,8 +448,27 @@ class BrowserJourney(unittest.TestCase):
         page.fill("#obPostcode", postcode)
         page.click("#onboardingNext")
         expect(modal).to_be_hidden()
+        # G8: KNAPPEN HETER "SKAPA MIN VECKA" OCH SKAPAR NU EN VECKA.
+        #
+        # Den öppnade förut planjämförelsen, där sju av åtta veckotyper är
+        # låsta för en gratisanvändare. Det första en ny användare såg av
+        # produkten var alltså en hänglåsvägg - innan hon sett en enda
+        # måltid eller en enda prislapp. Nu landar hon i Vecka-vyn med en
+        # färdig vecka, och erbjudandet om en annan veckotyp står som en rad
+        # ovanför den.
+        expect(page.locator("#planModal")).to_be_hidden()
+        expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
+        expect(page.locator('#weekDayTabs [data-week-day="0"]')).to_be_visible()
+        expect(page.locator("#weekPlanUpsell")).to_be_visible()
 
     def choose_standard_week(self):
+        """Standardveckan ur planjämförelsen - eller den vecka som redan finns.
+
+        Efter G8 öppnas modalen INTE av onboardingen; den nås från "Skapa ny
+        vecka" och från raden ovanför veckan. Anropas helpern direkt efter
+        onboardingen är veckan alltså redan gjord, och då finns ingen modal
+        att välja i.
+        """
         page = self.page
         plan_modal = page.locator("#planModal")
         if plan_modal.is_visible():
@@ -463,9 +482,18 @@ class BrowserJourney(unittest.TestCase):
         expect(page.locator("#weekTodayCard [data-week-swap]")).to_be_visible()
 
     def wait_for_store_cards(self):
-        cards = self.page.locator("#storeCards .store-card")
+        """Butikskorten - G13: de bor på Vecka, inte i Handla.
+
+        "Var blir det billigast?" är en fråga man svarar på innan man går
+        till affären. Helpern byter därför själv till Vecka-vyn; den som
+        vill mäta något i Handla efteråt får gå tillbaka dit.
+        """
+        page = self.page
+        page.click('.bottom-nav-item[data-view="week"]')
+        expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
+        cards = page.locator("#storeCards .store-card")
         expect(cards.first).to_be_visible(timeout=30_000)
-        expect(self.page.locator("#shoppingCost")).not_to_contain_text("pris hämtas", timeout=30_000)
+        expect(page.locator("#shoppingCost")).not_to_contain_text("pris hämtas", timeout=30_000)
         return cards
 
     # ---- vaktposten: väntan själv ----
@@ -584,11 +612,8 @@ class BrowserJourney(unittest.TestCase):
             page.click("#recipePage .recipe-back")
             expect(page.locator("#top")).to_be_visible()
 
-        with self.step("Handla: lista, butikskort, Billigast, lås"):
-            page.click('.bottom-nav-item[data-view="basket"]')
-            expect(page.locator("#top")).to_have_class(re.compile(r"view-basket"))
-            expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
-            items_before = page.locator("#shoppingList .shopping-item").count()
+        with self.step("Vecka: butikskort, Billigast, lås"):
+            # G13: butiksvalet bor på Vecka. wait_for_store_cards byter vy.
             cards = self.wait_for_store_cards()
             priced = page.locator("#storeCards .store-card:not(.locked):not(.unavailable)")
             locked = page.locator("#storeCards .store-card.locked")
@@ -596,6 +621,14 @@ class BrowserJourney(unittest.TestCase):
             self.assertEqual(locked.count(), 2, cards.all_inner_texts())     # de andra bakom Premium
             expect(priced.first).to_contain_text("Billigast")
             expect(locked.first).to_contain_text("Se pris med Premium")
+
+        with self.step("Handla: listan först"):
+            page.click('.bottom-nav-item[data-view="basket"]')
+            expect(page.locator("#top")).to_have_class(re.compile(r"view-basket"))
+            expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
+            items_before = page.locator("#shoppingList .shopping-item").count()
+            # G13: butikskorten ligger INTE kvar i Handla-skärmen.
+            self.assertEqual(page.locator(".shopping-screen #storeCards").count(), 0)
             expect(page.locator("#priceSourceNote")).to_contain_text("Priser från")
             self.assertRegex(page.locator("#shoppingCost").inner_text(), r"\d+ kr / 900 kr")
 
@@ -667,7 +700,6 @@ class BrowserJourney(unittest.TestCase):
             self.assertNotIn(removed_name, läge.get("avklarade") or [])
 
         with self.step("butiksjämförelse: Free ser spridningen, låsta butiker och paywallen"):
-            page.click('.bottom-nav-item[data-view="basket"]')
             self.wait_for_store_cards()
             expect(page.locator("#storeSpreadTeaser")).to_be_visible()
             expect(page.locator("#storeSpreadTeaser")).to_contain_text("skiljer sig")
@@ -702,6 +734,97 @@ class BrowserJourney(unittest.TestCase):
         self.assertEqual(self.console_errors, [])
         self.assertEqual(len(self.batch_requests), 0, "Free ska aldrig hämta livepriser per vara")
 
+    def test_forsta_veckan_kommer_utan_betalvagg(self):
+        """G8: det dyraste avhoppet - hänglåsväggen före första måltiden.
+
+        Onboardingens sista knapp heter "Skapa min vecka". Den öppnade
+        planjämförelsen, där sju av åtta veckotyper är låsta för en
+        gratisanvändare. Det FÖRSTA en ny användare såg av produkten var
+        alltså en vägg av hänglås - innan hon sett en enda måltid, en enda
+        prislapp eller ett enda bevis på att appen kan något.
+
+        Testet mäter vad hon ser i det ögonblicket: en färdig vecka, inte en
+        modal. Erbjudandet finns kvar, men ovanför veckan och efter den -
+        sälj efter leverans, inte före.
+        """
+        page = self.page
+        page.goto(self.app())
+        self.complete_onboarding()
+
+        # Ingen modal, och framför allt inget hänglås: noll låsta veckotyper
+        # på skärmen direkt efter sista knappen.
+        expect(page.locator("#planModal")).to_be_hidden()
+        self.assertEqual(page.locator("[data-plan-paywall]:visible").count(), 0)
+        expect(page.locator("#paywallModal")).to_have_count(0)
+
+        # En RIKTIG vecka, inte en tom vy som påstår sig vara en.
+        state = self.wait_for_state(lambda s: s.get("weekPlan"), what="veckan")
+        self.assertTrue(1 <= len(state["weekPlan"]) <= 4, state["weekPlan"])
+        expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
+        page.click('#weekDayTabs [data-week-day="0"]')
+        expect(page.locator("#weekTodayCard [data-week-details]")).to_be_visible()
+
+        # Raden ovanför veckan är erbjudandet - och den leder till exakt den
+        # jämförelse som förut stod i vägen.
+        upsell = page.locator("#weekPlanUpsell")
+        expect(upsell).to_be_visible()
+        expect(upsell).to_contain_text("familjevecka")
+        # OVANFÖR veckan, mätt i DOM:en - en rad under den är något annat än
+        # det G8 beskriver.
+        ordning = page.evaluate(
+            "() => [...document.querySelectorAll('.week-overview > *')]"
+            ".map(el => el.id || el.className.split(' ')[0])")
+        self.assertLess(ordning.index("weekPlanUpsell"), ordning.index("weekDayTabs"), ordning)
+        upsell.click()
+        expect(page.locator("#planModal")).to_be_visible()
+        expect(page.locator("[data-plan-paywall]").first).to_be_visible()
+
+    def test_handla_borjar_med_listan_och_erbjuder_hushallet(self):
+        """G13: i butik, med varorna framför sig, ska listan vara det första.
+
+        Handla började med hushållsnot, kostnadsvarning, basvarufråga, två
+        priskällenoter, "Var blir det billigast?", butikskort och
+        framstegsmätare - sju saker före det enda man öppnar skärmen för.
+        Butiksvalet hör hemma på Vecka: var det blir billigast avgör man
+        innan man går, inte när man står vid hyllan.
+
+        Samtidigt är hushållet appens starkaste virala kanal och nämndes
+        inte en enda gång. Raden överst säger det, en gång, där den betyder
+        något.
+        """
+        page = self.page
+        page.goto(self.app())
+        self.complete_onboarding()
+        page.click('.bottom-nav-item[data-view="basket"]')
+        expect(page.locator("#top")).to_have_class(re.compile(r"view-basket"))
+        expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
+
+        # Butiksvalet finns inte längre i Handla-skärmen - det bor på Vecka.
+        for flyttat in ("#storeCards", "#storeCompareTitle", "#storeSpreadTeaser"):
+            self.assertEqual(page.locator(f".shopping-screen {flyttat}").count(), 0,
+                             f"{flyttat} ligger kvar i Handla")
+            self.assertEqual(page.locator(f".week-screen {flyttat}").count(), 1,
+                             f"{flyttat} saknas på Vecka")
+
+        # ORDNINGEN, mätt i DOM:en: listan före allt som förklarar den.
+        ordning = page.evaluate(
+            "() => [...document.querySelectorAll('.shopping-screen > *')]"
+            ".map(el => el.id || el.className.split(' ')[0])")
+        plats = {namn: index for index, namn in enumerate(ordning)}
+        self.assertIn("shoppingList", plats, ordning)
+        for efter in ("shopping-progress", "weekCostAlert", "staplePrompt",
+                      "priceSourceNote", "dabasNote"):
+            self.assertGreater(plats[efter], plats["shoppingList"],
+                               f"{efter} står före listan: {ordning}")
+
+        # Hushållsraden: överst, och bara när inget hushåll finns.
+        rad = page.locator("#basketHouseholdInvite")
+        expect(rad).to_be_visible()
+        expect(rad).to_contain_text("Handlar ni ihop?")
+        self.assertLess(plats["basketHouseholdInvite"], plats["shoppingList"], ordning)
+        rad.click()
+        expect(page.locator("#accountModal")).to_be_visible()
+
     def test_tiden_till_forsta_anvandbara_listan(self):
         """U03: sikta på ungefär en minut - och MÄT, påstå inte.
 
@@ -723,7 +846,6 @@ class BrowserJourney(unittest.TestCase):
         start = time.monotonic()
         page.goto(self.app())
         self.complete_onboarding()
-        self.choose_standard_week()
         page.click('.bottom-nav-item[data-view="basket"]')
         expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
         # "Användbar" = varor OCH ett riktigt pris. En lista utan pris går
@@ -814,10 +936,11 @@ class BrowserJourney(unittest.TestCase):
         första = list(self.local_state()["valda"])
         self.assertTrue(första)
 
-        # OBS: historiken är redan icke-tom här. Appen skapar en vecka under
-        # onboardingen, och planvalet ersätter den - så den "förra veckan"
-        # är en användaren aldrig såg. Testet mäter därför att historiken
-        # MINSKAR med ett, inte att den börjar tom.
+        # OBS: historiken kan redan vara icke-tom här. Hinner receptbanken bli
+        # klar först efter onboardingen skapar startkoden en vecka som
+        # onboardingens egen vecka sedan ersätter - en "förra vecka"
+        # användaren aldrig såg. Testet mäter därför att historiken går
+        # TILLBAKA till sin nivå, inte att den börjar tom.
         historik_innan = len(self.local_state().get("weekHistory") or [])
 
         # En ny vecka lägger den förra i historiken. Knappen bor på hemvyn.
@@ -991,8 +1114,9 @@ class BrowserJourney(unittest.TestCase):
         page.goto(self.app())
         self.complete_onboarding()
         self.choose_standard_week()
-        page.click('.bottom-nav-item[data-view="basket"]')
+        # Butikskorten (nu på Vecka) är kvittot på att prissättningen är klar.
         self.wait_for_store_cards()
+        page.click('.bottom-nav-item[data-view="basket"]')
 
         sektion = page.locator("#assumedHomeSection")
         expect(sektion).to_be_visible()
@@ -1187,6 +1311,9 @@ class BrowserJourney(unittest.TestCase):
             self.close_account_modal()
             page.click('.bottom-nav-item[data-view="basket"]')
             expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
+            # G13: butikskorten och "Jämför butiker" bor på Vecka.
+            page.click('.bottom-nav-item[data-view="week"]')
+            expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
             # Efter återkomsten från checkout prissätts veckan i två omgångar
             # (ny vecka + återställd vecka) och korten töms däremellan - vänta
             # in de TRE prissatta korten innan något annat asserteras, annars
@@ -1272,8 +1399,8 @@ class BrowserJourney(unittest.TestCase):
         page.goto(self.app())
         self.complete_onboarding()
         self.choose_standard_week()
-        page.click('.bottom-nav-item[data-view="basket"]')
         self.wait_for_store_cards()
+        page.click('.bottom-nav-item[data-view="basket"]')
 
         # Låt uppstartens hämtningar (priser, hyllor, kampanjer) landa först -
         # annars mäts deras omritningar och inte klickets.

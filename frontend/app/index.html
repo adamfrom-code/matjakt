@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=55">
+  <link rel="stylesheet" href="styles.css?v=56">
 </head>
 <body>
   <div class="phone-shell">
@@ -195,6 +195,10 @@
       <section class="screen week-screen" aria-labelledby="weekOverviewHeading">
         <section class="week-overview" id="weekOverview" aria-label="Min matvecka">
           <header class="screen-header week-overview-header"><h1 id="weekOverviewHeading">Min matvecka</h1></header>
+          <!-- G8: erbjudandet om en annan veckotyp står OVANFÖR den färdiga
+               veckan, inte i stället för den. Onboardingens sista knapp
+               skapar veckan direkt; den här raden säljer efteråt. -->
+          <button type="button" class="store-compare-upsell week-plan-upsell" id="weekPlanUpsell" hidden>Vill du ha en familjevecka i stället? Välj veckotyp <span aria-hidden="true">&rarr;</span></button>
           <div class="week-store-switch" id="weekStoreSwitch" role="tablist" aria-label="Byt butik för veckan">
             <button type="button" data-week-store="auto">Auto</button>
             <button type="button" data-week-store="alla">Alla</button>
@@ -202,6 +206,16 @@
           <div class="week-summary" id="weekSummary" hidden></div>
           <p class="week-store-status" id="weekStoreStatus"></p>
           <div id="storeCompare"></div>
+          <!-- G13: butiksvalet bor på Vecka, inte i Handla. Var det blir
+               billigast är en fråga man svarar på INNAN man går till affären;
+               i butiken, med varorna framför sig, ska listan vara det
+               första man ser. -->
+          <div class="week-store-block">
+            <h3 class="shopping-section-title" id="storeCompareTitle">Var blir det billigast?</h3>
+            <div class="store-cards" id="storeCards"></div>
+            <p class="store-spread-teaser" id="storeSpreadTeaser" hidden></p>
+            <div id="basketStoreCompare" hidden></div>
+          </div>
           <div class="week-day-tabs" id="weekDayTabs" role="tablist" aria-label="Välj dag"></div>
           <div id="weekTodayCard"></div>
           <!-- Dold: dagflikarna + dagens kort ÄR veckan. Listan dubblerade dem.
@@ -234,18 +248,16 @@
 
       <section class="screen shopping-screen" aria-labelledby="shoppingTitle">
         <header class="screen-header"><p class="eyebrow">Din lista</p><h1 id="shoppingTitle">Handla</h1></header>
+        <!-- G13: LISTAN FÖRST. Skärmen började med hushållsnot, kostnadsvarning,
+             basvarufråga, två priskällenoter, "Var blir det billigast?",
+             butikskort och framstegsmätare - sju saker före den enda man
+             öppnar Handla för. I butik, med varorna framför sig, är listan det
+             som ska stå överst; allt som förklarar den står under den.
+             Butiksvalet flyttade till Vecka, där det hör hemma. -->
         <p class="household-shared-note" id="basketHouseholdNote" hidden></p>
-        <div class="week-cost-alert" id="weekCostAlert" hidden></div>
-        <div class="staple-prompt" id="staplePrompt" hidden></div>
-        <p class="price-source-note" id="priceSourceNote" hidden></p>
-        <p class="price-source-note" id="dabasNote" hidden></p>
-        <!-- Butiksvalet överst: först var det blir billigast, sedan listan. -->
-        <h3 class="shopping-section-title" id="storeCompareTitle">Var blir det billigast?</h3>
-        <div class="store-cards" id="storeCards"></div>
-        <p class="store-spread-teaser" id="storeSpreadTeaser" hidden></p>
-        <div id="basketStoreCompare" hidden></div>
-        <section class="shopping-progress"><div><strong id="shoppingProgress">0 varor kvar</strong><span id="shoppingCost">0 / 0 kr</span></div><div class="progress-track"><i id="shoppingProgressBar"></i></div></section>
-        <div class="shopping-complete" id="shoppingComplete" hidden><strong>Allt handlat!</strong><p>Redo att planera nästa veckas meny?</p><button type="button" class="btn btn-primary" id="startNewWeekBtn"><span>Skapa nästa vecka</span><span aria-hidden="true">→</span></button></div>
+        <!-- Hushållet är appens starkaste virala kanal och nämndes inte en
+             enda gång. En rad, precis där den betyder något. -->
+        <button type="button" class="store-compare-upsell household-invite-prompt" id="basketHouseholdInvite" hidden>Handlar ni ihop? Dela listan med den du bor med <span aria-hidden="true">&rarr;</span></button>
         <h3 class="shopping-section-title" id="weekListTitle" hidden>Din matvecka</h3>
         <div class="shopping-list" id="shoppingList"></div>
         <section class="extra-items" id="extraItemsSection" hidden>
@@ -261,6 +273,12 @@
           <input type="text" id="manualItemInput" placeholder="Lägg till vara, t.ex. kaffe eller toalettpapper" maxlength="60">
           <button type="button" class="btn btn-ghost" id="manualItemAdd">+ Lägg till vara</button>
         </div>
+        <section class="shopping-progress"><div><strong id="shoppingProgress">0 varor kvar</strong><span id="shoppingCost">0 / 0 kr</span></div><div class="progress-track"><i id="shoppingProgressBar"></i></div></section>
+        <div class="shopping-complete" id="shoppingComplete" hidden><strong>Allt handlat!</strong><p>Redo att planera nästa veckas meny?</p><button type="button" class="btn btn-primary" id="startNewWeekBtn"><span>Skapa nästa vecka</span><span aria-hidden="true">→</span></button></div>
+        <div class="week-cost-alert" id="weekCostAlert" hidden></div>
+        <div class="staple-prompt" id="staplePrompt" hidden></div>
+        <p class="price-source-note" id="priceSourceNote" hidden></p>
+        <p class="price-source-note" id="dabasNote" hidden></p>
         <p class="primat-attribution" id="primatAttribution" hidden></p>
         <p class="cost-note">Priserna avser hela förpackningar. Det du har hemma räknas bort.</p>
       </section>
@@ -592,6 +610,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=55"></script>
+  <script type="module" src="app.js?v=56"></script>
 </body>
 </html>

@@ -16,7 +16,7 @@ import { createDebouncedSearch, mergeRecipeResults } from "./src/services/recipe
 import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/nutrition.js";
 import { PANTRY_LOCATIONS, expiryStatus, matchLocalRecipesToPantry, pantryAmounts } from "./src/services/pantry.js";
 import { extrasTotal, newExtraItem } from "./src/services/extras.js";
-import { ALLERGENS, filterByDiet, mergeDiet } from "./src/services/diet.js";
+import { filterByDiet, mergeDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
 import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl } from "./src/api/config.js";
 import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
@@ -26,7 +26,7 @@ import { errorText } from "./src/api/http.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.js";
 import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
-import { adjustInventory, createHousehold, createInvite, fetchHousehold, fetchNotifications, joinHousehold, leaveHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, removeMember, replaceWeekItems, saveHouseholdProfile, saveNotificationPrefs, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
+import { adjustInventory, fetchHousehold, fetchNotifications, joinHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, replaceWeekItems, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, pantryEntriesFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor } from "./src/services/categories.js";
 import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swapCostText, swapReasonText, weekCostAlert } from "./src/services/swap.js";
@@ -38,6 +38,7 @@ import { takeUrlTokens } from "./src/services/url-tokens.js";
 import { branchChoiceKey, canPlanWeek, chooseBranch } from "./src/services/branch-choice.js";
 import { createSeededRandom, newSeed } from "./src/services/seeded-random.js";
 import { debounce } from "./src/services/debounce.js";
+import { closeOnboarding, initAccountView, isAwaitingPremium, openOnboarding, openPaywall, openPremiumPitch, renderAccount, renderHousehold, renderNotificationPrefs, renderWeekPlanUpsell, setAwaitingPremium, wireHouseholdUi } from "./src/views/account.js";
 
 // FÖRST AV ALLT, före en enda rad annan startkod: engångstoken ur
 // adressfältet. `?reset=` är ett fullständigt kontoövertagande i klartext
@@ -2835,6 +2836,10 @@ const RENDER_STEPS = [
   ["recipes", renderRecipes],
   ["recipes", renderHemRecipePreview],
   ["basket", renderBasket],
+  // G8-raden ovanför veckan ("Vill du ha en familjevecka i stället?") syns
+  // först när det FINNS en vecka att jämföra med - alltså samma bana som
+  // veckan själv.
+  ["basket", renderWeekPlanUpsell],
   ["basket", updateSummary],
   // renderStats hör till kassen, inte till kontot: clearPriceSnapshots()
   // nollar state.dbComparison vid varje avbockning, och sparkortet läser
@@ -3178,7 +3183,6 @@ function renderPriceTabs() {
     if (wasChecked) box.querySelector("[data-withdrawal-consent]").checked = true;
   }
 }
-let awaitingPremiumActivation = false;
 let premiumPollInFlight = false;
 async function activatePremiumAfterCheckout() {
   // Bara en poll åt gången: i native-appen kan visibilitychange komma
@@ -3188,7 +3192,7 @@ async function activatePremiumAfterCheckout() {
   try { await pollPremiumAfterCheckout(); } finally { premiumPollInFlight = false; }
 }
 async function pollPremiumAfterCheckout() {
-  awaitingPremiumActivation = true;
+  setAwaitingPremium(true);
   openAccountModal();
   renderAccount();
   for (let attempt = 0; attempt < 15; attempt++) {
@@ -3198,7 +3202,7 @@ async function pollPremiumAfterCheckout() {
     if (hasPremium()) break;
     await new Promise(resolve => setTimeout(resolve, 2000));
   }
-  awaitingPremiumActivation = false;
+  setAwaitingPremium(false);
   renderAccount();
   // Premium just nu: veckans priser hämtas om utan mask (nyckeln bär planen).
   if (hasPremium()) renderBasket();
@@ -3211,73 +3215,13 @@ async function pollPremiumAfterCheckout() {
 }
 
 // ---------------------------------------------------------------------------
-// MITT HUSHÅLL (Konto → Hushåll)
+// HUSHÅLLET: NOTISER, DJUPLÄNKAR OCH INBJUDNINGSLANDNINGEN
 //
-// Flödet är avsiktligt tre steg och inte fler (§1):
-//   skriv namnet → Bjud in → skicka länken.
-// Ingen kod att läsa upp, ingen inställningssida att gå igenom först.
+// Panelen, medlemslistan och inbjudningsflödet bor i src/views/account.js.
+// Kvar här står det som hänger ihop med appens övriga delar: notisutkorgen,
+// djuplänkarna, sessionsstädningen och skafferiet som följer med in i ett
+// nytt hushåll.
 // ---------------------------------------------------------------------------
-
-const NOTIFY_LABELS = {
-  week: "Ny vecka",
-  shopping: "Ändringar i inköpslistan",
-  plan: "Ändringar i veckoplaneringen",
-  inventory: "Skafferi, kyl och frys",
-  price: "Prisbevakningar",
-};
-
-function renderHousehold() {
-  const panel = $("householdPanel");
-  if (!panel) return;
-  // Hushållet kräver ett konto - det är där medlemskapet bor.
-  panel.hidden = !state.authToken;
-  if (!state.authToken) return;
-  const active = householdActive();
-  $("householdNone").hidden = active;
-  $("householdCurrent").hidden = !active;
-  if (!active) return;
-  $("householdNameLabel").textContent = state.household.name;
-  const me = state.household.members.find(member => member.isMe);
-  const isAdmin = state.household.role === "admin";
-  $("householdMembers").innerHTML = state.household.members.map(member => {
-    const name = member.displayName || (member.email ? member.email.split("@")[0] : "Medlem");
-    const tags = [member.role === "admin" ? "administratör" : "", member.isMe ? "du" : ""].filter(Boolean).join(" · ");
-    const remove = isAdmin && !member.isMe
-      ? `<button type="button" class="household-remove" data-remove-member="${escapeHtml(String(member.userId))}" aria-label="Ta bort ${escapeHtml(name)}">Ta bort</button>` : "";
-    return `<li><span><strong>${escapeHtml(name)}</strong>${tags ? `<small>${escapeHtml(tags)}</small>` : ""}</span>${remove}</li>`;
-  }).join("");
-  $("householdMembers").querySelectorAll("[data-remove-member]").forEach(button => button.addEventListener("click", () => {
-    const userId = Number(button.dataset.removeMember);
-    removeMember(state.authToken, userId)
-      .then(({ household }) => { state.household = applySync(state.household, { household, revision: state.household.revision }); state.household.members = household.members; renderHousehold(); })
-      .catch(error => { $("householdInviteError").textContent = errorText(error); });
-  }));
-  // Bara administratören kan bjuda in - samma regel som servern håller.
-  $("householdInviteBtn").hidden = !isAdmin;
-  if (me) {
-    $("householdDisplayName").value = me.displayName || "";
-    $("householdSpice").value = me.profile?.spice || "";
-    $("householdDiet").value = me.profile?.diet || "";
-    $("householdAllergies").value = (me.profile?.allergies || []).join(", ");
-  }
-  renderNotificationPrefs();
-}
-
-function renderNotificationPrefs() {
-  const list = $("householdNotifyList");
-  if (!list || !state.notisInstallningar) return;
-  const prefs = state.notisInstallningar;
-  const rows = Object.entries(NOTIFY_LABELS).map(([key, label]) =>
-    `<label class="household-notify-row"><span>${label}</span><input type="checkbox" data-notify-pref="${key}" ${prefs[key] === false ? "" : "checked"}></label>`).join("");
-  list.innerHTML = `<label class="household-notify-row main"><span>Alla notiser</span><input type="checkbox" data-notify-pref="all" ${prefs.all === false ? "" : "checked"}></label>${rows}`;
-  list.querySelectorAll("[data-notify-pref]").forEach(input => input.addEventListener("change", () => {
-    const next = { ...prefs, [input.dataset.notifyPref]: input.checked };
-    state.notisInstallningar = next;
-    saveNotificationPrefs(state.authToken, next)
-      .then(({ preferences }) => { state.notisInstallningar = preferences; })
-      .catch(() => { /* nästa ändring försöker igen */ });
-  }));
-}
 
 async function loadNotifications() {
   if (!state.authToken || !householdActive()) return;
@@ -3311,86 +3255,6 @@ function clearHouseholdSession() {
   state.notisInstallningar = null;
   lastWeekPushKey = null;
   clearInterval(householdPollTimer);
-}
-
-function wireHouseholdUi() {
-  $("householdCreateForm")?.addEventListener("submit", async event => {
-    event.preventDefault();
-    $("householdCreateError").textContent = "";
-    try {
-      const { household } = await createHousehold(state.authToken, $("householdNameInput").value);
-      state.household = applySync(emptyHouseholdState(), { household, revision: 0 });
-      await pullHousehold(true);
-      // Veckan som redan finns på den här enheten blir familjens första vecka.
-      lastWeekPushKey = null;
-      pushWeekToHousehold();
-      pushPantryToHousehold();
-      startHouseholdSync();
-      renderHousehold();
-      loadNotifications();
-      render();
-    } catch (error) {
-      $("householdCreateError").textContent = errorText(error);
-    }
-  });
-
-  $("householdInviteBtn")?.addEventListener("click", async () => {
-    $("householdInviteError").textContent = "";
-    try {
-      const invite = await createInvite(state.authToken);
-      $("householdInviteBox").hidden = false;
-      $("householdInviteLink").value = invite.url;
-      // Systemets egen delningsruta när den finns: SMS, WhatsApp, Messenger -
-      // alla på en gång, utan att vi bygger en egen lista över appar.
-      const canShare = typeof navigator.share === "function";
-      $("householdShareBtn").hidden = !canShare;
-      $("householdShareBtn").onclick = () => navigator.share({ title: invite.shareTitle, text: invite.shareText, url: invite.url }).catch(() => {});
-      $("householdCopyBtn").onclick = async () => {
-        try {
-          await navigator.clipboard.writeText(invite.url);
-          $("householdCopyBtn").textContent = "Kopierad";
-          setTimeout(() => { $("householdCopyBtn").textContent = "Kopiera"; }, 2000);
-        } catch {
-          $("householdInviteLink").select();
-        }
-      };
-    } catch (error) {
-      $("householdInviteError").textContent = errorText(error);
-    }
-  });
-
-  $("householdProfileForm")?.addEventListener("submit", async event => {
-    event.preventDefault();
-    $("householdProfileError").textContent = "";
-    try {
-      const { household } = await saveHouseholdProfile(state.authToken, {
-        displayName: $("householdDisplayName").value,
-        profile: {
-          spice: $("householdSpice").value || undefined,
-          diet: $("householdDiet").value || undefined,
-          allergies: $("householdAllergies").value.split(",").map(value => value.trim()).filter(Boolean),
-        },
-      });
-      state.household = applySync(state.household, { household, revision: state.household.revision });
-      state.household.members = household.members;
-      renderHousehold();
-    } catch (error) {
-      $("householdProfileError").textContent = errorText(error);
-    }
-  });
-
-  $("householdLeaveBtn")?.addEventListener("click", async () => {
-    if (!confirm(`Lämna ${state.household.name}? Den gemensamma veckan, listan och skafferiet stannar hos de andra.`)) return;
-    try {
-      await leaveHousehold(state.authToken);
-    } catch { /* redan ute, eller offline - lokalt läge gäller ändå */ }
-    state.household = emptyHouseholdState();
-    startHouseholdSync();
-    renderHousehold();
-    render();
-  });
-
-  $("inviteDismissBtn")?.addEventListener("click", () => { $("inviteLanding").hidden = true; clearInviteFromUrl(); });
 }
 
 // Skafferiet som redan finns på enheten följer med in i det nya hushållet.
@@ -3454,60 +3318,6 @@ async function handlePendingInvite() {
   };
 }
 
-function renderAccount() {
-  const loggedIn = Boolean(state.user);
-  $("accountLoggedOut").hidden = loggedIn;
-  $("accountLoggedIn").hidden = !loggedIn;
-  $("profileBtn").textContent = loggedIn ? state.user.email.slice(0, 2).toUpperCase() : "MJ";
-  $("profileBtn").classList.toggle("is-premium", hasPremium());
-  syncSettingsInputs();
-  renderPriceTabs();
-  renderHousehold();
-  if (loggedIn) {
-    $("accountEmail").textContent = state.user.email;
-    $("verifyEmailNotice").hidden = state.user.emailVerified;
-    $("marketingToggle").checked = Boolean(state.user.marketingConsent);
-    // Utskick går bara till verifierade adresser - säg det, i stället för
-    // att låta någon tacka ja och undra varför inget kommer.
-    $("marketingNote").textContent = state.user.marketingConsent && !state.user.emailVerified
-      ? "(skickas när adressen är verifierad)" : "";
-    const daysLeft = state.user.trialEndsAt ? Math.max(1, Math.ceil((new Date(state.user.trialEndsAt) - Date.now()) / 86400000)) : 0;
-    const hasSubscription = ["active", "trialing", "past_due", "canceled", "unpaid"].includes(state.user.subscriptionStatus);
-    const pastDue = ["past_due", "unpaid", "incomplete"].includes(state.user.subscriptionStatus);
-    $("accountPremiumStatus").textContent = awaitingPremiumActivation && !hasPremium()
-      ? "Kontrollerar om betalningen gått igenom…"
-      : daysLeft ? `✓ Provperiod aktiv - ${plural(daysLeft, "dag", "dagar")} kvar (ingen betalning krävs)`
-      : state.user.premium ? "✓ Premium aktiverat"
-      : pastDue ? "Premium är pausat tills betalningen gått igenom"
-      : "Inget Premium ännu";
-    // Köpknappen döljs bara när det FINNS något att fixa i portalen. Medan
-    // vi kontrollerar en betalning står den kvar: i native-appen kan
-    // användaren ha stängt betalsidan utan att betala, och då vore en
-    // borttagen köpknapp en återvändsgränd. Servern nekar ändå ett andra
-    // köp (409) om prenumerationen redan finns.
-    $("premiumPitch").hidden = state.user.premium || pastDue;
-    $("subscriptionPanel").hidden = !hasSubscription;
-    if (hasSubscription) {
-      const periodEnd = state.user.subscriptionPeriodEnd ? new Date(state.user.subscriptionPeriodEnd).toLocaleDateString("sv-SE") : "okänt datum";
-      // Planetiketten kommer från samma källa som paywallen (backend), och
-      // en okänd plan påstår ingenting om priset.
-      const pricing = premiumPricing();
-      const planLabel = state.user.subscriptionPlan === "yearly" ? (pricing.yearly?.priceText || "399 kr/år")
-        : state.user.subscriptionPlan === "monthly" ? (pricing.monthly?.priceText || "59 kr/mån")
-        : "din plan";
-      let line;
-      if (state.user.subscriptionStatus === "active" && state.user.subscriptionCancelAtPeriodEnd) line = `Din prenumeration (${planLabel}) är uppsagd och gäller till ${periodEnd}, sedan återgår kontot till gratisversionen.`;
-      else if (state.user.subscriptionStatus === "active") line = `Din prenumeration (${planLabel}) förnyas automatiskt ${periodEnd}.`;
-      else if (["past_due", "unpaid"].includes(state.user.subscriptionStatus)) line = `Senaste betalningen (${planLabel}) gick inte igenom, så Premium är pausat. Uppdatera betalmetoden under Hantera prenumeration så aktiveras det igen.`;
-      else if (state.user.subscriptionStatus === "incomplete") line = `Betalningen är påbörjad men inte klar. Slutför den under Hantera prenumeration.`;
-      else line = `Din prenumeration är avslutad. Prenumerera igen när du vill.`;
-      $("subscriptionPanelLine").textContent = line;
-    }
-  }
-  const premium = hasPremium();
-  $("nutritionLocked").hidden = premium;
-  $("nutritionFields").hidden = !premium;
-}
 let swapContext = null;
 const SWAP_OPTIONS_BATCH = 3;
 function swapOptionMarkup(option, isSelected) {
@@ -3865,76 +3675,6 @@ function renderStats() {
 $("openStatsBtn").addEventListener("click", () => { renderStats(); setView("stats"); });
 $("homeShoppingStat").addEventListener("click", () => setView("basket"));
 
-// Fyra steg, inte sju. En förstagångare ska svara på det Matjakt inte kan
-// gissa - vilka ni är, vad ni vill lägga, vad ni inte äter, var ni handlar -
-// och sedan SE sin vecka. Tidsfiltret bor i Recept-fliken, "något ni hellre
-// slipper" och kalorier/makron i "Justera veckan"; mitt i onboardingen var de
-// bara friktion (och ett Premium-formulär för någon som inte ens sett appen).
-const ONBOARDING_STEPS = [
-  { title: "Vilka är ni hemma?", render: renderObHushall },
-  { title: "Budget & antal middagar", render: renderObBudget },
-  { title: "Kost & allergier", render: renderObKost },
-  { title: "Var handlar ni?", render: renderObButik },
-];
-let onboardingStep = 0;
-function renderObHushall() {
-  return `<div class="settings-grid"><div><label>Vuxna</label><div class="stepper"><button type="button" data-ob-adj="vuxna" data-delta="-1" aria-label="Färre vuxna">−</button><span>${state.hushall.vuxna}</span><button type="button" data-ob-adj="vuxna" data-delta="1" aria-label="Fler vuxna">+</button></div></div><div><label>Barn</label><div class="stepper"><button type="button" data-ob-adj="barn" data-delta="-1" aria-label="Färre barn">−</button><span>${state.hushall.barn}</span><button type="button" data-ob-adj="barn" data-delta="1" aria-label="Fler barn">+</button></div></div></div>`;
-}
-function renderObBudget() {
-  return `<label for="obBudget">Veckobudget</label><div class="budget-row"><input type="number" id="obBudget" value="${state.budget}" min="0" step="50" inputmode="numeric"><span>kr</span></div><p class="budget-scope">${escapeHtml(budgetScopeText())}</p><div class="settings-grid"><div><label>Middagar per vecka</label><div class="stepper"><button type="button" data-ob-meals="-1" aria-label="Färre middagar">−</button><span>${state.middagar}</span><button type="button" data-ob-meals="1" aria-label="Fler middagar">+</button></div></div></div>`;
-}
-function renderObKost() {
-  return `<label for="obKosttyp">Kosttyp</label><select id="obKosttyp"><option value="" ${!state.kost.kosttyp ? "selected" : ""}>Vanlig, allt</option><option value="vegetariskt" ${state.kost.kosttyp === "vegetariskt" ? "selected" : ""}>Vegetariskt</option><option value="veganskt" ${state.kost.kosttyp === "veganskt" ? "selected" : ""}>Veganskt</option></select><label>Allergier att undvika</label><div class="protein-source-chips" id="obAllergenChips">${ALLERGENS.map(a => `<label><input type="checkbox" value="${a}" ${state.kost.avoidAllergens.has(a) ? "checked" : ""}> ${a[0].toUpperCase() + a.slice(1)}</label>`).join("")}</div>`;
-}
-function renderObButik() {
-  return `<label for="obPostcode">Postnummer</label><div class="location-row"><input id="obPostcode" value="${escapeHtml(state.postnummer)}" inputmode="numeric" maxlength="5"><button type="button" id="obLocateBtn">Hitta mig</button></div><p class="ob-error" id="obPostcodeError"></p><label for="obStore">Favoritbutik</label><select id="obStore">${storeOptionsMarkup(state.butik, "Välj åt mig")}</select>`;
-}
-function wireOnboardingStep() {
-  document.querySelectorAll("[data-ob-adj]").forEach(button => button.addEventListener("click", () => {
-    const key = button.dataset.obAdj, delta = Number(button.dataset.delta), min = key === "vuxna" ? 1 : 0;
-    state.hushall[key] = Math.max(min, state.hushall[key] + delta);
-    state.personer = Math.min(12, Math.max(1, state.hushall.vuxna + state.hushall.barn));
-    saveState(); renderOnboardingStep();
-  }));
-  $("obBudget")?.addEventListener("input", e => { state.budget = clampBudget(e.target.value); saveState(); });
-  document.querySelectorAll("[data-ob-meals]").forEach(button => button.addEventListener("click", () => {
-    state.middagar = Math.min(Math.min(MAX_MEALS, maxDinners()), Math.max(1, state.middagar + Number(button.dataset.obMeals)));
-    saveState(); renderOnboardingStep();
-  }));
-  $("obKosttyp")?.addEventListener("change", e => { state.kost.kosttyp = e.target.value; saveState(); });
-  document.querySelectorAll("#obAllergenChips input").forEach(box => box.addEventListener("change", () => { state.kost.avoidAllergens = new Set([...document.querySelectorAll("#obAllergenChips input:checked")].map(b => b.value)); saveState(); }));
-  $("obPostcode")?.addEventListener("input", e => {
-    const previous = state.postnummer;
-    state.postnummer = e.target.value.replace(/\D/g, "").slice(0, 5);
-    if (state.postnummer !== previous) clearLocationDerivedState();
-    saveState();
-    syncNearbyBranches();
-  });
-  $("obStore")?.addEventListener("change", e => { state.butik = e.target.value; saveState(); });
-  $("obLocateBtn")?.addEventListener("click", () => { if (!navigator.geolocation) return; navigator.geolocation.getCurrentPosition(({ coords }) => { state.position = { lat: coords.latitude, lon: coords.longitude }; saveState(); }, () => {}); });
-}
-function renderOnboardingStep() {
-  const current = ONBOARDING_STEPS[onboardingStep];
-  $("onboardingTitle").textContent = current.title;
-  $("onboardingBody").innerHTML = current.render();
-  wireOnboardingStep();
-  $("onboardingDots").innerHTML = ONBOARDING_STEPS.map((_, index) => `<i class="${index === onboardingStep ? "active" : ""}"></i>`).join("");
-  $("onboardingBack").hidden = onboardingStep === 0;
-  $("onboardingNext").querySelector("span").textContent = onboardingStep === ONBOARDING_STEPS.length - 1 ? "Skapa min vecka" : "Nästa";
-}
-function openOnboarding() { onboardingStep = 0; $("onboardingModal").hidden = false; renderOnboardingStep(); }
-function closeOnboarding() { $("onboardingModal").hidden = true; }
-$("onboardingNext").addEventListener("click", () => {
-  if (onboardingStep === ONBOARDING_STEPS.length - 1) {
-    if (!/^\d{5}$/.test(state.postnummer)) { $("obPostcodeError").textContent = "Ange ett giltigt postnummer (5 siffror)."; return; }
-    state.onboardingComplete = true; saveState(); closeOnboarding(); syncNearbyBranches(); openPlanComparison();
-    return;
-  }
-  onboardingStep++; renderOnboardingStep();
-});
-$("onboardingBack").addEventListener("click", () => { onboardingStep = Math.max(0, onboardingStep - 1); renderOnboardingStep(); });
-$("onboardingSkip").addEventListener("click", () => { state.onboardingComplete = true; saveState(); closeOnboarding(); });
-
 function openAccountModal() { $("accountModal").hidden = false; }
 function closeAccountModal() { $("accountModal").hidden = true; $("loginError").textContent = ""; $("registerError").textContent = ""; $("redeemError").textContent = ""; $("forgotError").textContent = ""; $("resetError").textContent = ""; $("deleteError").textContent = ""; }
 $("profileBtn").addEventListener("click", openAccountModal);
@@ -4179,50 +3919,6 @@ $("accountRedeemForm").addEventListener("submit", async event => {
     state.user = user; renderAccount(); event.target.reset(); chooseMenu(false); renderCampaignSection();
   } catch (error) { $("redeemError").textContent = errorText(error); }
 });
-// The paywall sells VALUE, never just says "Premium krävs". Opened from
-// every locked control; prices come from the central config via
-// /api/entitlements, so 59/399 exist in exactly one place (the backend).
-function openPaywall(triggerFeature = "") {
-  const pricing = premiumPricing();
-  const yearly = pricing.yearly || {};
-  const monthly = pricing.monthly || {};
-  let modal = document.getElementById("paywallModal");
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "paywallModal";
-    modal.className = "modal paywall-modal";
-    document.body.appendChild(modal);
-  }
-  modal.innerHTML = `<div class="modal-card paywall-card">
-    <button type="button" class="modal-close" data-paywall-close aria-label="Stäng">×</button>
-    <p class="eyebrow">Matjakt Premium</p>
-    <h2>Lås upp hela matveckan</h2>
-    <p class="paywall-lead">Planera veckan efter familj, budget eller träning. Jämför riktiga matpriser hos alla kvalificerade butiker och få exakt inköpslista för varje butik.</p>
-    <ul class="paywall-points">
-      <li>Alla 7 veckotyper och 1–7 middagar</li>
-      <li>Alla butikers riktiga priser och butikskorgar</li>
-      <li>Näringsmål, kcal- och proteinfilter</li>
-      <li>Fullt skafferi och "Laga med det jag har"</li>
-    </ul>
-    <button type="button" class="btn btn-primary paywall-yearly" data-paywall-plan="yearly">
-      <span class="paywall-plan-label">${escapeHtml(yearly.badge || "Bäst värde")}</span>
-      <strong>${escapeHtml(yearly.priceText || "399 kr/år")}</strong>
-      <small>${escapeHtml(yearly.perMonthText || "≈ 33 kr/mån")} · ${escapeHtml(yearly.savingsText || "Spara 309 kr jämfört med månadsbetalning")}</small>
-    </button>
-    <button type="button" class="btn btn-ghost paywall-monthly" data-paywall-plan="monthly">
-      <strong>${escapeHtml(monthly.priceText || "59 kr/mån")}</strong>
-    </button>
-    ${withdrawalConsentMarkup("paywallWithdrawalConsent")}
-    <p class="account-error" id="paywallError"></p>
-    <button type="button" class="paywall-continue" data-paywall-close>Fortsätt gratis</button>
-  </div>`;
-  modal.hidden = false;
-  modal.querySelectorAll("[data-paywall-close]").forEach(el =>
-    el.addEventListener("click", () => { modal.hidden = true; }));
-  modal.querySelectorAll("[data-paywall-plan]").forEach(el =>
-    el.addEventListener("click", () => beginCheckout(el.dataset.paywallPlan, modal)));
-}
-
 // I native-appen (Capacitor) ska Stripe öppnas i systemets webbläsare -
 // navigeras webviewen till stripe.com lämnar användaren appen och landar
 // efteråt i webbversionen. Vid återkomst pollas Premium (visibilitychange).
@@ -4260,36 +3956,6 @@ function openExternal(rawUrl) {
   }
   location.href = url;
 }
-async function beginCheckout(plan, root = document.getElementById("paywallModal")) {
-  if (!state.user) {
-    document.getElementById("paywallModal").hidden = true;
-    openAccountModal?.();
-    return;
-  }
-  const errorLine = root?.querySelector("#paywallError");
-  if (errorLine) errorLine.textContent = "";
-  // Ångerrätten kryssas i FÖRE knappen, inte bort efteråt: en digital tjänst
-  // som levereras direkt får bara undantas från fjorton dagars ångerrätt om
-  // kunden uttryckligen avstått den. Servern vägrar ändå utan samtycket -
-  // det här är bara för att slippa gå till servern för att få veta det.
-  const consent = withdrawalConsentGiven(root);
-  if (!consent) {
-    const text = "Kryssa i rutan om ångerrätten för att kunna gå vidare till betalningen.";
-    if (errorLine) errorLine.textContent = text; else alert(text);
-    root?.querySelector("[data-withdrawal-consent]")?.focus();
-    return;
-  }
-  try {
-    await flushServerSync();
-    const { url } = await startCheckout(getStoredToken(), plan, consent);
-    if (url) { if (isNativeApp()) awaitingPremiumActivation = true; openExternal(url); }
-  } catch (error) {
-    const text = error ? errorText(error) : "Kunde inte starta betalningen just nu.";
-    if (errorLine) errorLine.textContent = text; else alert(text);
-  }
-}
-
-function openPremiumPitch() { openPaywall(); }
 let selectedPlan = "monthly";
 document.querySelectorAll("[data-price-tab]").forEach(tab => tab.addEventListener("click", () => { selectedPlan = tab.dataset.plan; document.querySelectorAll("[data-price-tab]").forEach(t => t.classList.toggle("active", t === tab)); }));
 $("subscribeBtn").addEventListener("click", async () => {
@@ -4304,7 +3970,7 @@ $("subscribeBtn").addEventListener("click", async () => {
   try {
     await flushServerSync();
     const { url } = await startCheckout(state.authToken, selectedPlan, consent);
-    if (isNativeApp()) awaitingPremiumActivation = true;
+    if (isNativeApp()) setAwaitingPremium(true);
     openExternal(url);
   } catch (error) { $("checkoutError").textContent = errorText(error); }
 });
@@ -4476,6 +4142,24 @@ function closeCookModal() { $("cookModal").hidden = true; }
 $("cookFromPantryBtn").addEventListener("click", openCookModal);
 document.querySelectorAll("[data-cook-close]").forEach(button => button.addEventListener("click", closeCookModal));
 restoreNutritionGoalsForm();
+// Kontovyn (kontoarket, hushållet, onboardingen, paywallen) bor i
+// src/views/account.js och får här sin koppling till resten av appen - en
+// gång, före första renderingen. Modulen ritar DOM och känner inte till
+// priser, recept eller vyer; allt sådant går genom de här funktionerna.
+initAccountView({
+  $,
+  hasPremium, premiumPricing, withdrawalConsentMarkup, withdrawalConsentGiven,
+  syncSettingsInputs, renderPriceTabs,
+  householdActive, pullHousehold, pushWeekToHousehold, pushPantryToHousehold,
+  startHouseholdSync, loadNotifications, clearInviteFromUrl,
+  // lastWeekPushKey är app.js egen debounce-nyckel. Ett nytt hushåll ska få
+  // veckan skickad även om exakt samma lista redan gått iväg en gång.
+  resetWeekPushKey: () => { lastWeekPushKey = null; },
+  openAccountModal, openPlanComparison, chooseMenu, setView,
+  syncNearbyBranches, clearLocationDerivedState, storeOptionsMarkup,
+  budgetScopeText, maxDinners, maxMeals: () => MAX_MEALS,
+  isNativeApp, openExternal, plural, render, trackEvent,
+});
 wireHouseholdUi();
 if (!state.valda.size) chooseMenu(false); else render();
 renderRecipePage();
@@ -4490,7 +4174,7 @@ handlePendingInvite();
 function onAppResumed() {
   pullHousehold(); loadNotifications();
   // Tillbaka från Stripe i native-appen: hämta Premium-status.
-  if (awaitingPremiumActivation && isNativeApp()) activatePremiumAfterCheckout();
+  if (isAwaitingPremium() && isNativeApp()) activatePremiumAfterCheckout();
 }
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") onAppResumed();
