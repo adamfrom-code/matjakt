@@ -1924,6 +1924,7 @@ class RecipePricingEngine:
             matched.append(row)
 
         requested = len(matched) + len(missing)
+        uncertain_rows = sum(1 for item in matched if not item.get("exactPackaging", True))
         return {
             "chain": chain,
             "storeId": store_id,
@@ -1933,6 +1934,20 @@ class RecipePricingEngine:
             "totalCheckoutCost": (None if matched and not any(
                 row.get("totalCost") is not None for row in matched)
                 else round(total, 2)),
+            # SUMMAN ÄR ETT GOLV, INTE ETT TAL. Det här var det saknade
+            # begreppet: systemet kunde säga "den här RADEN vet vi inte", men
+            # inte "den här SUMMAN är minst X". Följden var att rubriksiffran
+            # presenterades som exakt medan tre msk-rader (honung, olivolja,
+            # tomatpuré) bidrog med noll kronor - användaren budgeterade 640
+            # och betalade 700.
+            #
+            # Golv gäller så fort NÅGON rad saknar radtotal: en osäker rad
+            # (känt pris, gissat antal) eller en helt omatchad vara. Båda gör
+            # kassan högre än summan, aldrig lägre. uncertainRows är de
+            # första - de som har en produkt men inget antal - så UI:t kan
+            # säga "minst 640 kr + 3 varor utan säkert antal".
+            "totalIsFloor": bool(uncertain_rows or missing),
+            "uncertainRows": uncertain_rows,
             "matchedItems": matched,
             "missingItems": missing,
             # Ett paketantal som GISSADES till 1 (enheterna gick inte att
@@ -1941,7 +1956,7 @@ class RecipePricingEngine:
             # kedja som ärligt inte kan jämföras än en som vinner på en
             # underskattad gissning.
             "realPriceItems": sum(1 for item in matched if item.get("exactPackaging", True)),
-            "estimatedItems": sum(1 for item in matched if not item.get("exactPackaging", True)),
+            "estimatedItems": uncertain_rows,
             "totalItems": requested,
             "coveragePercent": (round(100 * sum(1 for item in matched if item.get("exactPackaging", True)) / requested)
                                 if requested else 0),

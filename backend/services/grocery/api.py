@@ -1078,6 +1078,12 @@ def format_chain_result(result: dict, store_row=None, comparison: dict | None = 
         "priceLabel": price_label,
         "chain": chain,
         "totalCheckoutCost": result.get("totalCheckoutCost"),
+        # Summan är ett GOLV så fort någon rad saknar radtotal - en osäker
+        # rad (känt pris, gissat antal) eller en omatchad vara. Rubriken får
+        # då inte presentera talet som exakt: "minst 640 kr + 3 varor utan
+        # säkert antal", inte "640 kr".
+        "totalIsFloor": bool(result.get("totalIsFloor")),
+        "uncertainRows": result.get("uncertainRows", 0),
         "coveragePercent": result.get("coveragePercent"),
         "realPriceItems": result.get("realPriceItems"),
         "estimatedItems": estimated,
