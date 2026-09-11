@@ -200,11 +200,25 @@ class TioSektionerMedSinCopy(unittest.TestCase):
         self.assertIn("anvandarvillkor.html", fot)
         self.assertIn("Produktinformation delvis från Dabas. Klipp från Pexels.", fot)
 
-    def test_supporten_ar_en_adress_pa_domanen_inte_en_privat_inkorg(self):
-        """En betaltjänst som ber om support via någons privata iCloud-adress
-        ser ut som ett hobbyprojekt, och adressen går inte att lämna över."""
-        self.assertIn("mailto:support@matjakt.store", self.html)
-        self.assertNotIn("adamfrom@icloud.com", self.html)
+    def test_kontaktadressen_ar_en_adress_som_gar_fram(self):
+        """support@matjakt.store ser bättre ut, men har ingen vidarebefordran
+        - ett mejl dit försvinner. En kontaktuppgift som inte når fram är
+        sämre än en privat som gör det. Samma adress på hela domänen: den
+        här sidan, villkoren och integritetspolicyn (I3). Dagen domänadressen
+        får en brevlåda byts alla fyra på en gång, och det här testet med."""
+        self.assertIn("mailto:adamfrom@icloud.com", self.html)
+        self.assertNotIn("support@matjakt.store", self.html)
+
+    def test_samma_kontaktadress_pa_hela_domanen(self):
+        """Två adresser på samma domän är en användare som inte vet vilken
+        som läses, och en av dem läses inte."""
+        rot = ROOT / "frontend"
+        for namn in ("index.html", "anvandarvillkor.html", "integritetspolicy.html"):
+            html = (rot / namn).read_text(encoding="utf-8")
+            self.assertIn("mailto:adamfrom@icloud.com", html,
+                          f"{namn} saknar en kontaktadress som går fram")
+            self.assertNotIn("support@matjakt.store", html,
+                             f"{namn} pekar på en brevlåda som inte finns")
 
     def test_varje_sektion_i_strukturen_finns(self):
         for ankare in ("sa-fungerar-det", "filmen", "skillnaden", "pris", "vanliga-fragor"):

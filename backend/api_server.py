@@ -52,6 +52,7 @@ from services.billing import StripeError, cancel_subscription, create_checkout_s
 from services.billing import matjakt_user_id as stripe_matjakt_user_id, orphan_subscriptions as stripe_orphan_subscriptions
 from services.billing import automatic_tax_allowed, price_verdict as stripe_price_verdict, tax_readiness as stripe_tax_readiness
 from services.billing import withdrawal
+from services.billing import gate as paywall
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.accounts import clientip  # noqa: E402
@@ -2491,13 +2492,32 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # ANDed - "barn" plus "snabbt" means both, which is what a filter
             # row of toggles means to a person using it.
             tags = [tag for value in params.get("tag", []) for tag in value.split(",") if tag]
+            # J1: fritt närings- och meal prep-filter är Premium, och det
+            # avgörs HÄR - inte av om klienten råkar rita ut låset. De
+            # kurerade hyllorna (/api/recipes/shelves) är fortsatt gratis:
+            # det är "grundläggande näringsfilter" i paketeringen.
+            plan = plan_features.plan_for_user(ACCOUNT_STORE.user_for_token(self._bearer_token()))
+            gated = [(paywall.NUTRITION_FILTER,
+                      number("minProtein") is not None or number("maxKcal") is not None),
+                     (paywall.MEAL_PREP_RECIPES, "mealprep" in {tag.lower() for tag in tags})]
+            asked_for_premium = False
+            for gate, asked in gated:
+                if not (gate and asked):
+                    continue
+                asked_for_premium = True
+                if gate.blocks(plan):
+                    self.send_json(403, gate.denial())
+                    return
             self.send_json(200, recipes_api.search(
                 tags=tags or None,
                 max_time=number("maxTime"), min_protein=number("minProtein"),
                 max_kcal=number("maxKcal"),
                 query=clean_text(params.get("q", [""])[0]) or None,
                 limit=number("limit") or 60, offset=number("offset") or 0,
-            ), cache_seconds=120)
+                # Ett svar som beror på planen får ALDRIG ligga i en delad
+                # cache: "public, max-age" hade låtit en mellanhand servera
+                # Premiums svar vidare till nästa gratiskonto.
+            ), cache_seconds=None if asked_for_premium else 120)
             return
         recipes_prefix = "/api/recipes/"
         if parsed.path.startswith(recipes_prefix):
@@ -2527,6 +2547,15 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/v1/recipes/by-pantry":
             if self._rate_limit("search"):
                 return
+            # J1: HELA "Laga med det jag har" hade ingen entitlement-kontroll
+            # alls - funktionen såldes som full_pantry och delades ut gratis
+            # till var och en som kände till vägen. Den bor i sin helhet på
+            # servern (receptkällan söks på skafferiets innehåll), så det här
+            # är en spärr klienten inte kan prata sig förbi.
+            if paywall.PANTRY_RECIPES and paywall.PANTRY_RECIPES.blocks(
+                    plan_features.plan_for_user(ACCOUNT_STORE.user_for_token(self._bearer_token()))):
+                self.send_json(403, paywall.PANTRY_RECIPES.denial())
+                return
             items = [clean_text(item) for item in parse_qs(parsed.query).get("items", [""])[0].split(",") if clean_text(item)]
             items = items[:30]
             if not items:
@@ -2534,14 +2563,16 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 return
             cache_key = tuple(sorted(item.lower() for item in items))
             cached = PANTRY_RECIPE_CACHE.get(cache_key)
+            # Svaret är Premiums, och får därför inte ligga kvar i en delad
+            # cache på vägen ut: bara klientens egen, aldrig "public".
             if cached and time.monotonic() - cached[1] < PANTRY_RECIPE_CACHE_TTL_SECONDS:
-                self.send_json(200, {"recipes": cached[0]}, cache_seconds=PANTRY_RECIPE_CACHE_TTL_SECONDS)
+                self.send_json(200, {"recipes": cached[0]})
                 return
             try:
                 pairs = RECIPE_SERVICE.search_by_pantry(items)
                 recipes = [{**recipe.to_dict(), "matchedIngredients": matched} for recipe, matched in pairs]
                 PANTRY_RECIPE_CACHE[cache_key] = (recipes, time.monotonic())
-                self.send_json(200, {"recipes": recipes}, cache_seconds=PANTRY_RECIPE_CACHE_TTL_SECONDS)
+                self.send_json(200, {"recipes": recipes})
             except Exception:
                 logger.exception("Pantry-based recipe search failed for items %r", items)
                 self.send_json(502, {"error": "Receptkällan svarar inte just nu"})
@@ -3379,6 +3410,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
         comes back in missingItems and lowers that chain's coverage. The
         comparison is allowed to stay undecided (cheapestChain null with a
         reason) rather than claim a cheapest chain the data can't support."""
+        plan = plan_features.plan_for_user(ACCOUNT_STORE.user_for_token(self._bearer_token()))
+        if self._paywall_refuses_week(plan, payload):
+            return
         items, error = self._pricing_items(payload)
         if error:
             self.send_json(400, {"error": error})
@@ -3390,10 +3424,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
         try:
             result = grocery_api.price_week(items, chains, pantry,
                                             store_selection=store_selection)
-            user = ACCOUNT_STORE.user_for_token(self._bearer_token())
-            plan = plan_features.plan_for_user(user)
-            if not plan_features.allowed(plan, "all_store_prices"):
-                result = mask_pricing_for_free(result)
+            for gate in (paywall.ALL_STORE_PRICES, paywall.STORE_COMPARISON):
+                if gate and gate.blocks(plan):
+                    result = mask_pricing_for_free(result)
+                    break
             self.send_json(200, result)
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             raise   # klienten gav upp - inget prisfel, _guarded tar det tyst
@@ -3401,9 +3435,41 @@ class ApiHandler(SimpleHTTPRequestHandler):
             logger.exception("Prissättning av veckan misslyckades")
             self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})
 
+    def _paywall_refuses_week(self, plan, payload):
+        """Grindarna som går att ställa på KROPPEN, före allt arbete.
+
+        Båda är riktiga spärrar och ingen av dem beror på att klienten ritar
+        ut ett lås: antalet middagar räknas ur recipeIds, och veckotypen är
+        den klienten själv säger sig ha byggt. Skickar svaret själv och
+        returnerar True när begäran nekats.
+
+        Att kontrollen ligger FÖRE `_pricing_items` är med flit: en vecka som
+        inte får prissättas ska kosta servern en jämförelse, inte en
+        aggregering av sju recept."""
+        if not isinstance(payload, dict):
+            return False
+        recipe_ids = payload.get("recipeIds")
+        dinners = len(recipe_ids) if isinstance(recipe_ids, list) else 0
+        if (paywall.SEVEN_DINNERS and dinners > paywall.dinner_limit(plan)
+                and paywall.SEVEN_DINNERS.blocks(plan)):
+            self.send_json(403, paywall.SEVEN_DINNERS.denial(
+                maxDinners=paywall.dinner_limit(plan)))
+            return True
+        week_gate = paywall.week_type_gate(payload.get("weekType"))
+        if week_gate and week_gate.blocks(plan):
+            self.send_json(403, week_gate.denial())
+            return True
+        return False
+
     def _handle_pricing_list(self, payload):
         """One chain's store-specific shopping list: the actual products to
         put in the basket, with image, pack size, package count and price."""
+        user = ACCOUNT_STORE.user_for_token(self._bearer_token())
+        plan = plan_features.plan_for_user(user)
+        # Samma middagstak som veckoprissättningen: annars vore listvägen en
+        # bakdörr till sjudagarsveckans riktiga priser.
+        if self._paywall_refuses_week(plan, payload):
+            return
         items, error = self._pricing_items(payload)
         if error:
             self.send_json(400, {"error": error})
@@ -3413,10 +3479,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json(400, {"error": "chain saknas"})
             return
         pantry = payload.get("pantry") if isinstance(payload.get("pantry"), dict) else None
-        user = ACCOUNT_STORE.user_for_token(self._bearer_token())
-        plan = plan_features.plan_for_user(user)
         store_selection = _store_selection_param(payload)
-        if not plan_features.allowed(plan, "all_store_baskets"):
+        if paywall.ALL_STORE_BASKETS and paywall.ALL_STORE_BASKETS.blocks(plan):
             # Which chain is Free allowed? The cheapest qualified one for
             # THIS list - decided by the same real comparison, server-side.
             # Anything else answers with a lock, not with data: a paywall
@@ -3425,9 +3489,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                                           store_selection=store_selection)
             allowed_chain = _free_chain_for(week)
             if chain != allowed_chain:
-                self.send_json(403, {"locked": True, "feature": "all_store_baskets",
-                                     "error": "Den här butikens lista ingår i Premium",
-                                     "freeChain": allowed_chain})
+                self.send_json(403, paywall.ALL_STORE_BASKETS.denial(freeChain=allowed_chain))
                 return
         try:
             self.send_json(200, grocery_api.shopping_list(
@@ -3567,9 +3629,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
         # och varje sådan flik blev tjugo skrapningar mot 30/min-spärren:
         # 429-stormen i produktionsloggen.
         user = ACCOUNT_STORE.user_for_token(self._bearer_token())
-        if not plan_features.allowed(plan_features.plan_for_user(user), "live_prices"):
-            self.send_json(403, {"locked": True, "feature": "live_prices",
-                                 "error": "Livepriser per vara ingår i Premium"})
+        if paywall.LIVE_PRICES and paywall.LIVE_PRICES.blocks(plan_features.plan_for_user(user)):
+            self.send_json(403, paywall.LIVE_PRICES.denial())
             return
 
         cache_zip = cache_scope(zip_code, store_key)
