@@ -10,14 +10,15 @@ if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "functi
 import { applySyncBlob, buildSyncPayload, flushServerSync, initAppState, persistLocally, saveState, selectedRecipes, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
 import { aggregateShopping, chainListTotal, chainRowAmount, initShoppingView, prunePhantomItemNames, renderBasket, wireReportPriceButtons } from "./src/views/shopping.js";
 import { watchOtherTabs } from "./src/state/tab-sync.js";
-import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
+import { aggregateIngredients, budgetRemaining, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
+import { branchLiveKey, branchesLoading, clearLocationDerivedState, createRetryGate, initPricingSync, livePricesLoading, pricingHeaders, pricingIsPending, resetExtraMatchSync, resetPricingSync, syncBranchComparison, syncDatabasePricing, syncExtraMatches, syncLivePrices, syncNearbyBranches, storeSelectionForPricing, weekPricingBody } from "./src/pricing/sync.js";
 import { createDebouncedSearch, mergeRecipeResults } from "./src/services/recipe-search.js";
 import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/nutrition.js";
 import { PANTRY_LOCATIONS, expiryStatus, matchLocalRecipesToPantry, pantryAmounts } from "./src/services/pantry.js";
 import { extrasTotal, newExtraItem } from "./src/services/extras.js";
 import { ALLERGENS, filterByDiet, mergeDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
-import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, productsBatchApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl, storesApiUrl } from "./src/api/config.js";
+import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl } from "./src/api/config.js";
 import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
 // errorText: inget rått fetch-fel når skärmen. "Failed to fetch" är inte
 // svenska, och en användare kan inte göra något åt ett "HTTP 500" (E7).
@@ -166,6 +167,26 @@ initAppState({
   onSyncStatus: (status, message) => setSyncStatus(status, message),
   saveRemote: saveAccountState,
   weekTotal: () => lastRealWeekTotal,
+});
+// Prishämtningen (prisdatabasen, livepriserna, filialjämförelsen,
+// extravarorna och butikslistan) bor i src/pricing/sync.js. Den känner inte
+// till skärmen: vem som frågar, vilken butik och vilken vecka det gäller
+// skickas in, och omritningar beställs via render-bussen. Allt skickas som
+// funktioner, inte som värden - de flesta av dem deklareras längre ner i den
+// här filen.
+initPricingSync({
+  hasPremium: () => hasPremium(),
+  chosenStore: () => chosenStore(),
+  selectedBranch: () => selectedBranch(),
+  nearbyBranches: () => nearbyBranches(),
+  plannedRecipes: () => plannedRecipes(),
+  pantryForPricing: () => pantryForPricing(),
+  pantryForServer: () => pantryForServer(),
+  isPricedChain: chain => VALID_CHAINS.includes(chain),
+  onPricesChanged: () => renderBasket(),
+  onLiveStatusChanged: () => updateWeekStoreStatus(),
+  onBranchesChanged: () => render(),
+  onBranchesLoaded: () => chooseMenu(false),
 });
 // Sparat / synkar / kunde inte synka - sanningen om var datat är, visad
 // diskret i kontovyn. Lokalt sparas ALLTID (localStorage, synkront);
@@ -908,9 +929,9 @@ async function fetchEntitlements() {
   // upgrade), and a Premium snapshot must not leak into Free. Throw the
   // whole price picture away and fetch it again under the new plan.
   if (lastEntitlementPlan !== entitlements.plan) {
-    databasePricingSync = { key: null, pending: false };
+    resetPricingSync();
     state.dbChainTotals = {}; state.dbLockedChains = []; state.dbComparison = null;
-    state.dbPricedAt = null; state.extraMatches = {}; extraMatchSync = {};
+    state.dbPricedAt = null; state.extraMatches = {}; resetExtraMatchSync();
   }
   lastEntitlementPlan = entitlements.plan;
   // Priserna kommer med svaret - rita om flikarna nu, annars står de kvar
@@ -1007,72 +1028,10 @@ function hasPremium() {
 }
 
 function nearbyBranches() { return state.branches.length ? state.branches : FALLBACK_BRANCH; }
-// Everything that describes WHERE the user shops. A new postcode invalidates
-// all of it: keeping Gävle's branches, Gävle's fetched prices or a pinned
-// Gävle store after a move to Stockholm would show the user a shop they
-// cannot walk into and a total they cannot pay.
-function clearLocationDerivedState() {
-  state.branches = [];
-  state.liveBranchTotals = {};
-  state.livePriser = {};
-  state.dbChainTotals = {};
-  state.dbComparison = null;
-  state.dbPricedAt = null;
-  state.liveUpdatedAt = null;
-  // A branch pinned in the old town is not reachable from the new one.
-  state.pinnedBranch = null;
-  // Both sync guards must forget their old key, or the refetch for the new
-  // postcode is skipped as "already done".
-  databasePricingSync = { key: null, pending: false };
-  branchComparisonSync = { key: null, branches: new Set() };
-}
-
-let branchesSync = { key: null, loading: false };
-async function syncNearbyBranches() {
-  const zip = state.postnummer;
-  if (!/^\d{5}$/.test(zip) || branchesSync.key === zip) return;
-  // A fetch already in flight used to make this return outright, so a
-  // postcode typed while the previous one was loading was dropped and never
-  // retried - the old town's stores simply stayed on screen. Remember the
-  // pending postcode instead and pick it up when the current fetch settles.
-  if (branchesSync.loading) { branchesSync.pending = zip; return; }
-  branchesSync = { key: zip, loading: true, pending: null };
-  clearLocationDerivedState();
-  render();
-  try {
-    // Always revalidate. A store list served from the browser's own cache is
-    // how a user ends up looking at shops that are no longer near them (and
-    // how a chain we just started carrying stays invisible). The server's own
-    // cache still absorbs the cost - this only stops the CLIENT from holding
-    // a stale copy.
-    const response = await fetch(storesApiUrl(zip), { cache: "no-cache", signal: AbortSignal.timeout(20000) });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    if (state.postnummer !== zip) return;
-    state.branches = (data.butiker || []).map(store => ({ kedja: store.kedja, namn: store.namn, ort: store.ort || "", lat: store.lat, lon: store.lon, avstandKm: store.avstandKm, prisfaktor: 1, primatKey: store.primatKey || "",
-      // Nationella butiksmodellen: butikens eget id + hur kedjan prissätter
-      // (nationellt/per butik) + om den här butikens priser går att få.
-      externalStoreId: store.externalStoreId || "", pricingScope: store.pricingScope || "", prisbar: store.prisbar !== false }));
-    state.liveBranchTotals = {};
-    // Only auto-pick a week here when the user doesn't already have one (same
-    // guard as the startup call below) - this resolves on every single app
-    // open once real branch data replaces the FALLBACK_BRANCH estimate, and
-    // unconditionally regenerating would silently discard checked-off items,
-    // cached prices, and even reshuffle an already-chosen week on every visit.
-    if (!state.valda.size) chooseMenu(false); else render();
-  } catch {
-    // The network did not answer. The estimated fallback branch is shown
-    // until this can be retried - but the key is cleared so the next attempt
-    // is not skipped as "already fetched".
-    branchesSync.key = null;
-  }
-  finally {
-    branchesSync.loading = false;
-    const pending = branchesSync.pending;
-    if (pending && pending !== state.postnummer) branchesSync.pending = null;
-    if (pending) { branchesSync.pending = null; syncNearbyBranches(); }
-  }
-}
+// clearLocationDerivedState() och syncNearbyBranches() bor i
+// src/pricing/sync.js tillsammans med resten av prishämtningen - de delar
+// synkgrindarna med den, och butikshämtningen har samma omförsöksbehov som
+// prishämtningen (E13).
 // Vad veckan ska ta hänsyn till: enhetens egen kost OCH hushållets
 // allergier. Uppgifterna familjen fyller i ska påverka maten - annars är
 // formuläret ett löfte som aldrig hålls.
@@ -1270,163 +1229,11 @@ function renderRecipeTagFilters() {
 const FAVORITE_ICON = '<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.5-9C.7 8.2 2.4 5 5.7 5c2 0 3.4 1.1 4.3 2.4C11 6.1 12.4 5 14.4 5c3.3 0 5 3.2 3.2 7-2.5 4.4-9.5 9-9.5 9Z"/></svg>';
 const PRICE_TAG_ICON = '<svg viewBox="0 0 24 24"><path d="M20 12 12.5 4.5a2 2 0 0 0-1.4-.5H5a1 1 0 0 0-1 1v6.1a2 2 0 0 0 .6 1.4L12 20"/><circle cx="8" cy="8" r="1.3"/></svg>';
 
-function branchLiveTotal(shoppingItems, chainProducts) {
-  return calculateLiveShoppingTotal(shoppingItems, chainProducts, pantryForPricing());
-}
-// A branch's stable identity for state.liveBranchTotals - primatKey, not
-// chain name, since two branches of the same chain can genuinely have
-// different prices (member deals, local campaigns - see cache_scope's
-// docstring server-side). A branch with no primatKey (pure scrape fallback,
-// nothing concrete to target) has no branch-specific live price to key -
-// callers must check for that and leave it out rather than fetch it.
-function branchLiveKey(branch) { return branch.primatKey ? `${branch.kedja}#${branch.primatKey}` : null; }
-let branchComparisonSync = { key: null, branches: new Set() };
-async function syncBranchComparison(shoppingItems, branches) {
-  const names = shoppingItems.map(item => item.namn).sort();
-  const key = `${state.postnummer}|${names.join(",")}`;
-  if (branchComparisonSync.key !== key) { branchComparisonSync = { key, branches: new Set() }; state.liveBranchTotals = {}; }
-  if (!names.length) return;
-  // Filialpriser är Premium (servern nekar Free med 403) och pausas efter
-  // 429/403 - annars blev varje filial ett avvisat anrop till.
-  if (!hasPremium() || Date.now() < livePriceCooldownUntil) return;
-  // Every nearby branch gets its own live fetch, keyed by its own primatKey -
-  // this used to fetch once per CHAIN and let every branch of that chain
-  // show that single result as if it were each branch's own live price
-  // (found live 2026-08-30: four different Coop branches all showing an
-  // identical "20 kr LIVE"). primatOnly:true because a scrape genuinely
-  // can't answer "this specific branch" any differently from another branch
-  // of the same chain (only Primat's store_key can) - with up to a dozen
-  // nearby branches, this keeps every one of these calls on the fast
-  // Primat/cache path and never triggers Playwright.
-  const targets = branches.filter(branch => branch.primatKey && !branchComparisonSync.branches.has(branchLiveKey(branch)));
-  targets.forEach(branch => branchComparisonSync.branches.add(branchLiveKey(branch)));
-  // Each branch is fetched independently and in parallel - a slow/timed-out
-  // one must not delay the others from starting or completing.
-  await Promise.allSettled(targets.map(async branch => {
-    if (branchComparisonSync.key !== key) return;
-    try {
-      const produkter = await fetchProductsBatch(branch.kedja, state.postnummer, names, undefined, branch.primatKey, true);
-      if (branchComparisonSync.key !== key) return;
-      const matched = Object.values(produkter).filter(Boolean);
-      if (matched.length) { state.liveBranchTotals[branchLiveKey(branch)] = branchLiveTotal(shoppingItems, produkter); state.liveUpdatedAt = Date.now(); renderBasket(); }
-    } catch { /* den här filialen visar kvar den statiska uppskattningen om livehämtningen misslyckas */ }
-  }));
-}
-// =============================================================================
-// REAL CHECKOUT PRICES FROM MATJAKT'S OWN PRICE DATABASE
-// =============================================================================
-// This is the good source. Everything else on this screen is either a flat
-// static estimate or a best-effort text search of a store's site; this one
-// prices the week against products actually collected into grocery.db, with
-// real package maths (600 g of a 700 g pack costs a whole pack) and a
-// coverage figure saying how much of the list it could really price.
-//
-// It is keyed by CHAIN, not by branch, because that is what the data
-// honestly supports: Willys and Hemköp prices are verified national (the
-// same query with two different storeIds returns byte-identical responses).
-// Claiming a branch-specific number here would be inventing precision.
-let databasePricingSync = { key: null, pending: false };
-// Nya försök efter nätfel glesas ut (8 s, 16 s, ... max 2 min) och nollställs
-// vid lyckat svar: offline på tåget ska inte ge ett anrop var åttonde
-// sekund tills täckningen är tillbaka.
-const RETRY_BASE_MS = 8000;
-const RETRY_MAX_MS = 120_000;
-let pricingRetryCount = 0;
-let campaignRetryCount = 0;
-function retryDelay(count) { return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** count); }
-// The pricing request for the week's recipes: recipe IDS, not a client-built
-// item list. The server aggregates from its own recipe rows - the same rows
-// the recipe page shows - so the priced list can never drift from the
-// recipes. Legacy/offline recipes without a bank id fall back to item lines.
-function pricingHeaders() {
-  // The pricing endpoints decide Free vs Premium SERVER-SIDE - but only if
-  // they know who is asking. Without the token every user was anonymous,
-  // and a paying customer got the masked Free response.
-  const token = getStoredToken();
-  return { "Content-Type": "application/json",
-           ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-}
-function storeSelectionForPricing() {
-  // Användarens butiker till prissättningen: närmaste butik per kedja (listan
-  // är avståndssorterad från servern), pinnad butik vinner över närmaste.
-  // Servern gör resten ärligt: nationellt prissatta kedjor etiketteras med
-  // butiken, butiksspecifika prissätts BARA om just den butikens katalog
-  // finns - annars rapporteras kedjan som otillgänglig i stället för att en
-  // annan butiks priser visas under fel namn.
-  const selection = {};
-  for (const branch of nearbyBranches()) {
-    if (branch.externalStoreId && !selection[branch.kedja]) selection[branch.kedja] = branch.externalStoreId;
-  }
-  const pinned = state.pinnedBranch;
-  if (pinned?.externalStoreId && pinned.kedja) selection[pinned.kedja] = pinned.externalStoreId;
-  return selection;
-}
-
-function weekPricingBody(shoppingItems) {
-  const selected = plannedRecipes();
-  const bankRecipes = selected.filter(recipe => recipe.priceStatus !== "unavailable"
-    && (!Array.isArray(recipe.ingredients) || recipe.ingredients.length || recipe.slug));
-  const recipeIds = bankRecipes.map(recipe => recipe.id);
-  const body = { people: state.personer, pantry: pantryForServer() };
-  // Borttagna varor måste följa med: recipeIds-vägen aggregerar om veckan på
-  // servern, och utan denna lista skulle butiksjämförelsen fortsätta prissätta
-  // varor användaren tagit bort.
-  if (state.removedItems.size) body.excludeItems = [...state.removedItems].sort();
-  if (recipeIds.length) body.recipeIds = recipeIds;
-  else body.items = shoppingItems.map(item => ({ name: item.namn, amount: item.total, unit: item.unit }));
-  const stores = storeSelectionForPricing();
-  if (Object.keys(stores).length) body.stores = stores;
-  return body;
-}
-async function syncDatabasePricing(shoppingItems) {
-  const body = weekPricingBody(shoppingItems);
-  if (!body.recipeIds?.length && !body.items?.length) return;
-  // Planen ingår i nyckeln: servern maskar Free-svaret (låsta kedjor), och
-  // utan planen i nyckeln låg det maskade svaret kvar efter att Premium
-  // aktiverats tills veckan råkade ändras (sett i E2E efter checkout).
-  const key = `${hasPremium() ? "premium" : "free"}|${JSON.stringify(body)}`;
-  if (databasePricingSync.key === key || databasePricingSync.pending) return;
-  databasePricingSync = { key, pending: true };
-  try {
-    const response = await fetch(pricingWeekApiUrl(), {
-      method: "POST",
-      headers: pricingHeaders(),
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(20000),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    if (databasePricingSync.key !== key) return;
-    state.dbChainTotals = {};
-    state.dbLockedChains = [];
-    (data.results || []).forEach(result => {
-      // Free's masked view: locked chains carry name + status only. They go
-      // in their own list for the store cards; only full results may ever
-      // enter dbChainTotals, so nothing downstream can mistake a silhouette
-      // for a priced chain.
-      if (result.locked) state.dbLockedChains.push(result);
-      else state.dbChainTotals[result.chain] = result;
-    });
-    state.dbComparison = data.comparison || null;
-    state.dbPricedAt = Date.now();
-    pricingRetryCount = 0;
-    renderBasket();
-  } catch {
-    // The price database being unreachable must never break the week view.
-    // Nothing fake fills the gap - the views show "pris saknas", and this
-    // timestamp is how they know the fetch actually failed rather than
-    // simply not having finished yet.
-    state.dbPricingFailedAt = Date.now();
-    // A failure must not park the key forever: with the key left in place,
-    // every later render concluded "already fetched" and the header said
-    // "pris hämtas…" until a full reload. One deploy window was enough to
-    // strand every open phone. Clear the key and retry shortly.
-    databasePricingSync.key = null;
-    setTimeout(() => renderBasket(), retryDelay(pricingRetryCount++));
-  } finally {
-    databasePricingSync.pending = false;
-  }
-}
+// Prisdatabasen, filialjämförelsen och deras synkgrindar bor i
+// src/pricing/sync.js: syncBranchComparison, syncDatabasePricing,
+// pricingHeaders, storeSelectionForPricing och weekPricingBody importeras
+// därifrån. Omförsöken efter nätfel går genom modulens omförsöksgrind i
+// stället för en egen setTimeout-kedja per fel (E5).
 
 // The real product the price database picked for one shopping line at the
 // chain currently in use - the actual thing to put in the basket, with its
@@ -1469,39 +1276,7 @@ function databaseResultFor(branch) {
 // the current chain, or the item's own campaign price at its own chain,
 // or nothing. state.extraMatches[chain][id] = { unitPrice, productName,
 // imageUrl } - fetched from the same pricing API as everything else.
-let extraMatchSync = {};
-async function syncExtraMatches(chain) {
-  const extras = state.extraItems;
-  if (!extras.length || !chain || chain === "alla") return;
-  const key = `${chain}|${extras.map(e => e.id + ":" + e.name).sort().join(",")}`;
-  if (extraMatchSync[chain] === key) return;
-  extraMatchSync[chain] = key;
-  try {
-    const response = await fetch(pricingListApiUrl(), {
-      method: "POST",
-      headers: pricingHeaders(),
-      body: JSON.stringify({ chain, items: extras.map(e => ({ name: e.name, amount: 1, unit: "st" })) }),
-      signal: AbortSignal.timeout(20000),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    const byName = {};
-    (data.items || []).forEach(item => {
-      if (item.priceStatus !== "missing" && item.totalCost != null) byName[item.ingredient] = item;
-    });
-    state.extraMatches[chain] = {};
-    extras.forEach(extra => {
-      const hit = byName[extra.name];
-      if (hit) state.extraMatches[chain][extra.id] = {
-        unitPrice: hit.totalCost, productName: hit.productName, imageUrl: hit.imageUrl,
-        packageSize: hit.packageSize,
-      };
-    });
-    renderBasket();
-  } catch {
-    extraMatchSync[chain] = null; // försök igen nästa render
-  }
-}
+// Själva hämtningen (syncExtraMatches) bor i src/pricing/sync.js.
 
 function currentPricedChain() {
   const chain = chosenStore();
@@ -1547,7 +1322,7 @@ function addExtraItem(fields) {
   }
   const extra = newExtraItem(fields);
   state.extraItems = [...state.extraItems, extra];
-  state.extraMatches = {}; extraMatchSync = {};
+  state.extraMatches = {}; resetExtraMatchSync();
   saveState(); renderBasket();
   return extra;
 }
@@ -1751,7 +1526,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
     // A flat estimate is never printed as a store price. While the real
     // fetch is still under way the head says so; if it came back empty the
     // head says that instead. A made-up "ca 512 kr" says neither.
-    const stillFetching = databasePricingSync.pending || (!state.dbPricedAt && !state.dbPricingFailedAt);
+    const stillFetching = pricingIsPending() || (!state.dbPricedAt && !state.dbPricingFailedAt);
     const currentPriceText = current.source === "estimate"
       ? `<strong class="price-missing">${stillFetching ? "pris hämtas…" : "pris saknas just nu"}</strong>`
       : hasUsablePrice(current)
@@ -1873,7 +1648,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
   // a price. "Uppskattat pris Coop Nian - ca 578 kr" is the exact banner the
   // no-fabricated-totals rule exists to kill.
   const headIsEstimate = cheapest.source === "estimate";
-  const headFetching = headIsEstimate && (databasePricingSync.pending || (!state.dbPricedAt && !state.dbPricingFailedAt));
+  const headFetching = headIsEstimate && (pricingIsPending() || (!state.dbPricedAt && !state.dbPricingFailedAt));
   container.innerHTML = `<div class="store-compare"><div class="store-compare-head"><span>${comparisonIsReal && winner && winner.branch.kedja === cheapest.branch.kedja ? "Lägst pris" : "Pris hos"}</span><strong>${escapeHtml(cheapest.branch.namn)}${headIsEstimate ? ` · ${headFetching ? "pris hämtas…" : "pris saknas just nu"}` : ` · ca ${money(cheapest.cost)}`}</strong>${savingsAreReal ? (winner && winner.branch.kedja !== cheapest.branch.kedja
       ? `<small>Billigast: ${escapeHtml(winner.branch.namn)} ${money(winner.cost)} · du sparar ${money(savings)}</small>`
       : `<small>Du sparar ${money(savings)}${state.dbComparison?.priciestTotal ? ` · ${Math.round(100 * savings / state.dbComparison.priciestTotal)} % billigare än dyraste jämförbara butik` : ""}</small>`)
@@ -2750,7 +2525,7 @@ function updateWeekStoreStatus() {
   const shoppingItems = aggregateShopping(selected);
   const liveCount = shoppingItems.filter(item => state.livePriser[item.namn]).length;
   const chain = chosenStore();
-  const fetchingLive = livePriceSync.loading;
+  const fetchingLive = livePricesLoading();
   $("weekStoreStatus").textContent = fetchingLive ? `Hämtar priser hos ${chain}...` : VALID_CHAINS.includes(chain) ? (liveCount ? `Visar priser hos ${chain}` : `Uppskattat pris - hämtar priser hos ${chain}...`) : chain === "alla" ? "Visar uppskattade priser, jämfört mot alla butiker" : "Visar uppskattade priser";
   $("weekStoreStatus").classList.toggle("loading", fetchingLive);
 }
@@ -2805,9 +2580,11 @@ const VALID_CHAINS = RELEASED_CHAINS;
 //
 // Står EFTER VALID_CHAINS med flit: allt nedan som är en const (money,
 // plural, itemCategory, PANTRY_TAB_LABELS, VALID_CHAINS) måste vara
-// deklarerat innan det går att skicka vidare. Det som är `let` och byts ut
-// (databasePricingSync, livePriceSync, lastRealWeekTotal) skickas som
-// funktioner, aldrig som värden - annars fryses det första värdet fast.
+// deklarerat innan det går att skicka vidare. Det som byts ut under körningen
+// (prishämtningens synkgrindar, lastRealWeekTotal) skickas som funktioner,
+// aldrig som värden - annars fryses det första värdet fast. Grindarna bor
+// numera i src/pricing/sync.js och frågas via pricingIsPending och
+// livePricesLoading.
 // ---------------------------------------------------------------------------
 initShoppingView({
   $, money, plural,
@@ -2819,8 +2596,8 @@ initShoppingView({
   removedRowsForView, restoreRemovedRows,
   householdActive,
   chosenStore, currentPricedChain, headerPricedChain, validChains: VALID_CHAINS,
-  pricingPending: () => databasePricingSync.pending,
-  livePricesLoading: () => livePriceSync.loading,
+  pricingPending: pricingIsPending,
+  livePricesLoading,
   nearbyBranches, computeStoreResults, sameBranch, selectedBranch, hasUsablePrice,
   extrasTotalForChain, syncExtraMatches,
   ensureWeekRecipeDetails,
@@ -2849,103 +2626,9 @@ function renderWeekStoreTabs() {
   tabs.querySelectorAll("[data-week-store]").forEach(button =>
     button.classList.toggle("active", button.dataset.weekStore === state.butik));
 }
-// Matches the backend's MATJAKT_MAX_SCRAPES (production runs 2) - one item
-// per request, up to this many in flight at once via a small worker pool
-// below. One item per request (not several bundled into one) because a
-// single item's scrape can itself take close to the request timeout (Coop in
-// particular runs 18-25s even with nothing else competing for the backend's
-// CPU) - bundling several into one request used to make the whole request
-// fail together even when most of those items would have succeeded alone.
-// Sending more in flight than the backend can actually run concurrently
-// wouldn't help (they'd just queue there instead of here), and sending only
-// one at a time would leave the backend's second worker idle the whole sync.
-// Flera varor per anrop, ett anrop i taget. Varje anrop räknas mot
-// serverns skrapspärr (30/min per IP) - ett anrop per vara gjorde en
-// veckolista till tjugo anrop och produktionsloggen till en 429-storm.
-// Vid 429/403 pausas live-hämtningen en minut i stället för att loopa.
-// Skrapvägen tar fem varor per anrop så priserna landar löpande; den snabba
-// Primat-/cachevägen (primatOnly) tar serverns max (20) - en filial, ett anrop.
-const LIVE_PRICE_CHUNK = 5;
-const LIVE_PRICE_CHUNK_FAST = 20;
-const LIVE_PRICE_COOLDOWN_MS = 60_000;
-let livePriceCooldownUntil = 0;
-async function fetchProductsBatch(chain, zip, names, onItem, storeKey, primatOnly) {
-  const produkter = {};
-  const size = primatOnly ? LIVE_PRICE_CHUNK_FAST : LIVE_PRICE_CHUNK;
-  for (let start = 0; start < names.length; start += size) {
-    if (Date.now() < livePriceCooldownUntil) break;
-    const chunk = names.slice(start, start + size);
-    try {
-      const response = await fetch(productsBatchApiUrl(), {
-        method: "POST", headers: pricingHeaders(),
-        body: JSON.stringify({ butik: chain, zip, varor: chunk, ...(storeKey ? { butiksnyckel: storeKey } : {}), ...(primatOnly ? { primatOnly: true } : {}) }),
-        signal: AbortSignal.timeout(35000),
-      });
-      if (response.status === 429 || response.status === 403) {
-        livePriceCooldownUntil = Date.now() + LIVE_PRICE_COOLDOWN_MS;
-        break;
-      }
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const found = (await response.json()).produkter || {};
-      Object.assign(produkter, found);
-      onItem?.(found);
-    } catch { /* den här gruppen missade - nästa grupp hämtas ändå */ }
-  }
-  return produkter;
-}
-function mapLiveProducts(produkter) {
-  // pris_kr stays null when the backend genuinely has no confident price for
-  // a matched product (Primat has the item but no current price, or -
-  // filtered([, product]) => product) below keeps this - the entry is
-  // entirely absent (null) rather than a wrongly-forced 0. Every downstream
-  // reader (shoppingItemMarkup, weekShoppingRowMarkup, branchLiveTotal) must
-  // treat pris_kr === null as "Pris saknas", never as a spendable price.
-  return Object.fromEntries(Object.entries(produkter).filter(([, product]) => product).map(([namn, product]) => [namn, { pris_kr: product.pris_kr == null ? null : Number(product.pris_kr), produktnamn: String(product.produktnamn || namn), markeOchStorlek: String(product.marke_och_storlek || ""), url: safeHttpUrl(product.url), bild: product.bild ? safeHttpUrl(product.bild) : "", kalla: product.kalla || "", bildKalla: product.bild_kalla || "", kampanj: product.kampanj?.text ? { text: String(product.kampanj.text) } : null }]));
-}
-let livePriceSync = { key: null, loading: false };
-async function syncLivePrices(shoppingItems) {
-  const chain = chosenStore();
-  // A pinned branch only applies here once selectedBranch() actually
-  // resolved to it (i.e. its chain matches the chain being shopped) -
-  // otherwise this is a plain chain-level fetch, same as always.
-  const branch = selectedBranch();
-  const storeKey = branch?.kedja === chain ? branch.primatKey : "";
-  // ONLY the lines Matjakt's own price database could not answer. Everything
-  // it CAN answer is already on screen, from our own collected data, with no
-  // request to a chain at all.
-  //
-  // This is the line between the two halves of the system: collecting from
-  // the chains is slow background work, and using Matjakt must never wait on
-  // it. Before this, opening Handla fired a live per-item lookup for the
-  // whole week even when every single item was already priced from our
-  // database - a minute of requests to a chain, to arrive at prices we
-  // already had.
-  const priced = state.dbChainTotals[chain];
-  const answered = new Set((priced?.items || [])
-    .filter(item => item.priceStatus !== "missing")
-    .map(item => item.ingredient));
-  const names = shoppingItems.map(item => item.namn).filter(name => !answered.has(name)).sort();
-  const key = `${chain}|${storeKey}|${state.postnummer}|${names.join(",")}`;
-  // Free får aldrig live-priser: prisdatabasen svarar för den billigaste
-  // butiken, och servern nekar ändå (403). Cooldown efter 429/403.
-  if (!hasPremium()) return;
-  if (Date.now() < livePriceCooldownUntil) return;
-  if (!names.length || !VALID_CHAINS.includes(chain) || livePriceSync.loading || livePriceSync.key === key) return;
-  livePriceSync = { key, loading: true };
-  updateWeekStoreStatus();
-  try {
-    // Applied per item as it arrives (not once at the end) - a full week can
-    // take over a minute even when every item eventually succeeds, and
-    // showing prices land one by one is a much better wait than a blank
-    // "Hämtar..." the whole time.
-    await fetchProductsBatch(chain, state.postnummer, names, found => {
-      if (chosenStore() !== chain) return;
-      const mapped = mapLiveProducts(found);
-      if (Object.keys(mapped).length) { Object.assign(state.livePriser, mapped); state.liveUpdatedAt = Date.now(); renderBasket(); }
-    }, storeKey);
-  } catch { /* live-priser är ett tillägg ovanpå uppskattningen - misslyckas det visas bara uppskattningen kvar */ }
-  finally { livePriceSync.loading = false; updateWeekStoreStatus(); }
-}
+// fetchProductsBatch, mapLiveProducts och syncLivePrices - hämtningen av
+// livepriser hos den valda kedjan, med sin gruppstorlek och sin cooldown
+// efter 429/403 - bor i src/pricing/sync.js.
 // The chosen week's recipes need their STRUCTURED ingredients (a card
 // deliberately ships without them) before the shopping list can render its
 // lines. Fetched once per recipe, in the background; each arrival re-renders.
@@ -3197,7 +2880,9 @@ initRecipesView({
   dietFilterIsActive,
   selectedBranch,
   nearbyBranches,
-  branchesLoading: () => branchesSync.loading,
+  // branchesSync bor i src/pricing/sync.js sedan F1 - receptvyn frågar
+  // modulen i stället för en modulvariabel som inte längre finns här.
+  branchesLoading,
   hasPremium,
   scaledPurchasePrice,
   renderRecipeTagFilters,
@@ -4350,11 +4035,19 @@ async function refreshUser() {
   if (hasPremium() && hasActiveNutritionGoals(currentNutritionGoals()) && !state.valda.size) chooseMenu(false);
   renderCampaignSection();
 }
-let ownCampaignFetchKey = null;
+// Hämtad, pågående eller avvaktande. Det var en sträng ("done") som nollades
+// vid fel, och eftersom render-bussen körs vid varje interaktion sköt nästa
+// rendering iväg ett nytt /grocery/campaigns-anrop - ett per knapptryck,
+// ovanpå en exponentiell omförsökskedja som aldrig avbröts (E5). Grinden
+// nedan håller takten i stället: ETT försök per backoff-period, EN väntande
+// timer.
+let ownCampaignFetch = { done: false, inFlight: false };
+const ownCampaignsRetry = createRetryGate(() => renderOwnCampaigns());
 let ownCampaignDeals = [];
 async function renderOwnCampaigns() {
-  if (ownCampaignFetchKey === "done") return;
-  ownCampaignFetchKey = "done";
+  if (ownCampaignFetch.done || ownCampaignFetch.inFlight) return;
+  if (!ownCampaignsRetry.ready()) return;
+  ownCampaignFetch.inFlight = true;
   // Ett lugnt laddläge - utan det står rubriken över en tom rad i upp till
   // 15 sekunder innan hämtningen svarar.
   $("campaignList").innerHTML = `<p class="live-loading">Hämtar veckans fynd…</p>`;
@@ -4362,7 +4055,8 @@ async function renderOwnCampaigns() {
     const response = await fetch(`${API_BASE_URL}/grocery/campaigns`, { signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    campaignRetryCount = 0;
+    ownCampaignFetch.done = true;
+    ownCampaignsRetry.succeeded();
     const all = Object.values(data.deals || {}).flat()
       .sort((a, b) => b.discountPercent - a.discountPercent);
     if (!all.length) { $("campaignList").innerHTML = `<p class="live-loading">Inga kampanjer i butikernas data just nu.</p>`; return; }
@@ -4401,10 +4095,13 @@ async function renderOwnCampaigns() {
       button.textContent = "✓ Tillagd"; button.disabled = true; button.classList.add("added");
     }));
   } catch {
-    ownCampaignFetchKey = null;
     $("campaignList").innerHTML = `<p class="live-loading">Kunde inte hämta erbjudanden just nu - försöker igen strax.</p>`;
     // Utan egen omstart låg felet kvar tills någon annan render råkade ske.
-    setTimeout(() => renderOwnCampaigns(), retryDelay(campaignRetryCount++));
+    // Grinden avbryter den förra väntande timern innan den sätter en ny, så
+    // tio fel ger tio försök i följd - inte tio parallella kedjor.
+    ownCampaignsRetry.failed();
+  } finally {
+    ownCampaignFetch.inFlight = false;
   }
 }
 
