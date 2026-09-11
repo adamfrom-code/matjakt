@@ -1216,6 +1216,70 @@ class BrowserJourney(unittest.TestCase):
                                 f"kassen ritades aldrig om: {skrivningar}")
         self.assertEqual(self.console_errors, [])
 
+    # ---- E2: dagsindex ----
+    def test_ett_saknat_recept_forskjuter_inte_veckans_dagar(self):
+        """E2: en dag vars recept inte går att slå upp blir tom - inte borta.
+
+        Ett id i veckoplanen kan sluta gå att slå upp: receptbanken hann inte
+        laddas, receptet togs bort i backend, provider-recepten rensades vid
+        utloggning. Förr filtrerades den dagen bort ur listan, och då sköts
+        varje EFTERFÖLJANDE dag ett steg - torsdagens rätt stod på onsdagen.
+        Bytesrutan räknade samtidigt i den ofiltrerade weekPlan, så de två
+        sa olika saker om samma klick.
+        """
+        page = self.page
+        page.goto(self.app())
+        self.complete_onboarding()
+        self.choose_standard_week()
+        plan = self.local_state().get("weekPlan") or []
+        self.assertGreaterEqual(len(plan), 3, f"veckan blev för kort för att pröva förskjutning: {plan}")
+
+        # Ett id som inte finns, mitt i veckan. Resten av tillståndet rörs inte.
+        page.evaluate("""
+            () => {
+              const lage = JSON.parse(localStorage.getItem("matjakt-state"));
+              lage.weekPlan = [lage.weekPlan[0], "saknat-recept-e2e", ...lage.weekPlan.slice(1)];
+              localStorage.setItem("matjakt-state", JSON.stringify(lage));
+            }
+        """)
+        page.reload()
+        page.click('.bottom-nav-item[data-view="week"]')
+        expect(page.locator("#weekDayTabs .week-day-tab").first).to_be_visible()
+
+        # Tisdagsfliken är den tomma dagen, och den säger det.
+        page.click('#weekDayTabs [data-week-day="1"]')
+        expect(page.locator("#weekTodayCard .week-today-empty")).to_be_visible()
+        expect(page.locator('#weekDayTabs [data-week-day="1"]')).to_have_class(re.compile(r"empty"))
+
+        # Onsdagen bär veckoplanens TREDJE id - inte tisdagens rätt uppflyttad.
+        # (Namnet läses ur tillståndet, så det är planens id som avgör facit.)
+        page.click('#weekDayTabs [data-week-day="2"]')
+        kort = page.locator("#weekTodayCard .week-today-card")
+        expect(kort).to_be_visible()
+        expect(page.locator("#weekTodayCard .week-today-day")).to_have_text("onsdag")
+        namn_pa_kortet = kort.locator(".week-today-info strong").first.inner_text().strip()
+
+        # Bytesrutan är överens med kortet: samma dag, samma rätt. Det var
+        # precis de två som drev isär - kortet numrerade i den filtrerade
+        # listan, bytesrutan i den ofiltrerade weekPlan.
+        page.click("#weekTodayCard [data-week-swap]")
+        expect(page.locator("#swapModal")).to_be_visible()
+        hint = page.locator("#swapModalHint").inner_text()
+        self.assertIn("Ons", hint, f"bytesrutan pekade på en annan dag än kortet: {hint!r}")
+        self.assertIn(namn_pa_kortet, hint,
+                      f"bytesrutan pekade på en annan rätt än kortet ({namn_pa_kortet!r}): {hint!r}")
+
+        # Den dolda "Veckans plan"-listan ritar också en rad per dag, med den
+        # tomma dagen kvar på sin plats (G3 tänder listan; den ska inte tändas
+        # på en förskjuten vecka).
+        rader = page.locator("#weekPlanList .week-plan-row")
+        self.assertGreaterEqual(rader.count(), 3)
+        self.assertIn("is-empty", rader.nth(1).get_attribute("class"))
+        self.assertIn("Tis", rader.nth(1).evaluate("el => el.textContent"))
+        self.assertIn(namn_pa_kortet, rader.nth(2).evaluate("el => el.textContent"))
+
+        self.assertEqual(self.console_errors, [])
+
 
 if __name__ == "__main__":
     unittest.main()

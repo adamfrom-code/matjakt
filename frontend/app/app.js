@@ -7,11 +7,11 @@ if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "functi
     return controller.signal;
   };
 }
-import { readStoredState, writeStoredState } from "./src/state/storage.js";
+import { addToWeekPlan, applySyncBlob, buildSyncPayload, flushServerSync, initAppState, persistLocally, removeFromWeekPlan, saveState, selectedRecipes, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
 import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, packagesFor, portionFactor } from "./src/services/calculations.js";
 import { createDebouncedSearch, filterRecipes, mergeRecipeResults } from "./src/services/recipe-search.js";
 import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/nutrition.js";
-import { PANTRY_LOCATIONS, expiryStatus, matchLocalRecipesToPantry, normalizePantry, pantryAmounts } from "./src/services/pantry.js";
+import { PANTRY_LOCATIONS, expiryStatus, matchLocalRecipesToPantry, pantryAmounts } from "./src/services/pantry.js";
 import { extraLineTotal, extraUnitPrice, extrasTotal, newExtraItem, removeExtra, setQty } from "./src/services/extras.js";
 import { ALLERGENS, filterByDiet, mergeDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
@@ -134,34 +134,23 @@ const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 // stepper, the onboarding stepper and the week view can never disagree
 // about how many meals a week can hold (they previously all hardcoded 6).
 const MAX_MEALS = DAYS.length;
-// The single source of truth for "this week's recipes, in day order" - every
-// render site reads this instead of re-deriving order from state.valda
-// (a Set has no day-position semantics) or from RECEPT's own fixed array
-// order (which is unrelated to when a recipe was picked).
-function selectedRecipes() {
-  const allRecipes = [...RECEPT, ...state.apiRecipes];
-  return state.weekPlan.map(id => allRecipes.find(recipe => recipe.id === id)).filter(Boolean);
-}
+// TVÅ VYER PÅ SAMMA VECKA, och skillnaden är vilken fråga som ställs.
+//
+// selectedRecipes() (src/state/app-state.js) svarar "vad står på vilken DAG"
+// och har därför en plats per dag i weekPlan - `null` där receptet inte gick
+// att slå upp. Allt som numrerar dagar måste läsa den: förr filtrerades de
+// tomma platserna bort, och då sköts varje efterföljande dag ett steg, så
+// onsdagens rätt märktes "Tis" medan bytesrutan - som indexerar i den
+// OFILTRERADE weekPlan - sa något tredje.
+//
+// plannedRecipes() svarar "vilka rätter finns i veckan" och har ingen
+// dagordning att förvalta. Den är det gamla beteendet, ordagrant, och är vad
+// aggregat, priser, räkningar och "finns det en vecka alls" ska använda.
+const plannedRecipes = () => selectedRecipes().filter(Boolean);
 // Den senaste RIKTIGA veckototalen - aldrig ett uppskattat pris. Sätts i
 // renderBasket och sparas med veckan när den byts ut, så budgethjälpen
 // (§18) har verkliga tal att jämföra mot i stället för gissningar.
 let lastRealWeekTotal = null;
-
-function setWeekPlan(ids) {
-  // Papperskorgen: den vecka som just ersätts läggs överst i historiken
-  // (de tolv senaste behålls, synkas med kontot). "Skapa ny vecka" av
-  // misstag ska aldrig kosta en kurerad vecka, och historiken är dessutom
-  // det som gör att samma rätter inte kommer tillbaka direkt (§15).
-  if (state.weekPlan?.length && state.weekPlan.join() !== [...ids].join()) {
-    // Totalen sparas MED veckan så budgethjälpen har riktiga tal att
-    // jämföra mot (§18). Bara en riktig, prissatt total - null när veckan
-    // aldrig hann prissättas, så snittet aldrig bygger på en gissning.
-    state.weekHistory = [{ plan: [...state.weekPlan], savedAt: Date.now(),
-                           total: lastRealWeekTotal },
-                         ...(state.weekHistory || [])].slice(0, 12);
-  }
-  state.weekPlan = [...ids]; state.valda = new Set(ids);
-}
 
 function restorePreviousWeek() {
   const previous = (state.weekHistory || [])[0];
@@ -173,105 +162,29 @@ function restorePreviousWeek() {
   saveState(); render();
   showUndoToast("Förra veckan är tillbaka", () => {});
 }
-function addToWeekPlan(id) { if (!state.weekPlan.includes(id)) state.weekPlan.push(id); state.valda.add(id); }
-function removeFromWeekPlan(id) { state.weekPlan = state.weekPlan.filter(existing => existing !== id); state.valda.delete(id); }
-// Replaces exactly the recipe at this day's position - every other day's
-// recipe keeps its own position untouched, which is the whole point of
-// swapping "this day" rather than clearing and re-picking the week.
-function swapWeekPlanDay(dayIndex, newId) { state.weekPlan = state.weekPlan.map((id, index) => index === dayIndex ? newId : id); state.valda = new Set(state.weekPlan); }
-const savedState = readStoredState(localStorage);
-const state = { budget: savedState.budget || 800, personer: Math.min(12, Math.max(1, Number(savedState.personer) || 2)), middagar: savedState.middagar || 4, butik: savedState.butik || "auto", postnummer: savedState.postnummer || "", position: null, sokning: "", kategori: "alla", maxTid: savedState.maxTid || 0, baraFavoriter: false, apiRecipes: savedState.apiRecipes || [], pantry: normalizePantry(savedState.pantry || {}), pantryTab: "skafferi", liveProdukter: [], favoriter: new Set(savedState.favoriter || []), valda: new Set(savedState.valda || []), avklarade: new Set(savedState.avklarade || []), removedItems: new Set(savedState.removedItems || []), expanded: null, authToken: getStoredToken(), user: null, naringsmal: savedState.naringsmal || null, livePriser: {}, liveBranchTotals: {}, liveUpdatedAt: null, receptTaggar: new Set(), minProtein: 0, maxKcal: 0, hyllor: [], dbChainTotals: {}, dbComparison: null, dbPricedAt: null, dbPricingFailedAt: null, dbLockedChains: [], extraItems: savedState.extraItems || [], extraMatches: {}, branches: [], betyg: savedState.betyg || {}, kost: { kosttyp: savedState.kost?.kosttyp || "", avoidAllergens: new Set(savedState.kost?.avoidAllergens || []) }, onboardingComplete: savedState.onboardingComplete || false, hushall: savedState.hushall || { vuxna: savedState.personer || 2, barn: 0 }, ogillar: new Set(savedState.ogillar || []), feedback: savedState.feedback || {}, savingsLog: savedState.savingsLog || [], swapsThisWeek: savedState.swapsThisWeek || 0, pinnedBranch: savedState.pinnedBranch || null, weekHistory: savedState.weekHistory || [], foljdaVaror: savedState.foljdaVaror || [], harHemma: new Set(savedState.harHemma || []), stapleItems: savedState.stapleItems || [], stapleAsked: savedState.stapleAsked || {}, household: emptyHouseholdState(), householdLoaded: false, notiser: [],
-  // The week's recipe ids in day order (index 0 = Måndag) - the actual
-  // source of truth for "which day has which recipe", now that a day swap
-  // has to replace exactly one day's recipe in place. state.valda (a Set)
-  // stays around alongside it purely as an O(1) "is this recipe anywhere in
-  // my week" membership check for recipe-card UI - every place that needs
-  // day order or a specific day's recipe reads weekPlan / selectedRecipes(),
-  // never valda's own iteration order (a Set has none tied to day position).
-  weekPlan: Array.isArray(savedState.weekPlan) ? savedState.weekPlan : [...(savedState.valda || [])] };
-function buildSyncPayload() {
-  return { budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], removedItems: [...state.removedItems], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan, weekHistory: state.weekHistory, foljdaVaror: state.foljdaVaror, extraItems: state.extraItems, harHemma: [...state.harHemma], stapleItems: state.stapleItems, stapleAsked: state.stapleAsked,
-    // The last real pricing snapshot. Painted immediately on next visit with
-    // its own timestamp while a fresh fetch runs - the difference between
-    // "pris hämtas…" for seconds on every open and prices that are simply
-    // there. Never extended, never displayed without its "Uppdaterad" stamp.
-    dbChainTotals: state.dbChainTotals, dbComparison: state.dbComparison, dbPricedAt: state.dbPricedAt };
-}
-function applySyncBlob(blob) {
-  if (!blob) return;
-  if (blob.budget !== undefined) state.budget = blob.budget;
-  if (blob.personer !== undefined) state.personer = Math.min(12, Math.max(1, Number(blob.personer) || 2));
-  if (blob.middagar !== undefined) state.middagar = blob.middagar;
-  if (blob.butik !== undefined) state.butik = blob.butik;
-  if (blob.postnummer !== undefined) state.postnummer = blob.postnummer;
-  if (blob.maxTid !== undefined) state.maxTid = blob.maxTid;
-  if (blob.pantry !== undefined) state.pantry = normalizePantry(blob.pantry);
-  if (blob.favoriter !== undefined) state.favoriter = new Set(blob.favoriter);
-  if (blob.valda !== undefined) state.valda = new Set(blob.valda);
-  if (blob.avklarade !== undefined) state.avklarade = new Set(blob.avklarade);
-  if (blob.removedItems !== undefined) state.removedItems = new Set(blob.removedItems);
-  if (blob.apiRecipes !== undefined) state.apiRecipes = blob.apiRecipes;
-  if (blob.extraItems !== undefined) state.extraItems = blob.extraItems;
-  if (blob.weekHistory !== undefined) state.weekHistory = blob.weekHistory;
-  if (blob.foljdaVaror !== undefined) state.foljdaVaror = blob.foljdaVaror;
-  if (blob.harHemma !== undefined) state.harHemma = new Set(blob.harHemma);
-  if (blob.stapleItems !== undefined) state.stapleItems = blob.stapleItems;
-  if (blob.stapleAsked !== undefined) state.stapleAsked = blob.stapleAsked;
-  if (blob.dbChainTotals) { state.dbChainTotals = blob.dbChainTotals; state.dbComparison = blob.dbComparison || null; state.dbPricedAt = blob.dbPricedAt || null; }
-  if (blob.naringsmal !== undefined) state.naringsmal = blob.naringsmal;
-  if (blob.betyg !== undefined) state.betyg = blob.betyg;
-  if (blob.kost !== undefined) state.kost = { kosttyp: blob.kost.kosttyp || "", avoidAllergens: new Set(blob.kost.avoidAllergens || []) };
-  if (blob.onboardingComplete !== undefined) state.onboardingComplete = blob.onboardingComplete;
-  if (blob.hushall !== undefined) state.hushall = blob.hushall;
-  if (blob.ogillar !== undefined) state.ogillar = new Set(blob.ogillar);
-  if (blob.feedback !== undefined) state.feedback = blob.feedback;
-  if (blob.savingsLog !== undefined) state.savingsLog = blob.savingsLog;
-  if (blob.swapsThisWeek !== undefined) state.swapsThisWeek = blob.swapsThisWeek;
-  if (blob.pinnedBranch !== undefined) state.pinnedBranch = blob.pinnedBranch;
-  if (blob.weekPlan !== undefined) state.weekPlan = blob.weekPlan;
-}
-let serverSyncTimer = null;
+// Veckoplanen, tillståndet och synken bor numera i
+// src/state/app-state.js. Receptbanken, synkstatusraden (DOM) och
+// kontovägen skickas in - modulen känner varken till skärmen eller nätet.
+initAppState({
+  storage: localStorage,
+  authToken: getStoredToken(),
+  recipeBank: RECEPT,
+  onSyncStatus: (status, message) => setSyncStatus(status, message),
+  saveRemote: saveAccountState,
+  weekTotal: () => lastRealWeekTotal,
+});
 // Sparat / synkar / kunde inte synka - sanningen om var datat är, visad
 // diskret i kontovyn. Lokalt sparas ALLTID (localStorage, synkront);
-// statusen gäller resan till kontot.
-let syncStatus = "idle";
-function setSyncStatus(status) {
-  syncStatus = status;
+// statusen gäller resan till kontot. Undantaget är en full enhet, och då
+// skickar app-state.js med sin egen text: statusen "kunde inte synka" hade
+// pekat på nätet när felet satt i telefonen.
+function setSyncStatus(status, message = "") {
   const label = $("syncStatusLabel");
   if (!label) return;
-  label.textContent = status === "pending" ? "Synkar…"
+  label.textContent = message || (status === "pending" ? "Synkar…"
     : status === "error" ? "Kunde inte synka - försöker igen"
-    : state.authToken ? "Allt sparat på ditt konto" : "Sparat på den här enheten";
+    : state.authToken ? "Allt sparat på ditt konto" : "Sparat på den här enheten");
   label.classList.toggle("sync-error", status === "error");
-}
-
-function scheduleServerSync() {
-  if (!state.authToken) { setSyncStatus("idle"); return; }
-  clearTimeout(serverSyncTimer);
-  setSyncStatus("pending");
-  // Debounced: saveState() fires on nearly every interaction (pantry +/-, ratings,
-  // swaps...) - pushing to the server on every single one would be wasteful and
-  // could race with itself. One request ~1.5s after the last change is enough for
-  // "follows you to another phone", which is the actual requirement here.
-  serverSyncTimer = setTimeout(() => {
-    serverSyncTimer = null;
-    saveAccountState(state.authToken, buildSyncPayload())
-      .then(() => setSyncStatus("idle"))
-      .catch(() => { setSyncStatus("error"); /* nästa saveState-anrop försöker igen */ });
-  }, 1500);
-}
-// Skicka en väntande synk NU. Lämnas sidan (Stripe Checkout, portalen,
-// fliken stängs) inom 1,5 s efter sista ändringen försvann annars den
-// väntande timern med sidan - och nästa öppning hämtade serverns ÄLDRE
-// blob och skrev över veckan och onboardingflaggan som just gjorts.
-// Sett i CI: efter checkout var Handla tom och onboarding "ogjord".
-async function flushServerSync({ keepalive = false } = {}) {
-  if (!serverSyncTimer || !state.authToken) return;
-  clearTimeout(serverSyncTimer); serverSyncTimer = null;
-  try {
-    await saveAccountState(state.authToken, buildSyncPayload(), { keepalive });
-    setSyncStatus("idle");
-  } catch { setSyncStatus("error"); }
 }
 window.addEventListener("pagehide", () => { flushServerSync({ keepalive: true }); });
 async function pullAccountState() {
@@ -280,7 +193,7 @@ async function pullAccountState() {
     const { state: remote } = await fetchAccountState(state.authToken);
     if (remote) {
       applySyncBlob(remote);
-      writeStoredState(localStorage, buildSyncPayload());
+      persistLocally();
       syncSettingsInputs(); render(); renderPantry(); restoreNutritionGoalsForm();
       // A returning account on a NEW device: the synced state already says
       // onboarding is done, but the modal decided to show itself before the
@@ -293,7 +206,6 @@ async function pullAccountState() {
     }
   } catch { /* offline eller serverfel - den lokala datan används tills nästa försök */ }
 }
-function saveState() { writeStoredState(localStorage, buildSyncPayload()); scheduleServerSync(); }
 
 // ---------------------------------------------------------------------------
 // HUSHÅLLET
@@ -603,7 +515,7 @@ let weekPushTimer = null;
 let lastWeekPushKey = null;
 function pushWeekToHousehold({ onlyIfEmpty = false } = {}) {
   if (!householdActive()) return;
-  const items = aggregateShopping(selectedRecipes()).map(item => ({
+  const items = aggregateShopping(plannedRecipes()).map(item => ({
     name: item.namn, amount: item.total, unit: item.unit,
     category: categoryFor(item.namn, databaseItemFor(item.namn)?.category),
   }));
@@ -1666,7 +1578,7 @@ function storeSelectionForPricing() {
 }
 
 function weekPricingBody(shoppingItems) {
-  const selected = selectedRecipes();
+  const selected = plannedRecipes();
   const bankRecipes = selected.filter(recipe => recipe.priceStatus !== "unavailable"
     && (!Array.isArray(recipe.ingredients) || recipe.ingredients.length || recipe.slug));
   const recipeIds = bankRecipes.map(recipe => recipe.id);
@@ -1832,7 +1744,7 @@ function addExtraItem(fields) {
   // Varna - men hindra aldrig - när varan redan står i listan eller ligger
   // i skafferiet. Dubbelköp är pengar i sjön, men användaren bestämmer.
   const foldName = String(fields.name || "").toLowerCase();
-  const inList = aggregateShopping(selectedRecipes()).some(item => item.namn.toLowerCase() === foldName)
+  const inList = aggregateShopping(plannedRecipes()).some(item => item.namn.toLowerCase() === foldName)
     || state.extraItems.some(item => (item.name || "").toLowerCase() === foldName);
   const inPantry = pantryNamesForCooking().some(key => key.toLowerCase() === foldName);
   if (inList || inPantry) {
@@ -1984,7 +1896,7 @@ function renderStoreCards() {
   container.innerHTML = entries.map(storeCardMarkup).join("")
     + (basisLabel ? `<p class="store-basis">${escapeHtml(basisLabel)}</p>` : "")
     + compareButton;
-  $("storeCardsCompareBtn")?.addEventListener("click", () => { renderStoreComparisonPage(selectedRecipes()); setView("comparison"); });
+  $("storeCardsCompareBtn")?.addEventListener("click", () => { renderStoreComparisonPage(plannedRecipes()); setView("comparison"); });
   container.querySelectorAll("[data-store-card]").forEach(card => card.addEventListener("click", () => {
     if (card.dataset.storeCard === chosenStore()) return;
     // switchWeekStore, inte bara state.butik: livepriserna är nyckelsatta på
@@ -2320,7 +2232,7 @@ function comparisonStoreRowMarkup(result, isCheapest, priciestCost) {
 // per-chain totals, so the list can never show products that belong to a
 // different total than the one in its own header.
 async function openChainShoppingList(chain, branch = null) {
-  const selected = selectedRecipes();
+  const selected = plannedRecipes();
   const shoppingItems = aggregateShopping(selected);
   const body = $("chainListBody");
   $("chainListTitle").textContent = `Inköpslista · ${chain}`;
@@ -2903,6 +2815,21 @@ function nextMealEmptyMarkup() {
   </button>`;
 }
 function weekPlanRowMarkup(recipe, index) {
+  // En dag utan rätt behåller sin plats i listan. Att hoppa över den sköt
+  // varje senare dag ett steg uppåt, så torsdagens rätt stod på onsdagen -
+  // samma namn, fel dag, och ingen väg tillbaka till den tomma dagen.
+  // Samma klasser som en vanlig rad, så inga nya stilregler behövs: dagen, en
+  // tom bildruta och texten i samma tre spalter.
+  if (!recipe) {
+    return `<div class="week-plan-row is-empty ${index === weekOverviewDay ? "active" : ""}">
+      <span class="week-plan-row-main">
+        <span class="week-plan-day">${DAYS[index] || `Dag ${index + 1}`}</span>
+        <span class="week-plan-photo"></span>
+        <span class="week-plan-name">Ingen middag inplanerad</span>
+      </span>
+      <button type="button" class="week-plan-swap-btn" data-week-add-meal>+ Lägg till</button>
+    </div>`;
+  }
   const price = recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? money(recipe.portionspris) : "–";
   const fb = recipeFeedback(recipe.id);
   // Not a nested button-in-button: opening the recipe, swapping the day, and
@@ -2951,7 +2878,10 @@ let weekDayAutoPicked = false;
 // hemma" på skafferiet, och kostnaden skrivs bara ut när den är en riktig
 // prissatt total - aldrig ett uppskattat pris med "ca" framför.
 function weekSummaryFacts(selected, shoppingItems, total) {
-  const favourites = selected.filter(recipe =>
+  // Listan är dagordnad och kan ha tomma dagar; sammanfattningen räknar
+  // rätter. "4 middagar" ska vara fyra rätter, inte fyra platser i veckan.
+  const planned = selected.filter(Boolean);
+  const favourites = planned.filter(recipe =>
     state.favoriter.has(recipe.id) || (state.betyg[recipe.id] || 0) >= 4 || state.feedback[recipe.id]?.liked).length;
   const home = pantryForPricing();
   const atHome = shoppingItems.filter(item => (home[item.namn] || 0) > 0).length;
@@ -2960,14 +2890,15 @@ function weekSummaryFacts(selected, shoppingItems, total) {
     return match && match.campaignPrice != null && match.regularPrice != null
       && match.campaignPrice < match.regularPrice;
   }).length;
-  return { dinners: selected.length, favourites, fresh: selected.length - favourites, atHome, onCampaign, total };
+  return { dinners: planned.length, favourites, fresh: planned.length - favourites, atHome, onCampaign, total };
 }
 
 function renderWeekSummary(selected, shoppingItems, total) {
   const box = $("weekSummary");
   if (!box) return;
-  box.hidden = !selected.length;
-  if (!selected.length) return;
+  const harRatter = selected.some(Boolean);
+  box.hidden = !harRatter;
+  if (!harRatter) return;
   const facts = weekSummaryFacts(selected, shoppingItems, total);
   const lines = [
     `${plural(facts.dinners, "middag", "middagar")}`,
@@ -3037,7 +2968,7 @@ function renderWeekOverview(selected, shoppingItems, total) {
   // Ingen vecka alls: siffran är budgeten själv ("800 kr veckobudget"),
   // inte ett streck - strecket betyder "pris hämtas" och finns bara när
   // det faktiskt finns en vecka att prissätta.
-  const nothingPlanned = !selected.length;
+  const nothingPlanned = !selected.some(Boolean);
   $("summaryBudgetRemaining").textContent = nothingPlanned ? money(state.budget) : totalKnown ? money(Math.max(0, heroRemaining)) : "–";
   $("summaryBudgetPrefix").textContent = nothingPlanned ? "veckobudget" : "kvar av";
   $("summaryBudgetTotal").textContent = nothingPlanned ? "" : money(state.budget);
@@ -3151,7 +3082,7 @@ const ASSUMED_KLASS = {
 function renderAssumedHome(shoppingItems) {
   const section = $("assumedHomeSection"), box = $("assumedHomeList");
   if (!section || !box) return;
-  const items = assumedHomeItems(selectedRecipes());
+  const items = assumedHomeItems(plannedRecipes());
   section.hidden = !items.length;
   if (!items.length) return;
   const tillagda = new Set(state.extraItems.map(e => String(e.name || "").trim().toLowerCase()));
@@ -3238,7 +3169,7 @@ function renderWeekCostAlert(total) {
   // "Sänk priset" öppnar bytesrutan på veckans DYRASTE rätt med avsikten
   // billigare förvald - konkreta byten, inte ett råd.
   $("lowerCostBtn").addEventListener("click", () => {
-    const priciest = selectedRecipes().filter(recipe => recipe.portionspris)
+    const priciest = plannedRecipes().filter(recipe => recipe.portionspris)
       .sort((a, b) => b.portionspris - a.portionspris)[0];
     if (!priciest) return;
     openSwapModal(priciest.id);
@@ -3251,7 +3182,11 @@ function renderWeekCostAlert(total) {
 }
 
 function renderBasket() {
-  const selected = selectedRecipes();
+  // Två vyer på samma vecka: veckoöversikten ritar DAGAR och behöver de tomma
+  // platserna kvar (weekDays), medan allt som aggregerar, prissätter och
+  // jämför frågar efter RÄTTER (selected). Se plannedRecipes() längst upp.
+  const weekDays = selectedRecipes();
+  const selected = weekDays.filter(Boolean);
   ensureWeekRecipeDetails();
   const shoppingItems = shoppingItemsForView(selected);
   // The header total must be the SAME number the store-comparison widget
@@ -3374,17 +3309,18 @@ function renderBasket() {
   renderStoreComparison(selected); renderStoreCards(); renderExtraItems(activeChain); renderPantry();
   renderWeekStoreTabs();
   updateWeekStoreStatus();
-  // Fed the exact same selected/shoppingItems/total this function just
-  // computed - the overview and the full page below it are two views onto
-  // one render pass, never two separate computations that could drift.
-  renderWeekOverview(selected, shoppingItems, total);
+  // Fed the exact same shoppingItems/total this function just computed - the
+  // overview and the full page below it are two views onto one render pass,
+  // never two separate computations that could drift. Dagordnat, med de tomma
+  // dagarna kvar: det är veckoöversikten som numrerar dagarna.
+  renderWeekOverview(weekDays, shoppingItems, total);
   syncLivePrices(shoppingItems);
   // Veckans behov ut till familjens delade lista. Debouncad och idempotent:
   // en oförändrad vecka skickar ingenting.
   pushWeekToHousehold();
 }
 function updateWeekStoreStatus() {
-  const selected = selectedRecipes();
+  const selected = plannedRecipes();
   if (!selected.length) { $("weekStoreStatus").textContent = ""; return; }
   const shoppingItems = aggregateShopping(selected);
   const liveCount = shoppingItems.filter(item => state.livePriser[item.namn]).length;
@@ -3553,7 +3489,7 @@ async function syncLivePrices(shoppingItems) {
 // lines. Fetched once per recipe, in the background; each arrival re-renders.
 const recipeDetailFetches = new Set();
 function ensureWeekRecipeDetails() {
-  selectedRecipes().forEach(recipe => {
+  plannedRecipes().forEach(recipe => {
     if (Array.isArray(recipe.ingredients) && recipe.ingredients.length) return;
     if (recipe.priceStatus === "unavailable") return; // provider-recept har inget att hämta
     if (recipeDetailFetches.has(recipe.id)) return;
@@ -3699,7 +3635,7 @@ function showUndoToast(message, onUndo, onOpen = null) {
 function budgetScopeText() { return budgetScopeFor(state.middagar, state.personer); }
 
 function updateSummary() {
-  const hasWeek = selectedRecipes().length > 0;
+  const hasWeek = plannedRecipes().length > 0;
   $("generateBtnLabel").textContent = hasWeek ? "Öppna veckan" : "Skapa min vecka";
   $("newWeekBtn").hidden = !hasWeek;
   $("weekCardStatus").textContent = hasWeek ? "Veckan är klar" : "Redo";
@@ -4415,6 +4351,8 @@ function openSwapModal(currentId) {
     $("swapModal").hidden = false;
     return;
   }
+  // Dagordnad, med tomma dagar kvar som null: dayIndex kommer ur den
+  // OFILTRERADE weekPlan, och de två indexrymderna måste vara samma.
   const selected = selectedRecipes();
   const dayIndex = state.weekPlan.indexOf(currentId);
   const branch = selectedBranch();
@@ -4423,7 +4361,7 @@ function openSwapModal(currentId) {
   // import). shoppingListCost gick via statiska PRODUCT_CATALOG som inte
   // känner bankreceptens ingredienser - varje kandidat kostade ~samma och
   // "billigast först" blev slumpartad.
-  const current = selected.find(recipe => recipe.id === currentId);
+  const current = selected.find(recipe => recipe?.id === currentId);
   const allOptions = swapOptionsFor(current, candidates, "");
   if (!allOptions.length) { $("swapModalHint").textContent = ""; $("swapOptions").innerHTML = `<p class="live-loading">Inga alternativ hittades som passar budget, butik och dina filter just nu.</p>`; $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true; $("swapModal").hidden = false; return; }
   swapContext = { currentId, dayIndex, current, candidates, intent: "", allOptions, visibleCount: SWAP_OPTIONS_BATCH, selectedId: null };
@@ -4443,7 +4381,7 @@ function swapOptionsFor(current, candidates, intent) {
 function renderSwapModal() {
   if (!swapContext) return;
   const { currentId, dayIndex, allOptions, visibleCount, selectedId, intent } = swapContext;
-  const currentRecipe = selectedRecipes().find(r => r.id === currentId);
+  const currentRecipe = selectedRecipes().find(recipe => recipe?.id === currentId);
   const dayLabel = DAYS[dayIndex] || `Dag ${dayIndex + 1}`;
   // Avsikten först, alternativen sedan. Fem knappar räcker - det här ska
   // vara ett val, inte ett formulär.
@@ -4683,7 +4621,7 @@ function logEntriesSince(daysAgo) {
   return state.savingsLog.filter(entry => new Date(entry.date).getTime() >= cutoff);
 }
 function reusedIngredientCount() {
-  const selected = selectedRecipes();
+  const selected = plannedRecipes();
   if (!selected.length) return 0;
   const shoppingItems = aggregateShopping(selected);
   return shoppingItems.filter(item => selected.filter(recipe => recipe.ingredienser.includes(item.namn)).length > 1).length;
@@ -4728,7 +4666,7 @@ function renderStats() {
     // ursäkt ("kan inte beräknas ännu...") är bara brus på Hem.
     $("openStatsBtn").hidden = true;
     $("savingsCardValue").textContent = "–";
-    $("savingsCardSubtitle").textContent = selectedRecipes().length
+    $("savingsCardSubtitle").textContent = plannedRecipes().length
       ? "Kan inte beräknas ännu – kräver två jämförbara butiker"
       : "Skapa din första vecka för att se detta";
   }
@@ -5203,7 +5141,7 @@ $("mealsPlus").addEventListener("click", () => {
 // One primary action: create the week when there is none, open it when
 // there is. "Skapa ny vecka" stays as a quiet secondary path.
 $("generateBtn").addEventListener("click", () => {
-  if (selectedRecipes().length) setView("week");
+  if (plannedRecipes().length) setView("week");
   else openPlanComparison();
 });
 $("newWeekBtn").addEventListener("click", () => openPlanComparison()); $("refreshBtn").addEventListener("click", () => {
