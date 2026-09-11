@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   ALREADY_HAVE, NEED_TO_BUY, PURCHASED, applyLocalRow, applySync, emptyHouseholdState,
   handled, householdDietary, inventoryNames, inventoryRows, memberName, needToBuy,
-  pantryAmountsFor, shoppingRows,
+  pantryAmountsFor, pantryEntriesFor, shoppingRows,
 } from "../frontend/app/src/services/household-state.js";
 
 const firstSync = {
@@ -109,6 +109,41 @@ test("skafferimängder rapporteras bara när vi faktiskt vet dem", () => {
   });
   assert.deepEqual(pantryAmountsFor(state), { Ris: 1000 },
     "en vara utan känd mängd får inte skickas som ett tal till prismotorn");
+});
+
+test("C9: skafferiet skickas med enheten, för prismotorn måste kunna jämföra", () => {
+  const state = applySync(emptyHouseholdState(), {
+    revision: 3,
+    inventory: [
+      // Hushållets databas har en unit-kolumn. Den kastades bort på väg till
+      // servern, och avdraget gissade sig till radens basenhet: "Ris 2 (kg)"
+      // mot en 500 g-rad drog av TVÅ GRAM, och "Potatis 1000" (gram) mot
+      // receptets "Potatis 4 st" drog av 1 000 STYCK.
+      { key: "a", name: "Ris", amount: 2, unit: "kg", location: "skafferi", revision: 1 },
+      { key: "b", name: "Potatis", amount: 1000, unit: "g", location: "skafferi", revision: 2 },
+      // Rad utan enhet: skickas utan, och behandlas då som förut.
+      { key: "c", name: "Buljongtärningar", amount: 6, location: "skafferi", revision: 3 },
+    ],
+  });
+  assert.deepEqual(pantryEntriesFor(state), {
+    Ris: { amount: 2, unit: "kg" },
+    Potatis: { amount: 1000, unit: "g" },
+    Buljongtärningar: { amount: 6 },
+  });
+});
+
+test("C9: enhetsformen är lika konservativ som talformen", () => {
+  const state = applySync(emptyHouseholdState(), {
+    revision: 4,
+    inventory: [
+      { key: "a", name: "Ris", amount: 1000, unit: "g", location: "skafferi", revision: 1 },
+      { key: "b", name: "Soja", amount: 0, unit: "ml", location: "skafferi", revision: 2 },
+      { key: "c", name: "Lök", amount: null, unit: "st", location: "skafferi", revision: 3 },
+      { key: "d", name: "Ärtor", amount: 500, unit: "g", location: "frys", deleted: true, revision: 4 },
+    ],
+  });
+  assert.deepEqual(pantryEntriesFor(state), { Ris: { amount: 1000, unit: "g" } },
+    "en vara utan känd mängd får inte skickas, med eller utan enhet");
 });
 
 test("hushållets allergier slås ihop men kosttypen gör det inte", () => {

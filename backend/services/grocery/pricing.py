@@ -871,6 +871,45 @@ def convert_amount(amount: float | None, from_unit: str | None, to_unit: str | N
     return None
 
 
+def _assumed_pantry_unit(row_unit: str | None) -> str:
+    """Enheten en skafferipost UTAN egen enhet antas stå i: radens egen
+    familj, i basenhet. Det är den gamla modellen och den gäller fortfarande
+    för det lokala skafferiet, där en post är ett antal utan enhet ("+1
+    burk") - för en styckrad är den då exakt rätt, och för en gram- eller
+    ml-rad drar den av försvinnande lite, alltså åt rätt håll."""
+    folded = _fold(row_unit or "")
+    if folded in _VOLUME:
+        return "ml"
+    return "g" if folded in _MASS else "st"
+
+
+def pantry_entry(value) -> tuple[float, str | None]:
+    """Läser EN skafferipost till (mängd, enhet). Enheten är None när posten
+    inte bär någon.
+
+    Två former är giltiga på tråden, och båda måste vara det: ett rent tal
+    (det lokala skafferiet, och varje klient med gammal app.js i sin
+    service worker-cache) och {"amount": 2, "unit": "kg"} (hushållet, som
+    HAR en enhetskolumn i databasen). Den enheten kastades förut bort i
+    frontend, och avdraget gissade sig då till radens basenhet: "Ris 2 kg
+    hemma" mot en 500 g-rad drog av TVÅ GRAM.
+
+    Skräp ger (0, None) - ett oläsbart värde får aldrig bli ett avdrag."""
+    if isinstance(value, dict):
+        raw_amount = value.get("amount", value.get("mangd"))
+        raw_unit = value.get("unit", value.get("enhet"))
+        unit = str(raw_unit).strip() if raw_unit not in (None, "") else None
+    else:
+        raw_amount, unit = value, None
+    try:
+        amount = float(raw_amount or 0)
+    except (TypeError, ValueError):
+        return 0.0, None
+    if not math.isfinite(amount):
+        return 0.0, None
+    return amount, unit
+
+
 # Size-texter som importen inte hann tolka ("CA 175G", "ca: 750g",
 # "400/240g", "2x120g", "6pack", "15-p") - tolkas VID PRISSÄTTNING så att
 # redan insamlad data läker utan omimport. Detta var estimatbergets rot:
@@ -1960,11 +1999,9 @@ class RecipePricingEngine:
             amount = float(item.get("amount") or item.get("total") or 0)
             unit = item.get("unit") or "st"
 
-            # Skafferiet lagras i basenheter (ml/vikt-g/st) medan radens
-            # mängd står i receptets enhet (dl, l, msk...). Avdraget görs i
-            # radens enhet via riktig konvertering - 50 ml grädde hemma
-            # nollade annars en hel literrad ("1 - 50 = köps inte"), och
-            # skräpvärden (icke-tal) 500:ade hela prissättningen.
+            # Avdraget görs i RADENS enhet via riktig konvertering - 50 ml
+            # grädde hemma nollade annars en hel literrad ("1 - 50 = köps
+            # inte"), och skräpvärden (icke-tal) 500:ade hela prissättningen.
             # Veckat uppslag: {"ris": 500} ska träffa varan "Ris" - exakt
             # skiftlägeskänslig likhet lät skafferiet tyst sluta dra av.
             pantry_value = pantry.get(name)
@@ -1974,17 +2011,15 @@ class RecipePricingEngine:
                     if _fold(str(pantry_key)) == folded_name:
                         pantry_value = value
                         break
-            try:
-                raw_at_home = float(pantry_value or 0)
-            except (TypeError, ValueError):
-                raw_at_home = 0.0
+            raw_at_home, pantry_unit = pantry_entry(pantry_value)
             at_home = 0.0
             if raw_at_home > 0:
-                pantry_unit = "ml" if _fold(unit) in _VOLUME else ("g" if _fold(unit) in _MASS else "st")
-                converted = convert_amount(raw_at_home, pantry_unit, unit)
-                # Ojämförbara enheter (st hemma mot gram-rad): inget avdrag -
-                # hellre att varan står kvar än att den försvinner på en
-                # gissning.
+                converted = convert_amount(raw_at_home, pantry_unit or _assumed_pantry_unit(unit), unit)
+                # Ojämförbara enheter (gram hemma mot en styckrad): inget
+                # avdrag - hellre att varan står kvar än att den försvinner
+                # på en gissning. "Potatis 1000 g" mot receptets "Potatis
+                # 4 st" drog förut av 1 000 STYCK och tog bort potatisen ur
+                # både listan och totalen.
                 at_home = converted if converted is not None else 0.0
             needed = max(0.0, amount - at_home)
             if needed <= 0:

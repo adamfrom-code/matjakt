@@ -20,7 +20,7 @@ import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, 
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, loadShelves, matchesAllTags } from "./src/data/recipes.js";
 import { adjustInventory, createHousehold, createInvite, fetchHousehold, fetchNotifications, joinHousehold, leaveHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, removeMember, replaceWeekItems, saveHouseholdProfile, saveNotificationPrefs, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
-import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
+import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, pantryEntriesFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor, groupByCategory } from "./src/services/categories.js";
 import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swapCostText, swapReasonText, weekCostAlert } from "./src/services/swap.js";
 import { RECIPE_FALLBACK_ART, RECIPE_FALLBACK_LABEL, kindFor as recipeFallbackKind } from "./src/services/recipe-fallback.js";
@@ -463,6 +463,13 @@ function pantryList(location = null) {
 // bara mängder vi faktiskt vet.
 function pantryForPricing() {
   return householdActive() ? pantryAmountsFor(state.household) : pantryAmounts(state.pantry);
+}
+
+// Samma skafferi, men MED enheten - formen som går till prismotorn. Hushållet
+// har en enhet per lagerrad; det lokala skafferiet har bara ett antal, och
+// skickar därför rena tal precis som förut. Motorn läser båda formerna.
+function pantryForServer() {
+  return householdActive() ? pantryEntriesFor(state.household) : pantryAmounts(state.pantry);
 }
 
 function pantryNamesForCooking() {
@@ -1661,7 +1668,7 @@ function weekPricingBody(shoppingItems) {
   const bankRecipes = selected.filter(recipe => recipe.priceStatus !== "unavailable"
     && (!Array.isArray(recipe.ingredients) || recipe.ingredients.length || recipe.slug));
   const recipeIds = bankRecipes.map(recipe => recipe.id);
-  const body = { people: state.personer, pantry: pantryForPricing() };
+  const body = { people: state.personer, pantry: pantryForServer() };
   // Borttagna varor måste följa med: recipeIds-vägen aggregerar om veckan på
   // servern, och utan denna lista skulle butiksjämförelsen fortsätta prissätta
   // varor användaren tagit bort.
@@ -4531,7 +4538,7 @@ async function syncPlanPricing(plans) {
       const response = await fetch(pricingWeekApiUrl(), {
         method: "POST",
         headers: pricingHeaders(),
-        body: JSON.stringify({ recipeIds, people: state.personer, pantry: pantryForPricing(),
+        body: JSON.stringify({ recipeIds, people: state.personer, pantry: pantryForServer(),
           ...(Object.keys(storeSelectionForPricing()).length ? { stores: storeSelectionForPricing() } : {}) }),
         signal: AbortSignal.timeout(20000),
       });

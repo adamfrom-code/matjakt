@@ -123,6 +123,31 @@ export function pantryAmountsFor(state) {
   return amounts;
 }
 
+/**
+ * Samma rader, men MED enheten - det här är formen prismotorn får.
+ *
+ * Hushållets databas har en `unit`-kolumn på varje lagerrad och synken bär
+ * den hela vägen hit. Den kastades ändå bort på väg till servern, och
+ * avdraget fick gissa sig till radens basenhet. Två fel i motsatt riktning:
+ * "Ris 2 (kg) hemma" mot en 500 g-rad drog av TVÅ GRAM, och "Potatis 1000"
+ * (gram) mot receptets "Potatis 4 st" drog av 1 000 STYCK - potatisen
+ * försvann ur både listan och totalen.
+ *
+ * Enheten följer med rå; motorn konverterar och VÄGRAR avdrag när enheterna
+ * inte går att jämföra. En rad utan enhet skickas utan, och behandlas då som
+ * förut.
+ */
+export function pantryEntriesFor(state) {
+  const entries = {};
+  inventoryRows(state).forEach(item => {
+    const amount = Number(item.amount);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    const unit = typeof item.unit === "string" ? item.unit.trim() : "";
+    entries[item.name] = unit ? { amount, unit } : { amount };
+  });
+  return entries;
+}
+
 /** Namnen på det hushållet har hemma - för "laga med det jag har" och för
  * receptval som vill använda upp råvaror (§17). */
 export function inventoryNames(state) {
