@@ -293,10 +293,10 @@ class BootstrapTest(unittest.TestCase):
         scheduler_module.importer.start = lambda chain, **kwargs: (
             self.started.append(chain) or {"started": True, "chain": chain})
         self.addCleanup(lambda: setattr(scheduler_module.importer, "start", self._real_start))
-        self.scheduler = GroceryScheduler({"Willys": "02:00"})
+        self.scheduler = GroceryScheduler({"Willys": "02:00"}, kv=MinnesKV())
         self.scheduler.enabled = True
 
-    def _summary(self, total, finished=True, chains=None):
+    def _summary(self, total, finished=True, chains=None, completed=None):
         """`finished` is whether a full import has EVER completed. A
         catalogue that has never finished importing is not a working
         catalogue, however many rows it happens to hold.
@@ -304,18 +304,29 @@ class BootstrapTest(unittest.TestCase):
         `chains` overrides the per-chain state: {chain: (products, finished)}.
         By default every schedulable chain mirrors the summary, because that
         is what provider_status really returns - a mock that only mentions
-        Willys would make the other chains look permanently empty."""
+        Willys would make the other chains look permanently empty.
+
+        `completed` överskuggar lastCompletedRun per kedja: {chain: status}.
+        Bootstrapen läser det fältet numera, inte lastSuccessfulRun, så en
+        blockerad körning som publicerat rader räknas som genomförd (D5)."""
         from services.grocery import api as grocery_api
         real_summary = grocery_api.database_summary
         real_status = grocery_api.provider_status
         if chains is None:
             chains = {chain: (total, finished)
                       for chain in scheduler_module.SCHEDULABLE_CHAINS}
+        completed = completed or {}
+
+        def rad(chain, products, done):
+            genomförd = completed.get(chain, "success" if done else None)
+            return {"chain": chain, "products": products,
+                    "lastSuccessfulRun": {"status": "success"} if done else None,
+                    "lastCompletedRun": ({"status": genomförd, "pricesUpdated": products}
+                                         if genomförd else None)}
+
         grocery_api.database_summary = lambda: {"totalProducts": total, "chains": []}
         grocery_api.provider_status = lambda: [
-            {"chain": chain, "products": products,
-             "lastSuccessfulRun": {"status": "success"} if done else None}
-            for chain, (products, done) in chains.items()]
+            rad(chain, products, done) for chain, (products, done) in chains.items()]
         self.addCleanup(lambda: setattr(grocery_api, "database_summary", real_summary))
         self.addCleanup(lambda: setattr(grocery_api, "provider_status", real_status))
 
@@ -408,6 +419,117 @@ class BootstrapTest(unittest.TestCase):
         self.addCleanup(lambda: setattr(grocery_api, "database_summary", real))
         self.assertFalse(self.scheduler.bootstrap_if_empty())
         self.assertEqual(self.started, [])
+
+    def test_a_blocked_run_that_published_rows_counts_as_completed(self):
+        """D5. En Primat-körning som slår i radtaket behåller det den hann
+        hämta, publiceras av publish.py och märks "blocked" - aldrig
+        "success". Villkoret läste lastSuccessfulRun, som därmed förblev None
+        för alltid, så bootstrapen startade om kedjan vid varje deploy."""
+        self._summary(8000, finished=False,
+                      chains={chain: (8000, False)
+                              for chain in scheduler_module.SCHEDULABLE_CHAINS},
+                      completed={chain: "blocked"
+                                 for chain in scheduler_module.SCHEDULABLE_CHAINS})
+        with mock.patch.dict(os.environ, {"PRIMAT_API_KEY": "x"}):
+            self.assertFalse(self.scheduler.bootstrap_if_empty())
+        self.assertEqual(self.started, [])
+
+    def test_a_blocked_run_with_nothing_published_is_not_completed(self):
+        """Kravet på publicerade rader är poängen: en körning som blockerades
+        innan den hann publicera något har inte genomfört någonting."""
+        kedjor = {chain: (8000, False) for chain in scheduler_module.SCHEDULABLE_CHAINS}
+        genomförda = {chain: "blocked" for chain in kedjor}
+        # Willys blockerades utan att hinna publicera en enda rad.
+        kedjor["Willys"] = (0, False)
+        genomförda["Willys"] = None
+        self._summary(0, finished=False, chains=kedjor, completed=genomförda)
+        with mock.patch.dict(os.environ, {"PRIMAT_API_KEY": "x"}):
+            self.assertTrue(self.scheduler.bootstrap_if_empty())
+        self.assertEqual(self.started, ["Willys"])
+
+    def test_bootstrap_respects_the_daily_row_budget(self):
+        """En bootstrap mot en tom dygnskvot ger ett 429 per Primat-kedja,
+        lämnar tre blocked-markeringar och har ingen katalog att visa för
+        det. Willys hämtas från kedjans egna sidor och kostar ingen kvot."""
+        from services.grocery import quota
+        self._summary(0, finished=False)
+        quota.book_rows(100_000, kv=self.scheduler._kv())
+        with mock.patch.dict(os.environ, {"PRIMAT_API_KEY": "x"}):
+            self.scheduler.bootstrap_if_empty()
+        self.assertIn("Willys", self.started)
+        for kedja in scheduler_module.PRIMAT_ONLY_CHAINS:
+            self.assertNotIn(kedja, self.started, f"{kedja} startades utan kvot kvar")
+
+
+class TvaBootstrapsIRad(unittest.TestCase):
+    """D5:s acceptanskriterium.
+
+    `bootstrap_if_empty` startade varje schemalagd kedja som saknade
+    lastSuccessfulRun. En Primat-körning som slår i radtaket kastar
+    ProviderBlockedError, publiceras partiellt och märks "blocked" - aldrig
+    "success". Fältet förblev alltså None hur många rader kedjan än hade i
+    databasen, och VARJE deploy startade om ICA och Coop. Två deployer samma
+    dag räckte för att bränna dygnskvoten.
+
+    Testet simulerar hela kedjan: en import som slutar "blocked" med
+    publicerade rader, och två bootstraps i rad."""
+
+    def setUp(self):
+        from services.grocery import api as grocery_api
+        self.grocery_api = grocery_api
+        self.started = []
+        # Kedjornas tillstånd som provider_status skulle rapportera det.
+        self.tillstånd = {chain: {"chain": chain, "products": 0,
+                                  "lastSuccessfulRun": None, "lastCompletedRun": None}
+                          for chain in scheduler_module.SCHEDULABLE_CHAINS}
+
+        def start(chain, **kwargs):
+            self.started.append(chain)
+            # Utfallet från natten 2026-09-11: kvoten tar slut, körningen
+            # publicerar det den hann hämta och märks blocked.
+            self.tillstånd[chain].update(
+                products=8000,
+                lastCompletedRun={"status": "blocked", "pricesUpdated": 8000})
+            return {"started": True, "chain": chain}
+
+        self._real_start = scheduler_module.importer.start
+        self._real_status = scheduler_module.importer.status
+        scheduler_module.importer.start = start
+        scheduler_module.importer.status = lambda: {"running": False}
+        self.addCleanup(lambda: setattr(scheduler_module.importer, "start", self._real_start))
+        self.addCleanup(lambda: setattr(scheduler_module.importer, "status", self._real_status))
+
+        self._real_summary = grocery_api.database_summary
+        self._real_panel = grocery_api.provider_status
+        grocery_api.database_summary = lambda: {"totalProducts": 0, "chains": []}
+        grocery_api.provider_status = lambda: [dict(v) for v in self.tillstånd.values()]
+        self.addCleanup(lambda: setattr(grocery_api, "database_summary", self._real_summary))
+        self.addCleanup(lambda: setattr(grocery_api, "provider_status", self._real_panel))
+
+        self.scheduler = GroceryScheduler({"Willys": "02:00"}, kv=MinnesKV())
+        self.scheduler.enabled = True
+
+    def test_tva_bootstraps_i_rad_startar_inte_samma_kedja_tva_ganger(self):
+        with mock.patch.dict(os.environ, {"PRIMAT_API_KEY": "x"}):
+            self.assertTrue(self.scheduler.bootstrap_if_empty())
+            första = list(self.started)
+            self.assertEqual(sorted(första), sorted(scheduler_module.SCHEDULABLE_CHAINS))
+
+            # Deploy nummer två. Inget nytt ska startas.
+            self.started.clear()
+            self.assertFalse(self.scheduler.bootstrap_if_empty())
+        self.assertEqual(self.started, [],
+                         "andra bootstrapen startade om kedjor som redan har en katalog")
+
+    def test_en_kedja_som_aldrig_publicerade_nagot_tas_om(self):
+        """Motsatsen, så regeln inte blir "starta aldrig om": en kedja vars
+        körning inte lämnade en enda publicerad rad har inte en katalog."""
+        with mock.patch.dict(os.environ, {"PRIMAT_API_KEY": "x"}):
+            self.scheduler.bootstrap_if_empty()
+            self.tillstånd["Hemköp"].update(products=0, lastCompletedRun=None)
+            self.started.clear()
+            self.assertTrue(self.scheduler.bootstrap_if_empty())
+        self.assertEqual(self.started, ["Hemköp"])
 
 
 class DaylightSavingAndLateTicks(unittest.TestCase):
@@ -536,6 +658,34 @@ class MissadKorningTasIgen(unittest.TestCase):
         with mock.patch.dict(os.environ, {"PRIMAT_API_KEY": "x"}):
             sched._tick(datetime(2026, 8, 31, 5, 31))
         self.assertEqual(self.started, ["ICA"])
+
+    def test_en_kedja_utan_kvotutrymme_startas_inte_och_provas_inte_varje_minut(self):
+        """D5. Kvoten frågas FÖRE start. Och kedjan markeras som skött för i
+        dag: kvoten nollställs midnatt UTC = 02:00 svensk tid, alla tre
+        Primat-jobben ligger efter det, så är kvoten slut vid jobbets
+        klockslag finns inget mer att hämta förrän i morgon. Utan
+        markeringen hade schemaläggaren prövat samma kedja varje minut
+        resten av dygnet och loggat lika ofta."""
+        from services.grocery import quota
+        kv = MinnesKV()
+        sched = schemalaggare({"ICA": "05:30"}, kv=kv)
+        quota.book_rows(100_000, kv=kv)
+        with mock.patch.dict(os.environ, {"PRIMAT_API_KEY": "x"}):
+            sched._tick(datetime(2026, 8, 31, 5, 30))
+            self.assertEqual(self.started, [])
+            # Markerad, alltså inte prövad igen samma dygn ens om kvoten
+            # skulle frigöras.
+            self.assertEqual(sched._last_run_day("ICA"), "2026-08-31")
+
+    def test_en_egen_kedja_stoppas_aldrig_av_primats_kvot(self):
+        """Willys, Hemköp och City Gross hämtas från kedjornas egna sidor och
+        kostar ingen Primat-kvot alls."""
+        from services.grocery import quota
+        kv = MinnesKV()
+        sched = schemalaggare({"Willys": "02:00"}, kv=kv)
+        quota.book_rows(100_000, kv=kv)
+        sched._tick(datetime(2026, 8, 31, 2, 0))
+        self.assertEqual(self.started, ["Willys"])
 
     def test_driftkollen_tas_ocksa_igen(self):
         """Exakt minutmatchning gjorde att en tick som blev försenad av last

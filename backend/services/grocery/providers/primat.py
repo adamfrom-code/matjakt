@@ -31,11 +31,19 @@ prissättningsmotorn behandlar dem fail-closed (osäker rad, aldrig i säkra
 totaler), precis som för alla andra kedjor.
 
 KVOT OCH TAKT: gratisnivån är 60 anrop/min, 20 000 rader/dag, 200 rader/
-anrop (App-nivån 250/min, 100 000 rader/dag). Providern håller sig under
-takgränsen med en paus mellan anropen och slutar hämta vid max_rows - det
-som redan hämtats behålls och körningen märks "blocked" med ärligt besked,
-aldrig tyst trunkerad. Inga kringgåenden: träffar vi en gräns rapporterar
-vi den.
+anrop; App-nivån 250/min och 100 000 rader/dag (bekräftat ur Primats eget
+429-svar 2026-09-10). Providern håller sig under takgränsen med en paus
+mellan anropen och slutar hämta vid max_rows - det som redan hämtats behålls
+och körningen märks "blocked" med ärligt besked, aldrig tyst trunkerad. Inga
+kringgåenden: träffar vi en gräns rapporterar vi den.
+
+TVÅ TAK, OCH DE MÄTER OLIKA SAKER. max_rows är vad EN körning får kosta.
+Dygnskvoten är vad ALLA körningar tillsammans får kosta, och den räknades
+inte alls förrän D5: varje rad bokförs nu i quota.py medan körningen pågår,
+per UTC-dygn, och taket för en körning klipps mot det som är kvar. Tre
+kedjor i schemat gånger det gamla taket 40 000 var 120 000 rader mot en kvot
+på 100 000 - taket låg alltså över kvoten, och natten 2026-09-11 tog Coop
+det som fanns medan ICA och Lidl aldrig kom förbi 429.
 
 NYCKELN läses ur miljön (PRIMAT_API_KEY), loggas aldrig och ingår aldrig i
 någon RawProduct eller något felmeddelande.
@@ -48,6 +56,7 @@ from datetime import datetime
 
 from services.pricing.primat_client import PrimatError, _request
 
+from .. import quota
 from ..base import GroceryProvider
 from ..errors import ProviderBlockedError
 from ..models import RawProduct, Store
@@ -81,6 +90,13 @@ BATCH_SIZE = 100
 # utan att en Maxi-katalog (~225 anrop) tar mer än ~5 minuter.
 SECONDS_BETWEEN_CALLS = 1.1
 
+# Vad EN körning får kosta av dygnskvoten, som standard. Räknat, inte valt:
+# dygnsbudgeten delad på de tre kedjor som har ett Primat-jobb i schemat
+# (ICA, Coop, Lidl), så alla tre ryms under samma dygn. Se modulens docstring
+# och services/grocery/quota.py.
+PRIMAT_SCHEDULED_CHAINS = 3
+DEFAULT_MAX_ROWS_PER_RUN = quota.DEFAULT_DAILY_ROW_BUDGET // PRIMAT_SCHEDULED_CHAINS
+
 
 def _epoch(iso_timestamp) -> float | None:
     """"2026-09-02T03:32:13Z" -> epoktid. None in, None ut."""
@@ -96,14 +112,28 @@ class PrimatProvider(GroceryProvider):
     name = "primat"
 
     def __init__(self, chain: str, api_key: str | None = None,
-                 max_rows: int | None = None):
+                 max_rows: int | None = None, book_rows=None):
         if chain not in CHAIN_KEYS:
             raise ValueError(f"Primat täcker inte kedjan {chain!r}")
         if max_rows is None:
-            # Styrbart utan koddeploy: gratisnivån har 20 000 rader/dag och
-            # en full Maxi-katalog kostar ~30 000 (pris + batch), så på
-            # gratisnivån behöver taket sättas lägre än standardvärdet.
-            max_rows = int(os.environ.get("PRIMAT_MAX_ROWS_PER_RUN", "40000"))
+            # Styrbart utan koddeploy. Standardvärdet är RÄKNAT: dygnskvoten
+            # delad på de tre Primat-kedjorna i schemat, så alla tre ryms
+            # samma dygn. 40 000 gånger tre var 120 000 mot en kvot på
+            # 100 000 - taket låg över kvoten, vilket är samma sak som inget
+            # tak alls. En full Maxi-katalog kostar ~22 000 (prisrader plus
+            # batchuppslag), så utrymmet räcker med marginal.
+            råtak = (os.environ.get("PRIMAT_MAX_ROWS_PER_RUN") or "").strip()
+            max_rows = (int(råtak) if råtak.isdigit() and int(råtak) > 0
+                        else DEFAULT_MAX_ROWS_PER_RUN)
+            # DYGNET KLIPPER KÖRNINGEN. Har dagens övriga körningar redan
+            # ätit upp kvoten får den här bara det som är kvar. Utan det
+            # kunde tre körningar à 33 333 bli 100 000 även när de två
+            # första redan förbrukat allt, och då blir den tredje bara ett
+            # 429 som kostar tid och lämnar en blocked-markering.
+            #
+            # Bara på den härledda vägen: ett uttryckligt max_rows är en
+            # uttrycklig instruktion och klipps inte.
+            max_rows = min(max_rows, quota.headroom())
         self.chain = chain
         self._primat_chain = CHAIN_KEYS[chain]
         # .strip(): en nyckel som klistrats in i Renders formulär bär ofta
@@ -117,8 +147,32 @@ class PrimatProvider(GroceryProvider):
         # hämtade behålls och körningen rapporteras "blocked", se
         # get_products.
         self._max_rows = max_rows
+        # Bokföringen. Injicerbar för tester; i drift är det quota.book_rows,
+        # som skriver till KV-storen per UTC-dygn.
+        self._book_rows = book_rows if book_rows is not None else quota.book_rows
         self._rows_spent = 0
         self._last_call = 0.0
+
+    @property
+    def rows_spent(self) -> int:
+        """Rader den HÄR körningen har förbrukat. Dygnets summa ligger i
+        quota.rows_spent()."""
+        return self._rows_spent
+
+    def _spend(self, count: int):
+        """Räknar raderna både för körningen och för dygnet.
+
+        Bokförs MEDAN körningen pågår. Att vänta till slutet hade gjort
+        bokföringen beroende av att körningen lyckas, och det är just de
+        körningar som inte lyckas (429, timeout, deploy mitt i) som kostat
+        rader utan att lämna ett spår."""
+        if count <= 0:
+            return
+        self._rows_spent += count
+        try:
+            self._book_rows(count)
+        except Exception:
+            logger.exception("Kunde inte bokföra %d rader mot dygnskvoten", count)
 
     # ------------------------------------------------------------------ API
     def _call(self, method: str, path: str, params=None, body=None):
@@ -177,7 +231,7 @@ class PrimatProvider(GroceryProvider):
             page = self._call("GET", "/prices", params=params)
             rows = page.get("data") or []
             price_rows.extend(rows)
-            self._rows_spent += len(rows)
+            self._spend(len(rows))
             cursor = page.get("next_cursor")
             if not cursor or not rows:
                 break
@@ -207,7 +261,7 @@ class PrimatProvider(GroceryProvider):
                     pid = product.get("product_id")
                     if pid:
                         details[pid] = product
-            self._rows_spent += len(chunk)
+            self._spend(len(chunk))
 
         products = []
         for row in price_rows:
