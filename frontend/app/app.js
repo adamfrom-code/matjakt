@@ -9,6 +9,7 @@ if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "functi
 }
 import { applySyncBlob, buildSyncPayload, flushServerSync, initAppState, persistLocally, saveState, selectedRecipes, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
 import { aggregateShopping, chainListTotal, chainRowAmount, initShoppingView, prunePhantomItemNames, renderBasket, wireReportPriceButtons } from "./src/views/shopping.js";
+import { watchOtherTabs } from "./src/state/tab-sync.js";
 import { aggregateIngredients, budgetRemaining, calculateLiveShoppingTotal, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
 import { createDebouncedSearch, mergeRecipeResults } from "./src/services/recipe-search.js";
 import { filterByNutritionGoals, hasActiveNutritionGoals } from "./src/services/nutrition.js";
@@ -177,6 +178,15 @@ function setSyncStatus(status, message = "") {
   label.classList.toggle("sync-error", status === "error");
 }
 window.addEventListener("pagehide", () => { flushServerSync({ keepalive: true }); });
+// E8: en annan flik har skrivit samma blob, och den här flikens minne är
+// därmed den gamla veckan. Beskedet - inte en sammanslagning - är hela
+// åtgärden; se src/state/tab-sync.js för varför. Remsan ligger kvar tills
+// någon trycker: den som missar den tappar sina bockningar tyst.
+watchOtherTabs({
+  target: window,
+  onOtherTab: text => showUndoToast(text, null, () => location.reload(),
+                                    { actionLabel: "Ladda om", duration: 0 }),
+});
 async function pullAccountState() {
   if (!state.authToken) return;
   try {
@@ -3040,20 +3050,24 @@ function restoreRemovedRows() {
 // En enda toast åt gången: en ny borttagning ersätter den förra i stället
 // för att stapla remsor över navigeringen.
 let undoToastTimer = null;
-function showUndoToast(message, onUndo, onOpen = null) {
+function showUndoToast(message, onUndo, onOpen = null, options = {}) {
   const toast = $("undoToast");
   toast.querySelector("span").textContent = message;
   toast.hidden = false;
   const button = toast.querySelector("button");
   // Samma remsa, två roller: "Ångra" efter en egen ändring, "Öppna" när det
   // är en notis om något NÅGON ANNAN gjort. Att ångra någon annans ändring
-  // vore fel knapp på fel handling.
+  // vore fel knapp på fel handling. En anropare med en TREDJE handling
+  // ("Ladda om" när en annan flik skrivit) säger det i options.actionLabel.
   const action = onUndo || onOpen;
-  button.textContent = onUndo ? "Ångra" : "Öppna";
+  button.textContent = options.actionLabel || (onUndo ? "Ångra" : "Öppna");
   button.hidden = !action;
   button.onclick = () => { clearTimeout(undoToastTimer); toast.hidden = true; if (action) action(); };
   clearTimeout(undoToastTimer);
-  undoToastTimer = setTimeout(() => { toast.hidden = true; }, 6000);
+  // duration 0 = remsan ligger kvar tills någon trycker. En kvittens ska
+  // försvinna av sig själv; ett besked man MÅSTE se innan nästa ändring
+  // ska inte hinna tona bort medan telefonen ligger i fickan.
+  if (options.duration !== 0) undoToastTimer = setTimeout(() => { toast.hidden = true; }, options.duration || 6000);
 }
 
 // U01: budgeten måste säga VAD den räcker till - se src/services/budget-scope.js.

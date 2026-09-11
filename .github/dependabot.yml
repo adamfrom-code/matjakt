@@ -1,0 +1,61 @@
+# K2 - beroendena får inte ligga stilla utan att någon vet om det.
+#
+# Repot hade ingen Dependabot alls. Det betydde inte att beroendena stod
+# still - det betydde att ingen visste när de rörde sig, och att ett CVE i
+# esbuild eller greenlet upptäcktes den dag någon råkade läsa en nyhet.
+#
+# Veckovis, måndag morgon: en PR i taget per ekosystem, så att kön av elva
+# agenter inte drunknar i uppdateringar. Varje PR går genom exakt samma CI
+# som allt annat - inklusive lås- och hashkontrollen i security-jobbet.
+version: 2
+updates:
+  # Python. Dependabot ser att backend/requirements.txt är genererad ur
+  # backend/requirements.in (pip-compile) och regenererar låsfilen med
+  # hasharna i stället för att bara skriva om en rad.
+  #
+  # playwright är UNDANTAGEN med flit: den raden hör ihop med taggen på
+  # basimagen i backend/Dockerfile, och en PR som höjer den ena men inte den
+  # andra ger "Executable doesn't exist" i produktion. Höjningen är ett
+  # människobeslut i två filer samtidigt - se backend/requirements.in.
+  - package-ecosystem: pip
+    directory: "/backend"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Stockholm
+    open-pull-requests-limit: 1
+    commit-message:
+      prefix: "beroenden"
+    ignore:
+      - dependency-name: playwright
+
+  # npm. esbuild (byggsteget) och Capacitor (native-bygget).
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Stockholm
+    open-pull-requests-limit: 1
+    commit-message:
+      prefix: "beroenden"
+    groups:
+      capacitor:
+        patterns: ["@capacitor/*"]
+
+  # GitHub Actions. Den mest förbisedda av de tre och den som kör med
+  # störst behörighet: actions/checkout, setup-python, setup-node,
+  # deploy-pages. En action pinnad på en flyttbar tagg är kod någon annan
+  # kan ändra under fötterna på deployen.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Stockholm
+    open-pull-requests-limit: 1
+    commit-message:
+      prefix: "beroenden"
