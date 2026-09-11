@@ -34,6 +34,9 @@ import { budgetScopeText as budgetScopeFor } from "./src/services/budget-scope.j
 import { planWarning } from "./src/services/plan-warning.js";
 import { ASSUMED_STATE, assumedHomeItems, assumedState } from "./src/services/assumed-home.js";
 import { takeUrlTokens } from "./src/services/url-tokens.js";
+import { branchChoiceKey, canPlanWeek, chooseBranch } from "./src/services/branch-choice.js";
+import { createSeededRandom, newSeed } from "./src/services/seeded-random.js";
+import { debounce } from "./src/services/debounce.js";
 
 // FÖRST AV ALLT, före en enda rad annan startkod: engångstoken ur
 // adressfältet. `?reset=` är ett fullständigt kontoövertagande i klartext
@@ -812,6 +815,15 @@ function comboEstimatedCost(combo) {
   return combo.reduce((sum, recipe) =>
     sum + (recipe.inkopspris ?? medianInkopspris()) * factor, 0);
 }
+// E9: ETT FRÖ PER "SKAPA VECKA"-TILLFÄLLE.
+//
+// Slumpen i everydayRank låg i Math.random(), och rankningen kördes om vid
+// varje omritning - samma vecka, samma budget, samma butiker kunde ge olika
+// svar. Nu dras ett frö när användaren faktiskt ber om en ny vecka, och allt
+// som händer inom det tillfället läser samma ström: samma fråga ger samma
+// svar, en ny fråga ger en ny vecka. Se src/services/seeded-random.js.
+let planRandom = createSeededRandom(newSeed());
+function newWeekSeed() { planRandom = createSeededRandom(newSeed()); }
 function evaluateCombos(recipes, count, branch) {
   // minTotal: however hard the pool is capped, a `count`-dinner week needs
   // at least count+1 candidates or there is nothing to choose between.
@@ -826,7 +838,11 @@ function evaluateCombos(recipes, count, branch) {
     // vecka" gav exakt samma vecka varje gång. Slumpen väljer bara vilka
     // kandidater av samma klass som får tävla; budget och kostnader räknas
     // oförändrat på riktiga priser nedströms.
-    return (tags.includes("vardagsmat") || tags.includes("husmanskost") ? 0 : 10) + Math.random();
+    //
+    // E9: den kommer ur en SEEDAD ström, inte ur Math.random(). Förut kunde
+    // samma indata ge olika svar - i en app vars hela löfte är "vem är
+    // billigast" är det en trovärdighetsfråga, inte en smaksak.
+    return (tags.includes("vardagsmat") || tags.includes("husmanskost") ? 0 : 10) + planRandom();
   };
   const pool = limitCandidatePool(recipes, 6, CANDIDATE_POOL_FOR_COUNT[count] || 24,
                                   "proteinkalla", "inkopspris", count + 1, everydayRank);
@@ -1136,31 +1152,34 @@ function updateNutritionWarning(nutritionShortfall, fick = null) {
   $("nutritionWarning").hidden = !text;
   if (text) $("nutritionWarning").textContent = text;
 }
-function cheapestBranch(chain = null) {
-  const branches = nearbyBranches().filter(branch => !chain || branch.kedja === chain);
-  const candidates = candidateRecipesForUser();
-  const scored = branches.map(branch => {
-    const recipes = bestMenuCombo(candidates, state.middagar, state.budget, branch);
-    const avstandKm = state.position ? distanceKm(state.position.lat, state.position.lon, branch.lat, branch.lon) : branch.avstandKm;
-    return { ...branch, avstandKm, recipes, total: shoppingListCost(recipes, branch) };
-  }).filter(result => result.recipes.length);
-  if (!scored.length) return null;
-  // Without Premium, every branch shares the same flat price estimate (no real
-  // per-chain data exists until live prices are fetched, which only happens after
-  // a week is chosen) - sorting that by "total" would just be an arbitrary tie,
-  // which is exactly how a wrong "X is cheapest" claim happens. Pick by distance
-  // instead and never claim it's the cheapest; real cross-store comparison lives
-  // in renderStoreComparison() using live data, gated to Premium.
-  if (!hasPremium()) return scored.sort((a, b) => a.avstandKm - b.avstandKm)[0];
-  // Premium auto-pick: the server's own comparison decides which CHAIN is
-  // cheapest (real prices, real coverage guards, see compare_chains); the
-  // nearest branch of that chain wins. The static estimates all share
-  // prisfaktor 1, so sorting by their "total" was an arbitrary tie - the
-  // very thing the "Billigast" guards exist to prevent.
-  const winnerChain = state.dbComparison?.cheapestChain;
-  const ofWinner = winnerChain ? scored.filter(branch => branch.kedja === winnerChain) : [];
-  const pool = ofWinner.length ? ofWinner : scored;
-  return pool.sort((a, b) => a.avstandKm - b.avstandKm)[0];
+// E9: BUTIKSVALET BYGGER INTE LÄNGRE EN VECKOPLAN PER BUTIK.
+//
+// cheapestBranch() körde en fullständig kombinationssökning för VARJE
+// närbutik - 30-40k kombinationer per filial, 300-400k med tio - plus en
+// shoppingListCost per resultat. Allt det arbetet slängdes: veckoplanen
+// användes till ett `total` ingen läste och till frågan "går det att bygga
+// en vecka alls?", som är samma svar för varje filial. Sorteringen som
+// faktiskt avgjorde vilken butik det blev var avståndet, i båda grenarna.
+//
+// Kvar här är bara att plocka ihop appens tillstånd till modulens indata.
+// Själva valet - och nyckeln som säger när det behöver göras om - bor i
+// src/services/branch-choice.js, där det går att prova utan webbläsare.
+function branchChoiceInput() {
+  return {
+    branches: nearbyBranches(),
+    // "auto" är inte en kedja utan frånvaron av ett kedjeval.
+    chain: state.butik === "auto" ? null : state.butik,
+    position: state.position,
+    distanceTo: branch => (state.position
+      ? distanceKm(state.position.lat, state.position.lon, branch.lat, branch.lon) : null),
+    premium: hasPremium(),
+    cheapestChain: state.dbComparison?.cheapestChain || null,
+    // Enda kvarvarande beroendet till receptbanken: utan recept finns ingen
+    // vecka att handla till, och då ingen butik att visa. Precis som förut,
+    // när noll kandidater tömde filiallistan.
+    hasMenu: canPlanWeek(candidateRecipesForUser().length, state.middagar),
+    pinned: state.pinnedBranch,
+  };
 }
 // A branch the user explicitly picked from the store comparison list (e.g.
 // "Coop Tullhuset" over the auto-picked "Coop Nian") overrides the normal
@@ -1176,8 +1195,11 @@ function pinnedBranchMatch() {
 }
 let branchCache = { key: null, value: null };
 function selectedBranch() {
-  const key = JSON.stringify([state.budget, state.middagar, state.butik, state.postnummer, state.position, RECEPT.length, state.apiRecipes.length, hasPremium(), state.naringsmal, state.pinnedBranch, state.branches.length]);
-  if (branchCache.key !== key) branchCache = { key, value: pinnedBranchMatch() || (state.butik === "auto" ? cheapestBranch() : cheapestBranch(state.butik)) };
+  // Nyckeln bärs av exakt det valet beror på, och state.budget är inte
+  // längre en av dem: budgetfältet kan därför inte trigga ett omval.
+  const input = branchChoiceInput();
+  const key = branchChoiceKey(input);
+  if (branchCache.key !== key) branchCache = { key, value: pinnedBranchMatch() || chooseBranch(input) };
   return branchCache.value;
 }
 function cheapestStore() {
@@ -1197,6 +1219,9 @@ function sanitizeApiPayload(payload) {
 const availableRecipes = () => candidateRecipesForUser();
 
 function chooseMenu(shouldScroll = true) {
+  // Ett nytt frö = en ny vecka. Utan det här anropet hade seedningen gjort
+  // "Skapa ny vecka" till en knapp som gav samma vecka varje gång.
+  newWeekSeed();
   const branch = selectedBranch();
   const { candidates, nutritionShortfall } = weekPlanCandidates();
   const combo = bestMenuCombo(candidates, state.middagar, state.budget, branch);
@@ -1664,8 +1689,8 @@ function hasUsablePrice(result) {
   return !(result.isLive && result.certain === 0);
 }
 
-// cheapestBranch() builds a NEW object ({...branch, avstandKm, recipes,
-// total}), so an identity check against a row's own branch never matched and
+// Butiksvalet returnerar ett NYTT objekt ({...branch, avstandKm}), så en
+// identitetskontroll mot en rads egen butik aldrig matchade och
 // every caller silently fell through to "the cheapest row" instead. That is
 // why the week view could show "Pris hos ICA Nära Stortorget" while the
 // shopping list below it listed Willys products. Compare on a stable
@@ -1719,7 +1744,7 @@ function renderStoreComparison(selected, containerId = "storeCompare") {
   const updatedLabel = anyLive && state.liveUpdatedAt ? `<small class="store-compare-updated">Uppdaterad ${new Date(state.liveUpdatedAt).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}</small>` : "";
   if (!premium) {
     // Free tier never claims a store is "cheapest" - without live data for every
-    // chain that would just be a guess (see cheapestBranch()'s flat estimate),
+    // chain that would just be a guess (see shoppingListCost's flat estimate),
     // and showing it as fact is exactly the kind of mismatch users have reported.
     // Show only the price at the store actually in use, plainly labeled.
     const current = results.find(r => sameBranch(r.branch, selectedBranch())) || results[0];
@@ -3221,7 +3246,16 @@ function syncSettingsInputs() {
   if (autoOption) autoOption.textContent = hasPremium() ? "Billigast automatiskt" : "Närmast automatiskt (Premium: billigast)";
 }
 syncSettingsInputs();
-$("budgetInput").addEventListener("input", e => { state.budget = clampBudget(e.target.value); saveState(); updateSummary(); renderBasket(); });
+// E9: budgetfältets lyssnare körde hela omräkningen vid VARJE tangenttryck -
+// och innan butiksvalet gjordes om bar cache-nyckeln state.budget, så varje
+// tecken drog igång en kombinationssökning per närbutik. Talet syns direkt i
+// fältet; det är bara räkningen som väntar 250 ms på att skrivandet ska ta
+// slut. Lämnas fältet (change fyras vid blur, alltså före varje knapptryck
+// någon annanstans) gäller det sista värdet omedelbart.
+const applyBudget = value => { state.budget = clampBudget(value); saveState(); updateSummary(); renderBasket(); };
+const budgetTyped = debounce(applyBudget, 250);
+$("budgetInput").addEventListener("input", e => budgetTyped(e.target.value));
+$("budgetInput").addEventListener("change", e => budgetTyped.flush(e.target.value));
 const debouncedGeocode = createDebouncedSearch((zip, signal) => fetch(geocodeApiUrl(zip), { signal }).then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }), 400);
 $("changePasswordForm")?.addEventListener("submit", async event => {
   event.preventDefault();
@@ -4023,6 +4057,9 @@ async function syncPlanPricing(plans) {
   }));
 }
 function openPlanComparison() {
+  // Samma tillfälle, ett frö: de sju veckotyperna nedan drar ur samma ström
+  // och korten går därför att räkna fram igen exakt som de visades.
+  newWeekSeed();
   const branch = selectedBranch();
   const { candidates, nutritionShortfall } = weekPlanCandidates();
   updateNutritionWarning(nutritionShortfall);
