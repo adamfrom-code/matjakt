@@ -1136,6 +1136,86 @@ class BrowserJourney(unittest.TestCase):
         self.assertLessEqual(len(self.batch_requests), 12,
                              f"för många livepris-anrop för en Premium-resa: {len(self.batch_requests)}")
 
+    # ---- E0: render-bussen ----
+    #
+    # Räknaren ersätter sättaren på Element.prototype.innerHTML och bokför
+    # varje skrivning på närmaste förfader med id. Det mäter det som faktiskt
+    # kostar - en rivning av ett helt DOM-träd - och inte hur många gånger en
+    # funktion råkade anropas.
+    RAKNARE = """
+        () => {
+          if (!window.__matjaktInnerHtml) {
+            const beskrivning = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
+            window.__matjaktInnerHtml = {};
+            Object.defineProperty(Element.prototype, "innerHTML", {
+              configurable: true,
+              enumerable: beskrivning.enumerable,
+              get: beskrivning.get,
+              set(värde) {
+                const värd = this.closest ? this.closest("[id]") : null;
+                const nyckel = värd && värd.id ? värd.id : "(utan id)";
+                window.__matjaktInnerHtml[nyckel] = (window.__matjaktInnerHtml[nyckel] || 0) + 1;
+                beskrivning.set.call(this, värde);
+              },
+            });
+          }
+          for (const nyckel of Object.keys(window.__matjaktInnerHtml)) delete window.__matjaktInnerHtml[nyckel];
+          return true;
+        }
+    """
+    # Behållarna som renderRecipes/renderHemRecipePreview skriver i. Hyllorna
+    # och taggfiltren hör hit lika mycket som den platta listan: i normalläget
+    # (ingen sökning, inga filter) är det HYLLORNA som är receptbiblioteket.
+    RECEPTBEHALLARE = ("recipeScroll", "recipeShelves", "recipeTagFilters", "hemRecipePreview")
+
+    def test_avbockning_ritar_inte_om_receptlistan(self):
+        """E0: att bocka av en vara i Handla ritar om kassen - ingenting annat.
+
+        Förr var render() sju renderare i rad, så en kryssruta i Handla rev
+        ner och byggde upp hela receptbiblioteket (200+ kort med bilder) och
+        band om varenda lyssnare. Det här är mätningen, inte åsikten: antalet
+        skrivningar till innerHTML per behållare under exakt det klicket.
+        """
+        page = self.page
+        page.goto(self.app())
+        self.complete_onboarding()
+        self.choose_standard_week()
+        page.click('.bottom-nav-item[data-view="basket"]')
+        self.wait_for_store_cards()
+
+        # Låt uppstartens hämtningar (priser, hyllor, kampanjer) landa först -
+        # annars mäts deras omritningar och inte klickets.
+        page.wait_for_timeout(1500)
+        self.assertTrue(page.evaluate(self.RAKNARE))
+        page.wait_for_timeout(500)
+        i_vila = page.evaluate("() => ({ ...window.__matjaktInnerHtml })")
+        brus = {namn: i_vila[namn] for namn in self.RECEPTBEHALLARE if i_vila.get(namn)}
+        self.assertEqual(brus, {}, f"receptbiblioteket ritades om utan att något hände: {i_vila}")
+
+        knappar = page.locator("#shoppingList [data-bought]")
+        self.assertGreater(knappar.count(), 0, "inköpslistan hade inga varor att bocka av")
+        vara = knappar.first.get_attribute("data-bought")
+        page.evaluate(self.RAKNARE)
+        knappar.first.click()
+
+        # Avbockningen ska synas: varan lämnar den aktiva listan och kassen
+        # ritas om. Utan den här väntan mäter testet en bildruta som inte hänt.
+        page.wait_for_function("() => (window.__matjaktInnerHtml.shoppingList || 0) > 0")
+        self.wait_for_state(lambda s: vara in (s.get("avklarade") or []), what=f"{vara} som avbockad")
+
+        skrivningar = page.evaluate("() => ({ ...window.__matjaktInnerHtml })")
+        ritade_om = {namn: skrivningar[namn] for namn in self.RECEPTBEHALLARE if skrivningar.get(namn)}
+        self.assertEqual(ritade_om, {},
+                         f"avbockningen ritade om receptbiblioteket: {ritade_om} (allt: {skrivningar})")
+        # Och kassen ritades om: bussen samlar ihop, den slutar inte rita.
+        # Exakt antal står inte här med flit - avbockningen slänger också
+        # prissnapshotten, och omhämtningen som följer ritar kassen en gång
+        # till när den landar. Det som prövas är att receptbiblioteket inte
+        # följer med, inte hur många gånger kassen hinner ritas.
+        self.assertGreaterEqual(skrivningar.get("shoppingList", 0), 1,
+                                f"kassen ritades aldrig om: {skrivningar}")
+        self.assertEqual(self.console_errors, [])
+
 
 if __name__ == "__main__":
     unittest.main()

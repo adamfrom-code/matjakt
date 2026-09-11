@@ -355,7 +355,9 @@ function setItemStatus(name, status, options = {}) {
   lastShoppingUndo = { name, status: previous, pantryAdded: addedToPantry, gtin: options.gtin };
   clearPriceSnapshots();
   saveState();
-  render();
+  // Bara kassen. En avbockad vara ändrar inget i receptbiblioteket, och att
+  // rita om det var hela kostnaden som render-bussen finns för att ta bort.
+  invalidate("basket");
 }
 
 function addLocalPantryItem(name, options = {}) {
@@ -381,7 +383,7 @@ async function setHouseholdStatus(name, status, previous, options = {}) {
   // Ångra-beskrivningen sätts INNAN svaret: remsan visas direkt, och ett
   // "Ångra" som hinner före servern får inte backa FÖRRA varan.
   lastShoppingUndo = { key, name, status: previous };
-  render();
+  invalidate("basket");
   try {
     const location = PANTRY_LOCATIONS.includes(options.location) ? options.location : "skafferi";
     let response;
@@ -400,7 +402,7 @@ async function setHouseholdStatus(name, status, previous, options = {}) {
     if (rowBefore) shopping[key] = rowBefore; else delete shopping[key];
     state.household = { ...state.household, shopping };
     if (lastShoppingUndo?.key === key) lastShoppingUndo = null;
-    render();
+    invalidate("basket");
     pullHousehold(true);
   }
 }
@@ -412,7 +414,7 @@ function applyHouseholdResponse(response) {
   if (response.inventory && response.inventory.key) rows.inventory.push(response.inventory);
   if (Array.isArray(response.items)) rows.shopping.push(...response.items);
   state.household = applySync(state.household, rows);
-  render();
+  invalidate("basket");
 }
 
 function undoLastShoppingAction() {
@@ -421,7 +423,7 @@ function undoLastShoppingAction() {
   if (!undo) return;
   if (householdActive()) {
     state.household = applyLocalRow(state.household, "shopping", { key: undo.key, status: undo.status });
-    render();
+    invalidate("basket");
     undoShoppingAction(state.authToken, undo).then(applyHouseholdResponse).catch(() => pullHousehold(true));
     return;
   }
@@ -435,7 +437,7 @@ function undoLastShoppingAction() {
   if (undo.pantryAdded) delete state.pantry[undo.name];
   clearPriceSnapshots();
   saveState();
-  render();
+  invalidate("basket");
 }
 
 // ---- skafferiet: hushållets rader eller enhetens egna ---------------------
@@ -3643,7 +3645,7 @@ function removeShoppingItem(name) {
   // refetch fill honest numbers in.
   clearPriceSnapshots();
   saveState();
-  render();
+  invalidate("basket");
   showUndoToast(`${name} borttagen`, () => {
     state.removedItems.delete(name);
     // I hushållet är REMOVED serverns status - ångra måste också gå dit,
@@ -3651,7 +3653,7 @@ function removeShoppingItem(name) {
     if (householdActive()) setHouseholdStatus(name, NEED_TO_BUY, REMOVED);
     clearPriceSnapshots();
     saveState();
-    render();
+    invalidate("basket");
   });
 }
 function removedRowsForView() {
@@ -3664,7 +3666,7 @@ function restoreRemovedRows() {
   state.removedItems.clear();
   if (householdActive()) names.forEach(name => setHouseholdStatus(name, NEED_TO_BUY, REMOVED));
   saveState();
-  render();
+  invalidate("basket");
 }
 
 // En enda toast åt gången: en ny borttagning ersätter den förra i stället
@@ -3716,7 +3718,60 @@ function renderHemRecipePreview() {
   $("hemRecipePreview").innerHTML = recipes.length ? recipes.map(hemRecipePreviewMarkup).join("") : `<p class="empty-state">Inga recept matchar din butik ännu.</p>`;
   document.querySelectorAll("[data-hem-details]").forEach(btn => btn.addEventListener("click", () => openRecipeTab(btn.dataset.hemDetails)));
 }
-function render() { renderGreeting(); renderRecipes(); renderHemRecipePreview(); renderBasket(); updateSummary(); renderStats(); renderCampaignSection(); }
+// ---------------------------------------------------------------------------
+// RENDER-BUSSEN
+//
+// render() körde alla sju renderarna vid VARJE interaktion. Att bocka av en
+// vara i Handla rev därför ner och byggde upp hela receptbiblioteket - 200+
+// kort med bilder - och band om varenda lyssnare, för att en kryssruta i en
+// annan vy ändrat färg.
+//
+// Nu säger anroparen vad som blivit inaktuellt i stället för att beordra en
+// omritning: invalidate("basket") märker en bana smutsig, bussen samlar
+// ihop allt som hunnit märkas till NÄSTA bildruta och kör bara de banorna.
+// Tio anrop under samma bildruta blir alltså en omritning, inte tio.
+//
+//   basket   - veckan, inköpslistan, skafferiet och deras siffror
+//   recipes  - receptbiblioteket, hyllorna och förslagsraden på Hem
+//   account  - hälsningen (den enda av de sju som läser state.user)
+//
+// RENDER_STEPS är render()s gamla ordning, oförändrad. Ett steg som körs får
+// alltid sina föregångare i samma inbördes ordning som förut - det är
+// därför listan är en ordnad tabell och inte ett uppslag per bana.
+// F-paketen kan flytta ut funktionerna härifrån till egna moduler utan att
+// röra en enda anropsplats: anroparen känner bara banans namn.
+const RENDER_STEPS = [
+  ["account", renderGreeting],
+  ["recipes", renderRecipes],
+  ["recipes", renderHemRecipePreview],
+  ["basket", renderBasket],
+  ["basket", updateSummary],
+  // renderStats hör till kassen, inte till kontot: clearPriceSnapshots()
+  // nollar state.dbComparison vid varje avbockning, och sparkortet läser
+  // just den.
+  ["basket", renderStats],
+  ["basket", renderCampaignSection],
+];
+const dirtyRenderLanes = new Set();
+let renderFrame = null;
+function invalidate(...lanes) {
+  lanes.forEach(lane => dirtyRenderLanes.add(lane));
+  if (renderFrame !== null) return;
+  // setTimeout som reserv: requestAnimationFrame saknas i miljöer utan
+  // fönster, och en utebliven omritning är värre än en bildruta för sent.
+  renderFrame = typeof requestAnimationFrame === "function"
+    ? requestAnimationFrame(flushRender)
+    : setTimeout(flushRender, 0);
+}
+function flushRender() {
+  renderFrame = null;
+  const lanes = new Set(dirtyRenderLanes);
+  dirtyRenderLanes.clear();
+  RENDER_STEPS.forEach(([lane, step]) => { if (lanes.has(lane)) step(); });
+}
+// "Allt är inaktuellt". Varje anropsplats som inte vet bättre beter sig
+// exakt som förut - bara samlad till en bildruta i stället för direkt.
+function render() { invalidate("account", "recipes", "basket"); }
 function step(key, delta, min, max) { state[key] = Math.min(max, Math.max(min, state[key] + delta)); $(`${key === "personer" ? "people" : "meals"}Value`).textContent = state[key]; saveState(); render(); }
 const DISLIKE_SUGGESTIONS = ["Lök", "Svamp", "Fisk", "Skaldjur", "Nötter", "Inälvsmat", "Stark mat", "Kokosmjölk"];
 function renderDislikeChips() {
