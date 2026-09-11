@@ -172,6 +172,39 @@ mening och bekräftas i modal — inte som en röd knapp.
 
 ---
 
+### 2.4 Tillstånd som inte får bäras av färg
+
+Aliasskiktet i G1 riktade `--gold`, `--gold-2` och `--gold-soft` mot grå tokens.
+Det var rätt migreringsväg — men en aliasrest är inget beslut, och den lämnade
+en komponent trasig: **stjärnbetyget**. Satt stjärna blev `--ink-2` (`#5A6367`),
+osatt `--ink-3` (`#626B6F`). Åtta steg per kanal. Samma grå. En användare kan
+inte se vad hon har betygsatt.
+
+Vägen ut är inte en andra accent. §2.3 förbjuder uttryckligen accenten för
+"kvalitet, betyg, favorit, Premium", och systemet har en färg. **Alltså bärs
+på/av av formen**, precis som de tre prisreglerna gör.
+
+| Komponent | Av | På |
+|---|---|---|
+| Stjärnbetyg | kontur, `--ink-3`, 1,5 px | **fylld**, `--ink` |
+| Favorit | kontur | fylld |
+| Flik i bottennav | ingen understrykning | 2 px accentunderstrykning (tillåtet: det är *nuläget*) |
+| Kräver uppmärksamhet | vanlig rad | nedsänkt `--paper-2`-fält med 3 px kantmarkering i `--ink-3` till vänster |
+| Premium | — | ordet **PREMIUM** i spärrade kapitäler (R56) |
+
+Kantmarkeringen är avsiktligt `--ink-3` och inte accenten: en varning är inte
+"här går vägen vidare". Den är ett fält som skiljer sig i **relief**, inte i
+temperatur.
+
+**Testkrav.** Kontrasttestet från G4 mäter text mot bakgrund och kan aldrig se
+att satt och osatt ser likadana ut — det var därför stjärnbetyget kunde gå
+sönder tyst. Varje komponent med på/av-tillstånd ska därför ha ett test som
+kräver **minst 3:1 mellan lägena**, mätt på det som faktiskt skiljer dem
+(fyllnad mot kontur, fält mot yta). Två grå som skiljer åtta steg per kanal
+ska faila.
+
+---
+
 ## 3. Typografi
 
 ### 3.1 Familjer
