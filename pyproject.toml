@@ -1,0 +1,142 @@
+# K1 — LINT SOM FAILAR PÅ FEL, INTE PÅ FORMATERING.
+#
+# Ruff har aldrig körts i det här repot. Första körningen med ruffs egna
+# standardregler gav ~700 träffar, och de tre största posterna var
+# `# noqa`-kommentarer, `# -*- coding: utf-8 -*-`-rader och importordning.
+# Inget av det gör att programmet beter sig fel.
+#
+# En lint som failar på sjuhundra ställen dag ett stängs av dag två - och då
+# fångas inte heller de trettiotvå som var riktiga buggar. Urvalet nedan är
+# därför gjort åt andra hållet: reglerna som svarar på frågan "gör koden
+# något annat än det som står skrivet?", och inget annat.
+#
+# VAD DEN FÖRSTA KÖRNINGEN HITTADE, och det är hela argumentet för paketet:
+#
+#   * Sex LITERALA backsteg-tecken (0x08) i backend/scripts/secret_scan.py
+#     där någon menat `\b`. Fem av hemlighetsskannerns mönster - GitHub-token,
+#     AWS-nyckel, Anthropic/OpenAI-nyckel, Slack-token, Google-nyckel - krävde
+#     alltså ett backsteg framför nyckeln och kunde ALDRIG matcha. I ett
+#     publikt repo som redan läckt en token en gång. Lagat i K1.
+#   * Två till i backend/services/recipes/images.py, där `\bn[cd]\b` blev
+#     backsteg, så licensfiltrets kortform för "non-commercial"/"no-derivs"
+#     var avväpnad.
+#   * Tolv dubblerade nycklar i samma fils bildtabell och en i
+#     grocery/pricing.py. En dubblerad nyckel i ett dict-literal försvinner
+#     tyst - tolv recept pekade på fel bild, och en buljongpost fanns inte.
+#
+# De två sista ligger i andra zoner och rörs inte av det här paketet; de står
+# i baslinjen längst ned med filnamn, så att nästa agent som öppnar filen ser
+# dem. K1:s PR listar dem också.
+
+[tool.ruff]
+target-version = "py310"          # samma som basimagen (playwright/python:...-jammy)
+line-length = 200                 # bara för de regler som råkar bry sig; E501 är AV
+extend-exclude = [
+    "backend/venv",
+    "backend/data",
+    "marketing",
+    "node_modules",
+    "dist",
+    "build",
+    # Native-bygget. Ingen python ligger där i dag; raderna finns för att
+    # eslint.config.js ignorerar samma kataloger, och två uteslutningslistor
+    # som inte stämmer överens är en fälla för den som lägger till en fil.
+    "android",
+    "ios",
+    "ios-prep",
+]
+
+[tool.ruff.lint]
+# Uppräknade en och en, inte som familjer, så att en uppgradering av ruff
+# inte tyst lägger till en grind ingen valt.
+select = [
+    "E9",       # syntaxfel och IO-fel - koden går inte att köra
+    "F",        # pyflakes: odefinierade namn, dubblerade nycklar, död kod
+    "B",        # bugbear: muterbara defaultargument, loopvariabler i closures
+    "PLE",      # pylint ERROR: bara det som är entydigt fel
+    "PLR0124",  # namn jämfört med sig självt
+    "PLW0127",  # självtilldelning
+    "PLW0129",  # assert på ett uttryck som alltid är sant
+    "T100",     # bortglömd breakpoint()/pdb
+    "ASYNC",    # blockerande anrop i async-kod
+    "S102",     # exec()
+    "S307",     # eval()
+]
+
+ignore = [
+    # ── Vad som valdes BORT, och varför ────────────────────────────────
+    # Formatering och smak hör inte i en grind. Ingen av raderna nedan
+    # ändrar vad programmet gör.
+    "E501",    # radlängd
+    "W291", "W293", "W605",
+    "UP",      # "modernisera syntaxen" - inklusive UP009 som ville ta bort
+               # `# -*- coding: utf-8 -*-` ur 135 filer
+    "I001",    # importordning
+    "RUF100",  # oanvända noqa-kommentarer (273 st, noll effekt på körning)
+    "N",       # namngivning - repot skriver svenska namn med flit
+    "D",       # docstring-formalia
+    "ANN", "TCH", "FA",  # typannoteringskrav; se mypy-noten i K1:s PR
+
+    # ── Regler som ÄR i familjerna ovan men inte är buggar ──────────────
+    "B904",    # `raise ... from` inne i except. 23 träffar, ingen av dem
+               # ändrar beteende; den är en läsbarhetskonvention.
+    "B905",    # zip(strict=) - stilkrav, och target py310 där det är nytt.
+    "B007",    # oanvänd loopvariabel. `for _, värde in ...` är redan
+               # undantaget av regeln; resten är nitpick.
+    "B008",    # funktionsanrop i defaultargument - vanligt och avsiktligt här.
+    "F401",    # oanvänd import (25 st) och
+    "F841",    # oanvänd variabel (9 st): död kod, inte fel kod. Rapporteras
+               # i CI som en varning i ett eget, icke-blockerande steg -
+               # blockerar man dem dag ett blir grinden avstängd dag två, och
+               # fixarna ligger dessutom i frontendens och backendens
+               # konfliktfiler mitt under F-vågens refaktorering.
+]
+
+[tool.ruff.lint.per-file-ignores]
+# ── BASLINJE ────────────────────────────────────────────────────────────
+#
+# Det här är INTE "regler vi inte bryr oss om". Det är kända, uppmätta fel
+# i filer som ligger i ANDRA zoner än Z-CI, och som ett CI-paket inte får
+# ändra i - två paket i samma zon körs aldrig samtidigt, och fem agenter
+# refaktorerar frontenden just nu. Varje rad har filens fynd utskrivet.
+#
+# Listan ska KRYMPA. Den som öppnar en av filerna nedan av andra skäl tar
+# bort sin rad i samma PR. Allt som INTE står här failar bygget.
+
+# Tolv dubblerade nycklar i bildtabellen: "gratang", "potatisgratang",
+# "fiskgratang", "kottfarslimpa", "flaskfile", "ugnspannkaka", "aggrora",
+# "lax", "torsk", "biff", "paj", "pyttipanna". Den andra förekomsten av
+# varje nyckel vinner och den första försvinner tyst - tolv recept får
+# alltså en annan bild än tabellen ser ut att ge dem.
+# Dessutom två literala backsteg i _NON_COMMERCIAL: `\bn[cd]\b` blev
+# backsteg, så kortformen för "non-commercial"/"no-derivs" är avväpnad.
+# (Z-GROCERY)
+"backend/services/recipes/images.py" = ["F601", "PLE2510"]
+
+# En dubblerad nyckel: "buljong". (Z-PRICING)
+"backend/services/grocery/pricing.py" = ["F601"]
+
+# Muterbart defaultargument. (Z-GROCERY)
+"backend/services/grocery/collectors/axfood.py" = ["B006"]
+"backend/services/grocery/importer.py" = ["B006"]
+
+# `number != number` är den idiomatiska NaN-kontrollen - float("nan") är det
+# enda värde som inte är lika med sig självt. Regeln har rätt i allmänhet och
+# fel här, och undantaget står hellre med en förklaring än att regeln stryks
+# för hela repot.
+"backend/services/household/routes.py" = ["PLR0124"]
+"backend/services/household/store.py" = ["PLR0124"]
+
+# Closures som binder loopvariabeln - klassikern. Här i testhjälpare där
+# beteendet råkar bli rätt, men mönstret är fel och ska rättas av den som
+# äger sviten. (Z-GROCERY)
+"backend/tests/test_axfood_providers.py" = ["B023"]
+"backend/tests/test_citygross_provider.py" = ["B023"]
+
+# Dubblerad `import threading`, och en `assertRaises(Exception)` som fångar
+# vad som helst.
+"backend/tests/test_household_sync_hardening.py" = ["F811"]
+
+# `assertRaises(Exception)` fångar precis vad som helst - även ett AttributeError
+# från en felstavning i testet självt. Ska smalnas till den faktiska klassen.
+"backend/tests/test_api_server.py" = ["B017"]
