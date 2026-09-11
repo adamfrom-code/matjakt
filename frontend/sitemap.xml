@@ -1,3 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- robots.txt pekar sökmotorerna hit. Filen låg tom: <urlset> utan en enda
+     URL, vilket säger "den här domänen har inga sidor". Varje publik sida på
+     matjakt.store ska stå här. Sidor med <meta name="robots" content="noindex">
+     (404.html, site/index.html) står med flit INTE med, och inte heller app/ -
+     appskalet har inget innehåll att indexera.
+     backend/tests/test_seo.py håller listan komplett. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://matjakt.store/</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://matjakt.store/integritetspolicy.html</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://matjakt.store/anvandarvillkor.html</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
 </urlset>

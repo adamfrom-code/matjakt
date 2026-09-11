@@ -3,15 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#f6f3ea">
+  <meta name="theme-color" content="#ECEEEF">
   <meta name="robots" content="noindex">
   <title>Sidan hittades inte – Matjakt</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:opsz,wght@6..72,300..700&display=swap" rel="stylesheet">
   <style>
-    body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#f6f3ea;color:#162019;font-family:"DM Sans",system-ui,sans-serif;text-align:center;padding:24px}
-    h1{font-family:"Fraunces",serif;font-size:28px;margin:0}
-    p{color:#6e786f;margin:0;max-width:320px}
-    a{display:inline-flex;min-height:44px;align-items:center;padding:0 22px;border-radius:99px;background:#f28c28;color:#2b1a08;font-weight:700;text-decoration:none;margin-top:8px}
+    /* Samma designsystem som appen och landningssidan (docs/DESIGNSYSTEM-D.md):
+       sval pappersvit, oxblod som enda accent, Newsreader mot Archivo, noll
+       radie. Sidan ska inte se ut som en annan produkt än den man kom från. */
+    :root{
+      --paper:#ECEEEF; --ink:#16191B; --ink-3:#626B6F;
+      --accent:#8A1F42; --accent-press:#6E1935; --on-accent:#FFFFFF;
+    }
+    @media (prefers-color-scheme:dark){
+      :root:not([data-theme="light"]){
+        --paper:#111416; --ink:#E9ECEE; --ink-3:#7E888C;
+        --accent:#EE93AB; --accent-press:#F5B7C6; --on-accent:#26060F;
+      }
+    }
+    :root[data-theme="dark"]{
+      --paper:#111416; --ink:#E9ECEE; --ink-3:#7E888C;
+      --accent:#EE93AB; --accent-press:#F5B7C6; --on-accent:#26060F;
+    }
+    body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:var(--paper);color:var(--ink);font:400 14px/1.5 "Archivo","Helvetica Neue",Helvetica,Arial,sans-serif;text-align:center;padding:24px}
+    .wordmark{font:600 10.5px/1 "Archivo","Helvetica Neue",Helvetica,Arial,sans-serif;letter-spacing:.26em;text-transform:uppercase;color:var(--ink-3)}
+    h1{font:400 30px/1.05 "Newsreader",Georgia,"Times New Roman",serif;letter-spacing:-.02em;margin:0;color:var(--ink)}
+    p{color:var(--ink-3);margin:0;max-width:340px}
+    a{display:inline-flex;min-height:52px;align-items:center;padding:0 20px;border-radius:0;background:var(--accent);color:var(--on-accent);font:500 15px/1.2 "Archivo","Helvetica Neue",Helvetica,Arial,sans-serif;letter-spacing:.02em;text-decoration:none;margin-top:8px}
+    a:active{background:var(--accent-press)}
+    a:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   </style>
   <script>
     /* This 404 page is served by GitHub Pages for any unmatched path, on both
@@ -26,10 +48,10 @@
   </script>
 </head>
 <body>
-  <span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:#173b2a">Matjakt<span style="color:#f28c28">.</span></span>
+  <span class="wordmark">Matjakt</span>
   <h1>Sidan hittades inte</h1>
   <p>Länken kan ha ändrats eller inte längre finnas. Prova att gå tillbaka till appen eller startsidan.</p>
-  <a id="home-link" href="/matjakt/">Till Matjakt →</a>
+  <a id="home-link" href="/matjakt/">Till Matjakt</a>
   <script>document.getElementById("home-link").href = base;</script>
 </body>
 </html>
