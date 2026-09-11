@@ -2402,8 +2402,19 @@ function chainShoppingListMarkup(data, branch = null) {
   const pricedElsewhere = perStore && pricedStore && branch?.namn && pricedStore !== branch.namn
     ? `<p class="chain-list-warning">Priserna är hämtade i ${escapeHtml(pricedStore)}. ${escapeHtml(data.chain)} sätter priser per butik, så ${escapeHtml(branch.namn)} kan skilja sig.</p>`
     : "";
-  const sticky = `<div class="chain-list-sticky"><strong>${escapeHtml(storeName)}</strong><span>${money(total)} · ${data.realPriceItems}/${data.totalItems} varor</span></div>`;
-  const head = sticky + `<div class="chain-list-head"><h2>${escapeHtml(storeName)}</h2><small>${escapeHtml([data.chain, distance].filter(Boolean).join(" · "))}</small>${pricedElsewhere}<div class="chain-list-total"><span>Total kassakostnad</span><strong>${money(total)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor har pris</span>${data.estimatedItems ? `<span>${data.estimatedItems} med uppskattat antal</span>` : ""}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span><button type="button" class="report-price-btn" data-report-price>Ser något fel ut?</button>${savings}</div>${warning}</div>`;
+  // SUMMAN SOM GOLV. Rubriksiffran presenterades som exakt medan de osäkra
+  // radernas kostnad tyst utelämnades - tre msk-rader (honung, olivolja,
+  // tomatpuré) bidrog med noll kronor, och användaren budgeterade 640 och
+  // betalade 700. Golvet kommer från servern (totalIsFloor), så klienten
+  // inte härleder en andra sanning: så fort någon rad saknar radtotal är
+  // talet en undre gräns, aldrig kassans belopp.
+  const floor = !!data.totalIsFloor;
+  const totalLabel = floor ? "Kassakostnad, minst" : "Total kassakostnad";
+  const stickyTotal = floor ? `minst ${money(total)}` : money(total);
+  const uncertainNote = data.uncertainRows
+    ? `<span>+ ${data.uncertainRows} ${data.uncertainRows === 1 ? "vara" : "varor"} utan säkert antal</span>` : "";
+  const sticky = `<div class="chain-list-sticky"><strong>${escapeHtml(storeName)}</strong><span>${stickyTotal} · ${data.realPriceItems}/${data.totalItems} varor</span></div>`;
+  const head = sticky + `<div class="chain-list-head"><h2>${escapeHtml(storeName)}</h2><small>${escapeHtml([data.chain, distance].filter(Boolean).join(" · "))}</small>${pricedElsewhere}<div class="chain-list-total"><span>${totalLabel}</span><strong>${money(total)}</strong></div><div class="chain-list-meta"><span>${data.realPriceItems} av ${data.totalItems} varor har pris</span>${uncertainNote}${data.missingItems ? `<span>${data.missingItems} utan pris</span>` : ""}<span>${escapeHtml(updated)}</span><button type="button" class="report-price-btn" data-report-price>Ser något fel ut?</button>${savings}</div>${warning}</div>`;
 
   const rows = (data.items || []).map(item => {
     const checked = itemStatus(item.ingredient) !== NEED_TO_BUY;
