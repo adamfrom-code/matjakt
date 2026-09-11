@@ -1907,15 +1907,29 @@ class AuthHttpTest(unittest.TestCase):
 
             api_server.MAIL_CONFIG = {"host": "smtp.example", "from_email": "noreply@example"}
 
-            def broken(config, to_email, subject, body):
+            # Dubbeln måste tåla hela den riktiga signaturen. Verifieringsmejlet
+            # skickas med både text och HTML sedan I4, och en dubbel med för få
+            # parametrar failar på TypeError - alltså inte på det testet mäter.
+            def broken(config, to_email, subject, body, body_html=None, unsubscribe_url=None):
                 raise MailSendFailed("SMTP 451 try later")
             api_server.send_email = broken
             _, payload = self.post("/api/auth/register", {"email": self._email(), "password": "hemligt123"})
             self.assertEqual(payload["verificationMail"], "failed")
 
-            api_server.send_email = lambda config, to_email, subject, body: None
+            from services import mailings
+            sent = []
+            api_server.send_email = lambda config, to_email, subject, body, body_html=None, unsubscribe_url=None: \
+                sent.append((subject, body, body_html))
             _, payload = self.post("/api/auth/register", {"email": self._email(), "password": "hemligt123"})
             self.assertEqual(payload["verificationMail"], "sent")
+            # I4: verifieringsmejlet går genom mallen i services/mailings -
+            # dold preheader, riktig knapp, och verifieringslänken i knappen.
+            subject, body, body_html = sent[0]
+            self.assertIn(subject, mailings.subject_variants("verify"))
+            self.assertIn("display:none", body_html)
+            self.assertIn('<table role="presentation"', body_html)
+            self.assertIn("Verifiera min adress", body_html)
+            self.assertIn("/?verify=", body)
         finally:
             api_server.send_email, api_server.MAIL_CONFIG = original_send, original_config
 
