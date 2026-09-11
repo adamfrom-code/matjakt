@@ -1,0 +1,31 @@
+# K6 - täckningsmätning.
+#
+# 1 500 tester låter mycket, men ingen visste VAD de rörde. Utan en siffra
+# är "vi har bra tester" en åsikt, och en hel modul kan sakna svit utan att
+# någon märker det förrän den går sönder i drift.
+#
+#     coverage run --rcfile=.coveragerc backend/tests/run.py
+#     coverage report --rcfile=.coveragerc
+#
+# Mätningen gäller backendens KÄLLKOD - inte testerna själva (en svit som
+# mäter sig själv ger ett tal som stiger av att man skriver fler tester,
+# vilket är precis fel signal) och inte venv eller genererad data.
+[run]
+source = backend
+branch = false
+omit =
+    backend/tests/*
+    backend/venv/*
+    backend/data/*
+    */site-packages/*
+
+[report]
+# Rader som aldrig kan mätas meningsfullt.
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    raise NotImplementedError
+    if TYPE_CHECKING:
+show_missing = false
+skip_covered = false
+precision = 1

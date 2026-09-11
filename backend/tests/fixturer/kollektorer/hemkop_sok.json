@@ -1,0 +1,47 @@
+{
+  "results": [
+    {
+      "code": "101150",
+      "name": "Mellanmjölk 1,5% 1,5l Arla Ko",
+      "manufacturer": "Arla Ko",
+      "productLine2": "Färsk mjölk",
+      "displayVolume": "1,5l",
+      "priceValue": 17.7,
+      "comparePrice": "11,80 kr/l",
+      "image": {
+        "url": "https://assets.axfood.se/image/upload/f_auto,t_200/07340083443893_C1L1_s01"
+      },
+      "googleAnalyticsCategory": "",
+      "potentialPromotions": []
+    },
+    {
+      "code": "404712",
+      "name": "Laxfilé 400g ASC",
+      "manufacturer": "Hemköp",
+      "productLine2": "Färsk fisk",
+      "displayVolume": "400g",
+      "priceValue": 66.2,
+      "comparePrice": "165,50 kr/kg",
+      "image": {
+        "url": "https://assets.axfood.se/image/upload/f_auto,t_200/07311070123456_C1L1_s01"
+      },
+      "googleAnalyticsCategory": "",
+      "potentialPromotions": [
+        {
+          "campaignType": "OFFER",
+          "qualifyingCount": 2,
+          "conditionLabelFormatted": "",
+          "rewardLabel": "129 kr",
+          "price": {"value": 64.5, "currencyIso": "SEK"}
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "currentPage": 0,
+    "numberOfPages": 1,
+    "pageSize": 30,
+    "totalNumberOfResults": 2
+  },
+  "breadcrumbs": []
+}

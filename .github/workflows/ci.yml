@@ -36,8 +36,69 @@ jobs:
       - run: pip install -r backend/requirements.txt
       - name: Kompilera allt
         run: python -m compileall -q backend
+      # K6 - SKIP-BUDGETEN. unittest skrev "skipped=4" och gick vidare, så
+      # dagen de blev fem såg likadan ut som dagen de var fyra, och dagen de
+      # blev trettio också. MATJAKT_STRICT=1 fäller en körning där ett
+      # överhoppat test har en orsak som inte står i
+      # backend/tests/tillatna_skip.txt. "Noll skip" går inte att kräva -
+      # några beror på vad som finns i miljön - men VILKA de är ska vara ett
+      # beslut någon har läst, inte en siffra ingen tittar på.
       - name: Testsvit (tests/run.py sätter MATJAKT_TEST_MODE + tempkatalog)
+        env:
+          MATJAKT_STRICT: "1"
         run: python backend/tests/run.py
+
+  # K6 - TÄCKNINGSMÄTNING. 1 500 tester lät mycket, men ingen visste vad de
+  # rörde: utan en siffra är "vi har bra tester" en åsikt, och en hel modul
+  # kan sakna svit tills den går sönder i drift.
+  #
+  # Golvet är satt UNDER dagens nivå med marginal, och det är med avsikt.
+  # Ett golv på exakt dagens tal blir rött av varje ny modul som landar
+  # minuten före sina tester, och en grind som är röd av normalt arbete
+  # stängs av. Det här golvet blir rött av det som faktiskt betyder något:
+  # en svit som slutar köra, eller en stor otestad yta som läggs till.
+  #
+  # Jobbet är MEDVETET inte en obligatorisk statuscheck i main:s ruleset.
+  # Enligt planen rapporteras täckningen först en månad och blockerar sedan
+  # på delta; tills dess ska ett tal som rör sig synas utan att stoppa elva
+  # parallella paket. Adam lägger till det i rulesetet när talet har legat
+  # stilla en månad.
+  coverage:
+    name: Täckning (rapporteras, golv under dagens nivå)
+    runs-on: ubuntu-latest
+    env:
+      MATJAKT_STRICT: "1"
+      # Browser-E2E:n körs i e2e-jobbet, som har en Chromium. Här finns ingen,
+      # och skillnaden syns i talet: samma commit mäter 74,7 % med resorna och
+      # 73,8 % utan. Ett golv går inte att sätta mot ett tal som beror på om en
+      # webbläsare råkade gå att starta, så resorna stängs AV med flit och
+      # talet är alltid det lägre. Planen säger samma sak med andra ord:
+      # `coverage run backend/tests/run.py --exclude "*journey*"`.
+      MATJAKT_E2E: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements.txt
+      - run: pip install --quiet coverage
+      - name: Kör sviten under coverage
+        run: coverage run --rcfile=.coveragerc backend/tests/run.py
+      - name: Rapport och golv
+        run: |
+          coverage report --rcfile=.coveragerc | tail -40
+          coverage report --rcfile=.coveragerc --fail-under="$(cat backend/tests/tackningsgolv.txt)"
+      - name: Siffran i körningens sammanfattning
+        if: always()
+        run: |
+          {
+            echo "### Täckning, backend"
+            echo ''
+            echo '```'
+            coverage report --rcfile=.coveragerc | tail -3
+            echo '```'
+            echo "Golv: $(cat backend/tests/tackningsgolv.txt) %"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   frontend:
     name: Frontend-tester och syntax
@@ -89,7 +150,13 @@ jobs:
         # är spårat. Det är precis den sortens fel en regel i en fil inte
         # fångar och en grind i CI gör.
         run: |
-          tracked=$(git ls-files '*.tsv' 'audit_*.json' 'backend/data/*' 'marketing/build/*' 'dist/*' 'build/*')
+          # K6: .coverage kom till med täckningsjobbet nedan, och den
+          # skrivs i repo-roten av var och en som mäter lokalt - exakt samma
+          # sorts konfliktgenerator som audit_flags.tsv var. Den står i
+          # .gitignore, men gitignore avspårar inget som redan är spårat,
+          # och det var precis så marketing/build/ kunde ligga kvar med 73 MB
+          # video. Grinden är det som faktiskt håller.
+          tracked=$(git ls-files '*.tsv' 'audit_*.json' 'backend/data/*' 'marketing/build/*' 'dist/*' 'build/*' '.coverage' '.coverage.*' 'htmlcov/*')
           if [ -n "$tracked" ]; then echo "Spårade genererade artefakter:"; echo "$tracked"; exit 1; fi
       - name: Versionsnumren följs åt (sw.js, app.js?v=, styles.css?v=)
         run: python backend/scripts/check_frontend_version.py
@@ -248,7 +315,18 @@ jobs:
   # docs/STAGING.md listar vad som återstår för att provet ska bli skarpt.
   deploy-staging:
     name: Deploy till staging
-    needs: [backend, frontend, security, e2e]
+    # K6: `coverage` står med här, och det är inte kosmetik. `success()` på ett
+    # jobb ser BARA jobben i dess egen `needs`. Utan raden hade en röd täckning
+    # låtit backenden deployas - medan deploy.yml, som kräver att HELA
+    # CI-körningen blev grön, hade vägrat publicera frontenden. Resultatet: ny
+    # backend, gammal frontend, precis den sortens omaka par K3 byggdes för att
+    # förhindra. Antingen går hela releasen, eller ingen del av den.
+    #
+    # Täckningsjobbet är ändå INTE en obligatorisk statuscheck i rulesetet: på
+    # en PR syns det som rött utan att blockera, enligt planen ("rapporteras
+    # första månaden, blockerar sedan på delta"). Raden gäller bara pushar till
+    # main, där en halv release är värre än ingen.
+    needs: [backend, frontend, security, e2e, coverage]
     if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     concurrency:

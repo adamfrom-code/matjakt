@@ -1,0 +1,29 @@
+[
+  {
+    "storeId": "2132",
+    "name": "Willys Gävle Gestrike",
+    "onlineStore": true,
+    "address": {
+      "line1": "Gestrikegatan 11",
+      "postalCode": "80281",
+      "town": "Gävle"
+    },
+    "geoPoint": {"latitude": 60.6749, "longitude": 17.1413}
+  },
+  {
+    "storeId": "2140",
+    "name": "Willys Hemma Gävle Centrum",
+    "onlineStore": false,
+    "address": {
+      "line1": "Norra Kungsgatan 4",
+      "postalCode": "80311",
+      "town": "Gävle"
+    },
+    "geoPoint": {"latitude": 0.0, "longitude": 0.0}
+  },
+  {
+    "name": "Butik utan id",
+    "onlineStore": true,
+    "address": {}
+  }
+]
