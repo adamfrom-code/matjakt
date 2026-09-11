@@ -602,7 +602,14 @@ MAILINGS = mailings.MailingScheduler(
     lambda to, subject, text, body_html, unsub: send_email(MAIL_CONFIG, to, subject, text, body_html, unsub),
     lambda: grocery_api.campaign_deals(per_chain=mailings.DEALS_PER_CHAIN).get("deals", {}),
     api_base=PUBLIC_API_URL, app_url=APP_URL, secret=MAIL_SECRET, enabled=MAILINGS_ENABLED,
-    mail_configured=lambda: mail_is_configured(MAIL_CONFIG), released_chains=grocery_api.RELEASED_CHAINS)
+    mail_configured=lambda: mail_is_configured(MAIL_CONFIG), released_chains=grocery_api.RELEASED_CHAINS,
+    # I4: låt fynden välja menyn. Receptbanken med bara ingrediensNAMNEN -
+    # det är allt matchningen behöver - så Kampanjtorget kan visa middagar
+    # byggda på veckans reor och inte bara en lista med rabatter.
+    recipes_provider=lambda: [
+        {"name": recipe.get("name"), "slug": recipe.get("slug"),
+         "ingredients": recipe.get("ingredientNames") or []}
+        for recipe in (recipes_api.search(limit=500).get("recipes") or [])])
 
 
 def insights_payload() -> dict:
@@ -2703,17 +2710,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     verify_token = ACCOUNT_STORE.create_verification_token_for_email(user["email"])
                     # Dag 0 i välkomstserien ÄR verifieringsmejlet: det är
                     # transaktionellt (kontot behöver det) och får därför
-                    # bära igångsättningstipsen utan samtycke.
-                    send_email(
-                        MAIL_CONFIG, user["email"], "Välkommen till Matjakt - verifiera din e-postadress",
-                        "Välkommen till Matjakt!\n\n"
-                        f"Klicka här för att verifiera din e-postadress:\n{APP_URL}/?verify={verify_token}\n\n"
-                        "Så kommer du igång:\n"
-                        "1. Sätt din veckobudget och hur många ni är.\n"
-                        "2. Skapa din första vecka - Matjakt väljer middagar och räknar ut var de blir billigast.\n"
-                        "3. Ta med inköpslistan till butiken och bocka av.\n\n"
-                        "Om du inte skapade det här kontot kan du ignorera mejlet.",
-                    )
+                    # bära igångsättningstipsen utan samtycke. Copyn och
+                    # formen ligger i services/mailings (I4) - samma
+                    # preheader, samma knapp och samma avsändare som resten.
+                    subject, text, body_html = mailings.render_verify(
+                        f"{APP_URL}/?verify={verify_token}", APP_URL)
+                    send_email(MAIL_CONFIG, user["email"], subject, text, body_html)
                 except MailNotConfigured:
                     mail_status = "not_configured"
                     # B10: domänen, aldrig adressen - se observability.email_domain.
@@ -2851,10 +2853,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 return
             try:
                 email, verify_token = ACCOUNT_STORE.resend_verification(self._bearer_token())
-                send_email(
-                    MAIL_CONFIG, email, "Verifiera din e-postadress - Matjakt",
-                    f"Klicka här för att verifiera din e-postadress:\n{APP_URL}/?verify={verify_token}",
-                )
+                subject, text, body_html = mailings.render_verify(
+                    f"{APP_URL}/?verify={verify_token}", APP_URL)
+                send_email(MAIL_CONFIG, email, subject, text, body_html)
                 self.send_json(200, {"ok": True})
             except AccountError as error:
                 self.send_json(400, {"error": str(error)})

@@ -14,6 +14,19 @@ from email.utils import formataddr, formatdate, make_msgid, parseaddr
 
 from ..data_guard import guard_outbound_call
 
+# ---- Avsändaridentitet -------------------------------------------------------
+# Ett mejl från "noreply@" är ett mejl ingen svarar på, och ett svar som
+# studsar är en kund som gav upp. AvsändarNAMNET är det inkorgen visar i
+# avsändarkolumnen; svarsadressen är den brevlåda en människa faktiskt läser.
+# De är därför medvetet olika adresser: hej@ skickar, support@ tar emot.
+#
+# SMTP_FROM_EMAIL styr fortfarande kuvertadressen (den måste matcha domänen
+# leverantören har DKIM-signerat). Saknar den ett visningsnamn sätts Matjakt
+# här i stället för att bli en naken adress i inkorgen.
+SENDER_NAME = "Matjakt"
+SENDER_EMAIL = "hej@matjakt.store"
+REPLY_TO_EMAIL = "support@matjakt.store"
+
 
 class MailError(Exception):
     """Base for both "not configured" and real SMTP delivery errors. `code`
@@ -51,15 +64,13 @@ def is_configured(config) -> bool:
     return bool(config.get("host") and config.get("from_email"))
 
 
-def send_email(config, to_email, subject, body_text, body_html=None, unsubscribe_url=None):
-    """Text alltid; HTML som alternativ när det finns. `unsubscribe_url`
-    sätter List-Unsubscribe så mejlklienter kan visa sin egen avsluta-knapp -
-    utskicksmodulen (services/mailings) skickar aldrig utan den."""
-    host = config.get("host")
-    from_email = config.get("from_email")
-    if not host or not from_email:
-        raise MailNotConfigured("E-post är inte konfigurerat på servern ännu")
-    guard_outbound_call("en SMTP-server")
+def build_message(config, to_email, subject, body_text, body_html=None, unsubscribe_url=None):
+    """Det färdiga mejlet, utan att något skickas.
+
+    Egen funktion just för att huvudena ska gå att PRÖVA: "rätt avsändare och
+    rätt Reply-To" är ett test, inte en åsikt, och ett test som måste resa en
+    SMTP-server för att läsa ett From-huvud skrivs aldrig."""
+    from_email = config.get("from_email") or SENDER_EMAIL
     # Kuvertadressen (MAIL FROM) är den bara adressen; From-huvudet får ett
     # namn. Date och Message-ID sätts uttryckligen - utan dem ger
     # SpamAssassins MISSING_DATE/MISSING_MID poäng och mejlet hamnar i
@@ -73,13 +84,32 @@ def send_email(config, to_email, subject, body_text, body_html=None, unsubscribe
     else:
         message = MIMEText(body_text, "plain", "utf-8")
     message["Subject"] = subject
-    message["From"] = formataddr((display_name or "Matjakt", envelope_from))
+    message["From"] = formataddr((display_name or SENDER_NAME, envelope_from))
+    # Svaren ska till en läst brevlåda, inte till utskicksadressen. Utan
+    # Reply-To hamnar varje "hur avslutar jag?" hos hej@ - som ingen öppnar.
+    reply_to = str(config.get("reply_to") or REPLY_TO_EMAIL).strip()
+    if reply_to:
+        message["Reply-To"] = reply_to
     message["To"] = to_email
     message["Date"] = formatdate(localtime=True)
     message["Message-ID"] = make_msgid(domain=envelope_from.rsplit("@", 1)[-1] or None)
     if unsubscribe_url:
         message["List-Unsubscribe"] = f"<{unsubscribe_url}>"
         message["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
+    return envelope_from, message
+
+
+def send_email(config, to_email, subject, body_text, body_html=None, unsubscribe_url=None):
+    """Text alltid; HTML som alternativ när det finns. `unsubscribe_url`
+    sätter List-Unsubscribe så mejlklienter kan visa sin egen avsluta-knapp -
+    utskicksmodulen (services/mailings) skickar aldrig utan den."""
+    host = config.get("host")
+    from_email = config.get("from_email")
+    if not host or not from_email:
+        raise MailNotConfigured("E-post är inte konfigurerat på servern ännu")
+    guard_outbound_call("en SMTP-server")
+    envelope_from, message = build_message(config, to_email, subject, body_text,
+                                           body_html, unsubscribe_url)
     try:
         with smtplib.SMTP(host, int(config.get("port") or 587), timeout=15) as smtp:
             smtp.starttls(context=ssl.create_default_context())
