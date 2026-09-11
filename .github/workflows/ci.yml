@@ -460,9 +460,10 @@ jobs:
       group: render-deploy
       cancel-in-progress: false
     outputs:
-      # Saknas hooken deployas ingenting, och då finns inget att hälsokolla.
-      # Utan den här flaggan hade health-gate pollat en oförändrad drift i
-      # åtta minuter och blivit röd av en helt korrekt körning.
+      # Säger VEM som startade deployen, inte OM någon gjorde det. Render har
+      # "Auto-Deploy: After CI Checks Pass" påslaget i dashboarden och
+      # deployar av sig självt; hooken är en andra väg som gör att vi kan
+      # peka ut exakt SHA. Hälsogrinden körs oavsett - se motiveringen där.
       triggad: ${{ steps.hook.outputs.triggad }}
     steps:
       - name: Trigga Renders deploy-hook för exakt den gröna committen
@@ -472,7 +473,9 @@ jobs:
         run: |
           if [ -z "$RENDER_DEPLOY_HOOK" ]; then
             echo "triggad=false" >> "$GITHUB_OUTPUT"
-            echo "RENDER_DEPLOY_HOOK saknas i repo-secrets - ingen deploy triggad."
+            echo "::notice::RENDER_DEPLOY_HOOK saknas i repo-secrets. Renders egen"
+            echo "::notice::Auto-Deploy (After CI Checks Pass) gör jobbet i stället."
+            echo "::notice::Hälsogrinden väntar ändå på att driften kör den här committen."
             exit 0
           fi
           # ref= gör att Render bygger DEN HÄR committen, inte grenspetsen
@@ -509,7 +512,23 @@ jobs:
   health-gate:
     name: Hälsokontroll (drift kör den gröna committen)
     needs: [deploy-backend]
-    if: needs.deploy-backend.outputs.triggad == 'true'
+    # KÖRS OAVSETT VEM SOM STARTADE DEPLOYEN. Villkoret var tidigare
+    # "bara om VI triggade hooken", och eftersom RENDER_DEPLOY_HOOK aldrig
+    # lades in i repots secrets hoppades grinden över vid varje merge -
+    # tyst, och utan att något såg rött. Frontenden deployade alltså utan
+    # att någon kontrollerat att backenden var uppe med samma commit, vilket
+    # är precis det racet K3 fanns för att stänga.
+    #
+    # Render deployar av sig självt (Auto-Deploy: After CI Checks Pass), så
+    # committen NÅR produktionen ändå - vi vet bara inte när. Grindens fråga
+    # är inte "startade vi en deploy" utan "kör driften den här committen",
+    # och den frågan är lika giltig oavsett vem som tryckte på knappen.
+    #
+    # Fail-closed med avsikt: kommer committen inte upp inom åtta minuter
+    # blir CI röd och frontenden står kvar på föregående version. Gammal
+    # frontend mot gammal backend är ett par som har fungerat, till skillnad
+    # från ny frontend mot gammal backend.
+    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     concurrency:
       group: render-deploy
