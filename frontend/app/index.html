@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=106">
+  <link rel="stylesheet" href="styles.css?v=107">
 </head>
 <body>
   <div class="phone-shell">
@@ -280,6 +280,11 @@
         <p class="price-source-note" id="priceSourceNote" hidden></p>
         <p class="price-source-note" id="dabasNote" hidden></p>
         <p class="primat-attribution" id="primatAttribution" hidden></p>
+        <!-- L0: teckenförklaringen till de tre prisreglerna. Fylls av
+             teckenförklaringMarkup() i src/views/pris.js - samma tre former
+             som prislapparna själva, så att de går att läsa utan att ha
+             memorerat systemet. -->
+        <div id="prisnyckel"></div>
         <p class="cost-note">Priserna avser hela förpackningar. Det du har hemma räknas bort.</p>
       </section>
 
@@ -610,6 +615,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=106"></script>
+  <script type="module" src="app.js?v=107"></script>
 </body>
 </html>
