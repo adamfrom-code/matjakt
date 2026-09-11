@@ -1,0 +1,27 @@
+# DIREKTA beroenden. Den här filen redigeras för hand.
+#
+# backend/requirements.txt är GENERERAD härifrån och innehåller hela trädet
+# med exakta versioner och sha256-hashar:
+#
+#     pip install pip-tools
+#     pip-compile --generate-hashes --output-file backend/requirements.txt backend/requirements.in
+#
+# ─────────────────────────────────────────────────────────────────────────
+# PLAYWRIGHT-RADEN ÄNDRAS TILLSAMMANS MED backend/Dockerfile.
+#
+# Basimagen är mcr.microsoft.com/playwright/python:v1.62.0-jammy, och den bär
+# EN Chromium-version - den som hör till just 1.62.0. Playwright-biblioteket
+# letar efter webbläsaren på en sökväg som är versionsstämplad. Står det
+# `playwright>=1.45` här kan ett `pip install` månader senare dra 1.70 in i
+# samma image, och då finns inte den Chromium biblioteket letar efter.
+#
+# Det som gör det farligt är att felet inte behöver en kodändring för att
+# uppstå. En ombyggnad av en OFÖRÄNDRAD commit - en Render-omdeploy, en
+# rensad byggcache - räcker, och servern startar med "Executable doesn't
+# exist" i produktion medan repot ser identiskt ut.
+#
+# Höjs versionen någon gång ska BÅDA ändras i samma commit: taggen i
+# backend/Dockerfile och raden nedan. backend/tests/test_beroenden.py
+# vägrar släppa igenom en PR där de två talen skiljer sig.
+# ─────────────────────────────────────────────────────────────────────────
+playwright==1.62.0
