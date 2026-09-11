@@ -23,6 +23,10 @@ KÖRNINGSGATE (hela körningen):
     butikens tidigare prisantal är misstänkt trasig (halv katalog, fel
     butik, ändrad API-form) och publiceras inte. En körning som källan
     själv avbröt (blocked) är förväntat partiell och slås ihop.
+  - PRISNIVÅN jämförs produkt för produkt mot det som redan gäller. Flyttar
+    sig MEDIANEN mer än PRICE_LEVEL_MAX_MEDIAN_SHIFT, eller rör sig mer än
+    PRICE_LEVEL_MAX_SAME_DIRECTION av raderna materiellt åt samma håll,
+    publiceras ingenting. Se price_level_shift().
 
 Publicering är MERGE (upsert per produkt), inte utbyte: en partiell körning
 raderar aldrig priser för produkter den inte såg. Färskheten syns per rad
@@ -35,6 +39,7 @@ kedjans utsedda referensbutik (STORE_SPECIFIC-kedjor). Se register.py.
 """
 
 import logging
+import statistics
 import time
 
 logger = logging.getLogger("matjakt.grocery.publish")
@@ -43,6 +48,45 @@ PUBLISH_MIN_GATE_PERCENT = 95.0
 PUBLISH_MIN_RATIO_OF_PREVIOUS = 0.3
 MAX_PRICE_SEK = 30000.0
 MAX_UNIT_PRICE_SEK = 5000.0
+
+# ---------------------------------------------------------------- prisnivå
+# D2. Radgaten frågar "är den HÄR raden ett rimligt pris?" och körningsgaten
+# frågar "kom det HUR MÅNGA rader?". Ingen av dem frågade "är det här
+# fortfarande SAMMA prisnivå?", och det är den fråga hela produkten hänger
+# på: Matjakt lovar att säga vem som är billigast.
+#
+# En decimalbugg - öre tolkat som kronor, eller en källa som byter fältform
+# så 12,90 blir 1,29 - passerar båda de gamla gaterna utan att skava. Varje
+# rad är sund var för sig (0 < pris <= 30 000) och antalet rader är exakt
+# som i går, så 95 %-gaten ger 100 % och 30 %-regeln ser en komplett
+# katalog. Kedjan kröns Billigast med en tiondel av sina riktiga priser och
+# ingenting larmar.
+#
+# Jämförelsen görs på ORDINARIE pris och bara på produkter som fanns i båda
+# körningarna. Kampanjpriser utelämnas med flit: en kampanjvecka flyttar
+# enskilda varor 30-50 % helt lagligt, och att blanda in dem hade gjort
+# måttet så brusigt att tröskeln måste sättas där den inte längre fångar
+# något. Ordinarie hyllpris rör sig inte så.
+#
+# TVÅ MÅTT, för de fångar olika fel:
+#   MEDIANEN fångar en systematisk förskjutning av hela katalogen (allt
+#   delat med tio ger median 0,1).
+#   RIKTNINGEN fångar ett fel som bara drabbade en del av katalogen och
+#   därför inte syns i medianen: flyttar sig hälften av raderna kraftigt åt
+#   samma håll medan resten står still ligger medianen kvar på 1,0.
+#
+# Ett "materiellt" prisdrag är mer än PRICE_LEVEL_MATERIAL_MOVE. Under det
+# är rörelsen vanlig hyllprisjustering, och att räkna varenda ettöring som
+# en rörelse hade fällt normala nätter.
+#
+# MINIMIURVAL: under PRICE_LEVEL_MIN_SAMPLE gemensamma produkter går nivån
+# inte att bedöma, och då bedöms den inte. Det gör också att en FÖRSTA
+# import (bootstrap, tom butik, ingenting att jämföra mot) aldrig kan
+# fastna här - den har noll överlapp.
+PRICE_LEVEL_MIN_SAMPLE = 30
+PRICE_LEVEL_MAX_MEDIAN_SHIFT = 0.25
+PRICE_LEVEL_MATERIAL_MOVE = 0.10
+PRICE_LEVEL_MAX_SAME_DIRECTION = 0.40
 
 
 def _sane_price(value):
@@ -90,6 +134,72 @@ def gate_row(row: dict, product_name: str | None) -> tuple[bool, str | None, dic
         "regular_price": regular, "campaign_price": campaign, "member_price": member,
         "multibuy_price": multibuy, "unit_price": unit_price,
     }
+
+
+def price_level_shift(db, store_id: int, passed_rows) -> dict | None:
+    """Hur körningens prisnivå förhåller sig till den som redan gäller.
+
+    Returnerar None när nivån inte GÅR att bedöma - butiken har inga priser
+    sedan tidigare, eller för få gemensamma produkter. "Vet inte" är inte
+    "allt är bra", och skillnaden ligger i att anroparen då publicerar som
+    förut i stället för att fälla en körning på ett mått som inte finns.
+
+    Annars en dict med antalet jämförda produkter, medianen av nya/gamla
+    priset, och hur stor andel av raderna som rört sig materiellt upp
+    respektive ner. Siffrorna följer med i körningens sammanfattning så
+    adminvyn kan visa vad gaten faktiskt mätte."""
+    previous = {}
+    for row in db.connection.execute(
+            "SELECT product_id, regular_price FROM grocery_current_prices "
+            "WHERE store_id = ? AND regular_price IS NOT NULL AND regular_price > 0",
+            (store_id,)):
+        previous[row["product_id"]] = float(row["regular_price"])
+    if not previous:
+        return None
+
+    kvoter = []
+    for row, cleaned in passed_rows:
+        nytt = cleaned.get("regular_price")
+        gammalt = previous.get(row["product_id"])
+        if not nytt or not gammalt:
+            continue
+        kvoter.append(nytt / gammalt)
+    if len(kvoter) < PRICE_LEVEL_MIN_SAMPLE:
+        return None
+
+    upp = sum(1 for kvot in kvoter if kvot > 1 + PRICE_LEVEL_MATERIAL_MOVE)
+    ner = sum(1 for kvot in kvoter if kvot < 1 - PRICE_LEVEL_MATERIAL_MOVE)
+    return {
+        "compared": len(kvoter),
+        "medianRatio": round(statistics.median(kvoter), 4),
+        "movedUpShare": round(upp / len(kvoter), 4),
+        "movedDownShare": round(ner / len(kvoter), 4),
+    }
+
+
+def price_level_reason(shift: dict | None) -> str | None:
+    """Varför nivån inte får publiceras, eller None när den får det.
+
+    Texten är för adminvyn och för larmmejlet: den säger vad som mättes och
+    på hur många produkter, aldrig vad vi "antog i stället". Det finns
+    ingen korrigeringsväg här - en körning vars prisnivå inte går att lita
+    på publiceras inte alls, och gårdagens hela dataset står kvar."""
+    if not shift:
+        return None
+    median = shift["medianRatio"]
+    if abs(median - 1.0) > PRICE_LEVEL_MAX_MEDIAN_SHIFT:
+        return (f"prisnivån flyttade sig {round((median - 1.0) * 100, 1)} % "
+                f"(median över {shift['compared']} produkter, tak "
+                f"±{round(PRICE_LEVEL_MAX_MEDIAN_SHIFT * 100)} %) - "
+                f"senaste godkända priser behålls")
+    for andel, håll in ((shift["movedDownShare"], "ner"), (shift["movedUpShare"], "upp")):
+        if andel > PRICE_LEVEL_MAX_SAME_DIRECTION:
+            return (f"{round(andel * 100, 1)} % av {shift['compared']} jämförda "
+                    f"produkter flyttade sig mer än "
+                    f"{round(PRICE_LEVEL_MATERIAL_MOVE * 100)} % {håll} åt samma håll "
+                    f"(tak {round(PRICE_LEVEL_MAX_SAME_DIRECTION * 100)} %) - "
+                    f"senaste godkända priser behålls")
+    return None
 
 
 REFERENCE_HEAL_RATIO = 0.9
@@ -251,6 +361,16 @@ def publish_run(db, run_id: int, store_id: int, chain: str, *, source: str,
         publish_ok, message = False, (f"komplett körning gav {len(passed_rows)} rader mot "
                                       f"{previous} tidigare - misstänkt trasig, inget publicerat")
 
+    # PRISNIVÅN, sist av körningsgaterna. Den gäller ÄVEN en blockerad eller
+    # begränsad körning: de är förväntat partiella i ANTAL rader, men en
+    # tiondel av rätt pris är lika fel på femtio rader som på tolvtusen.
+    # Måttet är per produkt, så ett urval kan inte skeva det.
+    price_level = price_level_shift(db, store_id, passed_rows) if publish_ok else None
+    if publish_ok:
+        level_reason = price_level_reason(price_level)
+        if level_reason:
+            publish_ok, message = False, level_reason
+
     if not publish_ok:
         from ..observability import METRICS
         METRICS.incr("pricing_gate_failed")
@@ -259,7 +379,8 @@ def publish_run(db, run_id: int, store_id: int, chain: str, *, source: str,
         db.clear_staging(run_id)
         logger.warning("Körning %s (%s/butik %s) INTE publicerad: %s", run_id, chain, store_id, message)
         return {"staged": staged, "passed": len(passed_rows), "published": 0,
-                "gatePercent": gate_percent, "published_ok": False, "message": message}
+                "gatePercent": gate_percent, "published_ok": False, "message": message,
+                "priceLevel": price_level}
 
     scope = CHAIN_PRICING_SCOPE.get(chain, "STORE_SPECIFIC")
     if publish_reference is None:
@@ -310,7 +431,8 @@ def publish_run(db, run_id: int, store_id: int, chain: str, *, source: str,
                            published=False, message=message)
         db.clear_staging(run_id)
         return {"staged": staged, "passed": len(passed_rows), "published": 0,
-                "gatePercent": gate_percent, "published_ok": False, "message": message}
+                "gatePercent": gate_percent, "published_ok": False, "message": message,
+                "priceLevel": price_level}
 
     if blocked:
         message = f"partiell körning (källan avbröt): {published} rader publicerade"
@@ -321,4 +443,4 @@ def publish_run(db, run_id: int, store_id: int, chain: str, *, source: str,
                 run_id, published, staged, gate_percent, reference_published)
     return {"staged": staged, "passed": len(passed_rows), "published": published,
             "referencePublished": reference_published, "gatePercent": gate_percent,
-            "published_ok": True, "message": message}
+            "published_ok": True, "message": message, "priceLevel": price_level}
