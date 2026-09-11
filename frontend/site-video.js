@@ -77,6 +77,10 @@
 
   if (!("IntersectionObserver" in window)) {
     // Old browser: posters only. Loading all six would be the worse failure.
+    // Back to "still" first: the reveal animation hides every scene until the
+    // observer says it is on screen, and here there is no observer to say it.
+    // Leaving "motion" set would hand this visitor seven invisible tiles.
+    document.documentElement.setAttribute("data-video", "still");
     return;
   }
 
