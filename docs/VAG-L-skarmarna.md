@@ -43,11 +43,13 @@ en fördröjning, det är förutsättningen.
 | **L5** Sparat | `Z-FRONT-VIEW` | F, G4 |
 | **L6** Inställningar | `Z-FRONT-VIEW` | F5, G11 |
 | **L7** Premium | `Z-FRONT-VIEW` | F5, J2, J3 |
+| **L9** versionen ut ur källan | `Z-CI` | L0 |
 | **L8** literalstädning | `Z-STYLE` | L0–L5 |
 
-**L0 först och ensam.** Allt annat använder den. L1–L7 kan sedan köras
-parallellt av sju agenter — de äger varsin vymodul och rör inte varandras
-filer.
+**L0 först och ensam.** Allt annat använder den. **L9 näst**, före L1–L7: den
+tar bort den enda raden alla sju vyagenter annars slåss om. L1–L7 kan sedan
+köras parallellt av sju agenter — de äger varsin vymodul och rör inte
+varandras filer.
 
 Varje paket har `matjakt-design-D.html` som facit. Öppna rätt telefon i den
 filen och bygg den skärmen. Avviker du, skriv i PR:en varför.
@@ -197,6 +199,52 @@ Inte en hänglåsvägg — en jämförelsetabell med **bara sanna rader**, byggd
 feature-matrisen som J3 landar. Nej sätts med tankstreck, inte enbart med färg.
 
 Blockeras av J3. Bygg inte tabellen mot den gamla matrisen.
+
+---
+
+## L9 · Versionen ut ur källan `Z-CI`
+
+Frontend-versionen står på **tre ställen i två filer**: `sw.js`
+(`matjakt-shell-vNN`) och `index.html` två gånger (`?v=NN`). Varje paket som
+rör frontend måste höja alla tre, och **K5 kräver att den höjs, inte bara att
+de tre är lika**.
+
+Med åtta grenar i luften betyder det att varje merge konfliktar med varenda
+annan gren som rör frontend. Natten mellan 10 och 11 september blev G5 och
+D11 liggande som `DIRTY` med grön CI och ingen ägare kvar — G5 i fyra
+timmar — och båda konflikterna var enbart de tre versionsraderna. D11 fick
+baseras om tre gånger på tjugo minuter och landade till slut på v108 efter
+att ha börjat på v56.
+
+Värre: instruktionen "ta det högsta talet du ser och lägg på ett" lät
+versionen **sjunka** när grenar mergade i annan ordning än de skapades. En
+version som går ner gör att Pages serverar gammal `app.js` under samma URL —
+exakt det fel service workern finns för att undvika. E15 upptäckte det
+(`app.js?v=` hade varit uppe i 103 och gått ner två gånger) och byggde
+`scripts/frontend_version.mjs`, som räknar upp från det högsta tal som
+*någonsin* stått i main.
+
+Generatorn löser riktningen men inte konflikten: källfilerna behåller sitt
+heltal, så raden finns kvar att slåss om. E15 valde det medvetet för att inte
+bryta K5 och de sju grenar som då var i luften. Rätt beslut just då, fel läge
+när grenarna ändå baseras om hela tiden.
+
+**Gör:** låt versionen aldrig stå i källan. `sw.js` och `index.html` bär en
+platshållare, byggsteget stämplar in talet från `frontend_version.mjs`, och
+`check_frontend_version.py` kontrollerar **bygget** i stället för källan.
+Utvecklingsservern serverar källorna som förut; den behöver inget tal.
+
+Då finns ingen rad att konflikta om, och ingen agent behöver veta vilket
+nummer någon annan tog.
+
+**Acceptans:** två grenar som var för sig ändrar `frontend/app/**` mergas utan
+konflikt — samma bevisform som A4:s changelog-test, prövad mot ett riktigt
+git-arbetsträd, och med motsatsen visad: samma två ändringar med talet kvar i
+källan **konfliktar**. Plus att K5:s grind fortfarande failar på ett bygge
+vars version inte höjts.
+
+**Kör efter L0 och före L1–L7.** Sju parallella vyagenter är precis det läge
+där den här konflikten kostar mest.
 
 ---
 
