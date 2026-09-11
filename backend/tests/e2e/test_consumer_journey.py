@@ -954,12 +954,31 @@ class BrowserJourney(unittest.TestCase):
         self.assertEqual(rad.get("qty"), 1, rad)
         self.assertEqual(rad.get("source"), "assumed_home", rad)
 
-        # Chippet stannar kvar men byter tillstånd - det försvinner inte.
-        expect(page.locator("#assumedHomeList .assumed-chip.is-added")).to_contain_text(namn)
+        # CHIPPET visar ingrediensnamnet - renderAssumedHome skriver ut just
+        # det namn den erbjöd. Det stannar kvar men byter tillstånd, det
+        # försvinner inte. Antalet är ett: bara varan vi tryckte på får flippa.
+        tillagt = page.locator("#assumedHomeList .assumed-chip.is-added")
+        expect(tillagt).to_have_count(1)
+        expect(tillagt).to_contain_text(namn)
         expect(page.locator(f'#assumedHomeList [data-assumed-add="{namn}"]')).to_have_count(0)
 
+        # RADEN känns igen på sitt id, inte på sin text.
+        #
+        # extraRowMarkup visar PRODUKTENS namn när prismatchningen hittade en
+        # (`match?.productName || extra.name`), och det är avsiktligt: den som
+        # står i butiken ska läsa det som står på hyllan. Men veckan är
+        # slumpad, så vilken vara som blir den första skiftar - och "Peppar"
+        # matchar produkten "Vitpeppar" (sammansättningsregeln låter
+        # "vitpeppar" svara på "peppar"). "Vitpeppar" innehåller inte "Peppar"
+        # med versal, så to_contain_text(namn) föll på VECKAN, inte på ett
+        # fel: CI-körning 34542092867, grön på omkörning av samma commit.
+        # Mätt mot fixturen byter 2 av 35 antagna hemmavaror namn så här
+        # (Peppar -> Vitpeppar, Ris -> Jasminris) och en tredje klarar sig
+        # bara på att produkten börjar med ingrediensen (Buljong ->
+        # Buljongtärning). Id:t är veckooberoende; namnet är det inte.
         expect(page.locator("#extraItemsSection")).to_be_visible()
-        expect(page.locator("#extraItemsList")).to_contain_text(namn)
+        listraden = page.locator(f'#extraItemsList .extra-item:has([data-extra-check="{rad["id"]}"])')
+        expect(listraden).to_be_visible()
 
         # DEN ÄRLIGA VARIANTEN, inte den önskade.
         #
@@ -975,9 +994,7 @@ class BrowserJourney(unittest.TestCase):
         # en tyst nolla - en rad som ser prissatt ut och bidrar med 0 kr.
         # Se docs/MASTER_BACKLOG.md; luckan gäller alla extravaror, även de
         # som skrivs in för hand, och är inte något U06 införde.
-        rad = page.locator("#extraItemsList")
-        expect(rad).to_be_visible()
-        text = rad.inner_text()
+        text = listraden.inner_text()
         # RADEN, inte totalen. Rubriktotalen rör sig av skäl som inte har med
         # extravaran att göra - vilken kedja som hunnit prissättas, en
         # omprissättning som landar. Att jämföra den före och efter mätte
@@ -986,6 +1003,11 @@ class BrowserJourney(unittest.TestCase):
         # dess enhetstester; här kontrolleras att raden SÄGER det.
         if "Ingen säker prismatch" not in text:
             self.assertRegex(text, r"\d", f"prissatt rad utan synligt pris: {text!r}")
+        else:
+            # Utan produktmatch finns bara ingrediensens eget namn att visa,
+            # och då SKA raden visa det. Gemener på båda sidor: det är
+            # namnet som prövas, inte versalerna.
+            self.assertIn(namn.lower(), text.lower(), f"oprissatt rad utan varunamn: {text!r}")
 
         # BETALVÄGGEN HÅLLER FORTFARANDE. Gaten avgörs numera på veckan i
         # stället för på extravarorna - det får inte betyda att Free får se
