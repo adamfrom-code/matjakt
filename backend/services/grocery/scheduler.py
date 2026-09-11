@@ -33,17 +33,40 @@ PRIMAT_API_KEY those two are skipped entirely, because importer._provider_for
 would otherwise fall back to the direct scraper for ICA - the exact repeated
 fetching this module refuses to do.
 
-QUOTA. Koden har INGET eget radtak: providern hämtar tills Primat säger
-stopp, behåller det som hunnit komma in och märker körningen "blocked", som
-publish.py slår ihop i stället för att förkasta - så täckningen byggs upp
-över flera nätter i stället för att en natt misslyckas helt.
+QUOTA. Här stod att koden inte hade något eget radtak och att dygnsbudgetens
+storlek därför inte fanns i koden. Bägge påståendena var fel.
+`PRIMAT_MAX_ROWS_PER_RUN` i providers/primat.py var - och är - ett radtak,
+och det stod på 40 000. Tre kedjor i schemat gånger 40 000 är 120 000 rader
+mot en dygnskvot på 100 000: taket låg ÖVER kvoten, alltså kunde det aldrig
+skydda något. Natten 2026-09-11 blev utfallet
 
-Dygnsbudgetens storlek står därför ingenstans i koden, och ska inte göra
-det. Den läses ur Primats eget GET /me (se _primat_quota nedan) och matas
-in i driftkollen, som varnar vid 85 %. Går den inte att läsa blir svaret
-"Ej tillgängligt" - aldrig ett antaget tal. Tidigare stod här att gratis-
-nivån ger 20 000 rader och App-nivån 100 000; de siffrorna kom från ett
-äldre repo och var aldrig verifierade mot kontot.
+    ICA=0/0p [failed]  Coop=12079/12050p [ready_for_release]  Lidl=0/0p [limited]
+
+Coop hann först och tog det som fanns kvar; ICA och Lidl kom aldrig förbi
+429.
+
+Nu gäller tre saker samtidigt:
+
+  * varje förbrukad rad BOKFÖRS per kvotdygn (services/grocery/quota.py),
+    medan körningen pågår - inte efteråt, eftersom det är körningar som inte
+    blir klara som kostat rader utan att lämna spår;
+  * schemaläggaren och bootstrapen frågar bokföringen FÖRE start och hoppar
+    över kedjan när det inte finns utrymme, i stället för att betala för ett
+    429;
+  * en körnings tak är dygnsbudgeten delad på de tre Primat-kedjorna, klippt
+    mot det som återstår av dygnet.
+
+Budgetens storlek är 100 000 rader på App-nivån, bekräftat ur Primats eget
+429-svar 2026-09-10, och ändras utan deploy via PRIMAT_DAILY_ROW_BUDGET. Så
+fort driftkollen läst ett tak ur Primats GET /me är DET talet budgeten -
+vårt eget står kvar bara som utgångsläge. Driftkollen varnar fortfarande vid
+85 % av det Primat själv rapporterar, och säger "Ej tillgängligt" hellre än
+ett antaget tal när svaret inte går att läsa.
+
+Ett tak som ändå nås är inte farligt: providern slutar hämta, behåller det
+den fått och märker körningen "blocked", vilket publish.py slår ihop i
+stället för att förkasta - täckningen byggs upp över flera nätter i stället
+för att en natt misslyckas helt.
 
 Times are Europe/Stockholm, which is the point: a "03:00" job that silently
 means 03:00 UTC would drift an hour twice a year against the shelf prices it
@@ -362,6 +385,26 @@ class GroceryScheduler:
             logger.exception("Kunde inte läsa körningshistoriken för %s", chain)
             return True
 
+    def _primat_quota_allows(self, chain: str) -> bool:
+        """False när dygnets radkvot inte räcker för en katalogimport.
+
+        Gäller bara Primat-kedjorna: Willys, Hemköp och City Gross hämtas
+        från kedjornas egna sidor och kostar ingen kvot alls.
+
+        Kontrollen ligger FÖRE start med flit. `_rows_spent` fanns i
+        providern men bara inom en körning, i minnet, och ingen frågade den
+        innan nästa startade. Natten 2026-09-11 blev utfallet
+        ICA=0/0p, Coop=12 079, Lidl=0/0p: Coop hann först och tog det som
+        fanns, de andra två fick 429 och lämnade varsin blocked-markering
+        utan en enda rad."""
+        if chain not in PRIMAT_ONLY_CHAINS:
+            return True
+        from . import quota
+        ok, skäl = quota.can_start(kv=self._kv())
+        if not ok:
+            logger.warning("Hoppar över %s: %s", chain, skäl)
+        return ok
+
     def bootstrap_if_empty(self):
         """Runs the first import immediately when the price database is empty.
 
@@ -401,12 +444,20 @@ class GroceryScheduler:
         for chain in sorted(SCHEDULABLE_CHAINS,
                             key=lambda name: (name != BOOTSTRAP_CHAIN, name)):
             state = providers.get(chain) or {}
-            # This cannot loop: once one run finishes, lastSuccessfulRun is
-            # set and the condition stops being true, however many times we
-            # restart.
             if not _får_köras(chain):
                 continue
-            if state.get("products", 0) == 0 or not state.get("lastSuccessfulRun"):
+            # GENOMFÖRD, inte LYCKAD (D5). Villkoret läste lastSuccessfulRun,
+            # och en Primat-körning som slår i radtaket märks "blocked" -
+            # aldrig "success" - hur många rader den än hann publicera. ICA
+            # och Coop hade alltså en katalog i databasen och
+            # lastSuccessfulRun = None för alltid, så VARJE deploy startade om
+            # dem och betalade för katalogen en gång till. Två deployer samma
+            # dag räckte för att bränna dygnskvoten.
+            #
+            # Det kan inte loopa: så fort en körning publicerat något är
+            # lastCompletedRun satt och villkoret slutar gälla, hur många
+            # omstarter som än kommer.
+            if state.get("products", 0) == 0 or not state.get("lastCompletedRun"):
                 needy.append(chain)
         if not needy:
             return False
@@ -415,6 +466,11 @@ class GroceryScheduler:
                        ", ".join(needy))
         started_any = False
         for chain in needy:
+            # KVOTEN FRÅGAS FÖRE START, inte efteråt. En bootstrap som kör
+            # mot en tom dygnskvot får ett 429 per kedja, lämnar tre
+            # blocked-markeringar och har ingen katalog att visa för det.
+            if not self._primat_quota_allows(chain):
+                continue
             # EN KEDJA FÅR INTE TA DE ÖVRIGA MED SIG. Metoden körs på en
             # daemon-tråd utan handler: ett undantag här dödade tråden tyst,
             # och de kedjor som stod på tur importerades aldrig. Sett i
@@ -608,6 +664,10 @@ class GroceryScheduler:
                 "Lidl": "Primat: feedens verkliga storlek är inte uppmätt än",
             },
             "registerSyncAt": REGISTER_SYNC_AT,
+            # Radbokföringen syns, för annars är den en spärr ingen kan se
+            # förrän den slår till. Talet är VÅRT - Primats /me är facit, och
+            # det säger fältet uttryckligen.
+            "rowBudget": _row_budget_status(self._kv()),
         }
 
     def _run_ops_alerts(self):
@@ -627,8 +687,17 @@ class GroceryScheduler:
             # Uppslaget får ALDRIG fälla driftkollen: utan nyckel, vid
             # nätfel eller okänt svarsformat blir quota None och resten
             # körs som förut.
+            kvot = _primat_quota()
+            if kvot:
+                # Primats eget tak är facit, och det här är enda stället där
+                # vi faktiskt får se det. Sparat blir det budgeten som
+                # radbokföringen (quota.py) räknar mot, i stället för vårt
+                # utgångsvärde - byter kontot nivå följer spärren med utan
+                # deploy.
+                from . import quota as row_quota
+                row_quota.remember_reported_budget(kvot.get("dailyRowLimit"), kv=KV_CACHE)
             resultat = alerts.process(grocery_api.provider_status(), KV_CACHE, MAIL_CONFIG,
-                                      quota=_primat_quota())
+                                      quota=kvot)
             if resultat["incidents"] or resultat["recoveries"]:
                 logger.warning("Driftlarm: %d nya, %d lösta",
                                len(resultat["incidents"]), len(resultat["recoveries"]))
@@ -710,6 +779,15 @@ class GroceryScheduler:
             if self._chain_already_started_today(chain, day_start):
                 self._mark_run(chain, day_stamp)
                 continue
+            if not self._primat_quota_allows(chain):
+                # MARKERAS som skött för i dag. Kvoten nollställs midnatt UTC
+                # = 02:00 svensk tid, och alla tre Primat-jobben ligger efter
+                # det - är kvoten slut vid jobbets klockslag finns det inget
+                # mer att hämta förrän i morgon. Utan markeringen hade
+                # schemaläggaren prövat samma kedja varje minut resten av
+                # dygnet och loggat lika ofta.
+                self._mark_run(chain, day_stamp)
+                continue
             result = importer.start(chain)
             if result.get("started"):
                 # MARKERAS FÖRST NU. Låg markeringen före start() räknades en
@@ -736,6 +814,17 @@ def _due_today(now, when: str):
     except (TypeError, ValueError):
         return None
     return now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+
+def _row_budget_status(kv):
+    """Radbokföringen för adminvyn. Får aldrig fälla statusanropet: en
+    oläsbar bokföring är ett tomt fält, inte ett 500."""
+    try:
+        from . import quota
+        return quota.status(kv=kv)
+    except Exception:
+        logger.exception("Kunde inte läsa radbokföringen")
+        return None
 
 
 def _truthy(value) -> bool:

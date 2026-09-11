@@ -524,6 +524,17 @@ def provider_status() -> list[dict]:
         # showing only the attempt would read as "this chain is broken".
         runs = _runs("")
         successes = _runs("WHERE status = 'success'")
+        # ... och GENOMFÖRD är en tredje fråga (D5). En Primat-körning som
+        # slår i radtaket behåller allt den hann hämta, publiceras av
+        # publish.py och märks "blocked" - aldrig "success". Den kedjan hade
+        # alltså en katalog i databasen och lastSuccessfulRun = None för
+        # alltid, så bootstrapen startade om ICA och Coop vid VARJE deploy
+        # och brände kvoten en gång per deploy.
+        #
+        # Kravet på publicerade rader är poängen: en blockerad körning som
+        # inte hann publicera något har inte genomfört någonting, och den ska
+        # tas om.
+        completed = _runs("WHERE status IN ('success', 'blocked') AND prices_updated > 0")
     finally:
         store.close()
 
@@ -544,6 +555,10 @@ def provider_status() -> list[dict]:
             "ageSeconds": held.get("ageSeconds"),
             "lastRun": runs.get(chain),
             "lastSuccessfulRun": successes.get(chain),
+            # "Har den här kedjan någonsin hämtat hem en katalog?" - till
+            # skillnad från lastSuccessfulRun säger den ja även när
+            # körningen avbröts av kvoten men publicerade det den fick.
+            "lastCompletedRun": completed.get(chain),
         })
     # Slutsatsen läggs på efter att raden är komplett, så chain_health() ser
     # samma fält som panelen visar - ingen risk att de säger olika saker.
