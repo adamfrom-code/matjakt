@@ -367,10 +367,44 @@ PROVIDER_STATUS = {
 
 
 # Hur gammal en lyckad import får bli innan kedjan räknas som inaktuell.
-# Nattjobben ligger 02-06:30 och kör dagligen, så 36 timmar rymmer en missad
+# Nattjobben ligger 02-07 och kör dagligen, så 36 timmar rymmer en missad
 # natt utan att larma - men inte två. Kortare och en enda hicka larmar i
 # onödan; längre och en kedja kan tyna bort en hel helg obemärkt.
 CHAIN_STALE_AFTER_SECONDS = 36 * 3600
+
+# SLÄPPTA kedjor bedöms hårdare, och gränsen är RÄKNAD - inte vald. En släppt
+# kedja är den kunden faktiskt prissätts mot, och nattens resultat ska vara
+# bedömt samma morgon i stället för dygnet efter.
+#
+# Räkningen: de släppta kedjorna kör 02:00 (Willys), 03:00 (Hemköp) och 04:00
+# (City Gross), och driftkollen går 07:30. En kedja som INTE kördes i natt har
+# då en senaste lyckad import från i går klockan T, alltså 24 + 7,5 - T timmar
+# gammal: 29,5 / 28,5 / 27,5. Den lägsta av dem är City Gross 27,5 - gränsen
+# måste ligga UNDER det för att morgonens koll ska hinna se natten. 36 timmar
+# gjorde det inte, och inte 30 heller: båda hade skjutit domen ett helt dygn.
+#
+# Uppåt finns gott om marginal: en kedja som kör varje natt har som mest ~24
+# timmar gammal data precis innan nästa körning, plus körningens egen längd
+# (tiotals minuter). 27 timmar nås aldrig av en kedja som fungerar.
+#
+# test_the_stale_window_catches_a_skipped_night (test_grocery_scheduler.py)
+# håller ihop siffran med schemat: flyttas en släppt kedja tidigare, eller
+# driftkollen senare, failar testet.
+RELEASED_CHAIN_STALE_AFTER_SECONDS = 27 * 3600
+
+# Körningsstatusar som betyder "försöket gav ingen ny data".
+#
+# "blocked" står MEDVETET inte här. En Primat-körning som slår i dygnskvoten
+# märks blocked, behåller det den hann hämta och slås ihop av publiceringen -
+# ett förväntat och hanterat utfall, inte ett fel. Larmade vi på det skulle
+# larmet komma varje natt tills katalogen är hel, och då slutar man läsa det.
+FAILED_ATTEMPT_STATUSES = frozenset({"failed", "empty"})
+
+
+def stale_after_seconds(chain) -> int:
+    """Hur gammal en lyckad import får bli för just den här kedjan."""
+    return (RELEASED_CHAIN_STALE_AFTER_SECONDS if chain in RELEASED_CHAINS
+            else CHAIN_STALE_AFTER_SECONDS)
 
 
 def chain_health(entry: dict, now: float = None) -> dict:
@@ -382,6 +416,9 @@ def chain_health(entry: dict, now: float = None) -> dict:
     lägger bara en slutsats ovanpå dem.
 
     Tillstånden, i den ordning de prövas:
+      failing            SENASTE FÖRSÖKET misslyckades, men det finns äldre
+                         godkänd data att falla tillbaka på. Kedjan uppdateras
+                         alltså inte längre, medan varje annat fält ser bra ut.
       limited            providern kan aldrig ge en hel korg (Lidl: ~200-400
                          rikspriser). Inte ett fel, men får aldrig läsas som
                          "snart klar".
@@ -389,7 +426,7 @@ def chain_health(entry: dict, now: float = None) -> dict:
       failed             senaste körningen misslyckades OCH ingen tidigare
                          lyckad finns att falla tillbaka på.
       stale              det finns godkänd data, men den senaste lyckade
-                         importen är äldre än CHAIN_STALE_AFTER_SECONDS.
+                         importen är äldre än stale_after_seconds(kedjan).
                          Användarna får fortfarande last-good - det här är
                          ett driftlarm, inte ett kundfel.
       healthy            släppt mot användare, färsk och frisk. Det här är
@@ -402,6 +439,17 @@ def chain_health(entry: dict, now: float = None) -> dict:
     "released" är en FLAGGA, inte ett tillstånd - en släppt kedja kan mycket
     väl vara stale eller failed. Att blanda ihop dem skulle dölja precis de
     fallen.
+
+    VARFÖR failing PRÖVAS FÖRST (D4). En körning som gav noll rader faller på
+    publiceringsgaten och märks "failed", men statusen härleddes bara ur
+    SENASTE LYCKADE körning: fanns en success från i går var kedjan "healthy"
+    tills stale-gränsen passerats, och då bara som en varning. Willys byter
+    API-form tisdag natt, och onsdagen igenom ser allt friskt ut.
+
+    Att det prövas före limited är också med flit: limited säger vad
+    providern kan leverera som bäst, och förklarar aldrig varför en körning
+    sprack. En kedja vars senaste försök misslyckades är trasig oavsett hur
+    tunn dess feed är.
     """
     now = now if now is not None else time.time()
     lyckad = entry.get("lastSuccessfulRun") or {}
@@ -414,6 +462,12 @@ def chain_health(entry: dict, now: float = None) -> dict:
         "lastSuccess": klar_vid,
         "released": entry.get("chain") in RELEASED_CHAINS,
     }
+    if klar_vid and senaste.get("status") in FAILED_ATTEMPT_STATUSES:
+        ålderstext = (f"senaste godkända data är {resultat['ageHours']} timmar gammal"
+                      if resultat["ageHours"] is not None else "åldern på data är okänd")
+        return {**resultat, "status": "failing",
+                "reason": (f"{scrub(senaste.get('errorMessage')) or 'Importen misslyckades'} "
+                           f"({ålderstext})")}
     if str(entry.get("status", "")).startswith("partial"):
         return {**resultat, "status": "limited",
                 "reason": "Providern har för lite data för en hel matkasse"}
@@ -423,7 +477,7 @@ def chain_health(entry: dict, now: float = None) -> dict:
                     "reason": scrub(senaste.get("errorMessage")) or "Importen misslyckades"}
         return {**resultat, "status": "never_imported",
                 "reason": "Ingen import har körts än"}
-    if ålder is not None and ålder > CHAIN_STALE_AFTER_SECONDS:
+    if ålder is not None and ålder > stale_after_seconds(entry.get("chain")):
         return {**resultat, "status": "stale",
                 "reason": f"Senaste lyckade import är {resultat['ageHours']} timmar gammal"}
     if resultat["released"]:

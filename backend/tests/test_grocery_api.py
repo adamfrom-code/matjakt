@@ -357,12 +357,50 @@ class ChainHealthTest(unittest.TestCase):
     def test_a_failed_run_after_a_good_one_is_not_failed(self):
         """Kärnan i last-good: nattens fel är ett driftproblem, inte ett
         kundproblem. Användarna får gårdagens priser, så kedjan är inte
-        'failed' - den är på sin höjd inaktuell."""
+        'failed' - den har en egen status, se failing nedan."""
         now = 100000.0
         health = grocery_api.chain_health(self._entry(
             last={"status": "failed", "finishedAt": now - 60, "errorMessage": "timeout"},
             success={"status": "success", "finishedAt": now - 3600}), now=now)
         self.assertNotEqual(health["status"], "failed")
+
+    def test_a_failed_attempt_shows_even_when_yesterday_succeeded(self):
+        """D4. En körning som ger noll rader faller på publiceringsgaten och
+        märks "failed" - men statusen härleddes bara ur senaste LYCKADE
+        körning, så en success från i går gjorde kedjan frisk. Willys byter
+        API-form tisdag natt, och onsdagen igenom ser allt bra ut."""
+        now = 1_000_000.0
+        health = grocery_api.chain_health(self._entry(
+            chain="Willys", status="working",
+            last={"status": "failed", "finishedAt": now - 3600,
+                  "errorMessage": "inga rader att publicera"},
+            success={"status": "success", "finishedAt": now - 25 * 3600}), now=now)
+        self.assertEqual(health["status"], "failing")
+        self.assertIn("inga rader", health["reason"])
+        # Åldern på det kunderna faktiskt får står i samma besked - annars går
+        # det inte att se hur bråttom det är.
+        self.assertIn("25", health["reason"])
+
+    def test_a_blocked_attempt_is_not_a_failed_attempt(self):
+        """En Primat-körning som slår i dygnskvoten märks blocked, behåller
+        det den hann hämta och slås ihop av publiceringen. Larmade vi på det
+        skulle larmet komma varje natt tills katalogen är hel."""
+        now = 1_000_000.0
+        health = grocery_api.chain_health(self._entry(
+            chain="Willys", status="working",
+            last={"status": "blocked", "finishedAt": now - 3600},
+            success={"status": "success", "finishedAt": now - 3600}), now=now)
+        self.assertEqual(health["status"], "healthy")
+
+    def test_a_failed_attempt_beats_a_structurally_limited_provider(self):
+        """limited säger vad providern kan leverera som bäst, och förklarar
+        aldrig varför en körning sprack."""
+        now = 1_000_000.0
+        health = grocery_api.chain_health(self._entry(
+            chain="Lidl", status="partial_via_primat",
+            last={"status": "failed", "finishedAt": now - 60, "errorMessage": "500 från Primat"},
+            success={"status": "success", "finishedAt": now - 3600}), now=now)
+        self.assertEqual(health["status"], "failing")
 
     def test_data_older_than_the_window_is_stale(self):
         now = 1_000_000.0
@@ -372,12 +410,36 @@ class ChainHealthTest(unittest.TestCase):
         self.assertEqual(health["status"], "stale")
 
     def test_a_missed_night_alone_does_not_alarm(self):
-        """36 timmar rymmer en missad natt. Larmar vi på 25 timmar skriker
-        systemet varje gång ett jobb blir en timme sent."""
+        """36 timmar rymmer en missad natt för en kedja som inte är släppt.
+        Larmar vi på 25 timmar skriker systemet varje gång ett jobb blir en
+        timme sent."""
         now = 1_000_000.0
         health = grocery_api.chain_health(self._entry(
             success={"status": "success", "finishedAt": now - 25 * 3600}), now=now)
         self.assertNotEqual(health["status"], "stale")
+
+    def test_a_released_chain_is_judged_the_same_morning(self):
+        """D4. En SLÄPPT kedja är den kunden prissätts mot, och nattens
+        resultat ska vara bedömt samma morgon. 28 timmar betyder att natten
+        uteblev: för Willys är det inaktuellt, för ICA ryms det fortfarande
+        inom en missad natt."""
+        now = 1_000_000.0
+        körning = {"status": "success", "finishedAt": now - 28 * 3600}
+        släppt = grocery_api.chain_health(self._entry(
+            chain="Willys", status="working", success=körning), now=now)
+        self.assertEqual(släppt["status"], "stale")
+        osläppt = grocery_api.chain_health(self._entry(chain="ICA", success=körning), now=now)
+        self.assertNotEqual(osläppt["status"], "stale")
+
+    def test_a_normal_night_never_reaches_the_released_window(self):
+        """Gränsen får inte larma på en kedja som fungerar. Precis innan
+        nästa nattjobb är datan ~24 timmar gammal."""
+        self.assertGreater(grocery_api.RELEASED_CHAIN_STALE_AFTER_SECONDS, 25 * 3600)
+        now = 1_000_000.0
+        health = grocery_api.chain_health(self._entry(
+            chain="Willys", status="working",
+            success={"status": "success", "finishedAt": now - 24 * 3600}), now=now)
+        self.assertEqual(health["status"], "healthy")
 
     def test_fresh_data_on_an_unreleased_chain_never_reads_as_released(self):
         """En lyckad import gör ALDRIG en kedja publik. Den blir
@@ -407,7 +469,7 @@ class ChainHealthTest(unittest.TestCase):
         for entry in grocery_api.provider_status():
             self.assertIn("health", entry, entry["chain"])
             self.assertIn(entry["health"]["status"],
-                          {"limited", "never_imported", "failed", "stale",
+                          {"limited", "never_imported", "failed", "failing", "stale",
                            "healthy", "ready_for_release"}, entry["chain"])
 
 

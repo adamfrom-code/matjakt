@@ -28,13 +28,17 @@ function when(value) {
 // Driftstatusen svarar på "behöver jag göra något?". Den är avsiktligt
 // konservativ: okänt underlag ger aldrig grönt, och "released" är en flagga
 // - inte ett friskhetsbesked. En publik kedja kan mycket väl vara stale.
+// failing: senaste FÖRSÖKET misslyckades trots att det finns äldre godkänd
+// data kvar. Röd, inte orange - kedjan uppdateras inte längre, och varje
+// annan siffra på raden (produktantal, ålder) ser fortfarande normal ut.
 const HEALTH_CLASS = {
   healthy: "ok", ready_for_release: "warn", stale: "warn",
-  failed: "bad", limited: "off", never_imported: "off",
+  failed: "bad", failing: "bad", limited: "off", never_imported: "off",
 };
 const HEALTH_LABEL = {
   healthy: "Frisk", ready_for_release: "Redo att släppas", stale: "Inaktuell",
-  failed: "Trasig", limited: "Begränsad", never_imported: "Aldrig importerad",
+  failed: "Trasig", failing: "Slutade uppdatera", limited: "Begränsad",
+  never_imported: "Aldrig importerad",
 };
 
 const STATUS_CLASS = {

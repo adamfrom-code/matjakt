@@ -119,6 +119,32 @@ class SchedulableChainsTest(unittest.TestCase):
         for chain, when in DEFAULT_SCHEDULE.items():
             self.assertLess(when, kollen, f"{chain} kör {when}, efter driftkollen {kollen}")
 
+    def test_the_stale_window_catches_a_skipped_night(self):
+        """D4. Gränsen för när en SLÄPPT kedja räknas som inaktuell är räknad
+        ur det här schemat, inte vald på känsla - så den hör hemma här.
+
+        Uteblir natten helt är kedjans senaste lyckade import från i går
+        klockan T när driftkollen går. Den är då 24 + kollen - T timmar
+        gammal, och gränsen måste ligga under det för att morgonens koll ska
+        hinna se natten i stället för att skjuta domen ett dygn."""
+        from services.grocery.api import RELEASED_CHAIN_STALE_AFTER_SECONDS, RELEASED_CHAINS
+
+        def timmar(klockslag):
+            h, m = (int(x) for x in klockslag.split(":"))
+            return h + m / 60
+
+        kollen = timmar(scheduler_module.OPS_ALERT_AT)
+        for chain in RELEASED_CHAINS:
+            ålder = (24 + kollen - timmar(DEFAULT_SCHEDULE[chain])) * 3600
+            self.assertGreater(
+                ålder, RELEASED_CHAIN_STALE_AFTER_SECONDS,
+                f"{chain} kör {DEFAULT_SCHEDULE[chain]}; en utebliven natt är bara "
+                f"{ålder / 3600:.1f} h gammal vid driftkollen {scheduler_module.OPS_ALERT_AT} "
+                f"och hinner inte bli inaktuell")
+        # ... och inte så lågt att en kedja som kör varje natt larmar. Precis
+        # innan nästa jobb är datan ~24 timmar gammal, plus körningens längd.
+        self.assertGreater(RELEASED_CHAIN_STALE_AFTER_SECONDS, 25 * 3600)
+
     def test_a_valid_override_is_honoured(self):
         self.assertEqual(parse_schedule("Willys=05:30"), {"Willys": "05:30"})
 
