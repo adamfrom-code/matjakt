@@ -742,6 +742,120 @@ class BrowserJourney(unittest.TestCase):
         self.assertEqual(self.console_errors, [])
         self.assertEqual(len(self.batch_requests), 0, "Free ska aldrig hämta livepriser per vara")
 
+    # ---- den sena kontosynken ----
+    #
+    # HÅLLER kontosynkens svar i sidan tills testet släpper det. Skrivboken
+    # (vantan.py) bokför vad appen gör; det här skriptet bestämmer NÄR ett
+    # svar kommer fram - och det är hela skillnaden mellan att hoppas på ett
+    # kapplöp och att köra det.
+    #
+    # Bara den FÖRSTA hämtningen parkeras: det är boot-radens `refreshUser()`,
+    # den som app.js startar utan att vänta in innan den öppnar onboardingen.
+    # Nummer tas när anropet går ut, inte när svaret kommer - flera synkar
+    # ligger i luften samtidigt och `bok.antal` hinner räknas upp under tiden.
+    PARKERA_KONTOSYNKEN = """
+    (() => {
+      const bok = { antal: 0, levererade: 0, slapp: null };
+      window.__parkeradKontosynk = bok;
+      const original = window.fetch;
+      window.fetch = async (...args) => {
+        const url = String((args[0] && args[0].url) || args[0] || "");
+        const metod = ((args[1] && args[1].method) || "GET").toUpperCase();
+        if (!url.includes("/api/account/state") || metod !== "GET") return original(...args);
+        const nummer = ++bok.antal;
+        const svar = await original(...args);
+        if (nummer !== 1) return svar;
+        await new Promise(klar => { bok.slapp = klar; });
+        // Räknas när appen läst KROPPEN, inte när svaret lämnades ut: det är
+        // raden efter som lägger blobben i tillståndet, och det är den
+        // väntan nedan behöver ha bakom sig.
+        const json = svar.json.bind(svar);
+        svar.json = async () => { const data = await json(); bok.levererade += 1; return data; };
+        return svar;
+      };
+    })();
+    """
+
+    def test_en_sen_kontosynk_skriver_inte_over_onboardingsvaren(self):
+        """Svaren du just gav överlever en kontosynk som landar efteråt.
+
+        Boot-raden i app.js startar `refreshUser()` UTAN att vänta in den och
+        öppnar onboardingen i nästa andetag. Hämtningen av kontots blob är
+        alltså i luften medan användaren skriver sina svar - och blobben är
+        tagen FÖRE dem: budget 800, tomt postnummer, onboarding ogjord.
+        Landade den efter svaren skrevs de över, tyst och utan att rutan på
+        skärmen ändrades: fältet visade 900 medan tillståndet sa 800.
+
+        Så såg felet ut i CI ("AssertionError: 800 != 900" i resan ovan), och
+        det gick igenom vid omkörning - inte för att något lagats, utan för
+        att svaret hann före nästa gång.
+
+        Här är det inget kapplöp: svaret HÅLLS tills svaren är givna och
+        släpps sedan fram. Utan grinden i applySyncBlob faller testet på
+        exakt samma rad som CI föll på.
+        """
+        page = self.page
+        email = f"e2e-sen-synk-{uuid.uuid4().hex[:8]}@example.com"
+
+        with self.step("konto - blobben på servern är från före onboardingen"):
+            # Receptlänken håller onboardingen stängd så kontot går att skapa
+            # först; blobben som skrivs nu bär standardvärdena.
+            page.goto(self.app(f"?recept={self.any_recipe_id()}"))
+            expect(page.locator("#recipePage")).to_be_visible()
+            self.register(email)
+            self.close_account_modal()
+            self.wait_for_server_state(lambda s: s.get("budget") == 800 and not s.get("onboardingComplete"),
+                                       what="blobben före onboardingen")
+
+        with self.step("hela onboardingen besvaras medan kontosynken hålls"):
+            page.add_init_script(self.PARKERA_KONTOSYNKEN)
+            page.goto(self.app())
+            expect(page.locator("#onboardingModal")).to_be_visible()
+            page.wait_for_function("() => (window.__parkeradKontosynk || {}).antal > 0")
+            self.complete_onboarding()
+            # RUTAN ÄR STÄNGD NU, och det är hela poängen: "Skapa min vecka"
+            # stänger den långt innan ett sent svar landar. Det ögonblicket -
+            # veckan skapas, blobben är kvar i luften - var det oskyddade.
+            state = self.wait_for_state(lambda s: s.get("weekPlan"), what="veckan")
+            self.assertEqual(state["budget"], 900, "appen tog inte emot svaret alls")
+
+        with self.step("den gamla blobben släpps fram"):
+            page.evaluate("() => window.__parkeradKontosynk.slapp()")
+            # LEVERERAD, inte bara släppt. Hann http.js tidsgräns (15 s) före
+            # oss avbröts kroppsläsningen och appen såg ett nätfel i stället
+            # för en gammal blob - då har ingenting prövats, och det ska sägas
+            # rakt ut i stället för att passera som grönt.
+            levererad = True
+            try:
+                page.wait_for_function(
+                    "() => (window.__parkeradKontosynk || {}).levererade >= 1", timeout=10_000)
+            except Exception:                                  # noqa: BLE001
+                levererad = False
+            if not levererad:
+                self.fail("kontosynkens blob nådde aldrig appen - parkeringen översteg"
+                          " http.js REQUEST_TIMEOUT_MS och testet prövade ingenting")
+
+        with self.step("svaren står kvar"):
+            # LÄSNINGEN LIGGER EFTER BLOBBEN, utan att vänta på en klocka:
+            # wait_for_function ovan är en TASK i sidan, och mikrotaskkön
+            # töms före nästa task. Räknaren höjs inuti svarets json(), och
+            # allt som följer på den - applySyncBlob, persistLocally - är
+            # mikrotasks i samma kedja. Pollningen som ser räknaren kan alltså
+            # inte köra före dem.
+            state = self.local_state()
+            self.assertEqual(state["budget"], 900, "den gamla blobben skrev över budgeten")
+            self.assertEqual(state["postnummer"], fixture.POSTCODE)
+            self.assertEqual(state["hushall"]["vuxna"], 3)
+            self.assertTrue(state["onboardingComplete"])
+            self.assertTrue(state["weekPlan"], "veckan som just skapades är borta")
+            # Och skärmen säger samma sak som tillståndet. Budgetraden är
+            # platsen där ett överskrivet värde faktiskt syns för användaren.
+            page.click('.bottom-nav-item[data-view="basket"]')
+            expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
+            self.assertRegex(page.locator("#shoppingCost").inner_text(), r"/ 900 kr")
+
+        self.assertEqual(self.console_errors, [])
+
     def test_forsta_veckan_kommer_utan_betalvagg(self):
         """G8: det dyraste avhoppet - hänglåsväggen före första måltiden.
 
