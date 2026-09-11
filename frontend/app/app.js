@@ -24,6 +24,7 @@ import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, 
 // svenska, och en användare kan inte göra något åt ett "HTTP 500" (E7).
 import { errorText } from "./src/api/http.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
+import { kopplaSvepBort } from "./src/utils/swipe-remove.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.js";
 import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
 import { adjustInventory, fetchHousehold, fetchNotifications, joinHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, replaceWeekItems, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
@@ -2608,6 +2609,19 @@ initShoppingView({
   syncLivePrices, pushWeekToHousehold,
   setLastRealWeekTotal: value => { lastRealWeekTotal = value; },
   recipeQuantities: RECIPE_QUANTITIES, packageInfo: PACKAGE_INFO,
+});
+
+// G5: krysset satt i tumzonen, intill "Köpt" - ett feltryck tog bort varan.
+// Svep vänster tar bort raden i stället, med Ångra i toasten. Lyssnaren sitter på
+// behållaren, inte på raderna, så den överlever varje omritning av listan.
+kopplaSvepBort($("shoppingList"), {
+  väljRad: mål => mål?.closest?.("[data-remove-item]")
+    ? null                                   // krysset är sin egen väg, inte ett svep
+    : mål?.closest?.(".shopping-item"),
+  taBort: rad => {
+    const namn = rad.querySelector("[data-remove-item]")?.dataset.removeItem;
+    if (namn) removeShoppingItem(namn);
+  },
 });
 
 function renderWeekStoreTabs() {

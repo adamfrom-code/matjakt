@@ -350,6 +350,14 @@ class BrowserJourney(unittest.TestCase):
     def app(self, query=""):
         return f"{self.server.base}/app/{query}"
 
+    def swipe_away(self, row):
+        """Sveper bort en varurad, som G5 gjorde det: på pekskärm ligger krysset
+        utanför radens kant, och svep vänster är vägen dit i stället. Pek-
+        händelserna skickas direkt - Playwright har tap men inget svep."""
+        for typ, x in (("pointerdown", 320), ("pointermove", 300),
+                       ("pointermove", 220), ("pointerup", 170)):
+            row.dispatch_event(typ, {"pointerType": "touch", "clientX": x, "clientY": 400})
+
     def local_state(self):
         raw = self.page.evaluate("() => localStorage.getItem('matjakt-state')")
         return json.loads(raw) if raw else {}
@@ -648,7 +656,7 @@ class BrowserJourney(unittest.TestCase):
             rader_med_namnet = page.locator("#shoppingList .shopping-item").evaluate_all(
                 "(rader, namn) => rader.filter(r => (r.querySelector('strong')?.innerText || '').trim() === namn).length",
                 namn_att_ta_bort)
-            page.click("#shoppingList [data-remove-item] >> nth=0")
+            self.swipe_away(page.locator("#shoppingList .shopping-item").first)
             expect(page.locator("#restoreRemovedBtn")).to_contain_text("1 borttagen vara")
             expect(page.locator("#storeCardsCompareBtn")).to_have_count(0)      # Free har ingen jämförelsesida
             self.assertEqual(page.locator("#shoppingList .shopping-item").count(),
