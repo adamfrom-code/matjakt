@@ -90,6 +90,7 @@ from ..base import GroceryProvider
 from ..errors import ProviderBlockedError, ProviderRequestError
 from .axfood import CATEGORY_PATH_SEPARATOR
 from ..models import RawProduct, Store
+from ..streaming import ProductSink
 from ...data_guard import guard_outbound_http
 
 logger = logging.getLogger("matjakt.grocery.citygross")
@@ -443,9 +444,15 @@ class CityGrossProvider(GroceryProvider):
         return found
 
     def _category_products(self, store_id: str, seen: set[str],
-                           products: list[RawProduct]) -> bool:
+                           sink: ProductSink) -> bool:
         """Collects every food department via the category browse. Returns
-        False when the navigation gave nothing usable."""
+        False when the navigation gave nothing usable.
+
+        D7: produkterna läggs i en ProductSink i stället för i en lista.
+        Sinken lämnar dem vidare till importern i batchar och släpper dem, så
+        en avdelning kostar minne medan den hämtas och ingenting efteråt.
+        `seen` finns kvar - den bär bara produkt-id:n (~8 700 korta strängar)
+        och är det enda som kan se att två avdelningar delar en vara."""
         categories = self._food_categories()
         if not categories:
             return False
@@ -465,8 +472,11 @@ class CityGrossProvider(GroceryProvider):
                     data = self._request(url)
                 except CityGrossBlockedError as blocked:
                     logger.error("City Gross blocked this run in category %r - stopping after %d product(s)",
-                                 category_name, len(products))
-                    blocked.partial_products = products
+                                 category_name, sink.count)
+                    # Det som redan streamats till importern är staget; det
+                    # här är bara den sista ohanterade batchen. Utan
+                    # streaming är det hela katalogen, precis som förut.
+                    blocked.partial_products = sink.drain()
                     raise
                 except CityGrossRequestError:
                     logger.exception("City Gross category %r failed (skip %d) - moving on", category_name, skip)
@@ -485,7 +495,7 @@ class CityGrossProvider(GroceryProvider):
                         continue
                     seen.add(product_id)
                     try:
-                        products.append(self.normalize_product({**raw, "_store_id": store_id}))
+                        sink.add(self.normalize_product({**raw, "_store_id": store_id}))
                     except Exception:
                         logger.exception("Failed to normalize City Gross product %r", product_id)
                 total = data.get("totalCount") or 0
@@ -505,7 +515,7 @@ class CityGrossProvider(GroceryProvider):
                 self.failed_categories.append(f"{category_name} (noll produkter)")
         return True
 
-    def get_products(self, store_id: str) -> list[RawProduct]:
+    def get_products(self, store_id: str, on_products=None) -> list[RawProduct]:
         """store_id is City Gross' storeNumber (e.g. "3209"). It scopes which
         products come back, though not their prices - see pricing_scope.
 
@@ -515,12 +525,19 @@ class CityGrossProvider(GroceryProvider):
 
         Avdelningsbokslutet (failed_categories / collected_categories)
         nollställs här, så en provider som återanvänds inte bär med sig
-        förra körningens fel in i den här."""
+        förra körningens fel in i den här.
+
+        D7 - `on_products`: får providern en callback lämnas produkterna
+        vidare batchvis medan insamlingen pågår och returvärdet blir tomt.
+        Utan callback returneras hela katalogen som förut, så ett
+        direktanrop (kontrollrummet, ett test) fungerar oförändrat. Hela
+        katalogen är ~8 700 RawProduct på en instans som också kör
+        Chromium i 512 MB."""
         self.failed_categories = []
         self.collected_categories = []
         seen: set[str] = set()
-        products: list[RawProduct] = []
-        self._category_products(store_id, seen, products)
+        sink = ProductSink(on_products)
+        self._category_products(store_id, seen, sink)
         logger.info("City Gross: %d av %d matavdelningar insamlade%s",
                     len(self.collected_categories), len(FOOD_DEPARTMENTS),
                     f"; problem med {', '.join(self.failed_categories)}"
@@ -534,8 +551,8 @@ class CityGrossProvider(GroceryProvider):
                 try:
                     data = self._request(url)
                 except CityGrossBlockedError as blocked:
-                    logger.error("City Gross blocked this run at term %r - stopping after %d product(s)", term, len(products))
-                    blocked.partial_products = products
+                    logger.error("City Gross blocked this run at term %r - stopping after %d product(s)", term, sink.count)
+                    blocked.partial_products = sink.drain()
                     raise
                 except CityGrossRequestError:
                     logger.exception("City Gross search failed for term %r (skip %d)", term, skip)
@@ -548,7 +565,7 @@ class CityGrossProvider(GroceryProvider):
                         continue
                     seen.add(product_id)
                     try:
-                        products.append(self.normalize_product({**raw, "_store_id": store_id}))
+                        sink.add(self.normalize_product({**raw, "_store_id": store_id}))
                     except Exception:
                         logger.exception("Failed to normalize City Gross product %r", product_id)
 
@@ -556,7 +573,9 @@ class CityGrossProvider(GroceryProvider):
                 skip += self.page_size
                 if skip >= total or not results:
                     break
-        return products
+        logger.info("City Gross: %d produkter, som mest %d samtidigt i minnet",
+                    sink.count, sink.peak_buffered)
+        return sink.drain()
 
     def get_product_details(self, product_id: str, store_id: str) -> RawProduct | None:
         url = (f"{BASE}/api/v1/Loop54/search?SearchQuery={quote(product_id)}"
