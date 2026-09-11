@@ -624,6 +624,12 @@ def insights_payload() -> dict:
     events = ANALYTICS.daily_events(14)
     return {
         "tratt": funnel,
+        # I7: de fem talen, färdigräknade med sina nämnare. Kontrollrummet
+        # ska inte behöva räkna procent själv - två ställen som räknar samma
+        # andel blir förr eller senare två olika andelar.
+        "veckansTal": ANALYTICS.veckans_tal(
+            premium_of=lambda row: AccountStore._to_public(row)["premium"],
+            premium_source_of=lambda row: AccountStore._to_public(row)["premiumSource"]),
         "handelser": events,
         # Gamla fältet från /testresultat: totalsumma per händelse.
         "events14Dagar": {event: entry["total"] for event, entry in events["events"].items()},
@@ -1910,6 +1916,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         router = HouseholdRouter(HOUSEHOLD_STORE, NOTIFICATION_STORE, ACCOUNT_STORE, APP_URL)
         status, body = router.handle(method, parsed.path, parse_qs(parsed.query), payload,
                                      self._bearer_token())
+        self._matning_hushall(parsed.path, status)
         self.send_json(status, body)
 
     # Största JSON-kropp servern läser in. Största legitima kroppen är ett
@@ -2097,6 +2104,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                          event_id, customer_id)
             self.send_json(500, {"error": "Kunden hör inte ihop med något konto ännu"})
             return
+        self._matning_betalning(outcome, event_type, data, customer_id)
         self.send_json(200, {"received": True, **({"duplicate": True} if outcome == "duplicate" else {}),
                              **({"outcome": outcome} if outcome not in ("applied", "duplicate") else {})})
 
@@ -2756,6 +2764,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     mail_status = "failed"
                     METRICS.incr("mail_send_failed")
                     logger.exception("Verification email failed for a %s address", email_domain(user["email"]))
+                ANALYTICS.record("konto_skapat", user_id=ACCOUNT_STORE.user_id_for_token(token))
                 self.send_json(201, {"token": token, "user": user, "verificationMail": mail_status})
             except AccountError as error:
                 self.send_json(400, {"error": str(error)})
@@ -2988,6 +2997,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     # Stripe skapa sessionen och köpknappen dör för alla.
                     automatic_tax=automatic_tax_allowed(STRIPE_PRICE_CHECK),
                 )
+                self._matning_checkout(user_id, payload.get("plan"))
                 self.send_json(200, {"url": url})
             except (AccountError, StripeError) as error:
                 self.send_json(400, {"error": str(error)})
@@ -3501,6 +3511,81 @@ class ApiHandler(SimpleHTTPRequestHandler):
         except Exception:
             logger.exception("Inköpslista misslyckades för %s", chain)
             self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})
+
+    # ---- I7: mätningens inkoppling -----------------------------------------
+    # Serversidan av produktmätningen. Varje hanterare ovan har EN rad som
+    # kallar hit; logiken ligger här så att ingen av dem växer. Allt är
+    # best-effort: mätning som fäller en betalning eller en inbjudan är värre
+    # än ingen mätning alls, så varje anrop är inneslutet i try/except.
+
+    def _matning(self, event: str, user_id=None):
+        try:
+            ANALYTICS.record(event, user_id=user_id)
+        except Exception:
+            logger.exception("Kunde inte räkna händelsen %s", event)
+
+    def _matning_konto_id(self):
+        try:
+            return ACCOUNT_STORE.user_id_for_token(self._bearer_token())
+        except Exception:
+            return None
+
+    def _matning_hushall(self, path: str, status: int):
+        """Inbjudan skickad respektive accepterad. Alla /api/household-vägar
+        går genom _handle_household, så hela hushållsmätningen hakar i på ett
+        ställe - hushållstjänstens egen router är orörd.
+
+        Bara 2xx räknas. En inbjudan som nekades på rate limit eller saknat
+        hushåll är inte en skickad inbjudan, och ett tal som räknar försök
+        ser ut som tillväxt när det är en bugg."""
+        if not 200 <= int(status) < 300:
+            return
+        event = {"/api/household/invite": "inbjudan_skickad",
+                 "/api/household/join": "inbjudan_accepterad"}.get(path)
+        if event:
+            self._matning(event, user_id=self._matning_konto_id())
+
+    def _matning_checkout(self, user_id, plan):
+        """Kassan öppnad, och vilken plan som valdes. Planen mäts HÄR och inte
+        i klienten: det klienten säger att den valde och det servern skapade en
+        session för är inte nödvändigtvis samma sak, och det är serverns
+        version som blir en faktura."""
+        self._matning("checkout_startad", user_id=user_id)
+        vald = {"yearly": "plan_vald_ar", "monthly": "plan_vald_manad"}.get(str(plan or ""))
+        if vald:
+            self._matning(vald, user_id=user_id)
+
+    def _matning_betalning(self, outcome, event_type, data, customer_id):
+        """Betalningen genomförd, och uppsägningen påbörjad.
+
+        Bara `applied` räknas - en duplicerad webhook är samma betalning en
+        gång till, och Stripe återlevererar gärna. Uppsägningen sker i Stripes
+        portal och syns bara som `cancel_at_period_end`; att räkna en öppnad
+        portal som en uppsägning hade räknat varje kortbyte som ett tapp."""
+        if outcome != "applied":
+            return
+        user_id = self._matning_konto_for_kund(customer_id)
+        status = data.get("status") if isinstance(data, dict) else None
+        if event_type == "customer.subscription.created" and status in ("active", "trialing"):
+            self._matning("betalning_genomford", user_id=user_id)
+            self._matning("premium_kop", user_id=user_id)
+        if isinstance(data, dict) and data.get("cancel_at_period_end"):
+            self._matning("uppsagning_paborjad", user_id=user_id)
+
+    @staticmethod
+    def _matning_konto_for_kund(customer_id):
+        """Kontot bakom en Stripe-kund. Webhooken har ingen session - utan
+        det här blir betalningen en anonym rad i analytics_daily och syns
+        aldrig i kohorten som betalade."""
+        if not customer_id:
+            return None
+        try:
+            with ACCOUNT_STORE.connection as anslutning:
+                rad = anslutning.execute(
+                    "SELECT id FROM users WHERE stripe_customer_id = ?", (customer_id,)).fetchone()
+            return int(rad["id"]) if rad else None
+        except Exception:
+            return None
 
     def _handle_analytics_event(self, payload):
         """Product-event counter. A named event increments a per-day counter;

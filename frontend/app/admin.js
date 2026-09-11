@@ -130,9 +130,55 @@ function renderIncidents(data) {
     || `<tr><td colspan="7" class="quiet">Ingen historik än</td></tr>`;
 }
 
+// I7: kronor, inte bara konton. Talen kommer FÄRDIGRÄKNADE från servern
+// (analytics.veckans_tal) - två ställen som räknar samma andel blir förr
+// eller senare två olika andelar, och då tror man på fel.
+const kr = n => typeof n === "number"
+  ? n.toLocaleString("sv-SE", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " kr"
+  : "—";
+const procent = a => typeof a === "number" ? Math.round(100 * a) + " %" : "—";
+
+function renderFemTal(tal) {
+  // Nämnaren på egen rad. Skriven inline blev "skapar en vecka inom 2 dygn
+  // 7 av 11" en enda mening, och då läses 7 som en del av etiketten.
+  const stat = (value, label, extra) =>
+    `<div class="stat"><b>${value ?? "—"}</b><span>${label}${
+      extra ? `<br><span class="quiet">${extra}</span>` : ""}</span></div>`;
+  if (!tal) { $("femTal").innerHTML = ""; $("femTalNote").textContent = ""; return; }
+  const snabb = tal.skapadeVeckaInomTvaDygn || {};
+  const kvar = tal.tillbakaEfterSjuDagar || {};
+  const betalande = tal.betalandeOchMrr || {};
+  $("femTal").innerHTML =
+    stat(tal.nyaKonton?.tal, "nya konton, 7 dagar", `${tal.nyaKonton?.totaltSedanStart ?? "—"} totalt sedan start`) +
+    // Nämnaren står ut: andelen räknas bara på konton som HUNNIT få sina två
+    // dygn. Utan det sjunker talet varje gång någon registrerar sig, vilket
+    // ser ut som en försämring och är en artefakt.
+    stat(procent(snabb.andel), "skapar en vecka inom 2 dygn", `${snabb.tal ?? 0} av ${snabb.av ?? 0}`) +
+    stat(procent(kvar.andel), "tillbaka efter 7 dagar", `${kvar.tal ?? 0} av ${kvar.av ?? 0}`) +
+    stat(tal.aktivaHushallMedFlerAnEn?.tal, "aktiva hushåll med fler än en") +
+    stat(betalande.tal, "betalande konton",
+         betalande.tappade ? `${betalande.tappade} har slutat betala` : "") +
+    stat(kr(betalande.mrrKronor), "MRR inkl. moms", `${kr(betalande.arpuKronor)} per betalande konto`);
+  const varningar = [];
+  if (betalande.utanKandPlan) {
+    // MRR är för LÅG när det står något här, och en för låg intäktssiffra
+    // som ser exakt ut är sämre än ingen.
+    varningar.push(`${betalande.utanKandPlan} betalande konto(n) har en plan vi inte känner igen `
+                   + `- MRR är för låg. Kontrollera STRIPE_PRICE_MONTHLY/YEARLY.`);
+  }
+  if (betalande.sagerUppVidPeriodslut) {
+    varningar.push(`${betalande.sagerUppVidPeriodslut} har sagt upp till periodslut och `
+                   + `ingår fortfarande i MRR.`);
+  }
+  $("femTalNote").textContent = varningar.join(" ")
+    || "Årsplanen periodiseras (399 kr/år = 33 kr/mån). Andelarna räknas bara på konton "
+       + "som hunnit få sin chans - därför står nämnaren ut.";
+}
+
 function renderInsights(data) {
   const t = data.tratt?.totalt || {};
   const stat = (value, label) => `<div class="stat"><b>${value ?? "—"}</b><span>${label}</span></div>`;
+  renderFemTal(data.veckansTal);
   $("totals").innerHTML =
     stat(t.registrerade, "konton totalt") +
     stat(t.registreradeSenaste7Dagarna, "nya senaste 7 dagarna") +
@@ -153,9 +199,12 @@ function renderInsights(data) {
       <td><strong>${esc(c.vecka)}</strong>${c.mogen ? "" : ` <span class="pill warn">ofullständig</span>`}</td>
       <td>${c.registrerade}</td>
       <td>${c.skapadeVecka}${pct(c.skapadeVecka, c.registrerade)}</td>
+      <td>${c.skapadeVeckaInomTvaDygn}${pct(c.skapadeVeckaInomTvaDygn, c.mognaForSnabbfragan)}</td>
       <td>${c.tillbakaEfter7Dagar}${pct(c.tillbakaEfter7Dagar, c.registrerade)}</td>
-      <td>${c.premium}${pct(c.premium, c.registrerade)}</td>
-    </tr>`).join("") : `<tr><td colspan="5" class="wrap">Inga registreringar de senaste åtta veckorna.</td></tr>`;
+      <td>${c.premiumBetalande}${pct(c.premiumBetalande, c.registrerade)}</td>
+      <td>${kr(c.mrrKronor)}</td>
+      <td>${c.tappadePremium || 0}</td>
+    </tr>`).join("") : `<tr><td colspan="8" class="wrap">Inga registreringar de senaste åtta veckorna.</td></tr>`;
   const defs = data.tratt?.definitioner || {};
   $("cohortNote").textContent = `"Ofullständig" = ${defs.mogen || "alla har inte haft sju dagar på sig än"}.`;
 

@@ -148,11 +148,20 @@
       </details>
     </div>
 
+    <!-- I7: DE FEM TALEN. Tratten räknade konton, aldrig kronor - och den
+         enda frågan siffrorna finns för är om affären bär. Varje tal bär sin
+         egen nämnare: en andel utan nämnare är en gissning med decimaler. -->
     <div class="card">
       <div class="row" style="justify-content:space-between">
-        <strong>Människor</strong>
+        <strong>Veckans fem tal</strong>
         <button id="refresh">Uppdatera</button>
       </div>
+      <div class="stats" id="femTal" style="margin-top:.7rem"></div>
+      <p class="note" id="femTalNote"></p>
+    </div>
+
+    <div class="card">
+      <strong>Människor</strong>
       <div class="stats" id="totals" style="margin-top:.7rem"></div>
       <p class="note">Aktiv = kontot användes någon dag i perioden. Bara dagen sparas, aldrig klockslag.</p>
     </div>
@@ -162,7 +171,8 @@
       <table id="cohorts">
         <thead><tr>
           <th>Vecka</th><th>Registrerade</th><th>Skapade en vecka</th>
-          <th>Tillbaka efter 7 dagar</th><th>Premium</th>
+          <th>&hellip; inom 2 dygn</th><th>Tillbaka efter 7 dagar</th>
+          <th>Betalande</th><th>MRR</th><th>Tappade</th>
         </tr></thead>
         <tbody></tbody>
       </table>
