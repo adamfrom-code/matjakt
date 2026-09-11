@@ -90,6 +90,7 @@ from ..base import GroceryProvider
 from ..errors import ProviderBlockedError, ProviderRequestError
 from .axfood import CATEGORY_PATH_SEPARATOR
 from ..models import RawProduct, Store
+from ..streaming import ProductSink
 from ...data_guard import guard_outbound_http
 
 logger = logging.getLogger("matjakt.grocery.citygross")
@@ -294,6 +295,18 @@ class CityGrossProvider(GroceryProvider):
     def __init__(self, search_terms: list[str] | None = None, page_size: int = PAGE_SIZE):
         self.search_terms = search_terms or DEFAULT_SEARCH_TERMS
         self.page_size = page_size
+        # D6. Avdelningar som INTE gick att samla in. Axfood-providern har
+        # spårat detta sedan den skrevs, och importer._run läser fältet på
+        # alla providers: en icke-tom lista gör körningen partiell i stället
+        # för "success med errors=0". City Gross loggade och gick vidare, så
+        # en förlorad avdelning såg ut som en lyckad natt. 30 %-regeln fångar
+        # bara om över 70 % av katalogen försvinner, och Skafferiet är
+        # ~12 % - alltså aldrig.
+        self.failed_categories: list[str] = []
+        # Avdelningar som faktiskt gav produkter. Finns för loggen och för
+        # testerna: "elva av elva" är det enda svaret som betyder att inget
+        # tappades.
+        self.collected_categories: list[str] = []
 
     def _request(self, url: str) -> dict:
         request = urllib.request.Request(url, headers={
@@ -374,10 +387,33 @@ class CityGrossProvider(GroceryProvider):
 
         Returns [] when the navigation cannot be read or looks unexpected -
         the caller then falls back to term search rather than aborting, so a
-        navigation redesign degrades collection instead of killing it."""
+        navigation redesign degrades collection instead of killing it.
+
+        D6: EN AVDELNING SOM INTE LÄNGRE FINNS I NAVIGATIONEN ÄR ETT FYND,
+        inte en tystnad. FOOD_DEPARTMENTS är en allow-list på avdelnings-
+        NAMN, så den dag City Gross döper om "Skafferiet" matchar inget
+        namn längre och avdelningen faller ur insamlingen utan ett enda
+        felmeddelande. Vi vet exakt vilka elva avdelningar vi förväntar oss;
+        saknas någon av dem säger vi vilken.
+
+        Jämförelsen görs mot den FÖRVÄNTADE listan i stället för mot
+        föregående körnings antal, som uppdraget föreslår. Den är både
+        enklare (ingen historik att lagra) och skarpare: den namnger vad som
+        försvann redan första natten, i stället för att vänta på en körning
+        att jämföra med.
+
+        Att en avdelning hamnar här när City Gross faktiskt lagt ned den är
+        med flit. FOOD_DEPARTMENTS är ett medvetet kodbeslut, och en
+        avvikelse mot den ska kräva att en människa tittar - inte tystna av
+        sig själv."""
         try:
             tree = ((self._request(NAVIGATION_URL) or {}).get("data") or {}).get("tree") or {}
         except CityGrossRequestError:
+            # Reservlistan bär sajtens egna sid-id och är komplett, så
+            # fallbacken i sig gör INTE körningen partiell - det hade stängt
+            # av 30 %-regeln för en körning som samlade in hela katalogen.
+            # Att ett id hunnit dö syns i stället per avdelning nedan: en
+            # död sida ger ett kategorifel, en tom sida ger noll produkter.
             logger.warning("City Gross-navigationen svarar inte härifrån - "
                            "använder den statiska avdelningslistan")
             return list(FALLBACK_FOOD_DEPARTMENTS)
@@ -400,17 +436,33 @@ class CityGrossProvider(GroceryProvider):
             logger.warning("City Gross-navigationen gav inga matavdelningar - "
                            "använder den statiska avdelningslistan")
             return list(FALLBACK_FOOD_DEPARTMENTS)
+        saknade = sorted(FOOD_DEPARTMENTS - {name for _, name in found})
+        for name in saknade:
+            logger.warning("City Gross-navigationen erbjuder inte avdelningen %r längre "
+                           "- den samlas inte in", name)
+            self.failed_categories.append(f"{name} (saknas i navigationen)")
         return found
 
     def _category_products(self, store_id: str, seen: set[str],
-                           products: list[RawProduct]) -> bool:
+                           sink: ProductSink) -> bool:
         """Collects every food department via the category browse. Returns
-        False when the navigation gave nothing usable."""
+        False when the navigation gave nothing usable.
+
+        D7: produkterna läggs i en ProductSink i stället för i en lista.
+        Sinken lämnar dem vidare till importern i batchar och släpper dem, så
+        en avdelning kostar minne medan den hämtas och ingenting efteråt.
+        `seen` finns kvar - den bär bara produkt-id:n (~8 700 korta strängar)
+        och är det enda som kan se att två avdelningar delar en vara."""
         categories = self._food_categories()
         if not categories:
             return False
         for category_id, category_name in categories:
             skip = 0
+            # Rader avdelningen SVARADE med, inte nya produkter: två
+            # avdelningar kan dela en vara ("Vegetariskt" och "Mejeri"), och
+            # då hade en dedupräknare påstått att den andra var tom.
+            returnerade = 0
+            avbruten = False
             while True:
                 time.sleep(REQUEST_DELAY_SECONDS)
                 url = (f"{BASE}/api/v1/Loop54/category/{category_id}/products"
@@ -420,39 +472,76 @@ class CityGrossProvider(GroceryProvider):
                     data = self._request(url)
                 except CityGrossBlockedError as blocked:
                     logger.error("City Gross blocked this run in category %r - stopping after %d product(s)",
-                                 category_name, len(products))
-                    blocked.partial_products = products
+                                 category_name, sink.count)
+                    # Det som redan streamats till importern är staget; det
+                    # här är bara den sista ohanterade batchen. Utan
+                    # streaming är det hela katalogen, precis som förut.
+                    blocked.partial_products = sink.drain()
                     raise
                 except CityGrossRequestError:
                     logger.exception("City Gross category %r failed (skip %d) - moving on", category_name, skip)
+                    # D6. Samma spårning som Axfood: ett kategorifel gör
+                    # körningen PARTIELL. Förut loggades det och körningen
+                    # rapporterades success - en avdelning kunde försvinna
+                    # helt utan att någon siffra sa det.
+                    self.failed_categories.append(category_name)
+                    avbruten = True
                     break
                 items = data.get("items") or []
+                returnerade += len(items)
                 for raw in items:
                     product_id = str(raw.get("id") or "")
                     if not product_id or product_id in seen:
                         continue
                     seen.add(product_id)
                     try:
-                        products.append(self.normalize_product({**raw, "_store_id": store_id}))
+                        sink.add(self.normalize_product({**raw, "_store_id": store_id}))
                     except Exception:
                         logger.exception("Failed to normalize City Gross product %r", product_id)
                 total = data.get("totalCount") or 0
                 skip += CATEGORY_PAGE_SIZE
                 if skip >= total or not items:
                     break
-            logger.info("City Gross %r klar: %d produkter totalt hittills", category_name, len(products))
+            if avbruten:
+                continue
+            if returnerade:
+                self.collected_categories.append(category_name)
+            else:
+                # En avdelning som svarar men inte ger en enda produkt är
+                # också en tappad avdelning. Sidan finns, id:t stämmer,
+                # ingenting kastar - och hyllan är tom. Utan den här raden
+                # är det exakt lika tyst som ett kategorifel var.
+                logger.warning("City Gross-avdelningen %r gav noll produkter", category_name)
+                self.failed_categories.append(f"{category_name} (noll produkter)")
         return True
 
-    def get_products(self, store_id: str) -> list[RawProduct]:
+    def get_products(self, store_id: str, on_products=None) -> list[RawProduct]:
         """store_id is City Gross' storeNumber (e.g. "3209"). It scopes which
         products come back, though not their prices - see pricing_scope.
 
         Category browse first (the whole catalogue), term search as the
         fallback when navigation is unreadable - and as a top-up for
-        anything assortment quirks keep out of the department pages."""
+        anything assortment quirks keep out of the department pages.
+
+        Avdelningsbokslutet (failed_categories / collected_categories)
+        nollställs här, så en provider som återanvänds inte bär med sig
+        förra körningens fel in i den här.
+
+        D7 - `on_products`: får providern en callback lämnas produkterna
+        vidare batchvis medan insamlingen pågår och returvärdet blir tomt.
+        Utan callback returneras hela katalogen som förut, så ett
+        direktanrop (kontrollrummet, ett test) fungerar oförändrat. Hela
+        katalogen är ~8 700 RawProduct på en instans som också kör
+        Chromium i 512 MB."""
+        self.failed_categories = []
+        self.collected_categories = []
         seen: set[str] = set()
-        products: list[RawProduct] = []
-        self._category_products(store_id, seen, products)
+        sink = ProductSink(on_products)
+        self._category_products(store_id, seen, sink)
+        logger.info("City Gross: %d av %d matavdelningar insamlade%s",
+                    len(self.collected_categories), len(FOOD_DEPARTMENTS),
+                    f"; problem med {', '.join(self.failed_categories)}"
+                    if self.failed_categories else "")
         for term in self.search_terms:
             skip = 0
             while True:
@@ -462,8 +551,8 @@ class CityGrossProvider(GroceryProvider):
                 try:
                     data = self._request(url)
                 except CityGrossBlockedError as blocked:
-                    logger.error("City Gross blocked this run at term %r - stopping after %d product(s)", term, len(products))
-                    blocked.partial_products = products
+                    logger.error("City Gross blocked this run at term %r - stopping after %d product(s)", term, sink.count)
+                    blocked.partial_products = sink.drain()
                     raise
                 except CityGrossRequestError:
                     logger.exception("City Gross search failed for term %r (skip %d)", term, skip)
@@ -476,7 +565,7 @@ class CityGrossProvider(GroceryProvider):
                         continue
                     seen.add(product_id)
                     try:
-                        products.append(self.normalize_product({**raw, "_store_id": store_id}))
+                        sink.add(self.normalize_product({**raw, "_store_id": store_id}))
                     except Exception:
                         logger.exception("Failed to normalize City Gross product %r", product_id)
 
@@ -484,7 +573,9 @@ class CityGrossProvider(GroceryProvider):
                 skip += self.page_size
                 if skip >= total or not results:
                     break
-        return products
+        logger.info("City Gross: %d produkter, som mest %d samtidigt i minnet",
+                    sink.count, sink.peak_buffered)
+        return sink.drain()
 
     def get_product_details(self, product_id: str, store_id: str) -> RawProduct | None:
         url = (f"{BASE}/api/v1/Loop54/search?SearchQuery={quote(product_id)}"

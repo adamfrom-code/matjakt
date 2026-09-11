@@ -64,6 +64,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # K2: npm audit nedan behöver npm, inte node_modules - ingen npm ci här.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
       - name: Inga hemligheter i spårade filer
         run: python backend/scripts/secret_scan.py
       - name: .env är inte spårad
@@ -115,6 +119,47 @@ jobs:
             echo "Inga platshållare."
           fi
 
+      # ── K2: beroendena ─────────────────────────────────────────────────
+      #
+      # backend/requirements.txt innehöll EN rad: playwright>=1.45. Basimagen
+      # är pinnad till v1.62.0-jammy och bär EN Chromium. En ombyggnad av en
+      # oförändrad commit kunde alltså dra en nyare Playwright in i en image
+      # vars webbläsare den inte känner igen - "Executable doesn't exist" i
+      # produktion, utan en enda kodändring.
+      #
+      # Låsfilen är nu genererad ur backend/requirements.in med hashar, och
+      # de tre stegen nedan är det som gör låsningen till mer än en fil som
+      # råkar ligga i repot.
+      - name: Låsfilen går att installera i produktionsimagen (py3.10, glibc-linux)
+        # DEN HÄR KONTROLLEN ÄR HELA POÄNGEN. CI kör Python 3.12 och
+        # basimagen (jammy) kör 3.10. En låsfil som genererats på 3.12 kan
+        # mycket väl peka ut ett hjul som inte finns för 3.10 - och det
+        # upptäcks då först när Render bygger om, i produktion.
+        #
+        # pip download hämtar inget till bygget; det kontrollerar bara att
+        # varje låst paket FINNS som hjul för imagens python och plattform,
+        # och att sha256 stämmer. Låsfilen har hashar på varje rad, så pip
+        # går automatiskt in i --require-hashes-läge: ett paket som saknas i
+        # filen eller inte matchar sin hash avvisas.
+        run: |
+          python -m pip install --upgrade pip >/dev/null
+          pip download --no-cache-dir --only-binary=:all: \
+            --python-version 3.10 --implementation cp --abi cp310 \
+            --platform manylinux_2_28_x86_64 --platform manylinux_2_17_x86_64 \
+            --platform manylinux1_x86_64 --platform any \
+            -r backend/requirements.txt -d "${RUNNER_TEMP}/hjul-py310"
+          echo "Alla låsta paket finns som hjul för imagens python."
+      - name: Kända sårbarheter i python-beroendena (pip-audit)
+        run: |
+          pip install --quiet pip-audit
+          pip-audit -r backend/requirements.txt
+      - name: Kända sårbarheter i npm-beroendena (hög och uppåt)
+        # --audit-level=high: MEDEL blockerar inte. En grind som failar på
+        # varje moderate i ett transitivt Capacitor-beroende blir avstängd
+        # inom en vecka, och då fångas inte heller de allvarliga.
+        # npm audit behöver bara package-lock.json, inte node_modules.
+        run: npm audit --audit-level=high
+
   e2e:
     name: "Browser-E2E (Playwright: konsumentresan, Premium/Stripe, hushållet med två personer)"
     runs-on: ubuntu-latest
@@ -126,7 +171,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r backend/requirements.txt playwright
+      # K2: det extra lösa `playwright` som stod här är borta. Det gjorde två
+      # saker, båda fel: det upphävde låsfilen (pip fick välja fritt) och det
+      # hade sprängt --require-hashes-läget som hasharna i låsfilen slår på -
+      # ett löst namn utan hash får inte blandas med hashade krav. Paketet
+      # står redan i backend/requirements.txt, låst till imagens version.
+      - run: pip install -r backend/requirements.txt
       - run: python -m playwright install --with-deps chromium
       - name: Resorna i källform (konsument + hushåll)
         run: python backend/tests/run.py --pattern "test_*journey*"
