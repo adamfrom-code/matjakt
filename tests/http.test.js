@@ -31,17 +31,30 @@ const jsonResponse = (status, body) => ({
   json: async () => body,
 });
 
-/** En server som tar emot anropet och sedan aldrig svarar - tills signalen avbryter. */
-function deadServer(seen = {}) {
-  return (url, init) => {
-    seen.url = url;
-    seen.init = init;
-    return new Promise((_resolve, reject) => {
-      if (!init?.signal) return; // ingen signal = hänger för evigt, precis som buggen
-      init.signal.addEventListener("abort", () => reject(init.signal.reason
+/**
+ * En server som tar emot anropet och sedan aldrig svarar. Bara en avbruten
+ * signal får loss den - saknas signal hänger anropet för evigt, precis som
+ * buggen gjorde. `escape` är testets egen nödutgång så att ingen promise
+ * lämnas hängande när sviten är klar.
+ */
+function deadServer(escape = new AbortController()) {
+  const handler = (url, init) => new Promise((_resolve, reject) => {
+    // AbortSignal.timeout() använder en UNREF:ad timer - den håller inte
+    // igång Nodes händelseloop. Är den timern det enda som återstår anser
+    // testlöparen att loopen är tom medan vi väntar ut tidsgränsen och fäller
+    // hela filen ("Promise resolution is still pending but the event loop has
+    // already resolved"). I en webbläsare finns alltid annat som håller
+    // loopen vid liv; här får stubben göra det.
+    const alive = setInterval(() => {}, 5);
+    const stop = error => { clearInterval(alive); reject(error); };
+    if (init?.signal) {
+      init.signal.addEventListener("abort", () => stop(init.signal.reason
         || Object.assign(new Error("aborted"), { name: "AbortError" })));
-    });
-  };
+    }
+    escape.signal.addEventListener("abort", () => stop(new Error("testet städade undan sig")));
+  });
+  handler.escape = escape;
+  return handler;
 }
 
 // ---- E6: anropet avbryts, det hänger inte -------------------------------
@@ -60,13 +73,20 @@ test("E6: ett anrop som aldrig svarar avbryts av tidsgränsen", async () => {
 
 test("E6: utan tidsgräns hänger samma anrop för evigt - därför behövs den", async () => {
   // Beviset att testet ovan mäter något: samma döda server, ingen signal.
-  const restore = stubFetch(deadServer());
+  const server = deadServer();
+  const restore = stubFetch(server);
   try {
+    const pending = request("/auth/me", { timeout: 0 }).then(() => "svarade", () => "avbröts");
     const raced = await Promise.race([
-      request("/auth/me", { timeout: 0 }).then(() => "svarade", () => "avbröts"),
+      pending,
       new Promise(resolve => setTimeout(() => resolve("hänger"), 120)),
     ]);
     assert.equal(raced, "hänger");
+    // Städa: en promise som aldrig settlar fäller hela sviten på Node 20
+    // ("Promise resolution is still pending but the event loop has already
+    // resolved") - och skulle dessutom dölja vad som egentligen gick fel.
+    server.escape.abort();
+    assert.equal(await pending, "avbröts");
   } finally { restore(); }
 });
 
