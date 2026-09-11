@@ -89,6 +89,24 @@ jobs:
           if [ -n "$tracked" ]; then echo "Spårade genererade artefakter:"; echo "$tracked"; exit 1; fi
       - name: Versionsnumren följs åt (sw.js, app.js?v=, styles.css?v=)
         run: python backend/scripts/check_frontend_version.py
+      # K5 - LIKHET ÄR INTE FÄRSKHET. Steget ovan kräver att de tre talen är
+      # LIKA. Det säger ingenting om att de ska ha HÖJTS när frontenden
+      # ändrats, och det var precis det som saknades: en PR som rörde
+      # frontend/app/app.js utan bump var grön, Pages HTTP-cache serverade
+      # gammal app.js under samma URL, och service workern behöll sin kopia
+      # tills CACHE_NAME bytte. Felet står beskrivet överst i sw.js - "the
+      # site was updated, phones still showed the old three week types" - och
+      # den enda kontrollen mot det var att någon kom ihåg.
+      #
+      # Basen kommer ur händelsen, för bara den vet exakt vad ändringen är:
+      # pull_request -> basgrenens SHA, merge_group -> köns bas, push ->
+      # committen före. Saknas alla tre (workflow_dispatch) faller skriptet
+      # tillbaka på merge-base mot origin/main. fetch-depth: 0 ovan är det
+      # som gör basen läsbar över huvud taget.
+      - name: Ändrad frontend kräver HÖJD version
+        env:
+          BAS: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: python backend/scripts/check_frontend_version.py --require-bump --base "$BAS"
       - name: Juridiska platshållare (varning - släppgrind, inte byggfel)
         run: |
           if grep -rn 'class="placeholder"' frontend/*.html; then
