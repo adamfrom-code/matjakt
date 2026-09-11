@@ -228,12 +228,95 @@ jobs:
           path: backend/data/audit/
           if-no-files-found: ignore
 
+  # ── K4 · STAGING FÖRE PRODUKTION ───────────────────────────────────────
+  #
+  # E2E kördes bara mot en process i CI och aldrig mot något som liknar
+  # Render. Efter en deploy var kontrollen en människa som öppnade
+  # /api/health i en flik - vilket fångar "servern svarar inte" och ungefär
+  # inget annat.
+  #
+  # Samma bygge går nu upp i staging FÖRST, rökprovas där, och först när det
+  # provet är grönt fyras produktionens hook. Det som fångas är exakt det som
+  # inte går att se i en testsvit: en image som inte startar, en migration
+  # som stannar på en disk med data, en miljövariabel som saknas, ett
+  # beroende som inte finns i imagen.
+  #
+  # OM STAGING INTE ÄR UPPSATT hoppar rökprovet över sig själv och jobbet
+  # blir grönt. Det är ett medvetet val: `deploy-backend` behöver det här
+  # jobbet, och ett jobb som SKIPPAS gör varje jobb som behöver det skippat
+  # med sig. En halvfärdig staging får inte stoppa produktionsdeployer.
+  # docs/STAGING.md listar vad som återstår för att provet ska bli skarpt.
+  deploy-staging:
+    name: Deploy till staging
+    needs: [backend, frontend, security, e2e]
+    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: render-staging
+      cancel-in-progress: false
+    outputs:
+      triggad: ${{ steps.hook.outputs.triggad }}
+    steps:
+      - name: Trigga stagings deploy-hook för den gröna committen
+        id: hook
+        env:
+          RENDER_STAGING_DEPLOY_HOOK: ${{ secrets.RENDER_STAGING_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_STAGING_DEPLOY_HOOK" ]; then
+            echo "triggad=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::RENDER_STAGING_DEPLOY_HOOK saknas - stagingtjänsten är inte uppsatt än (docs/STAGING.md). Produktionsdeployen fortsätter som förut, utan stagingprov."
+            exit 0
+          fi
+          case "$RENDER_STAGING_DEPLOY_HOOK" in *\?*) sep='&';; *) sep='?';; esac
+          curl -fsS -X POST "${RENDER_STAGING_DEPLOY_HOOK}${sep}ref=${GITHUB_SHA}" -o /dev/null
+          echo "triggad=true" >> "$GITHUB_OUTPUT"
+          echo "Staging-deploy triggad för ${GITHUB_SHA}"
+
+  smoke-staging:
+    name: Rökprov mot staging (grinden före produktion)
+    needs: [deploy-staging]
+    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: render-staging
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Steg-nivå `if`, inte jobb-nivå: ett HOPPAT JOBB gör deploy-backend
+      # hoppat med sig, ett hoppat STEG lämnar jobbet grönt.
+      - name: Vänta tills staging kör committen
+        if: needs.deploy-staging.outputs.triggad == 'true'
+        env:
+          STAGING_HALSO_URL: ${{ vars.MATJAKT_STAGING_HEALTH_URL || 'https://matjakt-staging.onrender.com/api/health' }}
+        run: |
+          python backend/scripts/wait_for_deploy.py \
+            --url "$STAGING_HALSO_URL" --commit "$GITHUB_SHA" --timeout 480 --interval 15
+      - name: Rökprov
+        if: needs.deploy-staging.outputs.triggad == 'true'
+        env:
+          STAGING_API: ${{ vars.MATJAKT_STAGING_API_URL || 'https://matjakt-staging.onrender.com/api' }}
+        run: |
+          python backend/scripts/smoke.py --url "$STAGING_API" \
+            --commit "$GITHUB_SHA" --stripe-lage test
+      - name: Utan staging finns inget prov att köra
+        if: needs.deploy-staging.outputs.triggad != 'true'
+        run: echo "::notice::Stagingtjänsten är inte uppsatt - se docs/STAGING.md."
+
   # ENDA vägen till Render. Auto-Deploy i Render-dashboarden ska vara AV;
   # den här hooken körs bara när alla jobb ovan är gröna på main. Saknas
   # secreten RENDER_DEPLOY_HOOK loggas det och inget deployas.
+  #
+  # K4: `smoke-staging` är tillagd i needs. Faller rökprovet mot staging blir
+  # success() falskt, produktionens hook fyrar inte, health-gate hoppas över,
+  # CI blir röd på main - och deploy.yml, som kräver en grön CI-körning,
+  # publicerar därför ingen frontend heller. Ett trasigt bygge stannar i
+  # staging.
   deploy-backend:
     name: Deploy backend till Render (bara grön main)
-    needs: [backend, frontend, security, e2e]
+    needs: [backend, frontend, security, e2e, smoke-staging]
     if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     concurrency:
@@ -306,3 +389,61 @@ jobs:
         run: |
           python backend/scripts/wait_for_deploy.py \
             --url "$HALSO_URL" --commit "$GITHUB_SHA" --timeout 480 --interval 15
+
+  # ── K4 · RÖKPROV MOT PRODUKTION, OCH VÄGEN TILLBAKA ────────────────────
+  #
+  # health-gate ovan svarar på EN fråga: kör drift den här committen? Den
+  # frågan kan mycket väl besvaras med ja av en release som startat, svarat
+  # ok: true och tappat hela prisplattformen. Rökprovet ställer de andra
+  # sex, och det gör det EFTER att backenden är live men FÖRE frontenden -
+  # för deploy.yml startar först när hela den här körningen är klar.
+  smoke-prod:
+    name: Rökprov mot produktion
+    needs: [deploy-backend, health-gate]
+    if: needs.deploy-backend.outputs.triggad == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Åtta prov mot den levande backenden
+        env:
+          PROD_API: ${{ vars.MATJAKT_API_URL || 'https://matjakt.onrender.com/api' }}
+        run: |
+          python backend/scripts/smoke.py --url "$PROD_API" \
+            --commit "$GITHUB_SHA" --stripe-lage live
+
+  # Faller hälsokontrollen eller rökprovet står produktionen med en trasig
+  # release, och den enda vägen tillbaka var att någon var vaken och tryckte
+  # "Deploy previous" i Renders dashboard.
+  #
+  # Villkoret är `always()` plus uttalade resultat, inte `failure()`.
+  # Skillnaden spelar roll: en health-gate som failar gör smoke-prod HOPPAT,
+  # och ett hoppat behov hade tystat ner det här jobbet i precis det läge där
+  # det behövs allra mest. Här står det ordagrant vad som utlöser en
+  # återställning - hälsogrinden eller rökprovet blev rött - och inget annat.
+  #
+  # Saknas RENDER_API_KEY/RENDER_SERVICE_ID säger skriptet det rakt ut och
+  # jobbet blir rött: "kunde inte rulla tillbaka" får aldrig se ut som
+  # "rullade tillbaka".
+  rollback:
+    name: Rulla tillbaka produktionen (bara vid rött rökprov)
+    needs: [deploy-backend, health-gate, smoke-prod]
+    if: >-
+      always() && needs.deploy-backend.outputs.triggad == 'true'
+      && (needs.health-gate.result == 'failure' || needs.smoke-prod.result == 'failure')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: render-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tillbaka till föregående live-deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: python backend/scripts/render_rollback.py --exclude "$GITHUB_SHA"

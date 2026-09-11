@@ -83,3 +83,98 @@ services:
         sync: false
       - key: SMTP_FROM_EMAIL
         sync: false
+
+  # ── K4 · STAGING ────────────────────────────────────────────────────────
+  #
+  # E2E kördes bara mot en process i CI och aldrig mot något som liknar
+  # Render. Efter en deploy var kontrollen en människa som öppnade
+  # /api/health i en flik. Det fångar "servern svarar inte" och ungefär
+  # inget annat: en deploy som startar, svarar ok: true och har tappat hela
+  # prisplattformen ser likadan ut i den fliken som en frisk.
+  #
+  # Staging är samma image, samma Dockerfile och samma kod som produktion -
+  # bara egen disk, egna hemligheter och Stripes TESTNYCKLAR. Poängen är
+  # inte att den är lik produktion i data, utan att den kör samma BYGGE
+  # först, så att ett bygge som inte ens startar aldrig når kunderna.
+  #
+  # Tjänsten skapas av Adam; se docs/STAGING.md för exakt vilka steg som
+  # återstår och vilka hemligheter som ska sättas var.
+  - type: web
+    name: matjakt-staging
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    # Staging behöver inte uthållighet mellan deployer på samma sätt som
+    # produktion, och en starter-instans per miljö är den billigaste
+    # försäkring som finns mot en trasig release.
+    plan: starter
+    # Precis som produktion: deploy sker BARA via hooken från CI
+    # (ci.yml, jobbet deploy-staging), aldrig direkt på push.
+    autoDeploy: false
+    healthCheckPath: /api/health
+    disk:
+      name: matjakt-staging-data
+      mountPath: /app/backend/data
+      sizeGB: 1
+    envVars:
+      # Frontenden deployas inte till staging - Pages har en miljö. Origin
+      # är ändå satt så att en lokal frontend eller ett manuellt anrop mot
+      # staging inte blockeras av CORS.
+      - key: MATJAKT_FRONTEND_ORIGIN
+        value: http://localhost:8080,http://127.0.0.1:8080
+      - key: MATJAKT_APP_URL
+        value: https://matjakt.store/app
+      - key: MATJAKT_TRUST_PROXY
+        value: "1"
+      # AV i staging, och det är hela poängen med en egen miljö:
+      #
+      # Schemaläggaren hade bränt Primats DYGNSKVOT en gång till varje natt
+      # - samma kvot som produktion delar. En staging som kostar produktion
+      # dess prisdata är värre än ingen staging.
+      - key: MATJAKT_GROCERY_SCHEDULE_ENABLED
+        value: "0"
+      - key: MATJAKT_MAX_SCRAPES
+        value: "0"
+      # Utskick: aldrig från staging. Ett välkomstmejl till en riktig
+      # adress från en testmiljö är inte ett driftfel, det är ett
+      # förtroendefel.
+      - key: MATJAKT_MAILINGS_ENABLED
+        value: "0"
+      - key: MATJAKT_MAIL_SECRET
+        sync: false
+      - key: MATJAKT_ADMIN_EMAIL
+        sync: false
+      - key: MATJAKT_PUBLIC_API_URL
+        value: https://matjakt-staging.onrender.com/api
+      - key: PRIMAT_API_KEY
+        sync: false
+      # Egen admin-token, skild från produktionens. Samma token i två
+      # miljöer betyder att den som får tag i stagings token är inne i
+      # produktion också.
+      - key: MATJAKT_ADMIN_TOKEN
+        sync: false
+      - key: MATJAKT_BACKUP_TOKEN
+        sync: false
+      - key: MATJAKT_BACKUP_PUBLIC_KEY
+        sync: false
+      # STRIPE: TESTNYCKLAR, ALLTID. /api/health rapporterar stripe.mode,
+      # och rökprovet mot staging kan därför se skillnad på sk_test_ och
+      # sk_live_ utan att någon nyckel någonsin visas.
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_MONTHLY
+        sync: false
+      - key: STRIPE_PRICE_YEARLY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false
