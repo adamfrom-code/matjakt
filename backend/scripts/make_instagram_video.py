@@ -47,10 +47,18 @@ FADE = 0.45
 # placed outside this band is text sitting under a username or a Send button.
 SAFE_TOP, SAFE_BOTTOM = 260, 520
 
-BRAND_GREEN = (23, 59, 42)
-BRAND_ORANGE = (242, 140, 40)
+# Designsystemets tokens (docs/DESIGNSYSTEM-D.md 2.1), som RGB. Reelen är en
+# av fem ytor som bär varumärket - de andra är landningssidan, appen, 404:an
+# och de juridiska sidorna - och tre paletter i samma domän läser som tre
+# olika produkter.
+PAPER = (236, 238, 239)       # --paper  #ECEEEF
+INK = (22, 25, 27)            # --ink    #16191B
+ACCENT = (138, 31, 66)        # --accent #8A1F42, systemets ENDA accent
+ON_ACCENT = (255, 255, 255)   # --on-accent
+SCRIM = (10, 12, 13)          # --scrim - den ska mörklägga fotot, inte färga det
 
-# Georgia and Segoe stand in for Fraunces and DM Sans. They are on every
+# Georgia and Segoe stand in for Newsreader and Archivo - Georgia is the
+# fallback the design system itself names for Newsreader. They are on every
 # Windows machine, and a video that renders is worth more than one that needs
 # a font install to build at all.
 SERIF = "C:/Windows/Fonts/georgiab.ttf"
@@ -85,7 +93,7 @@ def scene_overlay(index: int, headline: str, caption: str, path: Path):
     for y in range(HEIGHT):
         position = y / HEIGHT
         alpha = 0 if position < 0.42 else int(225 * ((position - 0.42) / 0.58) ** 1.5)
-        scrim_draw.line([(0, y), (WIDTH, y)], fill=(12, 26, 19, alpha))
+        scrim_draw.line([(0, y), (WIDTH, y)], fill=SCRIM + (alpha,))
     image.alpha_composite(scrim)
 
     draw = ImageDraw.Draw(image)
@@ -99,11 +107,11 @@ def scene_overlay(index: int, headline: str, caption: str, path: Path):
 
     # The step number, so the sequence reads as a sequence.
     badge = 62
-    draw.ellipse([margin, y - badge - 34, margin + badge, y - 34], fill=BRAND_ORANGE)
+    draw.rectangle([margin, y - badge - 34, margin + badge, y - 34], fill=ACCENT)
     number_font = font(SERIF, 34)
     number = str(index)
     draw.text((margin + badge / 2 - draw.textlength(number, font=number_font) / 2,
-               y - badge - 34 + 11), number, font=number_font, fill=(43, 26, 8))
+               y - badge - 34 + 11), number, font=number_font, fill=ON_ACCENT)
 
     for line in lines:
         draw.text((margin, y), line, font=headline_font, fill=(255, 255, 255))
@@ -117,14 +125,14 @@ def scene_overlay(index: int, headline: str, caption: str, path: Path):
 def card(path: Path, title: str, subtitle: str = "", logo: Path | None = None,
          title_size: int = 96):
     """A full-frame typographic card - the open and the close."""
-    image = Image.new("RGBA", (WIDTH, HEIGHT), BRAND_GREEN + (255,))
+    image = Image.new("RGBA", (WIDTH, HEIGHT), PAPER + (255,))
     draw = ImageDraw.Draw(image)
 
     centre = HEIGHT // 2
     if logo and logo.exists():
         mark = Image.open(logo).convert("RGBA").resize((260, 260), Image.LANCZOS)
         rounded = Image.new("L", (260, 260), 0)
-        ImageDraw.Draw(rounded).rounded_rectangle([0, 0, 259, 259], radius=62, fill=255)
+        ImageDraw.Draw(rounded).rectangle([0, 0, 259, 259], fill=255)
         mark.putalpha(rounded)
         image.alpha_composite(mark, ((WIDTH - 260) // 2, centre - 330))
 
@@ -133,13 +141,13 @@ def card(path: Path, title: str, subtitle: str = "", logo: Path | None = None,
     y = centre - (len(lines) * (title_size + 18)) // 2 + (60 if logo else 0)
     for line in lines:
         draw.text(((WIDTH - draw.textlength(line, font=title_font)) / 2, y),
-                  line, font=title_font, fill=(255, 255, 255))
+                  line, font=title_font, fill=INK)
         y += title_size + 18
 
     if subtitle:
         subtitle_font = font(SANS, 46)
         draw.text(((WIDTH - draw.textlength(subtitle, font=subtitle_font)) / 2, y + 26),
-                  subtitle, font=subtitle_font, fill=BRAND_ORANGE)
+                  subtitle, font=subtitle_font, fill=ACCENT)
 
     image.convert("RGB").save(path, quality=95)
 
