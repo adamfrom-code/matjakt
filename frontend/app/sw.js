@@ -1,11 +1,29 @@
-// Bumped together with the ?v= query on app.js/styles.css in index.html.
-// All three have to move: the query busts the browser's HTTP cache, and the
-// cache name makes the service worker drop its old copy in activate(). Miss
-// any of them and a returning user keeps running the previous release under
-// the same URL - which is exactly what happened after the recipe-bank and
-// week-type work shipped: the site was updated, phones still showed the old
-// three week types.
-const CACHE_NAME = "matjakt-shell-v56";
+// CACHE-STÄMPELN. Talet här hör ihop med ?v= på app.js/styles.css i
+// index.html: queryn spräcker webbläsarens HTTP-cache, och cachenamnet får
+// service workern att släppa sin gamla kopia i activate(). Missas något av
+// dem kör en återvändande användare den förra releasen under samma URL -
+// exakt det som hände efter receptbanks- och veckotypsarbetet: sidan var
+// uppdaterad, telefonerna visade de gamla tre veckotyperna.
+//
+// Talet står kvar i källan, men det redigeras inte längre för hand och det är
+// inte det som deployas. `node scripts/frontend_version.mjs --bump` räknar upp
+// alla tre ställena från det HÖGSTA tal som någonsin stått i main, och
+// byggsteget (scripts/build_frontend.mjs) stämplar bygget med talet plus en
+// hash av det som faktiskt byggdes. Två grenar som båda höjde 51 till 52 blir
+// EN höjning vid ombasering, utan ett ord - hashen är det som gör att den
+// tystnaden ändå inte kan gömma ny kod bakom en adress webbläsaren redan sett.
+//
+// Att talet hoppade förbi ett femtiotal steg till 104 är generatorns första
+// körning, och den
+// säger något obehagligt om historiken: `app.js?v=` gick 102 -> 25 (964d45e),
+// upp till 103 (7aeb57c) och ner till 26 igen (3a36dd2) när de tre räknarna
+// slogs ihop. Allt under 104 är alltså cache-nycklar som redan serverats en
+// gång, med annat innehåll - felet det här paketet handlar om har redan hänt
+// två gånger i main. Ett tal som kan gå ner är värre än tre tal som kan gå
+// isär, så det räknas numera från det högsta som någonsin setts och aldrig
+// från det som råkar ligga i den egna grenen.
+// Se scripts/frontend_version.mjs.
+const CACHE_NAME = "matjakt-shell-v104";
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -46,6 +64,22 @@ self.addEventListener("fetch", event => {
         }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      // OFFLINE MED QUERY I ADRESSEN.
+      //
+      // caches.match(request) matchar på EXAKT URL, query och allt. Varje
+      // djuplänk appen själv delar ut bär en - ?recept=, ?invite=, ?verify=,
+      // ?reset=, ?billing=success - och ingen av dem finns i cachen, för de
+      // har aldrig hämtats förut. Offline gav därför webbläsarens felsida på
+      // precis de adresser som skickas i mejl och delas vidare.
+      //
+      // En NAVIGERING vill åt appskalet. Det är samma dokument oavsett query,
+      // och appen läser sin egen adress när den startat (takeUrlTokens m.fl.).
+      // Så: exakt träff först, sedan samma adress utan query, sist skalet på
+      // scopets rot. Allt som inte är en navigering beter sig som förut - att
+      // svara med HTML-skalet på en produktbild vore värre än inget svar.
+      .catch(() => caches.match(event.request).then(hit => hit
+        || (event.request.mode === "navigate"
+          ? caches.match(event.request, { ignoreSearch: true }).then(shell => shell || caches.match("./"))
+          : undefined)))
   );
 });
