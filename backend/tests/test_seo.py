@@ -270,30 +270,42 @@ class EttVarumarkeIHelaDomanen(unittest.TestCase):
             self.assertIn(token, källa, f"reelen saknar {token}")
 
 
-class SupportenGarAttLamnaOver(unittest.TestCase):
-    def test_ingen_privat_inkorg_pa_nagon_publik_sida(self):
+class KontaktadressenGarFram(unittest.TestCase):
+    """Paketet skrev först support@matjakt.store överallt. Den adressen har
+    ingen vidarebefordran - ett mejl dit hamnar ingenstans, och det är värre
+    än en privat adress som läses. I3 avgjorde: adamfrom@icloud.com på hela
+    domänen tills brevlådan finns. Byts den, byts den på alla sidor samtidigt
+    och det här testet med."""
+
+    SIDOR = ("index.html", "integritetspolicy.html", "anvandarvillkor.html")
+
+    def test_varje_publik_sida_bar_en_adress_som_nar_nagon(self):
+        for namn in self.SIDOR:
+            html = (FRONTEND / namn).read_text(encoding="utf-8")
+            self.assertIn("mailto:adamfrom@icloud.com", html,
+                          f"{namn} saknar en kontaktadress som går fram")
+
+    def test_ingen_sida_utlovar_en_brevlada_som_inte_finns(self):
         for sida in sorted(FRONTEND.glob("*.html")):
             html = sida.read_text(encoding="utf-8")
-            self.assertTrue("adamfrom@icloud.com" not in html,
-                            f"{sida.name} ber om support till en privat iCloud-adress")
-
-    def test_de_juridiska_sidorna_pekar_pa_domanens_adress(self):
-        for namn in ("integritetspolicy.html", "anvandarvillkor.html"):
-            html = (FRONTEND / namn).read_text(encoding="utf-8")
-            self.assertTrue("support@matjakt.store" in html, f"{namn} saknar supportadressen")
+            self.assertNotIn("support@matjakt.store", html,
+                             f"{sida.name} ber om support till en adress utan mottagare")
 
 
-class SlappgrindenStarKvar(unittest.TestCase):
-    """I3 (företagsnamn och organisationsnummer) är ADAMS BESLUT och
-    överhoppat. CI:s steg "Juridiska platshållare" är en VARNING, inte ett
-    byggfel - och markeringen måste finnas kvar för att varningen ska kunna
-    hittas när beslutet väl är fattat."""
+class SlappgrindenArPasserad(unittest.TestCase):
+    """Beslutet är fattat (I3) och platshållarna ifyllda. CI:s steg
+    "Juridiska platshållare" är fortfarande en VARNING och inte ett byggfel -
+    det ska stå kvar, för nästa platshållare någon skriver ska hittas på
+    samma sätt. Men på de sidor som finns i dag ska den inte ha något att
+    varna om."""
 
-    def test_platshallarna_ar_kvar_och_gar_att_hitta(self):
-        html = (FRONTEND / "integritetspolicy.html").read_text(encoding="utf-8")
-        self.assertIn('class="placeholder"', html,
-                      "markeringen som CI:s släppgrind letar efter är borta")
-        self.assertIn("[FÖRETAGSNAMN / DITT NAMN]", html)
+    def test_inga_platshallare_kvar_pa_nagon_publik_sida(self):
+        for sida in sorted(FRONTEND.glob("*.html")):
+            html = sida.read_text(encoding="utf-8")
+            self.assertNotIn('class="placeholder"', html,
+                             f"{sida.name} har kvar en juridisk platshållare")
+            self.assertNotIn("[FÖRETAGSNAMN", html, f"{sida.name}: platshållartext kvar")
+            self.assertNotIn("[ORGANISATIONSNUMMER", html, f"{sida.name}: platshållartext kvar")
 
     def test_ci_steget_ar_en_varning_inte_ett_byggfel(self):
         ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
