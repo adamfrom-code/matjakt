@@ -79,7 +79,7 @@ def _kort(text, gräns=200):
     return text if len(text) <= gräns else text[:gräns - 1] + "…"
 
 
-def evaluate(panel, quota=None):
+def evaluate(panel, quota=None, backup=None, canaries=None):
     """Vilka problem som finns JUST NU, som en dict key -> beskrivning.
 
     Nyckeln identifierar problemet, inte tillfället: samma trasiga ICA-import
@@ -134,6 +134,41 @@ def evaluate(panel, quota=None):
                              f"det som hunnit hämtas behålls - men täckningen "
                              f"byggs då upp över flera nätter i stället för en."),
                 }
+    # D10. BACKUPEN SOM SLUTAT TAS.
+    # Backupen var rätt byggd men helt oövervakad: åldern lästes bara av
+    # backuptråden själv. En backup ingen tittar på är ett antagande, och
+    # den dag den behövs är exakt fel dag att upptäcka att den slutade tas
+    # för tre veckor sedan.
+    if backup and not backup.get("ok"):
+        problem["backup:stale"] = {
+            "severity": "critical", "chain": None,
+            "title": "Matjakt — säkerhetskopiorna har slutat tas",
+            "body": (f"{backup.get('reason') or 'backupen ser inte frisk ut'}.\n\n"
+                     f"Antal set på disken: {backup.get('sets')}. Backupen är det enda "
+                     f"som står mellan en dålig migrering och alla konton, och den "
+                     f"upptäcks annars först den dag den behövs.\n\n"
+                     f"Kontrollera backuptråden i serverloggen och /api/health -> backup."),
+        }
+    # D10. KANARIEFÅGELN: en känd vara till ett känt pris, per kedja.
+    # Radantal och medianpris svarar på "ser insamlingen normal ut?" utan att
+    # någonsin titta på en vara någon känner igen. En kedja som byter
+    # API-form kan fortsätta leverera tiotusen välformade rader - bara inte
+    # rätt rader.
+    for kanarie in canaries or []:
+        if kanarie.get("ok") or not kanarie.get("configured"):
+            continue
+        kedja = kanarie.get("chain")
+        problem[f"canary:{kedja}"] = {
+            "severity": "warning", "chain": kedja,
+            "title": f"Matjakt — kontrollvaran hos {kedja} ser fel ut",
+            "body": (f"{_kort(kanarie.get('reason'))}\n\n"
+                     f"Kontrollvaran är EN vara vi vet fanns, till ett pris vi vet "
+                     f"ungefär vad det var. Ser den fel ut har något gått sönder "
+                     f"mellan kedjans sida och vår databas - resten av katalogen kan "
+                     f"se helt normal ut ändå.\n\n"
+                     f"Kedjans priser är kvar och serveras; det här är en signal om "
+                     f"att titta på insamlingen, inte ett skäl att kasta natten."),
+        }
     return problem
 
 
@@ -215,7 +250,8 @@ def open_incidents(kv):
             if key != HISTORY_KEY and _state(kv, key)}
 
 
-def process(panel, kv, mail_config, quota=None, now=None, to_email=None):
+def process(panel, kv, mail_config, quota=None, now=None, to_email=None,
+            backup=None, canaries=None):
     """Jämför nuläget mot öppna incidenter och skickar det som faktiskt är nytt.
 
     TILLSTÅNDET ÄR SANNINGEN, MEJLET ÄR ETT KVITTO. Förut skrevs en incident
@@ -231,7 +267,7 @@ def process(panel, kv, mail_config, quota=None, now=None, to_email=None):
     """
     now = now if now is not None else time.time()
     to_email = to_email if to_email is not None else admin_email()
-    aktuella = evaluate(panel, quota=quota)
+    aktuella = evaluate(panel, quota=quota, backup=backup, canaries=canaries)
     öppna = open_incidents(kv)
     resultat = {"incidents": [], "recoveries": [], "suppressed": [], "skipped": []}
 
