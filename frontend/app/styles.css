@@ -536,15 +536,15 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.02em}
 
 /* ---- Hem: ordning och budgetblocket ---------------------------------- */
 .view-home .home-screen{display:flex;flex-direction:column}
-.home-screen>.home-hero{order:0}.home-screen>.week-card{order:1}.home-screen>.next-meal-section{order:2}.home-screen>.home-stats{order:3}.home-screen>.campaign-section{order:4}.home-screen>.hem-recipes-section{order:5}
+.home-screen>.home-hero{order:0}.home-screen>.next-meal-section{order:1}.home-screen>.week-card{order:2}.home-screen>.home-stats{order:3}.home-screen>.campaign-section{order:4}.home-screen>.hem-recipes-section{order:5}
 .week-card,.week-card.compact{display:flex;flex-direction:column;gap:8px;margin:0 0 22px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
 .week-card-label{font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
 .status-dot{padding:0;background:transparent;color:var(--muted);font-size:12px;font-weight:600;letter-spacing:0}
 .week-sheet-plus,.week-sheet-plus-corner{width:32px;height:32px;background:var(--surface-2);color:var(--text);font-size:18px}
 .week-budget-row{padding:2px 0 0}
-.week-budget-text{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin:0;color:var(--muted);font-size:15px;font-weight:600}
-.week-budget-text strong{display:block;width:100%;margin-bottom:2px;font:700 54px/1 var(--font-display);letter-spacing:-.035em;color:var(--text)}
-.week-budget-text b{margin-left:auto;font-weight:700;color:var(--muted)}
+.week-budget-text{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;margin:0;color:var(--ink-2);font-size:14px;font-weight:400}
+.week-budget-text strong{font:600 15px/1.4 var(--font-body);color:var(--ink)}
+.week-budget-text b{margin-left:auto;font-weight:600;color:var(--ink-2)}
 .progress-track{height:6px;margin-top:8px;border-radius:99px;background:#e3e7e3}
 .progress-track i{background:var(--primary)}
 .week-card .btn-primary{margin-top:8px}
