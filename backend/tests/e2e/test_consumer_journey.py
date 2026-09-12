@@ -980,6 +980,41 @@ class BrowserJourney(unittest.TestCase):
         expect(page.locator("[data-choose-plan]").first).to_be_visible()
         self.assertEqual(page.locator("[data-plan-paywall]").count(), 0)
 
+    def test_skapa_min_vecka_skapar_en_vecka_inte_ett_formular(self):
+        """G7: en knapp som lovar ett resultat ska leverera resultatet.
+
+        "Skapa min vecka" öppnade planjämförelsen - ett formulär med åtta
+        veckotyper, sju av dem låsta. Det är den klassiska tillitsläckan:
+        knappen säger vad den ska göra, och gör något annat.
+
+        Läget testet behöver är "ingen vecka än", och det finns på riktigt:
+        den som kommer in via en DELAD RECEPTLÄNK hoppar över onboardingen,
+        och då bygger starten ingen vecka åt henne. Det är exakt där knappen
+        heter "Skapa min vecka".
+        """
+        page = self.page
+        recipe_id = self.any_recipe_id()
+        page.goto(self.app(f"?recept={recipe_id}"))
+        expect(page.locator("#recipePage")).to_be_visible()
+        page.click('.bottom-nav-item[data-view="home"]')
+        expect(page.locator("#generateBtnLabel")).to_have_text("Skapa min vecka")
+
+        page.click("#generateBtn")
+
+        # EN FÄRDIG VECKA, inte en modal.
+        expect(page.locator("#planModal")).to_be_hidden()
+        self.assertEqual(page.locator("[data-plan-paywall]:visible").count(), 0)
+        state = self.wait_for_state(lambda s: s.get("weekPlan"), what="veckan")
+        self.assertTrue(len(state["weekPlan"]) >= 1, state["weekPlan"])
+        expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
+        expect(page.locator("#weekPlanList .week-plan-row:not(.is-empty)").first).to_be_visible()
+
+        # "Välj veckotyp" finns kvar - efter leveransen, inte före den.
+        page.click('.bottom-nav-item[data-view="home"]')
+        page.click("#weekSheetOpen")
+        page.click("#sheetPlanBtn")
+        expect(page.locator("#planModal")).to_be_visible()
+
     def test_onboardingen_gar_att_stanga_med_tangentbord(self):
         """G6: onboardingmodalen gick inte att stänga med tangentbord ALLS.
 
@@ -1232,7 +1267,10 @@ class BrowserJourney(unittest.TestCase):
         # TILLBAKA till sin nivå, inte att den börjar tom.
         historik_innan = len(self.local_state().get("weekHistory") or [])
 
-        # En ny vecka lägger den förra i historiken. Knappen bor på hemvyn.
+        # En ny vecka lägger den förra i historiken. Knappen bor på hemvyn,
+        # och efter G7 gör den vad den heter: skapar veckan direkt i stället
+        # för att öppna planjämförelsen. (choose_standard_week hanterar båda
+        # lägena - den väljer i modalen om den råkar vara öppen.)
         page.click('.bottom-nav-item[data-view="home"]')
         expect(page.locator("#newWeekBtn")).to_be_visible()
         page.click("#newWeekBtn")
