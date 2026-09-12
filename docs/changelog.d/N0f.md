@@ -1,4 +1,7 @@
-### Signeringsnycklarna kan inte committas av misstag
+---
+paket: N0f
+titel: Signeringsnycklarna kan inte committas av misstag
+---
 
 `.gitignore` håller ute `*.p8`, `AuthKey_*`, `*.mobileprovision`, `*.p12`
 och `*.cer`. Ett test kontrollerar att mönstren står kvar, att git faktiskt
