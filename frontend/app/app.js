@@ -213,12 +213,20 @@ watchOtherTabs({
   onOtherTab: text => showUndoToast(text, null, () => location.reload(),
                                     { actionLabel: "Ladda om", duration: 0 }),
 });
+const onboardingIsOpen = () => $("onboardingModal")?.hidden === false;
 async function pullAccountState() {
   if (!state.authToken) return;
+  // LÄST FÖRE HÄMTNINGEN OCKSÅ, inte bara efter. Att appen kan stå mitt i
+  // onboardingen när en blob landar är ingen slump: boot-raden startar
+  // refreshUser() utan att vänta in den och öppnar onboardingen i nästa
+  // andetag. Och "Skapa min vecka" stänger rutan långt innan ett sent svar
+  // kommer - läste vi bara av när blobben landar vore just det ögonblicket
+  // oskyddat, och det är det ögonblick veckan skapas i.
+  const svaradeVidStart = onboardingIsOpen();
   try {
     const { state: remote } = await fetchAccountState(state.authToken);
     if (remote) {
-      applySyncBlob(remote);
+      if (!applySyncBlob(remote, { onboardingOpen: svaradeVidStart || onboardingIsOpen() })) return;
       persistLocally();
       syncSettingsInputs(); render(); renderPantry(); restoreNutritionGoalsForm();
       // A returning account on a NEW device: the synced state already says

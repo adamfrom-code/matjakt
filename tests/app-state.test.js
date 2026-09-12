@@ -165,6 +165,94 @@ test("E4: en historikpost utan sin vecka slängs - restorePreviousWeek kastar p�
   assert.deepEqual(state.weekHistory[0].plan, ["linssoppa"]);
 });
 
+// ---- E16: en blob är en ögonblicksbild, inte ett facit -------------------
+//
+// Hämtningen av kontots blob väntas inte in någonstans (boot-radens
+// refreshUser, premiumpollen) och kan landa långt efter att den här enheten
+// skrivit nyare saker. Båda fallen nedan sänkte browser-E2E:n omväxlande och
+// gick igenom vid omkörning - det som saknades var inte en längre timeout
+// utan en regel om vilken av två bilder som är den äldre.
+
+test("E16: en blob från före onboardingen skriver inte över svaren som just ges", () => {
+  start();
+  // Användaren står i rutan och har skrivit sitt eget svar. Blobben på
+  // servern är från innan hon började: standardbudget, tomt postnummer.
+  state.budget = 900;
+  state.postnummer = "80252";
+  const skrevs = applySyncBlob({ budget: 800, postnummer: "", onboardingComplete: false },
+                               { onboardingOpen: true });
+  assert.equal(skrevs, false, "blobben är äldre än svaren och ska inte skrivas in");
+  assert.equal(state.budget, 900, "budgeten användaren skrev står kvar");
+  assert.equal(state.postnummer, "80252");
+});
+
+test("E16: inte heller när rutan hunnit stängas innan svaret kom", () => {
+  start();
+  // "Skapa min vecka" har gjort sitt och rutan är borta. Blobben begärdes
+  // medan den stod öppen, och anroparen bär med sig det - annars vore det
+  // ögonblick veckan skapas i det enda som saknade skydd.
+  state.budget = 900;
+  state.onboardingComplete = true;
+  setWeekPlan(["linssoppa", "korvgryta"]);
+  const skrevs = applySyncBlob({ budget: 800, onboardingComplete: false, weekPlan: [] },
+                               { onboardingOpen: true });
+  assert.equal(skrevs, false);
+  assert.equal(state.budget, 900);
+  assert.equal(state.onboardingComplete, true);
+  assert.deepEqual(state.weekPlan, ["linssoppa", "korvgryta"], "veckan som just skapades står kvar");
+});
+
+test("E16: ett konto som aldrig gjort onboardingen får ändå sin vecka", () => {
+  start();
+  // Utloggningen låter "onboarding klar" stanna på enheten med flit - den är
+  // av apparat-karaktär. Nästa person som loggar in kan vara en gäst som
+  // aldrig sett rutan men mycket väl har en vecka på sitt konto, och den
+  // frågan avgörs av om NÅGON svarar just nu, inte av vad enheten minns.
+  state.onboardingComplete = true;
+  const skrevs = applySyncBlob({ weekPlan: ["korvgryta"], onboardingComplete: false });
+  assert.equal(skrevs, true);
+  assert.deepEqual(state.weekPlan, ["korvgryta"]);
+});
+
+test("E16: en blob som KÄNNER till onboardingen är den nyare och skrivs in", () => {
+  start();
+  state.onboardingComplete = true;
+  const skrevs = applySyncBlob({ budget: 1500, onboardingComplete: true, weekPlan: ["korvgryta"] });
+  assert.equal(skrevs, true, "kontots egen vecka på en ny telefon ska fortfarande komma fram");
+  assert.equal(state.budget, 1500);
+  assert.deepEqual(state.weekPlan, ["korvgryta"]);
+});
+
+test("E16: en äldre prisbild lägger sig inte över en färskare", () => {
+  start();
+  // Premium har just prissatt alla tre kedjorna.
+  state.dbChainTotals = { Willys: { chain: "Willys" }, Hemköp: { chain: "Hemköp" }, "City Gross": { chain: "City Gross" } };
+  state.dbPricedAt = 2000;
+  // Blobben begärdes före köpet och bär Free-vyns maskade bild: EN kedja.
+  applySyncBlob({ dbChainTotals: { Willys: { chain: "Willys" } }, dbPricedAt: 1000 });
+  assert.deepEqual(Object.keys(state.dbChainTotals).sort(), ["City Gross", "Hemköp", "Willys"],
+                   "de tre prissatta kedjorna står kvar");
+  assert.equal(state.dbPricedAt, 2000);
+});
+
+test("E16: en färskare prisbild ur kontot målas som förut", () => {
+  start();
+  state.dbChainTotals = { Willys: { chain: "Willys" } };
+  state.dbPricedAt = 1000;
+  applySyncBlob({ dbChainTotals: { Hemköp: { chain: "Hemköp" } }, dbComparison: { cheapestChain: "Hemköp" }, dbPricedAt: 3000 });
+  assert.deepEqual(Object.keys(state.dbChainTotals), ["Hemköp"]);
+  assert.equal(state.dbComparison.cheapestChain, "Hemköp");
+  assert.equal(state.dbPricedAt, 3000);
+});
+
+test("E16: utan egen prisbild är kontots alltid den bättre - annars 'pris hämtas…'", () => {
+  start();
+  assert.equal(state.dbPricedAt, null);
+  applySyncBlob({ dbChainTotals: { Willys: { chain: "Willys" } }, dbPricedAt: 1000 });
+  assert.deepEqual(Object.keys(state.dbChainTotals), ["Willys"]);
+  assert.equal(state.dbPricedAt, 1000);
+});
+
 test("payloaden ut är samma fält som förut, plus versionen", () => {
   start();
   setWeekPlan(["linssoppa"]);
