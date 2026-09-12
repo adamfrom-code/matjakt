@@ -24,6 +24,8 @@
 | Hushållshändelser | `household_events` (typ, vem, när, varans namn) | underlag för notiser; högst 500 rader per hushåll | medlemmarna, Adam (drift) | avtal |
 | Notisinställningar | `notification_prefs` (per kategori) | användaren styr vad som plingar | Adam (drift) | avtal |
 | Enhetstoken för push | `push_devices.token_hash` (SHA-256) | skicka notis till rätt enhet; glöms vid utloggning och byter ägare när ett nytt konto loggar in på enheten | ingen – hash | avtal |
+| Web Push-prenumeration | `push_subscriptions` (endpoint i KLARTEXT + `p256dh`/`auth`, per webbläsare/telefon) | söndagsnotisen: endpointen ÄR adressen servern POSTar till, en hash går inte att skicka till. Raderas vid utloggning, vid raderat konto och när push-tjänsten svarar 404/410 | push-tjänsten (Google/Mozilla/Apple) som mottagare, Adam (drift) | samtycke (`notification_prefs.week`) |
+| Skickade veckonotiser | `push_log` (konto, sort, dag – aldrig klockslag eller innehåll) | garantin för EN notis per söndag och konto, även över en omstart | Adam (drift) | avtal |
 | Köade notiser | `notification_outbox` (titel, text, deeplink; högst 100 per användare) | leverera notiser; töms när någon lämnar hushållet | mottagaren, Adam (drift) | avtal |
 | Premiumstatus | `users.premium`, `subscription_*`, `stripe_customer_id`, `stripe_subscription_id`, `stripe_event_created` | låsa upp Premium, sköta prenumerationen | Adam, Stripe | avtal |
 | Provperiodsfält (`trial_*`) | `matjakt.db` | historik för två gamla konton; ingen ny trial ges | Adam | – (utfasas) |

@@ -11,6 +11,8 @@
 | Stripe-händelse-id (`stripe_events`) | tills vidare | – | manuellt: tabellen är liten (en rad per webhook); rensa rader äldre än 90 dygn vid behov |
 | Stripe-referenser på kontot | så länge kontot finns | vid radering (kunden raderas hos Stripe) | automatiskt |
 | Inaktiva konton | tills vidare | – | **beslut saknas**: förslag 24 månader utan inloggning → mejl → radering efter 30 dygn. Kräver SMTP och en policytext |
+| Web Push-prenumeration (`push_subscriptions`) | så länge kontot finns och veckonotisen är påslagen | vid utloggning, vid avstängd veckonotis, vid raderat konto, och när push-tjänsten svarar 404/410 | automatiskt, `services/push/store.py` |
+| Skickade veckonotiser (`push_log`) | tills vidare | – | manuellt: en rad per konto och söndag; rensa rader äldre än 90 dygn vid behov. Raden bär ingen text och inget klockslag, bara att notisen gick ut |
 | Feedback (fritext) | tills vidare | – | manuellt; förslag 12 månader |
 | Analytics-räknare | tills vidare, utan identitet | – | inget personuppgiftsskäl att rensa |
 | Rate limit-räknare | i processminne, max 1 timme | vid omstart | automatiskt |
