@@ -164,6 +164,12 @@
         <!-- Hushållet är appens starkaste virala kanal och nämndes inte en
              enda gång. En rad, precis där den betyder något. -->
         <button type="button" class="store-compare-upsell household-invite-prompt" id="basketHouseholdInvite" hidden>Handlar ni ihop? Dela listan med den du bor med <span aria-hidden="true">&rarr;</span></button>
+        <!-- G9: postnumret frågas HÄR, inte i onboardingen. Det var en hård
+             grind före första värdet - fem siffror krävdes för att ens få se
+             en måltid. Frågan hör hemma där svaret gör skillnad: i butiken,
+             när priserna ska stämma. Raden visas bara när postnummer saknas,
+             och försvinner för alltid när det är ifyllt. -->
+        <button type="button" class="store-compare-upsell postcode-prompt" id="basketPostcodePrompt" hidden>Priserna är riksgemensamma. Ange postnummer för priserna i din butik <span aria-hidden="true">&rarr;</span></button>
         <h3 class="shopping-section-title" id="weekListTitle" hidden>Din matvecka</h3>
         <div class="shopping-list" id="shoppingList"></div>
         <section class="extra-items" id="extraItemsSection" hidden>
