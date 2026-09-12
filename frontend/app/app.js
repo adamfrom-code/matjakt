@@ -32,6 +32,10 @@ import { dinnerCandidates } from "./src/data/meal-type.js";
 import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
 import { weekPlanDays } from "./src/views/week.js";
 import { initSettingsView, renderSettings } from "./src/views/settings.js";
+// L1: Ikväll-skärmen ritas av sin egen modul. app.js skickar in fotot,
+// dagen och pengarna; vyn bestämmer formen - och priset skrivs av
+// prisMarkup() i src/views/pris.js, aldrig av en vy.
+import { budgetremsaText, fyndradMarkup, ikvallMarkup, ikvallTomMarkup } from "./src/views/ikvall.js";
 import { adjustInventory, fetchHousehold, fetchNotifications, forgetPushSubscription, joinHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, replaceWeekItems, savePushSubscription, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, pantryEntriesFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor } from "./src/services/categories.js";
@@ -2032,30 +2036,19 @@ function weekEmptyDayMarkup() {
   return `<div class="week-today-empty"><p>Ingen middag inplanerad den här dagen ännu.</p><button type="button" class="btn btn-ghost" data-week-add-meal>+ Lägg till middag</button></div>`;
 }
 function todayIndex() { return (new Date().getDay() + 6) % 7; }
-function nextMealCardMarkup(recipe, dayLabel = "Ikväll") {
-  const meta = [recipe.tid ? `${recipe.tid} min` : null,
-                `${recipe.servings || state.personer} portioner`].filter(Boolean).join(" · ");
-  // Fotot ÄR kortet: hela ytan öppnar receptet, "Byt" ligger som egen knapp
-  // ovanpå (syskon, inte kapslad knapp-i-knapp).
-  //
-  // M2: `namn: false` - rubriken ligger redan PÅ bilden (hero-meal-info över
-  // scrimen). Saknas fotot ritas reservkortet med monogram och kapitäler i
-  // stället, inte med rättens namn en andra gång i samma rektangel.
-  return `<div class="hero-meal-card">
-    <button type="button" class="hero-meal-open" data-week-details="${escapeHtml(recipe.id)}" aria-label="Öppna ${escapeHtml(recipe.namn)}">
-      <span class="hero-meal-photo">${recipePhoto(recipe, { namn: false })}</span>
-      <span class="hero-meal-scrim" aria-hidden="true"></span>
-      <span class="hero-meal-info"><small>${escapeHtml(dayLabel)}</small><strong>${escapeHtml(recipe.namn)}</strong><span class="hero-meal-meta">${escapeHtml(meta)}</span></span>
-    </button>
-    <button type="button" class="hero-meal-swap" data-week-swap="${escapeHtml(recipe.id)}">Byt</button>
-  </div>`;
+// L1: kortet självt ritas av src/views/ikvall.js. app.js äger det vyn inte
+// kan veta - vilket foto receptet har, vad klockan är och hur pengar skrivs
+// på svenska - och skickar in det. Ögonbrynet är "Ikväll · onsdag" när
+// hjälten faktiskt är i dag, annars "På lördag": skärmen får aldrig säga
+// "Ikväll" om en rätt som ligger tre dagar bort.
+function ikvallÖgonbryn(index) {
+  return index === todayIndex()
+    ? `Ikväll · ${DAYS_LONG[index] || DAYS[index]}`
+    : `På ${DAYS_LONG[index] || DAYS[index]}`;
 }
-function nextMealEmptyMarkup() {
-  // Ingen vecka: hjälteytan blir inbjudan i stället för ett tomt hål.
-  return `<button type="button" class="hero-meal-card hero-meal-invite" data-hem-create>
-    <strong>Vad blir det för middag i veckan?</strong>
-    <p>Tryck här så sätter Matjakt ihop veckans middagar - med riktiga priser från butikerna nära dig.</p>
-  </button>`;
+function ikvallMeta(recipe) {
+  return [recipe.tid ? `${recipe.tid} min` : null,
+          `${recipe.servings || state.personer} portioner`].filter(Boolean).join(" · ");
 }
 function weekPlanRowMarkup(recipe, index) {
   // En dag utan rätt behåller sin plats i listan. Att hoppa över den sköt
@@ -2196,29 +2189,41 @@ function renderWeekOverview(selected, shoppingItems, total) {
   // day tab the user has clicked above (that's a browsing choice on the
   // Vecka page, not a change to what "next" means on Hem). Same recipePhoto
   // call as the Vecka card above, so it's the same image, not a new fetch.
+  //
+  // M2: `namn: false` - rubriken ligger redan PÅ bilden (hero-meal-info över
+  // skärmen). Saknas fotot ritas reservkortet med monogram och kapitäler i
+  // stället, inte med rättens namn en andra gång i samma rektangel. Tio av
+  // receptbankens elva bildlösa rätter är middagar, alltså rätter
+  // veckoplaneraren faktiskt kan lägga här: reservkortet är hjälteytans
+  // andra normalläge, inte ett randfall.
   const heroIndex = selected[todayIndex()] ? todayIndex() : firstPlannedDayFrom(selected, todayIndex());
   const heroRecipe = selected[heroIndex];
-  const heroLabel = heroIndex === todayIndex() ? "Ikväll" : `På ${DAYS_LONG[heroIndex] || DAYS[heroIndex]}`;
-  $("nextMealCard").innerHTML = heroRecipe ? nextMealCardMarkup(heroRecipe, heroLabel) : nextMealEmptyMarkup();
+  $("nextMealCard").innerHTML = heroRecipe
+    ? ikvallMarkup(heroRecipe, {
+        ögonbryn: ikvallÖgonbryn(heroIndex),
+        meta: ikvallMeta(heroRecipe),
+        foto: recipePhoto(heroRecipe, { namn: false }),
+      })
+    : ikvallTomMarkup();
 
-  // Hem's budget-progress card - fed the same total this function already
-  // received from renderBasket(), never recomputed separately.
-  const heroRemaining = budgetRemaining(state.budget, total);
-  // total == null betyder "riktigt pris ej hämtat ännu" - inte "veckan
-  // kostar 0 kr". Kortet visar då ett lugnt hämtningsläge i stället för
-  // "800 kr kvar · 0%" som fakta.
-  const totalKnown = total != null;
-  const percentUsed = totalKnown && state.budget ? Math.min(100, Math.round(total / state.budget * 100)) : 0;
-  // Ingen vecka alls: siffran är budgeten själv ("800 kr veckobudget"),
-  // inte ett streck - strecket betyder "pris hämtas" och finns bara när
-  // det faktiskt finns en vecka att prissätta.
+  // Budgetremsan (§5.8) - matad med SAMMA total som funktionen redan fått av
+  // renderBasket(), aldrig omräknad för sig. total == null betyder "riktigt
+  // pris ej hämtat ännu", inte "veckan kostar 0 kr"; remsan säger då
+  // "hämtas…" i stället för att rita en tom stapel som fakta.
   const nothingPlanned = !selected.some(Boolean);
-  $("summaryBudgetRemaining").textContent = nothingPlanned ? money(state.budget) : totalKnown ? money(Math.max(0, heroRemaining)) : "–";
-  $("summaryBudgetPrefix").textContent = nothingPlanned ? "veckobudget" : "kvar av";
-  $("summaryBudgetTotal").textContent = nothingPlanned ? "" : money(state.budget);
-  $("summaryBudgetPercent").textContent = nothingPlanned ? "" : totalKnown ? `${percentUsed}%` : "hämtas…";
-  $("summaryBudgetBar").style.width = `${percentUsed}%`;
-  $("summaryBudgetBar").classList.toggle("over-budget", heroRemaining < 0);
+  const remsa = budgetremsaText({
+    budget: state.budget, använt: total, harVecka: !nothingPlanned, money,
+  });
+  $("summaryBudgetRemaining").textContent = remsa.belopp;
+  $("summaryBudgetPrefix").textContent = remsa.efter;
+  $("summaryBudgetNote").textContent = remsa.not;
+  // Ett värde, två användningar: mätarens fyllnad och markörens läge läser
+  // samma --andel, så de kan inte glida isär.
+  $("summaryBudgetMeter").style.setProperty("--andel", `${remsa.andel}%`);
+  // Aldrig bara procent - "28 % av vad" är ingen upplysning i en affär.
+  $("summaryBudgetMeter").setAttribute("aria-label", remsa.etikett || "Ingen vecka planerad ännu");
+  $("summaryBudgetBar").classList.toggle("over-budget", budgetRemaining(state.budget, total) < 0);
+  renderIkvallFynd();
 
   // All wired together at the end, once every section above has its final
   // DOM in place - wiring data-week-details right after only the today-card
@@ -2691,7 +2696,14 @@ function updateSummary() {
   // Hemkortet är avsiktligt kompakt och får inte en textrad till, men den
   // som lyssnar sig igenom sidan ska höra omfattningen utan att först
   // öppna inställningarna.
-  $("budgetCardBtn")?.setAttribute("aria-label", `Budget: ${budgetScopeText()}`);
+  //
+  // L1: omfattningen står som dold text INUTI remsan, inte som aria-label på
+  // knappen. Ett aria-label hade ersatt hela det tillgängliga namnet - alltså
+  // tystat både beloppet och mätarens egen etikett - och lämnat kvar en knapp
+  // som bara säger "Budget: gäller 4 middagar för 2 personer" utan att nämna
+  // en enda krona.
+  const omfattning = $("budgetScopeAria");
+  if (omfattning) omfattning.textContent = budgetScopeText();
 }
 function hemRecipePreviewMarkup(recipe) {
   const badge = recipe.typ && recipe.typ !== "Provider-recept" ? `<span class="hem-recipe-badge">${escapeHtml(recipe.typ)}</span>` : "";
@@ -3802,6 +3814,10 @@ async function renderOwnCampaigns() {
       return `<div class="campaign-deal"><span class="campaign-deal-image">${photo}<span class="campaign-deal-badge">−${deal.discountPercent}%</span></span><span class="campaign-deal-info"><strong>${escapeHtml(deal.name)}</strong>${deal.brand || deal.size ? `<small class="campaign-deal-brand">${escapeHtml([deal.brand, deal.size].filter(Boolean).join(" · "))}</small>` : ""}<span class="campaign-deal-price-row"><strong class="campaign-deal-price">${money(deal.campaignPrice)}</strong><s>${money(deal.regularPrice)}</s></span>${deal.lowestSeen != null ? (deal.campaignPrice <= deal.lowestSeen ? `<small class="campaign-history good">Lägsta pris vi sett</small>` : `<small class="campaign-history">Har nyligen kostat ${money(deal.lowestSeen)}</small>`) : ""}<span class="campaign-deal-store" style="color:${storeColor}">${escapeHtml(deal.chain)}</span>${addButton}<button type="button" class="campaign-follow ${state.foljdaVaror.some(f => f.name === deal.name) ? "following" : ""}" data-deal-follow="${escapeHtml(deal.name)}" aria-label="Följ ${escapeHtml(deal.name)}">${state.foljdaVaror.some(f => f.name === deal.name) ? "♥ Följer" : "♡ Följ varan"}</button></span></div>`;
     }).join("");
     ownCampaignDeals = all;
+    // Fyndraden på Ikväll hade inga fynd att visa när skärmen ritades - den
+    // hämtningen svarar först nu. Raden ritas om här i stället för att
+    // startsidan ska stå med ett tomt hål tills nästa avbockning.
+    renderIkvallFynd();
     document.querySelectorAll("[data-deal-follow]").forEach(button => button.addEventListener("click", () => {
       const name = button.dataset.dealFollow;
       const deal = ownCampaignDeals.find(d => d.name === name);
@@ -3839,6 +3855,26 @@ async function renderOwnCampaigns() {
 
 async function renderCampaignSection() {
   renderOwnCampaigns();
+}
+
+// L1 · FYNDRADEN PÅ IKVÄLL
+//
+// En rad, inte en kortkarusell till - kortkarusellen står redan längre ned
+// på skärmen. Raden säger vad veckans bästa fynd GÖR, och den kan bara säga
+// det när fyndet bär en receptkoppling. C11 lägger `recipeIds` och
+// `savesOnWeek` på varje fynd; tills dess finns kopplingen inte, och raden
+// säger då det den faktiskt vet: varan, kedjan och priset. Den gissar
+// aldrig ihop en koppling ur ett varunamn - ett påstått löfte är sämre än
+// inget löfte (se docs/PAKET-C11-fynd.md).
+function renderIkvallFynd() {
+  const box = $("ikvallFynd");
+  if (!box) return;
+  box.innerHTML = fyndradMarkup(ownCampaignDeals, {
+    receptNamn: id => RECEPT.find(recipe => recipe.id === id)?.namn || "",
+    money,
+  });
+  box.querySelectorAll("[data-ikvall-fynd]").forEach(button =>
+    button.addEventListener("click", () => $("campaignSection")?.scrollIntoView({ behavior: "smooth" })));
 }
 
 // "Visa alla" scrollar raden till sitt slut i stället för att öppna en
