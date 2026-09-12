@@ -724,8 +724,13 @@ class GroceryScheduler:
                 # deploy.
                 from . import quota as row_quota
                 row_quota.remember_reported_budget(kvot.get("dailyRowLimit"), kv=KV_CACHE)
+            # D10. BACKUPEN OCH KANARIEFÅGELN MED I SAMMA KOLL.
+            # Båda uppslagen får ALDRIG fälla driftkollen: en otillgänglig
+            # disk eller en trasig databas ska inte ta kedjelarmen med sig
+            # i fallet - samma regel som kvotuppslaget ovan.
             resultat = alerts.process(grocery_api.provider_status(), KV_CACHE, MAIL_CONFIG,
-                                      quota=kvot)
+                                      quota=kvot, backup=_backup_health(),
+                                      canaries=_canary_results())
             if resultat["incidents"] or resultat["recoveries"]:
                 logger.warning("Driftlarm: %d nya, %d lösta",
                                len(resultat["incidents"]), len(resultat["recoveries"]))
@@ -860,6 +865,35 @@ def _truthy(value) -> bool:
 
 
 SCHEDULER = GroceryScheduler()
+
+
+def _backup_health():
+    """Backupens ålder, eller None om den inte går att läsa.
+
+    D10: samma regel som kvotuppslaget - ett uppslag som misslyckas får inte
+    ta med sig kedjelarmen i fallet. None betyder "vet inte", och
+    alerts.evaluate larmar inte på ovisshet."""
+    try:
+        from api_server import DATA_DIR
+        from .. import backup
+        return backup.health(DATA_DIR)
+    except Exception:
+        logger.info("Backupens ålder kunde inte läsas - driftkollen fortsätter utan den")
+        return None
+
+
+def _canary_results():
+    """Kanariefågeln per kedja, eller en tom lista."""
+    try:
+        from . import api as grocery_api, canary
+        store = grocery_api.open_store()
+        try:
+            return canary.check_all(store)
+        finally:
+            store.close()
+    except Exception:
+        logger.info("Kanariekollen kunde inte köras - driftkollen fortsätter utan den")
+        return []
 
 
 def _primat_quota():

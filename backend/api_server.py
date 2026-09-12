@@ -51,6 +51,7 @@ from services.household.routes import HouseholdRouter
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
 from services.billing import matjakt_user_id as stripe_matjakt_user_id, orphan_subscriptions as stripe_orphan_subscriptions
 from services.billing import automatic_tax_allowed, price_verdict as stripe_price_verdict, tax_readiness as stripe_tax_readiness
+from services.billing import oss as stripe_oss
 from services.billing import withdrawal
 from services.billing import gate as paywall
 from services.billing import activation as billing_activation
@@ -60,6 +61,7 @@ from services.accounts import ratelimit  # noqa: E402
 from services.accounts import clientip  # noqa: E402
 from services.accounts import data_export  # noqa: E402
 from services import admin_audit  # noqa: E402
+from services import backup as backup_service  # noqa: E402
 from services import backup_crypto  # noqa: E402
 from services.bounded_server import BoundedThreadingHTTPServer  # noqa: E402
 from services.grocery import alerts as grocery_alerts  # noqa: E402
@@ -191,6 +193,42 @@ def stripe_price_id(plan: str) -> str:
     return STRIPE_PRICE_YEARLY if plan == "yearly" else STRIPE_PRICE_MONTHLY
 
 
+def check_oss_countries(*, alarm=True):
+    """B2b: har någon BETALANDE kund en adress utanför Sverige?
+
+    Prenumerationen går att köpa från vilket EU-land som helst, och då gäller
+    köparlandets momssats via One Stop Shop. Stripe Tax räknar rätt sats av
+    sig självt - men OSS-registreringen görs hos Skatteverket, och den finns
+    inte förrän Adam gjort den. Kontrollen ska alltså upptäcka den FÖRSTA
+    utländska kunden när hon dyker upp, inte vid en granskning två år senare
+    med retroaktiv moms i ett land vi inte var registrerade i.
+
+    Får aldrig stoppa något: ett nätfel mot Stripe är inte en tysk kund, och
+    svaret säger då att kontrollen inte kördes i stället för att låtsas att
+    listan är tom.
+
+    Sammanfattningen (ALDRIG kundlistan - den bär e-postadresser) läggs i
+    STRIPE_PRICE_CHECK så /api/health kan visa den utan admin-token, precis
+    som de andra Stripe-kontrollerna."""
+    if not STRIPE_SECRET_KEY:
+        report = stripe_oss.unavailable("Stripe är inte konfigurerat")
+    else:
+        try:
+            report = stripe_oss.foreign_customers(STRIPE_SECRET_KEY)
+        except Exception as error:
+            logger.exception("OSS-kontrollen kunde inte köras")
+            report = stripe_oss.unavailable(
+                f"kontrollen kunde inte köras ({error.__class__.__name__})")
+    if report.get("alarm") and alarm:
+        METRICS.incr("stripe_oss_foreign_customer")
+        logger.error("OSS-LARM: %s. GET /api/admin/stripe-check listar kunderna.",
+                     report.get("reason"))
+    STRIPE_PRICE_CHECK["oss"] = {key: report.get(key) for key in
+                                 ("alarm", "foreignCount", "countries", "unknownCountry",
+                                  "checked", "truncated", "reason", "available")}
+    return report
+
+
 def verify_stripe_prices():
     """Frågar Stripe om de konfigurerade priserna finns och stämmer
     (59 kr/mån, 399 kr/år, ingen provperiod, angivna INKLUSIVE moms) och om
@@ -234,6 +272,9 @@ def verify_stripe_prices():
     if not result["ok"]:
         logger.error("Stripe-konfigurationen stämmer inte: priser=%s moms=%s",
                      result["plans"], result["automaticTax"])
+    # B2b: OSS-kontrollen körs i samma svep, så larmet finns i /api/health
+    # från första uppstarten - inte först när någon öppnar kontrollrummet.
+    check_oss_countries()
     return STRIPE_PRICE_CHECK
 MAIL_CONFIG = {
     "host": os.environ.get("SMTP_HOST", ""),
@@ -2233,6 +2274,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
         # "servern har fullt" ser likadana ut utifrån; här syns skillnaden.
         "connections": SERVER.stats() if SERVER is not None else {"max": MAX_CONNECTIONS},
         "backupEncryption": backup_crypto.status(),
+        # D10: ÅLDERN PÅ DEN SENASTE SÄKERHETSKOPIAN. B5 gjorde
+        # nedladdningsvägen kontrollerbar; det här gör själva backupen det.
+        # newest_age_seconds fanns men lästes bara av backuptråden själv - en
+        # backup som slutat tas var alltså osynlig ända till den dag den
+        # behövdes. Ålder, antal set och en slutsats; inga sökvägar.
+        "backup": backup_service.health(DATA_DIR),
         # Stripe-läge utan hemligheter: bara om nyckeln är en TEST- eller
         # LIVE-nyckel (prefix) och vilka delar som är satta. Svarar på
         # "används inga live-nycklar?" utan att någonsin visa nyckeln.
@@ -2249,7 +2296,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
                    "priceCheck": STRIPE_PRICE_CHECK.get("plans"),
                    # B2: är momsen påslagen på riktigt? Utan den här raden
                    # var "ingen moms" osynligt tills en revisor frågade.
-                   "automaticTax": STRIPE_PRICE_CHECK.get("automaticTax")},
+                   "automaticTax": STRIPE_PRICE_CHECK.get("automaticTax"),
+                   # B2b: OSS. Sammanfattningen, aldrig kundlistan - den bär
+                   # e-postadresser och /api/health är öppen.
+                   "oss": STRIPE_PRICE_CHECK.get("oss")},
         "recipeProviders": sorted(RECIPE_SERVICE.providers),
                                  "recipeCount": recipes_api.stats().get("total", 0),
                                  "productCount": grocery_api.database_summary().get("totalProducts", 0),
@@ -2301,10 +2351,25 @@ class ApiHandler(SimpleHTTPRequestHandler):
                                       (None if all_ok else "priserna är inte satta inklusive moms")}
             all_ok = all_ok and report["automaticTax"]["ready"]
             report["ok"] = all_ok
+            # B2b, OSS. Prenumerationen går att köpa från vilket EU-land som
+            # helst, och då gäller KÖPARLANDETS momssats. Stripe Tax räknar
+            # rätt sats av sig självt - men OSS-registreringen görs hos
+            # Skatteverket, och den första utländska kunden ska upptäckas när
+            # hon dyker upp, inte vid en granskning.
+            #
+            # Kontrollen läser KUNDERNAS adresser, vilket ingenting i B2
+            # gjorde: den läste bara prisobjekten och kontots
+            # skatteinställningar.
+            report["oss"] = check_oss_countries()
+            # Larmet gör kontrollrummet GULT, inte rött: `ok` fortsätter
+            # handla om konfigurationen, och momsen blir rätt ändå. Det som
+            # saknas är en registrering - och det syns på statuskoden, som
+            # inte är 200.
+            status = 502 if not all_ok else (409 if report["oss"].get("alarm") else 200)
             # Samma svar som uppstartskontrollen skulle gett: skriv in det, så
             # checkout börjar skicka automatic_tax så fort dashboarden är klar.
             verify_stripe_prices()
-            self.send_json(200 if all_ok else 502, report)
+            self.send_json(status, report)
             return
         if parsed.path == "/api/admin/stripe-reconcile":
             # B1: vem betalar utan att ha fått något? Stripe listar sina
@@ -3957,7 +4022,6 @@ if __name__ == "__main__":
     # Nattliga, verifierade säkerhetskopior av alla databaser. Persistens är
     # inte backup - se services/backup.py för de ärliga gränserna och
     # återställningsinstruktionen.
-    from services import backup as backup_service
     backup_service.start_nightly(DATA_DIR)
     try:
         SERVER = BoundedThreadingHTTPServer(
