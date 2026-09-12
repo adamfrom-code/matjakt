@@ -120,11 +120,35 @@
 
       <section class="screen week-screen" aria-labelledby="weekOverviewHeading">
         <section class="week-overview" id="weekOverview" aria-label="Min matvecka">
-          <header class="screen-header week-overview-header"><h1 id="weekOverviewHeading">Min matvecka</h1></header>
+          <!-- L2: VECKAN ÄR SJU RADER OCH EN SUMMERING (design D, telefon 2).
+               Ögonbrynet bär datumintervallet, rubriken heter Veckan, och
+               sedan kommer dagarna. Allt som förklarar veckan - butiksval,
+               jämförelse, inköpsförhandsvisning - står UNDER den, av samma
+               skäl som listan kommer först i Handla: det man öppnade skärmen
+               för ska stå överst. Sju rader, rubrik och summering ryms
+               tillsammans på 844 px utan att man skrollar. -->
+          <header class="screen-header week-overview-header vecka-topp">
+            <span class="kap" id="weekRangeLabel"></span>
+            <h1 id="weekOverviewHeading">Veckan</h1>
+          </header>
           <!-- G8: erbjudandet om en annan veckotyp står OVANFÖR den färdiga
                veckan, inte i stället för den. Onboardingens sista knapp
                skapar veckan direkt; den här raden säljer efteråt. -->
           <button type="button" class="store-compare-upsell week-plan-upsell" id="weekPlanUpsell" hidden>Vill du ha en familjevecka i stället? Välj veckotyp <span aria-hidden="true">&rarr;</span></button>
+          <!-- G3: HELA VECKAN SYNLIG. Listan var permanent dold, och kvar
+               fanns sju dagflikar och ETT dagskort i taget - alltså gick
+               frågan appen finns för, "vad äter vi i veckan", inte att
+               besvara med ögonen. L2 tog bort flikarna och dagskortet: sju
+               rader, alla synliga, ingen kalender emellan. -->
+          <div class="week-overview-section week-plan-section">
+            <h2 class="sr-only">Veckans plan</h2>
+            <div class="week-plan-list vecka-dagar" id="weekPlanList"></div>
+          </div>
+          <!-- Summeringen: delposter, linje, summa. Kvittots LOGIK - man ska
+               kunna räkna efter - inte kvittots utseende. Och summan säger
+               vad den grundar sig på: saknar en rad sitt pris står det
+               "minst", aldrig ett exakt tal (C7). -->
+          <div class="vecka-fot" id="weekTotals"></div>
           <div class="week-store-switch" id="weekStoreSwitch" role="tablist" aria-label="Byt butik för veckan">
             <button type="button" data-week-store="auto">Auto</button>
             <button type="button" data-week-store="alla">Alla</button>
@@ -141,17 +165,6 @@
             <div class="store-cards" id="storeCards"></div>
             <p class="store-spread-teaser" id="storeSpreadTeaser" hidden></p>
             <div id="basketStoreCompare" hidden></div>
-          </div>
-          <div class="week-day-tabs" id="weekDayTabs" role="tablist" aria-label="Välj dag"></div>
-          <div id="weekTodayCard"></div>
-          <!-- G3: HELA VECKAN SYNLIG. Listan var permanent dold, och kvar
-               fanns sju dagflikar och ETT dagskort i taget - alltså gick
-               frågan appen finns för, "vad äter vi i veckan", inte att
-               besvara med ögonen. Sju rader, alla synliga, ingen knapp
-               emellan. (L2 bygger om raderna till design D.) -->
-          <div class="week-overview-section week-plan-section">
-            <div class="section-heading"><h2>Veckans plan</h2></div>
-            <div class="week-plan-list" id="weekPlanList"></div>
           </div>
           <div class="week-overview-section">
             <div class="section-heading"><h2>Handla-listan</h2><span id="weekShoppingSummary"></span></div>
