@@ -47,6 +47,7 @@ from services.accounts import AccountError, AccountStore
 from services.analytics import ACTIVATION_EVENT, ANALYTICS_EVENTS, AnalyticsStore
 from services import mailings
 from services.household import HouseholdStore, NotificationStore
+from services.push import PushStore, WeeklyPushScheduler, WebPushSender
 from services.household.routes import HouseholdRouter
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
 from services.billing import matjakt_user_id as stripe_matjakt_user_id, orphan_subscriptions as stripe_orphan_subscriptions
@@ -669,6 +670,18 @@ DUNNING = billing_dunning.Dunning(
     # mejlet lästes.
     billing_url=f"{APP_URL}/?billing=portal",
     mail_log=MAIL_LOG, metrics=METRICS)
+# H1: SÖNDAGSNOTISEN. Prenumerationerna bor i kontodatabasen (samma
+# anslutning som ACCOUNT_STORE) för att mottagarfrågan behöver synced_state -
+# notisen ska bära ANVÄNDARENS egna tal, inte påhittade. Samtycket läses ur
+# NOTIFICATION_STORE:s notification_prefs; inget andra system bredvid.
+#
+# Utan MATJAKT_VAPID_PUBLIC_KEY/_PRIVATE_KEY skickas ingenting och allt annat
+# fungerar oförändrat - avsändaren svarar med ett blocked_reason i stället
+# för att kasta. Nycklarna sätts i Renders dashboard; den privata halvan får
+# aldrig finnas i repot (CLAUDE.md, förbud 3 och 4).
+PUSH_STORE = PushStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
+WEB_PUSH = WebPushSender.from_env()
+WEEKLY_PUSH = WeeklyPushScheduler(PUSH_STORE, WEB_PUSH, NOTIFICATION_STORE, app_url=APP_URL)
 MAILINGS = mailings.MailingScheduler(
     MAIL_LOG,
     lambda to, subject, text, body_html, unsub: send_email(MAIL_CONFIG, to, subject, text, body_html, unsub),
@@ -713,6 +726,7 @@ def insights_payload() -> dict:
         # konton med Premium utan levande prenumeration - listan hämtas med
         # GET /api/admin/subscription-audit.
         "fakturering": dict(BILLING_WATCH),
+        "veckonotis": WEEKLY_PUSH.status(),
     }
 
 # ---------------------------------------------------------------------------
@@ -2047,7 +2061,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
         limit = "household_invite" if parsed.path == "/api/household/invite" else "household"
         if self._rate_limit(limit, self._session_bucket()):
             return
-        router = HouseholdRouter(HOUSEHOLD_STORE, NOTIFICATION_STORE, ACCOUNT_STORE, APP_URL)
+        router = HouseholdRouter(HOUSEHOLD_STORE, NOTIFICATION_STORE, ACCOUNT_STORE, APP_URL,
+                                 push=PUSH_STORE, push_public_key=WEB_PUSH.public_key)
         status, body = router.handle(method, parsed.path, parse_qs(parsed.query), payload,
                                      self._bearer_token())
         self._matning_hushall(parsed.path, status)
@@ -3211,6 +3226,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                         HOUSEHOLD_STORE.forget_user(identity[0])
                         NOTIFICATION_STORE.forget_user(identity[0])
                         SAVINGS.forget_user(identity[0])
+                        PUSH_STORE.forget_user(identity[0])
                     except Exception:
                         logger.exception("Kunde inte städa hushållsdata för raderat konto")
                 if customer_id and STRIPE_SECRET_KEY:
@@ -4202,6 +4218,7 @@ if __name__ == "__main__":
     GROCERY_SCHEDULER.start()
     MAILINGS.start()
     start_billing_watch()
+    WEEKLY_PUSH.start()
     # Förvärm prismotorns ordindex i bakgrunden: kallstarten (indexbygge
     # per kedja, ~2-3 s) ska betalas här vid deploy - inte av första kundens
     # första prisanrop.

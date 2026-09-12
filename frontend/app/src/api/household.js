@@ -51,3 +51,12 @@ export const saveHouseholdDoc = (token, doc, body, meta = {}) => post("/doc", to
 export const fetchNotifications = token => get("/notifications", token);
 export const saveNotificationPrefs = (token, preferences) => post("/notifications/prefs", token, { preferences });
 export const registerDevice = (token, deviceToken, platform) => post("/notifications/device", token, { token: deviceToken, platform });
+
+// H1: Web Push-prenumerationen. `week: true` skickas MED prenumerationen och
+// skrivs i notification_prefs på servern - att webbläsaren gav tillstånd är
+// inte samma sak som att användaren bett om en veckopåminnelse, och servern
+// ska inte behöva gissa vilket av de två som hände.
+export const savePushSubscription = (token, subscription, platform = "web") =>
+  post("/notifications/push", token, { subscription, platform, week: true });
+export const forgetPushSubscription = (token, endpoint) =>
+  post("/notifications/push/forget", token, { endpoint });
