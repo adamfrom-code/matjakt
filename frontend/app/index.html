@@ -185,18 +185,25 @@
           <input type="text" id="manualItemInput" placeholder="Lägg till vara, t.ex. kaffe eller toalettpapper" maxlength="60">
           <button type="button" class="btn btn-ghost" id="manualItemAdd">+ Lägg till vara</button>
         </div>
-        <section class="shopping-progress"><div><strong id="shoppingProgress">0 varor kvar</strong><span id="shoppingCost">0 / 0 kr</span></div><div class="progress-track"><i id="shoppingProgressBar"></i></div></section>
+        <!-- L3/C7: KASSAN. "Minst att betala" så fort någon rad saknar en
+             radtotal - en summa som utelämnar de osäkra radernas kostnad får
+             aldrig visas som ett exakt tal. Raden under räknar vad som fattas,
+             och #prisnyckel är teckenförklaringen till de tre prisformerna
+             (L0, §5.7): den hör hemma just här, i foten på den skärm där
+             priserna läses. Talet i #shoppingCost renderas av prisMarkup() -
+             ingen egen prismarkup, varken här eller i shopping.js. -->
+        <section class="shopping-progress kassa" aria-labelledby="shoppingTotalLabel">
+          <div class="kassa-toppen"><span class="kap kap-ink" id="shoppingTotalLabel">Summa i kassan</span><span class="kassa-summa" id="shoppingCost"></span></div>
+          <p class="kassa-rader"><strong id="shoppingProgress">0 varor kvar</strong><span class="kassa-osaker" id="shoppingUncertain" hidden></span></p>
+          <div class="progress-track"><i id="shoppingProgressBar"></i></div>
+          <div id="prisnyckel"></div>
+        </section>
         <div class="shopping-complete" id="shoppingComplete" hidden><strong>Allt handlat!</strong><p>Redo att planera nästa veckas meny?</p><button type="button" class="btn btn-primary" id="startNewWeekBtn"><span>Skapa nästa vecka</span><span aria-hidden="true">→</span></button></div>
         <div class="week-cost-alert" id="weekCostAlert" hidden></div>
         <div class="staple-prompt" id="staplePrompt" hidden></div>
         <p class="price-source-note" id="priceSourceNote" hidden></p>
         <p class="price-source-note" id="dabasNote" hidden></p>
         <p class="primat-attribution" id="primatAttribution" hidden></p>
-        <!-- L0: teckenförklaringen till de tre prisreglerna. Fylls av
-             teckenförklaringMarkup() i src/views/pris.js - samma tre former
-             som prislapparna själva, så att de går att läsa utan att ha
-             memorerat systemet. -->
-        <div id="prisnyckel"></div>
         <p class="cost-note">Priserna avser hela förpackningar. Det du har hemma räknas bort.</p>
       </section>
 

@@ -25,12 +25,15 @@
 // ---------------------------------------------------------------------------
 
 import { aggregateIngredients, packagesFor } from "../services/calculations.js";
-import { categoryFor, groupByCategory } from "../services/categories.js";
+import { groupByCategory } from "../services/categories.js";
 import { extraLineTotal, extraUnitPrice, removeExtra, setQty } from "../services/extras.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, foldName, shoppingRows } from "../services/household-state.js";
 import { saveState, selectedRecipes, state } from "../state/app-state.js";
 import { escapeHtml, safeHttpUrl } from "../utils/html.js";
-import { teckenförklaringMarkup } from "./pris.js";
+import {
+  KONTROLLERAT, SAKNAS, UPPSKATTAT,
+  prisMarkup, prisTillstånd, summaTillstånd, teckenförklaringMarkup,
+} from "./pris.js";
 
 // Allt vyn behöver men inte äger. Skickas in en gång vid uppstart; namnen
 // är exakt de app.js använder, så varje flyttad rad står oförändrad nedan.
@@ -182,34 +185,46 @@ export function aggregateShopping(selected) {
 }
 
 // ---------------------------------------------------------------------------
-// HANDLA: EN RAD
+// HANDLA: EN RAD  (L3 — design D, telefon 3)
 //
 // Frågorna en rad ska besvara på ett ögonkast, i den ordningen (§30):
 //   Vad är varan?  Hur mycket behöver vi?  Har vi den?  Vad kostar den?
-//   Var köps den?
 //
-// Bilden får aldrig ta över. Den är 44 px, ligger till vänster och ersätts
-// av en neutral kategorisymbol när vi inte har en bild vi får visa (§9) -
-// aldrig av en annan produkts bild för att fylla tomrummet.
+// Raden ÄR kryssrutan. Den gamla raden hade ett foto på 56 px, ett märke, en
+// butiksnot, ett jämförpris och därunder en egen knapprad med "Har hemma" och
+// "Köpt" - sju upplysningar och tre träffytor på en rad vars uppgift i butik
+// är att säga vad man ska lägga i korgen och vad det kostar. Design D ger
+// raden fyra saker: kryssrutan, namnet, mängden som underrad och priset till
+// höger. Allt annat står kvar i appen, men inte i tumhöjd mitt i listan.
 //
-// Produktnamn, märke och förpackning skrivs BARA ut när de kommer från en
-// riktig matchning i prisdatabasen. En osäker matchning blir inte säker av
-// att den får en bild (§35).
+// TRE TRÄFFYTOR BLEV EN. Radens knapp är avbockningen: obockad bär den
+// data-bought, avbockad data-need, alltså exakt de två lyssnare
+// wireShoppingRowActions redan binder. Kryssrutans egen storlek är 21 px men
+// träffytan är hela radens 44 (DESIGNSYSTEM-D.md §5.5).
+//
+// "Har hemma" och "ta bort" är radens sekundära handlingar och ligger i
+// .vara-sido, utanför radens högerkant på pekskärm (G5) och framme vid fokus,
+// hover och svep. En sekundär handling ska vara nåbar, inte i vägen.
+//
+// Produktnamn skrivs BARA ut när det kommer från en riktig matchning i
+// prisdatabasen. En osäker matchning blir inte säker av att den får ett
+// produktnamn (§35).
 // ---------------------------------------------------------------------------
 
 const AT_HOME_ICON = '<svg viewBox="0 0 24 24"><path d="m4 11 8-6 8 6v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1Z"/></svg>';
-const BOUGHT_ICON = '<svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg>';
+const BOCK = '<svg viewBox="0 0 11 9" width="11" height="9" fill="none" aria-hidden="true">'
+  + '<path d="M1 4.6 4 7.6 10 1.2" stroke-width="1.8"/></svg>';
 
-function shoppingActionsMarkup(name, status) {
-  if (status === NEED_TO_BUY) {
-    return `<div class="shopping-actions">`
-      + `<button type="button" class="shopping-action" data-at-home="${escapeHtml(name)}">${AT_HOME_ICON}<span>Har hemma</span></button>`
-      + `<button type="button" class="shopping-action buy" data-bought="${escapeHtml(name)}">${BOUGHT_ICON}<span>Köpt</span></button>`
-      + `</div>`;
-  }
-  const label = status === PURCHASED ? "Köpt" : "Finns hemma";
-  return `<div class="shopping-actions handled"><span class="shopping-handled-label">${label}</span>`
-    + `<button type="button" class="shopping-action" data-need="${escapeHtml(name)}">Behöver köpa</button></div>`;
+// Radens sekundära handlingar. "Har hemma" är bara sant att erbjuda på en
+// vara man ännu inte bockat av; krysset gäller alltid.
+function rowSideMarkup(name, status) {
+  const atHome = status === NEED_TO_BUY
+    ? `<button type="button" class="shopping-action vara-hemma" data-at-home="${escapeHtml(name)}"`
+      + ` aria-label="${escapeHtml(name)} finns hemma">${AT_HOME_ICON}<span>Har hemma</span></button>`
+    : "";
+  return `<div class="vara-sido">${atHome}`
+    + `<button type="button" class="shopping-remove" data-remove-item="${escapeHtml(name)}"`
+    + ` aria-label="Ta bort ${escapeHtml(name)} ur listan">×</button></div>`;
 }
 
 export function amountLabel(amount, unit) {
@@ -239,71 +254,117 @@ function quantityTextFor(item, match, status = NEED_TO_BUY) {
   return [needed, count].filter(Boolean).join(" · ");
 }
 
-export function shoppingRowMarkup(item) {
+// Det raden behöver veta om sitt eget pris, hämtat en gång. Samma räkning som
+// totalsumman (packagesFor), inte en egen kopia: kopian räknade veckans behov
+// i det VISADE måttet (6 dl) mot förpackningens basmått (200 ml) och kom fram
+// till ett paket i stället för tre - raden sa "Behöver 6 dl" och visade priset
+// för en burk. null = antal osäkert (vikt/volym utan paketinfo), 0 = allt
+// finns redan hemma.
+export function prisUnderlag(item) {
   const match = app.databaseItemFor(item.namn);
-  const status = app.itemStatus(item.namn);
-  const category = categoryFor(item.namn, match?.category);
   const live = state.livePriser[item.namn];
-  // BILDEN: bara en bild vi faktiskt har rätt att visa för just den här
-  // produkten. Saknas den ritas kategorisymbolen - aldrig någon annans bild.
-  const imageUrl = match?.imageUrl || live?.bild;
-  const photo = imageUrl
-    ? `<img class="shopping-item-image has-image" src="${escapeHtml(safeHttpUrl(imageUrl) || "")}" alt="" loading="lazy" decoding="async">`
-    : app.categoryIconMarkup(category);
+  const packages = match ? match.packages : packagesFor(item, app.pantryForPricing());
+  const dbSyncPending = app.pricingPending() || (!state.dbPricedAt && !state.dbPricingFailedAt);
+  const hämtas = !match && !live
+    && (dbSyncPending || (app.livePricesLoading() && app.validChains.includes(app.chosenStore())));
+  return { match, live, packages, hämtas };
+}
+
+// ---------------------------------------------------------------------------
+// L3 · PRISET RENDERAS AV L0, ALDRIG AV DEN HÄR FILEN
+//
+// Handla skrev förut ut tre olika prislappar med tre olika markupar:
+// `<strong>${money(x)}</strong>`, `<strong class="price-missing">Pris
+// saknas</strong>` och `<small class="item-status estimated">Antal
+// osäkert</small>`. Tre former, uppfunna på plats, som ingen annan vy delade
+// - och som därför kunde glida isär från resten av appen utan att någon såg
+// det. Nu översätter den här funktionen bara motorns rad till ETT av L0:s tre
+// tillstånd, och prisMarkup() bestämmer hur det ser ut (§6).
+//
+// Ett gissat paketantal blir SAKNAS, inte ett tal: radtotalen är ärligt okänd
+// när antalet är en gissning (C8), och en tom ram är sann där "22 kr" inte är
+// det. Hur många sådana rader veckan har räknas i stället i foten, en gång
+// (C7) - raden ska inte behöva bära en varning som hör till summan.
+// ---------------------------------------------------------------------------
+export function radPrisTillstånd({ match, live, packages }) {
+  if (match) return { värde: match.totalCost, tillstånd: prisTillstånd(match) };
+  // Ett livepris är hämtat hos kedjan men inte prissatt av motorn; utan
+  // paketantal finns ingen radtotal att stå för.
+  if (live) {
+    return live.pris_kr == null || packages == null
+      ? { värde: null, tillstånd: SAKNAS }
+      : { värde: live.pris_kr * packages, tillstånd: KONTROLLERAT };
+  }
+  return { värde: null, tillstånd: SAKNAS };
+}
+
+// C7:s golv, räknat på de rader som FAKTISKT står i listan. "Antal osäkert"
+// betyder att varan har ett pris men inget säkert antal - den gör kassan
+// högre än summan, aldrig lägre.
+export function saknarSäkertAntal(item) {
+  const { match, live, packages } = prisUnderlag(item);
+  if (match) return match.exactPackaging === false || match.rowUncertain === true
+    || match.priceStatus === "estimated";
+  return !!live && packages == null;
+}
+
+export function shoppingRowMarkup(item) {
+  const status = app.itemStatus(item.namn);
+  const underlag = prisUnderlag(item);
+  const { match, live } = underlag;
+  const klar = status !== NEED_TO_BUY;
   const title = match ? match.productName : (live ? live.produktnamn : item.namn);
   const quantity = quantityTextFor(item, match, status);
-  const brand = match ? match.brand : (live ? live.markeOchStorlek : "");
-  const meta = escapeHtml([brand, quantity].filter(Boolean).join(" · "));
-  // Priset: bara ett riktigt pris får skrivas ut. Ett statiskt katalogpris
-  // är en gissning i en kolumn av fakta och skrivs aldrig.
-  const dbSyncPending = app.pricingPending() || (!state.dbPricedAt && !state.dbPricingFailedAt);
-  const priceMissing = live && live.pris_kr == null;
-  // SAMMA räkning som totalsumman (packagesFor), inte en egen kopia: kopian
-  // räknade veckans behov i det VISADE måttet (6 dl) mot förpackningens
-  // basmått (200 ml) och kom fram till ett paket i stället för tre - raden
-  // sa "Behöver 6 dl" och visade priset för en burk. null = antal osäkert
-  // (vikt/volym utan paketinfo), 0 = allt finns redan hemma.
-  const packages = match ? match.packages : packagesFor(item, app.pantryForPricing());
-  const stillFetching = !match && !live && (dbSyncPending || (app.livePricesLoading() && app.validChains.includes(app.chosenStore())));
-  const price = match && match.totalCost != null ? app.money(match.totalCost)
-    : priceMissing ? "Pris saknas"
-      : live ? (packages == null ? "" : app.money(live.pris_kr * packages))
-        : stillFetching ? "" : "Pris saknas";
-  const store = match ? (state.dbChainTotals[app.currentPricedChain()]?.chain || app.currentPricedChain() || "") : "";
   const onCampaign = match && match.campaignPrice != null && match.regularPrice != null
     && match.campaignPrice < match.regularPrice;
   const campaign = onCampaign
-    ? `<small class="shopping-item-campaign">Kampanj ${app.money(match.campaignPrice)} (ord. ${app.money(match.regularPrice)})</small>`
-    : (live?.kampanj?.text ? `<small class="shopping-item-campaign">${escapeHtml(live.kampanj.text)}</small>` : "");
-  // Flaggad, inte gömd: när receptets enhet inte går att räkna om mot
-  // förpackningens gissar motorn "en förpackning". Det är en gissning om
-  // ANTAL, och den som står i affären är den som kan avgöra.
-  // Antalet är osäkert både när prisdatabasen säger det och när ett livepris
-  // saknar paketinfo för en vikt-/volymvara - i båda fallen ska raden säga
-  // det i stället för att visa ett tal vi inte kan stå för.
-  const inexact = match?.priceStatus === "estimated" || (!match && live && packages == null)
-    ? '<small class="item-status estimated">Antal osäkert</small>'
-    : (stillFetching ? '<small class="item-status loading">pris hämtas…</small>' : "");
-  const comparePrice = match?.comparisonPrice != null
-    ? `<small class="shopping-item-compare">${app.money(match.comparisonPrice)}/${/l|ml|dl/.test(match.packageUnit || "") ? "l" : "kg"}</small>` : "";
-  return `<article class="shopping-item status-${status.toLowerCase()}">`
-    + `<div class="shopping-item-main">${photo}`
-    + `<span class="shopping-item-info"><strong>${escapeHtml(title)}</strong>`
-    + `<small class="shopping-item-meta">${meta}</small>${campaign}</span>`
-    + `<span class="shopping-item-price"><strong class="${price === "Pris saknas" ? "price-missing" : ""}">${price}</strong>`
-    + `${store ? `<small class="shopping-item-store">${escapeHtml(store)}</small>` : ""}${comparePrice}${inexact}</span>`
-    + `<button type="button" class="shopping-remove" data-remove-item="${escapeHtml(item.namn)}" aria-label="Ta bort ${escapeHtml(item.namn)} ur listan">×</button></div>`
-    + shoppingActionsMarkup(item.namn, status)
+    ? `Kampanj ${app.money(match.campaignPrice)} (ord. ${app.money(match.regularPrice)})`
+    : (live?.kampanj?.text || "");
+  // Mängden som underrad: vad veckan behöver och hur många förpackningar det
+  // blir i korgen. Kampanjen hör till samma rad - den ändrar priset, inte varan.
+  const undertext = escapeHtml([quantity, campaign].filter(Boolean).join(" · "));
+  // "pris hämtas…" är inget pristillstånd - det är frånvaron av ett svar, och
+  // får därför inte låna någon av de tre formerna. En tom ram medan hämtningen
+  // pågår vore ett påstående vi inte har täckning för.
+  const { värde, tillstånd } = radPrisTillstånd(underlag);
+  const pris = underlag.hämtas
+    ? `<span class="pris-hamtas">pris hämtas…</span>`
+    : prisMarkup(värde, tillstånd);
+  // RADEN ÄR KNAPPEN (§5.5). Obockad bär den data-bought, avbockad data-need -
+  // samma två lyssnare wireShoppingRowActions redan binder, så avbockningen
+  // behöver ingen egen knapp intill priset.
+  const toggle = klar
+    ? `data-need="${escapeHtml(item.namn)}"`
+    : `data-bought="${escapeHtml(item.namn)}"`;
+  return `<article class="shopping-item vara-rad status-${status.toLowerCase()}${klar ? " vara--klar" : ""}">`
+    + `<button type="button" class="vara" ${toggle} aria-pressed="${klar}" aria-keyshortcuts="Delete">`
+    + `<span class="ruta" aria-hidden="true">${BOCK}</span>`
+    + `<span class="txt"><strong>${escapeHtml(title)}</strong>`
+    + `<small class="mangd">${undertext}</small></span>`
+    + pris
+    + `</button>`
+    + rowSideMarkup(item.namn, status)
     + `</article>`;
 }
 
-// Handlade och hemmavarande rader samlas under listan i stället för att
-// försvinna: den som bockat fel ska kunna se det och ta tillbaka varan.
-export function handledRowMarkup(item) {
-  const status = app.itemStatus(item.namn);
-  const label = status === PURCHASED ? "Köpt" : "Finns hemma";
-  return `<div class="shopping-handled-row"><span><strong>${escapeHtml(item.namn)}</strong><small>${label}</small></span>`
-    + `<button type="button" class="btn-ghost" data-need="${escapeHtml(item.namn)}">Behöver köpa</button></div>`;
+// ---------------------------------------------------------------------------
+// L3 · AVDELNINGEN
+//
+// Listan är butikens ordning, inte appens: frukt och grönt först, frysen
+// sist. Avdelningen märks med en hårlinje längs gruppens vänsterkant och en
+// rubrik i spärrade kapitäler - inget kort, ingen ram, ingen skugga. Det är
+// hela skillnaden mellan ett uppslag och en samling paneler: innehållet
+// skiljs åt av linjer och luft.
+//
+// Rubriken skrivs som vanlig text och versaliseras i CSS. Versaler i källan
+// får en skärmläsare att stava ordet bokstav för bokstav (§8).
+// ---------------------------------------------------------------------------
+export function avdelningMarkup(category, items) {
+  return `<section class="avdelningsgrupp">`
+    + `<h3 class="avdelning"><span class="kap kap-ink">${escapeHtml(category)}</span>`
+    + `<span class="kap">${app.plural(items.length, "vara", "varor")}</span></h3>`
+    + items.map(shoppingRowMarkup).join("")
+    + `</section>`;
 }
 
 export function wireShoppingRowActions(container) {
@@ -390,6 +451,96 @@ export function renderExtraItems(chain) {
   app.syncExtraMatches(chain);
 }
 
+// ---------------------------------------------------------------------------
+// L3 + C7 · FOTEN: "MINST ATT BETALA", OCH VAD SOM SAKNAS
+//
+// C7:s golv, uttryckt i foten på Handla. En summa som utelämnar de osäkra
+// radernas kostnad får aldrig visas som ett exakt tal: tre msk-rader (honung,
+// olivolja, tomatpuré) bidrog med noll kronor, användaren budgeterade 640 och
+// betalade 700. Rubriken heter därför "Minst att betala" så fort någon rad
+// saknar en radtotal, och raden under räknar dem: "3 varor utan säkert antal".
+//
+// GOLVET RÄKNAS PÅ DE RADER SOM STÅR I LISTAN, inte bara på serverns flagga.
+// Servern vet vad DEN prissatte; listan kan därutöver bära hushållsrader och
+// extravaror den aldrig såg. Läser foten bara serverns totalIsFloor kan den
+// säga "att betala" ovanför en lista med en tom prisram i - och det är exakt
+// det fel C7 fanns för att stänga. Flaggan är med som ett OR, aldrig som enda
+// källa: går de isär vinner golvet, för golvet kan bara vara för lågt.
+//
+// Talet självt renderas av L0:s prisMarkup. Foten skriver ingen egen
+// prismarkup - "minst" är en modifierare på komponenten, inte en fjärde form.
+// ---------------------------------------------------------------------------
+
+export function kassaUnderlag({ shoppingItems, total, headerDb, activeChain }) {
+  let osäkertAntal = 0;
+  let utanPris = 0;
+  let hämtas = 0;
+  for (const item of shoppingItems) {
+    const underlag = prisUnderlag(item);
+    if (underlag.hämtas) { hämtas += 1; continue; }
+    if (saknarSäkertAntal(item)) { osäkertAntal += 1; continue; }
+    if (radPrisTillstånd(underlag).tillstånd === SAKNAS) utanPris += 1;
+  }
+  // En extravara utan prismatch bidrar med noll kronor till extrasCost - och
+  // gör därmed summan till ett golv på precis samma sätt som en osäker rad.
+  const extraUtanPris = state.extraItems.filter(extra =>
+    extraLineTotal(extra, activeChain, (state.extraMatches[activeChain] || {})[extra.id]) == null).length;
+  const golv = headerDb?.totalIsFloor === true
+    || osäkertAntal > 0 || utanPris > 0 || extraUtanPris > 0;
+  // En summa som inte är butiksverifierad hela vägen är uppskattad, aldrig
+  // kontrollerad. Utan ett databasresultat är talet en beräkning på
+  // förpackningspriser - alltså uppskattat per definition.
+  const tillstånd = total == null ? SAKNAS
+    : headerDb ? summaTillstånd(headerDb).tillstånd : UPPSKATTAT;
+  return { osäkertAntal, utanPris, hämtas, golv, tillstånd };
+}
+
+function renderKassa({ shoppingItems, total, extrasCost, headerDb, activeChain }) {
+  const kostnad = app.$("shoppingCost");
+  if (!kostnad) return;
+  const { osäkertAntal, utanPris, golv, tillstånd } = kassaUnderlag({ shoppingItems, total, headerDb, activeChain });
+  const nothingPlanned = !shoppingItems.length && !state.extraItems.length;
+  const väntar = app.pricingPending() || (!state.dbPricedAt && !state.dbPricingFailedAt);
+  const budget = `<span class="kassa-budget">/ ${escapeHtml(app.money(state.budget))}</span>`;
+  // Bara extravaror: deras summa är hela kassan, och den är exakt så långt
+  // varje extrarad har ett pris.
+  const enbartExtra = total == null && !shoppingItems.length && state.extraItems.length;
+  const lapp = nothingPlanned
+    ? `<span class="pris">–</span>`
+    : enbartExtra
+      ? prisMarkup(app.money(extrasCost), KONTROLLERAT, { golv })
+      // "hämtas…" bara medan det faktiskt hämtas. Är prissättningen klar och
+      // ingen kedja kunde prissätta listan är talet inte på väg - det saknas,
+      // och då är det L0:s tomma ram som gäller, inte en evig spinner.
+      : total == null
+        ? (väntar ? `<span class="pris-hamtas">pris hämtas…</span>` : prisMarkup(null, SAKNAS))
+        : prisMarkup(app.money(total), tillstånd, { golv });
+  kostnad.innerHTML = `${lapp} ${budget}`;
+  // Rubriken säger vad talet ÄR. "Minst att betala" är inte en varning utan en
+  // beskrivning: kassan kan bli högre, aldrig lägre.
+  const label = app.$("shoppingTotalLabel");
+  if (label) label.textContent = golv && total != null ? "Minst att betala" : "Summa i kassan";
+  // Och vad som fattas, i klartext. Två olika brister, aldrig hopslagna till
+  // ett tal: en vara med känt pris men gissat antal är något annat än en vara
+  // vi inte har något pris på alls.
+  const not = app.$("shoppingUncertain");
+  if (not) {
+    const delar = [
+      osäkertAntal ? app.plural(osäkertAntal, "vara utan säkert antal", "varor utan säkert antal") : "",
+      utanPris ? app.plural(utanPris, "vara utan pris", "varor utan pris") : "",
+    ].filter(Boolean);
+    not.textContent = delar.join(" · ");
+    not.hidden = !delar.length;
+  }
+  // L0 · TECKENFÖRKLARINGEN, i foten på Handla (§5.7). Prisets säkerhet bärs
+  // av form, och en form ingen fått förklarad för sig är bara en tystare
+  // version av att inte säga något. Nyckeln står därför kvar oavsett vad
+  // listan innehåller - också när varje pris är kontrollerat. Markupen är
+  // statisk och skrivs en gång, inte vid varje omritning.
+  const prisnyckel = app.$("prisnyckel");
+  if (prisnyckel && !prisnyckel.firstChild) prisnyckel.innerHTML = teckenförklaringMarkup();
+}
+
 // Listan som Handla faktiskt ritar.
 //
 // Utan hushåll: veckans aggregat, precis som förut.
@@ -440,32 +591,31 @@ export function renderBasket() {
   const total = headerDb ? headerDb.totalCheckoutCost + extrasCost
     : currentResult && currentResult.source !== "estimate" && currentResult.comparable !== false && app.hasUsablePrice(currentResult)
       ? currentResult.cost + extrasCost : null;
-  // ATT HANDLA vs REDAN LÖST. Varor som är köpta eller redan finns hemma
-  // lämnar den aktiva listan men försvinner inte: de samlas under den, så
-  // ett felklick går att se och ta tillbaka (§5, §6).
+  // L3 · AVBOCKAD RAD STÅR KVAR DÄR DEN HÖR HEMMA.
+  //
+  // Köpta och hemmavarande varor lyftes förut ur listan och samlades i ett
+  // eget "Klart"-block under den. Det löste rätt problem - ett felklick fick
+  // inte radera varan ur synfältet - men det löste det genom att flytta den,
+  // och i butik betyder det att raden man just bockade av hoppar bort från
+  // hyllan man står vid. Design D bockar av på plats: raden blir genomstruken
+  // och tonad och ligger kvar i sin avdelning, så listan man läser är samma
+  // lista hela vägen genom affären. Ett felklick syns direkt, på raden själv.
   const activeItems = shoppingItems.filter(item => app.itemStatus(item.namn) === NEED_TO_BUY);
   const handledItems = shoppingItems.filter(item => {
     const status = app.itemStatus(item.namn);
     return status === PURCHASED || status === ALREADY_HAVE;
   });
   // Butiksordning, inte alfabetisk: frukt & grönt först, frysen sist (§31).
-  const groups = groupByCategory(activeItems, item => app.itemCategory(item.namn));
+  const groups = groupByCategory(shoppingItems, item => app.itemCategory(item.namn));
   // Tom lista av två helt olika skäl: ingen meny finns, eller användaren
   // har tagit bort varenda rad själv. Samma tomtillstånd för båda vore en
   // lögn om det första.
   const emptyState = state.removedItems.size
     ? `<div class="pantry-empty"><h2>Allt är borttaget ur listan</h2><p>Du har markerat varje vara som borttagen. Återställ dem nedan om du ångrar dig.</p></div>`
-    : handledItems.length
-      ? `<div class="pantry-empty"><h2>Allt är avbockat</h2><p>Ingenting kvar att handla den här veckan.</p></div>`
-      : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
-  const alreadyHome = handledItems.filter(item => app.itemStatus(item.namn) === ALREADY_HAVE).length;
-  const handledSection = handledItems.length
-    ? `<section class="shopping-handled"><h3>Klart${alreadyHome ? ` · ${app.plural(alreadyHome, "vara finns hemma", "varor finns hemma")}` : ""}<span>${handledItems.length}</span></h3>${handledItems.map(handledRowMarkup).join("")}</section>`
-    : "";
-  app.$("shoppingList").innerHTML = (activeItems.length
-    ? groups.map(([category, items]) => `<section><h3>${category}<span>${items.length}</span></h3>${items.map(shoppingRowMarkup).join("")}</section>`).join("")
-    : (shoppingItems.length ? "" : emptyState)) + handledSection;
-  if (shoppingItems.length && !activeItems.length && !handledItems.length) app.$("shoppingList").innerHTML = emptyState;
+    : `<div class="pantry-empty"><h2>Listan väntar på din vecka</h2><p>Skapa en meny så samlar vi automatiskt allt du behöver handla.</p></div>`;
+  app.$("shoppingList").innerHTML = shoppingItems.length
+    ? groups.map(([category, items]) => avdelningMarkup(category, items)).join("")
+    : emptyState;
   const removedCount = app.removedRowsForView().length;
   if (removedCount) {
     app.$("shoppingList").insertAdjacentHTML("beforeend",
@@ -499,13 +649,6 @@ export function renderBasket() {
     dabasNote.hidden = !fromDabas;
     dabasNote.textContent = fromDabas ? "Produktinformation från Dabas" : "";
   }
-  // L0 · TECKENFÖRKLARINGEN. Prisets säkerhet bärs av form, och en form som
-  // ingen har fått förklarad för sig är bara en tystare version av att inte
-  // säga något. Nyckeln står därför kvar i foten oavsett vad listan innehåller
-  // - också när varje pris är kontrollerat (§5.7). Markupen är statisk och
-  // skrivs en gång, inte vid varje omritning.
-  const prisnyckel = app.$("prisnyckel");
-  if (prisnyckel && !prisnyckel.firstChild) prisnyckel.innerHTML = teckenförklaringMarkup();
   const sourceNote = app.$("priceSourceNote");
   if (sourceNote) {
     if (sourceResult?.updatedAt) {
@@ -518,16 +661,8 @@ export function renderBasket() {
       sourceNote.hidden = true;
     }
   }
-  const nothingPlanned = !shoppingItems.length && !state.extraItems.length;
-  app.$("shoppingCost").textContent = nothingPlanned
-    ? `– / ${app.money(state.budget)}`
-    : total == null && !shoppingItems.length && state.extraItems.length
-      ? `${app.money(extrasCost)} / ${app.money(state.budget)}`
-      // "hämtas…" bara medan det faktiskt hämtas. Är prissättningen klar och
-      // ingen kedja kunde prissätta listan är det ärligare att säga det.
-      : `${total == null
-            ? (app.pricingPending() || (!state.dbPricedAt && !state.dbPricingFailedAt) ? "pris hämtas…" : "pris saknas just nu")
-            : app.money(total)} / ${app.money(state.budget)}`; app.$("shoppingProgressBar").style.width = `${progress}%`;
+  renderKassa({ shoppingItems, total, extrasCost, headerDb, activeChain });
+  app.$("shoppingProgressBar").style.width = `${progress}%`;
   // "Allt handlat" celebrates a finished list, never an empty one - and
   // extras count: a week isn't done while the added coffee is unbought.
   const extrasDone = state.extraItems.every(extra => extra.checked);

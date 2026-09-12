@@ -25,7 +25,7 @@ import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, 
 import { errorText } from "./src/api/http.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { closeModal, openModal } from "./src/utils/modal.js";
-import { kopplaSvepBort } from "./src/utils/swipe-remove.js";
+import { kopplaSvepBort, kopplaTangentbordsBorttag } from "./src/utils/swipe-remove.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.js";
 import { PACKAGE_INFO, PRODUCT_CATALOG, RECIPE_DETAILS, RECIPE_QUANTITIES } from "./src/data/legacy-catalog.js";
 import { dinnerCandidates } from "./src/data/meal-type.js";
@@ -2498,15 +2498,21 @@ initShoppingView({
 // G5: krysset satt i tumzonen, intill "Köpt" - ett feltryck tog bort varan.
 // Svep vänster tar bort raden i stället, med Ångra i toasten. Lyssnaren sitter på
 // behållaren, inte på raderna, så den överlever varje omritning av listan.
-kopplaSvepBort($("shoppingList"), {
-  väljRad: mål => mål?.closest?.("[data-remove-item]")
-    ? null                                   // krysset är sin egen väg, inte ett svep
-    : mål?.closest?.(".shopping-item"),
-  taBort: rad => {
-    const namn = rad.querySelector("[data-remove-item]")?.dataset.removeItem;
-    if (namn) removeShoppingItem(namn);
-  },
-});
+//
+// L3: och samma handling utan finger. Ett svep är otillgängligt i samma sekund
+// som det är enda vägen, så Delete/Backspace på den fokuserade raden gör exakt
+// det svepet gör. EN funktion, två vägar in - skulle de kalla var sin kopia
+// vore tangentbordsvägen en sämre variant, och den skillnaden syns inte förrän
+// någon står utan mus.
+const taBortSvepradEllerFokusrad = rad => {
+  const namn = rad.querySelector("[data-remove-item]")?.dataset.removeItem;
+  if (namn) removeShoppingItem(namn);
+};
+const varuradUnder = mål => mål?.closest?.("[data-remove-item]")
+  ? null                                   // krysset är sin egen väg, inte ett svep
+  : mål?.closest?.(".shopping-item");
+kopplaSvepBort($("shoppingList"), { väljRad: varuradUnder, taBort: taBortSvepradEllerFokusrad });
+kopplaTangentbordsBorttag($("shoppingList"), { väljRad: varuradUnder, taBort: taBortSvepradEllerFokusrad });
 
 function renderWeekStoreTabs() {
   const tabs = document.querySelector('[aria-label="Byt butik för veckan"]');

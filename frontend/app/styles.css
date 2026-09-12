@@ -1020,20 +1020,30 @@ button{color:inherit}
    står kvar där det stod.
 
    Krysset försvinner aldrig ur DOM:en: det kommer fram vid fokus, så
-   tangentbord och skärmläsare har kvar samma väg till samma handling. */
+   tangentbord och skärmläsare har kvar samma väg till samma handling.
+
+   L3 bygger vidare: raden har numera TVÅ sekundära handlingar ("har hemma"
+   och "ta bort"), och de reser tillsammans i .vara-sido. Regeln är densamma
+   som G5 satte - ute på pekskärm, framme vid fokus - bara utsträckt till
+   gruppen, så att inte den ena kontrollen ligger kvar i tumzonen medan den
+   andra flyttar ut. Krysset behåller sin egen regel: den är G5:s löfte, och
+   ett löfte som bara gäller så länge ingen lägger en knapp bredvid är inget
+   löfte. */
 .shopping-item{position:relative;overflow:hidden}
-.shopping-item-main{transition:transform var(--t-normal) var(--ease)}
+.shopping-item-main,.vara-sido{transition:transform var(--t-normal) var(--ease)}
 @media (hover:none) and (pointer:coarse){
   .shopping-item{touch-action:pan-y}
+  .shopping-item .vara-sido{transform:translateX(100%)}
   .shopping-item .shopping-remove{
     transform:translateX(100%);
     transition:transform var(--t-normal) var(--ease);
   }
+  .shopping-item:focus-within .vara-sido{transform:translateX(0)}
   .shopping-item:focus-within .shopping-remove,
   .shopping-item .shopping-remove:focus-visible{transform:translateX(0)}
 }
 @media (prefers-reduced-motion:reduce){
-  .shopping-item .shopping-remove,.shopping-item-main{transition:none}
+  .shopping-item .shopping-remove,.shopping-item-main,.vara-sido{transition:none}
 }
 
 /* ---- SPARAT (L5) -------------------------------------------------------
@@ -1249,3 +1259,132 @@ button{color:inherit}
   overflow:hidden;text-overflow:ellipsis;
 }
 .settings-row.marked .settings-row-value{color:var(--text);font-weight:600}
+
+/* ====================================================================
+   L3 · HANDLA, SOM I DESIGN D (telefon 3)
+
+   Skärmen var en stapel av kort: varje vara i en egen ruta med ram, radie,
+   skugga och ett foto på 56 px, och avdelningsrubriken satt som en
+   pillerformad etikett ovanför. Design D har inga kort inne i appen -
+   innehållet skiljs åt av linjer och luft, precis som på ett tryckt uppslag.
+   Avdelningen märks med en hårlinje längs gruppens vänsterkant, raden med en
+   hårlinje under sig, och ingenting med en skugga.
+
+   Reglerna ligger sist i filen med avsikt: de vinner över det äldre
+   .shopping-item-skiktet (som fortfarande gäller extravaror och skafferiet)
+   utan att någon annan vy rörs. -------------------------------------------- */
+
+.shopping-list{margin:0 0 4px}
+
+/* AVDELNINGEN. Hårlinjen till vänster binder ihop gruppens rader utan att
+   rita en ruta runt dem. Rubriken i spärrade kapitäler, antalet till höger. */
+.avdelningsgrupp{margin:0 0 2px;padding-left:13px;border-left:1px solid var(--rule)}
+.shopping-list .avdelning{
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  margin:16px 0 3px;padding:0;
+  font:600 10px/1.5 var(--font-body);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)
+}
+.shopping-list .avdelning .kap{font:inherit;letter-spacing:inherit;color:var(--ink-3)}
+.shopping-list .avdelning .kap-ink{color:var(--ink-2)}
+
+/* RADEN. Ingen ram, ingen radie, ingen bakgrund - bara hårlinjen under.
+   Raden ÄR kryssrutan (§5.5): träffytan är hela radens 44 px, och rutan
+   själv får därför vara 21. Högerkanten hålls fri för radens sekundära
+   handlingar, så priset aldrig hamnar under dem. */
+.shopping-list .shopping-item{
+  display:block;position:relative;overflow:hidden;
+  margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none
+}
+.shopping-list .vara{
+  display:flex;align-items:center;gap:13px;width:100%;
+  min-height:44px;padding:8px 92px 8px 0;
+  border:0;border-bottom:1px solid var(--rule);background:none;
+  font:400 14px/1.4 var(--font-body);color:var(--ink);text-align:left
+}
+.shopping-list .vara:active{background:var(--paper-2)}
+.ruta{
+  flex:0 0 21px;width:21px;height:21px;
+  border:1.5px solid var(--ink-3);background:none;
+  display:flex;align-items:center;justify-content:center
+}
+.ruta svg{display:none}
+.ruta svg path{stroke:var(--paper)}
+.vara--klar .ruta{background:var(--ink);border-color:var(--ink)}
+.vara--klar .ruta svg{display:block}
+.vara .txt{flex:1;min-width:0}
+.vara .txt strong{
+  display:block;padding:0;font:400 14px/1.35 var(--font-body);color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+/* Mängden som EGEN underrad, inte inklämd efter namnet: "Behöver 250 g ·
+   1 × 400 g" är två upplysningar, och de får plats bara på en egen rad. */
+.vara .mangd{
+  display:block;margin-top:2px;
+  font:400 11.5px/1.35 var(--font-body);color:var(--ink-3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.shopping-list .vara .pris{flex:0 0 auto}
+.pris-hamtas{flex:0 0 auto;font:400 11.5px/1.4 var(--font-body);color:var(--ink-3);white-space:nowrap}
+
+/* AVBOCKAD RAD: genomstruken och tonad, kvar i sin avdelning. Den som bockar
+   av i butiken ska se raden ligga kvar vid hyllan den hörde till - inte
+   hoppa ner i ett eget block längst ner på skärmen. */
+.vara--klar .txt strong,.vara--klar .mangd,.vara--klar .pris{color:var(--ink-3)}
+.vara--klar .txt strong,.vara--klar .pris{text-decoration:line-through}
+/* Den tomma ramen stryks aldrig över: ett saknat pris förblir ett tomt fack. */
+.vara--klar .saknas{text-decoration:none}
+
+/* SEKUNDÄRA HANDLINGAR. "Har hemma" och krysset bor i .vara-sido vid radens
+   högerkant. På pekskärm åker gruppen ut ur raden (G5-blocket ovan) och
+   kommer fram vid fokus; med mus står den kvar. Båda är 44x44. */
+.vara-sido{
+  position:absolute;top:0;right:0;height:100%;
+  display:flex;align-items:center
+}
+.shopping-list .vara-hemma{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  width:44px;height:44px;padding:0;border:0;border-radius:0;background:var(--paper);
+  font:600 10px/1 var(--font-body);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-2)
+}
+.shopping-list .vara-hemma svg{
+  width:17px;height:17px;flex:none;fill:none;stroke:currentColor;
+  stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round
+}
+.shopping-list .vara-hemma span{
+  position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap
+}
+.shopping-list .shopping-remove{
+  position:static;width:44px;height:44px;padding:0;border:0;border-radius:0;
+  background:var(--paper);color:var(--ink-2);font-size:17px;line-height:1
+}
+/* Finns det bredd - surfplatta, delad vy - får huset sin text tillbaka. En
+   ikon med bara ett aria-namn är läsbar för skärmläsaren och gåtfull för
+   ögat; där plats finns ska ordet stå. */
+@media (min-width:560px){
+  .shopping-list .vara{padding-right:152px}
+  .shopping-list .vara-hemma{width:auto;padding:0 12px}
+  .shopping-list .vara-hemma span{position:static;width:auto;height:auto;clip:auto}
+}
+
+/* KASSAN. Den enda nedsänkta ytan på skärmen. --ink-3 är förbjudet på
+   --paper-2 (RÄTTELSE 1, 4,31:1) - all text här är --ink eller --ink-2. */
+.shopping-progress.kassa{
+  position:static;margin:18px 0 16px;padding:12px 16px 14px;
+  border:0;border-top:1px solid var(--rule-2);border-radius:0;
+  background:var(--paper-2);box-shadow:none
+}
+.kassa .kassa-toppen{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.kassa .kap{font:600 10px/1.5 var(--font-body);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2)}
+.kassa-summa{display:inline-flex;align-items:baseline;gap:7px}
+.kassa-summa .pris{font-family:var(--font-display);font-size:26px;color:var(--ink)}
+.kassa-summa .pris .cirka,.kassa-summa .pris .minst{font-family:var(--font-body);color:var(--ink-2)}
+.kassa-summa .saknas{font-family:var(--font-body)}
+.kassa-budget{font:400 13px/1.4 var(--font-body);color:var(--ink-2)}
+.kassa .kassa-rader{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;margin:6px 0 0}
+.kassa .kassa-rader strong{font:400 12.5px/1.5 var(--font-body);color:var(--ink-2)}
+.kassa-osaker{font:400 12.5px/1.5 var(--font-body);color:var(--ink-2)}
+.kassa-osaker::before{content:"+ "}
+.kassa .progress-track{height:3px;margin-top:9px;border-radius:0;background:var(--rule)}
+.kassa .progress-track i{border-radius:0;background:var(--ink)}
+.kassa .prisnyckel{margin:12px 0 0;border-top:1px solid var(--rule)}
