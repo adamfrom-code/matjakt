@@ -1208,3 +1208,44 @@ button{color:inherit}
     margin-top:-.1em;
   }
 }
+
+/* ===== G11 · Inställningar =====================================================
+   Skärmen appen inte hade. Reglerna ligger sist och fristående i stället för i
+   den stora display-listan högre upp: `.view-settings .settings-screen` väger
+   0,2,0 mot `.screen{display:none}` och vinner utan att den raden behöver
+   röras - en fil som fyra L-paket skriver i samtidigt ska få så få nya
+   redigeringspunkter som möjligt.
+
+   L6 bygger om skärmen efter design D (telefon 7). Det här är den enkla
+   varianten: hårfina linjer, rubrik per grupp, värdet till höger. */
+.view-settings .settings-screen{display:block}
+.settings-screen .screen-header{padding-bottom:10px}
+.settings-groups{display:flex;flex-direction:column}
+.settings-group-title{
+  margin:22px 0 2px;color:var(--muted);
+  font:700 11px/1 var(--font-body);letter-spacing:.12em;text-transform:uppercase;
+}
+.settings-group-title:first-child{margin-top:6px}
+.settings-row{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  width:100%;min-height:52px;padding:10px 2px;
+  border:0;border-bottom:1px solid var(--border);background:transparent;
+  color:var(--text);text-align:left;
+}
+.settings-row:active{background:var(--surface-2)}
+.settings-row-text{min-width:0;display:flex;flex-direction:column;gap:3px}
+.settings-row-label{font-size:15px;font-weight:600}
+.settings-row-note{color:var(--muted);font-size:12px}
+/* Allergiraden när den är tom. Märkningen bärs av ett ORD, inte bara av en
+   färg - "Ej ifyllt" går att läsa i gråskala och av en skärmläsare, och det
+   är appens mest säkerhetskritiska inställning. */
+.settings-row-flag{
+  align-self:flex-start;margin-top:2px;padding:2px 8px;
+  border:1px solid var(--ink-3);border-radius:999px;
+  color:var(--ink-2);font-size:11px;font-weight:700;letter-spacing:.04em;
+}
+.settings-row-value{
+  flex:none;max-width:52%;color:var(--muted);font-size:14px;text-align:right;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.settings-row.marked .settings-row-value{color:var(--text);font-weight:600}

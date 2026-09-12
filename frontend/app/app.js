@@ -31,6 +31,7 @@ import { PACKAGE_INFO, PRODUCT_CATALOG, RECIPE_DETAILS, RECIPE_QUANTITIES } from
 import { dinnerCandidates } from "./src/data/meal-type.js";
 import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
 import { weekPlanDays } from "./src/views/week.js";
+import { initSettingsView, renderSettings } from "./src/views/settings.js";
 import { adjustInventory, fetchHousehold, fetchNotifications, joinHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, replaceWeekItems, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, pantryEntriesFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor } from "./src/services/categories.js";
@@ -2740,6 +2741,10 @@ const RENDER_STEPS = [
   // G9-raden i Handla ("Ange postnummer för priserna i din butik") hänger på
   // samma sak som priserna gör: postnumret. Samma bana som listan.
   ["basket", renderPostcodePrompt],
+  // G11: Inställningar visar budget, personer, butik, postnummer, kost, konto
+  // och plan. Alla de värdena ändras i "account"-banan (kontot, hushållet)
+  // eller i veckoarket, och skärmen måste säga samma sak som de gör.
+  ["account", renderSettings],
   ["basket", updateSummary],
   // renderStats hör till kassen, inte till kontot: clearPriceSnapshots()
   // nollar state.dbComparison vid varje avbockning, och sparkortet läser
@@ -3071,15 +3076,19 @@ $("favoriteFilter").addEventListener("change", e => { state.baraFavoriter = e.ta
 function setView(view) { $("top").className = `app view-${view}`;
   // Grov tratt för testrundorna: en räknare per flikbesök, inget mer.
   trackEvent(`view_${view}`); document.querySelectorAll(".bottom-nav-item").forEach(item => item.classList.toggle("active", item.dataset.view === view)); window.scrollTo({ top: 0, behavior: "smooth" }); }
-document.querySelectorAll("[data-view]").forEach(item => item.addEventListener("click", () => {
-  // Från receptsidan ska ett tryck i menyn landa direkt i rätt flik - inte
-  // kräva ett extra "tillbaka" först.
-  if (new URLSearchParams(location.search).get("recept")) {
-    history.pushState(null, "", location.pathname);
-    renderRecipePage();
-  }
-  setView(item.dataset.view);
-}));
+// Receptsidan är ett eget lager OVANPÅ appen: renderRecipePage() döljer hela
+// #top. Allt som byter flik måste därför lämna den först, annars byts vyn
+// under ett lager som ligger kvar över den. Bottennavigeringen gjorde det
+// redan; Inställningar-knappen (G11) behöver samma sak, så steget bor i en
+// egen funktion i stället för inuti en lyssnare.
+function leaveRecipePage() {
+  if (!new URLSearchParams(location.search).get("recept")) return;
+  history.pushState(null, "", location.pathname);
+  renderRecipePage();
+}
+function goToView(view) { leaveRecipePage(); setView(view); }
+document.querySelectorAll("[data-view]").forEach(item =>
+  item.addEventListener("click", () => goToView(item.dataset.view)));
 document.querySelector(".wordmark").addEventListener("click", event => {
   event.preventDefault();
   if (new URLSearchParams(location.search).get("recept")) { history.pushState(null, "", location.pathname); renderRecipePage(); }
@@ -3603,9 +3612,16 @@ initSparatView({ $ });
 // mening till en 1080x1080-bild; knappen byter väg då, inte plats.
 $("sparatShareBtn").addEventListener("click", () => { delaMånaden(); });
 
-function openAccountModal() { openModal($("accountModal"), { onClose: closeAccountModal }); }
+// G11: kontoarket är långt, och Inställningar-skärmens rader pekar på olika
+// delar av det. Ett valfritt sektions-id tar användaren dit hon faktiskt
+// tryckte i stället för att lämna henne överst i ett scroll.
+function openAccountModal(section = "") {
+  openModal($("accountModal"), { onClose: closeAccountModal });
+  if (section) $(section)?.scrollIntoView({ block: "start" });
+}
 function closeAccountModal() { closeModal($("accountModal")); $("loginError").textContent = ""; $("registerError").textContent = ""; $("redeemError").textContent = ""; $("forgotError").textContent = ""; $("resetError").textContent = ""; $("deleteError").textContent = ""; }
-$("profileBtn").addEventListener("click", openAccountModal);
+// G11: profilknappen leder till Inställningar-skärmen (se src/views/settings.js),
+// inte rakt in i kontoarket. Bindningen görs där.
 document.querySelectorAll("[data-account-close]").forEach(button => button.addEventListener("click", closeAccountModal));
 function showAccountForm(name) {
   $("accountLoginForm").hidden = name !== "login";
@@ -4102,6 +4118,12 @@ initAccountView({
   syncNearbyBranches, clearLocationDerivedState, storeOptionsMarkup, openWeekSheet,
   budgetScopeText, maxDinners, maxMeals: () => MAX_MEALS,
   isNativeApp, openExternal, plural, render, trackEvent,
+});
+initSettingsView({
+  $, householdActive, hasPremium, openWeekSheet, openAccountModal, openPaywall,
+  // goToView, inte setView: profilknappen kan tryckas medan receptsidan
+  // ligger över appen, och då måste den lämnas först.
+  setView: goToView, plural, money, trackEvent,
 });
 wireHouseholdUi();
 if (!state.valda.size) chooseMenu(false); else render();
