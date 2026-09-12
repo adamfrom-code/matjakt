@@ -274,16 +274,42 @@ jobs:
             --platform manylinux1_x86_64 --platform any \
             -r backend/requirements.txt -d "${RUNNER_TEMP}/hjul-py310"
           echo "Alla låsta paket finns som hjul för imagens python."
+      # ── K2b: EN SÅRBARHET ÄR RÖD, EN BLIPP ÄR DET INTE ────────────────
+      #
+      # Båda stegen nedan ställer en fråga över nätet - till PyPI respektive
+      # npm-registret - så båda kan falla av skäl som inte har med beroendena
+      # att göra. 2026-09-11 gjorde de det, på main-committen d34d294
+      # (körning 34650990118):
+      #
+      #     requests.exceptions.ConnectionError: ('Connection aborted.',
+      #         ConnectionResetError(104, 'Connection reset by peer'))
+      #
+      # En omkörning av exakt samma commit blev grön. Ingenting var sårbart.
+      # Men "Hemligheter och versioner" är en av fyra obligatoriska
+      # statuscheckar OCH står sedan K4/K6 i releasekedjan (deploy-staging
+      # behöver security), så den blippen blockerade varje öppen PR från varje
+      # agent och stoppade hela deployen tills en människa körde om jobbet.
+      #
+      # audit_deps.py gör om frågan tre gånger med växande paus, och först när
+      # samtliga försök föll på en KÄND transportsignatur blir det en
+      # `::warning::` i stället för rött. Nedgraderingen kräver positivt bevis:
+      # finns en tolkbar rapport är rapporten facit, och allt annat som
+      # misslyckas - trasig låsfil, trasigt verktyg, borttagen flagga - är
+      # fortfarande rött. Hela resonemanget står i skriptets docstring.
+      #
+      # Kommandona står i skriptet och inte här, för flaggorna som ger
+      # maskinläsbar utdata hör ihop med tolken som läser den. Skiljer man dem
+      # åt kan en ändring här tyst göra varje körning otolkbar, och då blir
+      # varje körning ett "nätfall" - en grind som aldrig mer kan bli röd.
+      # backend/tests/test_sarbarhetsgrind.py håller båda riktningarna.
       - name: Kända sårbarheter i python-beroendena (pip-audit)
-        run: |
-          pip install --quiet pip-audit
-          pip-audit -r backend/requirements.txt
+        run: python backend/scripts/audit_deps.py pip
       - name: Kända sårbarheter i npm-beroendena (hög och uppåt)
-        # --audit-level=high: MEDEL blockerar inte. En grind som failar på
-        # varje moderate i ett transitivt Capacitor-beroende blir avstängd
-        # inom en vecka, och då fångas inte heller de allvarliga.
+        # --audit-level=high (satt i skriptet): MEDEL blockerar inte. En grind
+        # som failar på varje moderate i ett transitivt Capacitor-beroende blir
+        # avstängd inom en vecka, och då fångas inte heller de allvarliga.
         # npm audit behöver bara package-lock.json, inte node_modules.
-        run: npm audit --audit-level=high
+        run: python backend/scripts/audit_deps.py npm
 
   e2e:
     name: "Browser-E2E (Playwright: konsumentresan, Premium/Stripe, hushållet med två personer)"
