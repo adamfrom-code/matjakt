@@ -122,6 +122,11 @@
   </div>
 
   <div id="panel" hidden>
+    <!-- G12: kontrollrummet svarade med alert(). En systemdialog mitt i en
+         panel som annars skriver sina besked i sidan - och som dessutom låser
+         sidan tills någon klickar bort den. Felen skrivs här i stället, i
+         samma form som #authError ovanför. -->
+    <p class="note" id="adminError" role="status" style="color:#b91c1c"></p>
     <!-- DRIFTSTATUS FÖRST. Frågan "behöver jag göra något?" ska besvaras
          innan någon siffra om användare. Sammanfattningen är avsiktligt
          konservativ: okänt eller för gammalt underlag ger aldrig grönt. -->

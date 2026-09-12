@@ -20,6 +20,7 @@ import { clampBudget } from "../services/calculations.js";
 import { ALLERGENS } from "../services/diet.js";
 import { escapeHtml } from "../utils/html.js";
 import { closeModal, openModal } from "../utils/modal.js";
+import { askConfirm, showNotice } from "./dialog.js";
 // errorText: inget rått fetch-fel når skärmen. "Failed to fetch" är inte
 // svenska, och en användare kan inte göra något åt ett "HTTP 500" (E7).
 import { errorText } from "../api/http.js";
@@ -278,7 +279,14 @@ export function wireHouseholdUi() {
   });
 
   $("householdLeaveBtn")?.addEventListener("click", async () => {
-    if (!confirm(`Lämna ${state.household.name}? Den gemensamma veckan, listan och skafferiet stannar hos de andra.`)) return;
+    const bekräftat = await askConfirm({
+      title: `Lämna ${state.household.name}?`,
+      body: "Den gemensamma veckan, listan och skafferiet stannar hos de andra. Du får din egen igen.",
+      confirmLabel: "Lämna hushållet",
+      cancelLabel: "Stanna kvar",
+      danger: true,
+    });
+    if (!bekräftat) return;
     try {
       await leaveHousehold(state.authToken);
     } catch { /* redan ute, eller offline - lokalt läge gäller ändå */ }
@@ -611,7 +619,7 @@ export async function beginCheckout(plan, root = document.getElementById("paywal
   const consent = app.withdrawalConsentGiven(root);
   if (!consent) {
     const text = "Kryssa i rutan om ångerrätten för att kunna gå vidare till betalningen.";
-    if (errorLine) errorLine.textContent = text; else alert(text);
+    if (errorLine) errorLine.textContent = text; else showNotice({ title: "Ett steg kvar", body: text });
     root?.querySelector("[data-withdrawal-consent]")?.focus();
     return;
   }
@@ -621,7 +629,7 @@ export async function beginCheckout(plan, root = document.getElementById("paywal
     if (url) { if (app.isNativeApp()) awaitingPremiumActivation = true; app.openExternal(url); }
   } catch (error) {
     const text = error ? errorText(error) : "Kunde inte starta betalningen just nu.";
-    if (errorLine) errorLine.textContent = text; else alert(text);
+    if (errorLine) errorLine.textContent = text; else showNotice({ title: "Betalningen kom inte igång", body: text });
   }
 }
 
