@@ -698,7 +698,14 @@
     ],
     "dietFlags": [
       "vegetariskt"
-    ]
+    ],
+    "image": "assets/recipes/gronsakssoppa-med-pasta.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Simple_minestrone_(1).jpg",
+    "imageCredit": "jules",
+    "imageLicense": "CC BY 2.0",
+    "imageAlt": "Två skålar minestrone med vita bönor och zucchini",
+    "imageStatus": "ok"
   },
   {
     "id": "lax-i-ugn-fetaost",
@@ -1342,7 +1349,14 @@
     "dietFlags": [
       "blandkost",
       "laktosfritt"
-    ]
+    ],
+    "image": "assets/recipes/strimlad-flaskkarre-ris.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Stir-fried_ginger_pork_(8486598866).jpg",
+    "imageCredit": "Ruth Hartnup from Vancouver, Canada",
+    "imageLicense": "CC BY 2.0",
+    "imageAlt": "Strimlad fläskkarré med paprika i sojasås bredvid kokt ris",
+    "imageStatus": "ok"
   },
   {
     "id": "vegansk-bolognese-vegofars",

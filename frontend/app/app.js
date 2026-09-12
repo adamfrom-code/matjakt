@@ -2035,9 +2035,13 @@ function nextMealCardMarkup(recipe, dayLabel = "Ikväll") {
                 `${recipe.servings || state.personer} portioner`].filter(Boolean).join(" · ");
   // Fotot ÄR kortet: hela ytan öppnar receptet, "Byt" ligger som egen knapp
   // ovanpå (syskon, inte kapslad knapp-i-knapp).
+  //
+  // M2: `namn: false` - rubriken ligger redan PÅ bilden (hero-meal-info över
+  // scrimen). Saknas fotot ritas reservkortet med monogram och kapitäler i
+  // stället, inte med rättens namn en andra gång i samma rektangel.
   return `<div class="hero-meal-card">
     <button type="button" class="hero-meal-open" data-week-details="${escapeHtml(recipe.id)}" aria-label="Öppna ${escapeHtml(recipe.namn)}">
-      <span class="hero-meal-photo">${recipePhoto(recipe)}</span>
+      <span class="hero-meal-photo">${recipePhoto(recipe, { namn: false })}</span>
       <span class="hero-meal-scrim" aria-hidden="true"></span>
       <span class="hero-meal-info"><small>${escapeHtml(dayLabel)}</small><strong>${escapeHtml(recipe.namn)}</strong><span class="hero-meal-meta">${escapeHtml(meta)}</span></span>
     </button>

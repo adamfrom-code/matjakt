@@ -9,14 +9,17 @@ The rule these protect: a photo of the WRONG dish is worse than no photo. It
 makes the app look careless in the one place a food app cannot afford to.
 """
 
+import json
 import os
 import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from services.recipes import images  # noqa: E402
+from services.recipes import RecipeStore, images  # noqa: E402
+from services.recipes.api import RECIPE_SOURCE_DIR  # noqa: E402
 from services.recipes.images import (  # noqa: E402
     COMMERCIAL_LICENCES, build_query, english_terms, placeholder, score_candidate,
 )
@@ -108,6 +111,82 @@ class PlaceholderTest(unittest.TestCase):
         self.assertTrue(placeholder(recipe("Köttfärslimpa", "Köttfärs"))["imageAlt"])
 
 
+class ProvenanceInTheBankTest(unittest.TestCase):
+    """M2: varje rad i `recipes` som bär en bild bär också sin licens.
+
+    Repot är publikt och landningssidan krediterar redan Pexels. En bild vi
+    inte kan namnge licensen på är en juridisk skuld, inte en bild - och den
+    sortens rad kommer aldrig in med buller. Den kommer in för att någon
+    klistrade in en URL som såg bra ut.
+
+    Testet byggs mot den SPÅRADE källan (backend/recipe_sources/) och prövas
+    på den riktiga tabellen, inte på JSON-dictarna: det är `recipes` som
+    servern svarar ur, och kolumnen som ska vara ifylld är image_license.
+    backend/data/recipes.db är gitignorerad och finns inte i CI, så den
+    byggs här i en tempkatalog ur exakt de filer som ligger i git.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.TemporaryDirectory()
+        cls.store = RecipeStore(Path(cls._tmp.name) / "recipes.db")
+        for path in sorted(RECIPE_SOURCE_DIR.glob("*.json")):
+            for recipe_row in json.loads(path.read_text(encoding="utf-8")):
+                cls.store.upsert_recipe(recipe_row)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.store.close()
+        cls._tmp.cleanup()
+
+    def _rows(self, where=""):
+        return list(self.store._connection.execute(
+            f"SELECT id, name, image, image_source, image_source_url, image_credit, "
+            f"image_license, image_status FROM recipes {where}"))
+
+    def test_the_bank_is_actually_loaded(self):
+        """Skyddar kraven nedan från att bli tomma och därmed meningslösa."""
+        self.assertGreater(len(self._rows()), 200)
+        self.assertGreater(
+            len(self._rows("WHERE image IS NOT NULL AND image <> ''")), 200)
+
+    def test_every_row_with_an_image_states_its_licence(self):
+        missing = [(row["id"], row["image"]) for row
+                   in self._rows("WHERE image IS NOT NULL AND TRIM(image) <> ''")
+                   if not (row["image_license"] or "").strip()]
+        self.assertEqual(missing, [],
+                         "recept med bild men utan image_license: "
+                         + ", ".join(rid for rid, _ in missing))
+
+    def test_a_licence_is_useless_without_a_source_to_check_it_against(self):
+        """CC BY och CC BY-SA kräver namngivning. Står bara licensen kvar är
+        raden ett påstående ingen kan kontrollera."""
+        thin = [row["id"] for row
+                in self._rows("WHERE image IS NOT NULL AND TRIM(image) <> ''")
+                if not (row["image_source_url"] or "").strip()
+                or not (row["image_credit"] or "").strip()]
+        self.assertEqual(thin, [])
+
+    def test_a_stated_licence_is_one_we_may_actually_ship(self):
+        refused = [(row["id"], row["image_license"]) for row
+                   in self._rows("WHERE image IS NOT NULL AND TRIM(image) <> ''")
+                   if not COMMERCIAL_LICENCES.match(row["image_license"] or "")]
+        self.assertEqual(refused, [])
+
+    def test_a_row_without_an_image_is_marked_so_the_gap_can_be_found(self):
+        for row in self._rows("WHERE image IS NULL OR TRIM(image) = ''"):
+            self.assertEqual(row["image_status"], "needs_image", row["id"])
+
+    def test_the_bundled_photos_exist_where_the_app_looks_for_them(self):
+        """Bilder vi själva laddat ner ligger i frontend/app/assets/recipes/.
+        En rad som pekar på en fil som inte är med i bygget är samma tomma
+        bildyta som ingen bild alls - bara svårare att upptäcka."""
+        assets = Path(__file__).resolve().parents[2] / "frontend" / "app"
+        own = [row for row in self._rows("WHERE image LIKE 'assets/%'")]
+        self.assertGreater(len(own), 0)
+        for row in own:
+            self.assertTrue((assets / row["image"]).is_file(),
+                            f"{row['id']} pekar på {row['image']} som inte finns")
 
 
 class PexelsSourceTest(unittest.TestCase):

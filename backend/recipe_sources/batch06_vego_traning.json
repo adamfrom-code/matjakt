@@ -1940,7 +1940,14 @@
     "dietFlags": [
       "blandkost",
       "glutenfritt"
-    ]
+    ],
+    "image": "assets/recipes/biff-rodvinssas.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Steak_au_poivre_at_La_Famiglia,_Flamingo,_Vantaa.jpg",
+    "imageCredit": "JIP",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageAlt": "Biff med pepparsås, haricots verts och potatis på tallrik",
+    "imageStatus": "ok"
   },
   {
     "id": "overnight-bulgursallad-kyckling",

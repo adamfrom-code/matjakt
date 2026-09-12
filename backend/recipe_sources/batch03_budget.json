@@ -516,8 +516,13 @@
     "dietFlags": [
       "blandkost"
     ],
-    "imageAlt": "Kålpudding med lingon",
-    "imageStatus": "needs_image"
+    "imageAlt": "Kålpudding i långpanna med brynt kål på ytan",
+    "imageStatus": "ok",
+    "image": "assets/recipes/kalpudding.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:K%C3%A5lpudding_i_l%C3%A5ngpanna.jpg",
+    "imageCredit": "AgnesEklunds",
+    "imageLicense": "CC0"
   },
   {
     "id": "bonsoppa-tomat",

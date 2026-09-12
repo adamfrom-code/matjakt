@@ -20,7 +20,7 @@
 import { addToWeekPlan, removeFromWeekPlan, saveState, state } from "../state/app-state.js";
 import { escapeHtml, safeHttpUrl } from "../utils/html.js";
 import { filterRecipes } from "../services/recipe-search.js";
-import { RECIPE_FALLBACK_ART, RECIPE_FALLBACK_LABEL, kindFor as recipeFallbackKind } from "../services/recipe-fallback.js";
+import { receptbildMarkup, reservkortMarkup } from "./receptbild.js";
 import { loadRecipe, loadShelves, matchesAllTags } from "../data/recipes.js";
 import { recipeDetailApiUrl } from "../api/config.js";
 import { SAKNAS, UPPSKATTAT, prisMarkup } from "./pris.js";
@@ -62,20 +62,11 @@ export function initRecipesView(overrides = {}) {
   host = { ...host, ...overrides };
 }
 
-// Kort och rader ritar bilden i som mest ~400 px - att ladda 940px-varianten
-// där är 3x bandbredd för ingenting (85 kB -> 27 kB per kort, mätt).
-// Pexels CDN skalar via query-parametrar; receptdetaljen behåller originalet.
-const cardImageUrl = url => typeof url === "string" && url.includes("images.pexels.com")
-  ? url.replace(/([?&])h=\d+&w=\d+/, "$1h=330&w=480")
-  : url;
-export function recipeFallbackMarkup(recipe) {
-  const kind = recipeFallbackKind(recipe);
-  const label = RECIPE_FALLBACK_LABEL[kind];
-  // aria-label säger att bilden saknas, inte vad ikonen föreställer: en
-  // skärmläsare ska inte tro att vi visar ett foto av rätten.
-  return `<span class="recipe-photo recipe-fallback kind-${kind}" role="img" aria-label="Ingen matbild tillgänglig"><svg viewBox="0 0 64 64">${RECIPE_FALLBACK_ART[kind]}</svg><small>${label}</small></span>`;
-}
-export const recipePhoto = recipe => recipe.bild ? `<img class="recipe-photo" src="${escapeHtml(safeHttpUrl(cardImageUrl(recipe.bild)) || "")}" alt="${escapeHtml(recipe.namn)}" loading="lazy" decoding="async">` : recipeFallbackMarkup(recipe);
+// M2: bildytan ägs av src/views/receptbild.js - ett foto eller ett
+// reservkort, aldrig ett hål. De två namnen här är kvar för att app.js och
+// vyerna redan kallar dem; de gör inget annat än att peka vidare.
+export const recipeFallbackMarkup = (recipe, val) => reservkortMarkup(recipe, val);
+export const recipePhoto = (recipe, val) => receptbildMarkup(recipe, val);
 
 export function mapApiRecipe(recipe) {
   // Rå text i state - escapas vid rendering som allt annat. Escape vid
@@ -350,9 +341,17 @@ export async function renderRecipePage() {
   const stepsMarkup = (details.steg || []).map((step, index) =>
     `<label class="steg"><span class="nr">${index + 1}</span><span class="steg-text">${escapeHtml(step)}</span><input type="checkbox" data-step-check="${index}"></label>`).join("");
 
-  const heroMedia = recipe.bild
-    ? `<img class="recipe-photo" src="${escapeHtml(safeHttpUrl(recipe.bild) || "")}" alt="${escapeHtml(recipe.namn)}">`
-    : recipePhoto(recipe);
+  // M2: `recipe.bild ? <img> : reservkort` var fel fråga. Den frågade om
+  // FÄLTET fanns, inte om adressen gick att sätta i src - och en bild vars
+  // adress filtret vägrar gav `<img src="">`, alltså webbläsarens
+  // trasiga-bild-glyf mitt i uppslaget. Komponenten svarar på rätt fråga och
+  // ritar ett kort i stället när det inte finns något foto att visa.
+  //
+  // `namn: false`: rubriken ligger redan PÅ bilden, i pappersfältet i
+  // figcaptionen. Två namn i samma rektangel är inte en design. Utan namn
+  // står monogrammet kvar - kortet blir aldrig en etikett på en tom platta.
+  // `lat: false`: uppslagets bild är det första man ser.
+  const heroMedia = receptbildMarkup(recipe, { full: true, lat: false, namn: false });
   $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe">`
     + `<figure class="recepthero">${heroMedia}<figcaption class="titel">${eyebrow ? `<span class="kap">${escapeHtml(eyebrow)}</span>` : ""}<h1>${escapeHtml(recipe.namn)}</h1></figcaption></figure>`
     + `<div class="receptmeta"><span class="kap">Pris per portion</span>${portionPrice}</div>`

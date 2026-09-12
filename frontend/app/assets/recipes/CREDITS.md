@@ -7,7 +7,6 @@ Receptbilderna kommer från Wikimedia Commons och är fritt licensierade. Ingen 
 | kycklinggryta.jpg | Shrabee | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Creamy_Chicken_Curry.jpg |
 | pastagratang.jpg | Scott Veg | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Baked_macaroni_and_cheese_close-up.jpg |
 | linssoppa.jpg | Whoisjohngalt | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Bowl_of_lentil_soup_with_green_and_red_lentils.jpg |
-| korvstroganoff.jpg | benketaro | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Beef_stroganoff_with_pasta.jpg |
 | tacobonor.jpg | Meg H | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Mexican-Rice-and-Beans-3_(35582784560).jpg |
 | fiskpasta.jpg | HaJunkiyada | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Tilapia_with_cream_based_pasta,_vegetables,_and_mushrooms.jpg |
 | lax.jpg | MOs810 | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Baked_salmon_with_dill_and_lemon.jpg |
@@ -63,4 +62,21 @@ Receptbilderna kommer från Wikimedia Commons och är fritt licensierade. Ingen 
 | sparrispastacitron.jpg | Vegan Feast Catering | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Pasta_with_tomatoes_and_asparagus_(4880297603).jpg |
 | morotscurry.jpg | pelican from Tokyo, Japan | CC BY-SA 2.0 | https://commons.wikimedia.org/wiki/File:Carrot_curry_and_rice_(8479175466).jpg |
 
+| flygande-jakob.jpg | Kr-val | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Flygande_jakob_fardig.jpg |
+| flaskpannkaka.jpg | Håkan Dahlström from Malmö, Sweden | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Fl%C3%A4skpannkaka_(15593125202).jpg |
+| artsoppa-vegetarisk.jpg | JIP | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Pea_soup_in_Loviisa.jpg |
+| isterband-dillstuvad.jpg | Jgu | CC BY 3.0 | https://commons.wikimedia.org/wiki/File:IsterbandMedMos.jpg |
+| kroppkakor.jpg | Sendelbach (talk) | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Kroppkaka.jpg |
+| kalpudding.jpg | AgnesEklunds | CC0 | https://commons.wikimedia.org/wiki/File:K%C3%A5lpudding_i_l%C3%A5ngpanna.jpg |
+| korv-stroganoff-klassisk.jpg | Blockhaj | CC BY 4.0 | https://commons.wikimedia.org/wiki/File:Korvstroganoff_with_rice_1.jpg |
+| korvstroganoff.jpg | Blockhaj | CC BY 4.0 | https://commons.wikimedia.org/wiki/File:Korvstroganoff_with_rice_4.jpg |
+| sillunch-potatis.jpg | Fluff | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Midsummer_pickled_herring.jpg |
+| korv-med-mos.jpg | Acabashi | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Charlecote_Park_Sausage_and_Mash_Warwickshire_England_01_lighter.jpg |
+| gronsakssoppa-med-pasta.jpg | jules | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Simple_minestrone_(1).jpg |
+| lantlig-potatissoppa-purjolok.jpg | Roundhere44 | CC0 | https://commons.wikimedia.org/wiki/File:Leek_Soup.jpg |
+| sondagsstek.jpg | Acabashi | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Roast_beef_Sunday_roast_at_The_Stag,_Little_Easton,_Essex,_England.jpg |
+| biff-rodvinssas.jpg | JIP | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Steak_au_poivre_at_La_Famiglia,_Flamingo,_Vantaa.jpg |
+| strimlad-flaskkarre-ris.jpg | Ruth Hartnup from Vancouver, Canada | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Stir-fried_ginger_pork_(8486598866).jpg |
+| varmkorv-gourmet.jpg | Evan Swigart from Chicago, USA | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Hot_dog_on_a_plate_-_Evan_Swigart.jpg |
+| kycklingwraps-lunch.jpg | Miansari66 | CC0 | https://commons.wikimedia.org/wiki/File:Fajitas_Wraps.JPG |
 CC BY/BY-SA-licenserna kräver namngivning av upphovsperson vid vidare spridning av bilderna utanför appen.

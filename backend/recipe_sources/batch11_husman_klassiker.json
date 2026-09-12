@@ -284,7 +284,14 @@
     "dietFlags": [
       "blandkost",
       "glutenfritt"
-    ]
+    ],
+    "image": "assets/recipes/korv-med-mos.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Charlecote_Park_Sausage_and_Mash_Warwickshire_England_01_lighter.jpg",
+    "imageCredit": "Acabashi",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageAlt": "Korv med potatismos, brun sås och grönkål på tallrik",
+    "imageStatus": "ok"
   },
   {
     "id": "bruna-bonor-flask",

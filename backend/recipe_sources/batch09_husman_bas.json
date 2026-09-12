@@ -69,7 +69,14 @@
     ],
     "dietFlags": [
       "blandkost"
-    ]
+    ],
+    "image": "assets/recipes/flaskpannkaka.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Fl%C3%A4skpannkaka_(15593125202).jpg",
+    "imageCredit": "Håkan Dahlström from Malmö, Sweden",
+    "imageLicense": "CC BY 2.0",
+    "imageAlt": "Gyllenbrun fläskpannkaka med bitar av rimmat sidfläsk",
+    "imageStatus": "ok"
   },
   {
     "id": "kaldolmar",
@@ -351,7 +358,14 @@
     "dietFlags": [
       "blandkost",
       "glutenfritt"
-    ]
+    ],
+    "image": "assets/recipes/sondagsstek.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Roast_beef_Sunday_roast_at_The_Stag,_Little_Easton,_Essex,_England.jpg",
+    "imageCredit": "Acabashi",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageAlt": "Skivad stek med sås, rostad potatis och rotfrukter på tallrik",
+    "imageStatus": "ok"
   },
   {
     "id": "isterband-dillstuvad",
@@ -429,7 +443,14 @@
     ],
     "dietFlags": [
       "blandkost"
-    ]
+    ],
+    "image": "assets/recipes/isterband-dillstuvad.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:IsterbandMedMos.jpg",
+    "imageCredit": "Jgu",
+    "imageLicense": "CC BY 3.0",
+    "imageAlt": "Stekt isterband med potatismos och ärtor på tallrik",
+    "imageStatus": "ok"
   },
   {
     "id": "kroppkakor",
@@ -513,7 +534,14 @@
     ],
     "dietFlags": [
       "blandkost"
-    ]
+    ],
+    "image": "assets/recipes/kroppkakor.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Kroppkaka.jpg",
+    "imageCredit": "Sendelbach (talk)",
+    "imageLicense": "CC BY-SA 3.0",
+    "imageAlt": "Två kroppkakor med smält smör och lingonsylt på tallrik",
+    "imageStatus": "ok"
   },
   {
     "id": "panerad-torsk-potatismos",

@@ -172,7 +172,14 @@
     ],
     "dietFlags": [
       "blandkost"
-    ]
+    ],
+    "image": "assets/recipes/flygande-jakob.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Flygande_jakob_fardig.jpg",
+    "imageCredit": "Kr-val",
+    "imageLicense": "CC BY-SA 3.0",
+    "imageAlt": "Flygande Jacob i ugnsform, serverad med ris och sallad",
+    "imageStatus": "ok"
   },
   {
     "id": "dillkott",
@@ -445,7 +452,14 @@
     ],
     "dietFlags": [
       "blandkost"
-    ]
+    ],
+    "image": "assets/recipes/korv-stroganoff-klassisk.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Korvstroganoff_with_rice_1.jpg",
+    "imageCredit": "Blockhaj",
+    "imageLicense": "CC BY 4.0",
+    "imageAlt": "Korvstroganoff med strimlad korv i tomatsås på ris",
+    "imageStatus": "ok"
   },
   {
     "id": "raggmunk",
@@ -1388,7 +1402,14 @@
       "veganskt",
       "glutenfritt",
       "laktosfritt"
-    ]
+    ],
+    "image": "assets/recipes/artsoppa-vegetarisk.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Pea_soup_in_Loviisa.jpg",
+    "imageCredit": "JIP",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageAlt": "Tallrik med gul ärtsoppa och knäckebröd bredvid",
+    "imageStatus": "ok"
   },
   {
     "id": "falukorv-ugn",
