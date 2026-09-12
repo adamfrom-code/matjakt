@@ -19,6 +19,7 @@ import { getStoredToken, startCheckout } from "../api/auth.js";
 import { clampBudget } from "../services/calculations.js";
 import { ALLERGENS } from "../services/diet.js";
 import { escapeHtml } from "../utils/html.js";
+import { closeModal, openModal } from "../utils/modal.js";
 // errorText: inget rått fetch-fel når skärmen. "Failed to fetch" är inte
 // svenska, och en användare kan inte göra något åt ett "HTTP 500" (E7).
 import { errorText } from "../api/http.js";
@@ -247,7 +248,7 @@ export function wireHouseholdUi() {
     app.render();
   });
 
-  $("inviteDismissBtn")?.addEventListener("click", () => { $("inviteLanding").hidden = true; app.clearInviteFromUrl(); });
+  $("inviteDismissBtn")?.addEventListener("click", () => { closeModal($("inviteLanding")); app.clearInviteFromUrl(); });
 }
 
 // ---------------------------------------------------------------------------
@@ -377,8 +378,21 @@ function renderOnboardingStep() {
   $("onboardingBack").hidden = onboardingStep === 0;
   $("onboardingNext").querySelector("span").textContent = onboardingStep === ONBOARDING_STEPS.length - 1 ? "Skapa min vecka" : "Nästa";
 }
-export function openOnboarding() { onboardingStep = 0; $("onboardingModal").hidden = false; renderOnboardingStep(); }
-export function closeOnboarding() { $("onboardingModal").hidden = true; }
+// G6: onboardingmodalen gick inte att stänga med tangentbord ALLS - inget
+// Escape, ingen fokusflytt, och tab-ordningen fortsatte rakt ner i appen
+// bakom. Det var det första en ny användare mötte. Nu är den ett lager som
+// alla andra: rubriken får fokus, appen bakom är inert, Escape stänger.
+//
+// Escape stänger onboardingen på samma villkor som "Hoppa över, jag ställer
+// in senare" - den som backar ur ska inte mötas av samma modal vid nästa
+// rendering, och att smyga tillbaka den vore att låsa in henne igen.
+export function openOnboarding() {
+  onboardingStep = 0;
+  renderOnboardingStep();
+  openModal($("onboardingModal"), { onClose: skipOnboarding });
+}
+export function closeOnboarding() { closeModal($("onboardingModal")); }
+function skipOnboarding() { state.onboardingComplete = true; saveState(); closeOnboarding(); }
 
 function wireOnboardingButtons() {
   const next = $("onboardingNext");
@@ -405,7 +419,7 @@ function wireOnboardingButtons() {
     onboardingStep++; renderOnboardingStep();
   });
   $("onboardingBack").addEventListener("click", () => { onboardingStep = Math.max(0, onboardingStep - 1); renderOnboardingStep(); });
-  $("onboardingSkip").addEventListener("click", () => { state.onboardingComplete = true; saveState(); closeOnboarding(); });
+  $("onboardingSkip").addEventListener("click", skipOnboarding);
 }
 
 // G8, andra halvan: erbjudandet som förut stod i vägen står nu bredvid.
@@ -446,10 +460,13 @@ export function openPaywall(triggerFeature = "") {
     modal.className = "modal paywall-modal";
     document.body.appendChild(modal);
   }
-  modal.innerHTML = `<div class="modal-card paywall-card">
+  // G6: betalväggen byggs i JS och hade därför aldrig fått den role/aria som
+  // markupmodalerna har - en modal som skärmläsaren inte vet att den är inne
+  // i, mitt i ett betalflöde.
+  modal.innerHTML = `<div class="modal-card paywall-card" role="dialog" aria-modal="true" aria-labelledby="paywallTitle">
     <button type="button" class="modal-close" data-paywall-close aria-label="Stäng">×</button>
     <p class="eyebrow">Matjakt Premium</p>
-    <h2>Lås upp hela matveckan</h2>
+    <h2 id="paywallTitle">Lås upp hela matveckan</h2>
     <p class="paywall-lead">Planera veckan efter familj, budget eller träning. Jämför riktiga matpriser hos alla kvalificerade butiker och få exakt inköpslista för varje butik.</p>
     <ul class="paywall-points">
       <li>Alla 7 veckotyper och 1–7 middagar</li>
@@ -469,16 +486,16 @@ export function openPaywall(triggerFeature = "") {
     <p class="account-error" id="paywallError"></p>
     <button type="button" class="paywall-continue" data-paywall-close>Fortsätt gratis</button>
   </div>`;
-  modal.hidden = false;
+  openModal(modal, { onClose: () => closeModal(modal) });
   modal.querySelectorAll("[data-paywall-close]").forEach(el =>
-    el.addEventListener("click", () => { modal.hidden = true; }));
+    el.addEventListener("click", () => closeModal(modal)));
   modal.querySelectorAll("[data-paywall-plan]").forEach(el =>
     el.addEventListener("click", () => beginCheckout(el.dataset.paywallPlan, modal)));
 }
 
 export async function beginCheckout(plan, root = document.getElementById("paywallModal")) {
   if (!state.user) {
-    document.getElementById("paywallModal").hidden = true;
+    closeModal(document.getElementById("paywallModal"));
     app.openAccountModal();
     return;
   }

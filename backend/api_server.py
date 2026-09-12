@@ -44,20 +44,24 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
-from services.analytics import ANALYTICS_EVENTS, AnalyticsStore
+from services.analytics import ACTIVATION_EVENT, ANALYTICS_EVENTS, AnalyticsStore
 from services import mailings
 from services.household import HouseholdStore, NotificationStore
 from services.household.routes import HouseholdRouter
 from services.billing import StripeError, cancel_subscription, create_checkout_session, create_customer, create_portal_session, parse_event, verify_webhook_signature, delete_customer, subscription_period_end, fetch_price as fetch_stripe_price
 from services.billing import matjakt_user_id as stripe_matjakt_user_id, orphan_subscriptions as stripe_orphan_subscriptions
 from services.billing import automatic_tax_allowed, price_verdict as stripe_price_verdict, tax_readiness as stripe_tax_readiness
+from services.billing import oss as stripe_oss
 from services.billing import withdrawal
 from services.billing import gate as paywall
+from services.billing import activation as billing_activation
+from services.billing.savings import SavingsStore
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.accounts import clientip  # noqa: E402
 from services.accounts import data_export  # noqa: E402
 from services import admin_audit  # noqa: E402
+from services import backup as backup_service  # noqa: E402
 from services import backup_crypto  # noqa: E402
 from services.bounded_server import BoundedThreadingHTTPServer  # noqa: E402
 from services.grocery import alerts as grocery_alerts  # noqa: E402
@@ -189,6 +193,42 @@ def stripe_price_id(plan: str) -> str:
     return STRIPE_PRICE_YEARLY if plan == "yearly" else STRIPE_PRICE_MONTHLY
 
 
+def check_oss_countries(*, alarm=True):
+    """B2b: har någon BETALANDE kund en adress utanför Sverige?
+
+    Prenumerationen går att köpa från vilket EU-land som helst, och då gäller
+    köparlandets momssats via One Stop Shop. Stripe Tax räknar rätt sats av
+    sig självt - men OSS-registreringen görs hos Skatteverket, och den finns
+    inte förrän Adam gjort den. Kontrollen ska alltså upptäcka den FÖRSTA
+    utländska kunden när hon dyker upp, inte vid en granskning två år senare
+    med retroaktiv moms i ett land vi inte var registrerade i.
+
+    Får aldrig stoppa något: ett nätfel mot Stripe är inte en tysk kund, och
+    svaret säger då att kontrollen inte kördes i stället för att låtsas att
+    listan är tom.
+
+    Sammanfattningen (ALDRIG kundlistan - den bär e-postadresser) läggs i
+    STRIPE_PRICE_CHECK så /api/health kan visa den utan admin-token, precis
+    som de andra Stripe-kontrollerna."""
+    if not STRIPE_SECRET_KEY:
+        report = stripe_oss.unavailable("Stripe är inte konfigurerat")
+    else:
+        try:
+            report = stripe_oss.foreign_customers(STRIPE_SECRET_KEY)
+        except Exception as error:
+            logger.exception("OSS-kontrollen kunde inte köras")
+            report = stripe_oss.unavailable(
+                f"kontrollen kunde inte köras ({error.__class__.__name__})")
+    if report.get("alarm") and alarm:
+        METRICS.incr("stripe_oss_foreign_customer")
+        logger.error("OSS-LARM: %s. GET /api/admin/stripe-check listar kunderna.",
+                     report.get("reason"))
+    STRIPE_PRICE_CHECK["oss"] = {key: report.get(key) for key in
+                                 ("alarm", "foreignCount", "countries", "unknownCountry",
+                                  "checked", "truncated", "reason", "available")}
+    return report
+
+
 def verify_stripe_prices():
     """Frågar Stripe om de konfigurerade priserna finns och stämmer
     (59 kr/mån, 399 kr/år, ingen provperiod, angivna INKLUSIVE moms) och om
@@ -232,6 +272,9 @@ def verify_stripe_prices():
     if not result["ok"]:
         logger.error("Stripe-konfigurationen stämmer inte: priser=%s moms=%s",
                      result["plans"], result["automaticTax"])
+    # B2b: OSS-kontrollen körs i samma svep, så larmet finns i /api/health
+    # från första uppstarten - inte först när någon öppnar kontrollrummet.
+    check_oss_countries()
     return STRIPE_PRICE_CHECK
 MAIL_CONFIG = {
     "host": os.environ.get("SMTP_HOST", ""),
@@ -597,6 +640,11 @@ KV_CACHE = KeyValueCacheStore(PRICE_CACHE.connection, lock=PRICE_CACHE.lock)
 # allt äldre än sju dagar - flytten nedan räddar det som finns kvar där och
 # är ofarlig att köra vid varje uppstart (skriver bara dagar som saknas).
 ANALYTICS = AnalyticsStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
+# J3: sparhistoriken bor i KONTOdatabasen, samma anslutning och samma lås
+# som ovan. Före J3 fanns den bara i webbläsarens localStorage - alltså borta
+# vid varje telefonbyte. "Du sparade 1 340 kr i september" går inte att säga
+# om siffran försvinner med en rensad cache.
+SAVINGS = SavingsStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
 ANALYTICS.import_legacy_counters(lambda event, day: KV_CACHE.get("analytics", f"{event}:{day}")[0])
 MAILINGS = mailings.MailingScheduler(
     mailings.MailingStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock),
@@ -2226,6 +2274,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
         # "servern har fullt" ser likadana ut utifrån; här syns skillnaden.
         "connections": SERVER.stats() if SERVER is not None else {"max": MAX_CONNECTIONS},
         "backupEncryption": backup_crypto.status(),
+        # D10: ÅLDERN PÅ DEN SENASTE SÄKERHETSKOPIAN. B5 gjorde
+        # nedladdningsvägen kontrollerbar; det här gör själva backupen det.
+        # newest_age_seconds fanns men lästes bara av backuptråden själv - en
+        # backup som slutat tas var alltså osynlig ända till den dag den
+        # behövdes. Ålder, antal set och en slutsats; inga sökvägar.
+        "backup": backup_service.health(DATA_DIR),
         # Stripe-läge utan hemligheter: bara om nyckeln är en TEST- eller
         # LIVE-nyckel (prefix) och vilka delar som är satta. Svarar på
         # "används inga live-nycklar?" utan att någonsin visa nyckeln.
@@ -2242,7 +2296,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
                    "priceCheck": STRIPE_PRICE_CHECK.get("plans"),
                    # B2: är momsen påslagen på riktigt? Utan den här raden
                    # var "ingen moms" osynligt tills en revisor frågade.
-                   "automaticTax": STRIPE_PRICE_CHECK.get("automaticTax")},
+                   "automaticTax": STRIPE_PRICE_CHECK.get("automaticTax"),
+                   # B2b: OSS. Sammanfattningen, aldrig kundlistan - den bär
+                   # e-postadresser och /api/health är öppen.
+                   "oss": STRIPE_PRICE_CHECK.get("oss")},
         "recipeProviders": sorted(RECIPE_SERVICE.providers),
                                  "recipeCount": recipes_api.stats().get("total", 0),
                                  "productCount": grocery_api.database_summary().get("totalProducts", 0),
@@ -2294,10 +2351,25 @@ class ApiHandler(SimpleHTTPRequestHandler):
                                       (None if all_ok else "priserna är inte satta inklusive moms")}
             all_ok = all_ok and report["automaticTax"]["ready"]
             report["ok"] = all_ok
+            # B2b, OSS. Prenumerationen går att köpa från vilket EU-land som
+            # helst, och då gäller KÖPARLANDETS momssats. Stripe Tax räknar
+            # rätt sats av sig självt - men OSS-registreringen görs hos
+            # Skatteverket, och den första utländska kunden ska upptäckas när
+            # hon dyker upp, inte vid en granskning.
+            #
+            # Kontrollen läser KUNDERNAS adresser, vilket ingenting i B2
+            # gjorde: den läste bara prisobjekten och kontots
+            # skatteinställningar.
+            report["oss"] = check_oss_countries()
+            # Larmet gör kontrollrummet GULT, inte rött: `ok` fortsätter
+            # handla om konfigurationen, och momsen blir rätt ändå. Det som
+            # saknas är en registrering - och det syns på statuskoden, som
+            # inte är 200.
+            status = 502 if not all_ok else (409 if report["oss"].get("alarm") else 200)
             # Samma svar som uppstartskontrollen skulle gett: skriv in det, så
             # checkout börjar skicka automatic_tax så fort dashboarden är klar.
             verify_stripe_prices()
-            self.send_json(200 if all_ok else 502, report)
+            self.send_json(status, report)
             return
         if parsed.path == "/api/admin/stripe-reconcile":
             # B1: vem betalar utan att ha fått något? Stripe listar sina
@@ -2410,6 +2482,29 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # B3: ångerrättstexten kommer härifrån, precis som priserna - så
             # rutan i köpflödet aldrig kan säga en annan sak än den som sparas.
             self.send_json(200, {**plan_features.entitlements(plan), "withdrawal": withdrawal.terms()})
+            return
+        if parsed.path == "/api/savings":
+            # J3: sparhistoriken. Free ser sin senaste vecka, Premium hela
+            # historiken och månadsrapporten. MASKNING, inte nekande - Free
+            # ska se att siffran finns OCH hur många veckor som ligger bakom
+            # låset. Att dölja mängden vore att dölja erbjudandet.
+            if self._rate_limit("public"):
+                return
+            token = self._bearer_token()
+            user = ACCOUNT_STORE.user_for_token(token)
+            user_id = ACCOUNT_STORE.user_id_for_token(token)
+            if not user_id:
+                self.send_json(401, {"error": "Du måste vara inloggad"})
+                return
+            plan = plan_features.plan_for_user(user)
+            locked = bool(paywall.SAVINGS_HISTORY and paywall.SAVINGS_HISTORY.blocks(plan))
+            report = SAVINGS.report(user_id,
+                                    max_weeks=plan_features.max_savings_weeks(plan),
+                                    include_months=not locked)
+            # Svaret beror på planen och får därför aldrig ligga i en delad
+            # cache (J1) - send_json utan cache_seconds är no-store.
+            self.send_json(200, {**report, "locked": locked,
+                                 "feature": "savings_history" if locked else None})
             return
         if parsed.path == "/api/mail/unsubscribe":
             # Avsluta utskicken från länken i mejlet: ingen inloggning, bara
@@ -2931,6 +3026,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     try:
                         HOUSEHOLD_STORE.forget_user(identity[0])
                         NOTIFICATION_STORE.forget_user(identity[0])
+                        SAVINGS.forget_user(identity[0])
                     except Exception:
                         logger.exception("Kunde inte städa hushållsdata för raderat konto")
                 if customer_id and STRIPE_SECRET_KEY:
@@ -3195,6 +3291,32 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 return
             self._handle_analytics_event(payload)
             return
+        if parsed.path == "/api/savings/week":
+            # J3: veckans besparing skrivs ner när veckan är handlad. En rad
+            # per konto och vecka - skrivs samma vecka om (byten, ändrad
+            # lista) ersätts raden i stället för att läggas till, annars
+            # växer "sparat i september" med varje omräkning.
+            if self._rate_limit("state"):
+                return
+            user_id = ACCOUNT_STORE.user_id_for_token(self._bearer_token())
+            if not user_id:
+                self.send_json(401, {"error": "Du måste vara inloggad"})
+                return
+            if not isinstance(payload, dict):
+                self.send_json(400, {"error": "Ogiltig kropp"})
+                return
+            try:
+                self.send_json(200, SAVINGS.record_week(
+                    user_id,
+                    week_key=payload.get("weekKey"),
+                    cheapest_total=payload.get("cheapestTotal"),
+                    priciest_total=payload.get("priciestTotal"),
+                    saved=payload.get("savedKr"),
+                    chain=payload.get("chain")))
+            except Exception:
+                logger.exception("Kunde inte spara veckans besparing")
+                self.send_json(503, {"error": "Kunde inte spara just nu"})
+            return
         if parsed.path == "/api/account/marketing":
             # Tacka ja/nej till utskick från Konto-vyn. Servern äger svaret.
             if self._rate_limit("state"):      # B8: skrivväg genom kontolagret
@@ -3439,12 +3561,37 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 if gate and gate.blocks(plan):
                     result = mask_pricing_for_free(result)
                     break
+            # J3: en prissatt vecka ÄR en skapad vecka, och den första utlöser
+            # provperioden. Kroken är avsiktligt här - efter att veckan
+            # lyckats, före svaret - så en person som just sett att det
+            # skiljer 214 kr mellan butikerna får sju dagar Premium i samma
+            # ögonblick. En trial vid registrering testar nyfikenhet; den här
+            # testar produkten på någon som redan använt den.
+            self._record_first_week()
             self.send_json(200, result)
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             raise   # klienten gav upp - inget prisfel, _guarded tar det tyst
         except Exception:
             logger.exception("Prissättning av veckan misslyckades")
             self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})
+
+    # J3: krokar som körs när ett konto skapar sin FÖRSTA vecka. Listan är
+    # tom här; H5 hänger hänvisningsbelöningen på samma signal, så villkoret
+    # blir "vecka_skapad" och inte "registrerad" för allt som belönar.
+    ACTIVATION_HOOKS = ()
+
+    def _record_first_week(self):
+        """Aktiveringssignalen. Får ALDRIG kasta: det här är en belöningsväg,
+        och en trasig belöning får inte bli ett trasigt prissvar."""
+        try:
+            user_id = ACCOUNT_STORE.user_id_for_token(self._bearer_token())
+        except Exception:
+            logger.exception("Kunde inte slå upp kontot för aktiveringssignalen")
+            return
+        if not user_id:
+            return          # anonym vecka: inget konto att belöna
+        billing_activation.on_first_week(ACCOUNT_STORE, user_id,
+                                         hooks=self.ACTIVATION_HOOKS)
 
     def _paywall_refuses_week(self, plan, payload):
         """Grindarna som går att ställa på KROPPEN, före allt arbete.
@@ -3610,6 +3757,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
             ANALYTICS.record(event, user_id=user_id)
         except Exception:
             logger.exception("Kunde inte räkna händelsen %s", event)
+        # J3: samma aktiveringssignal som den prissatta veckan ger, från det
+        # andra hållet. Vilken som kommer först spelar ingen roll -
+        # mark_first_week är atomär och belönar bara övergången.
+        if event == ACTIVATION_EVENT and user_id:
+            billing_activation.on_first_week(ACCOUNT_STORE, user_id,
+                                             hooks=self.ACTIVATION_HOOKS)
         self.send_json(200, {"ok": True})
 
     def _handle_campaigns(self, params):
@@ -3869,7 +4022,6 @@ if __name__ == "__main__":
     # Nattliga, verifierade säkerhetskopior av alla databaser. Persistens är
     # inte backup - se services/backup.py för de ärliga gränserna och
     # återställningsinstruktionen.
-    from services import backup as backup_service
     backup_service.start_nightly(DATA_DIR)
     try:
         SERVER = BoundedThreadingHTTPServer(

@@ -48,6 +48,7 @@ if test_mode_active():
     from services.accounts import AccountStore
     from services.household import HouseholdStore, NotificationStore
     from services.analytics import AnalyticsStore
+    from services.billing.savings import SavingsStore
     from services.grocery import api as grocery_api
     from services.recipes import api as recipes_api
     from services.recipes import prices as recipe_prices
@@ -93,6 +94,9 @@ class _Server:
             # (Syntes som "4 != 3" i trattestet när E2E:n körs i samma
             # process som enhetstesterna, dvs. lokalt där Playwright finns.)
             "analytics": api_server.ANALYTICS,
+            # Samma sak för sparhistoriken (J3): SavingsStore binder
+            # ACCOUNT_STORE.connection vid uppstart.
+            "savings": api_server.SAVINGS,
             "stripe": (api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET,
                        api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY,
                        api_server.APP_URL, api_server.create_customer, api_server.create_checkout_session),
@@ -103,6 +107,8 @@ class _Server:
         api_server.HOUSEHOLD_STORE = HouseholdStore(root / "matjakt.db")
         api_server.NOTIFICATION_STORE = NotificationStore(root / "matjakt.db")
         api_server.ANALYTICS = AnalyticsStore(api_server.ACCOUNT_STORE.connection)
+        api_server.SAVINGS = SavingsStore(api_server.ACCOUNT_STORE.connection,
+                                          lock=api_server.ACCOUNT_STORE.lock)
         grocery_api.clear_cache()
         recipes_api.clear_cache()
         ratelimit.reset()
@@ -146,6 +152,7 @@ class _Server:
         api_server.HOUSEHOLD_STORE = self._saved["household"]
         api_server.NOTIFICATION_STORE = self._saved["notifications"]
         api_server.ANALYTICS = self._saved["analytics"]
+        api_server.SAVINGS = self._saved["savings"]
         grocery_api.DB_PATH = self._saved["grocery"]
         recipes_api.DB_PATH = self._saved["recipes"]
         api_server.ACCOUNT_STORE = self._saved["accounts"]
@@ -413,6 +420,20 @@ class BrowserJourney(unittest.TestCase):
         expect(page.locator("#accountLoggedIn")).to_be_visible()
         expect(page.locator("#accountEmail")).to_have_text(email)
 
+    def trial_already_used(self):
+        """J3 ger sju dagars Premium efter den FÖRSTA skapade veckan, så varje
+        nyregistrerat konto i en E2E ÄR Premium så snart veckan finns. Det är
+        hela poängen med trialen - och samtidigt skälet att den måste vara
+        förbrukad innan man prövar något som bara gäller Free.
+
+        `trial_used = 1` säger "den här personen har redan haft sina sju
+        dagar". Anropas FÖRE veckan skapas: då beviljas ingen trial alls, och
+        kontot är Free hela resan igenom. Ingen omladdning behövs, och därmed
+        kan ingen väntande synk gå förlorad."""
+        api_server.ACCOUNT_STORE.connection.execute(
+            "UPDATE users SET trial_ends_at = NULL, trial_used = 1")
+        api_server.ACCOUNT_STORE.connection.commit()
+
     def login(self, email):
         page = self.page
         if not page.locator("#accountModal").is_visible():
@@ -480,7 +501,14 @@ class BrowserJourney(unittest.TestCase):
         page = self.page
         plan_modal = page.locator("#planModal")
         if plan_modal.is_visible():
-            expect(page.locator('[data-plan-paywall]').first).to_be_visible()   # Premium-veckor låsta
+            # J3: varenda veckotyp är gratis. Veckorna sätts ihop i klienten
+            # ur ett lokalt receptregister och gick aldrig att skydda - och
+            # de är precis det som gör en ny användare beroende de första
+            # två veckorna. Alla kort ska alltså gå att VÄLJA, inget ska bära
+            # ett hänglås.
+            expect(page.locator('[data-choose-plan]').first).to_be_visible()
+            self.assertEqual(page.locator("[data-plan-paywall]").count(), 0,
+                             "en veckotyp är låst trots att alla är gratis sedan J3")
             page.click('[data-choose-plan="standard"]')
             expect(plan_modal).to_be_hidden()
         expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
@@ -581,6 +609,10 @@ class BrowserJourney(unittest.TestCase):
             self.logout()
             self.login(email)
             self.close_account_modal()
+            # Bytesräknaren och middagstaket är GRATIS-gränser. Utan det här
+            # är kontot Premium i sju dagar från sin första vecka (J3), och
+            # då finns inget tak att pröva.
+            self.trial_already_used()
 
         with self.step("onboarding 4 steg"):
             page.goto(self.app())
@@ -742,6 +774,163 @@ class BrowserJourney(unittest.TestCase):
         self.assertEqual(self.console_errors, [])
         self.assertEqual(len(self.batch_requests), 0, "Free ska aldrig hämta livepriser per vara")
 
+    # ---- den sena kontosynken ----
+    #
+    # HÅLLER kontosynkens svar i sidan tills testet släpper det. Skrivboken
+    # (vantan.py) bokför vad appen gör; det här skriptet bestämmer NÄR ett
+    # svar kommer fram - och det är hela skillnaden mellan att hoppas på ett
+    # kapplöp och att köra det.
+    #
+    # Bara den FÖRSTA hämtningen parkeras: det är boot-radens `refreshUser()`,
+    # den som app.js startar utan att vänta in innan den öppnar onboardingen.
+    # Nummer tas när anropet går ut, inte när svaret kommer - flera synkar
+    # ligger i luften samtidigt och `bok.antal` hinner räknas upp under tiden.
+    PARKERA_KONTOSYNKEN = """
+    (() => {
+      const bok = { antal: 0, levererade: 0, slapp: null };
+      window.__parkeradKontosynk = bok;
+      const original = window.fetch;
+      window.fetch = async (...args) => {
+        const url = String((args[0] && args[0].url) || args[0] || "");
+        const metod = ((args[1] && args[1].method) || "GET").toUpperCase();
+        if (!url.includes("/api/account/state") || metod !== "GET") return original(...args);
+        const nummer = ++bok.antal;
+        const svar = await original(...args);
+        if (nummer !== 1) return svar;
+        await new Promise(klar => { bok.slapp = klar; });
+        // Räknas när appen läst KROPPEN, inte när svaret lämnades ut: det är
+        // raden efter som lägger blobben i tillståndet, och det är den
+        // väntan nedan behöver ha bakom sig.
+        const json = svar.json.bind(svar);
+        svar.json = async () => { const data = await json(); bok.levererade += 1; return data; };
+        return svar;
+      };
+    })();
+    """
+
+    def test_en_sen_kontosynk_skriver_inte_over_onboardingsvaren(self):
+        """Svaren du just gav överlever en kontosynk som landar efteråt.
+
+        Boot-raden i app.js startar `refreshUser()` UTAN att vänta in den och
+        öppnar onboardingen i nästa andetag. Hämtningen av kontots blob är
+        alltså i luften medan användaren skriver sina svar - och blobben är
+        tagen FÖRE dem: budget 800, tomt postnummer, onboarding ogjord.
+        Landade den efter svaren skrevs de över, tyst och utan att rutan på
+        skärmen ändrades: fältet visade 900 medan tillståndet sa 800.
+
+        Så såg felet ut i CI ("AssertionError: 800 != 900" i resan ovan), och
+        det gick igenom vid omkörning - inte för att något lagats, utan för
+        att svaret hann före nästa gång.
+
+        Här är det inget kapplöp: svaret HÅLLS tills svaren är givna och
+        släpps sedan fram. Utan grinden i applySyncBlob faller testet på
+        exakt samma rad som CI föll på.
+        """
+        page = self.page
+        email = f"e2e-sen-synk-{uuid.uuid4().hex[:8]}@example.com"
+
+        with self.step("konto - blobben på servern är från före onboardingen"):
+            # Receptlänken håller onboardingen stängd så kontot går att skapa
+            # först; blobben som skrivs nu bär standardvärdena.
+            page.goto(self.app(f"?recept={self.any_recipe_id()}"))
+            expect(page.locator("#recipePage")).to_be_visible()
+            self.register(email)
+            self.close_account_modal()
+            self.wait_for_server_state(lambda s: s.get("budget") == 800 and not s.get("onboardingComplete"),
+                                       what="blobben före onboardingen")
+
+        with self.step("hela onboardingen besvaras medan kontosynken hålls"):
+            page.add_init_script(self.PARKERA_KONTOSYNKEN)
+            page.goto(self.app())
+            expect(page.locator("#onboardingModal")).to_be_visible()
+            page.wait_for_function("() => (window.__parkeradKontosynk || {}).antal > 0")
+            self.complete_onboarding()
+            # RUTAN ÄR STÄNGD NU, och det är hela poängen: "Skapa min vecka"
+            # stänger den långt innan ett sent svar landar. Det ögonblicket -
+            # veckan skapas, blobben är kvar i luften - var det oskyddade.
+            state = self.wait_for_state(lambda s: s.get("weekPlan"), what="veckan")
+            self.assertEqual(state["budget"], 900, "appen tog inte emot svaret alls")
+
+        with self.step("den gamla blobben släpps fram"):
+            page.evaluate("() => window.__parkeradKontosynk.slapp()")
+            # LEVERERAD, inte bara släppt. Hann http.js tidsgräns (15 s) före
+            # oss avbröts kroppsläsningen och appen såg ett nätfel i stället
+            # för en gammal blob - då har ingenting prövats, och det ska sägas
+            # rakt ut i stället för att passera som grönt.
+            levererad = True
+            try:
+                page.wait_for_function(
+                    "() => (window.__parkeradKontosynk || {}).levererade >= 1", timeout=10_000)
+            except Exception:                                  # noqa: BLE001
+                levererad = False
+            if not levererad:
+                self.fail("kontosynkens blob nådde aldrig appen - parkeringen översteg"
+                          " http.js REQUEST_TIMEOUT_MS och testet prövade ingenting")
+
+        with self.step("svaren står kvar"):
+            # LÄSNINGEN LIGGER EFTER BLOBBEN, utan att vänta på en klocka:
+            # wait_for_function ovan är en TASK i sidan, och mikrotaskkön
+            # töms före nästa task. Räknaren höjs inuti svarets json(), och
+            # allt som följer på den - applySyncBlob, persistLocally - är
+            # mikrotasks i samma kedja. Pollningen som ser räknaren kan alltså
+            # inte köra före dem.
+            state = self.local_state()
+            self.assertEqual(state["budget"], 900, "den gamla blobben skrev över budgeten")
+            self.assertEqual(state["postnummer"], fixture.POSTCODE)
+            self.assertEqual(state["hushall"]["vuxna"], 3)
+            self.assertTrue(state["onboardingComplete"])
+            self.assertTrue(state["weekPlan"], "veckan som just skapades är borta")
+            # Och skärmen säger samma sak som tillståndet. Budgetraden är
+            # platsen där ett överskrivet värde faktiskt syns för användaren.
+            page.click('.bottom-nav-item[data-view="basket"]')
+            expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
+            self.assertRegex(page.locator("#shoppingCost").inner_text(), r"/ 900 kr")
+
+        self.assertEqual(self.console_errors, [])
+
+    def test_hela_veckan_syns_utan_ett_enda_klick(self):
+        """G3: sju rader syns utan att man klickar.
+
+        "Veckans plan" var `hidden` i markupen, och koden bakom ritade
+        dessutom bara fyra rader med resten bakom "Visa hela veckan". Kvar på
+        skärmen fanns sju dagflikar och ETT dagskort i taget - alltså gick
+        frågan appen finns för, *vad äter vi i veckan*, inte att besvara med
+        ögonen. "✓ Lagad" och "✗ Hoppade över" fanns bara i den dolda listan
+        och var därmed oåtkomliga.
+
+        Testet rör ingenting efter onboardingen. Varje klick det INTE gör är
+        en del av påståendet.
+        """
+        page = self.page
+        page.goto(self.app())
+        self.complete_onboarding()
+
+        lista = page.locator("#weekPlanList")
+        expect(lista).to_be_visible()
+        rader = lista.locator(".week-plan-row")
+        # Sju dagar, alltid - weekPlan är bara så lång som antalet middagar
+        # (fyra på Free), medan dagflikarna ovanför ritar sju. Stod det fyra
+        # rader under sju flikar sa skärmen två saker om samma vecka.
+        expect(rader).to_have_count(7)
+        self.assertEqual(page.locator("#weekDayTabs .week-day-tab").count(), 7)
+
+        # Veckans rätter står i listan, inte bara i dagskortet.
+        state = self.wait_for_state(lambda s: s.get("weekPlan"), what="veckan")
+        planerade = lista.locator(".week-plan-row:not(.is-empty)")
+        expect(planerade).to_have_count(len(state["weekPlan"]))
+        # ...och de planlösa dagarna behåller sin plats i stället för att
+        # skjuta senare dagar uppåt (E2:s dagsindexfel i ett annat lager).
+        expect(lista.locator(".week-plan-row.is-empty"))\
+            .to_have_count(7 - len(state["weekPlan"]))
+
+        # Ingen kvarglömd knapp mellan användaren och veckan.
+        expect(page.locator("#weekPlanToggle")).to_have_count(0)
+
+        # "✓ Lagad" / "✗ Hoppade över" är åtkomliga först nu.
+        expect(lista.locator(".week-plan-menu").first).to_be_visible()
+        lista.locator(".week-plan-menu summary").first.click()
+        expect(lista.locator("[data-cooked]").first).to_be_visible()
+
     def test_forsta_veckan_kommer_utan_betalvagg(self):
         """G8: det dyraste avhoppet - hänglåsväggen före första måltiden.
 
@@ -785,7 +974,99 @@ class BrowserJourney(unittest.TestCase):
         self.assertLess(ordning.index("weekPlanUpsell"), ordning.index("weekDayTabs"), ordning)
         upsell.click()
         expect(page.locator("#planModal")).to_be_visible()
-        expect(page.locator("[data-plan-paywall]").first).to_be_visible()
+        # J3: veckotyperna är gratis, så jämförelsen är ett ERBJUDANDE om en
+        # annan vecka - inte en vägg av hänglås. Raden leder fortfarande dit,
+        # och där går varje kort att välja.
+        expect(page.locator("[data-choose-plan]").first).to_be_visible()
+        self.assertEqual(page.locator("[data-plan-paywall]").count(), 0)
+
+    def test_onboardingen_gar_att_stanga_med_tangentbord(self):
+        """G6: onboardingmodalen gick inte att stänga med tangentbord ALLS.
+
+        Det var det FÖRSTA en ny användare mötte: ingen Escape, ingen
+        fokusflytt, och tab-ordningen fortsatte rakt ner i appen bakom. Den
+        som inte kan använda pekskärm hade ingen väg vidare.
+        """
+        page = self.page
+        page.goto(self.app())
+        expect(page.locator("#onboardingModal")).to_be_visible()
+
+        # Fokus flyttas in i lagret, och appen bakom stängs av.
+        self.assertTrue(page.evaluate(
+            "() => document.getElementById('onboardingModal').contains(document.activeElement)"),
+            "fokus flyttades aldrig in i onboardingen")
+        self.assertTrue(page.evaluate(
+            "() => document.querySelector('.phone-shell').hasAttribute('inert')"),
+            "appen bakom onboardingen var fortfarande tabbbar")
+
+        page.keyboard.press("Escape")
+        expect(page.locator("#onboardingModal")).to_be_hidden()
+        self.assertFalse(page.evaluate(
+            "() => document.querySelector('.phone-shell').hasAttribute('inert')"),
+            "inert låg kvar på appen efter att onboardingen stängts")
+
+        # Escape stänger på samma villkor som "Hoppa över, jag ställer in
+        # senare" - annars hade modalen smugit tillbaka vid nästa rendering
+        # och Escape bara varit en paus.
+        läge = self.wait_for_state(lambda s: s.get("onboardingComplete"), what="onboarding avklarad")
+        self.assertTrue(läge["onboardingComplete"])
+
+    def test_varje_modal_stangs_med_escape_och_lamnar_tillbaka_fokus(self):
+        """G6:s acceptanskriterium, prövat på varje modal i appen.
+
+        app.js hade EN Escape-lyssnare (veckoarket) och EN skrollspärr (samma
+        ark). Plan-, byt-, konto-, skafferi- och laga-modalerna hade ingen
+        fokusflytt vid öppning, ingen fokusfälla, ingen Escape - och
+        tab-ordningen fortsatte rakt ner i sidan bakom arket.
+
+        Fyra påståenden per modal: fokus flyttas IN, appen bakom blir inert,
+        Escape stänger, och fokus kommer tillbaka till knappen som öppnade.
+        Det sista är det som gör tangentbordsnavigering användbar: utan det
+        landar fokus på <body> och nästa Tab börjar om från sidans topp.
+        """
+        page = self.page
+        page.goto(self.app())
+        self.complete_onboarding()
+        # Priserna klara först: veckokortet ritas om vid varje prissvar, och
+        # en knapp som byts ut medan arket är öppet finns inte kvar att ge
+        # fokus tillbaka till. Det är en väntan på ett lugnt läge, inte en
+        # höjd timeout.
+        self.wait_for_store_cards()
+        # Dagfliken följer veckodagen, och en Free-vecka har fyra middagar -
+        # öppnas resan en fredag står dagskortet på en tom dag och har ingen
+        # "Byt"-knapp alls. Måndagen har alltid veckans första rätt.
+        page.click('#weekDayTabs [data-week-day="0"]')
+        expect(page.locator("#weekTodayCard [data-week-swap]")).to_be_visible()
+
+        fall = [
+            ("week", "#weekPlanUpsell", "#planModal"),
+            ("week", "#weekTodayCard [data-week-swap]", "#swapModal"),
+            ("home", "#weekSheetOpen", "#weekSheet"),
+            ("home", "#feedbackBtn", "#feedbackSheet"),
+            ("home", "#profileBtn", "#accountModal"),
+            ("pantry", "#addPantryBtn", "#pantryModal"),
+            ("pantry", "#cookFromPantryBtn", "#cookModal"),
+        ]
+        for vy, öppnare, modal in fall:
+            with self.step(f"{modal} stängs med Escape"):
+                page.click(f'.bottom-nav-item[data-view="{vy}"]')
+                page.click(öppnare)
+                expect(page.locator(modal)).to_be_visible()
+                self.assertTrue(page.evaluate(
+                    "sel => document.querySelector(sel).contains(document.activeElement)", modal),
+                    f"{modal}: fokus flyttades aldrig in i modalen")
+                self.assertTrue(page.evaluate(
+                    "() => document.querySelector('.phone-shell').hasAttribute('inert')"),
+                    f"{modal}: appen bakom var fortfarande tabbbar")
+
+                page.keyboard.press("Escape")
+                expect(page.locator(modal)).to_be_hidden()
+                self.assertTrue(page.evaluate(
+                    "sel => document.activeElement === document.querySelector(sel)", öppnare),
+                    f"{modal}: fokus kom inte tillbaka till {öppnare}")
+                self.assertFalse(page.evaluate(
+                    "() => document.querySelector('.phone-shell').hasAttribute('inert')"),
+                    f"{modal}: inert låg kvar på appen efter stängning")
 
     def test_handla_borjar_med_listan_och_erbjuder_hushallet(self):
         """G13: i butik, med varorna framför sig, ska listan vara det första.
@@ -1118,6 +1399,9 @@ class BrowserJourney(unittest.TestCase):
         page.goto(self.app(f"?recept={self.any_recipe_id()}"))
         expect(page.locator("#recipePage")).to_be_visible()
         self.register(f"e2e-{uuid.uuid4().hex[:10]}@example.com")
+        # Betalväggen längst ned i testet gäller ett GRATISKONTO. J3 ger sju
+        # dagar Premium vid första veckan, så trialen får vara förbrukad.
+        self.trial_already_used()
         self.close_account_modal()
         page.goto(self.app())
         self.complete_onboarding()
@@ -1255,17 +1539,26 @@ class BrowserJourney(unittest.TestCase):
             page.goto(self.app(f"?recept={self.any_recipe_id()}"))
             expect(page.locator("#recipePage")).to_be_visible()
             self.register(email)
+            # Köpflödet prövas på ett konto som INTE redan har Premium: J3:s
+            # aktiveringstrial hade annars gjort betalväggen osynlig.
+            self.trial_already_used()
             self.close_account_modal()
             page.goto(self.app())
             self.complete_onboarding()
             self.choose_standard_week()
 
-        with self.step("paywall från låst veckotyp"):
+        with self.step("paywall från middagstaket"):
+            # J3 flyttade ner veckotyperna till gratis, så det är inte längre
+            # där betalväggen möter någon. Den sjätte middagen är: Free
+            # planerar upp till FREE_MAX_DINNERS och servern räknar
+            # recipeIds, så spärren är äkta hela vägen ner.
             page.click('.bottom-nav-item[data-view="home"]')
-            page.click("#newWeekBtn")
-            expect(page.locator("#planModal")).to_be_visible()
-            page.click("[data-plan-paywall] >> nth=0")
+            page.click("#weekSheetOpen")
             paywall = page.locator("#paywallModal")
+            for _ in range(8):
+                if paywall.is_visible():
+                    break
+                page.click("#mealsPlus")
             expect(paywall).to_be_visible()
             expect(paywall).to_contain_text("Matjakt Premium")
 

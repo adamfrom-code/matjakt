@@ -70,6 +70,46 @@ def newest_age_seconds(data_dir: Path) -> float | None:
     return (datetime.now(timezone.utc) - stamp).total_seconds()
 
 
+# D10. NÄR EN BACKUP ÄR FÖR GAMMAL FÖR ATT KALLAS BACKUP.
+# Cykeln tar ett set per dygn och kollar varje timme. 36 timmar ger alltså
+# en hel missad natt plus tolv timmars marginal innan det larmar - tillräckligt
+# för att en långsam cykel eller en deploy mitt i inte ska ge falsklarm, och
+# kort nog att "backupen har varit död i en vecka" inte kan hända tyst.
+MAX_AGE_SECONDS = 36 * 3600
+
+
+def health(data_dir: Path) -> dict:
+    """Backupens tillstånd, för /api/health och för larmen.
+
+    D10: `newest_age_seconds` fanns men anropades bara av backuptråden
+    SJÄLV. En backup ingen tittar på är ett antagande, inte ett skydd, och
+    den dag den behövs är exakt fel dag att upptäcka att den slutade tas för
+    tre veckor sedan.
+
+    Formen är avsiktligt fattig på detaljer: ålder, antal set och en
+    slutsats. Sökvägar och filstorlekar är spaningsdata och stannar bakom
+    admin-token (jämför storage_info i api_server.py)."""
+    data_dir = Path(data_dir)
+    root = backup_dir(data_dir)
+    try:
+        sets = sorted(d.name for d in root.iterdir() if d.is_dir()) if root.exists() else []
+    except OSError:
+        sets = []
+    ålder = newest_age_seconds(data_dir)
+    if ålder is None:
+        return {"sets": len(sets), "newestAgeHours": None, "ok": False,
+                "reason": ("ingen säkerhetskopia finns" if not sets else
+                           "den senaste kopians stämpel går inte att läsa")}
+    for_gammal = ålder > MAX_AGE_SECONDS
+    return {
+        "sets": len(sets),
+        "newestAgeHours": round(ålder / 3600, 1),
+        "ok": not for_gammal,
+        "reason": (f"senaste säkerhetskopian är {round(ålder / 3600, 1)} timmar gammal "
+                   f"(gränsen är {MAX_AGE_SECONDS // 3600})" if for_gammal else None),
+    }
+
+
 def take_backup(data_dir: Path) -> dict:
     """One complete, verified, pruned backup set. Returns a small report."""
     data_dir = Path(data_dir)
@@ -99,6 +139,11 @@ def take_backup(data_dir: Path) -> dict:
                 logger.error("Backupkopian av %s underkändes: %s", db_path.name, status)
         except sqlite3.Error:
             failed.append(db_path.name)
+            # D10: den halvskrivna kopian städas bort. sqlite3.connect har
+            # redan skapat målfilen när backup() kastar, och en tom fil som
+            # heter grocery.db i ett backupset ser ut som en backup ända tills
+            # någon försöker återställa den.
+            (target / db_path.name).unlink(missing_ok=True)
             logger.exception("Kunde inte säkerhetskopiera %s", db_path.name)
 
     if not copied:

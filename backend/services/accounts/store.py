@@ -146,6 +146,11 @@ class AccountStore:
             # säger VILKEN ordalydelse som godkändes - se
             # services/billing/withdrawal.py.
             ("withdrawal_consent_at", "TEXT"), ("withdrawal_consent_version", "INTEGER"),
+            # J3: när kontot skapade sin FÖRSTA vecka. Aktiveringsögonblicket
+            # i produkten, och därmed villkoret för både provperioden och
+            # hänvisningsbelöningen (H5) - "vecka_skapad", aldrig
+            # registrering, så vi inte betalar för tomma konton.
+            ("first_week_at", "TEXT"),
         ):
             try:
                 self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
@@ -368,10 +373,48 @@ class AccountStore:
         self._connection.commit()
         return self._to_public(self._session_user_row(token))
 
-    # start_trial är borttagen (affärsmodell 2026-08-31: Free / 59 kr/mån /
-    # 399 kr/år, INGEN provperiod). Kolumnerna trial_ends_at/trial_used finns
-    # kvar enbart för grandfathering av redan utdelade trials - läsvägen ovan
-    # respekterar dem tills de löpt ut, men ingenting kan bevilja nya.
+    # start_trial vid REGISTRERING är och förblir borttagen. J3 lade
+    # tillbaka provperioden på ett annat ställe i tratten - efter den första
+    # skapade veckan - och de två metoderna nedan är hela den vägen.
+    def mark_first_week(self, user_id) -> bool:
+        """Markerar att kontot skapat sin första vecka. True BARA första
+        gången.
+
+        Atomär med flit: `WHERE first_week_at IS NULL` gör att två samtidiga
+        förfrågningar inte kan få True var. Allt som belönar aktivering
+        (provperioden i J3, hänvisningen i H5) hänger på den här
+        övergången, och en belöning som kan delas ut två gånger är inte en
+        belöning utan ett hål."""
+        with self._lock:
+            cursor = self._connection.execute(
+                "UPDATE users SET first_week_at = ? WHERE id = ? AND first_week_at IS NULL",
+                (datetime.now(timezone.utc).isoformat(), int(user_id)))
+            self._connection.commit()
+            return cursor.rowcount > 0
+
+    def grant_activation_trial(self, user_id, days: int) -> str | None:
+        """Sju dagars Premium efter den första veckan. Returnerar slutdatum,
+        eller None när ingen trial delades ut.
+
+        Delas INTE ut till den som redan betalar - en aktiv prenumerant som
+        får en trial ovanpå har inte fått något, och siffran i tratten hade
+        blivit fel. Delas inte heller ut två gånger: `trial_used` är
+        villkoret, och det är samma kolumn som grandfathering av de gamla
+        provperioderna läser."""
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT * FROM users WHERE id = ?", (int(user_id),)).fetchone()
+            if not row:
+                return None
+            if row["trial_used"] or self._to_public(row).get("premium"):
+                return None
+            ends_at = (datetime.now(timezone.utc) + timedelta(days=int(days))).isoformat()
+            self._connection.execute(
+                "UPDATE users SET trial_ends_at = ?, trial_used = 1 WHERE id = ? AND trial_used = 0",
+                (ends_at, int(user_id)))
+            self._connection.commit()
+            return ends_at
+
     def billing_identity_for_token(self, token):
         """Returns (user_id, email, existing_stripe_customer_id_or_None) for a session token."""
         row = self._session_user_row(token)
@@ -411,6 +454,23 @@ class AccountStore:
         row = self._connection.execute(
             "SELECT email FROM users WHERE id = ?", (int(user_id),)).fetchone()
         return row["email"] if row else None
+
+    def any_premium(self, user_ids) -> bool:
+        """Är NÅGON av de här användarna Premium just nu? (J3)
+
+        Hushållets plan frågas en gång per inbjudan, så det får bli EN
+        fråga - inte en per medlem. Svaret går genom `_to_public`, som är
+        det enda ställe som vet vad "Premium just nu" betyder: flaggan,
+        en levande trial ELLER en prenumeration vars period inte hunnit
+        rinna ut. En andra bedömning här hade förr eller senare sagt något
+        annat än kontosidan gör."""
+        ids = [int(value) for value in (user_ids or [])]
+        if not ids:
+            return False
+        placeholders = ",".join("?" for _ in ids)
+        rows = self._connection.execute(
+            f"SELECT * FROM users WHERE id IN ({placeholders})", ids).fetchall()
+        return any(self._to_public(row).get("premium") for row in rows)
 
     def set_stripe_customer_id(self, user_id, customer_id):
         self._connection.execute("UPDATE users SET stripe_customer_id = ? WHERE id = ?", (customer_id, user_id))

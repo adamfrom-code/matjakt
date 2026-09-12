@@ -1,29 +1,30 @@
-// CACHE-STÄMPELN. Talet här hör ihop med ?v= på app.js/styles.css i
-// index.html: queryn spräcker webbläsarens HTTP-cache, och cachenamnet får
-// service workern att släppa sin gamla kopia i activate(). Missas något av
-// dem kör en återvändande användare den förra releasen under samma URL -
-// exakt det som hände efter receptbanks- och veckotypsarbetet: sidan var
-// uppdaterad, telefonerna visade de gamla tre veckotyperna.
+// CACHE-STÄMPELN. Den hör ihop med ?v= på app.js/styles.css i index.html:
+// queryn spräcker webbläsarens HTTP-cache, och cachenamnet får service workern
+// att släppa sin gamla kopia i activate(). Missas något av dem kör en
+// återvändande användare den förra releasen under samma URL - exakt det som
+// hände efter receptbanks- och veckotypsarbetet: sidan var uppdaterad,
+// telefonerna visade de gamla tre veckotyperna.
 //
-// Talet står kvar i källan, men det redigeras inte längre för hand och det är
-// inte det som deployas. `node scripts/frontend_version.mjs --bump` räknar upp
-// alla tre ställena från det HÖGSTA tal som någonsin stått i main, och
-// byggsteget (scripts/build_frontend.mjs) stämplar bygget med talet plus en
-// hash av det som faktiskt byggdes. Två grenar som båda höjde 51 till 52 blir
-// EN höjning vid ombasering, utan ett ord - hashen är det som gör att den
-// tystnaden ändå inte kan gömma ny kod bakom en adress webbläsaren redan sett.
+// DET STÅR INGET TAL HÄR, OCH DET SKA INTE GÖRA DET (L9). Platshållaren nedan
+// byts ut av byggsteget mot eran plus en digest över varje fil under app/ i
+// bygget - `matjakt-shell-v120-a1b2c3d4e5`. Två skäl, båda mätta:
 //
-// Att talet hoppade förbi ett femtiotal steg till 104 är generatorns första
-// körning, och den
-// säger något obehagligt om historiken: `app.js?v=` gick 102 -> 25 (964d45e),
-// upp till 103 (7aeb57c) och ner till 26 igen (3a36dd2) när de tre räknarna
-// slogs ihop. Allt under 104 är alltså cache-nycklar som redan serverats en
-// gång, med annat innehåll - felet det här paketet handlar om har redan hänt
-// två gånger i main. Ett tal som kan gå ner är värre än tre tal som kan gå
-// isär, så det räknas numera från det högsta som någonsin setts och aldrig
-// från det som råkar ligga i den egna grenen.
-// Se scripts/frontend_version.mjs.
-const CACHE_NAME = "matjakt-shell-v107";
+//   - Ett handskrivet tal kunde SJUNKA. `app.js?v=` gick 102 -> 25 (964d45e),
+//     upp till 103 (7aeb57c) och ner till 26 igen (3a36dd2) när de tre
+//     räknarna slogs ihop, så allt under 104 är cache-nycklar som redan
+//     serverats en gång med annat innehåll. Felet den här filen finns för att
+//     undvika hade alltså redan hänt två gånger i main. En digest kan inte
+//     sjunka och kan inte råka bli densamma som förra releasens.
+//   - Raden var den enda åtta parallella grenar konfliktade på. G5 låg DIRTY
+//     med grön CI i fyra timmar, D11 baserades om fyra gånger och gick från
+//     v56 till v107 - och båda konflikterna var enbart versionsraderna.
+//
+// Utvecklingsservern serverar den här filen som den står, och platshållaren är
+// ett fullt dugligt cachenamn lokalt - den behöver inget tal. Det som deployas
+// är alltid stämplat: bygget vägrar skriva ut en kopia där platshållaren står
+// kvar, och grinden räknar om digesten ur bygget och jämför. Se
+// scripts/frontend_version.mjs och backend/scripts/check_frontend_version.py.
+const CACHE_NAME = "matjakt-shell-v__MATJAKT_VERSION__";
 
 self.addEventListener("install", () => self.skipWaiting());
 

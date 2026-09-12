@@ -204,6 +204,38 @@ class KedjanIWorkflowfilerna(unittest.TestCase):
         self._krav(efter, "needs: [deploy-backend]",
                    "health-gate måste ligga EFTER deploy-backend, annars mäter den ingenting")
 
+    def test_health_gate_hoppas_inte_over_nar_hooken_saknas(self):
+        """Den här luckan var öppen i flera timmar utan att något såg rött.
+
+        health-gate var villkorad på `needs.deploy-backend.outputs.triggad ==
+        'true'`, alltså "bara om VI startade deployen". RENDER_DEPLOY_HOOK
+        lades aldrig in i repots secrets, så flaggan var alltid false och
+        grinden hoppades över vid VARJE merge - tyst, som `skipped`, vilket
+        ser ut precis som ett jobb som inte behövdes.
+
+        Frontenden deployade därmed utan att någon kontrollerat att backenden
+        var uppe med samma commit. Racet K3 stängde var öppet igen, och de
+        fyra testerna ovan var alla gröna hela tiden: en överhoppad grind
+        finns i filen, behöver deploy-backend och anropar rätt skript.
+
+        Render deployar av sig självt (Auto-Deploy: After CI Checks Pass), så
+        committen når produktionen ändå - vi vet bara inte när. Grindens fråga
+        är "kör driften den här committen", inte "startade vi en deploy".
+        """
+        efter = self.ci.split("health-gate:", 1)[1][:2000]
+        villkor = [rad.strip() for rad in efter.splitlines()
+                   if rad.strip().startswith("if:")]
+        self.assertTrue(villkor, "health-gate saknar villkor helt")
+        self.assertNotIn(
+            "triggad", villkor[0],
+            "health-gate är villkorad på att VI startade deployen. Saknas hooken "
+            "hoppas grinden över vid varje merge och frontenden går live "
+            "oprövad mot backenden.")
+        self.assertIn(
+            "github.ref == 'refs/heads/main'", villkor[0],
+            "health-gate måste köra på varje push till main - det är där "
+            "frontenden riskerar att gå före backenden")
+
     def test_health_gate_anropar_skriptet_som_testas_har(self):
         self._krav(self.ci, "backend/scripts/wait_for_deploy.py",
                    "hälsogrinden måste köra just det skript som testerna ovan prövar")
