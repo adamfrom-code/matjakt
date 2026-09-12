@@ -1,4 +1,58 @@
 /* ==========================================================================
+   TYPSNITTEN LIGGER I APPEN (N0b). DESIGNSYSTEM-D.md §3.1.
+
+   Newsreader och Archivo hämtades tidigare från Googles fontvärdar. Det
+   kostade två saker: appens första start utan nät visade fel typsnitt, och
+   CSP:n måste släppa in två tredjepartsvärdar - en i style-src, en i
+   font-src - enbart för att hämta bokstäver. Bägge är borta nu; filerna
+   nedan ligger i bundlet och laddas från 'self'.
+
+   tests/typsnitt.test.js failar om någon av värdarna kommer tillbaka, i den
+   här filen eller i index.html. Därför nämns de inte vid namn någonstans
+   under frontend/app/ - grinden är en ren textsökning, utan undantag att
+   smita igenom.
+
+   Proveniens, version och det exakta delmängdskommandot står i
+   assets/fonts/README.md. Licensen (SIL OFL 1.1) följer med i samma katalog.
+
+   Delmängd: Google Fonts latin-omfång. Tecken utanför det sätts ur
+   fallbackstacken i --f-disp/--f-ui i stället - kyrilliska och arabiska som
+   förut, och numera även latin-ext (ł, ș). Hela repot innehåller fem sådana
+   tecken; att täcka dem hade kostat 58 kB i appbundlet.
+
+   Vikterna är de som faktiskt förekommer i den här filen: Newsreader 400 och
+   700, Archivo 400/500/600/700 rak plus 400 kursiv (<em> i ingredienslistan
+   och tidsstämpeln i butiksjämförelsen). Variabel wght slår statiska snitt i
+   båda familjerna - siffrorna står i changelog.d/N0b.md. Newsreader behåller
+   opsz: §3.2 sätter samma familj från 13px till 82px, och stortalet på
+   Sparat-skärmen är synligt grövre när opsz spikas.
+
+   font-display:swap + fallbackstackarna gör att sidan är LÄSBAR i väntan på
+   typsnittet, aldrig osynlig.
+   ========================================================================== */
+@font-face{
+  font-family:"Newsreader";
+  src:url("assets/fonts/newsreader-variable-latin.woff2") format("woff2");
+  font-weight:400 700;
+  font-style:normal;
+  font-display:swap;
+}
+@font-face{
+  font-family:"Archivo";
+  src:url("assets/fonts/archivo-variable-latin.woff2") format("woff2");
+  font-weight:400 700;
+  font-style:normal;
+  font-display:swap;
+}
+@font-face{
+  font-family:"Archivo";
+  src:url("assets/fonts/archivo-italic-latin.woff2") format("woff2");
+  font-weight:400;
+  font-style:italic;
+  font-display:swap;
+}
+
+/* ==========================================================================
    DESIGNSYSTEM D - "Middagskortet". ALIASSKIKT (DESIGNSYSTEM-D.md §9.1).
 
    Riktningen: en mattidning i telefonformat. Sval pappersvit, oxblod som enda
