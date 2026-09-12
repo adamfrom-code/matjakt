@@ -22,7 +22,12 @@ class AccountStoreTest(unittest.TestCase):
         self.assertEqual(user, {
             "email": "ada@example.com", "premium": False, "premiumSource": None, "plan": "free", "trialEndsAt": None, "trialUsed": False,
             "subscriptionStatus": None, "subscriptionPlan": None, "subscriptionPeriodEnd": None,
-            "subscriptionCancelAtPeriodEnd": False, "emailVerified": False, "marketingConsent": False,
+            "subscriptionCancelAtPeriodEnd": False,
+            # J5: respiten vid nekat kort, och adressbytet som väntar på
+            # bekräftelse. Null när inget är på gång - en banderoll ska inte
+            # kunna ritas av misstag.
+            "subscriptionGraceUntil": None, "pendingEmail": None,
+            "emailVerified": False, "marketingConsent": False,
         })
         login_token, login_user = self.store.login("ada@example.com", "hemligt123")
         self.assertTrue(login_token)

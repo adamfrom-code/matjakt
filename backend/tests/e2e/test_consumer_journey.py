@@ -420,6 +420,18 @@ class BrowserJourney(unittest.TestCase):
         expect(page.locator("#accountLoggedIn")).to_be_visible()
         expect(page.locator("#accountEmail")).to_have_text(email)
 
+    def verify_email(self, email):
+        """Följer verifieringslänken, som en ny användare gör i sin brevlåda.
+
+        J5 kräver en bekräftad adress före ett köp: kvittot,
+        lösenordsåterställningen och prenumerationssidan går alla dit, och
+        den som skrev adam@gmial.com upptäckte det först efter att ha betalat
+        399 kr. E2E:n har ingen SMTP, så token hämtas ur lagret - men den
+        löses in via den RIKTIGA vägen."""
+        token = api_server.ACCOUNT_STORE.create_verification_token_for_email(email)
+        status, _ = self.server.request("POST", "/api/auth/verify-email", {"token": token})
+        self.assertEqual(status, 200)
+
     def trial_already_used(self):
         """J3 ger sju dagars Premium efter den FÖRSTA skapade veckan, så varje
         nyregistrerat konto i en E2E ÄR Premium så snart veckan finns. Det är
@@ -1551,6 +1563,9 @@ class BrowserJourney(unittest.TestCase):
             # Köpflödet prövas på ett konto som INTE redan har Premium: J3:s
             # aktiveringstrial hade annars gjort betalväggen osynlig.
             self.trial_already_used()
+            # J5: och på ett konto vars adress är bekräftad - annars når man
+            # inte checkout alls, vilket är hela poängen med den spärren.
+            self.verify_email(email)
             self.close_account_modal()
             page.goto(self.app())
             self.complete_onboarding()

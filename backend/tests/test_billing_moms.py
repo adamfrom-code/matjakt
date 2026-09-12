@@ -227,6 +227,9 @@ class CheckoutVagenFoljerKontrollen(unittest.TestCase):
         trad.start()
         try:
             token, _ = api_server.ACCOUNT_STORE.register(f"b2-{uuid.uuid4().hex[:10]}@example.com", "hemligt123")
+            # J5: verifierad adress krävs före köp - inte det B2 prövar.
+            api_server.ACCOUNT_STORE.connection.execute("UPDATE users SET email_verified = 1")
+            api_server.ACCOUNT_STORE.connection.commit()
             con = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
             try:
                 con.request("POST", "/api/billing/checkout",
