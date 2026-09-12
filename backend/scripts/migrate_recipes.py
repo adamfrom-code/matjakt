@@ -7,8 +7,9 @@ The recipes are currently spread across THREE places that have to be read
 together, which is the whole reason for this migration:
 
   frontend/app/data/recipes.json   name, nutrition, tags, image filename
-  frontend/app/app.js              RECIPE_QUANTITIES - the amounts, keyed by
-                                   recipe id AND ingredient name
+  frontend/app/src/data/          RECIPE_QUANTITIES - the amounts, keyed by
+    legacy-catalog.js              recipe id AND ingredient name (it lived in
+                                   app.js until F6 moved it out)
   assets/recipes/CREDITS.md        author, licence and source per image
 
 An ingredient in one file, its 600 g in another, and the right to show its
@@ -33,7 +34,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 from services.recipes import RecipeStore, normalize_ingredient_id  # noqa: E402
 
 RECIPES_JSON = ROOT / "frontend" / "app" / "data" / "recipes.json"
-APP_JS = ROOT / "frontend" / "app" / "app.js"
+LEGACY_CATALOG = ROOT / "frontend" / "app" / "src" / "data" / "legacy-catalog.js"
 CREDITS = ROOT / "frontend" / "app" / "assets" / "recipes" / "CREDITS.md"
 
 # Units the recipes use, mapped to what the pricing engine converts between.
@@ -42,8 +43,8 @@ UNIT_FIXES = {"st": "st", "g": "g", "kg": "kg", "ml": "ml", "l": "l", "dl": "dl"
 
 
 def read_quantities() -> dict:
-    """RECIPE_QUANTITIES out of app.js: {recipe_id: {ingredient: (amount, unit)}}."""
-    source = APP_JS.read_text(encoding="utf-8")
+    """RECIPE_QUANTITIES out of legacy-catalog.js: {recipe_id: {ingredient: (amount, unit)}}."""
+    source = LEGACY_CATALOG.read_text(encoding="utf-8")
     start = source.index("const RECIPE_QUANTITIES = {")
     quantities = {}
     for line in source[start:].splitlines()[1:]:
