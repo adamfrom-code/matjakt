@@ -547,7 +547,14 @@
         </div>
 
         <div class="premium-pitch" id="premiumPitch">
-          <h3>Matjakt Premium</h3>
+          <!-- L7 · telefon 8. Ingen hänglåsvägg: kapitälen säger vad det
+               heter, rubriken vad det ÄR, och ingressen att gratisversionen
+               fortsätter vara hel. Ordet Premium versaliseras i CSS och inte i
+               källan (§8) - versaler i markupen får skärmläsaren att stava dem
+               bokstav för bokstav. -->
+          <p class="prem-kap">Matjakt Premium</p>
+          <h3>Alla butikers priser, sida vid sida</h3>
+          <p class="prem-ingress">Gratisversionen är hel och fortsätter vara det: riktigt pris och hela inköpslistan hos den billigaste kvalificerade butiken. Premium visar dem alla, hämtar priserna per vara under dagen och låter hela hushållet dela samma vecka.</p>
           <ul class="premium-feature-list">
             <li>Upp till 7 middagar per vecka</li>
             <li>Alla veckotyper: familj, budget, träning, bulk, snabb, vegetarisk, balanserad</li>
@@ -559,16 +566,28 @@
             <li>Aktuella erbjudanden och kampanjer</li>
             <li>Laga med det du redan har hemma</li>
           </ul>
-          <div class="premium-pricing" role="tablist">
-            <button type="button" class="premium-price-tab active" data-price-tab="month" data-plan="monthly"><span>Månad</span><strong></strong><small>/mån</small></button>
-            <button type="button" class="premium-price-tab" data-price-tab="year" data-plan="yearly"><span>År · Bäst värde</span><strong></strong><small></small></button>
+          <!-- Behållaren bar role="tablist" med två barn som varken hade
+               role="tab" eller någon tabpanel att styra: en skärmläsare fick
+               veta att den stod i en flikrad och hittade sedan inga flikar.
+               Det är två växlande knappar, och det är vad de säger nu.
+               Innehållet fylls av src/views/premiumskarmen.js ur
+               /api/entitlements - tomt här med flit, för 59 och 399 bor i
+               backend och en hårdkodad siffra kan tyst börja ljuga. -->
+          <div class="premium-pricing" role="group" aria-label="Välj hur du vill betala">
+            <button type="button" class="premium-price-tab active" data-price-tab="month" data-plan="monthly" aria-pressed="true"></button>
+            <button type="button" class="premium-price-tab" data-price-tab="year" data-plan="yearly" aria-pressed="false"></button>
           </div>
+          <!-- Prisinformationslagen (2004:347): det pris en konsument visas ska
+               vara det hon betalar. B2 satte tax_behavior "inclusive" på
+               priserna i Stripe; det här är att SÄGA det på skärmen. -->
+          <p class="prem-moms">Alla priser är totalpris inklusive moms.</p>
           <!-- Ångerrätten (distansavtalslagen). Rutan ritas av app.js ur
                /api/entitlements, så texten användaren kryssar i och texten
                som sparas på kontot är samma sträng. Tom här med flit. -->
           <div id="premiumWithdrawal"></div>
           <button class="btn btn-primary" type="button" id="subscribeBtn"><span>Prenumerera</span></button>
           <p class="account-error" id="checkoutError"></p>
+          <p class="prem-avsluta">Avsluta när du vill, direkt i appen.</p>
           <p class="premium-pitch-note">Har du en Premium-kod?</p>
           <form id="accountRedeemForm" class="account-form">
             <label class="sr-only" for="premiumCode">Premium-kod</label>

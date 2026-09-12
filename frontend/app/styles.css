@@ -160,7 +160,10 @@ button.campaign-deal{cursor:pointer;font:inherit}
 .back-link{display:inline-block;margin-bottom:10px;border:0;background:transparent;color:var(--primary);font-size:14px;font-weight:700}
 .store-compare-upsell{width:100%;margin-top:12px;padding:12px;border-radius:12px;font-size:12px;font-weight:700;line-height:1.5;text-align:left}
 .premium-pitch{margin-top:6px}.premium-pitch h3{margin:0 0 12px;font:700 20px var(--font-display)}.premium-feature-list{margin:0 0 18px;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}.premium-feature-list li{position:relative;padding-left:24px;color:var(--text);font-size:14px}.premium-feature-list li:before{content:"✓";position:absolute;left:0;color:var(--gold-2);font-weight:700}
-.premium-pricing{display:flex;gap:8px;margin-bottom:16px}.premium-price-tab{flex:1;padding:12px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);text-align:left}.premium-price-tab span{display:block;color:var(--muted);font-size:12px;font-weight:600}.premium-price-tab strong{display:block;margin-top:3px;font:700 19px var(--font-display);color:var(--text)}.premium-price-tab small{display:block;margin-top:2px;color:var(--muted);font-size:11px}.premium-price-tab.active{border-color:var(--gold);background:var(--gold-soft)}.premium-price-tab.active strong,.premium-price-tab.active span{color:var(--gold-2)}
+/* L7: de gamla prisflikarna är borta. De ritade vald plan som en GULDPLATTA
+   (--gold/--gold-soft/--gold-2) - exakt den form R56 rev ut ur .premium-badge,
+   och exakt vad §2.3 förbjuder: Premium får inte bära en egen färg. Formen
+   står nu sist i filen, under "PREMIUM (L7)". */
 .premium-pitch-note{margin:14px 0 8px;color:var(--muted);font-size:12px;text-align:center}
 /* Ångerrätten (B3). Rutan är ett villkor för att köpet ska få starta och
    ska se ut som ett val, inte som finstilt: 20px träffyta, brödtext i
@@ -745,10 +748,10 @@ button.store-compare-row:active{background:var(--surface-2)}
 .onboarding-dots i{background:#dfe4df}
 .onboarding-dots i.active{background:var(--primary)}
 .onboarding-card .eyebrow{color:var(--primary)}
-.premium-price-tab{border:1px solid var(--border);border-radius:16px;background:var(--surface)}
-.premium-price-tab.active{border-color:var(--text);background:var(--text);color:#fff}
-.premium-price-tab.active strong,.premium-price-tab.active span,.premium-price-tab.active small{color:#fff}
-.premium-pitch{border:1px solid var(--border);border-radius:20px;background:var(--surface)}
+/* L7: V2-blocket gjorde vald plan till en INK-platta med vit text och la ett
+   kort runt hela pitchen. Båda ersätts av blocket sist i filen: hårlinjer,
+   ingen platta, och markeringen buren av en linje som FINNS - inte av en
+   färg som byts. */
 .paywall-yearly{border-radius:16px}
 .nutrition-goals{border:1px solid var(--border);border-radius:16px;background:var(--surface)}
 .nutrition-locked{color:var(--muted)}
@@ -1273,3 +1276,126 @@ button{color:inherit}
 .sparkvitto-ingen{font-weight:700}
 .sparkvitto-skal,.sparkvitto-not{color:var(--ink-2);font-size:12.5px}
 .sparkvitto-lopande{margin-top:12px;padding-top:10px;border-top:1px solid var(--rule)}
+
+/* ---- PREMIUM (L7) ------------------------------------------------------
+   Facit: docs/matjakt-design-D.html, telefon 8.
+
+   INGEN HÄNGLÅSVÄGG. Skärmen är ett uppslag: kapitäl, en rubrik i Newsreader
+   som säger vad produkten ÄR, en ingress som säger att gratisversionen
+   fortsätter vara hel, jämförelsen, och under den priset och ett val.
+   Jämförelsetabellen ritas av J2 (src/views/premiumtabellen.js) ur
+   accounts/features.py; L7 bygger ingen andra tabell.
+
+   ACCENTEN RÖR INTE PREMIUM. §2.3 räknar upp accentens förbjudna betydelser
+   och "kvalitet, betyg, favorit, Premium" står med: systemets enda färg
+   betyder "här är du, här går vägen vidare". Premium märks i stället med
+   ORDET i spärrade kapitäler (§2.4, R56). Undantaget är betalväggens
+   årsknapp, som är skärmens PRIMÄRA HANDLING - och primärknappen är exakt
+   vad §2.3 tillåter accenten för.
+
+   OCH VALET MELLAN MÅNAD OCH ÅR BÄRS AV FORM, INTE AV FÄRG. En vald flik som
+   bara byter ton försvinner i gråskala. Markeringen är därför en LINJE SOM
+   FINNS eller inte finns (border-bottom-width 2px mot 0) plus halvfet stil på
+   beloppet; färgskiftet i etiketten ligger ovanpå det och bär ingenting
+   ensamt. tests/premiumskarmen.test.js river färgen ur båda lägena och kräver
+   att de fortfarande går att skilja åt - samma prov som L0:s tre prisregler.
+
+   Reglerna ligger sist och fristående i stället för i de gamla
+   .premium-*-raderna högre upp: J2 skriver i just de raderna samtidigt, och
+   en fil som två paket rör ska få så få gemensamma redigeringspunkter som
+   möjligt. Två rader är ändå borttagna, för de RITADE det paketet handlar om:
+   den gamla guldplattan på vald plan (--gold/--gold-soft/--gold-2, samma form
+   R56 rev ut ur .premium-badge) och V2-blockets omtagning av den som en
+   INK-platta med vit text. Att låta dem stå och överrösta dem härifrån hade
+   gjort markeringen till en fråga om kaskadordning.
+
+   Selektorerna är ändå .premium-pitch .premium-price-tab och inte bara
+   .premium-price-tab: betalväggen har samma roll i en modal med andra mått,
+   och prefixet säger vilken av de två skärmarna regeln gäller. */
+
+/* Premium märks med ordet. Skrivs som vanlig text i källan och versaliseras
+   här (§8): versaler i markupen får skärmläsaren att stava P-R-E-M-I-U-M. */
+.prem-kap{
+  margin:0;color:var(--ink-2);
+  font:600 10px/1.5 var(--f-ui);letter-spacing:.22em;text-transform:uppercase;
+}
+
+/* Rubriken och ingressen (.premtopp). 29 px Newsreader i vikt 400 - en
+   rubrik blir inte viktigare av att vara fet, den blir bullrig (§3.2). */
+.premium-pitch{margin-top:var(--sp-6)}
+.premium-pitch h3{
+  margin:var(--sp-3) 0 0;max-width:15ch;color:var(--ink);
+  font:400 29px/1.04 var(--f-disp);letter-spacing:-.02em;
+}
+.prem-ingress{
+  margin:var(--sp-4) 0 0;max-width:33ch;color:var(--ink-2);
+  font:400 13px/1.5 var(--f-ui);
+}
+
+/* Prisraden (.premprisrad). Två jämbördiga val under en hårlinje, inte två
+   kort. Beloppet står överst på SKÄRMEN via order; i DOM:en står namnet
+   först, för det är den ordning en skärmläsare ger en begriplig mening. */
+.premium-pitch .premium-pricing{
+  display:flex;gap:var(--sp-8);margin:var(--sp-6) 0 0;
+  padding-top:var(--sp-5);border-top:1px solid var(--rule-2);background:none;
+}
+/* background och color sätts uttryckligen till papperets, inte till `none`.
+   En tom background maskerar ingenting: kontrastsvepet i tests/kontrast.test.js
+   läser bakgrunden ur den NÄRMASTE regel som faktiskt sätter en, precis som
+   kaskaden gör, och hoppar över den som säger `none`. Ett uttryckligt värde är
+   det enda som säger vad texten ligger på. */
+.premium-pitch .premium-price-tab{
+  flex:0 1 auto;display:flex;flex-direction:column;gap:var(--sp-1);
+  min-height:44px;padding:0 0 calc(var(--sp-3) + 2px);
+  border:0;border-bottom:0 solid var(--ink);border-radius:0;
+  background:var(--paper);color:var(--ink);text-align:left;
+}
+.premium-pitch .premium-price-tab .prem-plan-tal{
+  order:1;color:var(--ink);font:400 23px/1.1 var(--f-disp);
+}
+.premium-pitch .premium-price-tab .prem-plan-namn{
+  order:2;color:var(--ink-3);
+  font:600 10px/1.5 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;
+}
+.premium-pitch .premium-price-tab .prem-plan-villkor{
+  order:3;color:var(--ink-2);font:400 11.5px/1.4 var(--f-ui);
+}
+/* Valt läge: linjen FINNS. Bredden bär markeringen, inte färgen - en linje
+   som bara byter från transparent till --ink är osynlig utan färg. */
+.premium-pitch .premium-price-tab.active{
+  border-bottom-width:2px;padding-bottom:var(--sp-3);
+  background:var(--paper);color:var(--ink);
+}
+.premium-pitch .premium-price-tab.active .prem-plan-tal{font-weight:600}
+.premium-pitch .premium-price-tab.active .prem-plan-namn{color:var(--ink)}
+
+/* Prisinformationslagen (2004:347) och "avsluta när du vill" - två meningar
+   som hör till priset och inte till det finstilta. */
+.prem-moms{margin:var(--sp-4) 0 0;color:var(--ink-2);font:400 11.5px/1.5 var(--f-ui)}
+.prem-avsluta{
+  display:block;margin:var(--sp-4) 0 0;color:var(--ink-2);
+  font:400 11.5px/1.5 var(--f-ui);text-align:center;
+}
+
+/* Betalväggen: samma uppslag, samma typografi, i en modal. */
+.paywall-card h2{
+  margin:var(--sp-3) 0 0;max-width:15ch;color:var(--ink);
+  font:400 29px/1.04 var(--f-disp);letter-spacing:-.02em;
+}
+.paywall-lead{
+  margin:var(--sp-4) 0 var(--sp-6);max-width:33ch;color:var(--ink-2);
+  font:400 13px/1.5 var(--f-ui);
+}
+.paywall-yearly,.paywall-monthly{gap:var(--sp-1);min-height:44px}
+.paywall-yearly .prem-plan-namn,.paywall-monthly .prem-plan-namn{
+  order:2;font:600 10px/1.5 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;
+}
+/* Beloppet ritas av L0:s komponent, som sätter --ink. Inne i en primärknapp
+   ligger det på accenten, och då är --ink fel färg - knappen bestämmer sin
+   egen textfärg och siffran ska ärva den. */
+.paywall-yearly .prem-plan-tal,.paywall-monthly .prem-plan-tal{
+  order:1;color:inherit;font:400 23px/1.1 var(--f-disp);
+}
+.paywall-yearly .prem-plan-villkor,.paywall-monthly .prem-plan-villkor{
+  order:3;font:400 11.5px/1.4 var(--f-ui);
+}

@@ -19,6 +19,11 @@ import { getStoredToken, startCheckout } from "../api/auth.js";
 import { clampBudget } from "../services/calculations.js";
 import { ALLERGENS } from "../services/diet.js";
 import { escapeHtml } from "../utils/html.js";
+// L7: betalväggens belopp ritas av samma modul som kontoarkets, och varje
+// siffra går genom L0:s prisMarkup(). Betalväggen hade egna strängar med
+// `priceText` som reserv - två skärmar som formaterar samma pris var för sig
+// är två skärmar som kan börja säga olika saker om det.
+import { paywallPlanMarkup, planetikett } from "./premiumskarmen.js";
 import { closeModal, openModal } from "../utils/modal.js";
 // errorText: inget rått fetch-fel når skärmen. "Failed to fetch" är inte
 // svenska, och en användare kan inte göra något åt ett "HTTP 500" (E7).
@@ -340,9 +345,7 @@ export function renderAccount() {
       // Planetiketten kommer från samma källa som paywallen (backend), och
       // en okänd plan påstår ingenting om priset.
       const pricing = app.premiumPricing();
-      const planLabel = state.user.subscriptionPlan === "yearly" ? (pricing.yearly?.priceText || "399 kr/år")
-        : state.user.subscriptionPlan === "monthly" ? (pricing.monthly?.priceText || "59 kr/mån")
-        : "din plan";
+      const planLabel = planetikett(pricing, state.user.subscriptionPlan);
       let line;
       if (state.user.subscriptionStatus === "active" && state.user.subscriptionCancelAtPeriodEnd) line = `Din prenumeration (${planLabel}) är uppsagd och gäller till ${periodEnd}, sedan återgår kontot till gratisversionen.`;
       else if (state.user.subscriptionStatus === "active") line = `Din prenumeration (${planLabel}) förnyas automatiskt ${periodEnd}.`;
@@ -554,8 +557,6 @@ function wireWeekPlanUpsell() {
 // /api/entitlements, so 59/399 exist in exactly one place (the backend).
 export function openPaywall(triggerFeature = "") {
   const pricing = app.premiumPricing();
-  const yearly = pricing.yearly || {};
-  const monthly = pricing.monthly || {};
   let modal = document.getElementById("paywallModal");
   if (!modal) {
     modal = document.createElement("div");
@@ -568,8 +569,8 @@ export function openPaywall(triggerFeature = "") {
   // i, mitt i ett betalflöde.
   modal.innerHTML = `<div class="modal-card paywall-card" role="dialog" aria-modal="true" aria-labelledby="paywallTitle">
     <button type="button" class="modal-close" data-paywall-close aria-label="Stäng">×</button>
-    <p class="eyebrow">Matjakt Premium</p>
-    <h2 id="paywallTitle">Lås upp hela matveckan</h2>
+    <p class="prem-kap">Matjakt Premium</p>
+    <h2 id="paywallTitle">Alla butikers priser, sida vid sida</h2>
     <p class="paywall-lead">Planera veckan efter familj, budget eller träning. Jämför riktiga matpriser hos alla kvalificerade butiker och få exakt inköpslista för varje butik.</p>
     <ul class="paywall-points">
       <li>Alla 7 veckotyper och 1–7 middagar</li>
@@ -577,16 +578,11 @@ export function openPaywall(triggerFeature = "") {
       <li>Näringsmål, kcal- och proteinfilter</li>
       <li>Fullt skafferi och "Laga med det jag har"</li>
     </ul>
-    <button type="button" class="btn btn-primary paywall-yearly" data-paywall-plan="yearly">
-      <span class="paywall-plan-label">${escapeHtml(yearly.badge || "Bäst värde")}</span>
-      <strong>${escapeHtml(yearly.priceText || "399 kr/år")}</strong>
-      <small>${escapeHtml(yearly.perMonthText || "≈ 33 kr/mån")} · ${escapeHtml(yearly.savingsText || "Spara 309 kr jämfört med månadsbetalning")}</small>
-    </button>
-    <button type="button" class="btn btn-ghost paywall-monthly" data-paywall-plan="monthly">
-      <strong>${escapeHtml(monthly.priceText || "59 kr/mån")}</strong>
-    </button>
+    ${paywallPlanMarkup(pricing)}
+    <p class="prem-moms">Alla priser är totalpris inklusive moms.</p>
     ${app.withdrawalConsentMarkup("paywallWithdrawalConsent")}
     <p class="account-error" id="paywallError"></p>
+    <p class="prem-avsluta">Avsluta när du vill, direkt i appen.</p>
     <button type="button" class="paywall-continue" data-paywall-close>Fortsätt gratis</button>
   </div>`;
   openModal(modal, { onClose: () => closeModal(modal) });
