@@ -263,3 +263,21 @@ test("payloaden ut är samma fält som förut, plus versionen", () => {
   assert.deepEqual(payload.valda, ["linssoppa"]);
   assert.equal(payload.authToken, undefined, "token bor i sin egen nyckel och får aldrig följa med");
 });
+
+// ---- T3: låsen hör ihop med de summor de stod bredvid --------------------
+
+test("T3: när kontots prisbild går in följer inte den gamla hämtningens lås med", () => {
+  start();
+  // Den här enhetens egen bild: Free-vyns maskade svar - EN prissatt kedja
+  // och två lås.
+  state.dbChainTotals = { Willys: { chain: "Willys" } };
+  state.dbLockedChains = [{ chain: "Hemköp" }, { chain: "City Gross" }];
+  state.dbPricedAt = 1_000;
+  // En annan enhet har prissatt senare, så E16:s stämpelgrind släpper in
+  // blobben. Den bär inga lås - buildSyncPayload skickar dem inte.
+  applySyncBlob({ dbChainTotals: { Hemköp: { chain: "Hemköp" } }, dbPricedAt: 3_000 });
+  assert.deepEqual(Object.keys(state.dbChainTotals), ["Hemköp"]);
+  // Låg de kvar visade butikskorten två hänglås bredvid en uppsättning
+  // summor de aldrig hörde till - en bild ingen hämtning svarat.
+  assert.deepEqual(state.dbLockedChains, []);
+});
