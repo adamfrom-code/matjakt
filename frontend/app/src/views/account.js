@@ -24,6 +24,9 @@ import { escapeHtml } from "../utils/html.js";
 // `priceText` som reserv - två skärmar som formaterar samma pris var för sig
 // är två skärmar som kan börja säga olika saker om det.
 import { paywallPlanMarkup, planetikett } from "./premiumskarmen.js";
+// J2: och jämförelsetabellen är premiumtabellen.js. L7 gör skärmen, J2 gör
+// listan sann - de möts här, i betalväggen, och ingen av dem bygger den andra.
+import { jamforelseMarkup } from "./premiumtabellen.js";
 import { closeModal, openModal } from "../utils/modal.js";
 import { askConfirm, showNotice } from "./dialog.js";
 // errorText: inget rått fetch-fel når skärmen. "Failed to fetch" är inte
@@ -323,6 +326,7 @@ export function renderAccount() {
   $("profileBtn").classList.toggle("is-premium", app.hasPremium());
   app.syncSettingsInputs();
   app.renderPriceTabs();
+  renderPremiumJamforelse();
   renderHousehold();
   if (loggedIn) {
     $("accountEmail").textContent = state.user.email;
@@ -366,6 +370,15 @@ export function renderAccount() {
   const premium = app.hasPremium();
   $("nutritionLocked").hidden = premium;
   $("nutritionFields").hidden = !premium;
+}
+
+// J2: samma tabell i kontoarket som i betalväggen. Två listor som säger olika
+// saker om samma produkt är exakt det fel paketet finns för att ta bort, så
+// markupen har EN källa - src/views/premiumtabellen.js - och beloppen kommer
+// ur /api/entitlements via app.premiumPricing(), aldrig ur en sträng här.
+function renderPremiumJamforelse() {
+  const box = $("premiumJamforelse");
+  if (box) box.innerHTML = jamforelseMarkup(app.premiumPricing());
 }
 
 // ---------------------------------------------------------------------------
@@ -579,13 +592,8 @@ export function openPaywall(triggerFeature = "") {
     <button type="button" class="modal-close" data-paywall-close aria-label="Stäng">×</button>
     <p class="prem-kap">Matjakt Premium</p>
     <h2 id="paywallTitle">Alla butikers priser, sida vid sida</h2>
-    <p class="paywall-lead">Planera veckan efter familj, budget eller träning. Jämför riktiga matpriser hos alla kvalificerade butiker och få exakt inköpslista för varje butik.</p>
-    <ul class="paywall-points">
-      <li>Alla 7 veckotyper och 1–7 middagar</li>
-      <li>Alla butikers riktiga priser och butikskorgar</li>
-      <li>Näringsmål, kcal- och proteinfilter</li>
-      <li>Fullt skafferi och "Laga med det jag har"</li>
-    </ul>
+    <p class="paywall-lead">Du planerar redan veckan och ser vad den kostar hos den billigaste butiken. Premium öppnar alla butikers priser, den exakta jämförelsen, hela hushållet och sparhistoriken.</p>
+    ${jamforelseMarkup(pricing)}
     ${paywallPlanMarkup(pricing)}
     <p class="prem-moms">Alla priser är totalpris inklusive moms.</p>
     ${app.withdrawalConsentMarkup("paywallWithdrawalConsent")}
