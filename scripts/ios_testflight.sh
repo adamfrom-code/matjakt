@@ -132,12 +132,26 @@ done
 rubrik "Arkivering"
 ARKIV="$ROOT/build/Matjakt.xcarchive"
 rm -rf "$ARKIV"
+# ARKIVET SIGNERAS INTE. Det låter konstigt, så det behöver stå här.
+#
+# Med automatisk signering ber `xcodebuild archive` Apple om en
+# UTVECKLINGSprofil, och en sådan kräver minst en registrerad enhet:
+# "Your team has no devices from which to generate a provisioning profile."
+# Att sätta distributionsidentiteten för hand ger i stället
+# "conflicting provisioning settings" - automatisk signering accepterar
+# ingen manuell identitet.
+#
+# Men det är ändå `-exportArchive` som bestämmer distributionsformen och
+# signerar om appen: method=app-store-connect, signingStyle=automatic och
+# -allowProvisioningUpdates skapar App Store-profilen, som INTE kräver
+# någon enhet. Arkivet behöver alltså aldrig vara signerat.
+#
+# Registrera inte en iPhone för att komma runt det här. Det får felet att
+# försvinna och ger i stället ett utvecklingssignerat bygge som App Store
+# Connect avvisar vid uppladdningen - ett dyrare fel, längre bort.
 xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
   -destination 'generic/platform=iOS' -archivePath "$ARKIV" archive \
-  -allowProvisioningUpdates \
-  -authenticationKeyPath "$NYCKEL" \
-  -authenticationKeyID "$ASC_KEY_ID" \
-  -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
   >build/arkiv.log 2>&1
 if [ $? -ne 0 ]; then
   nej "arkiveringen föll - build/arkiv.log:"
