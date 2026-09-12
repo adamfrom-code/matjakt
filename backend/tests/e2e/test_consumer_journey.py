@@ -1080,7 +1080,14 @@ class BrowserJourney(unittest.TestCase):
                       };
                     }
                 """)
-                self.assertGreaterEqual(träff["hojd"], 44, träff)
+                # HALVPIXELN, inte hundratusendelen. `.screen` bär animationen
+                # screen-in (.35 s), och en rect som mäts medan en transform är
+                # igång räknas ut i float32: höjden 44 kom tillbaka som
+                # 43.999969482421875 i CI och fällde en knapp vars CSS säger
+                # `height:44px`. Kravet är oförändrat - 43,5 faller fortfarande,
+                # för det är inte en avrundning utan en halv pixel - men
+                # mätbruset under animationen är inte en för liten träffyta.
+                self.assertGreaterEqual(round(träff["hojd"], 2), 44, träff)
                 self.assertTrue(träff["vanster"] and träff["hoger"],
                                 f"träffytan är smalare än 44 px: {träff}")
 
