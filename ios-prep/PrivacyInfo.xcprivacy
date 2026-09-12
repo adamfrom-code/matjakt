@@ -2,15 +2,54 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
   Matjakt - Privacy manifest (krävs av App Store sedan våren 2024).
-  Läggs i ios/App/App/PrivacyInfo.xcprivacy efter `npx cap add ios`.
-  Innehållet speglar vad appen faktiskt gör (frontend/app + Capacitor 8):
+
+  KÄLLAN LIGGER I ios-prep/. scripts/ios_mac_pass.sh kopierar den här filen
+  över ios/App/App/PrivacyInfo.xcprivacy vid varje Mac-pass. Ändras bara den
+  ena är ändringen borta nästa körning, utan felmeddelande - kopieringen
+  lyckas ju. Ändra alltid båda.
+
+  Apple läser TRE dokument om samma sak och jämför dem med varandra: det
+  här manifestet, App Privacy-etiketten i App Store Connect (svaren står i
+  ios-prep/APP_PRIVACY_LABEL.md) och integritetspolicyn som
+  store/appstore/metadata/sv-SE/privacy_url.txt pekar på. En motsägelse
+  mellan dem är en anledning till avslag.
+
+  "COLLECT" ÄR SNÄVARE ÄN ORDET LÅTER, och det avgör varje rad nedan. Apple
+  räknar en uppgift som insamlad först när den LÄMNAR ENHETEN och går att
+  läsa längre än förfrågan i sig kräver. Vad appen råkar ha i minnet spelar
+  ingen roll.
+
     - Ingen spårning, inga tredjeparts-SDK:er, ingen reklam.
-    - Konto = e-postadress (kopplad till användaren) för inloggning.
-    - Plats används en gång per "Hitta mig" och sparas i profilen som
-      lat/lon för butiksval (kopplad till kontot när man är inloggad).
-    - Köp: Premium (i dag Stripe på webben; se docs/IOS_RELEASE.md om IAP).
+    - E-post (kopplad): users.email, kontots inloggning.
+    - Plats (kopplad, GROV): bara postnumret. Det ligger i
+      buildSyncPayload() och landar i users.synced_state. Fem siffror
+      beskriver var någon bor med lägre upplösning än lat/lon med tre
+      decimaler, vilket är Apples gräns mellan Precise och Coarse.
+      KOORDINATERNA LÄMNAR ALDRIG ENHETEN: "Hitta mig" sätter
+      state.position, men position ingår inte i synkpayloaden, skrivs inte
+      till localStorage och har ingen kolumn i users. Avståndet räknas i
+      enheten - servern skickar butikernas koordinater hit, aldrig tvärtom.
+      Fram till N0k stod här exakt plats, kopplad till användaren. Det var
+      fel åt det dyrare hållet: en etikett som överdriver insamlingen är
+      lika oriktig som en som underdriver den.
+    - Hälsa (kopplad): allergier och kosttyp, dels i users.synced_state via
+      kost.avoidAllergens/kost.kosttyp, dels i hushållsprofilen där de delas
+      med familjen. Integritetspolicyn behandlar dem som artikel
+      9-uppgifter med uttryckligt samtycke - en etikett utan hälsodata hade
+      motsagt appens egen policy.
+    - Produktinteraktion (kopplad, ÄNDAMÅL ANALYTICS): analytics_user_days
+      räknar namngivna händelser per konto och dag - aldrig klockslag,
+      aldrig IP, aldrig fritext. Tabellen finns för att besvara om någon
+      kommer tillbaka vecka två, inte för att appen ska fungera, och därför
+      är ändamålet Analytics och inte AppFunctionality.
+    - Köp (kopplad): Premium (i dag Stripe på webben; se docs/IOS_RELEASE.md
+      om IAP).
+
   Required-reason-API:er: Capacitor läser UserDefaults (CA92.1) och
   filtidsstämplar (C617.1). Verifiera listan i Xcode innan inlämning.
+
+  Grinden som håller filen och koden ihop:
+  backend/tests/test_ios_privacy_manifest.py.
 -->
 <plist version="1.0">
 <dict>
@@ -34,7 +73,7 @@
     </dict>
     <dict>
       <key>NSPrivacyCollectedDataType</key>
-      <string>NSPrivacyCollectedDataTypePreciseLocation</string>
+      <string>NSPrivacyCollectedDataTypeCoarseLocation</string>
       <key>NSPrivacyCollectedDataTypeLinked</key>
       <true/>
       <key>NSPrivacyCollectedDataTypeTracking</key>
@@ -42,6 +81,30 @@
       <key>NSPrivacyCollectedDataTypePurposes</key>
       <array>
         <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypeHealth</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <true/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypeProductInteraction</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <true/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
       </array>
     </dict>
     <dict>
