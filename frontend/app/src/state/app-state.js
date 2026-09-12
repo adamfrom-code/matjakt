@@ -327,6 +327,10 @@ export function applySyncBlob(blob, { onboardingOpen = false } = {}) {
     state.dbChainTotals = clean.dbChainTotals;
     state.dbComparison = clean.dbComparison || null;
     state.dbPricedAt = clean.dbPricedAt || null;
+    // Blobben bär inga lås - buildSyncPayload skickar dem inte. Att låta den
+    // förra hämtningens lås stå kvar bredvid en annan uppsättning summor är
+    // en bild ingen hämtning någonsin svarat. Nästa hämtning sätter dem.
+    state.dbLockedChains = [];
   }
   set("naringsmal", value => { state.naringsmal = value; });
   set("betyg", value => { state.betyg = value; });
