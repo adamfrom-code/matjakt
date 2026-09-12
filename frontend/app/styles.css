@@ -1209,46 +1209,6 @@ button{color:inherit}
   }
 }
 
-/* ===== G11 · Inställningar 
-   Skärmen appen inte hade. Reglerna ligger sist och fristående i stället för i
-   den stora display-listan högre upp: `.view-settings .settings-screen` väger
-   0,2,0 mot `.screen{display:none}` och vinner utan att den raden behöver
-   röras - en fil som fyra L-paket skriver i samtidigt ska få så få nya
-   redigeringspunkter som möjligt.
-
-   L6 bygger om skärmen efter design D (telefon 7). Det här är den enkla
-   varianten: hårfina linjer, rubrik per grupp, värdet till höger. */
-.view-settings .settings-screen{display:block}
-.settings-screen .screen-header{padding-bottom:10px}
-.settings-groups{display:flex;flex-direction:column}
-.settings-group-title{
-  margin:22px 0 2px;color:var(--muted);
-  font:700 11px/1 var(--font-body);letter-spacing:.12em;text-transform:uppercase;
-}
-.settings-group-title:first-child{margin-top:6px}
-.settings-row{
-  display:flex;align-items:center;justify-content:space-between;gap:14px;
-  width:100%;min-height:52px;padding:10px 2px;
-  border:0;border-bottom:1px solid var(--border);background:transparent;
-  color:var(--text);text-align:left;
-}
-.settings-row:active{background:var(--surface-2)}
-.settings-row-text{min-width:0;display:flex;flex-direction:column;gap:3px}
-.settings-row-label{font-size:15px;font-weight:600}
-.settings-row-note{color:var(--muted);font-size:12px}
-/* Allergiraden när den är tom. Märkningen bärs av ett ORD, inte bara av en
-   färg - "Ej ifyllt" går att läsa i gråskala och av en skärmläsare, och det
-   är appens mest säkerhetskritiska inställning. */
-.settings-row-flag{
-  align-self:flex-start;margin-top:2px;padding:2px 8px;
-  border:1px solid var(--ink-3);border-radius:999px;
-  color:var(--ink-2);font-size:11px;font-weight:700;letter-spacing:.04em;
-}
-.settings-row-value{
-  flex:none;max-width:52%;color:var(--muted);font-size:14px;text-align:right;
-  overflow:hidden;text-overflow:ellipsis;
-}
-.settings-row.marked .settings-row-value{color:var(--text);font-weight:600}
 =======
 /* ---- H2 · SPARKVITTOT --------------------------------------------------
    Kortet efter avbockad lista. Det är ett kvitto, inte en gratulationsruta:
@@ -1273,3 +1233,119 @@ button{color:inherit}
 .sparkvitto-ingen{font-weight:700}
 .sparkvitto-skal,.sparkvitto-not{color:var(--ink-2);font-size:12.5px}
 .sparkvitto-lopande{margin-top:12px;padding-top:10px;border-top:1px solid var(--rule)}
+
+/* ---- INSTÄLLNINGAR (L6) -------------------------------------------------
+   Facit: docs/matjakt-design-D.html, telefon 7. G11 gjorde att skärmen FINNS;
+   det här blocket bygger den som i D - hårfina linjer mellan grupperna, en
+   rad per inställning på minst 52 px med värdet till höger, och ingenting
+   som liknar ett kort.
+
+   Blocket ligger sist och fristående, precis som G11:s gjorde, och av samma
+   skäl: `.view-settings .settings-screen` väger 0,2,0 mot `.screen{display:none}`
+   och vinner utan att den stora display-listan högre upp behöver röras.
+
+   TOKENS, INTE ALIAS. G11 skrev skärmen i aliasnamnen (--muted, --border,
+   --text, --font-body). De pekar rätt idag, men §9.1 säger att skiktet rivs i
+   etapp 7 och att nya komponenter skrivs i systemets egna tokens. Skärmen är
+   ny; den skrivs i --ink/--ink-2/--rule/--paper-2/--f-disp/--f-ui direkt, och
+   följer därmed med när mörkt läge kopplas på utan en enda extra regel.
+
+   ALLERGIRADEN NÄR DEN ÄR TOM - och varför den INTE är accentfärgad.
+   Riktningen ritar den markerade raden med accent: vänsterkant, värde och
+   märkkapitäl i oxblod. Det går inte att göra i den här appen. §2.3 räknar
+   upp accentens förbjudna betydelser och "status, varning, fel, 'över
+   budget', 'saknas'" står med: accenten betyder nuläget och vägen vidare,
+   ingenting annat. §2.4 säger i stället exakt hur "kräver uppmärksamhet" ska
+   se ut - NEDSÄNKT --paper-2-FÄLT MED 3 PX KANTMARKERING I --ink-3 TILL
+   VÄNSTER - och motiverar det: "en varning är inte 'här går vägen vidare'.
+   Den är ett fält som skiljer sig i relief, inte i temperatur."
+
+   Det är den formen som står här, och den bär märkningen i tre kanaler som
+   alla överlever gråskala: ordet "Ej ifyllt", kantmarkeringen (en BREDD, inte
+   en färg) och reliefen. tests/installningar-formen.test.js river färgen ur
+   båda lägena och kräver att de fortfarande går att skilja åt - samma prov
+   som L0 lät de tre prisreglerna gå igenom, och av samma skäl: det här är
+   appens mest säkerhetskritiska inställning, och den läses i butiksbelysning
+   av någon som i vart tolfte fall inte ser rödgrönt.
+
+   RÄTTELSE 1 gäller i fältet: --ink-3 får aldrig bära TEXT på --paper-2
+   (4,31:1). Inne i den markerade raden står därför etiketten i --ink och
+   underraden i --ink-2 (4,86:1). --ink-3 används bara till kantmarkeringen
+   och märkets ram, som är grafiska objekt med 3:1-krav - och klarar det. */
+.view-settings .settings-screen{display:block}
+
+/* Toppen (.insttopp). Kapitälen är INTE appens vanliga .eyebrow: den står i
+   accent, och en skärm får ha högst två accentmarkeringar synliga samtidigt
+   (§2.3). På Inställningar är de redan slut - bottennavigeringens aktiva flik
+   och ingenting mer ska tävla med allergiraden om blicken. */
+.settings-screen .screen-header{padding:10px 0 5px}
+.settings-screen .eyebrow{
+  margin:0;color:var(--ink-3);
+  font:600 10px/1.5 var(--f-ui);letter-spacing:.2em;text-transform:uppercase;
+}
+.settings-screen .screen-header h1{
+  margin:4px 0 0;font:400 26px/1 var(--f-disp);letter-spacing:-.01em;
+}
+.settings-screen .back-link{
+  display:inline-flex;align-items:center;min-height:44px;margin:0;
+  color:var(--ink-2);font:600 10.5px/1 var(--f-ui);
+  letter-spacing:.16em;text-transform:uppercase;
+}
+
+/* Grupperna (.grupp). Hårlinjen hör till gruppen ovanför rubriken, så
+   skärmen läses som en följd av avdelningar och inte som en enda lång lista.
+   --rule-2 är rätt här: linjen avdelar och bär ingen betydelse (§2.2). */
+.settings-groups{display:flex;flex-direction:column}
+.settings-group-title{
+  margin:0;padding:var(--sp-5) 0 var(--sp-1);
+  border-top:1px solid var(--rule-2);
+  color:var(--ink-2);
+  font:600 10px/1.5 var(--f-ui);letter-spacing:.2em;text-transform:uppercase;
+}
+.settings-group-title:first-child{border-top:0;padding-top:var(--sp-3)}
+
+/* Raden (.instrad). 52 px är golvet i uppdraget och i G5:s svep; padding och
+   radhöjd får den att växa, aldrig krympa. */
+.settings-row{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  width:100%;min-height:52px;padding:var(--sp-3) 0;
+  border:0;border-bottom:1px solid var(--rule);background:transparent;
+  color:var(--ink);text-align:left;
+}
+.settings-row:active{background:var(--paper-2)}
+.settings-row-text{min-width:0;display:flex;flex-direction:column;gap:var(--sp-1)}
+.settings-row-label{font:400 14px/1.35 var(--f-ui);color:var(--ink)}
+.settings-row-note{font:400 11.5px/1.45 var(--f-ui);color:var(--ink-2)}
+/* Värdet till höger, i kolumn med de andra värdena. tabular-nums gör att
+   "950 kr/vecka" och "802 52" står på samma siffra (§3.3). */
+.settings-row-value{
+  flex:none;max-width:52%;
+  font:400 13.5px/1.35 var(--f-ui);color:var(--ink-2);text-align:right;
+  font-variant-numeric:tabular-nums;
+  overflow:hidden;text-overflow:ellipsis;
+}
+
+/* Den obesvarade raden. Formen bär märkningen: 3 px kantmarkering och en
+   indragning som inte finns på någon annan rad. Bakgrunden är reliefen ovanpå
+   det - aldrig det enda som skiljer. */
+/* Fältet bleder 10 px utanför textspalten åt båda håll och tar tillbaka samma
+   10 px som kantmarkering plus inre luft (3 + 7 = 10). Etiketten och värdet
+   står därför kvar på exakt samma x som i varje annan rad: det är RELIEFEN som
+   flyttar sig, inte innehållet. Skrivs det som en ren padding-left i stället
+   hoppar raden inåt och värdekolumnen bryts mitt i skärmen. */
+.settings-row.marked{
+  margin-inline:calc(var(--sp-4) * -1);
+  padding-left:var(--sp-3);padding-right:var(--sp-4);
+  border-left:3px solid var(--ink-3);
+  background:var(--paper-2);
+}
+.settings-row.marked .settings-row-value{color:var(--ink);font-weight:600}
+/* Märket är ett ORD i en ram, inte en färgprick: det går att läsa i gråskala,
+   det går att läsa upp, och det säger vad som är fel i stället för att
+   signalera att något är det. */
+.settings-row-flag{
+  align-self:flex-start;margin-top:var(--sp-1);padding:1px var(--sp-3);
+  border:1px solid var(--ink-3);
+  color:var(--ink-2);
+  font:600 9.5px/1.5 var(--f-ui);letter-spacing:.16em;text-transform:uppercase;
+}
