@@ -105,6 +105,19 @@ export const RADER = [
     premium: { har: true },
   },
   {
+    nyckel: "byten",
+    // J6 gav avsikterna bakom ett byte en nyckel i features.py, och den här
+    // raden finns därför att varje nyckel MÅSTE ha en rad - annars säger
+    // tabellen ingenting om funktionen, vilket är precis det tillstånd J2
+    // stängde. Raden säljer inte byten: den svarar "ingår" i båda kolumnerna,
+    // för det är vad modellen säger. Byter features.py åsikt byter raden det
+    // också, eller faller avvikelser() över den.
+    etikett: "Byt ut en middag, med eller utan avsikt",
+    funktioner: ["swap_intents"],
+    gratis: { har: true },
+    premium: { har: true },
+  },
+  {
     nyckel: "recept",
     etikett: "Receptbanken och favoriter",
     funktioner: ["recipe_search", "favorites"],
