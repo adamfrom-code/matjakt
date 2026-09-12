@@ -105,11 +105,27 @@ class AppStoreTexterna(unittest.TestCase):
         sys.path.insert(0, str(ROOT / "backend"))
         from services.accounts import features
         beskrivning = läs(APPSTORE / "description.txt")
-        self.assertIn("fyra middagar", beskrivning.lower())
-        self.assertEqual(features.FREE_MAX_DINNERS, 4,
-                         "gratisgränsen har ändrats - butikstexten säger fortfarande fyra")
+        self.assertIn("fem middagar", beskrivning.lower())
+        self.assertEqual(features.FREE_MAX_DINNERS, 5,
+                         "gratisgränsen har ändrats - butikstexten säger fortfarande fem")
         self.assertIn("sju middagar", beskrivning.lower())
         self.assertEqual(features.PREMIUM_MAX_DINNERS, 7)
+
+    def test_butiken_saljer_inget_som_redan_ar_gratis(self):
+        """J3 flyttade veckotyperna, skafferiet och näringsfiltret NER till
+        gratis. Står de kvar under PREMIUM i butiken är det samma löftesbrott
+        som J2 river ut ur appen - fast inför en granskare."""
+        import sys
+        sys.path.insert(0, str(ROOT / "backend"))
+        from services.accounts import features
+        for fil in (APPSTORE / "description.txt", PLAY / "full_description.txt"):
+            premium = läs(fil).split("PREMIUM (")[1].split("\n\n")[0].lower()
+            for fras, funktion in (("alla veckotyper", "family_week"),
+                                   ("laga med det jag har", "full_pantry"),
+                                   ("näringsmål", "advanced_nutrition")):
+                if features.allowed(features.FREE, funktion):
+                    self.assertNotIn(fras, premium,
+                                     f"{fil.name} säljer {fras!r} som Premium - det är gratis")
 
 
 class PlayTexterna(unittest.TestCase):

@@ -44,7 +44,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from playwright.sync_api import sync_playwright
 from services.accounts import AccountError, AccountStore
-from services.analytics import ANALYTICS_EVENTS, AnalyticsStore
+from services.analytics import ACTIVATION_EVENT, ANALYTICS_EVENTS, AnalyticsStore
 from services import mailings
 from services.household import HouseholdStore, NotificationStore
 from services.household.routes import HouseholdRouter
@@ -53,6 +53,8 @@ from services.billing import matjakt_user_id as stripe_matjakt_user_id, orphan_s
 from services.billing import automatic_tax_allowed, price_verdict as stripe_price_verdict, tax_readiness as stripe_tax_readiness
 from services.billing import withdrawal
 from services.billing import gate as paywall
+from services.billing import activation as billing_activation
+from services.billing.savings import SavingsStore
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
 from services.accounts import clientip  # noqa: E402
@@ -597,6 +599,11 @@ KV_CACHE = KeyValueCacheStore(PRICE_CACHE.connection, lock=PRICE_CACHE.lock)
 # allt äldre än sju dagar - flytten nedan räddar det som finns kvar där och
 # är ofarlig att köra vid varje uppstart (skriver bara dagar som saknas).
 ANALYTICS = AnalyticsStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
+# J3: sparhistoriken bor i KONTOdatabasen, samma anslutning och samma lås
+# som ovan. Före J3 fanns den bara i webbläsarens localStorage - alltså borta
+# vid varje telefonbyte. "Du sparade 1 340 kr i september" går inte att säga
+# om siffran försvinner med en rensad cache.
+SAVINGS = SavingsStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
 ANALYTICS.import_legacy_counters(lambda event, day: KV_CACHE.get("analytics", f"{event}:{day}")[0])
 MAILINGS = mailings.MailingScheduler(
     mailings.MailingStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock),
@@ -2411,6 +2418,29 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # rutan i köpflödet aldrig kan säga en annan sak än den som sparas.
             self.send_json(200, {**plan_features.entitlements(plan), "withdrawal": withdrawal.terms()})
             return
+        if parsed.path == "/api/savings":
+            # J3: sparhistoriken. Free ser sin senaste vecka, Premium hela
+            # historiken och månadsrapporten. MASKNING, inte nekande - Free
+            # ska se att siffran finns OCH hur många veckor som ligger bakom
+            # låset. Att dölja mängden vore att dölja erbjudandet.
+            if self._rate_limit("public"):
+                return
+            token = self._bearer_token()
+            user = ACCOUNT_STORE.user_for_token(token)
+            user_id = ACCOUNT_STORE.user_id_for_token(token)
+            if not user_id:
+                self.send_json(401, {"error": "Du måste vara inloggad"})
+                return
+            plan = plan_features.plan_for_user(user)
+            locked = bool(paywall.SAVINGS_HISTORY and paywall.SAVINGS_HISTORY.blocks(plan))
+            report = SAVINGS.report(user_id,
+                                    max_weeks=plan_features.max_savings_weeks(plan),
+                                    include_months=not locked)
+            # Svaret beror på planen och får därför aldrig ligga i en delad
+            # cache (J1) - send_json utan cache_seconds är no-store.
+            self.send_json(200, {**report, "locked": locked,
+                                 "feature": "savings_history" if locked else None})
+            return
         if parsed.path == "/api/mail/unsubscribe":
             # Avsluta utskicken från länken i mejlet: ingen inloggning, bara
             # den signerade tokenen. Fel token ger samma sida som ett okänt
@@ -2931,6 +2961,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     try:
                         HOUSEHOLD_STORE.forget_user(identity[0])
                         NOTIFICATION_STORE.forget_user(identity[0])
+                        SAVINGS.forget_user(identity[0])
                     except Exception:
                         logger.exception("Kunde inte städa hushållsdata för raderat konto")
                 if customer_id and STRIPE_SECRET_KEY:
@@ -3195,6 +3226,32 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 return
             self._handle_analytics_event(payload)
             return
+        if parsed.path == "/api/savings/week":
+            # J3: veckans besparing skrivs ner när veckan är handlad. En rad
+            # per konto och vecka - skrivs samma vecka om (byten, ändrad
+            # lista) ersätts raden i stället för att läggas till, annars
+            # växer "sparat i september" med varje omräkning.
+            if self._rate_limit("state"):
+                return
+            user_id = ACCOUNT_STORE.user_id_for_token(self._bearer_token())
+            if not user_id:
+                self.send_json(401, {"error": "Du måste vara inloggad"})
+                return
+            if not isinstance(payload, dict):
+                self.send_json(400, {"error": "Ogiltig kropp"})
+                return
+            try:
+                self.send_json(200, SAVINGS.record_week(
+                    user_id,
+                    week_key=payload.get("weekKey"),
+                    cheapest_total=payload.get("cheapestTotal"),
+                    priciest_total=payload.get("priciestTotal"),
+                    saved=payload.get("savedKr"),
+                    chain=payload.get("chain")))
+            except Exception:
+                logger.exception("Kunde inte spara veckans besparing")
+                self.send_json(503, {"error": "Kunde inte spara just nu"})
+            return
         if parsed.path == "/api/account/marketing":
             # Tacka ja/nej till utskick från Konto-vyn. Servern äger svaret.
             if self._rate_limit("state"):      # B8: skrivväg genom kontolagret
@@ -3439,12 +3496,37 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 if gate and gate.blocks(plan):
                     result = mask_pricing_for_free(result)
                     break
+            # J3: en prissatt vecka ÄR en skapad vecka, och den första utlöser
+            # provperioden. Kroken är avsiktligt här - efter att veckan
+            # lyckats, före svaret - så en person som just sett att det
+            # skiljer 214 kr mellan butikerna får sju dagar Premium i samma
+            # ögonblick. En trial vid registrering testar nyfikenhet; den här
+            # testar produkten på någon som redan använt den.
+            self._record_first_week()
             self.send_json(200, result)
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             raise   # klienten gav upp - inget prisfel, _guarded tar det tyst
         except Exception:
             logger.exception("Prissättning av veckan misslyckades")
             self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})
+
+    # J3: krokar som körs när ett konto skapar sin FÖRSTA vecka. Listan är
+    # tom här; H5 hänger hänvisningsbelöningen på samma signal, så villkoret
+    # blir "vecka_skapad" och inte "registrerad" för allt som belönar.
+    ACTIVATION_HOOKS = ()
+
+    def _record_first_week(self):
+        """Aktiveringssignalen. Får ALDRIG kasta: det här är en belöningsväg,
+        och en trasig belöning får inte bli ett trasigt prissvar."""
+        try:
+            user_id = ACCOUNT_STORE.user_id_for_token(self._bearer_token())
+        except Exception:
+            logger.exception("Kunde inte slå upp kontot för aktiveringssignalen")
+            return
+        if not user_id:
+            return          # anonym vecka: inget konto att belöna
+        billing_activation.on_first_week(ACCOUNT_STORE, user_id,
+                                         hooks=self.ACTIVATION_HOOKS)
 
     def _paywall_refuses_week(self, plan, payload):
         """Grindarna som går att ställa på KROPPEN, före allt arbete.
@@ -3610,6 +3692,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
             ANALYTICS.record(event, user_id=user_id)
         except Exception:
             logger.exception("Kunde inte räkna händelsen %s", event)
+        # J3: samma aktiveringssignal som den prissatta veckan ger, från det
+        # andra hållet. Vilken som kommer först spelar ingen roll -
+        # mark_first_week är atomär och belönar bara övergången.
+        if event == ACTIVATION_EVENT and user_id:
+            billing_activation.on_first_week(ACCOUNT_STORE, user_id,
+                                             hooks=self.ACTIVATION_HOOKS)
         self.send_json(200, {"ok": True})
 
     def _handle_campaigns(self, params):

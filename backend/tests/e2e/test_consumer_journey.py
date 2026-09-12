@@ -48,6 +48,7 @@ if test_mode_active():
     from services.accounts import AccountStore
     from services.household import HouseholdStore, NotificationStore
     from services.analytics import AnalyticsStore
+    from services.billing.savings import SavingsStore
     from services.grocery import api as grocery_api
     from services.recipes import api as recipes_api
     from services.recipes import prices as recipe_prices
@@ -93,6 +94,9 @@ class _Server:
             # (Syntes som "4 != 3" i trattestet när E2E:n körs i samma
             # process som enhetstesterna, dvs. lokalt där Playwright finns.)
             "analytics": api_server.ANALYTICS,
+            # Samma sak för sparhistoriken (J3): SavingsStore binder
+            # ACCOUNT_STORE.connection vid uppstart.
+            "savings": api_server.SAVINGS,
             "stripe": (api_server.STRIPE_SECRET_KEY, api_server.STRIPE_WEBHOOK_SECRET,
                        api_server.STRIPE_PRICE_MONTHLY, api_server.STRIPE_PRICE_YEARLY,
                        api_server.APP_URL, api_server.create_customer, api_server.create_checkout_session),
@@ -103,6 +107,8 @@ class _Server:
         api_server.HOUSEHOLD_STORE = HouseholdStore(root / "matjakt.db")
         api_server.NOTIFICATION_STORE = NotificationStore(root / "matjakt.db")
         api_server.ANALYTICS = AnalyticsStore(api_server.ACCOUNT_STORE.connection)
+        api_server.SAVINGS = SavingsStore(api_server.ACCOUNT_STORE.connection,
+                                          lock=api_server.ACCOUNT_STORE.lock)
         grocery_api.clear_cache()
         recipes_api.clear_cache()
         ratelimit.reset()
@@ -146,6 +152,7 @@ class _Server:
         api_server.HOUSEHOLD_STORE = self._saved["household"]
         api_server.NOTIFICATION_STORE = self._saved["notifications"]
         api_server.ANALYTICS = self._saved["analytics"]
+        api_server.SAVINGS = self._saved["savings"]
         grocery_api.DB_PATH = self._saved["grocery"]
         recipes_api.DB_PATH = self._saved["recipes"]
         api_server.ACCOUNT_STORE = self._saved["accounts"]
@@ -413,6 +420,20 @@ class BrowserJourney(unittest.TestCase):
         expect(page.locator("#accountLoggedIn")).to_be_visible()
         expect(page.locator("#accountEmail")).to_have_text(email)
 
+    def trial_already_used(self):
+        """J3 ger sju dagars Premium efter den FÖRSTA skapade veckan, så varje
+        nyregistrerat konto i en E2E ÄR Premium så snart veckan finns. Det är
+        hela poängen med trialen - och samtidigt skälet att den måste vara
+        förbrukad innan man prövar något som bara gäller Free.
+
+        `trial_used = 1` säger "den här personen har redan haft sina sju
+        dagar". Anropas FÖRE veckan skapas: då beviljas ingen trial alls, och
+        kontot är Free hela resan igenom. Ingen omladdning behövs, och därmed
+        kan ingen väntande synk gå förlorad."""
+        api_server.ACCOUNT_STORE.connection.execute(
+            "UPDATE users SET trial_ends_at = NULL, trial_used = 1")
+        api_server.ACCOUNT_STORE.connection.commit()
+
     def login(self, email):
         page = self.page
         if not page.locator("#accountModal").is_visible():
@@ -480,7 +501,14 @@ class BrowserJourney(unittest.TestCase):
         page = self.page
         plan_modal = page.locator("#planModal")
         if plan_modal.is_visible():
-            expect(page.locator('[data-plan-paywall]').first).to_be_visible()   # Premium-veckor låsta
+            # J3: varenda veckotyp är gratis. Veckorna sätts ihop i klienten
+            # ur ett lokalt receptregister och gick aldrig att skydda - och
+            # de är precis det som gör en ny användare beroende de första
+            # två veckorna. Alla kort ska alltså gå att VÄLJA, inget ska bära
+            # ett hänglås.
+            expect(page.locator('[data-choose-plan]').first).to_be_visible()
+            self.assertEqual(page.locator("[data-plan-paywall]").count(), 0,
+                             "en veckotyp är låst trots att alla är gratis sedan J3")
             page.click('[data-choose-plan="standard"]')
             expect(plan_modal).to_be_hidden()
         expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
@@ -581,6 +609,10 @@ class BrowserJourney(unittest.TestCase):
             self.logout()
             self.login(email)
             self.close_account_modal()
+            # Bytesräknaren och middagstaket är GRATIS-gränser. Utan det här
+            # är kontot Premium i sju dagar från sin första vecka (J3), och
+            # då finns inget tak att pröva.
+            self.trial_already_used()
 
         with self.step("onboarding 4 steg"):
             page.goto(self.app())
@@ -942,7 +974,11 @@ class BrowserJourney(unittest.TestCase):
         self.assertLess(ordning.index("weekPlanUpsell"), ordning.index("weekDayTabs"), ordning)
         upsell.click()
         expect(page.locator("#planModal")).to_be_visible()
-        expect(page.locator("[data-plan-paywall]").first).to_be_visible()
+        # J3: veckotyperna är gratis, så jämförelsen är ett ERBJUDANDE om en
+        # annan vecka - inte en vägg av hänglås. Raden leder fortfarande dit,
+        # och där går varje kort att välja.
+        expect(page.locator("[data-choose-plan]").first).to_be_visible()
+        self.assertEqual(page.locator("[data-plan-paywall]").count(), 0)
 
     def test_onboardingen_gar_att_stanga_med_tangentbord(self):
         """G6: onboardingmodalen gick inte att stänga med tangentbord ALLS.
@@ -1363,6 +1399,9 @@ class BrowserJourney(unittest.TestCase):
         page.goto(self.app(f"?recept={self.any_recipe_id()}"))
         expect(page.locator("#recipePage")).to_be_visible()
         self.register(f"e2e-{uuid.uuid4().hex[:10]}@example.com")
+        # Betalväggen längst ned i testet gäller ett GRATISKONTO. J3 ger sju
+        # dagar Premium vid första veckan, så trialen får vara förbrukad.
+        self.trial_already_used()
         self.close_account_modal()
         page.goto(self.app())
         self.complete_onboarding()
@@ -1500,17 +1539,26 @@ class BrowserJourney(unittest.TestCase):
             page.goto(self.app(f"?recept={self.any_recipe_id()}"))
             expect(page.locator("#recipePage")).to_be_visible()
             self.register(email)
+            # Köpflödet prövas på ett konto som INTE redan har Premium: J3:s
+            # aktiveringstrial hade annars gjort betalväggen osynlig.
+            self.trial_already_used()
             self.close_account_modal()
             page.goto(self.app())
             self.complete_onboarding()
             self.choose_standard_week()
 
-        with self.step("paywall från låst veckotyp"):
+        with self.step("paywall från middagstaket"):
+            # J3 flyttade ner veckotyperna till gratis, så det är inte längre
+            # där betalväggen möter någon. Den sjätte middagen är: Free
+            # planerar upp till FREE_MAX_DINNERS och servern räknar
+            # recipeIds, så spärren är äkta hela vägen ner.
             page.click('.bottom-nav-item[data-view="home"]')
-            page.click("#newWeekBtn")
-            expect(page.locator("#planModal")).to_be_visible()
-            page.click("[data-plan-paywall] >> nth=0")
+            page.click("#weekSheetOpen")
             paywall = page.locator("#paywallModal")
+            for _ in range(8):
+                if paywall.is_visible():
+                    break
+                page.click("#mealsPlus")
             expect(paywall).to_be_visible()
             expect(paywall).to_contain_text("Matjakt Premium")
 

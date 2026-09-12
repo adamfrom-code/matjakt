@@ -23,10 +23,12 @@ from __future__ import annotations
 
 import logging
 
+from ..accounts import features as plan_features
+from ..billing import gate as paywall
 from .notifications import PREF_ALL, PREFERENCES
 from .store import (
-    ALREADY_HAVE, HouseholdError, LOCATIONS, NEED_TO_BUY, NotAMemberError,
-    PURCHASED, REMOVED,
+    ALREADY_HAVE, HouseholdError, HouseholdFullError, LOCATIONS, MAX_MEMBERS,
+    NEED_TO_BUY, NotAMemberError, PURCHASED, REMOVED,
 )
 
 logger = logging.getLogger("matjakt.household")
@@ -58,6 +60,40 @@ class HouseholdRouter:
         if not household_id:
             raise _NoHousehold()
         return household_id
+
+    # ---- planen (J3) -----------------------------------------------------
+
+    def household_plan(self, household_id) -> str:
+        """Hushållets plan: Premium så fort NÅGON i hushållet är det.
+
+        Det är familjen som är produkten, inte kontot. En pappa som betalar
+        ska inte behöva vara den som klickar på varje inbjudan, och en
+        mamma på gratiskontot ska inte mötas av en betalvägg i ett hushåll
+        som redan är betalt. Ett abonnemang per familj är exakt vad
+        paketeringen säger sig sälja.
+
+        Motsatsen - att fråga den inbjudandes eget konto - hade gjort
+        betalväggen till en fråga om vem i familjen som råkade hålla i
+        telefonen."""
+        members = self.store.member_user_ids(household_id)
+        if self.accounts.any_premium(members):
+            return plan_features.PREMIUM_MONTHLY
+        return plan_features.FREE
+
+    def _member_cap(self, household_id) -> int:
+        return paywall.household_member_cap(self.household_plan(household_id))
+
+    @staticmethod
+    def _full_response(error: HouseholdFullError):
+        """Ett fullt hushåll är två helt olika besked.
+
+        Under tolv betyder det "det här ingår i Premium" och svaret måste
+        bära `locked`/`feature`, precis som varje annan grind - annars vet
+        frontenden inte VAD den ska sälja. Vid tolv är hushållet faktiskt
+        fullt, och då finns inget att köpa."""
+        if paywall.HOUSEHOLD_SHARING and error.cap < MAX_MEMBERS:
+            return 403, paywall.HOUSEHOLD_SHARING.denial(maxMembers=error.cap)
+        return 400, {"error": str(error)}
 
     def _actor_name(self, household_id, user_id, email=""):
         """Vad notisen ska kalla den som gjorde ändringen. Visningsnamnet om
@@ -99,6 +135,9 @@ class HouseholdRouter:
         except NotAMemberError:
             # Regel 2: samma svar som för ett hushåll som inte finns.
             return 404, {"error": "Hushållet finns inte"}
+        except HouseholdFullError as error:
+            # J3: måste ligga FÖRE HouseholdError - den ärver från den.
+            return self._full_response(error)
         except HouseholdError as error:
             return 400, {"error": str(error)}
 
@@ -139,6 +178,16 @@ class HouseholdRouter:
     def _household_payload(self, household_id, user_id):
         household = self.store.household_for(household_id, user_id)
         household["members"] = self._decorate_members(household["members"], user_id)
+        # J3: taket och om det är nått står i varje svar om hushållet, så
+        # klienten kan säga "ni är två av två" INNAN någon trycker på Bjud
+        # in och får ett 403 i ansiktet. `canInvite` är false både för ett
+        # gratishushåll vid två och för ett premiumhushåll vid tolv -
+        # skillnaden syns på `locked`.
+        cap = self._member_cap(household_id)
+        count = len(household.get("members") or [])
+        household["memberCap"] = cap
+        household["canInvite"] = count < cap
+        household["capLocked"] = count >= cap and cap < MAX_MEMBERS
         return household
 
     def _decorate_members(self, members, user_id) -> list:
@@ -195,7 +244,12 @@ class HouseholdRouter:
 
     def _create_invite(self, user_id, email, payload):
         household_id = self._household_id(user_id)
-        invite = self.store.create_invite(household_id, user_id)
+        # J3: ATT BJUDA IN är den handling som möter betalväggen. Ingen
+        # befintlig medlem rörs av den här raden - ett gratishushåll med fem
+        # personer fortsätter dela vecka, lista och skafferi; det är den
+        # sjätte som kostar.
+        invite = self.store.create_invite(household_id, user_id,
+                                          member_cap=self._member_cap(household_id))
         household = self.store.household_for(household_id, user_id)
         name = self._actor_name(household_id, user_id, email) or "Någon"
         # Färdig text att dela i SMS/WhatsApp - användaren ska inte behöva
@@ -223,7 +277,11 @@ class HouseholdRouter:
             return 410, {"error": str(error), "code": "INVITE_INVALID"}
 
     def _join(self, user_id, email, payload):
-        household = self.store.accept_invite(payload.get("token"), user_id)
+        # Andra halvan av samma grind. En länk som skapades medan hushållet
+        # var Premium får inte fylla på ett hushåll som hunnit falla till
+        # Free - inbjudan är en öppen dörr i 72 timmar, inte ett löfte.
+        household = self.store.accept_invite(payload.get("token"), user_id,
+                                             cap_for=self._member_cap)
         household_id = household["id"]
         name = payload.get("displayName") or _local_part(email)
         self.store.set_profile(household_id, user_id, display_name=name)
