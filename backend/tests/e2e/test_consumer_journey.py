@@ -944,6 +944,94 @@ class BrowserJourney(unittest.TestCase):
         expect(page.locator("#planModal")).to_be_visible()
         expect(page.locator("[data-plan-paywall]").first).to_be_visible()
 
+    def test_onboardingen_gar_att_stanga_med_tangentbord(self):
+        """G6: onboardingmodalen gick inte att stänga med tangentbord ALLS.
+
+        Det var det FÖRSTA en ny användare mötte: ingen Escape, ingen
+        fokusflytt, och tab-ordningen fortsatte rakt ner i appen bakom. Den
+        som inte kan använda pekskärm hade ingen väg vidare.
+        """
+        page = self.page
+        page.goto(self.app())
+        expect(page.locator("#onboardingModal")).to_be_visible()
+
+        # Fokus flyttas in i lagret, och appen bakom stängs av.
+        self.assertTrue(page.evaluate(
+            "() => document.getElementById('onboardingModal').contains(document.activeElement)"),
+            "fokus flyttades aldrig in i onboardingen")
+        self.assertTrue(page.evaluate(
+            "() => document.querySelector('.phone-shell').hasAttribute('inert')"),
+            "appen bakom onboardingen var fortfarande tabbbar")
+
+        page.keyboard.press("Escape")
+        expect(page.locator("#onboardingModal")).to_be_hidden()
+        self.assertFalse(page.evaluate(
+            "() => document.querySelector('.phone-shell').hasAttribute('inert')"),
+            "inert låg kvar på appen efter att onboardingen stängts")
+
+        # Escape stänger på samma villkor som "Hoppa över, jag ställer in
+        # senare" - annars hade modalen smugit tillbaka vid nästa rendering
+        # och Escape bara varit en paus.
+        läge = self.wait_for_state(lambda s: s.get("onboardingComplete"), what="onboarding avklarad")
+        self.assertTrue(läge["onboardingComplete"])
+
+    def test_varje_modal_stangs_med_escape_och_lamnar_tillbaka_fokus(self):
+        """G6:s acceptanskriterium, prövat på varje modal i appen.
+
+        app.js hade EN Escape-lyssnare (veckoarket) och EN skrollspärr (samma
+        ark). Plan-, byt-, konto-, skafferi- och laga-modalerna hade ingen
+        fokusflytt vid öppning, ingen fokusfälla, ingen Escape - och
+        tab-ordningen fortsatte rakt ner i sidan bakom arket.
+
+        Fyra påståenden per modal: fokus flyttas IN, appen bakom blir inert,
+        Escape stänger, och fokus kommer tillbaka till knappen som öppnade.
+        Det sista är det som gör tangentbordsnavigering användbar: utan det
+        landar fokus på <body> och nästa Tab börjar om från sidans topp.
+        """
+        page = self.page
+        page.goto(self.app())
+        self.complete_onboarding()
+        # Priserna klara först: veckokortet ritas om vid varje prissvar, och
+        # en knapp som byts ut medan arket är öppet finns inte kvar att ge
+        # fokus tillbaka till. Det är en väntan på ett lugnt läge, inte en
+        # höjd timeout.
+        self.wait_for_store_cards()
+        # Dagfliken följer veckodagen, och en Free-vecka har fyra middagar -
+        # öppnas resan en fredag står dagskortet på en tom dag och har ingen
+        # "Byt"-knapp alls. Måndagen har alltid veckans första rätt.
+        page.click('#weekDayTabs [data-week-day="0"]')
+        expect(page.locator("#weekTodayCard [data-week-swap]")).to_be_visible()
+
+        fall = [
+            ("week", "#weekPlanUpsell", "#planModal"),
+            ("week", "#weekTodayCard [data-week-swap]", "#swapModal"),
+            ("home", "#weekSheetOpen", "#weekSheet"),
+            ("home", "#feedbackBtn", "#feedbackSheet"),
+            ("home", "#profileBtn", "#accountModal"),
+            ("pantry", "#addPantryBtn", "#pantryModal"),
+            ("pantry", "#cookFromPantryBtn", "#cookModal"),
+        ]
+        for vy, öppnare, modal in fall:
+            with self.step(f"{modal} stängs med Escape"):
+                page.click(f'.bottom-nav-item[data-view="{vy}"]')
+                page.click(öppnare)
+                expect(page.locator(modal)).to_be_visible()
+                self.assertTrue(page.evaluate(
+                    "sel => document.querySelector(sel).contains(document.activeElement)", modal),
+                    f"{modal}: fokus flyttades aldrig in i modalen")
+                self.assertTrue(page.evaluate(
+                    "() => document.querySelector('.phone-shell').hasAttribute('inert')"),
+                    f"{modal}: appen bakom var fortfarande tabbbar")
+
+                page.keyboard.press("Escape")
+                expect(page.locator(modal)).to_be_hidden()
+                self.assertTrue(page.evaluate(
+                    "sel => document.activeElement === document.querySelector(sel)", öppnare),
+                    f"{modal}: fokus kom inte tillbaka till {öppnare}")
+                self.assertFalse(page.evaluate(
+                    "() => document.querySelector('.phone-shell').hasAttribute('inert')"),
+                    f"{modal}: inert låg kvar på appen efter stängning")
+
     def test_handla_borjar_med_listan_och_erbjuder_hushallet(self):
         """G13: i butik, med varorna framför sig, ska listan vara det första.
 
