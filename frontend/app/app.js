@@ -43,7 +43,7 @@ import { takeUrlTokens } from "./src/services/url-tokens.js";
 import { branchChoiceKey, canPlanWeek, chooseBranch } from "./src/services/branch-choice.js";
 import { createSeededRandom, newSeed } from "./src/services/seeded-random.js";
 import { debounce } from "./src/services/debounce.js";
-import { closeOnboarding, initAccountView, isAwaitingPremium, openOnboarding, openPaywall, openPremiumPitch, renderAccount, renderHousehold, renderNotificationPrefs, renderWeekPlanUpsell, setAwaitingPremium, wireHouseholdUi } from "./src/views/account.js";
+import { closeOnboarding, initAccountView, isAwaitingPremium, openOnboarding, openPaywall, openPremiumPitch, renderAccount, renderHousehold, renderNotificationPrefs, renderPostcodePrompt, renderWeekPlanUpsell, setAwaitingPremium, wireHouseholdUi } from "./src/views/account.js";
 import { delaMånaden, initSparatView, renderSparat, sparatModell } from "./src/views/sparat.js";
 
 // FÖRST AV ALLT, före en enda rad annan startkod: engångstoken ur
@@ -2733,6 +2733,9 @@ const RENDER_STEPS = [
   // först när det FINNS en vecka att jämföra med - alltså samma bana som
   // veckan själv.
   ["basket", renderWeekPlanUpsell],
+  // G9-raden i Handla ("Ange postnummer för priserna i din butik") hänger på
+  // samma sak som priserna gör: postnumret. Samma bana som listan.
+  ["basket", renderPostcodePrompt],
   ["basket", updateSummary],
   // renderStats hör till kassen, inte till kontot: clearPriceSnapshots()
   // nollar state.dbComparison vid varje avbockning, och sparkortet läser
@@ -2877,7 +2880,28 @@ $("postcodeInput").addEventListener("input", e => {
     saveState(); refreshAfterSettingsChange();
   }).catch(() => { /* geokodning misslyckades - postnumret används ändå för exakt/ungefärlig matchning som innan */ });
 });
-$("locateBtn").addEventListener("click", () => { if (!navigator.geolocation) return; $("locateBtn").textContent = "Hämtar..."; navigator.geolocation.getCurrentPosition(({ coords }) => { state.position = { lat: coords.latitude, lon: coords.longitude }; $("locateBtn").textContent = "Hittad"; refreshAfterSettingsChange(); }, () => { $("locateBtn").textContent = "Försök igen"; }); });
+// G9: samma tystnad som i onboardingen, i veckoarket. Saknade webbläsaren
+// geolocation hände INGENTING alls - knappen såg trasig ut. Och "Försök
+// igen" på en nekad platsdelning är fel råd: ett nytt försök ger samma nej.
+// Nu säger raden under fältet vad som hände och vad man gör i stället.
+$("locateBtn").addEventListener("click", () => {
+  const knapp = $("locateBtn");
+  const rad = $("locationHint");
+  if (!navigator.geolocation) {
+    rad.textContent = "Den här webbläsaren kan inte dela din plats. Skriv postnumret i stället.";
+    return;
+  }
+  knapp.textContent = "Hämtar…";
+  navigator.geolocation.getCurrentPosition(({ coords }) => {
+    state.position = { lat: coords.latitude, lon: coords.longitude };
+    knapp.textContent = "Hittad";
+    rad.textContent = "Vi jämför butiker nära dig.";
+    refreshAfterSettingsChange();
+  }, () => {
+    knapp.textContent = "Hitta mig";
+    rad.textContent = "Vi fick inte din plats. Skriv postnumret i stället - utan det visar vi riksgemensamma priser.";
+  });
+});
 $("storeInput").addEventListener("change", e => {
   // Via switchWeekStore, inte bara state.butik: livepriserna är nyckelsatta
   // på varunamn UTAN kedja och måste rensas vid varje byte.
@@ -4071,7 +4095,7 @@ initAccountView({
   // veckan skickad även om exakt samma lista redan gått iväg en gång.
   resetWeekPushKey: () => { lastWeekPushKey = null; },
   openAccountModal, openPlanComparison, chooseMenu, setView,
-  syncNearbyBranches, clearLocationDerivedState, storeOptionsMarkup,
+  syncNearbyBranches, clearLocationDerivedState, storeOptionsMarkup, openWeekSheet,
   budgetScopeText, maxDinners, maxMeals: () => MAX_MEALS,
   isNativeApp, openExternal, plural, render, trackEvent,
 });

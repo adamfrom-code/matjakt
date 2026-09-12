@@ -1001,6 +1001,80 @@ class BrowserJourney(unittest.TestCase):
         expect(page.locator("[data-choose-plan]").first).to_be_visible()
         self.assertEqual(page.locator("[data-plan-paywall]").count(), 0)
 
+    def test_postnumret_ar_inte_en_grind_fore_forsta_veckan(self):
+        """G9: postnummer är ett frivilligt steg, inte en grind.
+
+        `/^\\d{5}$/` krävdes för att passera steg 4 av 4. Ett
+        integritetsmotstånd precis före det ögonblick då appen för första
+        gången levererar något: den som inte ville lämna sin adress kom
+        aldrig till en enda måltid.
+
+        FALLBACK_BRANCH bär redan hela vägen utan postnummer - riksgemensamma
+        Willys-priser. Testet går igenom onboardingen UTAN att röra
+        postnummerfältet och kräver en färdig vecka på andra sidan.
+        """
+        page = self.page
+        page.goto(self.app())
+        modal = page.locator("#onboardingModal")
+        expect(modal).to_be_visible()
+        page.click("#onboardingNext")           # hushåll
+        page.click("#onboardingNext")           # budget
+        page.click("#onboardingNext")           # kost
+        expect(page.locator("#onboardingTitle")).to_have_text("Var handlar ni?")
+
+        # Steget säger att fältet är frivilligt och vad man avstår.
+        expect(page.locator("#obPostcodeHint")).to_contain_text("riksgemensamma priser")
+        expect(page.locator("#obSkipPostcode")).to_be_visible()
+
+        # Ingenting skrivs i fältet. Knappen som lovar en vecka ska ge en.
+        page.click("#onboardingNext")
+        expect(modal).to_be_hidden()
+        state = self.wait_for_state(lambda s: s.get("weekPlan"), what="veckan utan postnummer")
+        self.assertTrue(len(state["weekPlan"]) >= 1, state["weekPlan"])
+        self.assertEqual(state.get("postnummer") or "", "")
+        expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
+
+        # ...och frågan ställs i stället där svaret gör skillnad: i Handla.
+        page.click('.bottom-nav-item[data-view="basket"]')
+        rad = page.locator("#basketPostcodePrompt")
+        expect(rad).to_be_visible()
+        expect(rad).to_contain_text("riksgemensamma")
+        rad.click()
+        expect(page.locator("#weekSheet")).to_be_visible()
+        page.fill("#postcodeInput", fixture.POSTCODE)
+        page.click("#weekSheetDone")
+        # Ifyllt postnummer -> raden är borta, för alltid.
+        page.click('.bottom-nav-item[data-view="basket"]')
+        expect(rad).to_be_hidden()
+
+    def test_postnumret_som_hoppas_over_ger_samma_vecka(self):
+        """G9, andra halvan: "Hoppa över" är en riktig väg, inte en text.
+
+        Knappen bredvid fältet säger vad man avstår - riksgemensamma priser
+        i stället för butikerna nära dig - och ska ta exakt samma väg ut som
+        "Skapa min vecka". Annars vore den ett löfte till.
+        """
+        page = self.page
+        page.goto(self.app())
+        expect(page.locator("#onboardingModal")).to_be_visible()
+        for _ in range(3):
+            page.click("#onboardingNext")
+        expect(page.locator("#onboardingTitle")).to_have_text("Var handlar ni?")
+
+        # Ett halvskrivet postnummer är något annat än inget: det ska inte
+        # slängas tyst. En rad säger vad som saknas...
+        page.fill("#obPostcode", "802")
+        page.click("#onboardingNext")
+        expect(page.locator("#onboardingModal")).to_be_visible()
+        expect(page.locator("#obPostcodeError")).to_contain_text("fem siffror")
+
+        # ...och "Hoppa över" går igenom ändå, med en färdig vecka.
+        page.click("#obSkipPostcode")
+        expect(page.locator("#onboardingModal")).to_be_hidden()
+        state = self.wait_for_state(lambda s: s.get("weekPlan"), what="veckan efter hoppa över")
+        self.assertTrue(len(state["weekPlan"]) >= 1, state["weekPlan"])
+        expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
+
     def test_skapa_min_vecka_skapar_en_vecka_inte_ett_formular(self):
         """G7: en knapp som lovar ett resultat ska leverera resultatet.
 

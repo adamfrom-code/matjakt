@@ -48,6 +48,7 @@ let app = {
   setView: () => {},
   syncNearbyBranches: () => {},
   clearLocationDerivedState: () => {},
+  openWeekSheet: () => {},
   storeOptionsMarkup: () => "",
   budgetScopeText: () => "",
   maxDinners: () => 4,
@@ -64,11 +65,18 @@ export function initAccountView(overrides = {}) {
   wireOnboardingButtons();
   wireWeekPlanUpsell();
   wireHouseholdInvitePrompt();
+  wirePostcodePrompt();
   // Hushållsraden hör inte till en inloggning: den som aldrig skapat ett
   // konto är precis den som ska se den. Den ritas därför redan här, inte
   // först när refreshUser() hunnit svara.
   renderHouseholdInvitePrompt();
+  renderPostcodePrompt();
 }
+
+// Postnummerraden ritas om varje gång skärmarna ritas om (render() i app.js),
+// så den försvinner i samma stund som postnumret fyllts i - oavsett var det
+// fylldes i.
+export { renderPostcodePrompt };
 
 const $ = id => app.$(id);
 
@@ -140,6 +148,30 @@ function renderHouseholdInvitePrompt() {
   const row = $("basketHouseholdInvite");
   if (!row) return;
   row.hidden = app.householdActive();
+}
+
+// G9: FRÅGAN OM POSTNUMMER FLYTTADE HIT.
+//
+// Den stod som steg 4 av 4 i onboardingen och krävde fem siffror för att
+// släppa igenom - ett integritetsmotstånd precis före det ögonblick då appen
+// för första gången levererar något. Här är den i stället ett erbjudande med
+// ett tydligt värde: priserna du ser blir din butiks i stället för
+// riksgemensamma. Raden syns bara när postnumret saknas.
+function renderPostcodePrompt() {
+  const row = $("basketPostcodePrompt");
+  if (!row) return;
+  row.hidden = /^\d{5}$/.test(state.postnummer || "");
+}
+
+function wirePostcodePrompt() {
+  const row = $("basketPostcodePrompt");
+  if (!row || row.dataset.wired) return;
+  row.dataset.wired = "1";
+  row.addEventListener("click", () => {
+    app.trackEvent("postnummer_fran_handla");
+    app.openWeekSheet();
+    $("postcodeInput")?.focus();
+  });
 }
 
 function wireHouseholdInvitePrompt() {
@@ -342,8 +374,19 @@ function renderObBudget() {
 function renderObKost() {
   return `<label for="obKosttyp">Kosttyp</label><select id="obKosttyp"><option value="" ${!state.kost.kosttyp ? "selected" : ""}>Vanlig, allt</option><option value="vegetariskt" ${state.kost.kosttyp === "vegetariskt" ? "selected" : ""}>Vegetariskt</option><option value="veganskt" ${state.kost.kosttyp === "veganskt" ? "selected" : ""}>Veganskt</option></select><label>Allergier att undvika</label><div class="protein-source-chips" id="obAllergenChips">${ALLERGENS.map(a => `<label><input type="checkbox" value="${a}" ${state.kost.avoidAllergens.has(a) ? "checked" : ""}> ${a[0].toUpperCase() + a.slice(1)}</label>`).join("")}</div>`;
 }
+// G9: POSTNUMMER ÄR ETT FRIVILLIGT STEG, INTE EN GRIND.
+//
+// `/^\d{5}$/` krävdes för att passera steg 4 av 4 - alltså stod ett
+// integritetsmotstånd precis före det ögonblick då appen för första gången
+// levererar något. Den som inte ville lämna sin adress, eller inte kunde sin
+// postnummerrad utantill, kom aldrig till en enda måltid.
+//
+// FALLBACK_BRANCH (app.js) bär redan hela vägen utan postnummer:
+// riksgemensamma Willys-priser. Det är ett sämre svar än butiken runt hörnet,
+// men det är ett svar - och den skillnaden står nu i klartext på skärmen i
+// stället för bakom en spärr.
 function renderObButik() {
-  return `<label for="obPostcode">Postnummer</label><div class="location-row"><input id="obPostcode" value="${escapeHtml(state.postnummer)}" inputmode="numeric" maxlength="5"><button type="button" id="obLocateBtn">Hitta mig</button></div><p class="ob-error" id="obPostcodeError"></p><label for="obStore">Favoritbutik</label><select id="obStore">${app.storeOptionsMarkup(state.butik, "Välj åt mig")}</select>`;
+  return `<label for="obPostcode">Postnummer (frivilligt)</label><div class="location-row"><input id="obPostcode" value="${escapeHtml(state.postnummer)}" inputmode="numeric" maxlength="5"><button type="button" id="obLocateBtn">Hitta mig</button></div><p class="location-hint" id="obPostcodeHint">Med postnummer jämför vi butikerna nära dig. Utan det visar vi riksgemensamma priser.</p><p class="ob-error" id="obPostcodeError"></p><button type="button" class="account-link-btn" id="obSkipPostcode">Hoppa över &ndash; vi visar riksgemensamma priser tills vidare</button><label for="obStore">Favoritbutik</label><select id="obStore">${app.storeOptionsMarkup(state.butik, "Välj åt mig")}</select>`;
 }
 function wireOnboardingStep() {
   document.querySelectorAll("[data-ob-adj]").forEach(button => button.addEventListener("click", () => {
@@ -367,7 +410,31 @@ function wireOnboardingStep() {
     app.syncNearbyBranches();
   });
   $("obStore")?.addEventListener("change", e => { state.butik = e.target.value; saveState(); });
-  $("obLocateBtn")?.addEventListener("click", () => { if (!navigator.geolocation) return; navigator.geolocation.getCurrentPosition(({ coords }) => { state.position = { lat: coords.latitude, lon: coords.longitude }; saveState(); }, () => {}); });
+  // G9: "Hitta mig" svalde ALLA fel tyst. Ingen geolocation i webbläsaren:
+  // knappen gjorde ingenting. Nekad platsdelning: knappen gjorde ingenting.
+  // En knapp som inte svarar är en återvändsgränd, och den låg mitt i det
+  // enda steg som förut var en grind.
+  $("obLocateBtn")?.addEventListener("click", () => {
+    const knapp = $("obLocateBtn");
+    const fel = $("obPostcodeError");
+    if (!navigator.geolocation) {
+      fel.textContent = "Den här webbläsaren kan inte dela din plats. Skriv postnumret i stället, eller hoppa över.";
+      return;
+    }
+    fel.textContent = "";
+    knapp.textContent = "Hämtar…";
+    navigator.geolocation.getCurrentPosition(({ coords }) => {
+      state.position = { lat: coords.latitude, lon: coords.longitude };
+      saveState();
+      knapp.textContent = "Hittad";
+    }, () => {
+      knapp.textContent = "Hitta mig";
+      fel.textContent = "Vi fick inte din plats. Skriv postnumret i stället, eller hoppa över.";
+    });
+  });
+  // Steget hoppas över, veckan byggs ändå. Samma väg som knappen "Skapa min
+  // vecka" tar - skillnaden är bara att den här säger vad man avstår.
+  $("obSkipPostcode")?.addEventListener("click", () => finishOnboarding());
 }
 function renderOnboardingStep() {
   const current = ONBOARDING_STEPS[onboardingStep];
@@ -388,11 +455,39 @@ function renderOnboardingStep() {
 // rendering, och att smyga tillbaka den vore att låsa in henne igen.
 export function openOnboarding() {
   onboardingStep = 0;
+  postcodeNoticeShown = false;
   renderOnboardingStep();
   openModal($("onboardingModal"), { onClose: skipOnboarding });
 }
 export function closeOnboarding() { closeModal($("onboardingModal")); }
 function skipOnboarding() { state.onboardingComplete = true; saveState(); closeOnboarding(); }
+
+// En gång per onboarding: raden om det halvskrivna postnumret ska påminna,
+// inte spärra. Andra trycket går igenom oavsett.
+let postcodeNoticeShown = false;
+
+// Onboardingen är klar och veckan byggs. EN väg ut, oavsett om man fyllde i
+// postnumret, hittade sig själv eller hoppade över steget.
+//
+// G8: knappen heter "Skapa min vecka" och skapar nu en vecka. Den öppnade
+// planjämförelsen, där sju av åtta veckotyper är låsta för en gratisanvändare
+// - det första en ny användare såg av produkten var alltså en hänglåsvägg,
+// innan hon sett en enda måltid eller en enda prislapp. chooseMenu() bygger
+// veckan av exakt de svar hon nyss gav och tar henne till Vecka-vyn.
+// Erbjudandet om en annan veckotyp står kvar som en rad OVANFÖR den färdiga
+// veckan (renderWeekPlanUpsell): sälj efter leverans, inte före.
+//
+// G9: syncNearbyBranches() struntar självt i ett postnummer som inte är fem
+// siffror, så utan postnummer står state.branches kvar tomt och
+// nearbyBranches() (app.js) svarar FALLBACK_BRANCH - riksgemensamma priser,
+// precis det raden vid fältet lovade.
+function finishOnboarding() {
+  state.onboardingComplete = true;
+  saveState();
+  closeOnboarding();
+  app.syncNearbyBranches();
+  app.chooseMenu();
+}
 
 function wireOnboardingButtons() {
   const next = $("onboardingNext");
@@ -400,20 +495,20 @@ function wireOnboardingButtons() {
   next.dataset.wired = "1";
   next.addEventListener("click", () => {
     if (onboardingStep === ONBOARDING_STEPS.length - 1) {
-      if (!/^\d{5}$/.test(state.postnummer)) { $("obPostcodeError").textContent = "Ange ett giltigt postnummer (5 siffror)."; return; }
-      state.onboardingComplete = true; saveState(); closeOnboarding(); app.syncNearbyBranches();
-      // G8: KNAPPEN HETER "SKAPA MIN VECKA" OCH SKAPAR NU EN VECKA.
+      // G9: ETT HALVSKRIVET POSTNUMMER ÄR NÅGOT ANNAT ÄN INGET POSTNUMMER.
       //
-      // Den öppnade planjämförelsen, där sju av åtta veckotyper är låsta för
-      // en gratisanvändare. Det första en ny användare såg av produkten var
-      // alltså en hänglåsvägg - innan hon sett en enda måltid eller en enda
-      // prislapp, och innan appen bevisat att den kan något alls.
-      //
-      // chooseMenu() bygger veckan av exakt de svar hon nyss gav och tar
-      // henne till Vecka-vyn. Erbjudandet om en annan veckotyp står kvar,
-      // men som en rad OVANFÖR den färdiga veckan (renderWeekPlanUpsell):
-      // sälj efter leverans, inte före.
-      app.chooseMenu();
+      // Grinden är borta: tomt fält går igenom och ger riksgemensamma priser.
+      // Men "123" är inte ett val att avstå - det är ett avbrutet försök, och
+      // att tyst behandla det som "inget postnummer" vore att slänga det hon
+      // skrev. En rad säger vad som saknas; nästa tryck går igenom, och
+      // "Hoppa över" bredvid fältet går igenom direkt.
+      const halvskrivet = state.postnummer && !/^\d{5}$/.test(state.postnummer);
+      if (halvskrivet && !postcodeNoticeShown) {
+        postcodeNoticeShown = true;
+        $("obPostcodeError").textContent = "Postnumret har fem siffror. Fyll i det, eller hoppa över - vi visar riksgemensamma priser tills vidare.";
+        return;
+      }
+      finishOnboarding();
       return;
     }
     onboardingStep++; renderOnboardingStep();
