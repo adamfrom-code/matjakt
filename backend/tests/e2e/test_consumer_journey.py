@@ -778,8 +778,24 @@ class BrowserJourney(unittest.TestCase):
             page.click("#storeCards .store-card.locked >> nth=0")
             paywall = page.locator("#paywallModal")
             expect(paywall).to_be_visible()
-            expect(paywall.locator('[data-paywall-plan="yearly"]')).to_contain_text("399 kr/år")
-            expect(paywall.locator('[data-paywall-plan="monthly"]')).to_contain_text("59 kr/mån")
+            # L7: beloppet och villkoret står inte längre hopskrivna i en
+            # sträng ("399 kr/år"). Beloppet ritas av L0:s priskomponent och
+            # villkoret är en egen rad, så kravet är skärpt i stället för
+            # sänkt: TALET ska komma ur komponenten, och perioden ska stå
+            # utskriven i ord i samma knapp.
+            årsknapp = paywall.locator('[data-paywall-plan="yearly"]')
+            månadsknapp = paywall.locator('[data-paywall-plan="monthly"]')
+            expect(årsknapp.locator("span.pris")).to_have_text("399 kr")
+            expect(årsknapp).to_contain_text("per år")
+            expect(månadsknapp.locator("span.pris")).to_have_text("59 kr")
+            expect(månadsknapp).to_contain_text("per månad")
+            # Prisinformationslagen: det pris konsumenten visas ska vara det
+            # hon betalar, och att det är inklusive moms ska stå där priset står.
+            expect(paywall).to_contain_text("inklusive moms")
+            # §2.3/§2.4: Premium märks med ORDET i spärrade kapitäler. Ordet
+            # står som vanlig text i källan och versaliseras i CSS, så
+            # skärmläsaren läser "Premium" och inte "P-R-E-M-I-U-M".
+            expect(paywall.locator(".prem-kap")).to_have_text("Matjakt Premium")
             page.click("#paywallModal .paywall-continue")
             expect(paywall).to_be_hidden()
 
@@ -1818,7 +1834,12 @@ class BrowserJourney(unittest.TestCase):
             }, "whsec_test")
             self.assertEqual(status, 200)
             expect(page.locator("#accountPremiumStatus")).to_have_text("✓ Premium aktiverat", timeout=30_000)
-            expect(page.locator("#subscriptionPanelLine")).to_contain_text("399 kr/år")
+            # L7: raden skrev förut "399 kr/år" med samma sträng som reserv när
+            # /api/entitlements inte svarat. Reservsiffran är borta - vet vi
+            # inte beloppet står det "din plan" - och etiketten stavas ut, så
+            # meningen går att läsa upp: "Din prenumeration (399 kr per år)
+            # förnyas automatiskt ...".
+            expect(page.locator("#subscriptionPanelLine")).to_contain_text("399 kr per år")
             expect(page.locator("#premiumPitch")).to_be_hidden()
             # Veckan och onboardingen gjordes sekunderna före checkout: den
             # väntande synken måste ha nått servern innan sidan lämnades,

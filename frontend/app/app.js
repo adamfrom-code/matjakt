@@ -32,6 +32,9 @@ import { dinnerCandidates } from "./src/data/meal-type.js";
 import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
 import { weekPlanDays } from "./src/views/week.js";
 import { initSettingsView, renderSettings } from "./src/views/settings.js";
+// L7: beloppen och planvalet ritas av premiumskarmen.js, som lämnar varje
+// siffra till L0:s prisMarkup(). Ingen vy formaterar sitt eget pris.
+import { ritaPlanval, synkaValet } from "./src/views/premiumskarmen.js";
 import { adjustInventory, fetchHousehold, fetchNotifications, forgetPushSubscription, joinHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, replaceWeekItems, savePushSubscription, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, pantryEntriesFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor } from "./src/services/categories.js";
@@ -3103,18 +3106,10 @@ document.querySelector(".wordmark").addEventListener("click", event => {
 // Flikarna i kontoarket var hårdkodad HTML och kunde tyst börja ljuga.
 function renderPriceTabs() {
   const pricing = premiumPricing();
-  const month = document.querySelector('[data-price-tab="month"]');
-  const year = document.querySelector('[data-price-tab="year"]');
-  // Beloppet i <strong>, villkoret i <small> - priceText bär redan "/mån"
-  // och skulle annars läsas som "59 kr/mån /mån".
-  const perMonth = pricing.monthly?.pricePerMonth;
-  const perYear = pricing.yearly?.pricePerYear;
-  if (month) month.innerHTML = `<span>Månad</span><strong>${escapeHtml(perMonth ? `${perMonth} kr` : (pricing.monthly?.priceText || ""))}</strong><small>/mån</small>`;
-  if (year) {
-    const savings = perMonth && perYear ? `spara ${perMonth * 12 - perYear} kr` : "";
-    const extra = ["/år", pricing.yearly?.perMonthText, savings].filter(Boolean).join(" · ");
-    year.innerHTML = `<span>År · Bäst värde</span><strong>${escapeHtml(perYear ? `${perYear} kr` : (pricing.yearly?.priceText || ""))}</strong><small>${escapeHtml(extra)}</small>`;
-  }
+  // L7: markupen bor i src/views/premiumskarmen.js och beloppen går genom
+  // L0:s prisMarkup(). Den här filen skrev dem förut som `${perMonth} kr` i en
+  // egen mall - alltså en andra prisformatering vid sidan av appens.
+  ritaPlanval(pricing);
   // Ångerrättsrutan i kontoarket ritas härifrån av samma skäl som priserna:
   // texten bor i backend, och hårdkodad HTML kan tyst börja ljuga om vad
   // kunden godkände. Bocken nollställs inte vid omritning - det är ett
@@ -3949,7 +3944,7 @@ function openExternal(rawUrl) {
   location.href = url;
 }
 let selectedPlan = "monthly";
-document.querySelectorAll("[data-price-tab]").forEach(tab => tab.addEventListener("click", () => { selectedPlan = tab.dataset.plan; document.querySelectorAll("[data-price-tab]").forEach(t => t.classList.toggle("active", t === tab)); }));
+document.querySelectorAll("[data-price-tab]").forEach(tab => tab.addEventListener("click", () => { selectedPlan = tab.dataset.plan; document.querySelectorAll("[data-price-tab]").forEach(t => t.classList.toggle("active", t === tab)); synkaValet(); }));
 $("subscribeBtn").addEventListener("click", async () => {
   $("checkoutError").textContent = "";
   if (!state.authToken) { $("checkoutError").textContent = "Skapa ett konto eller logga in först."; return; }
