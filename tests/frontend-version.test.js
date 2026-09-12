@@ -1,4 +1,5 @@
 // E15 (2): versionsbumpen var trippelmanuell.
+// L9: talet står inte i källan längre - bygget stämplar in det.
 //
 // `CACHE_NAME` i sw.js och `?v=` två gånger i index.html - tre handredigerade
 // tal som måste vara lika. Glider de isär kan en telefon köra gammal app.js
@@ -7,72 +8,70 @@
 // Pages gammal app.js under en URL telefonen redan sett. Ett tal som kan gå
 // ner är värre än tre tal som kan gå isär.
 //
-// Två lås här nere, ett per jobb i scripts/frontend_version.mjs:
-//   - generatorn ger ett tal som är strikt högre än allt main någonsin sett
-//   - byggsteget stämplar alla tre ställena med ETT värde, härlett ur bygget
+// E15 löste riktningen (ett tal som aldrig går ner) men lämnade raden kvar i
+// källan, där åtta parallella grenar konfliktade på den. L9 tog bort talet:
+// källan bär en platshållare, bygget stämplar in eran plus en digest över
+// varje fil under app/ i utdatan. Konfliktfriheten prövas i
+// tests/frontend-version-konflikt.test.js; här prövas att stämpeln gör sitt
+// jobb.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  bumpSources, cacheStamp, frontendRelease, mainReleases, nextRelease,
-  planBump, releasesIn, stampIndexHtml, stampServiceWorker, stampsIn,
+  PLACEHOLDER, RELEASE, cacheStamp, collectFiles, contentDigest, mainReleases,
+  nextRelease, placeholdersIn, releasesIn, sharedStamp, stampBuild, stampIndexHtml,
+  stampServiceWorker, stampsIn,
 } from "../scripts/frontend_version.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const swSource = readFileSync(join(ROOT, "frontend/app/sw.js"), "utf8");
 const htmlSource = readFileSync(join(ROOT, "frontend/app/index.html"), "utf8");
 
-// ---- källorna -------------------------------------------------------------
+// ---- källorna: ingen version att konflikta om -----------------------------
 
-test("E15: de tre ställena i källan säger samma sak", () => {
-  const release = frontendRelease(swSource, htmlSource);
-  assert.ok(Number.isInteger(release) && release > 0, `orimligt releasenummer: ${release}`);
+test("L9: de tre ställena i källan bär platshållaren, inte ett tal", () => {
+  assert.deepEqual(stampsIn(swSource, htmlSource), {
+    "sw.js CACHE_NAME": PLACEHOLDER,
+    "index.html app.js?v": PLACEHOLDER,
+    "index.html styles.css?v": PLACEHOLDER,
+  });
+});
+
+test("L9: ett tal som smugit tillbaka in i källan syns", () => {
+  // Det här är vad grinden (backend/scripts/check_frontend_version.py) letar
+  // efter. En rad med ett tal i är en rad varje frontendgren måste ändra.
+  const medTal = stampServiceWorker(swSource, "107");
+  assert.equal(stampsIn(medTal, htmlSource)["sw.js CACHE_NAME"], "107");
 });
 
 test("E15: en skev version är ett fel att bygga vidare på, inte ett val", () => {
-  const skevt = htmlSource.replace(/app\.js\?v=\d+/, "app.js?v=1");
-  assert.throws(() => frontendRelease(swSource, skevt), /VERSIONSSKEVHET/);
-  assert.throws(() => frontendRelease("// ingen cache här", htmlSource), /hittade ingen frontend-version/);
+  const skevt = stampIndexHtml(htmlSource, "1");
+  assert.throws(() => sharedStamp(swSource, skevt), /VERSIONSSKEVHET/);
+  assert.throws(() => sharedStamp("// ingen cache här", htmlSource), /hittade ingen frontend-version/);
+  assert.equal(sharedStamp(swSource, htmlSource), PLACEHOLDER);
 });
 
-test("E15: källorna behåller sitt rena tal - utvecklingsservern och K5-grinden läser dem", () => {
-  // backend/scripts/check_frontend_version.py matchar på (\d+). Stämplas
-  // källorna med hashen slutar både den grinden och `--bump` att fungera,
-  // och de sju grenar som bumpar för hand skulle stå utan grind.
-  assert.match(swSource, /CACHE_NAME = "matjakt-shell-v\d+"/);
-  assert.match(htmlSource, /app\.js\?v=\d+"/);
-  assert.match(htmlSource, /styles\.css\?v=\d+"/);
-});
+// ---- eran: en etikett som aldrig går bakåt --------------------------------
 
-// ---- generatorn: ett tal som aldrig går ner -------------------------------
-
-test("E15: nästa release är strikt högre än ALLT som setts", () => {
+test("E15: nästa era är strikt högre än ALLT som setts", () => {
   assert.equal(nextRelease([48, 52, 49]), 53);
   assert.equal(nextRelease([52]), 53);
   assert.equal(nextRelease([]), 1, "ett tomt repo börjar på 1, inte på NaN");
-});
-
-test("E15: ett main som gått NER ger ändå ett tal högre än toppen det haft", () => {
-  // Två grenar mergas i fel ordning: main går 52 -> 49. Toppen säger 49, och
+  // Två grenar mergade i fel ordning: main gick 52 -> 49. Toppen säger 49, och
   // 50-52 har redan varit ute. Nästa måste bli 53, inte 50.
   assert.equal(nextRelease([40, 52, 49]), 53);
-});
-
-test("E15: den egna grenens tal räcker inte som utgångspunkt", () => {
-  // Grenen står på 48, main på 52. 49 hade sänkt versionen vid merge.
-  const gren = [48, 48, 48];
-  assert.equal(nextRelease(gren), 49, "utan main är det gamla svaret 49");
-  assert.equal(nextRelease([...gren, 52]), 53, "med main blir det 53");
 });
 
 test("E15: bara hela releasetal räknas, inte byggets stämplar", () => {
   assert.deepEqual(releasesIn('CACHE_NAME = "matjakt-shell-v53"'), [53]);
   assert.deepEqual(releasesIn('CACHE_NAME = "matjakt-shell-v53-a1b2c3d4e5"'), [],
-    "en stämplad kopia är ett bygge, inte en release någon kan ha bumpat till");
+    "en stämplad kopia är ett bygge, inte en era någon kan ha bumpat till");
+  assert.deepEqual(releasesIn(`CACHE_NAME = "matjakt-shell-v${PLACEHOLDER}"`), [],
+    "platshållaren är inget tal");
   assert.deepEqual(releasesIn('src="app.js?v=12" href="styles.css?v=12"'), [12, 12]);
 });
 
@@ -107,82 +106,29 @@ test("E15: generatorn läser hela main, inte bara toppen", () => {
   }
 });
 
-test("E15: en gren som ligger efter main får ändå ett tal högre än main", () => {
-  const repo = repoMedHistorik([50, 51, 52]);
-  try {
-    // Arbetskopian står på 48 - en gren som grenades av före de tre merges
-    // som tagit main till 52. Det gamla svaret var 49.
-    const plan = planBump({
-      cwd: repo,
-      sw: 'const CACHE_NAME = "matjakt-shell-v48";',
-      html: '<link href="styles.css?v=48"><script src="app.js?v=48"></script>',
-      run: (...args) => execFileSync("git", args, { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }),
-    });
-    assert.equal(plan.sawMain, true);
-    assert.equal(plan.next, 53, "talet måste vara strikt högre än main:s 52, inte grenens 48 + 1");
-  } finally {
-    rmSync(repo, { recursive: true, force: true });
-  }
-});
-
 test("E15: utan git stannar generatorn inte - den säger bara att den inte vet", () => {
   // CI checkar ut med djup 1 och har ingen origin/main. En generator som
   // kastar där blir en som ingen kör.
   const tomt = mkdtempSync(join(tmpdir(), "matjakt-ingen-git-"));
   try {
     assert.deepEqual(mainReleases({ cwd: tomt, refs: ["origin/main", "main"] }), []);
-    const plan = planBump({ cwd: tomt, sw: 'const CACHE_NAME = "matjakt-shell-v48";', html: '"app.js?v=48" "styles.css?v=48"' });
-    assert.equal(plan.sawMain, false, "och den säger rakt ut att main inte gick att läsa");
-    assert.equal(plan.next, 49);
   } finally {
     rmSync(tomt, { recursive: true, force: true });
   }
 });
 
-test("E15: bumpen skriver alla tre ställena och rör inget annat", () => {
-  const { sw, html } = bumpSources(swSource, htmlSource, 99);
-  assert.deepEqual(stampsIn(sw, html), {
-    "sw.js CACHE_NAME": "99", "index.html app.js?v": "99", "index.html styles.css?v": "99",
-  });
-  assert.equal(html.replace(/\?v=[^"']*/g, ""), htmlSource.replace(/\?v=[^"']*/g, ""));
-});
-
-// Den skarpa varianten: mot det RIKTIGA main, i det här repot. Går main inte
-// att läsa (grund klon - CI checkar ut med djup 1) finns inget att pröva, och
-// testet hoppas över i stället för att ljuga. Det syntetiska repot ovan är
-// det som körs överallt.
-//
-// Notera vad som INTE prövas här: att den här grenens egna tre tal redan är
-// högre än main:s. Det är K5:s grind (check_frontend_version.py
-// --require-bump), och den mäter mot rätt bas. Ett node-test som krävde det
-// hade blivit rött i sju arbetskopior som råkar ligga efter main, av skäl som
-// inte har med deras paket att göra.
-test("E15: generatorns tal är högre än det som ligger i main", t => {
+test("L9: eran ligger över allt main någonsin delat ut", t => {
+  // Efter L9 växer inte mängden tal i main längre - den är golvet under eran.
+  // Etiketten får inte gå bakåt under det som en gång faktiskt serverats.
+  // Går main inte att läsa (grund klon - CI checkar ut med djup 1) finns inget
+  // att pröva, och testet hoppas över i stället för att ljuga.
   const main = mainReleases();
   if (!main.length) return t.skip("ingen läsbar origin/main - grund klon");
-  const plan = planBump();
-  assert.ok(plan.next > Math.max(...main),
-    `nästa release ${plan.next} är inte högre än main:s högsta ${Math.max(...main)}`);
+  assert.ok(RELEASE >= Math.max(...main),
+    `eran ${RELEASE} ligger under main:s högsta ${Math.max(...main)} - en etikett som går bakåt ljuger`);
 });
 
-// ---- stämpeln -------------------------------------------------------------
-
-test("E15: ändrad kod ger ALLTID en ny stämpel", () => {
-  const app = "console.log('v1')";
-  const css = "body{color:#000}";
-  const före = cacheStamp(53, app, css);
-  assert.notEqual(cacheStamp(53, app + " ", css), före, "en ändrad app.js måste byta stämpel");
-  assert.notEqual(cacheStamp(53, app, css + " "), före, "en ändrad styles.css måste byta stämpel");
-  assert.notEqual(cacheStamp(54, app, css), före, "ett höjt releasenummer syns också");
-});
-
-test("E15: oförändrad kod ger samma stämpel - bygget är inte slumpartat", () => {
-  assert.equal(cacheStamp(53, "app", "css"), cacheStamp(53, "app", "css"));
-});
-
-test("E15: stämpeln bär releasenumret så en människa känner igen releasen", () => {
-  assert.match(cacheStamp(53, "app", "css"), /^53-[0-9a-f]{10}$/);
-});
+// ---- stämplingen ---------------------------------------------------------
 
 test("E15: stämplingen träffar alla tre ställena och bara dem", () => {
   const sw = stampServiceWorker(swSource, "53-abcdef0123");
@@ -197,37 +143,140 @@ test("E15: stämplingen träffar alla tre ställena och bara dem", () => {
   assert.equal(html.replace(/\?v=[^"']*/g, ""), htmlSource.replace(/\?v=[^"']*/g, ""));
 });
 
-// ---- byggsteget, på riktigt ----------------------------------------------
+const fil = (namn, text) => [namn, Buffer.from(text)];
+const litetBygge = () => [
+  fil("app.js", "console.log('v1')"),
+  fil("index.html", `<link href="styles.css?v=${PLACEHOLDER}"><script src="app.js?v=${PLACEHOLDER}">`),
+  fil("styles.css", "body{color:#000}"),
+  fil("sw.js", `const CACHE_NAME = "matjakt-shell-v${PLACEHOLDER}";`),
+  fil("data/recipes.json", "[]"),
+  fil("assets/recipes/chili.jpg", "JPEG-ish"),
+];
 
-function buildInto() {
-  const out = mkdtempSync(join(tmpdir(), "matjakt-version-"));
-  try {
-    execFileSync(process.execPath, [join(ROOT, "scripts/build_frontend.mjs"), out], { stdio: "pipe" });
-    return {
-      sw: readFileSync(join(out, "app/sw.js"), "utf8"),
-      html: readFileSync(join(out, "app/index.html"), "utf8"),
-    };
-  } finally {
-    rmSync(out, { recursive: true, force: true });
+test("L9: digesten täcker VARJE fil under app/, inte bara bundeln och CSS:en", () => {
+  // Det var den gamla stämpelns tysta hål: en ändrad receptbank eller ett nytt
+  // receptfoto under samma filnamn ändrade varken app.js eller styles.css, men
+  // ligger bakom samma cache-nyckel och serverades ur service workerns kopia.
+  const bas = cacheStamp(RELEASE, litetBygge());
+  for (const [namn, nyttInnehåll] of [
+    ["app.js", "console.log('v2')"],
+    ["styles.css", "body{color:#fff}"],
+    ["data/recipes.json", '[{"id":1}]'],
+    ["assets/recipes/chili.jpg", "JPEG-annat"],
+    ["index.html", `<p>ny rad</p><link href="styles.css?v=${PLACEHOLDER}"><script src="app.js?v=${PLACEHOLDER}">`],
+    ["sw.js", `// ny logik\nconst CACHE_NAME = "matjakt-shell-v${PLACEHOLDER}";`],
+  ]) {
+    const ändrat = litetBygge().map(([n, b]) => (n === namn ? fil(n, nyttInnehåll) : [n, b]));
+    assert.notEqual(cacheStamp(RELEASE, ändrat), bas, `en ändrad ${namn} bytte inte cache-nyckel`);
   }
-}
-
-test("E15: bygget stämplar alla tre ställena med ETT värde", () => {
-  const built = buildInto();
-  const stämplar = stampsIn(built.sw, built.html);
-  assert.equal(new Set(Object.values(stämplar)).size, 1, `bygget lämnade skeva stämplar: ${JSON.stringify(stämplar)}`);
-  const stämpel = stämplar["sw.js CACHE_NAME"];
-  assert.match(stämpel, /^\d+-[0-9a-f]{10}$/);
-
-  // Stämpeln ska vara HÄRLEDD ur bygget, inte kopierad ur källan. Det är hela
-  // skillnaden mot ett handskrivet tal: den kan inte råka bli densamma som
-  // förra releasens medan koden är en annan.
-  const release = frontendRelease(swSource, htmlSource);
-  assert.equal(stämpel.split("-")[0], String(release), "releasenumret ska följa med");
-  assert.notEqual(stämpel, String(release), "stämpeln får inte vara bara talet");
+  assert.notEqual(cacheStamp(RELEASE, [...litetBygge(), fil("nytt.js", "")]), bas, "en tillagd fil syns inte");
+  assert.notEqual(cacheStamp(RELEASE, litetBygge().filter(([n]) => n !== "data/recipes.json")), bas,
+    "en borttagen fil syns inte");
+  // Sökvägen räknas, inte bara innehållet: samma byte under ett annat namn är
+  // en annan sak att servera.
+  const omdöpt = litetBygge().map(([n, b]) => (n === "assets/recipes/chili.jpg" ? ["assets/recipes/chili2.jpg", b] : [n, b]));
+  assert.notEqual(cacheStamp(RELEASE, omdöpt), bas, "ett omdöpt recept bytte inte cache-nyckel");
 });
 
-test("E15: två byggen av samma källa ger samma stämpel", () => {
-  const stämpel = () => { const built = buildInto(); return stampsIn(built.sw, built.html)["sw.js CACHE_NAME"]; };
-  assert.equal(stämpel(), stämpel(), "bygget får inte vara slumpartat - då bytte varje deploy URL i onödan");
+test("L9: stämpeln i filerna räknas INTE in i digesten - annars hade den berott på sig själv", () => {
+  const bas = cacheStamp(RELEASE, litetBygge());
+  const stämplat = litetBygge().map(([namn, byte]) => {
+    if (namn === "sw.js") return fil(namn, stampServiceWorker(byte.toString(), "999-deadbeef99"));
+    if (namn === "index.html") return fil(namn, stampIndexHtml(byte.toString(), "999-deadbeef99"));
+    return [namn, byte];
+  });
+  assert.equal(cacheStamp(RELEASE, stämplat), bas,
+    "att stämpla om ett bygge får inte ändra digesten - då hade den aldrig gått att kontrollera");
+});
+
+test("E15: oförändrad kod ger samma stämpel - bygget är inte slumpartat", () => {
+  assert.equal(cacheStamp(RELEASE, litetBygge()), cacheStamp(RELEASE, litetBygge()));
+  assert.equal(contentDigest(litetBygge()).length, 64);
+});
+
+test("L9: stämpeln bär eran så en människa känner igen releasen", () => {
+  assert.match(cacheStamp(53, litetBygge()), /^53-[0-9a-f]{10}$/);
+  assert.notEqual(cacheStamp(54, litetBygge()), cacheStamp(53, litetBygge()));
+});
+
+// ---- byggsteget, på riktigt ----------------------------------------------
+
+function byggTill() {
+  const out = mkdtempSync(join(tmpdir(), "matjakt-version-"));
+  execFileSync(process.execPath, [join(ROOT, "scripts/build_frontend.mjs"), out], { stdio: "pipe" });
+  return out;
+}
+
+const stämpelI = out => sharedStamp(readFileSync(join(out, "app/sw.js"), "utf8"),
+                                    readFileSync(join(out, "app/index.html"), "utf8"));
+
+test("L9: bygget stämplar alla tre ställena med ETT värde, härlett ur bygget", () => {
+  const out = byggTill();
+  try {
+    const app = join(out, "app");
+    const stämplar = stampsIn(readFileSync(join(app, "sw.js"), "utf8"), readFileSync(join(app, "index.html"), "utf8"));
+    assert.equal(new Set(Object.values(stämplar)).size, 1, `bygget lämnade skeva stämplar: ${JSON.stringify(stämplar)}`);
+    assert.match(stämplar["sw.js CACHE_NAME"], /^\d+-[0-9a-f]{10}$/);
+    assert.equal(stämplar["sw.js CACHE_NAME"], cacheStamp(RELEASE, collectFiles(app)),
+      "stämpeln i bygget är inte digesten av bygget - då kontrollerar den ingenting");
+  } finally { rmSync(out, { recursive: true, force: true }); }
+});
+
+test("L9: ingen platshållare når utdatan", () => {
+  const out = byggTill();
+  try {
+    assert.deepEqual(placeholdersIn(collectFiles(join(out, "app"))), [],
+      "en ostämplad cache-nyckel i produktion är en nyckel som aldrig byter");
+  } finally { rmSync(out, { recursive: true, force: true }); }
+});
+
+test("L9: en platshållare som INTE går att stämpla stannar bygget - högt", () => {
+  // Det farligaste utfallet här är ett tyst genomsläpp: service workern hade
+  // cachat under ett namn som aldrig byter, och ingen deploy efter den hade
+  // nått en telefon som redan varit inne. Stämplingen känner bara igen de tre
+  // ställena; står platshållaren någon annanstans måste bygget stanna.
+  const bygge = mkdtempSync(join(tmpdir(), "matjakt-platshallare-"));
+  const lägg = ([namn, innehåll]) => {
+    mkdirSync(dirname(join(bygge, namn)), { recursive: true });
+    writeFileSync(join(bygge, namn), innehåll);
+  };
+  try {
+    litetBygge().forEach(lägg);
+    assert.match(stampBuild(bygge), /^\d+-[0-9a-f]{10}$/, "ett välformat bygge ska gå igenom");
+
+    litetBygge().forEach(lägg);   // ställ tillbaka de nyss stämplade filerna
+    lägg(fil("admin.html", `<script src="admin.js?v=${PLACEHOLDER}"></script>`));
+    assert.throws(() => stampBuild(bygge), /admin\.html/,
+      "bygget släppte igenom en ostämplad platshållare");
+  } finally { rmSync(bygge, { recursive: true, force: true }); }
+});
+
+test("L9: två byggen av samma källa ger samma stämpel", () => {
+  const en = byggTill();
+  const två = byggTill();
+  try {
+    assert.equal(stämpelI(en), stämpelI(två),
+      "bygget får inte vara slumpartat - då bytte varje deploy URL i onödan");
+  } finally {
+    rmSync(en, { recursive: true, force: true });
+    rmSync(två, { recursive: true, force: true });
+  }
+});
+
+test("L9: en ändrad frontend ger ett bygge med en annan stämpel - utan att någon bumpar något", () => {
+  // Hela poängen med att ta bort talet: det som förr krävde tre handredigerade
+  // rader (och gav en konflikt per gren) sker nu av sig självt.
+  const out = byggTill();
+  const kopia = mkdtempSync(join(tmpdir(), "matjakt-andrad-"));
+  try {
+    const före = stämpelI(out);
+    cpSync(join(out, "app"), join(kopia, "app"), { recursive: true });
+    const app = join(kopia, "app");
+    writeFileSync(join(app, "app.js"), `${readFileSync(join(app, "app.js"), "utf8")}\n// G5: ikväll-vyn\n`);
+    assert.notEqual(stampBuild(app), före,
+      "en ändrad app.js gav samma cache-nyckel - då når den aldrig en telefon som varit inne");
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+    rmSync(kopia, { recursive: true, force: true });
+  }
 });

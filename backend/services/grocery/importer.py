@@ -28,6 +28,7 @@ import time
 
 from ..secret_scrub import scrub
 from . import api as grocery_api
+from . import canary
 from . import robots
 from .errors import ProviderBlockedError
 
@@ -319,6 +320,20 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
                                     error_message=gate_message)
             if not outcome["published_ok"]:
                 blocked_message = gate_message
+            elif saved:
+                # D10. KANARIEFÅGELN, DIREKT EFTER PUBLICERINGEN.
+                # Gaten har räknat rader och medianpris; ingen av dem har
+                # tittat på en vara någon känner igen. Kollen läser den
+                # publicerade prisbilden - alltså det kunderna får - och
+                # loggar. Den fäller ALDRIG körningen: vi vet att varan ser
+                # fel ut, inte vilken av de två siffrorna som är sann, och
+                # att kasta en hel natts katalog på en enda rad vore att
+                # göra mer skada än fyndet är värt. Larmet går via
+                # driftkollen (alerts.evaluate).
+                try:
+                    canary.log_result(canary.check(db, chain))
+                except Exception:
+                    logger.exception("Kanariekollen för %s kunde inte köras", chain)
         except robots.RobotsDisallowedError as förbud:
             # D9. ETT NEJ ÄR ETT SVAR, INTE EN KRASCH.
             # Kedjan har sagt ifrån i sin robots.txt. Körningen avslutas som

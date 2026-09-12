@@ -118,7 +118,29 @@ DEFAULT_SCHEDULE = {
     # märker körningen "blocked", vilket publiceringen slår ihop i stället
     # för att förkasta. Driftkollen varnar vid 85 % av den kvot Primat
     # själv rapporterar, så taket syns innan det slår i.
-    "ICA": "05:30",
+    #
+    # ICA LIGGER BLAND DE SLÄPPTA, INTE BLAND PRIMAT-KEDJORNA. Ordningen kom
+    # av varifrån datan hämtas - Primat efter de tre fria - men sedan D11 är
+    # ICA släppt mot kunder, och då är det driftkollen som bestämmer var den
+    # hör hemma. En utebliven natt upptäcks först när kedjans senaste lyckade
+    # import passerat RELEASED_CHAIN_STALE_AFTER_SECONDS, och den åldern är
+    # 24 + driftkollen - körtiden:
+    #
+    #   02:00 Willys 29,5 h · 03:00 Hemköp 28,5 h · 04:00 City Gross 27,5 h
+    #   04:30 ICA    27,0 h  <- här
+    #   05:30 ICA    26,0 h  <- där den låg, under den dåvarande gränsen 27 h
+    #
+    # På 05:30 tvingades gränsen ner till 25,5 h för att natten skulle
+    # upptäckas samma morgon - och nedåt får den inte gå under 25 h, för då
+    # larmar en kedja som fungerar (datan är ~24 h gammal precis före nästa
+    # körning). Ett halvtimmesfönster åt vardera hållet är ingen marginal.
+    # 04:30 ger 27,0 h, och gränsen kan gå tillbaka till 26 h med en timme
+    # åt båda håll.
+    #
+    # Coop och Lidl ligger kvar sent. De är osläppta, alltså gäller den
+    # generösare CHAIN_STALE_AFTER_SECONDS för dem. Släpps någon av dem
+    # måste den flyttas hit först - ingen stale-gräns räddar 06:30.
+    "ICA": "04:30",
     "Coop": "06:30",
     # Lidl gick redan att importera - PrimatProvider stödjer kedjan och
     # importer.py bär ett butiks-id - men den saknades i schemat, så den
@@ -702,8 +724,13 @@ class GroceryScheduler:
                 # deploy.
                 from . import quota as row_quota
                 row_quota.remember_reported_budget(kvot.get("dailyRowLimit"), kv=KV_CACHE)
+            # D10. BACKUPEN OCH KANARIEFÅGELN MED I SAMMA KOLL.
+            # Båda uppslagen får ALDRIG fälla driftkollen: en otillgänglig
+            # disk eller en trasig databas ska inte ta kedjelarmen med sig
+            # i fallet - samma regel som kvotuppslaget ovan.
             resultat = alerts.process(grocery_api.provider_status(), KV_CACHE, MAIL_CONFIG,
-                                      quota=kvot)
+                                      quota=kvot, backup=_backup_health(),
+                                      canaries=_canary_results())
             if resultat["incidents"] or resultat["recoveries"]:
                 logger.warning("Driftlarm: %d nya, %d lösta",
                                len(resultat["incidents"]), len(resultat["recoveries"]))
@@ -838,6 +865,35 @@ def _truthy(value) -> bool:
 
 
 SCHEDULER = GroceryScheduler()
+
+
+def _backup_health():
+    """Backupens ålder, eller None om den inte går att läsa.
+
+    D10: samma regel som kvotuppslaget - ett uppslag som misslyckas får inte
+    ta med sig kedjelarmen i fallet. None betyder "vet inte", och
+    alerts.evaluate larmar inte på ovisshet."""
+    try:
+        from api_server import DATA_DIR
+        from .. import backup
+        return backup.health(DATA_DIR)
+    except Exception:
+        logger.info("Backupens ålder kunde inte läsas - driftkollen fortsätter utan den")
+        return None
+
+
+def _canary_results():
+    """Kanariefågeln per kedja, eller en tom lista."""
+    try:
+        from . import api as grocery_api, canary
+        store = grocery_api.open_store()
+        try:
+            return canary.check_all(store)
+        finally:
+            store.close()
+    except Exception:
+        logger.info("Kanariekollen kunde inte köras - driftkollen fortsätter utan den")
+        return []
 
 
 def _primat_quota():

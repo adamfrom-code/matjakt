@@ -47,16 +47,32 @@ PRICING = {
 # whole planning loop works, against real prices, for the cheapest qualified
 # store - Premium widens it to every store, every week type and the advanced
 # filters. A feature not listed here is free for everyone.
+#
+# J3 FLYTTADE GRÄNSEN, och principen bakom flytten är värd att skriva ut:
+# sälj det som är dyrt för OSS och återkommande värdefullt för kunden -
+# färsk prisdata och delning - inte det som är gratis att generera lokalt
+# (och därför omöjligt att skydda).
+#
+# Ner till gratis: alla veckotyper, full_pantry, advanced_nutrition,
+# meal_prep. Veckorna sätts ihop i klienten ur ett lokalt receptregister, så
+# grinden kunde bara neka den som frågade ärligt om priset - och just de
+# funktionerna är vad som gör en ny användare beroende de första två
+# veckorna. Att låtsas sälja dem kostade oss vanan och gav ingen intäkt.
+#
+# Upp till premium: hushåll bortom två personer, och sparhistoriken.
+# Hushållet är den överlägset starkaste betalningsanledningen - en familj
+# som lagt in skafferi och delar lista byter inte app - och det är omöjligt
+# att kringgå från klienten eftersom varje rad går via servern.
 FEATURES = {
-    # Veckoplanering
-    "standard_week": {"free": True},        # vanlig standardvecka
-    "family_week": {"free": False},
-    "budget_week": {"free": False},
-    "training_week": {"free": False},
-    "bulk_week": {"free": False},
-    "quick_week": {"free": False},
-    "vegetarian_week": {"free": False},
-    "balanced_week": {"free": False},
+    # Veckoplanering: varenda veckotyp är gratis sedan J3.
+    "standard_week": {"free": True},
+    "family_week": {"free": True},
+    "budget_week": {"free": True},
+    "training_week": {"free": True},
+    "bulk_week": {"free": True},
+    "quick_week": {"free": True},
+    "vegetarian_week": {"free": True},
+    "balanced_week": {"free": True},
     # Middagar per vecka: Free planerar upp till gränsen, Premium 1-7.
     "seven_dinners": {"free": False},
     # Butiker och priser
@@ -68,17 +84,50 @@ FEATURES = {
     "live_prices": {"free": False},           # per-vara-priser från butikssajterna (products/batch)
     # Recept & filter
     "recipe_search": {"free": True},
-    "advanced_nutrition": {"free": False},    # kcal-/proteinfilter, näringsmål
-    "meal_prep": {"free": False},
+    "advanced_nutrition": {"free": True},     # kcal-/proteinfilter, näringsmål
+    "meal_prep": {"free": True},
     # Skafferi
     "basic_pantry": {"free": True},
-    "full_pantry": {"free": False},           # Laga med det jag har m.m.
+    "full_pantry": {"free": True},            # "Laga med det jag har"
     "favorites": {"free": True},
+    # Hushåll: två personer delar gratis, familjen kostar. Varje rad går via
+    # servern, så det här är den enda funktionen i produkten som inte går
+    # att låsa upp från klienten.
+    "household_sharing": {"free": False},
+    # Sparhistorik: Free ser den senaste veckan, Premium hela historiken och
+    # månadsrapporten - "Du sparade 1 340 kr i september", den enda siffran
+    # som BEVISAR att prenumerationen betalar sig.
+    "savings_history": {"free": False},
 }
 
-# Free planerar högst så här många middagar per vecka.
-FREE_MAX_DINNERS = 4
+# Free planerar högst så här många middagar per vecka. J3: 4 -> 5. En
+# arbetsvecka är den naturliga enheten; fyra känns som en stympning.
+FREE_MAX_DINNERS = 5
 PREMIUM_MAX_DINNERS = 7
+
+# Hushållets storlek per plan. Två personer är "vi delar lista"; tre är en
+# familj, och det är familjen som är produkten.
+FREE_MAX_HOUSEHOLD_MEMBERS = 2
+PREMIUM_MAX_HOUSEHOLD_MEMBERS = 12
+
+# Så många veckor bakåt sparhistoriken visar. Free ser den senaste veckan -
+# nog för att veta att siffran finns, för lite för att se en trend.
+FREE_SAVINGS_WEEKS = 1
+PREMIUM_SAVINGS_WEEKS = 52
+
+
+def max_household_members(plan: str) -> int:
+    """Hur många som får dela hushåll på den här planen.
+
+    ETT ställe. Både grinden i billing/gate.py, hushållslagret och
+    /api/entitlements läser den här funktionen, så de kan aldrig svara
+    olika på samma fråga."""
+    return (PREMIUM_MAX_HOUSEHOLD_MEMBERS if is_premium(plan)
+            else FREE_MAX_HOUSEHOLD_MEMBERS)
+
+
+def max_savings_weeks(plan: str) -> int:
+    return PREMIUM_SAVINGS_WEEKS if is_premium(plan) else FREE_SAVINGS_WEEKS
 
 
 def plan_for_user(user: dict | None) -> str:
@@ -114,6 +163,10 @@ def entitlements(plan: str) -> dict:
         "plan": plan,
         "isPremium": is_premium(plan),
         "maxDinners": PREMIUM_MAX_DINNERS if is_premium(plan) else FREE_MAX_DINNERS,
+        # J3: klienten ska kunna säga "ni är två av två" utan att gissa, och
+        # utan att först få ett 403 i ansiktet.
+        "maxHouseholdMembers": max_household_members(plan),
+        "maxSavingsWeeks": max_savings_weeks(plan),
         "features": {name: allowed(plan, name) for name in FEATURES},
         "pricing": PRICING,
     }

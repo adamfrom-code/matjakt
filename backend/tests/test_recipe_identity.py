@@ -30,7 +30,10 @@ from services.recipes import api as recipes_api  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 CLIENT_BANK = ROOT / "frontend" / "app" / "data" / "recipes.json"
-APP_JS = ROOT / "frontend" / "app" / "app.js"
+# De gamla mängd- och texttabellerna låg i app.js fram till F6; sedan dess i
+# sin egen modul. Samma rader, samma nycklar - bara en annan fil att läsa
+# dem ur.
+LEGACY_CATALOG = ROOT / "frontend" / "app" / "src" / "data" / "legacy-catalog.js"
 
 
 def _canonical_ids() -> set:
@@ -85,15 +88,16 @@ class RecipeIdentityTest(unittest.TestCase):
         self.assertEqual(duplicates, [])
 
     def test_the_legacy_quantity_tables_key_on_real_recipes(self):
-        """RECIPE_QUANTITIES och RECIPE_DETAILS i app.js är nycklade på
-        recept-id och används för recept UTAN strukturerade ingredienser.
+        """RECIPE_QUANTITIES och RECIPE_DETAILS i src/data/legacy-catalog.js
+        är nycklade på recept-id och används för recept UTAN strukturerade
+        ingredienser.
         En nyckel som inte motsvarar något recept är död vikt, och - värre -
         ett tecken på att ett id bytts på ett ställe men inte på det andra,
         vilket är precis hur den femdelade glidningen uppstod.
 
         Bara nycklar som SER UT som recept-id kontrolleras: tabellerna
         innehåller även ingrediensnamn."""
-        source = APP_JS.read_text(encoding="utf-8")
+        source = LEGACY_CATALOG.read_text(encoding="utf-8")
         known = self.canonical | {r["id"] for r in self.bank if r.get("id")}
         unknown = []
         for table in ("RECIPE_QUANTITIES", "RECIPE_DETAILS"):

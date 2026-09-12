@@ -199,8 +199,9 @@ class ImporterRouting(unittest.TestCase):
 
 class ReleasedChainsGate(unittest.TestCase):
     def test_unreleased_chains_never_reach_the_comparison(self):
-        """En halvimporterad ICA/Coop/Lidl-katalog i databasen får aldrig
-        räcka för att kedjan ska börja jämföras - släpp är ett beslut."""
+        """En halvimporterad Coop/Lidl-katalog i databasen får aldrig räcka
+        för att kedjan ska börja jämföras - släpp är ett beslut. ICA släpptes
+        i D11, uttryckligen och på referensnivå."""
         import tempfile
         from pathlib import Path
         from services.grocery import api as gapi
@@ -212,7 +213,7 @@ class ReleasedChainsGate(unittest.TestCase):
         self.addCleanup(lambda: setattr(gapi, "DB_PATH", real))
         gapi.clear_cache()
         self.addCleanup(gapi.clear_cache)
-        self.assertEqual(set(gapi.RELEASED_CHAINS), {"Willys", "Hemköp", "City Gross"})
+        self.assertEqual(set(gapi.RELEASED_CHAINS), {"Willys", "Hemköp", "City Gross", "ICA"})
         for chain in gapi.priceable_chains():
             self.assertIn(chain, gapi.RELEASED_CHAINS)
 

@@ -142,8 +142,15 @@ class HouseholdLifecycleTest(HouseholdApiTest):
         self.assertIn("?invite=", invite["url"])
 
     def test_invite_preview_works_before_login(self):
+        # J3: hushållet är fullt vid två på Free, så den andra inbjudan
+        # kräver Premium någonstans i hushållet. Premium är inte vad det här
+        # testet handlar om - det handlar om vad en OINLOGGAD får se av en
+        # inbjudningslänk - så familjen får betala.
         adam, _, _, invite = self._family()
+        api_server.ACCOUNT_STORE.connection.execute("UPDATE users SET premium = 1")
+        api_server.ACCOUNT_STORE.connection.commit()
         status, invite2 = self.post("/api/household/invite", {}, adam)
+        self.assertEqual(status, 200, invite2)
         status, preview = self.get(f"/api/household/invite?token={invite2['token']}")
         self.assertEqual(status, 200)
         self.assertEqual(preview["householdName"], "Familjen From")

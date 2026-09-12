@@ -3,7 +3,9 @@
 
 from .store import (
     HouseholdError,
+    HouseholdFullError,
     HouseholdStore,
+    MAX_MEMBERS,
     NotAMemberError,
     ITEM_STATUSES,
     LOCATIONS,
@@ -17,7 +19,8 @@ from .store import (
 from .notifications import NotificationStore, PREFERENCES, EVENT_RULES
 
 __all__ = [
-    "HouseholdError", "HouseholdStore", "NotAMemberError",
+    "HouseholdError", "HouseholdFullError", "HouseholdStore", "NotAMemberError",
+    "MAX_MEMBERS",
     "ITEM_STATUSES", "LOCATIONS",
     "NEED_TO_BUY", "ALREADY_HAVE", "PURCHASED", "REMOVED",
     "item_key", "fold",

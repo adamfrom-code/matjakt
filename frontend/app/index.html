@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=109">
+  <link rel="stylesheet" href="styles.css?v=__MATJAKT_VERSION__">
 </head>
 <body>
   <div class="phone-shell">
@@ -83,102 +83,6 @@
           <button class="home-stat is-savings" type="button" id="openStatsBtn">
             <span class="savings-card-label">Du sparar</span><strong id="savingsCardValue">–</strong><small id="savingsCardSubtitle">Skapa din första vecka för att se detta</small>
           </button>
-        </div>
-
-        <div class="week-sheet-backdrop" id="weekSheet" hidden role="dialog" aria-modal="true" aria-label="Justera veckan">
-          <div class="week-sheet-card">
-            <div class="sheet-head"><strong>Justera veckan</strong><button type="button" class="modal-close" id="weekSheetClose" aria-label="Stäng">×</button></div>
-            <div class="settings-content">
-              <label for="budgetInput">Veckobudget</label><div class="budget-row"><input type="number" id="budgetInput" value="800" min="0" step="50" inputmode="numeric"><span>kr</span></div><p class="budget-scope" id="budgetScopeNote">Gäller 4 middagar för 2 personer. Frukost, lunch och hushållsvaror ingår inte.</p>
-              <div class="settings-grid"><div><label>Personer</label><div class="stepper"><button id="peopleMinus" aria-label="Färre personer">−</button><span id="peopleValue">2</span><button id="peoplePlus" aria-label="Fler personer">+</button></div></div><div><label>Middagar</label><div class="stepper"><button id="mealsMinus" aria-label="Färre middagar">−</button><span id="mealsValue">4</span><button id="mealsPlus" aria-label="Fler middagar">+</button></div></div></div>
-              <label for="postcodeInput">Postnummer</label><div class="location-row"><input id="postcodeInput" inputmode="numeric" maxlength="5" placeholder="Ditt postnummer"><button id="locateBtn" type="button">Hitta mig</button></div><p id="locationHint" class="location-hint">Vi jämför butiker nära dig.</p>
-              <label for="storeInput">Butik</label><select id="storeInput"><option value="auto">Billigast automatiskt</option><option value="alla">Alla butiker</option></select>
-
-              <div class="nutrition-goals">
-                <div class="nutrition-goals-label"><span>Kost &amp; allergier</span></div>
-                <label for="kosttypInput">Kosttyp</label>
-                <select id="kosttypInput">
-                  <option value="">Alla recept</option>
-                  <option value="vegetariskt">Vegetariskt</option>
-                  <option value="veganskt">Veganskt</option>
-                </select>
-                <label>Undvik allergener</label>
-                <div class="protein-source-chips" id="allergenChips">
-                  <label><input type="checkbox" value="gluten"> Gluten</label>
-                  <label><input type="checkbox" value="laktos"> Laktos</label>
-                  <label><input type="checkbox" value="nötter"> Nötter</label>
-                  <label><input type="checkbox" value="jordnötter"> Jordnötter</label>
-                  <label><input type="checkbox" value="sesam"> Sesam</label>
-                  <label><input type="checkbox" value="skaldjur"> Skaldjur</label>
-                  <label><input type="checkbox" value="fisk"> Fisk</label>
-                  <label><input type="checkbox" value="ägg"> Ägg</label>
-                  <label><input type="checkbox" value="soja"> Soja</label>
-                </div>
-                <label for="dislikeCustom">Något ni hellre slipper</label>
-                <div class="protein-source-chips" id="dislikeChips"></div>
-                <input id="dislikeCustom" type="text" placeholder="Något annat? Skriv och tryck Enter" autocomplete="off">
-                <div class="ob-tag-list" id="dislikeTags"></div>
-              </div>
-
-              <div class="nutrition-goals">
-                <div class="nutrition-goals-label"><span>Näringsmål</span><span class="premium-badge">Premium</span></div>
-                <p class="nutrition-locked" id="nutritionLocked">Logga in och lös in Premium för att styra veckan efter kalorier, protein och proteinkälla per måltid.</p>
-                <div class="nutrition-fields" id="nutritionFields" hidden>
-                  <label for="goalPreset">Mål</label>
-                  <select id="goalPreset">
-                    <option value="">Anpassat</option>
-                    <option value="hogprotein">Högprotein</option>
-                    <option value="lagkalori">Lågkalori</option>
-                    <option value="bulk">Bulk</option>
-                    <option value="cut">Cut</option>
-                    <option value="underhall">Underhåll</option>
-                  </select>
-                  <label for="kcalGoal">Kalorier per måltid</label>
-                  <select id="kcalGoal">
-                    <option value="">Ingen gräns</option>
-                    <option value="0-400">Under 400 kcal</option>
-                    <option value="400-500">400–500 kcal</option>
-                    <option value="500-600">500–600 kcal</option>
-                    <option value="600-700">600–700 kcal</option>
-                    <option value="700-900">700–900 kcal</option>
-                  </select>
-                  <label for="proteinGoal">Protein per måltid</label>
-                  <select id="proteinGoal">
-                    <option value="">Ingen gräns</option>
-                    <option value="20">Minst 20 g</option>
-                    <option value="30">Minst 30 g</option>
-                    <option value="40">Minst 40 g</option>
-                    <option value="50">Minst 50 g</option>
-                    <option value="60">Minst 60 g</option>
-                  </select>
-                  <label for="carbsGoal">Kolhydrater</label>
-                  <select id="carbsGoal">
-                    <option value="">Normala</option>
-                    <option value="0-30">Låga</option>
-                    <option value="60-999">Höga</option>
-                  </select>
-                  <label for="fatGoal">Fett</label>
-                  <select id="fatGoal">
-                    <option value="">Normalt</option>
-                    <option value="0-15">Lågt</option>
-                  </select>
-                  <label>Proteinkälla</label>
-                  <div class="protein-source-chips" id="proteinSourceChips">
-                    <label><input type="checkbox" value="kyckling"> Kyckling</label>
-                    <label><input type="checkbox" value="notkott"> Nötkött</label>
-                    <label><input type="checkbox" value="flask"> Fläsk</label>
-                    <label><input type="checkbox" value="fisk"> Fisk</label>
-                    <label><input type="checkbox" value="skaldjur"> Skaldjur</label>
-                    <label><input type="checkbox" value="vegetariskt"> Vegetariskt</label>
-                    <label><input type="checkbox" value="veganskt"> Veganskt</label>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <button type="button" class="btn btn-ghost sheet-plan-btn" id="sheetPlanBtn">Välj veckotyp →</button>
-            <button type="button" class="btn btn-ghost sheet-plan-btn" id="restoreWeekBtn" hidden>Återställ förra veckan</button>
-            <button class="btn btn-primary sheet-done" id="weekSheetDone">Klart</button>
-          </div>
         </div>
 
         <section class="campaign-section" id="campaignSection" aria-labelledby="campaignHeading">
@@ -362,9 +266,110 @@
     </div>
   </div>
 
-  <div class="week-sheet-backdrop" id="feedbackSheet" hidden role="dialog" aria-modal="true" aria-label="Tyck till">
-    <div class="week-sheet-card">
-      <div class="sheet-head"><strong>Tyck till</strong><button type="button" class="modal-close" id="feedbackClose" aria-label="Stäng">×</button></div>
+  <!-- G6: arken och modalerna ligger UTANFÖR .phone-shell. openModal()
+       gör allt annat på body-nivå `inert` medan ett lager är öppet, och
+       veckoarket låg tidigare inuti appen det skulle spärra av - alltså
+       hade spärren antingen missat sidan bakom eller stängt av arket
+       självt. role="dialog" sitter på PANELEN, inte på bakgrunden. -->
+  <div class="week-sheet-backdrop" id="weekSheet" hidden>
+    <div class="week-sheet-card" role="dialog" aria-modal="true" aria-labelledby="weekSheetTitle">
+      <div class="sheet-head"><strong id="weekSheetTitle" data-modal-title>Justera veckan</strong><button type="button" class="modal-close" id="weekSheetClose" aria-label="Stäng">×</button></div>
+      <div class="settings-content">
+        <label for="budgetInput">Veckobudget</label><div class="budget-row"><input type="number" id="budgetInput" value="800" min="0" step="50" inputmode="numeric"><span>kr</span></div><p class="budget-scope" id="budgetScopeNote">Gäller 4 middagar för 2 personer. Frukost, lunch och hushållsvaror ingår inte.</p>
+        <div class="settings-grid"><div><label>Personer</label><div class="stepper"><button id="peopleMinus" aria-label="Färre personer">−</button><span id="peopleValue">2</span><button id="peoplePlus" aria-label="Fler personer">+</button></div></div><div><label>Middagar</label><div class="stepper"><button id="mealsMinus" aria-label="Färre middagar">−</button><span id="mealsValue">4</span><button id="mealsPlus" aria-label="Fler middagar">+</button></div></div></div>
+        <label for="postcodeInput">Postnummer</label><div class="location-row"><input id="postcodeInput" inputmode="numeric" maxlength="5" placeholder="Ditt postnummer"><button id="locateBtn" type="button">Hitta mig</button></div><p id="locationHint" class="location-hint">Vi jämför butiker nära dig.</p>
+        <label for="storeInput">Butik</label><select id="storeInput"><option value="auto">Billigast automatiskt</option><option value="alla">Alla butiker</option></select>
+
+        <div class="nutrition-goals">
+          <div class="nutrition-goals-label"><span>Kost &amp; allergier</span></div>
+          <label for="kosttypInput">Kosttyp</label>
+          <select id="kosttypInput">
+            <option value="">Alla recept</option>
+            <option value="vegetariskt">Vegetariskt</option>
+            <option value="veganskt">Veganskt</option>
+          </select>
+          <label>Undvik allergener</label>
+          <div class="protein-source-chips" id="allergenChips">
+            <label><input type="checkbox" value="gluten"> Gluten</label>
+            <label><input type="checkbox" value="laktos"> Laktos</label>
+            <label><input type="checkbox" value="nötter"> Nötter</label>
+            <label><input type="checkbox" value="jordnötter"> Jordnötter</label>
+            <label><input type="checkbox" value="sesam"> Sesam</label>
+            <label><input type="checkbox" value="skaldjur"> Skaldjur</label>
+            <label><input type="checkbox" value="fisk"> Fisk</label>
+            <label><input type="checkbox" value="ägg"> Ägg</label>
+            <label><input type="checkbox" value="soja"> Soja</label>
+          </div>
+          <label for="dislikeCustom">Något ni hellre slipper</label>
+          <div class="protein-source-chips" id="dislikeChips"></div>
+          <input id="dislikeCustom" type="text" placeholder="Något annat? Skriv och tryck Enter" autocomplete="off">
+          <div class="ob-tag-list" id="dislikeTags"></div>
+        </div>
+
+        <div class="nutrition-goals">
+          <div class="nutrition-goals-label"><span>Näringsmål</span><span class="premium-badge">Premium</span></div>
+          <p class="nutrition-locked" id="nutritionLocked">Logga in och lös in Premium för att styra veckan efter kalorier, protein och proteinkälla per måltid.</p>
+          <div class="nutrition-fields" id="nutritionFields" hidden>
+            <label for="goalPreset">Mål</label>
+            <select id="goalPreset">
+              <option value="">Anpassat</option>
+              <option value="hogprotein">Högprotein</option>
+              <option value="lagkalori">Lågkalori</option>
+              <option value="bulk">Bulk</option>
+              <option value="cut">Cut</option>
+              <option value="underhall">Underhåll</option>
+            </select>
+            <label for="kcalGoal">Kalorier per måltid</label>
+            <select id="kcalGoal">
+              <option value="">Ingen gräns</option>
+              <option value="0-400">Under 400 kcal</option>
+              <option value="400-500">400–500 kcal</option>
+              <option value="500-600">500–600 kcal</option>
+              <option value="600-700">600–700 kcal</option>
+              <option value="700-900">700–900 kcal</option>
+            </select>
+            <label for="proteinGoal">Protein per måltid</label>
+            <select id="proteinGoal">
+              <option value="">Ingen gräns</option>
+              <option value="20">Minst 20 g</option>
+              <option value="30">Minst 30 g</option>
+              <option value="40">Minst 40 g</option>
+              <option value="50">Minst 50 g</option>
+              <option value="60">Minst 60 g</option>
+            </select>
+            <label for="carbsGoal">Kolhydrater</label>
+            <select id="carbsGoal">
+              <option value="">Normala</option>
+              <option value="0-30">Låga</option>
+              <option value="60-999">Höga</option>
+            </select>
+            <label for="fatGoal">Fett</label>
+            <select id="fatGoal">
+              <option value="">Normalt</option>
+              <option value="0-15">Lågt</option>
+            </select>
+            <label>Proteinkälla</label>
+            <div class="protein-source-chips" id="proteinSourceChips">
+              <label><input type="checkbox" value="kyckling"> Kyckling</label>
+              <label><input type="checkbox" value="notkott"> Nötkött</label>
+              <label><input type="checkbox" value="flask"> Fläsk</label>
+              <label><input type="checkbox" value="fisk"> Fisk</label>
+              <label><input type="checkbox" value="skaldjur"> Skaldjur</label>
+              <label><input type="checkbox" value="vegetariskt"> Vegetariskt</label>
+              <label><input type="checkbox" value="veganskt"> Veganskt</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn btn-ghost sheet-plan-btn" id="sheetPlanBtn">Välj veckotyp →</button>
+      <button type="button" class="btn btn-ghost sheet-plan-btn" id="restoreWeekBtn" hidden>Återställ förra veckan</button>
+      <button class="btn btn-primary sheet-done" id="weekSheetDone">Klart</button>
+    </div>
+  </div>
+
+  <div class="week-sheet-backdrop" id="feedbackSheet" hidden>
+    <div class="week-sheet-card" role="dialog" aria-modal="true" aria-labelledby="feedbackSheetTitle">
+      <div class="sheet-head"><strong id="feedbackSheetTitle" data-modal-title>Tyck till</strong><button type="button" class="modal-close" id="feedbackClose" aria-label="Stäng">×</button></div>
       <p class="screen-intro">Vad var krångligt, trasigt eller saknades? Skriv precis som du tänker - det skickas anonymt.</p>
       <textarea id="feedbackText" rows="5" maxlength="2000" placeholder="Jag fattade inte hur man..."></textarea>
       <button class="btn btn-primary sheet-done" id="feedbackSend">Skicka</button>
@@ -617,6 +622,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=109"></script>
+  <script type="module" src="app.js?v=__MATJAKT_VERSION__"></script>
 </body>
 </html>

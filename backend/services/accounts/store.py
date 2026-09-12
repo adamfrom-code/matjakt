@@ -40,6 +40,39 @@ VERIFICATION_TOKEN_TTL_DAYS = 7
 _DUMMY_SALT = bytes(16)
 SUBSCRIPTION_GRACE_SECONDS = 3 * 86400
 PBKDF2_ITERATIONS = 200_000
+# J5: RESPIT VID NEKAT KORT. Ett kort som går ut släckte Premium i samma
+# sekund - trots att Stripe Smart Retries ofta får igenom betalningen på dag
+# 3 av 21. Det är ofrivillig churn på ett problem som löser sig självt, och
+# det dyraste slaget: kunden VILL betala.
+#
+# Sju dagar är valt för att täcka Stripes två första omförsök utan att ge
+# bort en hel månad gratis till någon som faktiskt slutat betala. Ett tal,
+# ett ställe - banderollen i appen och dunning-mejlet läser båda det här.
+PAST_DUE_GRACE_DAYS = 7
+# Hur länge en bekräftelselänk för byte av e-post gäller.
+EMAIL_CHANGE_TOKEN_TTL_HOURS = 24
+
+
+def _iso_in(**delta) -> str:
+    return (datetime.now(timezone.utc) + timedelta(**delta)).isoformat()
+
+
+def _past_due_grace(past_due_since_iso):
+    """(inom_respit, slutdatum_iso) för ett konto i past_due.
+
+    Utan en starttid finns ingen respit att räkna på - då är svaret nej,
+    aldrig "ja för säkerhets skull". Riktningen är densamma som i
+    _period_expired: allt oklart faller till Free."""
+    if not past_due_since_iso:
+        return False, None
+    try:
+        since = datetime.fromisoformat(str(past_due_since_iso))
+    except (TypeError, ValueError):
+        return False, None
+    if since.tzinfo is None:
+        since = since.replace(tzinfo=timezone.utc)
+    until = since + timedelta(days=PAST_DUE_GRACE_DAYS)
+    return datetime.now(timezone.utc) <= until, until.isoformat()
 
 
 def _period_expired(period_end_iso) -> bool:
@@ -146,6 +179,25 @@ class AccountStore:
             # säger VILKEN ordalydelse som godkändes - se
             # services/billing/withdrawal.py.
             ("withdrawal_consent_at", "TEXT"), ("withdrawal_consent_version", "INTEGER"),
+            # J3: när kontot skapade sin FÖRSTA vecka. Aktiveringsögonblicket
+            # i produkten, och därmed villkoret för både provperioden och
+            # hänvisningsbelöningen (H5) - "vecka_skapad", aldrig
+            # registrering, så vi inte betalar för tomma konton.
+            ("first_week_at", "TEXT"),
+            # J5, dunning: när Stripe första gången sa att betalningen inte
+            # gick igenom. Respiten räknas därifrån, och kolumnen nollställs
+            # så fort en dragning lyckas - annars hade nästa nekade kort
+            # ärvt en respit som redan var förbrukad.
+            ("past_due_since", "TEXT"),
+            # J5, byta e-post: den nya adressen är PÅ VÄG tills den bekräftats
+            # från just den adressen. Kontot byter aldrig adress på något
+            # annat sätt - annars räcker en kapad session för att ta över
+            # kontot permanent.
+            ("pending_email", "TEXT"), ("pending_email_token", "TEXT"),
+            ("pending_email_expires_at", "TEXT"),
+            # J5: vilken periodslutdag årspåminnelsen redan gått ut för. Ett
+            # datum, inte en boolean - nästa år ska påminnelsen komma igen.
+            ("renewal_reminder_for", "TEXT"),
         ):
             try:
                 self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
@@ -186,7 +238,17 @@ class AccountStore:
         # webhook-hemlighet, nere längre än Stripes omleveransfönster) faller
         # kontot till Free i stället för att ge bort Premium för evigt.
         subscription_active = sub_status in BILLING_LIVE_STATUSES and not _period_expired(period_end)
-        premium_active = bool(row["premium"]) or trial_active or subscription_active
+        # J5: RESPIT VID NEKAT KORT. past_due släckte Premium i samma sekund
+        # som banken sa nej, trots att Stripe Smart Retries ofta får igenom
+        # betalningen på dag 3 av 21. Nu behåller kontot Premium i sju dagar
+        # från första nekandet - och det är en RESPIT, inte en ny sanning:
+        # `subscriptionStatus` säger fortfarande "past_due", banderollen och
+        # dunning-mejlet säger varför, och `premiumSource` säger "grace" så
+        # tratten aldrig räknar en respit som en betalande kund.
+        in_grace, grace_until = (_past_due_grace(row["past_due_since"] if "past_due_since" in keys else None)
+                                 if sub_status == "past_due" else (False, None))
+        grace_active = bool(in_grace) and not _period_expired(period_end)
+        premium_active = bool(row["premium"]) or trial_active or subscription_active or grace_active
         plan_raw = row["subscription_plan"] if "subscription_plan" in keys else None
         # A01: VARFÖR kontot är Premium, inte bara ATT det är det.
         #
@@ -199,6 +261,7 @@ class AccountStore:
         # en aktiv prenumeration betalar, oavsett vilka andra flaggor som
         # råkar vara satta på kontot.
         premium_source = ("subscription" if subscription_active
+                          else "grace" if grace_active
                           else "trial" if trial_active
                           else "comped" if bool(row["premium"])
                           else None)
@@ -216,6 +279,11 @@ class AccountStore:
             "subscriptionPlan": row["subscription_plan"] if "subscription_plan" in keys else None,
             "subscriptionPeriodEnd": row["subscription_period_end"] if "subscription_period_end" in keys else None,
             "subscriptionCancelAtPeriodEnd": bool(row["subscription_cancel_at_period_end"]) if "subscription_cancel_at_period_end" in keys else False,
+            # J5: allt frontenden behöver för banderollen "Betalningen gick
+            # inte igenom - Premium ligger kvar till 24 september". Null när
+            # inget är fel, så en banderoll aldrig kan ritas av misstag.
+            "subscriptionGraceUntil": grace_until if grace_active else None,
+            "pendingEmail": (row["pending_email"] if "pending_email" in keys else None),
             "emailVerified": bool(row["email_verified"]) if "email_verified" in keys else False,
             "marketingConsent": bool(row["marketing_consent"]) if "marketing_consent" in keys else False,
         }
@@ -368,10 +436,48 @@ class AccountStore:
         self._connection.commit()
         return self._to_public(self._session_user_row(token))
 
-    # start_trial är borttagen (affärsmodell 2026-08-31: Free / 59 kr/mån /
-    # 399 kr/år, INGEN provperiod). Kolumnerna trial_ends_at/trial_used finns
-    # kvar enbart för grandfathering av redan utdelade trials - läsvägen ovan
-    # respekterar dem tills de löpt ut, men ingenting kan bevilja nya.
+    # start_trial vid REGISTRERING är och förblir borttagen. J3 lade
+    # tillbaka provperioden på ett annat ställe i tratten - efter den första
+    # skapade veckan - och de två metoderna nedan är hela den vägen.
+    def mark_first_week(self, user_id) -> bool:
+        """Markerar att kontot skapat sin första vecka. True BARA första
+        gången.
+
+        Atomär med flit: `WHERE first_week_at IS NULL` gör att två samtidiga
+        förfrågningar inte kan få True var. Allt som belönar aktivering
+        (provperioden i J3, hänvisningen i H5) hänger på den här
+        övergången, och en belöning som kan delas ut två gånger är inte en
+        belöning utan ett hål."""
+        with self._lock:
+            cursor = self._connection.execute(
+                "UPDATE users SET first_week_at = ? WHERE id = ? AND first_week_at IS NULL",
+                (datetime.now(timezone.utc).isoformat(), int(user_id)))
+            self._connection.commit()
+            return cursor.rowcount > 0
+
+    def grant_activation_trial(self, user_id, days: int) -> str | None:
+        """Sju dagars Premium efter den första veckan. Returnerar slutdatum,
+        eller None när ingen trial delades ut.
+
+        Delas INTE ut till den som redan betalar - en aktiv prenumerant som
+        får en trial ovanpå har inte fått något, och siffran i tratten hade
+        blivit fel. Delas inte heller ut två gånger: `trial_used` är
+        villkoret, och det är samma kolumn som grandfathering av de gamla
+        provperioderna läser."""
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT * FROM users WHERE id = ?", (int(user_id),)).fetchone()
+            if not row:
+                return None
+            if row["trial_used"] or self._to_public(row).get("premium"):
+                return None
+            ends_at = (datetime.now(timezone.utc) + timedelta(days=int(days))).isoformat()
+            self._connection.execute(
+                "UPDATE users SET trial_ends_at = ?, trial_used = 1 WHERE id = ? AND trial_used = 0",
+                (ends_at, int(user_id)))
+            self._connection.commit()
+            return ends_at
+
     def billing_identity_for_token(self, token):
         """Returns (user_id, email, existing_stripe_customer_id_or_None) for a session token."""
         row = self._session_user_row(token)
@@ -411,6 +517,23 @@ class AccountStore:
         row = self._connection.execute(
             "SELECT email FROM users WHERE id = ?", (int(user_id),)).fetchone()
         return row["email"] if row else None
+
+    def any_premium(self, user_ids) -> bool:
+        """Är NÅGON av de här användarna Premium just nu? (J3)
+
+        Hushållets plan frågas en gång per inbjudan, så det får bli EN
+        fråga - inte en per medlem. Svaret går genom `_to_public`, som är
+        det enda ställe som vet vad "Premium just nu" betyder: flaggan,
+        en levande trial ELLER en prenumeration vars period inte hunnit
+        rinna ut. En andra bedömning här hade förr eller senare sagt något
+        annat än kontosidan gör."""
+        ids = [int(value) for value in (user_ids or [])]
+        if not ids:
+            return False
+        placeholders = ",".join("?" for _ in ids)
+        rows = self._connection.execute(
+            f"SELECT * FROM users WHERE id IN ({placeholders})", ids).fetchall()
+        return any(self._to_public(row).get("premium") for row in rows)
 
     def set_stripe_customer_id(self, user_id, customer_id):
         self._connection.execute("UPDATE users SET stripe_customer_id = ? WHERE id = ?", (customer_id, user_id))
@@ -588,16 +711,224 @@ class AccountStore:
                     self._connection.execute(
                         """UPDATE users SET stripe_subscription_id = ?, subscription_status = ?,
                            subscription_period_end = ?, subscription_cancel_at_period_end = ?,
-                           subscription_plan = ?, stripe_event_created = COALESCE(?, stripe_event_created)
+                           subscription_plan = ?, stripe_event_created = COALESCE(?, stripe_event_created),
+                           -- J5: respiten hör ihop med EN nekad betalning.
+                           -- Lämnar prenumerationen past_due nollställs den,
+                           -- annars ärver nästa nekade kort en respit som
+                           -- redan är förbrukad. Sätts aldrig här - bara
+                           -- mark_past_due startar klockan.
+                           past_due_since = CASE WHEN ? = 'past_due' THEN past_due_since ELSE NULL END
                            WHERE id = ?""",
                         (subscription_id, status, period_end_iso, int(bool(cancel_at_period_end)),
-                         plan, created, row["id"]),
+                         plan, created, status, row["id"]),
                     )
                 self._connection.commit()
                 return outcome
             except Exception:
                 self._connection.rollback()
                 raise
+
+    # ---- J5: dunning, återbetalning och avstämning -----------------------
+
+    def _billing_row(self, customer_id, fallback_user_id=None):
+        """Kontoraden bakom ett Stripe-objekt, eller None.
+
+        Samma två spår som webhooken redan använder (B1): kund-id först,
+        sedan matjakt_user_id ur metadatan. Ett konto som pekar på en ANNAN
+        Stripe-kund matchas aldrig - det är en manuell fråga."""
+        row = None
+        if customer_id:
+            row = self._connection.execute(
+                "SELECT * FROM users WHERE stripe_customer_id = ?", (customer_id,)).fetchone()
+        if row is None and fallback_user_id is not None:
+            row = self._connection.execute(
+                "SELECT * FROM users WHERE id = ?", (int(fallback_user_id),)).fetchone()
+            if row is not None and row["stripe_customer_id"] and customer_id \
+                    and row["stripe_customer_id"] != customer_id:
+                return None
+        return row
+
+    def mark_past_due(self, customer_id, fallback_user_id=None) -> dict | None:
+        """En nekad dragning: starta respiten. Returnerar kontot, eller None
+        när ingen kundrad finns (anroparen svarar då 500 så Stripe försöker
+        igen - samma regel som B1).
+
+        IDEMPOTENT av sig själv: `past_due_since` sätts bara när den är tom,
+        så Stripes tre dygn av omleveranser inte kan flytta fram respiten
+        gång på gång. Därför behöver den här vägen inte förbruka ett
+        event-id för att vara säker att köra om."""
+        with self._stripe_lock:
+            row = self._billing_row(customer_id, fallback_user_id)
+            if row is None:
+                return None
+            self._connection.execute(
+                """UPDATE users
+                   SET subscription_status = 'past_due',
+                       past_due_since = COALESCE(past_due_since, ?)
+                   WHERE id = ?""",
+                (datetime.now(timezone.utc).isoformat(), row["id"]))
+            self._connection.commit()
+            fresh = self._connection.execute(
+                "SELECT * FROM users WHERE id = ?", (row["id"],)).fetchone()
+            return {"id": fresh["id"], **self._to_public(fresh)}
+
+    def clear_past_due(self, customer_id, fallback_user_id=None) -> dict | None:
+        """Dragningen gick igenom. Respiten nollställs så nästa nekade kort
+        får sina EGNA sju dagar - annars hade en kund som missade en
+        betalning i mars haft noll respit i november."""
+        with self._stripe_lock:
+            row = self._billing_row(customer_id, fallback_user_id)
+            if row is None:
+                return None
+            self._connection.execute(
+                "UPDATE users SET past_due_since = NULL WHERE id = ?", (row["id"],))
+            self._connection.commit()
+            return {"id": row["id"]}
+
+    def revoke_after_refund(self, customer_id, fallback_user_id=None, reason="refund"):
+        """Pengarna tillbaka - alltså inget Premium kvar.
+
+        Returnerar (user_id, stripe_subscription_id) så anroparen kan säga
+        upp prenumerationen hos Stripe, eller None när kunden är okänd.
+
+        Kontot skrivs till `canceled` HÄR, inte i väntan på webhooken för
+        uppsägningen: återbetalar man i god ton och glömmer säga upp behåller
+        kunden Premium ett helt år gratis. `premium = 0` rör den manuella
+        flaggan också - en återbetalning ska inte lämna en gammal
+        kod-inlösning kvar som en osynlig bakdörr till Premium."""
+        with self._stripe_lock:
+            row = self._billing_row(customer_id, fallback_user_id)
+            if row is None:
+                return None
+            self._connection.execute(
+                """UPDATE users SET subscription_status = 'canceled', premium = 0,
+                       past_due_since = NULL, trial_ends_at = NULL
+                   WHERE id = ?""", (row["id"],))
+            self._connection.commit()
+            return row["id"], row["stripe_subscription_id"]
+
+    def owing_subscribers(self) -> list:
+        """Konton VI tror betalar: id, e-post, kund-id, prenumerations-id,
+        status. Underlaget för avstämningen åt andra hållet än B1 - den
+        letar kunder hos Stripe utan konto, den här letar konton med Premium
+        utan levande prenumeration hos Stripe."""
+        placeholders = ",".join("?" * len(BILLING_OWNING_STATUSES))
+        rows = self._connection.execute(
+            f"""SELECT id, email, stripe_customer_id, stripe_subscription_id,
+                       subscription_status, subscription_period_end
+                FROM users
+                WHERE subscription_status IN ({placeholders})""",
+            BILLING_OWNING_STATUSES).fetchall()
+        return [dict(row) for row in rows]
+
+    def renewal_reminder_candidates(self, within_days: int) -> list:
+        """Årsprenumeranter vars period tar slut inom `within_days` och som
+        inte redan fått påminnelsen för just den perioden.
+
+        I Sverige förväntas en påminnelse före en årsförnyelse, och den
+        förebygger chargebacks: den som blir överraskad av 399 kr bestrider
+        dragningen i stället för att säga upp."""
+        horizon = _iso_in(days=int(within_days))
+        now = datetime.now(timezone.utc).isoformat()
+        rows = self._connection.execute(
+            """SELECT id, email, subscription_period_end, subscription_plan
+               FROM users
+               WHERE subscription_status = 'active'
+                 AND subscription_cancel_at_period_end = 0
+                 AND subscription_plan IS NOT NULL
+                 AND lower(subscription_plan) LIKE '%year%'
+                 AND subscription_period_end IS NOT NULL
+                 AND subscription_period_end > ?
+                 AND subscription_period_end <= ?
+                 AND (renewal_reminder_for IS NULL
+                      OR renewal_reminder_for != subscription_period_end)""",
+            (now, horizon)).fetchall()
+        return [dict(row) for row in rows]
+
+    def mark_renewal_reminded(self, user_id, period_end) -> None:
+        with self._lock:
+            self._connection.execute(
+                "UPDATE users SET renewal_reminder_for = ? WHERE id = ?",
+                (period_end, int(user_id)))
+            self._connection.commit()
+
+    # ---- J5: byta e-postadress -------------------------------------------
+
+    def request_email_change(self, token: str, new_email: str, password: str) -> tuple:
+        """Startar ett adressbyte. Returnerar (rå_token, ny_adress, gammal_adress).
+
+        Någon som registrerar sig med adam@gmial.com och betalar 399 kr kunde
+        varken få kvittot, återställa lösenordet eller nå portalen. Enda vägen
+        ut var att radera kontot - vilket säger upp prenumerationen och kastar
+        hushållet.
+
+        TVÅ SPÄRRAR, båda nödvändiga:
+
+        * LÖSENORDET krävs. En kapad session ska inte räcka för att ta över
+          kontot permanent genom att flytta adressen.
+        * Adressen byts INTE här. Den läggs som `pending_email` och blir
+          kontots först när länken i den NYA brevlådan följts - annars kunde
+          en felstavad adress låsa ute ägaren lika hårt som förut, fast med
+          ett extra steg."""
+        row = self._session_user_row(token)
+        if not row:
+            raise AccountError("Du måste vara inloggad")
+        expected = _hash_password(password or "", bytes.fromhex(row["salt"]))
+        if not secrets.compare_digest(expected, row["password_hash"]):
+            raise AccountError("Fel lösenord")
+        new_email = (new_email or "").strip().lower()
+        if not EMAIL_PATTERN.match(new_email):
+            raise AccountError("Ogiltig e-postadress")
+        if new_email == (row["email"] or "").strip().lower():
+            raise AccountError("Det är redan din adress")
+        taken = self._connection.execute(
+            "SELECT 1 FROM users WHERE email = ?", (new_email,)).fetchone()
+        if taken:
+            raise AccountError("Det finns redan ett konto med den e-postadressen")
+        raw = secrets.token_urlsafe(24)
+        with self._lock:
+            self._connection.execute(
+                """UPDATE users SET pending_email = ?, pending_email_token = ?,
+                       pending_email_expires_at = ? WHERE id = ?""",
+                (new_email, _session_key(raw),
+                 _iso_in(hours=EMAIL_CHANGE_TOKEN_TTL_HOURS), row["id"]))
+            self._connection.commit()
+        return raw, new_email, row["email"]
+
+    def confirm_email_change(self, token: str) -> dict:
+        """Följer länken i den nya brevlådan. Returnerar kontot med sin nya
+        adress, plus "previousEmail" så anroparen kan tala om för den GAMLA
+        adressen vad som hänt.
+
+        Engångs och tidsbegränsad, som varje annan token här: hashen jämförs,
+        raden nollställs i samma skrivning."""
+        if not token:
+            raise AccountError("Ogiltig bekräftelselänk")
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT * FROM users WHERE pending_email_token = ?",
+                (_session_key(token),)).fetchone()
+            if not row or not row["pending_email"]:
+                raise AccountError("Bekräftelselänken gäller inte längre")
+            if (row["pending_email_expires_at"] or "") <= datetime.now(timezone.utc).isoformat():
+                raise AccountError("Bekräftelselänken har gått ut")
+            previous = row["email"]
+            try:
+                self._connection.execute(
+                    """UPDATE users SET email = ?, email_verified = 1, pending_email = NULL,
+                           pending_email_token = NULL, pending_email_expires_at = NULL
+                       WHERE id = ?""", (row["pending_email"], row["id"]))
+            except sqlite3.IntegrityError:
+                # Någon annan hann registrera adressen medan länken låg i
+                # brevlådan. Släpp bytet - men SÄG det, låt det inte se ut
+                # som om det gick igenom.
+                self._connection.rollback()
+                raise AccountError("Det finns redan ett konto med den e-postadressen")
+            self._connection.commit()
+            fresh = self._connection.execute(
+                "SELECT * FROM users WHERE id = ?", (row["id"],)).fetchone()
+        return {"id": fresh["id"], "previousEmail": previous,
+                "stripeCustomerId": fresh["stripe_customer_id"], **self._to_public(fresh)}
 
     def stripe_ids_for_token(self, token):
         """(stripe_customer_id, stripe_subscription_id) för inloggad användare -

@@ -1018,17 +1018,17 @@ class ApiServerHttpTest(unittest.TestCase):
         finally:
             conn.close()
 
-    # J1: "Laga med det jag har" säljs som full_pantry och kontrolleras numera
-    # på servern, så vägen måste frågas som Premium för att alls svara.
+    # J1 byggde grinden; J3 flyttade full_pantry ner till gratis igen, och
+    # grinden försvann med funktionen (den härleds ur FEATURES). Vägen svarar
+    # alltså utan konto - se test_serverside_paywall.
     def test_recipes_by_pantry_rejects_empty_items(self):
-        status, payload = self.get("/api/v1/recipes/by-pantry?items=", token=self._premium_token())
+        status, payload = self.get("/api/v1/recipes/by-pantry?items=")
         self.assertEqual(status, 400)
         self.assertIn("error", payload)
 
     def test_recipes_by_pantry_returns_matches_and_caches(self):
         original = api_server.RECIPE_SERVICE.search_by_pantry
         calls = []
-        token = self._premium_token()
 
         class FakeRecipe:
             def to_dict(self):
@@ -1036,10 +1036,10 @@ class ApiServerHttpTest(unittest.TestCase):
 
         api_server.RECIPE_SERVICE.search_by_pantry = lambda items: calls.append(items) or [(FakeRecipe(), ["Lök"])]
         try:
-            status, payload = self.get(f"/api/v1/recipes/by-pantry?items={urllib.parse.quote('Lök,Pasta')}", token=token)
+            status, payload = self.get(f"/api/v1/recipes/by-pantry?items={urllib.parse.quote('Lök,Pasta')}")
             self.assertEqual(status, 200)
             self.assertEqual(payload["recipes"][0]["matchedIngredients"], ["Lök"])
-            status2, payload2 = self.get(f"/api/v1/recipes/by-pantry?items={urllib.parse.quote('Pasta,Lök')}", token=token)
+            status2, payload2 = self.get(f"/api/v1/recipes/by-pantry?items={urllib.parse.quote('Pasta,Lök')}")
             self.assertEqual(status2, 200)
             self.assertEqual(payload2["recipes"], payload["recipes"])
             self.assertEqual(len(calls), 1, "second request with the same ingredient set (different order) should hit the cache")
@@ -1341,6 +1341,17 @@ class AuthHttpTest(unittest.TestCase):
     def _email(self):
         return f"user-{uuid.uuid4().hex}@example.com"
 
+    def _verified_token(self):
+        """Ett konto med BEKRÄFTAD adress. J5 kräver det före ett köp -
+        kvittot, lösenordsåterställningen och prenumerationssidan går alla
+        dit - och de här testerna prövar checkout, inte verifieringen."""
+        email = self._email()
+        _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+        api_server.ACCOUNT_STORE.connection.execute(
+            "UPDATE users SET email_verified = 1 WHERE email = ?", (email,))
+        api_server.ACCOUNT_STORE.connection.commit()
+        return payload["token"]
+
     def test_register_login_and_me(self):
         email = self._email()
         status, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
@@ -1349,7 +1360,12 @@ class AuthHttpTest(unittest.TestCase):
         self.assertEqual(payload["user"], {
             "email": email, "premium": False, "premiumSource": None, "plan": "free", "trialEndsAt": None, "trialUsed": False,
             "subscriptionStatus": None, "subscriptionPlan": None, "subscriptionPeriodEnd": None,
-            "subscriptionCancelAtPeriodEnd": False, "emailVerified": False, "marketingConsent": False,
+            "subscriptionCancelAtPeriodEnd": False,
+            # J5: respiten vid nekat kort, och adressbytet som väntar på
+            # bekräftelse. Null när inget är på gång - en banderoll ska inte
+            # kunna ritas av misstag.
+            "subscriptionGraceUntil": None, "pendingEmail": None,
+            "emailVerified": False, "marketingConsent": False,
         })
         status, payload = self.get("/api/auth/me", token=token)
         self.assertEqual(status, 200)
@@ -1640,7 +1656,8 @@ class AuthHttpTest(unittest.TestCase):
         api_server.STRIPE_SECRET_KEY = api_server.STRIPE_PRICE_MONTHLY = api_server.STRIPE_PRICE_YEARLY = ""
         try:
             email = self._email()
-            _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+            # J5: verifierad adress krävs före köp - inte det här testets ämne.
+            payload = {"token": self._verified_token()}
             status, payload = self.post("/api/billing/checkout", {"plan": "monthly"}, token=payload["token"])
             self.assertEqual(status, 400)
             self.assertIn("error", payload)
@@ -1668,7 +1685,8 @@ class AuthHttpTest(unittest.TestCase):
         api_server.create_checkout_session = fake_create_checkout_session
         try:
             email = self._email()
-            _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+            # J5: verifierad adress krävs före köp - inte det här testets ämne.
+            payload = {"token": self._verified_token()}
             token = payload["token"]
             status, payload = self.post("/api/billing/checkout", {"plan": "monthly", "withdrawalConsent": True}, token=token)
             self.assertEqual(status, 200)
@@ -1841,7 +1859,8 @@ class AuthHttpTest(unittest.TestCase):
         api_server.create_checkout_session = lambda secret_key, customer_id, price_id, success_url, cancel_url, **kwargs: f"https://checkout.stripe.com/fake/{price_id}"
         try:
             email = self._email()
-            _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+            # J5: verifierad adress krävs före köp - inte det här testets ämne.
+            payload = {"token": self._verified_token()}
             token = payload["token"]
             status, payload = self.post("/api/billing/checkout", {"plan": "yearly", "withdrawalConsent": True}, token=token)
             self.assertEqual(status, 200)
@@ -1863,7 +1882,8 @@ class AuthHttpTest(unittest.TestCase):
         api_server.create_customer = down
         try:
             email = self._email()
-            _, payload = self.post("/api/auth/register", {"email": email, "password": "hemligt123"})
+            # J5: verifierad adress krävs före köp - inte det här testets ämne.
+            payload = {"token": self._verified_token()}
             status, payload = self.post("/api/billing/checkout", {"plan": "monthly", "withdrawalConsent": True}, token=payload["token"])
             self.assertEqual(status, 400)
             self.assertIn("Stripe svarar inte", payload["error"])

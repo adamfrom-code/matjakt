@@ -71,9 +71,9 @@ class FyraButiksdefinitioner(unittest.TestCase):
 
     def test_en_farsk_butik_i_osläppt_kedja_nar_ingen_kund(self):
         with tempfile.TemporaryDirectory() as tmp:
-            db, nu = self._bygg(tmp, "ICA")             # inte i RELEASED_CHAINS
+            db, nu = self._bygg(tmp, "Coop")            # inte i RELEASED_CHAINS
             try:
-                r = grocery_api.store_counts(db, "ICA", now=nu)
+                r = grocery_api.store_counts(db, "Coop", now=nu)
             finally:
                 db.close()
         self.assertEqual(r["farska"], 1)

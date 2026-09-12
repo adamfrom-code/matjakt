@@ -4,7 +4,7 @@
 
 ## Vad som händer vid `git push origin main`
 
-1. **CI** (`.github/workflows/ci.yml`): kompilering, hela backend-sviten i en isolerad tempkatalog utan riktiga anrop, frontend-tester, `node --check`, hemlighetsskanning, kontroll att `.env` inte är spårad, kontroll att frontendens tre versionsnummer följs åt.
+1. **CI** (`.github/workflows/ci.yml`): kompilering, hela backend-sviten i en isolerad tempkatalog utan riktiga anrop, frontend-tester, `node --check`, hemlighetsskanning, kontroll att `.env` inte är spårad, kontroll att frontendens cache-version inte står i källan och att stämpeln i bygget är digesten av bygget.
 2. **Pages** (`.github/workflows/deploy.yml`): startar när CI är GRÖN på main (`workflow_run`), kör `npm test`, bygger `dist/frontend` med `npm run build` (esbuild: `app.js` buntad + minifierad, `styles.css` minifierad, källorna orörda) och deployar den till matjakt.store med `matjakt-api-url` satt till Render.
 3. **Render**: bygger `backend/Dockerfile` och deployar. *Observera:* Render lyssnar på pushen direkt – inte på CI. En röd svit stoppar i dag Pages men inte backend. Åtgärd (Adam, Render-dashboarden): stäng av *Auto-Deploy* och lägg ett deploy-hook-steg sist i `ci.yml` (`curl -X POST "$RENDER_DEPLOY_HOOK"` med hooken som GitHub-secret). Tills dess: pusha bara grönt.
 
@@ -16,7 +16,7 @@
 | Frontend-svit | `node --test` | alla gröna |
 | Syntax | `node --check frontend/app/app.js && python -m compileall -q backend` | ok |
 | Hemligheter | `python backend/scripts/secret_scan.py` | inga träffar |
-| Versioner | `python backend/scripts/check_frontend_version.py` | samma nummer på tre ställen |
+| Versioner | `python backend/scripts/check_frontend_version.py` och `... --build dist/frontend` | platshållare i källan, stämpeln i bygget = digesten av bygget |
 | Prisaudit | `python backend/scripts/audit_pricing.py` (lokalt) och `POST /api/admin/pricing-audit` (prod, admin-token) | `gate: GRÖN` = 0 gram→styck, 0 volym→styck, 0 estimat, 0 otolkade, 0 kilopris-som-paketpris |
 | Auth | svitens `test_accounts`, `test_auth_hardening`, `test_session_tokens` + ett manuellt registrera/logga ut/logga in i prod | gröna, veckan finns kvar |
 | Stripe | `GET /api/health` → `stripe.mode`, `stripe.pricesVerified: true`; `GET /api/admin/stripe-check` → `ok: true` | test-läge tills live beslutas |
@@ -32,8 +32,14 @@
 # 1. Grönt lokalt
 python backend/tests/run.py && node --test && python backend/scripts/secret_scan.py && python backend/scripts/check_frontend_version.py
 
-# 2. Frontend-ändring? Höj cache-versionen (alla tre ställen på en gång)
-python backend/scripts/check_frontend_version.py --bump
+# 2. Frontend-ändring? Ingenting att göra (L9). Versionen står inte i källan -
+#    bygget stämplar in eran plus en digest över det som byggts, så en ändrad
+#    frontend byter cache-nyckel av sig själv. Kontrollera bygget om du vill:
+npm run build && python backend/scripts/check_frontend_version.py --build dist/frontend
+
+#    Eran (den läsbara etiketten "v110", inte cache-nyckeln) höjs vid en riktig
+#    release - inte per paket:
+node scripts/frontend_version.mjs --bump
 
 # 3. Små logiska commits, push
 git push origin main
@@ -109,7 +115,55 @@ Känt och accepterat: registrering svarar "det finns redan ett konto" (kontoenum
 
 ## Juridik
 
-Inga `class="placeholder"` får finnas kvar i `frontend/integritetspolicy.html` och `frontend/anvandarvillkor.html` vid publik release (CI:s säkerhetsjobb varnar). Avtalspart/personuppgiftsansvarig, organisationsnummer, abonnemang/uppsägning, ångerrätt, integritet samt allergi-/kostsamtycke fylls i av Adam.
+Avtalspart och personuppgiftsansvarig är ifyllda sedan I3: **Adam From, enskild firma, org.nr 199511045651, Södra Kansligatan 25, 805 52 Gävle**, kontakt `adamfrom@icloud.com`. Kontaktblock med postadress finns på båda sidorna — e-post ensam räcker inte för konsumentköp. Ångerrätten beskriver B3:s faktiska mekanism (kryssruta före köp, samtycket tidsstämplat, databasen avgör om Checkout får starta, ordalydelsen versionsmärkt).
+
+`tests/juridik.test.js` failar om en `class="placeholder"` kommer tillbaka, om org.nr saknas, om kontaktblocket saknar postnummer eller om ångerrättstexten inte nämner distansavtalslagen.
+
+`support@matjakt.store` har **ingen vidarebefordran** ännu. Sätts den upp ska adressen bytas på alla fem ställena samtidigt (två juridiksidor, landningssidan, 404, och `EPOST` i testet) — en halvbytt supportadress är sämre än ingen.
+
+## KVAR FÖR ADAM INNAN PUBLIK LANSERING
+
+Det här är saker bara kontoinnehavaren kan göra. Koden är byggd och väntar på var och en; ingen av dem kräver en deploy.
+
+### 1. Stripe: moms  (B2)
+
+Kontot står i **testläge**. Gör stegen där först, sedan om i live-läget.
+
+| Steg | Var | Notering |
+|---|---|---|
+| 1 | Skapa **nya** priser, 59,00 SEK/mån och 399,00 SEK/år, *Include tax in price* = **Yes** | `tax_behavior` går **inte** att ändra i efterhand. Nya pris-id:n måste in i Render. |
+| 2 | Settings → Tax: huvudkontorets adress (Sverige) + momsregistrering SE | `GET /v1/tax/settings` ska svara `status: "active"` |
+| 3 | Settings → Customer emails: *Successful payments* och *Refunds* | Ett kvitto utan momsuppdelning kan en svensk kund inte bokföra |
+| 4 | `GET /api/admin/stripe-check` med admin-token | Kör om hela kontrollen **utan omstart** och skriver in klartecknet som checkout läser |
+
+Priserna 59 och 399 kr är **inklusive 25 % moms** — prisinformationslagen kräver att visat pris till konsument är totalpriset. 59 kr = 47,20 + 11,80. 399 kr = 319,20 + 79,80. Beloppen ändras alltså inte.
+
+**Stripes *Legal entity* måste stå på samma juridiska person som juridiken ovan.** Momsen bokförs på den enhet Stripe känner till, inte på den som står i policyn.
+
+Ingen brådska i drift: `automatic_tax` skickas först när Stripe självt bekräftar att Tax är aktivt (`tax.py`), så köpknappen fungerar hela tiden. Tills dess står orsaken i klartext i `/api/health` → `stripe.priceCheck`.
+
+**OSS:** prenumerationen går att köpa från vilket EU-land som helst, och då gäller köparlandets momssats. Stripe Tax räknar rätt sats av sig själv, men OSS-registreringen är din. B2b lägger en kontroll som larmar första gången en betalande kund har adress utanför Sverige.
+
+### 2. Render: backupnycklarna  (B5)
+
+```
+MATJAKT_BACKUP_TOKEN         skild från admin-token
+MATJAKT_BACKUP_PUBLIC_KEY    certifikathalvan av ett openssl req -x509-par
+```
+
+Den **privata** nyckeln får aldrig finnas i miljön — servern behöver bara den publika för att kryptera.
+
+Backuperna tas som vanligt varje natt utan dem; det är bara *nedladdningen* som är stängd (`/api/admin/backup-download` svarar 404/503, `pull_backup.py` larmar med exit 1). Fail closed med avsikt: alternativet var att fortsätta strömma varje e-postadress i klartext över en enda headerhemlighet.
+
+### 3. Klickspårning i mejlen  (I7, ditt beslut)
+
+`mail_klick` har sitt namn men ingen avsändare. Den kräver en `GET /api/mail/click`-omdirigering och ändrade mallar — **och den ska stå i integritetspolicyn innan den byggs**. Klickspårning i marknadsmejl är personuppgiftsbehandling och smygs inte in.
+
+### 4. Övrigt
+
+- **App Store och Play:** `review_notes.txt` har två platshållare för granskningskontots e-post och lösenord. Kör om `backend/scripts/make_store_screenshots.py` när våg L är klar — skärmbilderna åldras med designen.
+- **Plausible:** `<meta name="matjakt-traffic">` finns men är tom. Sätt `plausible:matjakt.store` när du vill ha besöksstatistik. Kakfritt, redan i CSP:n, ingen samtyckesbanner.
+- **`RENDER_DEPLOY_HOOK`** i repo-secrets är valfri. Utan den deployar Render ändå via sin egen Auto-Deploy, och hälsogrinden väntar på committen oavsett (K3b). Med den får vi `?ref=<SHA>` så Render bygger exakt den gröna committen i stället för grenspetsen.
 
 ## Rollback
 

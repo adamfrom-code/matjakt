@@ -177,17 +177,21 @@ test("typsnitten är bytta överallt, inte bara i länken", () => {
     "styles.css hårdkodar ett typsnitt som inte längre laddas - då blir det systemfont");
 });
 
-test("versionsnumren i sw.js och index.html följer åt", () => {
-  // Tre ställen, ett tal. Släpar ett efter serverar service workern gammal CSS
-  // mot ny HTML, och användaren ser en halvbytt app tills cachen råkar rensas.
+test("versionen står inte i källan - de tre ställena bär platshållaren", () => {
+  // Tre ställen, ett värde. Släpar ett efter serverar service workern gammal
+  // CSS mot ny HTML, och användaren ser en halvbytt app tills cachen råkar
+  // rensas. L9 gjorde det omöjligt att bumpa dem isär genom att inte bumpa dem
+  // alls: bygget skriver alla tre ur en digest över det som byggts. Stämpeln
+  // prövas i tests/frontend-version.test.js; här vaktas bara att inget tal
+  // smugit tillbaka in i källan.
   const sw = läsFil("frontend/app/sw.js");
   const html = läsFil("frontend/app/index.html");
-  const skal = sw.match(/matjakt-shell-v(\d+)/);
-  assert.ok(skal, "sw.js saknar matjakt-shell-vNN");
-  const versioner = [...html.matchAll(/\?v=(\d+)/g)].map((m) => m[1]);
+  assert.match(sw, /CACHE_NAME = "matjakt-shell-v__MATJAKT_VERSION__"/,
+    "sw.js CACHE_NAME bär inte platshållaren");
+  const versioner = [...html.matchAll(/\?v=([^"']*)/g)].map((m) => m[1]);
   assert.ok(versioner.length >= 2, "index.html saknar ?v= på styles.css och app.js");
   for (const v of versioner) {
-    assert.equal(v, skal[1],
-      `index.html har ?v=${v} men sw.js cachar v${skal[1]} - de måste bumpas ihop`);
+    assert.equal(v, "__MATJAKT_VERSION__",
+      `index.html har ?v=${v} - ett tal där är raden varje frontendgren konfliktar på`);
   }
 });
