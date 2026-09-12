@@ -23,7 +23,7 @@ samma sekund den behövdes. En stämpel som bara går uppåt är dessutom sann
 oavsett i vilken ordning deployerna råkade gå.
 
 NUMREN. Ett lager = en databasfil = en egen räknare. Siffrorna betyder
-ingenting över lagergränsen: `KONTON = 1` och `RECEPT = 1` är inte "samma
+ingenting över lagergränsen: `KONTON = 2` och `RECEPT = 2` är inte "samma
 version", de är två tabeller som var för sig aldrig ändrats sedan stämpeln
 infördes. **0 betyder "aldrig stämplad"** - en databas som senast rördes av
 kod från före det här paketet, eller en fil som inte är någon av våra.
@@ -47,9 +47,9 @@ from pathlib import Path
 # migrationer som fanns då ligger under 1; de är inte numrerade var för sig
 # och kan inte bli det i efterhand, eftersom produktionsdatabaserna redan
 # hade kört dem utan att lämna spår om vilka.
-KONTON = 1
+KONTON = 2
 BUTIKSDATA = 1
-RECEPT = 1
+RECEPT = 2
 HUSHALL = 1
 PRISCACHE = 1
 
