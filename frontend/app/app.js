@@ -49,6 +49,7 @@ import { notificationIntent, syncWeeklyPush } from "./src/services/weekly-push.j
 import { branchChoiceKey, canPlanWeek, chooseBranch } from "./src/services/branch-choice.js";
 import { createSeededRandom, newSeed } from "./src/services/seeded-random.js";
 import { debounce } from "./src/services/debounce.js";
+import { createEntitlementRefresh } from "./src/services/entitlement-refresh.js";
 import { closeOnboarding, initAccountView, isAwaitingPremium, openOnboarding, openPaywall, openPremiumPitch, renderAccount, renderHousehold, renderNotificationPrefs, renderPostcodePrompt, renderWeekPlanUpsell, setAwaitingPremium, wireHouseholdUi } from "./src/views/account.js";
 import { delaMånaden, initSparatView, renderSparat, sparatModell } from "./src/views/sparat.js";
 
@@ -793,13 +794,25 @@ async function fetchEntitlements() {
     const token = getStoredToken();
     const response = await fetch(entitlementsApiUrl(), {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
+      // J4: backend svarar redan `Cache-Control: no-store` (send_json), men
+      // ett cachat svar är per definition en gammal plan - be aldrig om ett.
+      cache: "no-store",
       signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     entitlements = await response.json();
+    // hasPremium() läser entitlements.isPremium ELLER state.user.premium, och
+    // kontoarket (views/account.js) läser flaggan rakt av. Båda kommer ur
+    // samma kontopost i backend, men user-svaret hämtas bara vid inloggning -
+    // så utan den här raden står den uppsagda kvar som Premium fast det
+    // färska svaret säger free.
+    if (state.user && typeof entitlements.isPremium === "boolean") state.user.premium = entitlements.isPremium;
   } catch {
     // Nätet nere: behåll det vi har. Free är alltid ett säkert antagande.
   }
+  // Varje väg hit räknas som ett färskt svar - också boot och inloggning, som
+  // hämtar utan att gå via uppvakningsregeln i entitlement-refresh.js.
+  entitlementRefresh.markRefreshed();
   // A plan change makes every cached pricing answer stale: the masked
   // Free response must not survive into Premium (locked cards after an
   // upgrade), and a Premium snapshot must not leak into Free. Throw the
@@ -811,8 +824,12 @@ async function fetchEntitlements() {
   }
   lastEntitlementPlan = entitlements.plan;
   // Priserna kommer med svaret - rita om flikarna nu, annars står de kvar
-  // med reservvärdena tills något annat råkar rendera kontoarket.
+  // med reservvärdena tills något annat råkar rendera kontoarket. Och hela
+  // kontoarket, inte bara flikarna: den som sagt upp sig i kundportalen står
+  // framför öppet ark när svaret landar, och "✓ Premium aktiverat" ska inte
+  // få stå kvar där tills hon råkar stänga och öppna det igen (J4).
   renderPriceTabs();
+  renderAccount();
   // A saved dinner count above the plan's cap quietly clamps for the NEXT
   // generated week. The already-chosen week is untouched - a paywall must
   // never eat food someone already planned.
@@ -822,6 +839,10 @@ async function fetchEntitlements() {
   }
   render();
 }
+// J4: entitlementen hämtades bara vid boot och vid inloggning, och en PWA
+// bootar aldrig om. Regeln för när svaret är för gammalt bor i modulen; här
+// står bara vem som ska hämtas när den säger till.
+const entitlementRefresh = createEntitlementRefresh({ refresh: fetchEntitlements });
 function can(feature) {
   if (hasPremium()) return true;
   const features = entitlements.features || {};
@@ -4045,6 +4066,10 @@ $("manageBillingBtn").addEventListener("click", async () => {
   try {
     await flushServerSync();
     const { url } = await openBillingPortal(state.authToken);
+    // J4: hos Stripe kan hon säga upp, byta plan eller byta kort. Köpflödet
+    // pollar efter webhooken; portalflödet hade ingenting alls. Stämpeln gör
+    // att nästa uppvaknande hämtar planen på nytt direkt, utan åldersspärr.
+    entitlementRefresh.markBillingVisit();
     openExternal(url);
   } catch (error) { $("portalError").textContent = errorText(error); }
 });
@@ -4264,6 +4289,9 @@ handlePendingInvite();
 // att vi bygger en WebSocket-infrastruktur för det.
 function onAppResumed() {
   pullHousehold(); loadNotifications();
+  // J4: och planen. Den som sagt upp sig på en annan enhet - eller vars kort
+  // nekades i natt - ska inte fortsätta se Premium tills någon laddar om.
+  entitlementRefresh.onResume();
   // Tillbaka från Stripe i native-appen: hämta Premium-status.
   if (isAwaitingPremium() && isNativeApp()) activatePremiumAfterCheckout();
 }
