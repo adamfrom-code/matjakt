@@ -332,3 +332,91 @@ test("prisbilden rensas däremot när hämtningen startar - Gävles summor får 
     assert.equal(state.pinnedBranch, null, "en butik pinnad i den gamla staden går inte att gå till från den nya");
   } finally { restore(); }
 });
+
+// ---- T3: grinden måste veta om svaret fortfarande står kvar ----------------
+//
+// Grindens nyckel är veckan plus planen. Den svarar alltså på OM VI FRÅGAT,
+// aldrig på OM SVARET STÅR KVAR - och byter någon ut prisbilden utan att
+// veckan ändras ser den ingenting. E16 rättade den överskrivning som utlöste
+// det i CI (`count '3', Actual value: 1` efter ett premiumköp) och pekade
+// samtidigt ut grinden som skälet att den blev permanent: "nyckeln är redan
+// den premiumnyckeln, så den som betalat blir kvar i Free-vyn". Hålet finns
+// kvar utan kontosynken - clearPriceSnapshots och utloggningen tömmer båda
+// bilden utan att fråga grinden.
+
+const PREMIUMSVAR = jsonResponse({
+  results: [{ chain: "Willys", totalCheckoutCost: 491, realPriceItems: 17 },
+            { chain: "Hemköp", totalCheckoutCost: 579, realPriceItems: 17 },
+            { chain: "City Gross", totalCheckoutCost: 535, realPriceItems: 17 }],
+  comparison: { cheapestChain: "Willys" },
+});
+
+test("T3: när prisbilden bytts ut bakom grindens rygg hämtas veckan om", async () => {
+  startaTillstand();
+  let calls = 0;
+  const restore = stubFetch(async () => { calls++; return PREMIUMSVAR; });
+  try {
+    await syncDatabasePricing(VECKANS_VAROR);
+    assert.equal(Object.keys(state.dbChainTotals).length, 3);
+    assert.equal(calls, 1);
+
+    // Oförändrad prisbild: grinden ska INTE hämta om. Det är den halvan som
+    // håller nere anropen, och den får inte offras för den andra.
+    for (let omritning = 0; omritning < 10; omritning++) await syncDatabasePricing(VECKANS_VAROR);
+    assert.equal(calls, 1, "en oförändrad vecka får inte ge ett anrop per omritning");
+
+    // Kontots blob landar och ersätter svaret med en äldre bild. Grinden såg
+    // ingenting: samma vecka, samma plan, samma nyckel - och svarade "redan
+    // hämtat" för alltid. Trettio sekunder senare stod EN kedja kvar på
+    // skärmen, och det var så CI-felet såg ut.
+    state.dbChainTotals = { Willys: { chain: "Willys", totalCheckoutCost: 491 } };
+    state.dbPricedAt = 1;
+    await syncDatabasePricing(VECKANS_VAROR);
+    assert.equal(calls, 2, "grinden svarade 'redan hämtat' om ett svar som inte längre fanns kvar");
+    assert.equal(Object.keys(state.dbChainTotals).length, 3);
+  } finally { restore(); }
+});
+
+test("T3: en ersatt hämtning nollar inte den nya hämtningens pending-flagga", async () => {
+  startaTillstand();
+  let calls = 0;
+  const grindar = [];
+  const restore = stubFetch(async () => {
+    calls++;
+    await new Promise(resolve => grindar.push(resolve));   // hänger tills testet släpper
+    return PREMIUMSVAR;
+  });
+  try {
+    // Stubben hänger på sin egen grind, så hämtningen ligger kvar i luften
+    // efter anropet. `await null` släpper fram en microtask så det som köats
+    // har kört innan läget läses - svaret har ändå inte kommit.
+    const freeAnropet = syncDatabasePricing(VECKANS_VAROR);
+    await null;
+    assert.equal(calls, 1);
+    assert.equal(pricingIsPending(), true);
+
+    // Premium slår till mitt i: fetchEntitlements nollar grinden och rensar
+    // prisbilden, och nästa omritning startar hämtningen på nytt.
+    resetPricingSync();
+    state.dbChainTotals = {}; state.dbLockedChains = []; state.dbPricedAt = null;
+    const premiumAnropet = syncDatabasePricing(VECKANS_VAROR);
+    await null;
+    assert.equal(calls, 2);
+    assert.equal(pricingIsPending(), true);
+
+    // Nu svarar den ÖVERGIVNA hämtningen. Dess `finally` skrev
+    // `databasePricingSync.pending = false` på MODULVARIABELN - alltså på den
+    // nya hämtningens post, som fortfarande var i luften. Efter det stod
+    // grinden öppen mitt under ett pågående anrop.
+    grindar[0]();
+    await freeAnropet;
+    assert.equal(pricingIsPending(), true, "den övergivna hämtningen nollade den nya hämtningens flagga");
+    await syncDatabasePricing(VECKANS_VAROR);
+    assert.equal(calls, 2, "en tredje hämtning startade parallellt med den som redan pågick");
+
+    grindar[1]();
+    await premiumAnropet;
+    assert.equal(pricingIsPending(), false);
+    assert.equal(Object.keys(state.dbChainTotals).length, 3);
+  } finally { restore(); grindar.forEach(slapp => slapp()); }
+});

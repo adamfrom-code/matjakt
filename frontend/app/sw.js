@@ -84,3 +84,81 @@ self.addEventListener("fetch", event => {
           : undefined)))
   );
 });
+
+// ---------------------------------------------------------------------------
+// H1: SÖNDAGSNOTISEN
+//
+// Appen hade ingen `push`-lyssnare alls. Notisinställningarna under Konto →
+// Hushåll styrde en in-app-toast som bara syns om appen råkar vara öppen -
+// alltså exakt när ingen behöver påminnas. Det här är den andra halvan:
+// servern skickar söndag 17:00 (backend/services/push/schedule.py) och det
+// här tar emot.
+//
+// TVÅ REGLER.
+//
+// 1. EN PUSH FÅR ALDRIG KASTA. Gör den det visar webbläsaren sin egen
+//    "den här sajten uppdaterades i bakgrunden"-notis i stället - en notis
+//    användaren varken bad om eller kan tolka. Därför läses nyttolasten
+//    genom en try/catch med en färdig reservtext, och showNotification är
+//    det enda som kan misslyckas efter den punkten.
+// 2. ETT TRYCK SKA GE EN FÄRDIG VECKA. `notificationclick` landar inte på
+//    startsidan. Den öppnar (eller lyfter fram) appen med ?notis=vecka, och
+//    app.js bygger veckan på den signalen. En notis som leder till en tom
+//    startsida är en notis som lär folk att inte trycka.
+const NOTIFICATION_FALLBACK = {
+  title: "Dags att planera veckan",
+  body: "Förslaget till veckan är redan klart.",
+};
+// Samma tag varje söndag: en oläst notis ERSÄTTS i stället för att en till
+// läggs på hög. Databasens push_log är första försvaret mot dubbletter, det
+// här är andra - och det enda som också gäller mellan två servrar.
+const WEEK_NOTIFICATION_TAG = "matjakt-vecka";
+const WEEK_NOTIFICATION_URL = "./?notis=vecka";
+
+function notificationPayload(data) {
+  try {
+    const parsed = data && data.json();
+    if (parsed && typeof parsed === "object") return parsed;
+  } catch { /* inte JSON - texten nedan duger */ }
+  try {
+    const text = data && data.text();
+    if (text) return { ...NOTIFICATION_FALLBACK, body: text };
+  } catch { /* ingen nyttolast alls */ }
+  return NOTIFICATION_FALLBACK;
+}
+
+self.addEventListener("push", event => {
+  const payload = notificationPayload(event.data);
+  event.waitUntil(self.registration.showNotification(payload.title || NOTIFICATION_FALLBACK.title, {
+    body: payload.body || NOTIFICATION_FALLBACK.body,
+    tag: payload.tag || WEEK_NOTIFICATION_TAG,
+    icon: "assets/icons/icon-192.png",
+    badge: "assets/icons/icon-192.png",
+    lang: "sv-SE",
+    // Notisen bär inget känsligt (antal middagar och personer), men den
+    // ligger på en låst skärm och ska kunna läsas där - inget mer.
+    data: { url: payload.url || WEEK_NOTIFICATION_URL, kind: payload.kind || "sondagsnotis" },
+  }));
+});
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  event.waitUntil(openFromNotification(event.notification.data));
+});
+
+function openFromNotification(data) {
+  const target = new URL((data && data.url) || WEEK_NOTIFICATION_URL, self.location.href);
+  // Djuplänken är en UPPMANING, inte en adress: app.js läser ?notis= och
+  // bygger veckan. Den sätts även på en redan öppen flik, som annars hade
+  // lyfts fram på vilken vy den nu stod.
+  return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(windows => {
+    const open = windows.find(client => {
+      try { return new URL(client.url).origin === self.location.origin; } catch { return false; }
+    });
+    if (!open) return self.clients.openWindow(target.href);
+    // postMessage först, focus sen: en flik som inte går att lyfta fram
+    // (vissa webbläsare vägrar) har då ändå fått veta vad som ska hända.
+    if (open.postMessage) open.postMessage({ type: "matjakt-notis", url: target.href });
+    return open.focus ? open.focus() : undefined;
+  });
+}

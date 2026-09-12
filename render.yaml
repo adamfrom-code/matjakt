@@ -40,6 +40,18 @@ services:
         value: "0"
       - key: MATJAKT_MAIL_SECRET
         sync: false
+      # H1: SÖNDAGSNOTISENS NYCKELPAR (VAPID, RFC 8292). Genereras EN gång av
+      # Adam - `npx web-push generate-vapid-keys` - och sätts här i
+      # dashboarden, aldrig i en spårad fil. Den publika halvan går vidare
+      # till webbläsaren (den ÄR publik); den privata lämnar aldrig Render.
+      # Saknas de skickas ingen notis och allt annat fungerar oförändrat.
+      - key: MATJAKT_VAPID_PUBLIC_KEY
+        sync: false
+      - key: MATJAKT_VAPID_PRIVATE_KEY
+        sync: false
+      # Vem push-tjänsten kan höra av sig till om vi beter oss illa.
+      - key: MATJAKT_VAPID_SUBJECT
+        sync: false
       # D1: MOTTAGAREN FÖR DRIFTLARMEN. Hela larmkedjan i
       # services/grocery/alerts.py - dedupering, incident, recovery - var
       # byggd och testad men saknade adress här, så varje incident hamnade
@@ -141,6 +153,15 @@ services:
       - key: MATJAKT_MAILINGS_ENABLED
         value: "0"
       - key: MATJAKT_MAIL_SECRET
+        sync: false
+      # Veckonotisen: eget nyckelpar i staging, eller inget alls. Samma par
+      # i två miljöer betyder att ett stagingtest kan plinga i en riktig
+      # kunds telefon.
+      - key: MATJAKT_VAPID_PUBLIC_KEY
+        sync: false
+      - key: MATJAKT_VAPID_PRIVATE_KEY
+        sync: false
+      - key: MATJAKT_VAPID_SUBJECT
         sync: false
       - key: MATJAKT_ADMIN_EMAIL
         sync: false

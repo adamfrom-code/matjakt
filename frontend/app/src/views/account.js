@@ -195,10 +195,18 @@ export function renderNotificationPrefs() {
     `<label class="household-notify-row"><span>${label}</span><input type="checkbox" data-notify-pref="${key}" ${prefs[key] === false ? "" : "checked"}></label>`).join("");
   list.innerHTML = `<label class="household-notify-row main"><span>Alla notiser</span><input type="checkbox" data-notify-pref="all" ${prefs.all === false ? "" : "checked"}></label>${rows}`;
   list.querySelectorAll("[data-notify-pref]").forEach(input => input.addEventListener("change", () => {
-    const next = { ...prefs, [input.dataset.notifyPref]: input.checked };
+    const pref = input.dataset.notifyPref;
+    const next = { ...prefs, [pref]: input.checked };
     state.notisInstallningar = next;
     saveNotificationPrefs(state.authToken, next)
-      .then(({ preferences }) => { state.notisInstallningar = preferences; })
+      .then(({ preferences }) => {
+        state.notisInstallningar = preferences;
+        // H1: "Ny vecka" är brytaren för söndagsnotisen, och det HÄR är det
+        // enda stället i appen där tillståndsdialogen får visas - den kom ur
+        // ett tryck. Att slå av den säger upp prenumerationen; att slå på den
+        // frågar en gång. Ett nej frågas aldrig om igen (weekly-push.js).
+        if (pref === "week" || pref === "all") app.syncWeeklyNotification?.({ prompt: input.checked });
+      })
       .catch(() => { /* nästa ändring försöker igen */ });
   }));
 }

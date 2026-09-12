@@ -25,7 +25,7 @@ import logging
 
 from ..accounts import features as plan_features
 from ..billing import gate as paywall
-from .notifications import PREF_ALL, PREFERENCES
+from .notifications import PREF_ALL, PREF_WEEK, PREFERENCES
 from .store import (
     ALREADY_HAVE, HouseholdError, HouseholdFullError, LOCATIONS, MAX_MEMBERS,
     NEED_TO_BUY, NotAMemberError, PURCHASED, REMOVED,
@@ -40,11 +40,17 @@ DEFAULT_LOCATION = "skafferi"
 
 
 class HouseholdRouter:
-    def __init__(self, store, notifications, account_store, app_url="https://matjakt.store"):
+    def __init__(self, store, notifications, account_store, app_url="https://matjakt.store",
+                 push=None, push_public_key=""):
         self.store = store
         self.notifications = notifications
         self.accounts = account_store
         self.app_url = (app_url or "").rstrip("/")
+        # H1: Web Push-prenumerationerna. Valfria med flit - routern ska gå
+        # att bygga i ett test utan ett push-lager, och servern ska starta
+        # oförändrat utan VAPID-nycklar.
+        self.push = push
+        self.push_public_key = (push_public_key or "").strip()
 
     # ---- identitet -------------------------------------------------------
 
@@ -220,6 +226,14 @@ class HouseholdRouter:
             "preferences": self.notifications.preferences(user_id),
             "notifications": self.notifications.due(user_id),
             "pending": self.notifications.pending_count(user_id),
+            # H1: den PUBLIKA VAPID-halvan. Den är publik per definition -
+            # webbläsaren måste ha den för att kunna prenumerera - och en tom
+            # sträng är ett fullgott svar: klienten frågar då inte ens om
+            # notistillstånd, och ingen ser en dialog som inte leder någonvart.
+            "push": {
+                "publicKey": self.push_public_key,
+                "subscribed": bool(self.push and self.push.subscriptions_for(user_id)),
+            },
         }
 
     # ---- hushåll ---------------------------------------------------------
@@ -483,6 +497,36 @@ class HouseholdRouter:
         self.notifications.forget_device(payload.get("token") or "", user_id=user_id)
         return 200, {"ok": True}
 
+    # ---- Web Push (H1) ---------------------------------------------------
+    #
+    # Prenumerationen är inte hushållets - den är kontots - men den ligger
+    # under /notifications/ för att det är EN notismodell, inte två. Samma
+    # notification_prefs styr vad som får skickas hit.
+
+    def _push_subscribe(self, user_id, email, payload):
+        if not self.push:
+            return 503, {"error": "Push är inte påslaget på den här servern"}
+        # SAMTYCKET ÄR INTE UNDERFÖRSTÅTT. Att webbläsaren gav tillstånd
+        # betyder att den TILLÅTER en notis, inte att användaren bett om
+        # veckonotisen. Klienten skickar därför med brytaren den slog på,
+        # och den skrivs i notification_prefs - samma tabell som allt annat.
+        if payload.get("week") is not None:
+            self.notifications.set_preferences(user_id, {PREF_WEEK: bool(payload.get("week"))})
+        try:
+            self.push.subscribe(user_id, payload.get("subscription"),
+                                payload.get("platform") or "web")
+        except ValueError as error:
+            return 400, {"error": str(error)}
+        return 200, {"ok": True, "preferences": self.notifications.preferences(user_id)}
+
+    def _push_unsubscribe(self, user_id, email, payload):
+        if not self.push:
+            return 503, {"error": "Push är inte påslaget på den här servern"}
+        subscription = payload.get("subscription") if isinstance(payload.get("subscription"), dict) else {}
+        endpoint = payload.get("endpoint") or subscription.get("endpoint") or ""
+        self.push.unsubscribe(str(endpoint), user_id=user_id)
+        return 200, {"ok": True}
+
 
 class _Unauthorized(Exception):
     pass
@@ -515,6 +559,8 @@ _POST_ROUTES = {
     "/api/household/notifications/prefs": HouseholdRouter._notification_prefs,
     "/api/household/notifications/device": HouseholdRouter._register_device,
     "/api/household/notifications/device/forget": HouseholdRouter._forget_device,
+    "/api/household/notifications/push": HouseholdRouter._push_subscribe,
+    "/api/household/notifications/push/forget": HouseholdRouter._push_unsubscribe,
 }
 
 

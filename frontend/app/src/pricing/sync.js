@@ -199,7 +199,7 @@ function clearPricesForNewBranches() {
   state.pinnedBranch = null;
   // Båda synkgrindarna måste glömma sin gamla nyckel, annars hoppas hämtningen
   // för det nya läget över som "redan gjord".
-  databasePricingSync = { key: null, pending: false };
+  databasePricingSync = { key: null, pending: false, stamp: undefined };
   branchComparisonSync = { key: null, branches: new Set() };
 }
 
@@ -329,11 +329,19 @@ export async function syncBranchComparison(shoppingItems, branches) {
 // honestly supports: Willys and Hemköp prices are verified national (the
 // same query with two different storeIds returns byte-identical responses).
 // Claiming a branch-specific number here would be inventing precision.
-let databasePricingSync = { key: null, pending: false };
+// GRINDEN SVARAR PÅ "STÅR MITT SVAR KVAR?", INTE BARA "HAR JAG FRÅGAT?"
+//
+// `stamp` är den dbPricedAt hämtningen själv skrev. Stämmer den inte längre
+// med state.dbPricedAt har någon annan bytt ut prisbilden - kontots blob,
+// ett planbyte, ett nytt postnummer - och då är "redan hämtat" ett svar om
+// ett svar som inte finns kvar. Utan den halvan blev en överskrivning
+// permanent: samma vecka och samma plan ger samma nyckel, så ingen
+// omritning hämtade någonsin om. Se docs/changelog.d/T3.md.
+let databasePricingSync = { key: null, pending: false, stamp: undefined };
 const pricingRetry = createRetryGate(() => runtime.onPricesChanged(), clock);
 export const pricingIsPending = () => databasePricingSync.pending;
 // Bara för tester och för planbytet nedan: glöm den senast prissatta veckan.
-export function resetPricingSync() { databasePricingSync = { key: null, pending: false }; pricingRetry.reset(); }
+export function resetPricingSync() { databasePricingSync = { key: null, pending: false, stamp: undefined }; pricingRetry.reset(); }
 
 export async function syncDatabasePricing(shoppingItems) {
   const body = weekPricingBody(shoppingItems);
@@ -342,13 +350,20 @@ export async function syncDatabasePricing(shoppingItems) {
   // utan planen i nyckeln låg det maskade svaret kvar efter att Premium
   // aktiverats tills veckan råkade ändras (sett i E2E efter checkout).
   const key = `${runtime.hasPremium() ? "premium" : "free"}|${JSON.stringify(body)}`;
-  if (databasePricingSync.key === key || databasePricingSync.pending) return;
+  if (databasePricingSync.pending) return;
+  if (databasePricingSync.key === key && databasePricingSync.stamp === state.dbPricedAt) return;
   // Efter ett fel nollas nyckeln (se catch) - utan den här grinden betyder det
   // att NÄSTA rendering skjuter iväg ett nytt anrop, och render-bussen körs
   // vid varje interaktion. Ett anrop per knapptryck, ovanpå den väntande
   // omförsökstimern.
   if (!pricingRetry.ready()) return;
-  databasePricingSync = { key, pending: true };
+  // Posten jämförs på IDENTITET, inte på nyckeln. En hämtning som blivit
+  // ersatt (resetPricingSync vid planbyte, clearPricesForNewBranches vid nytt
+  // postnummer) fick annars skriva i efterträdarens post när den till slut
+  // svarade - och `finally` nollade dess pending mitt i luften, så en tredje
+  // hämtning kunde starta parallellt.
+  const denna = { key, pending: true, stamp: undefined };
+  databasePricingSync = denna;
   try {
     const response = await fetch(pricingWeekApiUrl(), {
       method: "POST",
@@ -358,7 +373,7 @@ export async function syncDatabasePricing(shoppingItems) {
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    if (databasePricingSync.key !== key) return;
+    if (databasePricingSync !== denna) return;
     state.dbChainTotals = {};
     state.dbLockedChains = [];
     (data.results || []).forEach(result => {
@@ -371,6 +386,7 @@ export async function syncDatabasePricing(shoppingItems) {
     });
     state.dbComparison = data.comparison || null;
     state.dbPricedAt = Date.now();
+    denna.stamp = state.dbPricedAt;
     pricingRetry.succeeded();
     runtime.onPricesChanged();
   } catch {
@@ -383,10 +399,10 @@ export async function syncDatabasePricing(shoppingItems) {
     // every later render concluded "already fetched" and the header said
     // "pris hämtas…" until a full reload. One deploy window was enough to
     // strand every open phone. Clear the key - grinden ovan håller takten.
-    databasePricingSync.key = null;
+    denna.key = null;
     pricingRetry.failed();
   } finally {
-    databasePricingSync.pending = false;
+    denna.pending = false;
   }
 }
 
