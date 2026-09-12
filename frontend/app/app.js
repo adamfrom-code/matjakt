@@ -28,6 +28,7 @@ import { closeModal, openModal } from "./src/utils/modal.js";
 import { kopplaSvepBort } from "./src/utils/swipe-remove.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.js";
 import { PACKAGE_INFO, PRODUCT_CATALOG, RECIPE_DETAILS, RECIPE_QUANTITIES } from "./src/data/legacy-catalog.js";
+import { dinnerCandidates } from "./src/data/meal-type.js";
 import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
 import { weekPlanDays } from "./src/views/week.js";
 import { adjustInventory, fetchHousehold, fetchNotifications, joinHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, replaceWeekItems, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
@@ -951,11 +952,17 @@ function everydayFirst(recipes) {
     .map(entry => entry.recipe);
 }
 
+// M1: EN VECKA BYGGS AV MIDDAGAR. Filtret ligger här, i den enda strypning
+// både chooseMenu() och openPlanComparison() går genom, och INTE i
+// localRecipesForUser() - receptfliken ska fortsätta visa hela banken, inklusive
+// frukostgröten. Det är veckoplaneringen som ska vara kräsen, inte katalogen.
+// Villkoret självt bor i src/data/meal-type.js så det går att pröva utan
+// webbläsare och inte kan glömmas bort av nästa väg som bygger en vecka.
 function weekPlanCandidates() {
-  const dietOnly = everydayFirst(localRecipesForUser().filter(recipe => !state.feedback[recipe.id]?.disliked));
+  const dietOnly = everydayFirst(dinnerCandidates(localRecipesForUser()).filter(recipe => !state.feedback[recipe.id]?.disliked));
   const goalsActive = hasPremium() && hasActiveNutritionGoals(currentNutritionGoals());
   if (!goalsActive) return { candidates: dietOnly, nutritionShortfall: false };
-  const nutritionCandidates = candidateRecipesForUser();
+  const nutritionCandidates = dinnerCandidates(candidateRecipesForUser());
   if (nutritionCandidates.length < state.middagar) return { candidates: dietOnly, nutritionShortfall: true };
   return { candidates: nutritionCandidates, nutritionShortfall: false };
 }
@@ -3255,7 +3262,9 @@ function openSwapModal(currentId) {
   const selected = selectedRecipes();
   const dayIndex = state.weekPlan.indexOf(currentId);
   const branch = selectedBranch();
-  const candidates = candidateRecipesForUser().filter(recipe => !state.valda.has(recipe.id));
+  // Samma villkor som när veckan skapades: ett byte lägger en rätt i veckan,
+  // och då gäller samma regel som för rätterna som redan ligger där.
+  const candidates = dinnerCandidates(candidateRecipesForUser()).filter(recipe => !state.valda.has(recipe.id));
   // Sorteras på kandidatens RIKTIGA portionspris (databasprissatt vid
   // import). shoppingListCost gick via statiska PRODUCT_CATALOG som inte
   // känner bankreceptens ingredienser - varje kandidat kostade ~samma och

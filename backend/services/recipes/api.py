@@ -18,6 +18,7 @@ import threading
 import time
 from pathlib import Path
 
+from .meal_types import DINNER
 from .store import RecipeStore
 
 DB_PATH = Path(os.environ.get("MATJAKT_DATA_DIR")
@@ -165,6 +166,10 @@ def card(recipe: dict) -> dict:
         "image": recipe["image"], "imageAlt": recipe["imageAlt"],
         "tags": recipe["tags"], "categories": recipe["categories"],
         "dietFlags": recipe["dietFlags"], "allergens": recipe["allergens"],
+        # Följer med VARJE kort, inte bara detaljsidan: veckoplaneraren i
+        # appen bygger sin vecka ur just den här listprojektionen, och utan
+        # fältet här hade den inte kunnat säga nej till en frukost.
+        "mealType": recipe.get("mealType"),
         # Bara NAMNEN, inte mängder/enheter - "Laga med det jag har" behöver
         # veta vad ett recept består av utan att listan sväller till
         # detaljsidans fulla payload.
@@ -264,6 +269,20 @@ def get(recipe_id: str) -> dict | None:
         finally:
             store.close()
     return _cached(("get", recipe_id), build)
+
+
+def week_candidates(limit: int = 500) -> list[dict]:
+    """Allt som FÅR föreslås som middag - och ingenting annat.
+
+    Den enda vägen in i en veckoplan på serversidan. Frågan ställs som ett
+    likhetsvillkor mot `meal_type`, så en rad som saknar klassificering faller
+    bort tillsammans med frukostarna: ett recept ingen har sagt något om ska
+    inte hamna på någons tallrik en tisdag.
+
+    Att den ligger här och inte som ett argument till `search()` är avsiktligt
+    - "kandidaterna till en veckoplan" är ett begrepp appen och mejlutskicken
+    delar, och det ska bara vara definierat på ett ställe."""
+    return search(meal_type=DINNER, limit=limit).get("recipes") or []
 
 
 def stats() -> dict:

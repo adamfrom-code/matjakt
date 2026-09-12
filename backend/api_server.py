@@ -678,10 +678,13 @@ MAILINGS = mailings.MailingScheduler(
     # I4: låt fynden välja menyn. Receptbanken med bara ingrediensNAMNEN -
     # det är allt matchningen behöver - så Kampanjtorget kan visa middagar
     # byggda på veckans reor och inte bara en lista med rabatter.
+    # M1: week_candidates() i stället för hela banken - "middagar byggda på
+    # veckans reor" ska vara middagar, och ett fynd på risgryn får inte
+    # föreslå gröt till torsdag.
     recipes_provider=lambda: [
         {"name": recipe.get("name"), "slug": recipe.get("slug"),
          "ingredients": recipe.get("ingredientNames") or []}
-        for recipe in (recipes_api.search(limit=500).get("recipes") or [])])
+        for recipe in recipes_api.week_candidates()])
 
 
 def insights_payload() -> dict:
