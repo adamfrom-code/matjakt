@@ -1,4 +1,7 @@
-### Distributionspasset
+---
+paket: N0g
+titel: Distributionspasset, i ett kommando
+---
 
 `scripts/ios_testflight.sh` arkiverar och laddar upp till TestFlight i ett
 kommando. Systerskript till `ios_mac_pass.sh`, som gör simulatorpasset.
