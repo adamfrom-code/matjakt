@@ -105,6 +105,21 @@ test("skriptet skriver aldrig ut nyckelns innehåll", () => {
   }
 });
 
+test("skriptet skapar build/ innan det skriver loggar dit", () => {
+  // build/ är gitignorerad och finns inte i en färsk klon. Utan en mkdir
+  // faller omdirigeringen `>build/arkiv.log` INNAN xcodebuild startar, och
+  // felet som rapporteras blir "arkiveringen föll" med en tom logg - vilket
+  // pekar åt precis fel håll. Det hände på riktigt vid första skarpa körningen.
+  const skriptText = readFileSync(skript, "utf8");
+  const mkdir = skriptText.indexOf('mkdir -p "$ROOT/build"');
+  const förstaLoggen = skriptText.indexOf(">build/");
+  assert.ok(mkdir !== -1, "skriptet saknar mkdir -p för build/");
+  assert.ok(
+    förstaLoggen === -1 || mkdir < förstaLoggen,
+    "mkdir -p build/ måste komma före den första loggomdirigeringen",
+  );
+});
+
 test("exportkonfigurationen laddar upp, och signerar automatiskt", () => {
   const plist = readFileSync(join(rot, "ios", "ExportOptions.plist"), "utf8");
   const värde = (nyckel) =>

@@ -27,6 +27,9 @@
 set -u
 cd "$(dirname "$0")/.." || exit 1
 ROOT="$(pwd)"
+# build/ är gitignorerad och finns inte i en färsk klon. Loggarna skrivs dit,
+# och utan katalogen faller omdirigeringen innan xcodebuild ens startar.
+mkdir -p "$ROOT/build"
 FEL=0
 BUILD_NR=""; VERSION=""; CHECKS_ONLY=0; UPLOAD=1
 
