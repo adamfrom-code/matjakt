@@ -654,17 +654,25 @@ class BrowserJourney(unittest.TestCase):
             first_week = list(state["weekPlan"])
 
         with self.step("byt rätt"):
+            # G10: ETT TRYCK ÄR BYTET. Alternativet markerade förut bara, och
+            # bytet skedde av "Byt till denna rätt" längst ner - två tryck där
+            # ett räcker, och en bekräftelse för en handling som Ångra i
+            # toasten ändå tar tillbaka. Knappen finns inte längre.
             page.click("#weekTodayCard [data-week-swap]")
             expect(page.locator("#swapModal")).to_be_visible()
             expect(page.locator("[data-choose-swap]").first).to_be_visible()
             page.click("[data-choose-swap] >> nth=0")
-            expect(page.locator("#swapConfirmBtn")).to_be_visible()
-            page.click("#swapConfirmBtn")
             expect(page.locator("#swapModal")).to_be_hidden()
             state = self.wait_for_state(lambda s: s.get("weekPlan") != first_week, what="bytet")
             self.assertEqual(len(state["weekPlan"]), len(first_week))
             self.assertEqual(state.get("swapsThisWeek"), 1)
             swapped_week = list(state["weekPlan"])
+            # Ångra-remsan står kvar och erbjuder vägen tillbaka. Den trycks
+            # inte här - resan fortsätter med den bytta veckan - men att den
+            # FINNS är hela anledningen till att bekräftelseknappen kunde tas
+            # bort i stället för att bara flyttas.
+            expect(page.locator("#undoToast")).to_be_visible()
+            expect(page.locator("#undoToast button")).to_have_text("Ångra")
 
         with self.step("recept: mängder och steg"):
             page.click("#weekTodayCard [data-week-details]")
@@ -1138,6 +1146,75 @@ class BrowserJourney(unittest.TestCase):
         with self.step("tillbaka till Ikväll"):
             page.click(".settings-screen .back-link")
             expect(page.locator("#top")).to_have_class(re.compile(r"view-home"))
+
+    def test_ett_tryck_byter_ratten_och_angra_tar_tillbaka_den(self):
+        """G10: ett tryck byter rätten - och det går att ångra.
+
+        Flödet var "Byt" → modal → tryck på alternativet (som bara MARKERADE)
+        → "Byt till denna rätt". Två tryck där ett räcker, och en
+        bekräftelseknapp för en handling som är helt riskfri.
+
+        Dessutom FREE_SWAP_LIMIT = 3: dörren stängdes efter tre byten, utan
+        förvarning, och taket syntes först när man slagit i det. Byte är den
+        handling som gör veckan till DIN - att strypa den straffar precis det
+        engagemang som bygger vana. Testet byter FYRA gånger.
+        """
+        page = self.page
+        page.goto(self.app())
+        self.complete_onboarding()
+        page.click('#weekDayTabs [data-week-day="0"]')
+
+        före = list(self.wait_for_state(lambda s: s.get("weekPlan"), what="veckan")["weekPlan"])
+
+        with self.step("ett tryck byter"):
+            page.click("#weekTodayCard [data-week-swap]")
+            expect(page.locator("#swapModal")).to_be_visible()
+            page.click("[data-choose-swap] >> nth=0")
+            # ETT tryck: modalen är stängd och veckan är bytt, utan ett andra.
+            expect(page.locator("#swapModal")).to_be_hidden()
+            efter = self.wait_for_state(lambda s: s.get("weekPlan") != före, what="bytet")["weekPlan"]
+            self.assertEqual(len(efter), len(före), "bytet ändrade veckans längd")
+            self.assertNotEqual(efter[0], före[0], "måndagens rätt byttes inte")
+            self.assertEqual(efter[1:], före[1:], "bytet rörde andra dagar än måndagen")
+
+        with self.step("Ångra i toasten tar tillbaka rätten"):
+            toast = page.locator("#undoToast")
+            expect(toast).to_be_visible()
+            expect(toast.locator("button")).to_have_text("Ångra")
+            toast.locator("button").click()
+            tillbaka = self.wait_for_state(lambda s: s.get("weekPlan") == före,
+                                           what="den ångrade veckan")
+            self.assertEqual(list(tillbaka["weekPlan"]), före)
+
+        with self.step("fyra byten utan tak"):
+            plan = före
+            for varv in range(4):
+                page.click("#weekTodayCard [data-week-swap]")
+                expect(page.locator("#swapModal")).to_be_visible()
+                # Inget hänglås mellan användaren och bytet - taket var det
+                # enda som fanns här, och det är borta.
+                self.assertEqual(page.locator("#swapUpsell").count(), 0,
+                                 f"byte {varv + 1}: en uppsäljning står i vägen")
+                expect(page.locator("[data-choose-swap]").first).to_be_visible()
+                page.click("[data-choose-swap] >> nth=0")
+                expect(page.locator("#swapModal")).to_be_hidden()
+                plan = self.wait_for_state(lambda s, p=plan: s.get("weekPlan") != p,
+                                           what=f"byte {varv + 1}")["weekPlan"]
+
+        with self.step("avsikten är det som säljs"):
+            page.click("#weekTodayCard [data-week-swap]")
+            expect(page.locator("#swapModal")).to_be_visible()
+            # "Något annat" är gratis och byter som vanligt...
+            fritt = page.locator('[data-swap-intent=""]')
+            expect(fritt).to_be_visible()
+            self.assertIsNone(fritt.get_attribute("data-swap-intent-locked"))
+            # ...men "Billigare" är Premium, och låset SYNS på knappen.
+            billigare = page.locator('[data-swap-intent="cheaper"]')
+            expect(billigare).to_be_visible()
+            self.assertIsNotNone(billigare.get_attribute("data-swap-intent-locked"),
+                                 "den låsta avsikten är inte märkt som låst")
+            billigare.click()
+            expect(page.locator("#paywallModal")).to_be_visible()
 
     def test_skapa_min_vecka_skapar_en_vecka_inte_ett_formular(self):
         """G7: en knapp som lovar ett resultat ska leverera resultatet.
