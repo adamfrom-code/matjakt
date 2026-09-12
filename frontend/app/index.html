@@ -13,8 +13,14 @@
        style-src keeps 'unsafe-inline' because the app sets style="" on
        elements; injected CSS is a far smaller problem than injected JS.
        frame-ancestors is ignored in a meta tag - the backend sends it as
-       a real header (see api_server.end_headers). -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://plausible.io https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com https://plausible.io https://cloud.umami.is; base-uri 'self'; form-action 'self'">
+       a real header (see api_server.end_headers).
+       style-src and font-src are 'self' only: Newsreader and Archivo ship
+       inside the app as woff2 (styles.css, assets/fonts/), so Google's two
+       font hosts are no longer allowed anywhere. tests/typsnitt.test.js
+       fails if either name reappears in this file or in styles.css, which
+       is why neither is spelled out here - the gate is a plain text search
+       with no exception to slip through. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://plausible.io https://cloud.umami.is; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com https://plausible.io https://cloud.umami.is; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ECEEEF">
   <meta name="description" content="Matjakt hjälper dig planera billigare middagar efter din budget.">
@@ -33,9 +39,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Matjakt">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&display=swap" rel="stylesheet">
+  <!-- Newsreader och Archivo ligger i appen (assets/fonts/), deklarerade
+       överst i styles.css. Ingen preconnect, ingen tredjepartslänk: första
+       starten utan nät visar rätt typsnitt, och CSP:n behöver inte släppa
+       in någon fontvärd. -->
   <link rel="stylesheet" href="styles.css?v=__MATJAKT_VERSION__">
 </head>
 <body>
