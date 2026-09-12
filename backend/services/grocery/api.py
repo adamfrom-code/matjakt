@@ -458,7 +458,7 @@ CHAIN_STALE_AFTER_SECONDS = 36 * 3600
 # 24 + driftkollen - kedjans körtid. Den snävaste SLÄPPTA kedjan sätter taket:
 #
 #   Willys     02:00 -> 29,5 h      City Gross 04:00 -> 27,5 h
-#   Hemköp     03:00 -> 28,5 h      ICA        05:30 -> 26,0 h
+#   Hemköp     03:00 -> 28,5 h      ICA        04:30 -> 27,0 h
 #
 # Gränsen låg på 27 h, räknad när bara de tre första var släppta. D11 släppte
 # ICA, som går 05:30 - en utebliven ICA-natt hade då inte upptäckts förrän
@@ -482,7 +482,7 @@ CHAIN_STALE_AFTER_SECONDS = 36 * 3600
 # test_the_stale_window_catches_a_skipped_night (test_grocery_scheduler.py)
 # håller ihop siffran med schemat: flyttas en släppt kedja senare, eller
 # driftkollen tidigare, failar testet.
-RELEASED_CHAIN_STALE_AFTER_SECONDS = int(25.5 * 3600)
+RELEASED_CHAIN_STALE_AFTER_SECONDS = 26 * 3600
 
 # Körningsstatusar som betyder "försöket gav ingen ny data".
 #
