@@ -1004,6 +1004,11 @@ button{color:inherit}
 .swap-intents{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
 .swap-intent{min-height:44px;padding:0 13px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .swap-intent.active{border-color:var(--primary);background:var(--primary);color:#fff}
+/* G10: låset på en avsikt bärs av ett ORD, inte av en ikon eller en färg -
+   "Premium" överlever gråskala och läses upp av skärmläsaren. Etiketten är
+   nedtonad och spärrad, som resten av systemets kapitäler. */
+.swap-intent.locked{color:var(--muted)}
+.swap-intent-lock{margin-left:2px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .swap-option-reason{display:block;margin-top:3px;color:var(--primary);font-size:12px;font-weight:600}
 /* ---- Budgethjälpen: en mening och en knapp --------------------------- */
 .week-cost-alert{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;margin:0 0 16px;border:1px solid var(--border);border-radius:18px;background:var(--surface)}
