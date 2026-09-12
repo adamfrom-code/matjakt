@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Exportkonfigurationen för TestFlight och App Store.
+
+  Den här filen är SPÅRAD med flit. Den innehåller ingen hemlighet - team-ID
+  syns i varje utgiven .ipa - och den som klonar repot ska kunna bygga utan
+  att gissa sig till innehållet. Signeringsnycklarna (*.p8, *.p12, profiler)
+  är det motsatta och hålls ute av .gitignore (N0f).
+
+  destination = upload gör att `xcodebuild -exportArchive` laddar upp direkt.
+  Ingen .ipa behöver skickas vidare för hand. Kör skriptet med --no-upload om
+  du vill ha filen i stället; det byter då destination i en kopia.
+-->
+<plist version="1.0">
+<dict>
+  <key>method</key>
+  <string>app-store-connect</string>
+
+  <key>destination</key>
+  <string>upload</string>
+
+  <!-- Automatisk signering: xcodebuild -allowProvisioningUpdates skapar och
+       hämtar certifikat och profiler via API-nyckeln. Maskinen behöver alltså
+       inget certifikat i nyckelringen i förväg - och den här maskinen har
+       inget ("0 valid identities found"). -->
+  <key>signingStyle</key>
+  <string>automatic</string>
+
+  <!-- Symbolerna vill vi ha uppe: utan dem är varje kraschrapport från
+       TestFlight en lista med adresser. -->
+  <key>uploadSymbols</key>
+  <true/>
+
+  <key>stripSwiftSymbols</key>
+  <true/>
+
+  <!-- Versionen sätts i projektet, inte av Apple. Ett bygge ska gå att
+       härleda till en commit. -->
+  <key>manageAppVersionAndBuildNumber</key>
+  <false/>
+</dict>
+</plist>
