@@ -454,27 +454,77 @@ button.campaign-deal{cursor:pointer;font:inherit}
 .hero-meal-photo .recipe-fallback{justify-content:flex-start;padding-top:30px}
 
 
-/* ---- Receptsidan: chips, ingrediensrader, avbockningsbara steg ----------- */
-.recipe-chips{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
-.recipe-chip{background:var(--primary-soft);color:var(--primary);font-size:13px;font-weight:600;padding:7px 13px;border-radius:99px}
+/* ---- Receptet: uppslaget i tidningen (design D, telefon 4 - L4) ----------
+   Fotot bleedar ut till skärmkanten, rubriken ligger PÅ det i ett pappersfält
+   och portionspriset står som bildtext under - sakligt och litet, aldrig ett
+   utrop (DESIGNSYSTEM-D.md §1). Prislappens egna former kommer ur L0
+   (.pris/.pris--ca/.saknas); här sätts bara var den står.
+
+   Kortet är borta i hela sektionen: inga radier, inga skuggor, inga ytor. Det
+   som skiljer en rad från nästa är en hårlinje, precis som på ett tryckt
+   uppslag. .ing-row står kvar oförändrad - "Följer priset på" i app.js
+   använder den, och den raden är inte den här skärmen. */
 .recipe-block{margin-top:26px}
-.ing-head{display:flex;align-items:baseline;justify-content:space-between}
-.ing-head span{color:var(--muted);font-size:13px}
 .ing-row{display:flex;gap:12px;align-items:baseline;background:var(--surface);border-radius:12px;padding:12px 14px;margin-top:8px;box-shadow:var(--shadow)}
 .ing-row strong{flex:0 0 74px;color:var(--primary);font-size:15px}
 .ing-row span{color:var(--text);font-size:15px}
 .ing-row em{color:var(--muted);font-style:normal;font-size:13px}
-.ing-optional span{color:var(--muted)}
-.ing-home{background:transparent;box-shadow:none;padding:6px 14px;margin-top:2px}
-.ing-home span{color:var(--muted);font-size:14px}
-.ing-home-label{margin:14px 0 2px;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-.steps{display:flex;flex-direction:column;gap:8px;margin-top:12px}
-.step-row{display:flex;gap:12px;align-items:flex-start;min-height:44px;background:var(--surface);border-radius:14px;padding:14px;box-shadow:var(--shadow);cursor:pointer}
-.step-row input{width:22px;height:22px;flex:none;accent-color:var(--primary);margin-top:1px}
-.step-number{flex:none;width:24px;height:24px;border-radius:50%;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:13px}
-.step-text{color:var(--text);font-size:15px;line-height:1.55}
-.step-done .step-text{color:var(--muted);text-decoration:line-through}
 .full-recipe ul,.full-recipe ol{padding-left:0;list-style:none}
+
+/* Kapitäletiketten. --ink-3 ger 4,68:1 mot --paper; på --paper-2 vore den
+   4,31:1 och förbjuden (RÄTTELSE 1), vilket .hemma .kap nedan rättar. */
+.full-recipe .kap{display:block;margin:0;font:600 10px/1.25 var(--f-ui);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+/* HELBLEED. .recipe-page har 18 px sidluft; hjälten tar tillbaka den. */
+.recepthero{position:relative;margin:0 -18px;aspect-ratio:5/3;background:var(--shot)}
+.recepthero>.recipe-photo{display:block;width:100%;height:100%;object-fit:cover}
+.recepthero>.recipe-fallback{display:flex;width:100%;height:100%}
+/* Rubriken ligger på bilden - men på papper, inte på fotot. Ett pappersfält
+   ger --ink mot --paper (15,17:1) oavsett hur ljust fotot under är, och
+   slipper den toning som annars måste räknas mot värsta fall. */
+.recepthero .titel{position:absolute;left:0;bottom:0;max-width:76%;padding:11px 18px;background:var(--paper)}
+.recepthero .titel h1{margin:5px 0 0;font:400 28px/1.02 var(--f-disp);letter-spacing:-.02em;color:var(--ink)}
+.receptmeta{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:10px 0 0}
+/* Näringsraden var skärmens enda kvarvarande kort: fylld platta med radie,
+   placerad precis där bildtexten ska vara det lugnaste på sidan. Samma
+   uppgifter, satt som meta. */
+.full-recipe-macros{margin:6px 0 0;padding:0;border-radius:0;background:none;color:var(--ink-2);font-size:12px;font-weight:400}
+
+/* Sektionsrubrik med hårlinje ut till kanten. */
+.ingrtopp{display:flex;align-items:center;gap:12px;padding:0 0 7px}
+.ingrtopp .linje{flex:1;height:1px;background:var(--rule-2)}
+
+/* TVÅ KOLUMNER. Mängden har en egen kolumn med tabular-nums: utan den är
+   siffrorna olika breda, kolumnen hoppar i sidled mellan raderna och listan
+   går inte att svepa med blicken - vilket är hela poängen med att dela upp
+   den. Testet tests/receptet.test.js failar om den försvinner. */
+.ingrlista{margin:0 -18px;border-top:1px solid var(--rule)}
+.ingrrad{display:grid;grid-template-columns:74px 1fr;gap:12px;align-items:baseline;padding:9px 18px;border-bottom:1px solid var(--rule)}
+.ingrrad .mangd2{font-size:12.5px;line-height:1.45;color:var(--ink-2);font-variant-numeric:tabular-nums;letter-spacing:.02em;white-space:nowrap}
+.ingrrad .namn2{font-size:14px;line-height:1.45;color:var(--ink)}
+.ingrrad em{font-style:normal;font-size:12.5px;color:var(--ink-2)}
+.ingrrad-valfri .namn2{color:var(--ink-2)}
+
+/* "Har du hemma" som TONAD RAD, inte som utelämnad: varorna är borträknade
+   ur priset, och det ska synas att de räknats bort. Nedsänkt --paper-2-fält,
+   samma grepp som budgetremsan. Texten i --ink-2 (4,86:1) - --ink-3 ger
+   4,31:1 här och är förbjuden på --paper-2 (RÄTTELSE 1). */
+.hemma{display:grid;grid-template-columns:74px 1fr;gap:12px;align-items:baseline;padding:10px 18px 11px;background:var(--paper-2);border-bottom:1px solid var(--rule)}
+.hemma .kap{color:var(--ink-2)}
+.hemma .namn2{font-size:13px;line-height:1.45;color:var(--ink-2)}
+
+/* NUMRERADE STEG, AVBOCKNINGSBARA. Hela raden är etiketten, så träffytan är
+   raden (min-height 44) och kryssrutans egen storlek är fri (§5.5). Siffran
+   är receptets struktur och sätts i display-serifen som i facit; avbockad
+   går den ned i --ink-3 tillsammans med texten, så det som är gjort tonas
+   utan att färg ensam bär skillnaden. */
+.steglista{margin:12px -18px 0;border-top:1px solid var(--rule)}
+.steg{display:grid;grid-template-columns:24px 1fr 44px;gap:12px;align-items:start;min-height:44px;padding:11px 18px;border-bottom:1px solid var(--rule);cursor:pointer}
+.steg .nr{font:400 19px/1.35 var(--f-disp);color:var(--accent);font-variant-numeric:tabular-nums}
+.steg .steg-text{font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+.steg input{justify-self:center;align-self:center;width:21px;height:21px;accent-color:var(--accent)}
+.steg-klar .nr{color:var(--ink-3)}
+.steg-klar .steg-text{color:var(--ink-3);text-decoration:line-through}
 
 .price-source-note{margin:0 2px 8px;color:var(--muted);font-size:12px}
 .report-price-btn{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;text-decoration:underline;cursor:pointer;padding:0}

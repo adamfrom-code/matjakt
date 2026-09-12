@@ -55,6 +55,8 @@ from services.billing import oss as stripe_oss
 from services.billing import withdrawal
 from services.billing import gate as paywall
 from services.billing import activation as billing_activation
+from services.billing import dunning as billing_dunning
+from services.billing import fetch_subscription as fetch_stripe_subscription, update_customer_email as stripe_update_customer_email
 from services.billing.savings import SavingsStore
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
 from services.accounts import ratelimit  # noqa: E402
@@ -502,7 +504,7 @@ DATA_DIR = Path(os.environ.get("MATJAKT_DATA_DIR") or (Path(__file__).resolve().
 # En testkörning som importerar api_server utan att först ha pekat
 # MATJAKT_DATA_DIR på en tempkatalog stoppas här, innan katalogen skapas
 # och innan matjakt.db/prices.db öppnas nedan - se services/data_guard.py.
-from services.data_guard import guard_database_path  # noqa: E402
+from services.data_guard import guard_database_path, test_mode_active  # noqa: E402
 guard_database_path(DATA_DIR, purpose="datakatalogen")
 # Räknarna överlever omstart och delas av processer på samma disk.
 ratelimit.configure(DATA_DIR / "ratelimit.db")
@@ -646,8 +648,29 @@ ANALYTICS = AnalyticsStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
 # om siffran försvinner med en rensad cache.
 SAVINGS = SavingsStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
 ANALYTICS.import_legacy_counters(lambda event, day: KV_CACHE.get("analytics", f"{event}:{day}")[0])
+MAIL_LOG = mailings.MailingStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
+# J5: livscykeln efter köpet. Lagret, mejlvägen och uppsägningen skickas in
+# som funktioner, så hela dunning-logiken går att pröva mot en lista i minnet
+# i stället för mot Stripe och en SMTP-server.
+#
+# Dunning-mejlet är TRANSAKTIONELLT: det går ut oavsett MATJAKT_MAILINGS_ENABLED
+# och oavsett marknadsföringssamtycke, precis som verifierings- och
+# lösenordsmejlen. Ett besked om att kundens egen betalning inte gick igenom
+# är inte reklam - och att tiga om den är att säga upp kunden åt henne.
+DUNNING = billing_dunning.Dunning(
+    ACCOUNT_STORE,
+    send_mail=lambda to, subject, text, html: send_email_async(MAIL_CONFIG, to, subject, text, html),
+    cancel_subscription=lambda sub: cancel_subscription(STRIPE_SECRET_KEY, sub),
+    render_dunning=mailings.render_dunning,
+    render_renewal=mailings.render_fornyelse,
+    app_url=APP_URL,
+    # Portalen kräver en session; länken i mejlet tar kunden till appen, som
+    # öppnar portalen åt henne. En rå portal-URL hade varit utgången när
+    # mejlet lästes.
+    billing_url=f"{APP_URL}/?billing=portal",
+    mail_log=MAIL_LOG, metrics=METRICS)
 MAILINGS = mailings.MailingScheduler(
-    mailings.MailingStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock),
+    MAIL_LOG,
     lambda to, subject, text, body_html, unsub: send_email(MAIL_CONFIG, to, subject, text, body_html, unsub),
     lambda: grocery_api.campaign_deals(per_chain=mailings.DEALS_PER_CHAIN).get("deals", {}),
     api_base=PUBLIC_API_URL, app_url=APP_URL, secret=MAIL_SECRET, enabled=MAILINGS_ENABLED,
@@ -683,6 +706,10 @@ def insights_payload() -> dict:
         "events14Dagar": {event: entry["total"] for event, entry in events["events"].items()},
         "feedback": ACCOUNT_STORE.list_feedback(),
         "utskick": MAILINGS.status(),
+        # J5: senaste avstämningen mot Stripe. `divergenceCount` > 0 betyder
+        # konton med Premium utan levande prenumeration - listan hämtas med
+        # GET /api/admin/subscription-audit.
+        "fakturering": dict(BILLING_WATCH),
     }
 
 # ---------------------------------------------------------------------------
@@ -837,6 +864,62 @@ def send_email_async(*args, **kwargs) -> None:
     thread = threading.Thread(target=worker, name="matjakt-mail", daemon=True)
     _MAIL_WORKERS.add(thread)
     thread.start()
+
+
+BILLING_WATCH = {"running": False, "lastRun": None, "divergenceCount": None,
+                 "remindersSent": 0, "error": None}
+
+
+def run_billing_watch_once() -> dict:
+    """Ett varv av J5:s efterköpsvakt: avstämning mot Stripe, och
+    årspåminnelserna.
+
+    Båda halvorna är säkerhetsnät. Avstämningen hittar det webhooken aldrig
+    fick se; påminnelsen hindrar den chargeback som följer av en oväntad
+    dragning på 399 kr. Ingen av dem får kunna stoppa servern, så allt är
+    inringat och resultatet läggs i BILLING_WATCH för /api/health."""
+    BILLING_WATCH["lastRun"] = datetime.now(timezone.utc).isoformat()
+    BILLING_WATCH["error"] = None
+    try:
+        BILLING_WATCH["remindersSent"] = DUNNING.send_renewal_reminders()
+    except Exception as error:
+        BILLING_WATCH["error"] = str(error)[:200]
+        logger.exception("Förnyelsepåminnelserna kunde inte skickas")
+    if not STRIPE_SECRET_KEY:
+        BILLING_WATCH["divergenceCount"] = None
+        return dict(BILLING_WATCH)
+    try:
+        report = billing_dunning.reconcile(
+            ACCOUNT_STORE, lambda sub: fetch_stripe_subscription(STRIPE_SECRET_KEY, sub))
+        BILLING_WATCH["divergenceCount"] = report["divergenceCount"]
+        if report["divergenceCount"]:
+            # LOGG + MÄTETAL, inte ett mejl per varv: avvikelsen är kvar
+            # nästa timme också, och ett larm som kommer varje timme läses
+            # snart inte alls. GET /api/admin/subscription-audit har listan.
+            METRICS.incr("stripe_subscription_divergence")
+            logger.error("Avstämning: %s konton har Premium utan levande prenumeration hos "
+                         "Stripe. GET /api/admin/subscription-audit listar dem.",
+                         report["divergenceCount"])
+    except Exception as error:
+        BILLING_WATCH["error"] = str(error)[:200]
+        logger.exception("Avstämningen mot Stripe misslyckades")
+    return dict(BILLING_WATCH)
+
+
+def start_billing_watch() -> None:
+    if BILLING_WATCH["running"] or test_mode_active():
+        return
+    BILLING_WATCH["running"] = True
+
+    def loop():
+        while True:
+            try:
+                run_billing_watch_once()
+            except Exception:
+                logger.exception("Faktureringsvakten föll")
+            time.sleep(billing_dunning.WATCH_INTERVAL_SECONDS)
+
+    threading.Thread(target=loop, name="matjakt-billing-watch", daemon=True).start()
 
 
 def join_mail_workers(timeout: float = 5.0) -> None:
@@ -2097,6 +2180,32 @@ class ApiHandler(SimpleHTTPRequestHandler):
         event_id = event.get("id")
         event_created = event.get("created")
         data = (event.get("data") or {}).get("object") or {}
+        if event_type in billing_dunning.HANDLED_EVENTS:
+            # J5: livscykeln EFTER köpet - nekat kort, lyckad omdragning,
+            # återbetalning, bestridande. Vägarna förbrukar med flit inget
+            # event-id: de är idempotenta i sig själva (past_due_since sätts
+            # bara när den är tom, återkallandet skriver ett sluttillstånd,
+            # mejlen dedupliceras på mail_log), så en halvvägs misslyckad
+            # leverans får köra om hela vägen utan att något dubbleras.
+            try:
+                outcome = DUNNING.handle(event_type, data,
+                                         fallback_user_id=stripe_matjakt_user_id(data))
+            except Exception:
+                logger.exception("Stripe-webhook %s (%s) kunde inte behandlas", event_id, event_type)
+                METRICS.incr("stripe_webhook_errors")
+                self.send_json(500, {"error": "Kunde inte behandla händelsen just nu"})
+                return
+            if outcome == "unknown_customer":
+                # Samma regel som B1: 200 här vore slutet. Stripe
+                # återlevererar aldrig ett kvitterat event.
+                METRICS.incr("stripe_webhook_unknown_customer")
+                logger.error("Stripe-webhook %s (%s): ingen kundrad för %s - svarar 500 så Stripe "
+                             "försöker igen.", event_id, event_type, billing_dunning.customer_of(data))
+                self.send_json(500, {"error": "Kunden hör inte ihop med något konto ännu"})
+                return
+            logger.info("Stripe event %s (%s): %s", event_id, event_type, outcome)
+            self.send_json(200, {"received": True, "handled": event_type, "outcome": outcome})
+            return
         if event_type not in ("customer.subscription.created", "customer.subscription.updated",
                               "customer.subscription.deleted"):
             # Andra händelsetyper bekräftas utan att röra något - Stripe ska
@@ -2386,6 +2495,21 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     STRIPE_SECRET_KEY, ACCOUNT_STORE.known_stripe_customer_ids))
             except StripeError as error:
                 self.send_json(502, {"error": str(error)})
+            return
+        if parsed.path == "/api/admin/subscription-audit":
+            # J5, andra halvan av B1:s avstämning. B1 frågar "vem betalar
+            # utan att ha fått något?". Den här frågar tvärtom: vilka konton
+            # HAR Premium hos oss utan en levande prenumeration hos Stripe?
+            # Det är säkerhetsnätet under webhooken - ett tappat event syns
+            # här i stället för vid en granskning.
+            if not self._admin_ok():
+                return
+            if not STRIPE_SECRET_KEY:
+                self.send_json(503, {"error": "Stripe är inte konfigurerat på servern"})
+                return
+            report = billing_dunning.reconcile(
+                ACCOUNT_STORE, lambda sub: fetch_stripe_subscription(STRIPE_SECRET_KEY, sub))
+            self.send_json(200 if report["divergenceCount"] == 0 else 409, report)
             return
         if parsed.path == "/api/admin/backup-download":
             # OFF-SITE-KOPIA UTAN TREDJE PART: senaste verifierade backupsetet
@@ -2982,6 +3106,63 @@ class ApiHandler(SimpleHTTPRequestHandler):
             except AccountError as error:
                 self.send_json(400, {"error": str(error)})
             return
+        if parsed.path == "/api/auth/change-email":
+            # J5: det fanns ingen väg alls. Enda utvägen ur en felstavad
+            # adress var att radera kontot - vilket säger upp prenumerationen
+            # och kastar hushållet.
+            if self._rate_limit("resend_verification", self._session_bucket(), self._client_ip()):
+                return
+            try:
+                raw, new_email, old_email = ACCOUNT_STORE.request_email_change(
+                    self._bearer_token(), payload.get("email"), payload.get("password"))
+            except AccountError as error:
+                self.send_json(400, {"error": str(error)})
+                return
+            mail_status = "sent"
+            try:
+                subject, text, body_html = mailings.render_verify(
+                    f"{APP_URL}/?bytmejl={raw}", APP_URL)
+                send_email(MAIL_CONFIG, new_email, subject, text, body_html)
+                # Den GAMLA adressen får veta att bytet begärts. Den som blir
+                # av med sitt konto ska höra det från oss, inte upptäcka det.
+                send_email_async(
+                    MAIL_CONFIG, old_email, "Någon vill byta e-postadress på ditt Matjakt-konto",
+                    "Vi har fått en begäran om att flytta ditt Matjakt-konto till en annan "
+                    "e-postadress. Bytet sker först när länken i den nya brevlådan följts.\n\n"
+                    "Var det inte du: byt lösenord direkt, så blir begäran verkningslös.")
+            except MailNotConfigured:
+                mail_status = "not_configured"
+            except MailError:
+                mail_status = "failed"
+                METRICS.incr("mail_send_failed")
+                logger.exception("Bekräftelsemejl för adressbyte misslyckades till en %s-adress",
+                                 email_domain(new_email))
+            self.send_json(200, {"ok": True, "pendingEmail": new_email, "mail": mail_status})
+            return
+        if parsed.path == "/api/auth/confirm-email-change":
+            if self._rate_limit("verify_email"):
+                return
+            try:
+                user = ACCOUNT_STORE.confirm_email_change(payload.get("token"))
+            except AccountError as error:
+                self.send_json(400, {"error": str(error)})
+                return
+            # Kunden hos Stripe följer med - annars går kvittot fortfarande
+            # till adressen som var fel från början, vilket var hela skälet
+            # till bytet.
+            if user.get("stripeCustomerId") and STRIPE_SECRET_KEY:
+                try:
+                    stripe_update_customer_email(STRIPE_SECRET_KEY, user["stripeCustomerId"], user["email"])
+                except StripeError:
+                    logger.exception("Stripe-kundens adress kunde inte uppdateras efter adressbyte")
+            send_email_async(
+                MAIL_CONFIG, user["previousEmail"], "Din Matjakt-adress är flyttad",
+                "Ditt Matjakt-konto använder nu en annan e-postadress. Det här är sista "
+                "mejlet till den här adressen.\n\nVar det inte du: svara på det här mejlet "
+                "så hjälper vi dig.")
+            self.send_json(200, {"user": {key: value for key, value in user.items()
+                                          if key not in ("id", "stripeCustomerId")}})
+            return
         if parsed.path == "/api/auth/resend-verification":
             # Mejl på begäran är en mejlbombningsvektor utan spärr.
             if self._rate_limit("resend_verification", self._session_bucket(), self._client_ip()):
@@ -3056,11 +3237,26 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if self._rate_limit("billing"):
                 return
             try:
+                user_id, email, customer_id = ACCOUNT_STORE.billing_identity_for_token(self._bearer_token())
+                current = ACCOUNT_STORE.user_for_token(self._bearer_token()) or {}
+                # J5: VERIFIERAD ADRESS FÖRE KÖP, och den kontrollen ligger
+                # FÖRST med flit. Någon som skrev adam@gmial.com och betalade
+                # 399 kr kunde varken få kvittot, återställa lösenordet eller
+                # nå portalen - och kunde inte heller byta adress. Nu måste
+                # adressen bevisas fungera innan pengar byter ägare, och
+                # beskedet får inte döljas bakom ett serverkonfigurationsfel
+                # kunden ändå inte kan göra något åt. Koden är den klienten
+                # visar en "skicka länken igen"-knapp på.
+                if not current.get("emailVerified"):
+                    self.send_json(403, {
+                        "error": "Bekräfta din e-postadress innan du köper Premium - "
+                                 "kvittot, lösenordsåterställningen och prenumerationssidan "
+                                 "går alla till den adressen.",
+                        "code": "EMAIL_NOT_VERIFIED"})
+                    return
                 price_id = stripe_price_id(payload.get("plan"))
                 if not price_id:
                     raise StripeError("Stripe-priser är inte konfigurerade på servern ännu")
-                user_id, email, customer_id = ACCOUNT_STORE.billing_identity_for_token(self._bearer_token())
-                current = ACCOUNT_STORE.user_for_token(self._bearer_token()) or {}
                 if current.get("subscriptionStatus") in ("active", "trialing", "past_due"):
                     # En andra Checkout ger två prenumerationer. Planbyte
                     # och uppsägning sker i Stripes portal.
@@ -4002,6 +4198,7 @@ if __name__ == "__main__":
 
     GROCERY_SCHEDULER.start()
     MAILINGS.start()
+    start_billing_watch()
     # Förvärm prismotorns ordindex i bakgrunden: kallstarten (indexbygge
     # per kedja, ~2-3 s) ska betalas här vid deploy - inte av första kundens
     # första prisanrop.
