@@ -53,8 +53,7 @@
       },
       {
         "name": "Smör",
-        "amount": 40,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Salt",
@@ -164,7 +163,8 @@
       },
       {
         "name": "Oregano",
-        "pantryStaple": true
+        "amount": 5,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -267,7 +267,8 @@
       },
       {
         "name": "Paprikapulver",
-        "pantryStaple": true
+        "amount": 10,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -337,8 +338,7 @@
       },
       {
         "name": "Smör",
-        "amount": 50,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Lingonsylt",
@@ -620,8 +620,7 @@
       },
       {
         "name": "Smör",
-        "amount": 50,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Salt",
@@ -629,7 +628,8 @@
       },
       {
         "name": "Oregano",
-        "pantryStaple": true
+        "amount": 5,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -793,8 +793,7 @@
       },
       {
         "name": "Smör",
-        "amount": 40,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Citron",

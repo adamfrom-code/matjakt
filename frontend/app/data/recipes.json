@@ -98,10 +98,10 @@
       "Röda linser",
       "Kokosmjölk",
       "Morötter",
-      "Lök & vitlök"
+      "Lök & vitlök",
+      "Buljong"
     ],
     "hemma": [
-      "Buljong",
       "Olja"
     ],
     "portioner": 4,
@@ -335,12 +335,11 @@
       "Kidneybönor",
       "Krossade tomater",
       "Majs",
-      "Paprika"
-    ],
-    "hemma": [
+      "Paprika",
       "Ris",
       "Chili"
     ],
+    "hemma": [],
     "beskrivning": "Mustig vegetarisk chili som blir ännu godare dagen efter.",
     "steg": [
       "Fräs paprika och lök.",
@@ -382,11 +381,11 @@
       "Kycklingfilé",
       "Äggnudlar",
       "Wokgrönsaker",
-      "Soja"
+      "Soja",
+      "Vitlök"
     ],
     "hemma": [
-      "Olja",
-      "Vitlök"
+      "Olja"
     ],
     "beskrivning": "Snabb wok med mycket grönsaker och smakrik soja.",
     "steg": [
@@ -426,10 +425,10 @@
       "Krossade tomater",
       "Grädde",
       "Lök",
-      "Basilika"
+      "Basilika",
+      "Buljong"
     ],
     "hemma": [
-      "Buljong",
       "Peppar"
     ],
     "beskrivning": "Len tomatsoppa med basilika och grädde.",
@@ -519,11 +518,11 @@
       "Köttfärs",
       "Potatis",
       "Grädde",
-      "Lingonsylt"
+      "Lingonsylt",
+      "Ströbröd",
+      "Ägg"
     ],
     "hemma": [
-      "Ströbröd",
-      "Ägg",
       "Smör"
     ],
     "beskrivning": "Svensk husmanskost med krämigt mos och söta lingon.",
@@ -612,12 +611,12 @@
       "Räkor",
       "Pasta",
       "Vitlök",
-      "Citron"
+      "Citron",
+      "Persilja"
     ],
     "hemma": [
       "Olja",
-      "Smör",
-      "Persilja"
+      "Smör"
     ],
     "beskrivning": "Snabblagad pasta med räkor, vitlök och en skvätt citron.",
     "steg": [
@@ -927,13 +926,13 @@
       "Kycklingfilé",
       "Krossade tomater",
       "Grädde",
-      "Curry & grönsaker"
-    ],
-    "hemma": [
-      "Smör",
+      "Curry & grönsaker",
       "Vitlök",
       "Ingefära",
       "Ris"
+    ],
+    "hemma": [
+      "Smör"
     ],
     "beskrivning": "Krämig, lent kryddad tomatsås med mör kyckling — restaurangens favorit, gjord hemma på under en timme.",
     "steg": [
@@ -978,11 +977,11 @@
       "Fryst torsk",
       "Räkor",
       "Dill",
-      "Grädde"
+      "Grädde",
+      "Citron"
     ],
     "hemma": [
       "Smör",
-      "Citron",
       "Salt",
       "Peppar"
     ],
@@ -1029,12 +1028,12 @@
       "Tofu",
       "Wokgrönsaker",
       "Soja",
-      "Ris"
-    ],
-    "hemma": [
-      "Olja",
+      "Ris",
       "Vitlök",
       "Sesamfrön"
+    ],
+    "hemma": [
+      "Olja"
     ],
     "beskrivning": "Knaprig tofu och färgstarka grönsaker i en blank sojaglaze — snabbt, fräscht och mättande.",
     "steg": [
@@ -1121,13 +1120,13 @@
       "Fläskfilé",
       "Äppelmos",
       "Rödkål",
-      "Potatis"
+      "Potatis",
+      "Timjan"
     ],
     "hemma": [
       "Smör",
       "Salt",
-      "Peppar",
-      "Timjan"
+      "Peppar"
     ],
     "beskrivning": "Klassisk höstmiddag — mör fläskfilé med syrlig äppelmos och sötsyrlig rödkål.",
     "steg": [
@@ -1171,12 +1170,12 @@
       "Pasta",
       "Krossade tomater",
       "Vitlök",
-      "Feta"
+      "Feta",
+      "Basilika"
     ],
     "hemma": [
       "Olivolja",
-      "Chiliflakes",
-      "Basilika"
+      "Chiliflakes"
     ],
     "beskrivning": "Den virala favoriten — en hel fetaost bakas med tomater till en krämig, salt sås som smälter samman med pastan.",
     "steg": [
@@ -1220,13 +1219,13 @@
       "Kalvschnitzel",
       "Potatis",
       "Citron",
-      "Kapris"
-    ],
-    "hemma": [
-      "Smör",
+      "Kapris",
       "Vetemjöl",
       "Ägg",
       "Ströbröd"
+    ],
+    "hemma": [
+      "Smör"
     ],
     "beskrivning": "Krispigt panerad kalvschnitzel med syrlig kapris och citron — en klassisk restaurangrätt som är enklare hemma än man tror.",
     "steg": [
@@ -1269,12 +1268,12 @@
       "Kycklinglårfilé",
       "Matvete",
       "Paprika",
-      "Yoghurt"
+      "Yoghurt",
+      "Paprikapulver"
     ],
     "hemma": [
       "Olja",
-      "Spiskummin",
-      "Paprikapulver"
+      "Spiskummin"
     ],
     "beskrivning": "Kryddstekt kyckling på fluffigt matvete med syrlig yoghurtsås — en enkel bowl med mycket smak.",
     "steg": [
@@ -1405,12 +1404,12 @@
       "Biff",
       "Ris",
       "Wokgrönsaker",
-      "Soja"
-    ],
-    "hemma": [
-      "Olja",
+      "Soja",
       "Vitlök",
       "Ingefära"
+    ],
+    "hemma": [
+      "Olja"
     ],
     "beskrivning": "Snabbwokad biff i strimlor med krispiga grönsaker och blank sojasås — klart på under 20 minuter.",
     "steg": [
@@ -1496,11 +1495,11 @@
       "Fläskfilé",
       "Pasta",
       "Krossade tomater",
-      "Basilika"
+      "Basilika",
+      "Vitlök"
     ],
     "hemma": [
       "Olja",
-      "Vitlök",
       "Salt",
       "Peppar"
     ],
@@ -1546,13 +1545,13 @@
       "Kalvschnitzel",
       "Matvete",
       "Paprika",
-      "Citron"
-    ],
-    "hemma": [
-      "Smör",
+      "Citron",
       "Vetemjöl",
       "Ägg",
       "Ströbröd"
+    ],
+    "hemma": [
+      "Smör"
     ],
     "beskrivning": "Krispig kalvschnitzel serverad med en fräsch matvetesallad istället för potatis, för en lite lättare middag.",
     "steg": [
@@ -1594,12 +1593,12 @@
       "Laxfilé",
       "Ris",
       "Wokgrönsaker",
-      "Soja"
-    ],
-    "hemma": [
-      "Olja",
+      "Soja",
       "Honung",
       "Ingefära"
+    ],
+    "hemma": [
+      "Olja"
     ],
     "beskrivning": "Blank, sötsalt lax stekt i sojaglaze med krispiga wokgrönsaker och ris.",
     "steg": [
@@ -1687,13 +1686,13 @@
       "Fryst torsk",
       "Potatis",
       "Krossade tomater",
-      "Vitlök"
+      "Vitlök",
+      "Basilika"
     ],
     "hemma": [
       "Olja",
       "Salt",
-      "Peppar",
-      "Basilika"
+      "Peppar"
     ],
     "beskrivning": "Saftig torsk som puttrar färdig i en enkel, smakrik tomatsås med vitlök.",
     "steg": [
@@ -2017,12 +2016,12 @@
       "Tofu",
       "Matvete",
       "Paprika",
-      "Soja"
-    ],
-    "hemma": [
-      "Olja",
+      "Soja",
       "Honung",
       "Ingefära"
+    ],
+    "hemma": [
+      "Olja"
     ],
     "beskrivning": "Krispig tofu i blank sojaglaze på en fräsch matvetesallad med paprika.",
     "steg": [
@@ -2065,11 +2064,11 @@
       "Halloumi",
       "Pasta",
       "Krossade tomater",
-      "Basilika"
+      "Basilika",
+      "Vitlök"
     ],
     "hemma": [
       "Olja",
-      "Vitlök",
       "Salt",
       "Peppar"
     ],
@@ -2158,11 +2157,11 @@
       "Feta",
       "Krossade tomater",
       "Kikärtor",
-      "Basilika"
+      "Basilika",
+      "Vitlök"
     ],
     "hemma": [
       "Olja",
-      "Vitlök",
       "Salt",
       "Peppar"
     ],
@@ -2301,12 +2300,12 @@
       "Köttfärs",
       "Pasta",
       "Krossade tomater",
-      "Basilika"
+      "Basilika",
+      "Lök",
+      "Vitlök"
     ],
     "hemma": [
       "Olja",
-      "Lök",
-      "Vitlök",
       "Salt",
       "Peppar"
     ],
@@ -2349,11 +2348,11 @@
       "Köttfärs",
       "Ris",
       "Paprika",
-      "Curry & grönsaker"
+      "Curry & grönsaker",
+      "Lök"
     ],
     "hemma": [
       "Olja",
-      "Lök",
       "Salt"
     ],
     "beskrivning": "Snabb köttfärsgryta med curry och paprika — mustig vardagsmat till hela familjen.",
@@ -2395,11 +2394,11 @@
       "Kycklingfilé",
       "Ris",
       "Curry & grönsaker",
-      "Yoghurt"
+      "Yoghurt",
+      "Vitlök"
     ],
     "hemma": [
       "Olja",
-      "Vitlök",
       "Salt"
     ],
     "beskrivning": "Yoghurtmarinerad kyckling med kryddig currysmak, stekt möra och saftiga.",
@@ -2534,11 +2533,11 @@
       "Zucchini",
       "Pasta",
       "Krossade tomater",
-      "Feta"
+      "Feta",
+      "Vitlök"
     ],
     "hemma": [
       "Olja",
-      "Vitlök",
       "Salt",
       "Peppar"
     ],
@@ -2581,14 +2580,14 @@
       "Sparris",
       "Pasta",
       "Citron",
-      "Vitlök"
+      "Vitlök",
+      "Parmesan"
     ],
     "hemma": [
       "Olja",
       "Smör",
       "Salt",
-      "Peppar",
-      "Parmesan"
+      "Peppar"
     ],
     "beskrivning": "Fräsch vårpasta med knaprig sparris, vitlök och en skvätt citron.",
     "steg": [

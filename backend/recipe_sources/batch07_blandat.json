@@ -441,8 +441,7 @@
       },
       {
         "name": "Spiskummin",
-        "amount": 5,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Naanbröd",
@@ -823,8 +822,7 @@
       },
       {
         "name": "Smör",
-        "amount": 100,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Vitlök",

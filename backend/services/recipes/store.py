@@ -38,6 +38,7 @@ from pathlib import Path
 
 from ..data_guard import guard_database_path
 from .meal_types import require as require_meal_type
+from .pantry import is_pantry_staple
 
 
 def normalize_ingredient_id(name: str) -> str:
@@ -345,7 +346,14 @@ class RecipeStore:
                      ingredient.get("unit"),
                      ingredient.get("normalizedId") or normalize_ingredient_id(name),
                      int(bool(ingredient.get("optional"))),
-                     int(bool(ingredient.get("pantryStaple"))), ingredient.get("note")),
+                     # HÄRLEDD, inte kopierad (M3). "Antas finnas hemma" är en
+                     # egenskap hos INGREDIENSEN, inte hos raden - och när den
+                     # avgjordes rad för rad blev ägg prissatt i 34 recept och
+                     # gratis i 2. Att läsa svaret ur services/recipes/pantry.py
+                     # gör "samma ingrediens, samma klassning" sant av
+                     # konstruktion, i varje databas som någonsin skrivs: en
+                     # felaktig flagga i en källfil kan inte överleva en import.
+                     int(is_pantry_staple(name)), ingredient.get("note")),
                 )
             for position, step in enumerate(recipe.get("instructions") or []):
                 self._connection.execute(

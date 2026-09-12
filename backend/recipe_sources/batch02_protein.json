@@ -205,8 +205,7 @@
       },
       {
         "name": "Smör",
-        "amount": 60,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Vitlök",
@@ -395,8 +394,7 @@
       },
       {
         "name": "Smör",
-        "amount": 20,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Salt",
@@ -486,8 +484,7 @@
       },
       {
         "name": "Olivolja",
-        "amount": 3,
-        "unit": "msk"
+        "pantryStaple": true
       },
       {
         "name": "Salt",
@@ -588,7 +585,8 @@
       },
       {
         "name": "Oregano",
-        "pantryStaple": true
+        "amount": 5,
+        "unit": "g"
       }
     ],
     "instructions": [
