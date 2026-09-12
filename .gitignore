@@ -63,3 +63,6 @@ build/
 .coverage
 .coverage.*
 htmlcov/
+
+# Rester av den kopierade ios-katalogen utan projektfil (ersatt av cap add ios)
+ios-gammal-kopierad-utan-projekt/
