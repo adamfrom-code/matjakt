@@ -71,14 +71,6 @@
       "Rör i tomatpuré och sambal oelek, häll på grädden och låt grytan sjuda 5-10 minuter.",
       "Smaka av med salt och peppar och servera med riset."
     ],
-    "categories": [
-      "Helg"
-    ],
-    "tags": [
-      "vardagsmat",
-      "snabbt",
-      "helgmiddag"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -92,7 +84,13 @@
     "imageCredit": "Rachel Claire",
     "imageLicense": "Pexels License",
     "imageAlt": "Kebabgryta med ris upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "helg",
+      "helgmiddag",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "stekt-flask-loksas",
@@ -156,20 +154,17 @@
       "Pudra mjölet över löken, späd med mjölken under omrörning och låt såsen sjuda tills den tjocknat.",
       "Smaka av löksåsen med salt och peppar och servera med fläsket och potatisen."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "billigt"
-    ],
     "allergens": [
       "gluten",
       "laktos"
     ],
     "dietFlags": [
       "blandkost"
+    ],
+    "labels": [
+      "husmanskost",
+      "billigt",
+      "vardagsmat"
     ]
   },
   {
@@ -234,16 +229,6 @@
       "Blanda makaroner och korv i en smord ugnsform, häll över äggstanningen och strö osten på toppen.",
       "Grädda cirka 30 minuter tills puddingen stannat och fått gyllene yta."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "barn",
-      "billigt",
-      "Familjefavorit"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -258,7 +243,14 @@
     "imageCredit": "Ronmar Lacamiento",
     "imageLicense": "Pexels License",
     "imageAlt": "Makaronipudding upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "familjefavorit",
+      "barn",
+      "billigt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "makaroner-kottbullar",
@@ -312,16 +304,6 @@
       "Skiva gurkan.",
       "Servera makaroner och köttbullar med ketchup och gurkskivor."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "barn",
-      "billigt",
-      "snabbt"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -335,7 +317,14 @@
     "imageCredit": "Valeria Boltneva",
     "imageLicense": "Pexels License",
     "imageAlt": "Makaroner och köttbullar upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "barn",
+      "billigt",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kramig-kycklinggryta",
@@ -409,16 +398,6 @@
       "Häll på buljong och grädde, lägg tillbaka kycklingen och låt sjuda 10 minuter.",
       "Rör i ärtorna sista minuterna, smaka av med salt och peppar och servera med riset."
     ],
-    "categories": [
-      "Husmanskost",
-      "Kyckling"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "barn",
-      "Familjefavorit"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -432,7 +411,14 @@
     "imageCredit": "Harry Tucker",
     "imageLicense": "Pexels License",
     "imageAlt": "Krämig kycklinggryta med grönsaker upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "kyckling",
+      "familjefavorit",
+      "barn",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kyckling-currysas-ris",
@@ -506,17 +492,6 @@
       "Tillsätt tärnat äpple, grädde och buljong. Lägg tillbaka kycklingen och sjud 8-10 minuter.",
       "Smaka av med salt och peppar och servera med riset."
     ],
-    "categories": [
-      "Husmanskost",
-      "Kyckling"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "barn",
-      "billigt",
-      "Familjefavorit"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -530,7 +505,15 @@
     "imageCredit": "Piotr Arnoldes",
     "imageLicense": "Pexels License",
     "imageAlt": "Kyckling i currysås med ris upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "kyckling",
+      "familjefavorit",
+      "barn",
+      "billigt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kramig-kycklingpasta",
@@ -599,16 +582,6 @@
       "Vänd ner pasta, spenat och riven parmesan. Späd med pastavatten till krämig konsistens.",
       "Smaka av och servera direkt med extra parmesan."
     ],
-    "categories": [
-      "Kyckling",
-      "Pasta"
-    ],
-    "tags": [
-      "vardagsmat",
-      "snabbt",
-      "barn",
-      "Familjefavorit"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -622,7 +595,15 @@
     "imageCredit": "Роман Нагаевский",
     "imageLicense": "Pexels License",
     "imageAlt": "Krämig kycklingpasta upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "pasta",
+      "familjefavorit",
+      "barn",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kycklinggratang-broccoli",
@@ -696,15 +677,6 @@
       "Varva ris, kyckling och broccoli i en smord form. Häll över såsen och toppa med ost.",
       "Gratinera cirka 20 minuter tills osten fått gyllene färg."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "vardagsmat",
-      "barn",
-      "mealprep",
-      "Familjefavorit"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -718,7 +690,14 @@
     "imageCredit": "Sylwester Ficek",
     "imageLicense": "Pexels License",
     "imageAlt": "Kycklinggratäng med broccoli upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "familjefavorit",
+      "barn",
+      "mealprep",
+      "vardagsmat"
+    ]
   },
   {
     "id": "lax-kall-dillsas",
@@ -777,14 +756,6 @@
       "Rör ihop crème fraiche med rikligt hackad dill, citronsaft, salt och peppar.",
       "Servera laxen med potatis, kall dillsås och citronklyftor."
     ],
-    "categories": [
-      "Fisk"
-    ],
-    "tags": [
-      "vardagsmat",
-      "snabbt",
-      "Familjefavorit"
-    ],
     "allergens": [
       "laktos",
       "fisk"
@@ -800,6 +771,12 @@
     "imageCredit": "Valeria Boltneva",
     "imageLicense": "Pexels License",
     "imageAlt": "Ugnslax med kokt potatis och kall dillsås upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "familjefavorit",
+      "snabbt",
+      "vardagsmat"
+    ]
   }
 ]

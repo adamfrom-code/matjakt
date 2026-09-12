@@ -129,7 +129,9 @@ class GolvetAterFinnsSomEttTal(unittest.TestCase):
         spec.loader.exec_module(import_recipes)
 
         gryta = {"id": "gryta", "name": "Gryta", "description": "Vardagsmiddag.",
-                 "servings": 4, "tags": ["vardagsmat"],
+                 # `labels`, inte `tags`: M4 slog ihop `categories` och `tags`
+                 # till ett fält, och importgrinden avvisar de gamla namnen.
+                 "servings": 4, "labels": ["vardagsmat"],
                  "instructions": ["Fräs.", "Koka.", "Servera."],
                  "ingredients": [{"name": "Pasta", "amount": 400, "unit": "g"},
                                  {"name": "Krossade tomater", "amount": 400, "unit": "g"},
@@ -230,7 +232,9 @@ class ReglernaGerSammaSvarIgen(unittest.TestCase):
         recept till middag. En tagg är en åsikt; portionens innehåll är ett
         faktum, och regeln ligger därför före middagsbeviset."""
         soppa = next(r for r in source_recipes() if r["id"] == "morotssoppa-ingefara")
-        self.assertIn("vardagsmat", soppa["tags"])
+        # Källorna bär ETT etikettfält efter M4; `vardagsmat` är redan i
+        # nyckelform och betyder därför samma sak som före sammanslagningen.
+        self.assertIn("vardagsmat", soppa["labels"])
         fynd = self.modul.classify(soppa)
         self.assertEqual(fynd.rule, "under-proteingolvet")
         self.assertEqual(fynd.meal_type, LUNCH)
