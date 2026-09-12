@@ -106,6 +106,18 @@ class HouseholdJourney(unittest.TestCase):
         page.evaluate("() => { const m = document.getElementById('onboardingModal'); if (m) m.hidden = true; }")
         return page, email
 
+    def _open_household(self, page):
+        """Hushållspanelen i kontoarket.
+
+        G11: profilknappen leder till INSTÄLLNINGAR, inte rakt in i kontoarket
+        - och hushållet har en egen rad där ("Delas med"), som öppnar arket på
+        rätt ställe. Det är två tryck i stället för ett, men det första tar en
+        till en skärm som SÄGER vad den innehåller.
+        """
+        page.click("#profileBtn")
+        page.click('[data-settings="hushall"]')
+        expect(page.locator("#accountModal")).to_be_visible()
+
     def _sync(self, page):
         """Väck synken som när telefonen plockas upp, och vänta in svaret."""
         page.evaluate("() => document.dispatchEvent(new Event('visibilitychange'))")
@@ -140,7 +152,7 @@ class HouseholdJourney(unittest.TestCase):
         sara, sara_email = self._person("sara")
 
         # --- Adam skapar hushåll ------------------------------------------
-        adam.click("#profileBtn")
+        self._open_household(adam)
         adam.fill("#householdNameInput", "Familjen From")
         adam.click("#householdCreateForm button[type=submit]")
         expect(adam.locator("#householdNameLabel")).to_have_text("Familjen From", timeout=8000)
@@ -161,7 +173,7 @@ class HouseholdJourney(unittest.TestCase):
         self._screenshot(sara, "landing")
         sara.click("#inviteJoinBtn")
         sara.wait_for_timeout(1500)
-        sara.click("#profileBtn")
+        self._open_household(sara)
         expect(sara.locator("#householdNameLabel")).to_have_text("Familjen From", timeout=8000)
         # Sara är medlem, inte admin: ingen inbjudningsknapp.
         expect(sara.locator("#householdInviteBtn")).to_be_hidden()
@@ -259,7 +271,7 @@ class HouseholdJourney(unittest.TestCase):
         self.assertEqual(statuses["Ketchup"], "ALREADY_HAVE", "Saras ändring försvann")
 
         # --- Sara lämnar, access försvinner -------------------------------------
-        sara.click("#profileBtn")
+        self._open_household(sara)
         sara.evaluate("() => { window.confirm = () => true; }")
         sara.click("#householdLeaveBtn")
         sara.wait_for_timeout(1500)
@@ -281,7 +293,7 @@ class HouseholdJourney(unittest.TestCase):
         adam, _ = self._person("adam")
         outsider, _ = self._person("frammande")
 
-        adam.click("#profileBtn")
+        self._open_household(adam)
         adam.fill("#householdNameInput", "Familjen From")
         adam.click("#householdCreateForm button[type=submit]")
         expect(adam.locator("#householdNameLabel")).to_have_text("Familjen From", timeout=8000)

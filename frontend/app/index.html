@@ -200,6 +200,21 @@
         <p class="cost-note">Priserna avser hela förpackningar. Det du har hemma räknas bort.</p>
       </section>
 
+      <!-- G11: INSTÄLLNINGAR. Skärmen appen inte hade. Kost och allergier -
+           det mest säkerhetskritiska i hela appen - bodde bakom ett omärkt
+           "＋" på 28x28 px i hörnet av veckokortet, och konto, hushåll,
+           lösenord, prenumeration och radera konto i ett enda långt modalt
+           scroll. Raderna fylls av src/views/settings.js; varje rad är en
+           genväg till den yta där inställningen faktiskt bor, så inget värde
+           finns på två ställen. (L6 bygger om skärmen efter design D.) -->
+      <section class="screen settings-screen" aria-labelledby="settingsTitle">
+        <header class="screen-header">
+          <button class="back-link" type="button" data-view="home">&larr; Ikväll</button>
+          <p class="eyebrow">Ditt hushåll</p><h1 id="settingsTitle">Inställningar</h1>
+        </header>
+        <div class="settings-groups" id="settingsGroups"></div>
+      </section>
+
       <section class="screen pantry-screen" aria-labelledby="pantryTitle">
         <header class="screen-header"><p class="eyebrow">Hemma hos dig</p><h1 id="pantryTitle">Skafferi</h1><p class="screen-intro">Har du redan något hemma? Lägg in det här, så räknar vi bort det från din inköpslista.</p></header>
         <section class="pantry-hero"><span>Varor hemma</span><strong id="pantryCount">0</strong><p>Matjakt räknar bort det du redan har.</p></section>
@@ -561,7 +576,8 @@
         <button class="account-logout-btn" id="logoutBtn" type="button">Logga ut</button>
         <button class="account-delete-btn" id="deleteAccountBtn" type="button">Radera konto</button>
         <p class="account-error" id="deleteError"></p>
-        <p class="account-legal-links"><a href="mailto:adamfrom@icloud.com">Kontakta support</a> · <a href="https://matjakt.store/integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="https://matjakt.store/anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
+        <!-- G11: Inställningar-raden "Integritet och data" siktar hit. -->
+        <p class="account-legal-links" id="accountLegal"><a href="mailto:adamfrom@icloud.com">Kontakta support</a> · <a href="https://matjakt.store/integritetspolicy.html" target="_blank" rel="noopener">Integritetspolicy</a> · <a href="https://matjakt.store/anvandarvillkor.html" target="_blank" rel="noopener">Användarvillkor</a></p>
       </div>
     </div>
   </div>

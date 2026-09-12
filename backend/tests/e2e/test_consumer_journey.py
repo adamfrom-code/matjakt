@@ -409,10 +409,21 @@ class BrowserJourney(unittest.TestCase):
             store.close()
         return rows[0]["id"]
 
+    def open_account(self):
+        """Kontoarket. G11: profilknappen leder till INSTÄLLNINGAR, och
+        kontoraden i den skärmen öppnar arket. Knappen hette "Öppna profil och
+        inställningar" redan förut; nu leder den dit den sa att den ledde."""
+        page = self.page
+        if page.locator("#accountModal").is_visible():
+            return
+        page.click("#profileBtn")
+        expect(page.locator("#top")).to_have_class(re.compile(r"view-settings"))
+        page.click('[data-settings="konto"]')
+        expect(page.locator("#accountModal")).to_be_visible()
+
     def register(self, email):
         page = self.page
-        page.click("#profileBtn")
-        expect(page.locator("#accountModal")).to_be_visible()
+        self.open_account()
         page.click('[data-account-tab="register"]')
         page.fill("#registerEmail", email)
         page.fill("#registerPassword", PASSWORD)
@@ -448,8 +459,7 @@ class BrowserJourney(unittest.TestCase):
 
     def login(self, email):
         page = self.page
-        if not page.locator("#accountModal").is_visible():
-            page.click("#profileBtn")
+        self.open_account()
         page.click('[data-account-tab="login"]')     # fliken minns "Skapa konto" från signup
         expect(page.locator("#accountLoginForm")).to_be_visible()
         page.fill("#loginEmail", email)
@@ -460,8 +470,7 @@ class BrowserJourney(unittest.TestCase):
 
     def logout(self):
         page = self.page
-        if not page.locator("#accountModal").is_visible():
-            page.click("#profileBtn")
+        self.open_account()
         page.click("#logoutBtn")
         expect(page.locator("#accountModal")).to_be_hidden()      # utloggning stänger modalen
         expect(page.locator("#profileBtn")).to_have_text("MJ")
@@ -1075,6 +1084,59 @@ class BrowserJourney(unittest.TestCase):
         self.assertTrue(len(state["weekPlan"]) >= 1, state["weekPlan"])
         expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
 
+    def test_installningarna_ar_en_skarm_med_allergierna_markta(self):
+        """G11: skärmen appen inte hade.
+
+        Kost och allergier - det mest säkerhetskritiska i hela appen - bodde i
+        ett bottenark bakom ett OMÄRKT "＋" på 28x28 px i hörnet av
+        veckokortet. Konto, hushåll, lösenord, prenumeration och radera konto
+        låg i ett enda långt modalt scroll. Det fanns ingen skärm som hette
+        Inställningar, och därför ingen plats där man kunde SE vad man svarat.
+        """
+        page = self.page
+        page.goto(self.app())
+        self.complete_onboarding()
+
+        with self.step("profilknappen leder till Inställningar"):
+            page.click("#profileBtn")
+            expect(page.locator("#top")).to_have_class(re.compile(r"view-settings"))
+            expect(page.locator("#settingsTitle")).to_have_text("Inställningar")
+            # Kontoarket ska INTE ha öppnat sig ovanpå.
+            expect(page.locator("#accountModal")).to_be_hidden()
+
+        with self.step("åtta grupper, och allergiraden märkt"):
+            grupper = page.locator(".settings-group-title")
+            expect(grupper).to_have_count(8)
+            allergi = page.locator('[data-settings="kost"]')
+            expect(allergi).to_be_visible()
+            # Onboardingen hoppade över kost-steget, så raden är tom - och en
+            # tom allergirad får inte se ut som en ifylld.
+            expect(allergi).to_contain_text("Ej ifyllt")
+            expect(allergi).to_contain_text("Inga angivna")
+            # Värden ur tillståndet, inte platshållare: budgeten sattes till
+            # 900 i complete_onboarding().
+            expect(page.locator('[data-settings="budget"]')).to_contain_text("900 kr")
+
+        with self.step("raden leder till stället där inställningen bor"):
+            allergi.click()
+            expect(page.locator("#weekSheet")).to_be_visible()
+            expect(page.locator("#kosttypInput")).to_be_visible()
+            page.keyboard.press("Escape")           # G6: Escape stänger arket
+            expect(page.locator("#weekSheet")).to_be_hidden()
+
+        with self.step("det man ställer in syns på skärmen efteråt"):
+            page.click('[data-settings="kost"]')
+            page.select_option("#kosttypInput", "vegetariskt")
+            page.click("#weekSheetDone")
+            expect(page.locator('[data-settings="kost"]')).to_contain_text("Vegetariskt")
+            self.assertNotIn("Ej ifyllt",
+                             page.locator('[data-settings="kost"]').inner_text(),
+                             "raden är fortfarande märkt som tom trots att kosttyp är satt")
+
+        with self.step("tillbaka till Ikväll"):
+            page.click(".settings-screen .back-link")
+            expect(page.locator("#top")).to_have_class(re.compile(r"view-home"))
+
     def test_skapa_min_vecka_skapar_en_vecka_inte_ett_formular(self):
         """G7: en knapp som lovar ett resultat ska leverera resultatet.
 
@@ -1173,7 +1235,8 @@ class BrowserJourney(unittest.TestCase):
             ("week", "#weekTodayCard [data-week-swap]", "#swapModal"),
             ("home", "#weekSheetOpen", "#weekSheet"),
             ("home", "#feedbackBtn", "#feedbackSheet"),
-            ("home", "#profileBtn", "#accountModal"),
+            # G11: kontoarket nås via Inställningar-skärmen, som inte har
+            # någon flik i bottennavigeringen. Det prövas separat nedan.
             ("pantry", "#addPantryBtn", "#pantryModal"),
             ("pantry", "#cookFromPantryBtn", "#cookModal"),
         ]
@@ -1197,6 +1260,24 @@ class BrowserJourney(unittest.TestCase):
                 self.assertFalse(page.evaluate(
                     "() => document.querySelector('.phone-shell').hasAttribute('inert')"),
                     f"{modal}: inert låg kvar på appen efter stängning")
+
+        with self.step("#accountModal stängs med Escape"):
+            # Kontoarket nås via Inställningar (G11) och har därför ingen flik
+            # i bottennavigeringen - samma fyra påståenden, egen väg dit.
+            page.click("#profileBtn")
+            page.click('[data-settings="konto"]')
+            expect(page.locator("#accountModal")).to_be_visible()
+            self.assertTrue(page.evaluate(
+                "() => document.getElementById('accountModal').contains(document.activeElement)"))
+            self.assertTrue(page.evaluate(
+                "() => document.querySelector('.phone-shell').hasAttribute('inert')"))
+            page.keyboard.press("Escape")
+            expect(page.locator("#accountModal")).to_be_hidden()
+            self.assertTrue(page.evaluate(
+                "() => document.activeElement === document.querySelector('[data-settings=\"konto\"]')"),
+                "fokus kom inte tillbaka till kontoraden i Inställningar")
+            self.assertFalse(page.evaluate(
+                "() => document.querySelector('.phone-shell').hasAttribute('inert')"))
 
     def test_handla_borjar_med_listan_och_erbjuder_hushallet(self):
         """G13: i butik, med varorna framför sig, ska listan vara det första.
@@ -1780,7 +1861,7 @@ class BrowserJourney(unittest.TestCase):
             }, "whsec_test")
             self.assertEqual(status, 200)
             page.reload()
-            page.click("#profileBtn")
+            self.open_account()
             expect(page.locator("#accountPremiumStatus")).to_have_text("Inget Premium ännu")
             expect(page.locator("#premiumPitch")).to_be_visible()
             self.close_account_modal()
