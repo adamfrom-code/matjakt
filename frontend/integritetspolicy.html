@@ -126,25 +126,27 @@
   <h3>Det din webbläsare hämtar direkt</h3>
   <ul>
     <li><strong>Google Fonts</strong> – de publika sidorna på matjakt.store hämtar typsnitten Archivo och Newsreader från <em>fonts.googleapis.com</em> och <em>fonts.gstatic.com</em>. Google ser då din IP-adress och vilken webbläsare du har. Inga kontouppgifter skickas med. Själva appen bär sina typsnitt som egna filer och kontaktar inte Google alls.</li>
-    <li><strong>Plausible</strong> – besöksstatistiken på matjakt.store körs med Plausible. Den är kakfri och får en sidvisning med adress, hänvisande sida och grov geografi – aldrig ditt konto, din e-post eller din inköpslista.</li>
-    <li><strong>GitHub Pages</strong> – de publika sidorna på matjakt.store ligger hos GitHub, som ser besökarnas IP-adresser i sina egna loggar.</li>
-    <li><strong>Bildvärdar</strong> – receptbilder ligger kvar hos sin källa, bland annat Pexels och TheMealDB, och hämtas direkt av din webbläsare. Värden ser din IP-adress; inga kontouppgifter följer med.</li>
+    <li><strong>Plausible</strong> – besöksstatistiken körs med Plausible, och bara på startsidan matjakt.store. Den är kakfri och får en sidvisning med adress, hänvisande sida och grov geografi – aldrig ditt konto, din e-post eller din inköpslista. <strong>Inne i appen mäts ingenting med Plausible</strong>, och de här juridiska sidorna laddar inte skriptet alls.</li>
+    <li><strong>GitHub Pages</strong> – de publika sidorna och själva appen ligger som statiska filer hos GitHub, som ser besökarnas IP-adresser i sina egna loggar. Bara <em>/api</em> går till vår egen server.</li>
+    <li><strong>Bildvärdar</strong> – recept- och produktbilder ligger kvar hos sin källa och hämtas direkt av din webbläsare: <em>images.pexels.com</em> (receptfoton), <em>images.openfoodfacts.org</em>, <em>assets.axfood.se</em> och ICA:s bildvärd (produktbilder). Värden ser din IP-adress och vilken webbläsare du har; inga kontouppgifter följer med, och värden får inte veta vem du är eller vad som står på resten av din lista.</li>
   </ul>
 
   <h3>Det servern kontaktar för din räkning</h3>
   <ul>
     <li><strong>Stripe</strong> – betalning och prenumeration. Stripe får din e-postadress och ett kund-id, och är själv personuppgiftsansvarig för det du lämnar i deras betalformulär.</li>
-    <li><strong>Resend</strong> – transaktionsmejlen (verifiering, lösenordsåterställning) och de utskick du tackat ja till lämnar servern via Resends SMTP-tjänst, som därmed får mottagaradressen och mejlets innehåll.</li>
+    <li><strong>Resend</strong> – vår e-postleverantör, i dag <em>smtp.resend.com</em>. Transaktionsmejlen (verifiering, lösenordsåterställning) och de utskick du tackat ja till lämnar servern via dem, som därmed får mottagaradressen och mejlets innehåll. Byter vi leverantör uppdaterar vi den här raden.</li>
     <li><strong>Render</strong> – Matjakts server och den disk som bär alla tabeller ovan driftas hos Render.</li>
     <li><strong>Apple, Google och Mozilla</strong> – veckonotisen skickas till den push-tjänst som hör till din enhet och webbläsare. Tjänsten får adressen till din enhet och ett krypterat meddelande som bara din enhet kan låsa upp.</li>
-    <li><strong>Zippopotam</strong> – slår upp ort och koordinater för ett postnummer så att butiksavstånd fungerar i hela landet. Ditt postnummer skickas dit; ingenting annat.</li>
   </ul>
 
+  <h3>Det ditt postnummer – och bara det – skickas till</h3>
+  <p>För att hitta butikerna nära dig frågar servern tre källor med ditt postnummer som enda uppgift: <strong>Zippopotam</strong> (slår upp ort och koordinater), <strong>Primat</strong> (vilka butiker som har fullt sortiment i området) och <strong>ICA:s butikssökning</strong>. Inget konto, ingen e-postadress, ingen IP-adress och ingen inköpslista följer med – och frågan ställs alltid från vår server, aldrig från din telefon. Svaret sparas per postnummer i en gemensam cache, så samma uppslag betjänar alla som bor i samma område: det går inte att utläsa ur den vem som frågade.</p>
+
   <h3>Källor som aldrig får något om dig</h3>
-  <p>Priser och produktdata hämtas på servern, på hela sortimentet och aldrig per användare: <strong>Primat</strong> (dagliga butikspriser), <strong>Dabas</strong> (produktdata, innehåll och allergener), <strong>Open Food Facts</strong> (produktbilder) och butikskedjornas egna publika webbutiker. Näringsvärden och volymvikter bygger på Livsmedelsverkets publicerade tabeller. Ingen av dessa får veta något om dig, din lista eller din enhet – insamlingen sker från servern, aldrig från din telefon.</p>
+  <p>Priser och produktdata hämtas på servern, på hela sortimentet och aldrig per användare: <strong>Dabas</strong> (produktdata, innehåll och allergener), <strong>Open Food Facts</strong> (produktuppgifter och bild-länkar), Primats prislistor och butikskedjornas egna publika webbutiker – Willys och Hemköp (Axfood), ICA, Coop och City Gross. Näringsvärden och volymvikter bygger på Livsmedelsverkets publicerade öppna data, hämtade i förväg; servern kontaktar dem inte när du använder appen. Ingen av de här källorna får veta något om dig, din lista eller din enhet.</p>
 
   <h2>Var behandlas uppgifterna?</h2>
-  <p>Servern med all kontodata står hos Render, betalningarna hanteras av Stripe, mejlen skickas via Resend, typsnitten hämtas från Google och notiserna levereras av Apple, Google eller Mozilla. Flera av dem är amerikanska bolag, och dina uppgifter kan därför komma att behandlas utanför EU och EES. Vill du veta exakt vilken leverantör som behandlar vad, skriv till <a href="mailto:adamfrom@icloud.com">adamfrom@icloud.com</a> så får du svar.</p>
+  <p>Servern med all kontodata står hos Render, sidorna och appen levereras av GitHub, betalningarna hanteras av Stripe, mejlen skickas via Resend, typsnitten hämtas från Google och notiserna levereras av Apple, Google eller Mozilla. Flera av dem är amerikanska bolag, och dina uppgifter kan därför komma att behandlas utanför EU och EES. Vill du veta exakt vilken leverantör som behandlar vad, eller vilket skydd som gäller för en viss överföring, skriv till <a href="mailto:adamfrom@icloud.com">adamfrom@icloud.com</a> så får du svar.</p>
 
   <h2>Hur länge sparas uppgifterna?</h2>
   <div class="scroll">
@@ -158,13 +160,13 @@
       <tr><td>Inbjudan till hushåll</td><td>72 timmar</td></tr>
       <tr><td>Hushållets händelselogg</td><td>De 500 senaste händelserna per hushåll</td></tr>
       <tr><td>Push-prenumeration</td><td>Tills du loggar ut, stänger av notisen eller raderar kontot</td></tr>
-      <tr><td>Missbruksspärrens rader</td><td>Högst en timme</td></tr>
-      <tr><td>Säkerhetskopior</td><td>De sju senaste dygnens kopior, alltså 7 dygn på servern</td></tr>
+      <tr><td>Missbruksspärrens rader</td><td>Räknas i högst en timme, städas bort löpande</td></tr>
+      <tr><td>Säkerhetskopior</td><td>De 7 senaste kopiorna – en per dygn, alltså ungefär en vecka</td></tr>
       <tr><td>Serverlogg hos Render</td><td>Renders egen logglagring</td></tr>
     </tbody>
   </table>
   </div>
-  <p>Raderar du ditt konto i appen försvinner det ur databasen direkt. Eftersom säkerhetskopior tas varje natt kan uppgifterna finnas kvar i en kopia tills den kopian rensas. En återställning från backup skulle återskapa raderade konton; sker det körs raderingarna från perioden efter kopians stämpel om.</p>
+  <p>Raderar du ditt konto i appen försvinner det ur databasen direkt. En säkerhetskopia tas ett dygn i taget och de sju senaste sparas, så uppgifterna kan finnas kvar i en kopia tills den kopian faller ur listan – normalt ungefär en vecka, men har servern stått stilla kan de sju kopiorna sträcka sig längre bak än så. En återställning från backup skulle återskapa raderade konton; sker det körs raderingarna från perioden efter kopians stämpel om.</p>
 
   <h2>Dina rättigheter</h2>
   <ul>

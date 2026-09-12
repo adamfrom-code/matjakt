@@ -156,6 +156,11 @@ class PolicynNamngerDetServernAnropar(unittest.TestCase):
     beviset bort ska namnet ut ur policyn; tillkommer ett nytt anrop någon
     annanstans fångas det inte här - men ett som BYTS ut fångas."""
 
+    # Resend är med flit det enda paret vars bevis är en driftfil och inte en
+    # anropande modul: mailer.py talar ren SMTP mot värden i SMTP_HOST och
+    # nämner ingen leverantör alls. Vem den värden är avgörs av Render-miljön,
+    # och det enda spårade stället som skriver ut den är RELEASE.md. Policyn
+    # namnger Resend för att det är sant i drift - inte för att koden gör det.
     PARTER = (
         ("Stripe", "backend/services/billing/stripe_client.py", "api.stripe.com"),
         ("Primat", "backend/services/pricing/primat_client.py", "primat.nu"),
@@ -163,6 +168,7 @@ class PolicynNamngerDetServernAnropar(unittest.TestCase):
         ("Open Food Facts", "backend/services/pricing/open_food_facts_client.py", "openfoodfacts.org"),
         ("Zippopotam", "backend/api_server.py", "zippopotam.us"),
         ("Render", "render.yaml", "matjakt-backend"),
+        ("GitHub", ".github/workflows/deploy.yml", "deploy-pages"),
         ("Resend", "docs/RELEASE.md", "smtp.resend.com"),
     )
 
@@ -192,6 +198,37 @@ class PolicynNamngerDetServernAnropar(unittest.TestCase):
         läst = brodtext(POLICY)
         self.assertRegex(läst, r"IP-adress[^.]{0,400}spärr|spärr[^.]{0,400}IP-adress",
                          "policyn förklarar inte att IP-adressen sparas i missbruksspärren")
+
+    def test_postnumret_gar_till_de_tre_som_faktiskt_far_det(self):
+        """Ett utkast placerade Primat under 'får aldrig något om dig'. Det var
+        fel: butiksuppslaget skickar användarens postnummer till Primat och
+        till ICA, precis som till Zippopotam. Postnumret ÄR en personuppgift
+        när det hör till ett konto, så de tre ska stå för sig - och den dag ett
+        anrop slutar bära postnumret ska raden ut ur policyn igen."""
+        server = (ROOT / "backend" / "api_server.py").read_text(encoding="utf-8")
+        primat = (ROOT / "backend/services/pricing/primat_client.py").read_text(encoding="utf-8")
+        self.assertIn('params={"postcode": zip_code}', primat,
+                      "Primat får inte längre postnumret - flytta tillbaka den till anonyma källor")
+        self.assertIn("handla.ica.se/api/store/v1?zip=", server,
+                      "ICA-butikssökningen bär inte längre postnumret")
+        self.assertIn("api.zippopotam.us/SE/", server)
+        läst = brodtext(POLICY)
+        rubrik = "Det ditt postnummer – och bara det – skickas till"
+        self.assertIn(rubrik, läst, "policyn har ingen rubrik för mottagarna av postnumret")
+        avsnitt = läst.split(rubrik, 1)[1][:900]
+        for part in ("Zippopotam", "Primat", "ICA"):
+            self.assertIn(part, avsnitt, f"{part} får postnumret men står inte under {rubrik!r}")
+
+    def test_primat_star_inte_kvar_bland_dem_som_inte_far_nagot(self):
+        """Regressionsvakt för just det felet: rubriken om anonyma källor får
+        inte lova att Primat aldrig får något, när butiksuppslaget gör det."""
+        läst = brodtext(POLICY)
+        rubrik = "Källor som aldrig får något om dig"
+        self.assertIn(rubrik, läst)
+        avsnitt = läst.split(rubrik, 1)[1][:900]
+        self.assertNotIn("Zippopotam", avsnitt,
+                         "Zippopotam får postnumret - den hör inte hemma under "
+                         f"{rubrik!r}")
 
 
 class LagringstidernaStammerMedKoden(unittest.TestCase):
@@ -225,10 +262,55 @@ class LagringstidernaStammerMedKoden(unittest.TestCase):
         self.assertIn(f"{händelser} rader", läst)
 
     def test_backupens_livslangd(self):
+        """KEEP räknar KOPIOR, inte dygn: `for stale in sets[:-KEEP]` sorterar
+        katalogerna och kastar alla utom de sista. Ett set per dygn gör att det
+        i praktiken blir ungefär en vecka - men efter ett driftavbrott sträcker
+        sig de sju seten längre bak än sju dygn. Policyn ska säga kopior."""
         läst = brodtext(POLICY)
         set_kvar = self.konstant("backend/services/backup.py", "KEEP")
-        self.assertIn(f"{set_kvar} dygn på servern", läst,
+        självaste = (ROOT / "backend/services/backup.py").read_text(encoding="utf-8")
+        self.assertIn("sets[:-KEEP]", självaste,
+                      "backup.py beskär inte längre på antal set - läs om konstanten")
+        self.assertIn(f"{set_kvar} senaste kopiorna", läst,
                       "policyn säger inte hur länge ett raderat konto ligger kvar i en säkerhetskopia")
+        self.assertNotIn(f"{set_kvar} dygn på servern", läst,
+                         "KEEP är antal kopior, inte dygn - formuleringen lovar en exakthet koden inte har")
+
+
+class PlatsenBeskrivsSomKodenFaktisktGor(unittest.TestCase):
+    """Ett utkast skrev att koordinaterna från "Hitta mig" SPARAS tills man
+    byter postnummer. De sparas inte alls.
+
+    `state.position` sätts i app.js men ingår inte i `buildSyncPayload()`, och
+    det är den payloaden - och bara den - som `persistLocally()` skriver till
+    localStorage och som POSTas till /api/account/state. `users` har ingen
+    lat/lon-kolumn. Koordinaterna lever alltså i JS-minnet under sessionen och
+    tar aldrig vägen till disk eller server.
+
+    Det spelar roll åt båda håll: en policy som överdriver insamlingen är lika
+    oriktig som en som underdriver den, och appens iOS-manifest deklarerar
+    exakt plats som "linked to the user" - någon av de två har fel."""
+
+    def test_koordinaterna_lamnar_inte_enheten(self):
+        state = (ROOT / "frontend/app/src/state/app-state.js").read_text(encoding="utf-8")
+        payload = re.search(r"buildSyncPayload[^{]*\{(.*?)\n\}", state, flags=re.S)
+        self.assertIsNotNone(payload, "buildSyncPayload() finns inte längre i app-state.js")
+        self.assertNotIn("position", payload.group(1),
+                         "position ingår nu i synkpayloaden - då SPARAS koordinaterna, "
+                         "och policyns 'stannar i appens minne' är inte längre sant")
+        konto = (ROOT / "backend/services/accounts/store.py").read_text(encoding="utf-8")
+        for kolumn in ('"latitude"', '"longitude"', '("lat"', '("lon"'):
+            self.assertNotIn(kolumn, konto, f"users bär nu {kolumn} - policyn måste skrivas om")
+        läst = brodtext(POLICY)
+        self.assertIn("koordinaterna stannar i appens minne", läst,
+                      "policyn säger inte att koordinaterna aldrig lämnar enheten")
+        self.assertIn("postnummer", läst)
+
+    def test_policyn_inte_pastar_att_positionen_sparas(self):
+        läst = brodtext(POLICY)
+        self.assertNotRegex(
+            läst, r"sparas också en ungefärlig position",
+            "policyn påstår att positionen sparas - koden sparar den inte")
 
 
 class RattigheternaFinnsIKoden(unittest.TestCase):
