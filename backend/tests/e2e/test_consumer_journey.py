@@ -611,7 +611,10 @@ class BrowserJourney(unittest.TestCase):
         with self.step("delad receptlänk öppnar receptet utan onboarding"):
             page.goto(self.app(f"?recept={recipe_id}"))
             expect(page.locator("#recipePage")).to_be_visible()
-            expect(page.locator("#recipePage .ing-row").first).to_be_visible()
+            # L4: receptsidan är byggd som telefon 4 i design D. Raden heter
+            # .ingrrad och har mängden i en egen kolumn; .ing-row är kvar i
+            # appen men hör numera till "Följer priset på", inte hit.
+            expect(page.locator("#recipePage .ingrrad").first).to_be_visible()
             expect(page.locator("#onboardingModal")).to_be_hidden()
 
         with self.step("signup"):
@@ -655,11 +658,17 @@ class BrowserJourney(unittest.TestCase):
         with self.step("recept: mängder och steg"):
             page.click("#weekTodayCard [data-week-details]")
             expect(page.locator("#recipePage")).to_be_visible()
-            expect(page.locator("#recipePage .step-row").first).to_be_visible()
+            # L4: steget är en avbockningsbar rad (.steg) med sitt nummer i
+            # egen kolumn. Bocken är kvar, klassen heter som i design D.
+            expect(page.locator("#recipePage .steg").first).to_be_visible()
+            expect(page.locator("#recipePage .steg input[type=checkbox]").first).to_be_visible()
+            # Priset är bildtext under fotot, inte ett chips bland fyra andra.
+            expect(page.locator("#recipePage .receptmeta")).to_contain_text("Pris per portion")
             # Mängderna kommer med detaljhämtningen (kortet i listan bär bara
-            # namn) - vänta in dem i stället för att läsa mitt i.
-            expect(page.locator("#recipePage .ing-row strong").first).not_to_have_text("", timeout=15_000)
-            amounts = page.locator("#recipePage .ing-row strong").all_inner_texts()
+            # namn) - vänta in dem i stället för att läsa mitt i. De står i
+            # mängdkolumnen .mangd2, inte längre i ett <strong> i raden.
+            expect(page.locator("#recipePage .ingrrad .mangd2").first).not_to_have_text("", timeout=15_000)
+            amounts = page.locator("#recipePage .ingrrad .mangd2").all_inner_texts()
             self.assertTrue(any(re.search(r"\d", text) for text in amounts), amounts)
             page.click("#recipePage .recipe-back")
             expect(page.locator("#top")).to_be_visible()

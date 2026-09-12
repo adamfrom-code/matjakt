@@ -23,6 +23,7 @@ import { filterRecipes } from "../services/recipe-search.js";
 import { RECIPE_FALLBACK_ART, RECIPE_FALLBACK_LABEL, kindFor as recipeFallbackKind } from "../services/recipe-fallback.js";
 import { loadRecipe, loadShelves, matchesAllTags } from "../data/recipes.js";
 import { recipeDetailApiUrl } from "../api/config.js";
+import { SAKNAS, UPPSKATTAT, prisMarkup } from "./pris.js";
 
 const $ = id => document.getElementById(id);
 
@@ -86,10 +87,21 @@ export function mapApiRecipe(recipe) {
   // som säger "salt & peppar" stod på skärmen som "salt &amp; peppar".
   // Rättningen är att ta bort den TIDIGA escapningen - aldrig den sena.
   // Rå text i state, escapad vid utskrift: tar man bort fel sida blir ett
-  // kosmetiskt fel en XSS-lucka. tests/recipes-view.test.js prövar båda
-  // halvorna, just därför.
-  const ingredients = (recipe.ingredients || []).map(item => `${item.measure || ""} ${item.name || ""}`.trim()).filter(Boolean);
-  return { id: recipe.id, provider: recipe.provider, providerRecipeId: recipe.providerRecipeId, namn: String(recipe.title || ""), butik: "alla", tid: Number(recipe.prepMinutes) || 0, typ: "Provider-recept", portionspris: null, inkopspris: null, sparar: 0, ingredienser: ingredients, hemma: [], beskrivning: "Recept från extern receptkälla. Pris beräknas först när ingredienserna har matchats mot svenska butikprodukter.", steg: recipe.instructions || [], bild: safeHttpUrl(recipe.imageUrl), imageSource: recipe.imageSource, sourceUrl: safeHttpUrl(recipe.sourceUrl), servings: recipe.servings, priceStatus: "unavailable" };
+  // kosmetiskt fel en XSS-lucka. tests/recipes-view.test.js och
+  // tests/receptet.test.js prövar båda halvorna, just därför.
+  //
+  // L4: mängden och namnet behålls också ISÄRPLOCKADE i `ingrediensrader`.
+  // Receptsidan sätter mängden i en egen kolumn, och `"500 g Torskrygg"` går
+  // inte att dela tillbaka utan att gissa - "1 kruka färsk dill" och "2 dl
+  // crème fraiche 34 %" delas på olika ställen. Källan vet redan var
+  // gränsen går; det är billigare att inte slänga den. Fältet är rå text av
+  // samma skäl som allt annat här, och läses bara av den här vyn:
+  // `ingredienser` (och dess form) är oförändrad för prismotorn och veckan.
+  const rows = (recipe.ingredients || [])
+    .map(item => ({ measure: String(item.measure || "").trim(), name: String(item.name || "").trim() }))
+    .filter(row => row.measure || row.name);
+  const ingredients = rows.map(row => `${row.measure} ${row.name}`.trim());
+  return { id: recipe.id, provider: recipe.provider, providerRecipeId: recipe.providerRecipeId, namn: String(recipe.title || ""), butik: "alla", tid: Number(recipe.prepMinutes) || 0, typ: "Provider-recept", portionspris: null, inkopspris: null, sparar: 0, ingredienser: ingredients, ingrediensrader: rows, hemma: [], beskrivning: "Recept från extern receptkälla. Pris beräknas först när ingredienserna har matchats mot svenska butikprodukter.", steg: recipe.instructions || [], bild: safeHttpUrl(recipe.imageUrl), imageSource: recipe.imageSource, sourceUrl: safeHttpUrl(recipe.sourceUrl), servings: recipe.servings, priceStatus: "unavailable" };
 }
 
 // True when the user is browsing rather than looking for something specific.
@@ -214,17 +226,31 @@ function formatMeasure(amount) {
 
 // Ingrediensmängderna skalas till HUSHÅLLET - receptbankens rader gäller
 // recipe.servings portioner, men veckan lagas för state.personer.
-function scaledIngredientRows(recipe) {
+//
+// Tre källor, ett svar. Vyn ska inte behöva veta vilken sorts recept den
+// ritar: `buy` är rader med mängd och namn isär (mängdkolumnen i L4), `home`
+// är namnen på det som räknats bort för att det redan står i skafferiet.
+//  1. Bankrecept - strukturerade rader med tal och enhet. Skalas.
+//  2. Provider-recept - mängden är färdig TEXT hos källan ("1 kruka") och
+//     kan inte skalas. Den står som den gör där, hellre än att gissas om.
+//  3. Listprojektioner - bara namn. Mängdkolumnen står tom, raden finns.
+function ingredientRows(recipe) {
   const structured = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
-  if (!structured.length) return null;
-  const scale = state.personer / (recipe.servings || 4);
-  const rows = { buy: [], home: [] };
-  structured.forEach(item => {
-    const target = item.pantryStaple ? rows.home : rows.buy;
-    const amount = item.amount != null && !item.pantryStaple ? formatMeasure(item.amount * scale) : "";
-    target.push({ amount, unit: item.pantryStaple ? "" : (item.unit || ""), name: item.name, optional: item.optional });
-  });
-  return rows;
+  if (structured.length) {
+    const scale = state.personer / (recipe.servings || 4);
+    const rows = { buy: [], home: [] };
+    structured.forEach(item => {
+      if (item.pantryStaple) { rows.home.push(item.name); return; }
+      const amount = item.amount != null ? formatMeasure(item.amount * scale) : "";
+      rows.buy.push({ amount: [amount, item.unit || ""].filter(Boolean).join(" "), name: item.name, optional: item.optional });
+    });
+    return rows;
+  }
+  const home = [...(recipe.hemma || [])];
+  if (Array.isArray(recipe.ingrediensrader) && recipe.ingrediensrader.length) {
+    return { buy: recipe.ingrediensrader.map(row => ({ amount: row.measure, name: row.name })), home };
+  }
+  return { buy: (recipe.ingredienser || []).map(name => ({ amount: "", name })), home };
 }
 
 export async function renderRecipePage() {
@@ -284,18 +310,59 @@ export async function renderRecipePage() {
   document.querySelectorAll(".bottom-nav-item").forEach(item =>
     item.classList.toggle("active", item.dataset.view === "recipes")); /* bottennavigeringen följer med in på receptsidan - flikarna ska alltid
      vara ett tryck bort */ $("recipePage").hidden = false;
-  const chips = [
-    recipe.tid ? `${recipe.tid} min` : null,
-    `${state.personer} portioner`,
-    recipe.difficulty || null,
-    recipe.priceStatus !== "unavailable" && recipe.portionspris ? `${host.money(recipe.portionspris)}/portion` : null,
-  ].filter(Boolean);
-  const ingredientRows = scaledIngredientRows(recipe);
-  const ingredientsMarkup = ingredientRows
-    ? `${ingredientRows.buy.map(row => `<div class="ing-row${row.optional ? " ing-optional" : ""}"><strong>${escapeHtml([row.amount, row.unit].filter(Boolean).join(" "))}</strong><span>${escapeHtml(row.name)}${row.optional ? " <em>(valfritt)</em>" : ""}</span></div>`).join("")}${ingredientRows.home.length ? `<p class="ing-home-label">Har du säkert hemma</p>${ingredientRows.home.map(row => `<div class="ing-row ing-home"><strong></strong><span>${escapeHtml(row.name)}</span></div>`).join("")}` : ""}`
-    : `${recipe.ingredienser.map(item => `<div class="ing-row"><strong></strong><span>${escapeHtml(item)}</span></div>`).join("")}`;
-  const stepsMarkup = (details.steg || []).map((step, index) => `<label class="step-row"><input type="checkbox" data-step-check="${index}"><span class="step-number">${index + 1}</span><span class="step-text">${escapeHtml(step)}</span></label>`).join("");
-  $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe">${recipe.bild ? `<img class="recipe-photo full-recipe-hero" src="${escapeHtml(safeHttpUrl(recipe.bild) || "")}" alt="${escapeHtml(recipe.namn)}">` : `<div class="full-recipe-fallback">${recipePhoto(recipe)}</div>`}<p class="eyebrow">${escapeHtml(recipe.typ)}</p><h1>${escapeHtml(recipe.namn)}</h1><div class="recipe-chips">${chips.map(chip => `<span class="recipe-chip">${escapeHtml(chip)}</span>`).join("")}</div>${recipe.kcal ? `<p class="full-recipe-macros">${host.macroLine(recipe)}</p>` : ""}<p class="full-recipe-description">${escapeHtml(details.beskrivning || "En god svensk vardagsrätt.")}</p><div class="recipe-cta-row"><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${escapeHtml(recipe.id)}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button><button type="button" class="recipe-share-btn" data-recipe-share aria-label="Dela receptet">Dela</button></div><section class="recipe-block"><div class="ing-head"><h2>Ingredienser</h2><span>${state.personer} portioner</span></div>${ingredientsMarkup}</section><section class="recipe-block"><h2>Gör så här</h2><div class="steps">${stepsMarkup}</div></section>${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${escapeHtml(details.tips)}</p>` : ""}<div class="recipe-block">${host.recipeRatingMarkup(recipe.id)}${host.feedbackMarkup(recipe.id)}</div></article>`;
+  // ---- L4: uppslaget i tidningen (design D, telefon 4) --------------------
+  //
+  // Fotot bleedar, rubriken ligger PÅ det i ett pappersfält, och priset står
+  // som bildtext under. Chipsraden är borta: fyra pillerformade chips under
+  // rubriken sade samma sak fyra gånger och gjorde priset till ett utrop
+  // bland tre andra. Metadatan står nu som EN kapitälrad ovanför rubriken.
+  const eyebrow = [recipe.typ, recipe.tid ? `${recipe.tid} min` : null, recipe.difficulty || null]
+    .filter(Boolean).join(" · ");
+
+  // PORTIONSPRISET SOM BILDTEXT (DESIGNSYSTEM-D.md §1), och markupen kommer
+  // ur L0:s komponent - den här vyn skriver ingen egen prismarkup.
+  // Tillståndet är UPPSKATTAT och inte KONTROLLERAT med flit: bankens
+  // portionspris är räknat ur kedjans priser för ett standardhushåll, inte
+  // verifierat i den butik användaren går till. Saknas talet - eller är det
+  // ett provider-recept som aldrig prissatts - blir det en öppen ram.
+  // "ca 52 kr" på ett tal vi inte har vore den sortens artighet som gör att
+  // ingen tror på nästa siffra heller.
+  const hasPortionPrice = recipe.priceStatus !== "unavailable" && recipe.portionspris != null;
+  const portionPrice = hasPortionPrice
+    ? prisMarkup(recipe.portionspris, UPPSKATTAT)
+    : prisMarkup(null, SAKNAS);
+
+  const rows = ingredientRows(recipe);
+  // MÄNGDEN I EGEN KOLUMN. Namnet står bredvid, inte efter: en lista som ska
+  // läsas med en gryta i handen läses kolumnvis, inte radvis.
+  //
+  // "HAR DU HEMMA" ÄR EN TONAD RAD, INTE EN UTELÄMNAD. Varorna är borträknade
+  // ur priset, och en vara som räknats bort ska synas att den räknats bort.
+  // Försvinner den i stället ser listan ofullständig ut, och användaren köper
+  // saltet en gång till.
+  const ingredientsMarkup = `<div class="ingrlista">`
+    + rows.buy.map(row => `<div class="ingrrad${row.optional ? " ingrrad-valfri" : ""}"><span class="mangd2">${escapeHtml(row.amount)}</span><span class="namn2">${escapeHtml(row.name)}${row.optional ? ` <em>(valfritt)</em>` : ""}</span></div>`).join("")
+    + (rows.home.length ? `<div class="hemma"><span class="kap">Har du hemma</span><span class="namn2">${escapeHtml(rows.home.join(", "))}</span></div>` : "")
+    + `</div>`;
+
+  // NUMRERADE STEG, AVBOCKNINGSBARA. Hela raden är etiketten, så träffytan är
+  // raden och inte kryssrutan - man lagar mat med händerna upptagna.
+  const stepsMarkup = (details.steg || []).map((step, index) =>
+    `<label class="steg"><span class="nr">${index + 1}</span><span class="steg-text">${escapeHtml(step)}</span><input type="checkbox" data-step-check="${index}"></label>`).join("");
+
+  const heroMedia = recipe.bild
+    ? `<img class="recipe-photo" src="${escapeHtml(safeHttpUrl(recipe.bild) || "")}" alt="${escapeHtml(recipe.namn)}">`
+    : recipePhoto(recipe);
+  $("recipePage").innerHTML = `<button class="recipe-back" type="button" aria-label="Tillbaka till recepten"></button><article class="full-recipe">`
+    + `<figure class="recepthero">${heroMedia}<figcaption class="titel">${eyebrow ? `<span class="kap">${escapeHtml(eyebrow)}</span>` : ""}<h1>${escapeHtml(recipe.namn)}</h1></figcaption></figure>`
+    + `<div class="receptmeta"><span class="kap">Pris per portion</span>${portionPrice}</div>`
+    + `${recipe.kcal ? `<p class="full-recipe-macros">${host.macroLine(recipe)}</p>` : ""}`
+    + `<p class="full-recipe-description">${escapeHtml(details.beskrivning || "En god svensk vardagsrätt.")}</p>`
+    + `<div class="recipe-cta-row"><button class="btn btn-primary recipe-add-primary" type="button" data-recipe-add="${escapeHtml(recipe.id)}"><span>${state.valda.has(recipe.id) ? "Tillagd i veckan" : "Lägg till i veckan"}</span><span>＋</span></button><button type="button" class="recipe-share-btn" data-recipe-share aria-label="Dela receptet">Dela</button></div>`
+    + `<section class="recipe-block"><div class="ingrtopp"><h2 class="kap">Ingredienser · ${escapeHtml(host.plural(state.personer, "portion", "portioner"))}</h2><span class="linje"></span></div>${ingredientsMarkup}</section>`
+    + `<section class="recipe-block"><div class="ingrtopp"><h2 class="kap">Gör så här</h2><span class="linje"></span></div><div class="steglista">${stepsMarkup}</div></section>`
+    + `${details.tips ? `<p class="recipe-tip"><strong>Kökstips:</strong> ${escapeHtml(details.tips)}</p>` : ""}`
+    + `<div class="recipe-block">${host.recipeRatingMarkup(recipe.id)}${host.feedbackMarkup(recipe.id)}</div></article>`;
   $("recipePage").querySelector(".recipe-back").addEventListener("click", () => history.back());
   // Avbockade steg medan man lagar - sparas lokalt per recept så ett
   // vridet-bort-och-tillbaka på telefonen inte tappar var man var.
@@ -305,10 +372,10 @@ export async function renderRecipePage() {
   $("recipePage").querySelectorAll("[data-step-check]").forEach(box => {
     const index = Number(box.dataset.stepCheck);
     box.checked = done.includes(index);
-    box.closest(".step-row").classList.toggle("step-done", box.checked);
+    box.closest(".steg").classList.toggle("steg-klar", box.checked);
     box.addEventListener("change", () => {
       box.checked ? done.push(index) : (done = done.filter(x => x !== index));
-      box.closest(".step-row").classList.toggle("step-done", box.checked);
+      box.closest(".steg").classList.toggle("steg-klar", box.checked);
       try { localStorage.setItem(stepKey, JSON.stringify(done)); } catch { /* full lagring - bocken lever ändå i DOM */ }
     });
   });
