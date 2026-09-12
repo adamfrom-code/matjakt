@@ -7,6 +7,15 @@ Letar efter riktigt nyckelmaterial (Stripe sk_live_/sk_test_/whsec_, Resend
 re_..., privata nycklar, ifyllda SMTP_PASSWORD/PRIMAT_API_KEY/DABAS_API_KEY/
 MATJAKT_ADMIN_TOKEN) i alla filer git spårar. Skriver ALDRIG ut värdet -
 bara fil, rad och mönster. .env är gitignorerad och skannas inte.
+
+Plus en kontroll som inte är ett mönster utan en plats: butiksmetadatan
+under store/. Den bär ett granskningskonto som ska fyllas i i App Store
+Connects egna fält, inte i en spårad fil, och mallen har hakparenteser för
+att göra det tydligt. En gång låg ett riktigt lösenord i arbetsträdet,
+oskrivet men en `git add -A` från att bli publicerat för alltid. Inget
+mönster fångade det - ett lösenord ser ut som vilket ord som helst - så
+kontrollen utgår från raden i stället: står det "Lösenord:" och något som
+inte är en platshållare efter, är det ifyllt.
 """
 
 import re
@@ -36,10 +45,33 @@ PATTERNS = {
 ALLOWLIST = re.compile(r"(?:sk_test_(?:x|fake|abc123|hemlig|riktig)\b|whsec_(?:x|test|new|wrong)\b|PRIMAT_API_KEY\s*=\s*\"(?:hemlig|testnyckel))")
 SKIP_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp", ".ico", ".db", ".lock", ".min.js", ".map", ".pdf")
 
+# Butiksmetadatan: raderna som ska stå tomma, och vad som räknas som tomt.
+# En platshållare är hakparentes, bindestreck eller ingenting alls.
+BUTIKSMETADATA = "store/"
+KONTORAD = re.compile(r"(?i)^\s*(lösenord|password|e-post|epost|email|användarnamn|username)\s*:\s*(.*)$")
+PLATSHALLARE = re.compile(r"^(?:\[.*\]|-+|)\s*$")
+
 
 def tracked_files() -> list[str]:
     out = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
     return [line for line in out.stdout.splitlines() if line]
+
+
+def granskningskontot(rel: str, text: str) -> list[tuple[str, int, str, str]]:
+    """Ett ifyllt granskningskonto i butiksmetadatan.
+
+    Kontot hör hemma i App Store Connects App Review Information, inte i
+    repot - och repot är publikt. Mallen har hakparenteser; allt annat är
+    ifyllt. Värdet skrivs aldrig ut, bara vilken rad det står på.
+    """
+    if not rel.startswith(BUTIKSMETADATA):
+        return []
+    träffar = []
+    for number, line in enumerate(text.splitlines(), 1):
+        match = KONTORAD.match(line)
+        if match and not PLATSHALLARE.match(match.group(2)):
+            träffar.append((rel, number, f"ifyllt granskningskonto ({match.group(1).lower()})", "…"))
+    return träffar
 
 
 def main() -> int:
@@ -59,6 +91,7 @@ def main() -> int:
                     if ALLOWLIST.search(match.group(0)) or ALLOWLIST.search(line[max(0, match.start() - 40):match.end()]):
                         continue
                     hits.append((rel, number, name, match.group(0)[:6] + "…"))
+        hits.extend(granskningskontot(rel, text))
     if hits:
         print("HEMLIGHETER I SPÅRADE FILER:")
         for rel, number, name, masked in hits:
