@@ -53,7 +53,12 @@ function el(tag, attribut = {}, text) {
 
 /**
  * Bygger lagret och returnerar delarna. Knapparna läggs i `val`-ordning;
- * varje val är { etikett, svar, stil }.
+ * varje val är { etikett, svar, stil, roll }.
+ *
+ * `data-dialog` är knappens enda stabila fäste. Etiketten duger inte: den
+ * säger vad knappen GÖR, och därför heter den ofta precis som knappen man
+ * tryckte på för att komma hit ("Lämna hushållet" står på båda). Klassen
+ * duger inte heller - den är en stilfråga och ägs av Z-STYLE.
  */
 function byggDialog({ title, body, val }) {
   const id = `appDialogTitle${++räknare}`;
@@ -68,8 +73,8 @@ function byggDialog({ title, body, val }) {
   kort.append(el("h2", { id }, title));
   if (body) kort.append(el("p", { class: "plan-modal-hint" }, body));
 
-  const knappar = val.map(({ etikett, stil }) => {
-    const knapp = el("button", { type: "button", class: stil });
+  const knappar = val.map(({ etikett, stil, roll }) => {
+    const knapp = el("button", { type: "button", class: stil, "data-dialog": roll });
     // Primärknappen bär sin text i ett <span> - `.btn-primary` är en flexrad
     // med `justify-content:space-between`, och en naken textnod hamnar då i
     // vänsterkanten i stället för i mitten.
@@ -99,14 +104,16 @@ export function askConfirm({ title, body, confirmLabel, cancelLabel = "Avbryt", 
   // Vid en destruktiv handling är det SÄKRA valet det stora: "Behåll kontot"
   // ligger som primärknapp och "Radera kontot" som röd textknapp. En dialog
   // som gör raderingen till den självklara knappen är en fälla, inte en fråga.
+  const ja = { etikett: confirmLabel, svar: true, roll: "confirm" };
+  const nej = { etikett: cancelLabel, svar: false, roll: "cancel" };
   const val = danger
     ? [
-      { etikett: cancelLabel, svar: false, stil: "btn btn-primary" },
-      { etikett: confirmLabel, svar: true, stil: "btn account-logout-btn" },
+      { ...nej, stil: "btn btn-primary" },
+      { ...ja, stil: "btn account-logout-btn" },
     ]
     : [
-      { etikett: confirmLabel, svar: true, stil: "btn btn-primary" },
-      { etikett: cancelLabel, svar: false, stil: "btn btn-ghost" },
+      { ...ja, stil: "btn btn-primary" },
+      { ...nej, stil: "btn btn-ghost" },
     ];
   return visa({ title, body, val }, false);
 }
@@ -118,8 +125,8 @@ export function askConfirm({ title, body, confirmLabel, cancelLabel = "Avbryt", 
  * @returns {Promise<void>} löst när beskedet kvitterats
  */
 export function showNotice({ title, body, closeLabel = "Stäng" }) {
-  return visa({ title, body, val: [{ etikett: closeLabel, svar: undefined, stil: "btn btn-primary" }] }, undefined)
-    .then(() => undefined);
+  const val = [{ etikett: closeLabel, svar: undefined, stil: "btn btn-primary", roll: "close" }];
+  return visa({ title, body, val }, undefined).then(() => undefined);
 }
 
 function visa({ title, body, val }, avbrottssvar) {

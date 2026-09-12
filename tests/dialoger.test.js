@@ -231,6 +231,33 @@ test("ja-knappen heter vad den gör, aldrig OK", async () => {
   } finally { städa(); }
 });
 
+test("knapparna bär data-dialog - det enda fästet som inte är en stilfråga", async () => {
+  // E2E klickar på den här, inte på etiketten: "Lämna hushållet" står både på
+  // knappen man tryckte på och på knappen i dialogen, och en textselektor
+  // hade träffat fel av de två. Klassen är Z-STYLE:s att byta när den vill.
+  const doc = await scen();
+  try {
+    const nejsvar = dialog.askConfirm({ title: "Lämna?", confirmLabel: "Lämna hushållet", cancelLabel: "Stanna kvar", danger: true });
+    assert.equal(doc.body.querySelector('[data-dialog="confirm"]').textContent, "Lämna hushållet");
+    doc.body.querySelector('[data-dialog="cancel"]').klicka();
+    assert.equal(await nejsvar, false, "cancel-fästet klickar inte igenom till svaret");
+
+    const jasvar = dialog.askConfirm({ title: "Lämna?", confirmLabel: "Lämna hushållet", danger: true });
+    doc.body.querySelector('[data-dialog="confirm"]').klicka();
+    assert.equal(await jasvar, true, "confirm-fästet klickar inte igenom till svaret");
+  } finally { städa(); }
+});
+
+test("showNotice-knappen är märkt close, inte confirm", async () => {
+  const doc = await scen();
+  try {
+    dialog.showNotice({ title: "Betalningen kom inte igång" });
+    assert.equal(doc.body.querySelectorAll('[data-dialog="confirm"]').length, 0,
+      "ett besked har inget ja-svar och ska inte se ut att ha ett");
+    assert.equal(doc.body.querySelector('[data-dialog="close"]').textContent, "Stäng");
+  } finally { städa(); }
+});
+
 test("dialogen städas bort ur DOM:en när svaret är givet", async () => {
   const doc = await scen();
   try {
