@@ -35,10 +35,12 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 try:
+    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
     from playwright.sync_api import expect, sync_playwright
     HAVE_PLAYWRIGHT = True
 except ImportError:  # pragma: no cover - miljö utan Playwright
     HAVE_PLAYWRIGHT = False
+    PlaywrightTimeoutError = Exception
 
 from services.data_guard import test_mode_active
 
@@ -2041,12 +2043,32 @@ class BrowserJourney(unittest.TestCase):
         # Bocka av hela listan. Varje klick river listan och startar en ny
         # prishämtning, så locatorn läses om varje varv i stället för att
         # hållas fast vid en nod som just ritats bort.
+        #
+        # OCH KLICKET MÅSTE TÅLA ATT NODEN BYTS UT MITT I. Playwright väntar
+        # på att elementet ska stå stilla innan det klickar; ritas listan om
+        # under den väntan blir det "element was detached from the DOM,
+        # retrying" - och på en lastad CI-maskin hinner nästa omritning före
+        # nästa försök, om och om igen, tills locatorn tajmar ut. Testet
+        # klickar därför på VARANS NAMN (ett stabilt fäste, inte "den första
+        # noden just nu) och läser facit ur tillståndet appen skrivit, inte
+        # ur DOM:en. Ett klick som inte landade är inget fel - det är ett
+        # varv till.
         for _ in range(80):
             knappar = page.locator("#shoppingList [data-bought]")
             if knappar.count() == 0:
                 break
             vara = knappar.first.get_attribute("data-bought")
-            knappar.first.click()
+            if not vara:
+                continue
+            for _ in range(8):
+                try:
+                    page.click(f'#shoppingList [data-bought="{vara}"]', timeout=4000)
+                except PlaywrightTimeoutError:
+                    pass          # omritad under klicket - läs tillståndet och försök igen
+                if vara in (self.local_state().get("avklarade") or []):
+                    break
+            else:
+                self.fail(f"{vara} gick inte att bocka av")
             self.wait_for_state(lambda s, namn=vara: namn in (s.get("avklarade") or []),
                                 what=f"{vara} som avbockad")
         else:
