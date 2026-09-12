@@ -91,6 +91,17 @@ jobs:
       # samma kod, en fil i stället för tretton moduler.
       - run: npm ci
       - run: npm run build
+      # L9: sista kontrollen före Pages. Cache-stämpeln i bygget ska VARA
+      # digesten av bygget - en ostämplad platshållare här hade gett en
+      # CACHE_NAME som aldrig byter, och då når ingen senare deploy en telefon
+      # som redan varit inne. Byggsteget failar självt på det; det här är
+      # grinden som kontrollerar samma sak med en egen implementation, på
+      # exakt de byte som laddas upp.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cache-stämpeln i det som deployas är digesten av det som deployas
+        run: python backend/scripts/check_frontend_version.py --build dist/frontend
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

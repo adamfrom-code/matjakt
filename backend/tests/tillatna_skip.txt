@@ -53,3 +53,14 @@ körs bara via backend/tests/run.py
 # Chromium-nedladdning i varje jobb kostar en minut för samma bevis. De här
 # fyra orsakerna är alltså "resan körs i ett annat jobb", inte "resan körs
 # inte". Blir e2e-jobbet självt tyst syns det där, inte här.
+
+node_modules/esbuild saknas - byggsteget går inte att köra
+# L9: de tre fallen i MotEttRiktigtBygge kör det RIKTIGA byggsteget mot den
+# RIKTIGA grinden - det är där JS-sidans och Python-sidans digest måste vara
+# eniga. Backend-jobbet har varken node eller node_modules, med flit: ett
+# `npm ci` i varje jobb kostar en halv minut för samma bevis. Samma kontroll
+# körs skarpt i security-jobbet (`npm ci && npm run build &&
+# check_frontend_version.py --build dist/frontend`), så divergerar de två
+# implementationerna blir CI röd där. Lokalt, där node_modules finns, kör de
+# tre fallen - det är alltså "beviset tas i ett annat jobb", inte "beviset
+# tas inte".

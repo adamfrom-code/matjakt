@@ -17,7 +17,7 @@ import { build } from "esbuild";
 import { cpSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { cacheStamp, frontendRelease, stampIndexHtml, stampServiceWorker } from "./frontend_version.mjs";
+import { stampBuild } from "./frontend_version.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const source = join(root, "frontend");
@@ -72,26 +72,23 @@ if (apiUrl) {
 if (native) {
   index = index.replace(/\s*<script src="\.\.\/traffic\.js" defer><\/script>/, "");
 }
+writeFileSync(indexPath, index);
 
-// CACHE-STÄMPELN SKRIVS HÄR, INTE FÖR HAND.
+// CACHE-STÄMPELN SKRIVS HÄR, OCH FINNS INGEN ANNANSTANS.
 //
-// Tre handredigerade tal som måste vara lika glider isär. Bygget skriver alla
-// tre ur ETT värde: releasenumret ur källorna (frontendRelease kastar om de
-// tre ställena säger olika saker - ett bygge på en skev version är ingenting
-// att deploya) plus en hash av det som FAKTISKT byggdes.
+// Källorna bär `__MATJAKT_VERSION__`, inte ett tal (L9). Ett tal i källan var
+// tre handredigerade rader som måste vara lika, som kunde SJUNKA vid merge,
+// och som var den enda raden åtta parallella grenar konfliktade på. Bygget
+// stämplar i stället in ett värde som är HÄRLETT ur det som faktiskt byggts:
+// eran ur scripts/frontend_version.mjs plus en digest över varje fil under
+// app/ i utdatan - bundeln, den minifierade CSS:en, index.html, admin-sidan,
+// manifestet, receptbanken och bilderna.
 //
-// Hashen är den som gör jobbet när bumpen ändå missas: två grenar som båda
-// höjde 51 till 52 blir EN höjning vid ombasering, utan ett ord, och talen
-// stämmer fortfarande överens. Ändrad kod kan aldrig hamna bakom en URL
-// webbläsaren redan sett. Talet höjs med `node scripts/frontend_version.mjs
-// --bump`, som räknar upp från det högsta main någonsin sett.
-const swPath = join(out, "app", "sw.js");
-const release = frontendRelease(readFileSync(swPath, "utf8"), index);
-const stamp = cacheStamp(release,
-                         readFileSync(join(out, "app", "app.js")),
-                         readFileSync(join(out, "app", "styles.css")));
-writeFileSync(swPath, stampServiceWorker(readFileSync(swPath, "utf8"), stamp));
-writeFileSync(indexPath, stampIndexHtml(index, stamp));
+// Därför kan ändrad kod aldrig hamna bakom en adress webbläsaren redan sett:
+// det finns inget att glömma. stampBuild kastar om en platshållare står kvar
+// i utdatan efteråt - en ostämplad CACHE_NAME i produktion vore en trasig
+// cache-nyckel, och ett tyst genomsläpp är det farligaste utfallet här.
+const stamp = stampBuild(join(out, "app"));
 
 const after = { app: kb(join(out, "app", "app.js")), css: kb(join(out, "app", "styles.css")) };
 console.log(`build: app.js ${before.app} kB -> ${after.app} kB, styles.css ${before.css} kB -> ${after.css} kB, cache v${stamp} -> ${out}${apiUrl ? ` (api: ${apiUrl})` : ""}${native ? " [native]" : ""}`);
