@@ -1042,3 +1042,92 @@ button{color:inherit}
 @media (prefers-reduced-motion:reduce){
   .shopping-item .shopping-remove,.shopping-item-main{transition:none}
 }
+
+/* ---- SPARAT (L5) -------------------------------------------------------
+   Facit: docs/matjakt-design-D.html, skärmen "Sparat". Alla färger är tokens,
+   så blocket inverterar med [data-theme="dark"] utan en enda extra regel.
+
+   ORDNINGEN ÄR INTE FRI. `.sparat-hero` sätter bakgrunden och måste stå FÖRE
+   varje regel som sätter en färg på ett `.sparat-hero-*`: kontrastsvepet i
+   tests/kontrast.test.js löser bakgrunden ur namnprefixet vid den punkt i
+   filen där färgen deklareras, precis som kaskaden gör.
+
+   De gamla `.stats-card` / `.stats-grid` / `.stats-waste`-reglerna står kvar
+   orörda ovanför. Markupen använder dem inte längre, men G4:s test håller
+   dem som bevis för att sparsiffran inte bär accentfärg - de rivs av L8. */
+.sparat-hero{
+  margin:6px 0 0;padding:22px var(--sp-7) 24px;
+  background:var(--ink);color:var(--paper);
+}
+.sparat-hero-label{
+  display:block;
+  font:600 10px/1.4 var(--f-ui);letter-spacing:.2em;text-transform:uppercase;
+  color:var(--paper-2);
+}
+/* Appens enda hjälterubrik i siffror (§3.2). 82px är designens mått på 390px
+   skärm; clamp håller den innanför kanten ned till 320px. */
+.sparat-hero-value{
+  margin:10px 0 0;
+  font:400 clamp(54px,17vw,82px)/.86 var(--f-disp);letter-spacing:-.035em;
+  font-variant-numeric:tabular-nums;
+  color:var(--paper);
+}
+.sparat-hero-value small{font-size:26px;letter-spacing:-.01em;margin-left:4px}
+.sparat-hero-tom{
+  font:400 20px/1.15 var(--f-disp);letter-spacing:-.01em;
+  color:var(--paper-2);
+}
+.sparat-hero-note{margin:11px 0 0;max-width:34ch;font-size:13px;color:var(--paper-2)}
+
+/* Månadsdiagrammet (§5.9). Spåret har en bestämd höjd, och stapelns
+   inline-`height` är en procent AV DEN - samma skala för alla månader. */
+.sparat-manader{display:flex;align-items:flex-end;gap:10px;margin:20px 0 0}
+.sparat-manad{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.sparat-manad-spar{position:relative;display:block;height:72px}
+.sparat-manad-spar>i{position:absolute;left:0;right:0;bottom:0;display:block}
+.sparat-manad-fyll{background:var(--ink-3);min-height:2px}
+/* Noll kronor: ett streck vid baslinjen. Den har underlag, den har bara inte
+   sparat något - och det är inte samma sak som att sakna underlag. */
+.sparat-manad-noll{height:0;border-top:2px solid var(--ink-3)}
+/* Saknas: ett tomt fack med öppen ram. Aldrig en nollstapel. */
+.sparat-manad-tomt{height:16px;border:1px solid var(--ink-3);background:none}
+/* Pågående månad kodas i TVÅ kanaler: accentfyllning och en mörkare etikett.
+   Färgen ensam överlever inte gråskala. Ordet "hittills" står dessutom i
+   värderaden under stapeln. */
+.sparat-manad--pagaende .sparat-manad-fyll{background:var(--accent)}
+.sparat-manad--pagaende .sparat-manad-noll{border-top-color:var(--accent)}
+.sparat-manad-namn{
+  font:600 9.5px/1.4 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);
+}
+.sparat-manad--pagaende .sparat-manad-namn{color:var(--ink)}
+
+/* Värderaden: diagrammet ska gå att läsa utan att tolka en stapellängd. */
+.sparat-manvarden{display:flex;gap:10px;margin:6px 0 0;padding-top:6px;border-top:1px solid var(--rule)}
+.sparat-varde{flex:1;min-width:0}
+.sparat-varde b{display:block;font:400 13px/1.2 var(--f-disp);font-variant-numeric:tabular-nums;color:var(--ink)}
+.sparat-varde small{display:block;margin-top:2px;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.sparat-varde--tomt b{color:var(--ink-3)}
+
+/* Nyckeltalsrader: hårlinjer, etikett till vänster, värdet till höger. */
+.sparat-tal{list-style:none;margin:22px 0 0;padding:0;border-top:1px solid var(--rule-2)}
+.sparat-tal-rad{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  min-height:52px;padding:8px 0;border-bottom:1px solid var(--rule);
+}
+.sparat-tal-etikett{font-size:14px;color:var(--ink)}
+.sparat-tal-varde{font:400 19px/1.1 var(--f-disp);font-variant-numeric:tabular-nums;text-align:right;color:var(--ink)}
+.sparat-tal-varde--tomt{font:400 13px/1.3 var(--f-ui);color:var(--ink-2)}
+
+/* Sekundärknapp (§5.1). Ram i stället för fyllning - "Dela din månad" är
+   inte skärmens huvudhandling, den är en väg vidare. */
+.btn-sekundar{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;min-height:52px;padding:0 var(--sp-7);
+  border:1px solid var(--ink);border-radius:0;
+  background:transparent;color:var(--ink);
+  font:500 15px/1.2 var(--f-ui);letter-spacing:.02em;
+}
+.btn-sekundar:active{background:var(--paper-2)}
+.sparat-dela{margin-top:18px}
+.sparat-dela-status{min-height:18px;margin:8px 0 0;font-size:13px;color:var(--ink-2)}
