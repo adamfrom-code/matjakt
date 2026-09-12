@@ -27,6 +27,7 @@
       "Salt"
     ],
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "billigt",
@@ -67,6 +68,7 @@
       "Peppar"
     ],
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegetarisk",
     "tags": [
       "billigt",
@@ -103,6 +105,7 @@
       "Olja"
     ],
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegansk",
     "tags": [
       "billigt",
@@ -141,6 +144,7 @@
       "Peppar"
     ],
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "billigt",
@@ -175,6 +179,7 @@
       "Kryddor"
     ],
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegetarisk",
     "tags": [
       "snabbt",
@@ -215,6 +220,7 @@
       "Peppar"
     ],
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "pescetarisk",
     "tags": [
       "fisk",
@@ -257,6 +263,7 @@
       "Toppa med citron och dill och baka tills laxen är klar."
     ],
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "pescetarisk",
     "tags": [
       "proteinrikt",
@@ -300,6 +307,7 @@
       "Stek halloumin och servera med yoghurt."
     ],
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegetarisk",
     "tags": [
       "billigt",
@@ -340,6 +348,7 @@
       "Låt sjuda i 20 minuter och servera med ris."
     ],
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegansk",
     "tags": [
       "billigt",
@@ -386,6 +395,7 @@
       "Woka grönsakerna och blanda allt med soja."
     ],
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "billigt",
@@ -429,6 +439,7 @@
       "Mixa soppan och rör ner grädden."
     ],
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegetarisk",
     "tags": [
       "billigt",
@@ -475,6 +486,7 @@
       "Servera med bär."
     ],
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegetarisk",
     "tags": [
       "billigt",
@@ -522,6 +534,7 @@
     ],
     "tips": "Fräs lite finhackad lök i smöret innan du blandar den i färsen.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "billigt",
@@ -567,6 +580,7 @@
     ],
     "tips": "Låt lasagnen vila 5 minuter innan du skär i den så håller den ihop bättre.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegetarisk",
     "tags": [
       "billigt",
@@ -613,6 +627,7 @@
     ],
     "tips": "Ta inte räkorna för hett eller för länge, då blir de sega.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": []
   },
@@ -651,6 +666,7 @@
     ],
     "tips": "En klick yoghurt på toppen balanserar currystyrkan fint.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegansk",
     "tags": [
       "billigt",
@@ -695,6 +711,7 @@
     ],
     "tips": "Låt köttet vila 5 minuter innan du skär i det så blir det saftigare.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -739,6 +756,7 @@
     ],
     "tips": "Låt biffen vila några minuter innan servering.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -783,6 +801,7 @@
     ],
     "tips": "En skvätt balsamvinäger ger såsen extra djup.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegansk",
     "tags": [
       "billigt",
@@ -828,6 +847,7 @@
     ],
     "tips": "Marinera kycklingen en stund i citron och olja för mer smak.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -876,6 +896,7 @@
     ],
     "tips": "Ett tunt lager senap mellan lagren ger en syrlig kontrast till den feta osten.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "billigt",
@@ -924,6 +945,7 @@
     ],
     "tips": "En klick smör i slutet ger såsen den där extra silkiga lyskraften.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -974,6 +996,7 @@
     ],
     "tips": "Pressa i lite citronsaft precis innan servering för att lyfta smakerna.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "pescetarisk",
     "tags": [
       "proteinrikt",
@@ -1023,6 +1046,7 @@
     ],
     "tips": "Woka på högsta möjliga värme och rör inte för mycket — då blir grönsakerna krispiga istället för mjäkiga.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegansk",
     "tags": [
       "vegetariskt",
@@ -1069,6 +1093,7 @@
     ],
     "tips": "Välj sparris i samma tjocklek så gräddas den jämnt.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "pescetarisk",
     "tags": [
       "proteinrikt",
@@ -1114,6 +1139,7 @@
     ],
     "tips": "Låt köttet vila minst 5 minuter under folie innan du skär i det, då rinner mindre saft ut.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -1162,6 +1188,7 @@
     ],
     "tips": "Spara lite pastavatten — det gör såsen silkigare om den blir för tjock.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegetarisk",
     "tags": [
       "billigt",
@@ -1211,6 +1238,7 @@
     ],
     "tips": "Stek inte för många schnitzlar samtidigt — då sjunker temperaturen i pannan och paneringen blir seg istället för krispig.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -1257,6 +1285,7 @@
     ],
     "tips": "Marinera kycklingen en stund i kryddorna och lite olja för djupare smak.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -1300,6 +1329,7 @@
     ],
     "tips": "Lägg citronskalen kvar i formen under gräddningen för extra arom.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -1345,6 +1375,7 @@
     ],
     "tips": "Vila alltid köttet några minuter innan det skärs, då rinner mindre saft ut.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -1390,6 +1421,7 @@
     ],
     "tips": "Skär köttet mot fibrerna så blir det mörare.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "snabbt",
@@ -1433,6 +1465,7 @@
     ],
     "tips": "Låt grytan sjuda på svag värme en stund extra — smakerna blir bara bättre.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -1480,6 +1513,7 @@
     ],
     "tips": "En nypa socker balanserar tomaternas syra.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -1529,6 +1563,7 @@
     ],
     "tips": "Salta matvetesaladen precis före servering så den inte blir vattnig.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -1575,6 +1610,7 @@
     ],
     "tips": "Vänd laxen försiktigt så bitarna inte faller sönder i glazen.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "pescetarisk",
     "tags": [
       "proteinrikt",
@@ -1621,6 +1657,7 @@
     ],
     "tips": "Flingsalt och extra citron på toppen lyfter smaken precis innan servering.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "pescetarisk",
     "tags": [
       "proteinrikt",
@@ -1667,6 +1704,7 @@
     ],
     "tips": "Rör inte för mycket i grytan när fisken puttrar, då håller bitarna ihop bättre.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "pescetarisk",
     "tags": [
       "fisk"
@@ -1710,6 +1748,7 @@
     ],
     "tips": "Låt inte räkorna koka för länge, då blir de sega.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "snabbt"
@@ -1755,6 +1794,7 @@
     ],
     "tips": "Servera saladen kall, gärna direkt från kylen på en varm dag.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "snabbt",
@@ -1801,6 +1841,7 @@
     ],
     "tips": "Saladen håller sig fin i kylen ett par dagar — perfekt att göra extra av.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegansk",
     "tags": [
       "snabbt",
@@ -1848,6 +1889,7 @@
     ],
     "tips": "Toppa gärna med avokado eller lite riven ost om du har hemma.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegansk",
     "tags": [
       "snabbt",
@@ -1896,6 +1938,7 @@
     ],
     "tips": "Pressa över lite lime om du har hemma för extra fräschör.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegansk",
     "tags": [
       "snabbt",
@@ -1942,6 +1985,7 @@
     ],
     "tips": "Pressa tofun lätt innan den steks, då blir den krispigare.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegansk",
     "tags": [
       "billigt",
@@ -1989,6 +2033,7 @@
     ],
     "tips": "Låt tofun steka ostört några minuter i taget så den hinner bli knaprig.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegansk",
     "tags": [
       "billigt",
@@ -2037,6 +2082,7 @@
     ],
     "tips": "Stek halloumin sist så den hinner vara varm och krispig vid servering.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegetarisk",
     "tags": [
       "billigt",
@@ -2081,6 +2127,7 @@
     ],
     "tips": "Halloumi smälter inte som andra ostar, så den håller formen fint även i en gryta.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegetarisk",
     "tags": [
       "billigt",
@@ -2128,6 +2175,7 @@
     ],
     "tips": "Servera med bröd om du har hemma för att svepa upp den krämiga såsen.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegetarisk",
     "tags": [
       "billigt",
@@ -2174,6 +2222,7 @@
     ],
     "tips": "Låt grytan sjuda ett tag extra på svag värme för djupare smak.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegansk",
     "tags": [
       "billigt",
@@ -2220,6 +2269,7 @@
     ],
     "tips": "Krydda tomatsåsen med lite oregano för mer smak.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "billigt",
@@ -2269,6 +2319,7 @@
     ],
     "tips": "Ju längre såsen får sjuda desto djupare blir smaken.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -2314,6 +2365,7 @@
     ],
     "tips": "En klick crème fraiche på toppen gör grytan lite mildare om det behövs.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "kott",
@@ -2359,6 +2411,7 @@
     ],
     "tips": "Ju längre kycklingen får marinera, desto mörare och smakrikare blir den.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -2404,6 +2457,7 @@
     ],
     "tips": "Spara citronskal till marinaden — det ger extra arom.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -2449,6 +2503,7 @@
     ],
     "tips": "Använd samma panna till såsen — stekskyn ger mycket smak.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "blandkost",
     "tags": [
       "proteinrikt",
@@ -2496,6 +2551,7 @@
     ],
     "tips": "Stek zucchinin på hög värme så den får färg utan att bli blöt.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegetarisk",
     "tags": [
       "billigt",
@@ -2543,6 +2599,7 @@
     ],
     "tips": "Riven parmesan på toppen om du har hemma lyfter rätten ytterligare.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegetarisk",
     "tags": [
       "snabbt",
@@ -2586,6 +2643,7 @@
     ],
     "tips": "Mixa gärna en del av grytan slät om du vill ha en krämigare konsistens.",
     "portioner": 4,
+    "mealType": "middag",
     "kosttyp": "vegansk",
     "tags": [
       "billigt",

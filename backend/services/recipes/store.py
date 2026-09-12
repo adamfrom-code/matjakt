@@ -37,6 +37,7 @@ import unicodedata
 from pathlib import Path
 
 from ..data_guard import guard_database_path
+from .meal_types import require as require_meal_type
 
 
 def normalize_ingredient_id(name: str) -> str:
@@ -91,7 +92,23 @@ class RecipeStore:
         typed: a real portion cost against a real chain, with its coverage,
         so a card can show a price that is genuinely defensible - or no price
         at all. ALTER-if-missing because production's recipes.db predates
-        them and must not be rebuilt (it would lose backfilled images)."""
+        them and must not be rebuilt (it would lose backfilled images).
+
+        `meal_type` (M1) säger vad rätten är TILL FÖR. Den läggs till på
+        samma sätt och av samma skäl - och med samma två egenskaper som gör
+        varje migration här återställningssäker (K6): den är rent additiv,
+        och kolumnen är nullbar utan `NOT NULL`. Efter en rollback kör gammal
+        kod mot en databas ny kod redan migrerat, och en `INSERT` som bara
+        nämner de gamla kolumnerna måste fortsätta gå igenom.
+
+        Kolumnen får AVSIKTLIGT ingen `CHECK`-begränsning: SQLite kan inte
+        lägga till en sådan i efterhand utan att bygga om tabellen, och en
+        ombyggd `recipes` är precis det som aldrig får hända i produktion (den
+        bär bakfyllda bilder). Det stängda värdeförrådet hålls i stället vid
+        SKRIVNING - se `meal_types.require`.
+
+        Metoden är idempotent och tål att köras om: `PRAGMA table_info` läses
+        varje gång, och en kolumn som redan finns läggs inte till igen."""
         have = {row[1] for row in self._connection.execute("PRAGMA table_info(recipes)")}
         wanted = {
             "price_per_portion": "REAL",
@@ -99,12 +116,17 @@ class RecipeStore:
             "price_covered": "INTEGER",
             "price_total": "INTEGER",
             "priced_at": "REAL",
+            "meal_type": "TEXT",
         }
         with self._connection:
             for column, kind in wanted.items():
                 if column not in have:
                     self._connection.execute(
                         f"ALTER TABLE recipes ADD COLUMN {column} {kind}")
+            # Veckoplaneringen frågar efter EN sak ur den här tabellen -
+            # middagarna - och gör det vid varje veckobygge.
+            self._connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_recipes_meal_type ON recipes(meal_type)")
 
     def get_meta(self, key: str):
         try:
@@ -242,9 +264,20 @@ class RecipeStore:
         Labels, ingredients and steps are replaced wholesale rather than
         merged: a recipe edited to have fewer ingredients must not keep the
         old ones, and working out which rows to delete is the kind of
-        bookkeeping that goes wrong quietly."""
+        bookkeeping that goes wrong quietly.
+
+        `mealType` är undantaget från "ersätt rakt av": utelämnas det behåller
+        raden sitt befintliga värde (`COALESCE`). Bildbakfyllningen skriver
+        tillbaka hela recept den läst ur databasen och en delmängdsuppdatering
+        får inte råka nolla klassificeringen. Ett MEDSKICKAT värde prövas
+        däremot mot det stängda värdeförrådet och avvisas om det inte hör dit
+        - ett felstavat `meal_type` upptäcks annars först som en frukost i
+        någons middagsvecka."""
         now = time.time()
         recipe_id = recipe["id"]
+        meal_type = recipe.get("mealType", recipe.get("meal_type"))
+        if meal_type is not None:
+            meal_type = require_meal_type(meal_type, recipe_id=str(recipe_id))
         with self._connection:
             existing = self._connection.execute(
                 "SELECT created_at FROM recipes WHERE id = ?", (recipe_id,)).fetchone()
@@ -253,11 +286,12 @@ class RecipeStore:
                 INSERT INTO recipes (id, slug, name, description, servings, prep_time,
                     cook_time, total_time, difficulty, kcal, protein, carbs, fat, fiber,
                     image, image_source, image_source_url, image_credit, image_license,
-                    image_alt, image_status, created_at, updated_at)
+                    image_alt, image_status, meal_type, created_at, updated_at)
                 VALUES (:id, :slug, :name, :description, :servings, :prep_time,
                     :cook_time, :total_time, :difficulty, :kcal, :protein, :carbs, :fat,
                     :fiber, :image, :image_source, :image_source_url, :image_credit,
-                    :image_license, :image_alt, :image_status, :created_at, :updated_at)
+                    :image_license, :image_alt, :image_status, :meal_type,
+                    :created_at, :updated_at)
                 ON CONFLICT(id) DO UPDATE SET
                     slug=excluded.slug, name=excluded.name, description=excluded.description,
                     servings=excluded.servings, prep_time=excluded.prep_time,
@@ -269,7 +303,9 @@ class RecipeStore:
                     image_source_url=excluded.image_source_url,
                     image_credit=excluded.image_credit,
                     image_license=excluded.image_license, image_alt=excluded.image_alt,
-                    image_status=excluded.image_status, updated_at=excluded.updated_at
+                    image_status=excluded.image_status,
+                    meal_type=COALESCE(excluded.meal_type, recipes.meal_type),
+                    updated_at=excluded.updated_at
                 """,
                 {
                     "id": recipe_id,
@@ -291,6 +327,7 @@ class RecipeStore:
                     "image_license": recipe.get("imageLicense"),
                     "image_alt": recipe.get("imageAlt"),
                     "image_status": recipe.get("imageStatus") or ("ok" if recipe.get("image") else "needs_image"),
+                    "meal_type": meal_type,
                     "created_at": existing["created_at"] if existing else now,
                     "updated_at": now,
                 },
@@ -351,6 +388,10 @@ class RecipeStore:
             "totalTime": row["total_time"], "difficulty": row["difficulty"],
             "nutrition": {"kcal": row["kcal"], "protein": row["protein"],
                           "carbs": row["carbs"], "fat": row["fat"], "fiber": row["fiber"]},
+            # Vad rätten är TILL FÖR. None betyder "ingen har klassificerat
+            # den" - aldrig "kanske middag": veckoplaneringen kräver exakt
+            # "middag" och släpper därför aldrig igenom en oklassad rad.
+            "mealType": _row_get(row, "meal_type"),
             "image": row["image"], "imageSource": row["image_source"],
             "imageSourceUrl": row["image_source_url"],
             "imageCredit": row["image_credit"], "imageLicense": row["image_license"],
@@ -386,10 +427,18 @@ class RecipeStore:
         return self._connection.execute("SELECT COUNT(*) FROM recipes").fetchone()[0]
 
     def search(self, *, tags=None, max_time=None, min_protein=None, max_kcal=None,
-               query=None, limit=200, offset=0) -> list[dict]:
+               query=None, meal_type=None, limit=200, offset=0) -> list[dict]:
         """Filtering happens in SQL, not by loading every recipe and sifting
-        it in Python - which is the difference between 58 recipes and 5 000."""
+        it in Python - which is the difference between 58 recipes and 5 000.
+
+        `meal_type` är ett LIKHETSVILLKOR, inte "det här eller okänt". En rad
+        utan klassificering faller därför bort ur `meal_type="middag"`, vilket
+        är rätt håll att fela åt: ett recept ingen har sagt något om hamnar
+        inte i någons middagsvecka."""
         where, params = [], []
+        if meal_type is not None:
+            where.append("meal_type = ?")
+            params.append(require_meal_type(meal_type))
         for tag in tags or []:
             where.append("""id IN (SELECT recipe_id FROM recipe_labels
                             WHERE kind IN ('tags','categories','dietFlags') AND value = ?)""")
@@ -447,6 +496,15 @@ class RecipeStore:
                AND image_license IS NOT NULL AND image_license != ''""").fetchone()[0]
         needs_image = self._connection.execute(
             "SELECT COUNT(*) FROM recipes WHERE image_status = 'needs_image'").fetchone()[0]
+        # Klassificeringen ska vara TOTAL. Går den sönder ska det synas som en
+        # siffra i adminpanelen och inte upptäckas av en användare som får
+        # gröt till middag, så luckan räknas här bredvid bildluckan.
+        by_meal_type = {row["meal_type"]: row["n"] for row in self._connection.execute(
+            """SELECT meal_type, COUNT(*) n FROM recipes
+               WHERE meal_type IS NOT NULL GROUP BY meal_type ORDER BY n DESC""")}
+        without_meal_type = self._connection.execute(
+            "SELECT COUNT(*) FROM recipes WHERE meal_type IS NULL OR meal_type = ''").fetchone()[0]
         return {"total": total, "byLabel": by_label, "needsImage": needs_image,
                 "completeNutrition": complete_nutrition,
+                "byMealType": by_meal_type, "withoutMealType": without_meal_type,
                 "withImage": with_image, "withLicensedImage": licensed}

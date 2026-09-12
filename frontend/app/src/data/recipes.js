@@ -139,6 +139,12 @@ function fromApi(recipe) {
     kolhydrater: recipe.nutrition?.carbs ?? recipe.kolhydrater,
     fett: recipe.nutrition?.fat ?? recipe.fett,
     allergener: recipe.allergens ?? recipe.allergener ?? [],
+    // Vad rätten är till för. Följer med listprojektionen från backenden och
+    // är det enda veckoplaneraren behöver för att kunna säga nej till en
+    // frukost. Fältet heter likadant i båda världarna, så det översätts inte
+    // - men det tas heller inte bort av en `...recipe`-spridning som råkar
+    // sakna det, eftersom ett saknat värde betyder "aldrig middag".
+    mealType: recipe.mealType ?? null,
     typ: recipe.categories?.[0] ?? recipe.typ,
     kosttyp: recipe.dietFlags?.[0] ?? recipe.kosttyp,
     tags: recipe.tags ?? [],
