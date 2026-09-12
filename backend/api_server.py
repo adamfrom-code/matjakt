@@ -1024,11 +1024,18 @@ def geocode_postcode(zip_code):
     502. A 502 is exactly what this app must never return for "we couldn't
     resolve this", per the same reasoning as stale_products - an honest
     empty/not-found result, not a server error, is what a bad or unlucky
-    input should produce."""
+    input should produce.
+
+    HTTPS, inte HTTP. Postnumret är en personuppgift och det ligger i
+    SÖKVÄGEN, inte i en kropp - över en okrypterad förbindelse är det
+    läsbart för varje mellanled, och det syns dessutom i proxyloggar som
+    aldrig loggar request-kroppar. Tjänsten svarar likadant på https
+    (samma data, samma 404 för okänt postnummer), så det fanns aldrig
+    något skäl till http; raden såg bara aldrig efter."""
     cached, updated_at = KV_CACHE.get("geocode", zip_code)
     if cached is not None and time.time() - updated_at < GEOCODE_CACHE_TTL_SECONDS:
         return cached
-    request = Request(f"http://api.zippopotam.us/SE/{zip_code}", headers={"User-Agent": "Matjakt/1.0"})
+    request = Request(f"https://api.zippopotam.us/SE/{zip_code}", headers={"User-Agent": "Matjakt/1.0"})
     try:
         with urlopen(request, timeout=8) as response:
             data = json.load(response)
