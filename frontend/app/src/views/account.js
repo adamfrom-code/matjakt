@@ -19,6 +19,7 @@ import { getStoredToken, startCheckout } from "../api/auth.js";
 import { clampBudget } from "../services/calculations.js";
 import { ALLERGENS } from "../services/diet.js";
 import { escapeHtml } from "../utils/html.js";
+import { jamforelseMarkup } from "./premiumtabellen.js";
 import { closeModal, openModal } from "../utils/modal.js";
 // errorText: inget rått fetch-fel når skärmen. "Failed to fetch" är inte
 // svenska, och en användare kan inte göra något åt ett "HTTP 500" (E7).
@@ -310,6 +311,7 @@ export function renderAccount() {
   $("profileBtn").classList.toggle("is-premium", app.hasPremium());
   app.syncSettingsInputs();
   app.renderPriceTabs();
+  renderPremiumJamforelse();
   renderHousehold();
   if (loggedIn) {
     $("accountEmail").textContent = state.user.email;
@@ -355,6 +357,15 @@ export function renderAccount() {
   const premium = app.hasPremium();
   $("nutritionLocked").hidden = premium;
   $("nutritionFields").hidden = !premium;
+}
+
+// J2: samma tabell i kontoarket som i betalväggen. Två listor som säger olika
+// saker om samma produkt är exakt det fel paketet finns för att ta bort, så
+// markupen har EN källa - src/views/premiumtabellen.js - och beloppen kommer
+// ur /api/entitlements via app.premiumPricing(), aldrig ur en sträng här.
+function renderPremiumJamforelse() {
+  const box = $("premiumJamforelse");
+  if (box) box.innerHTML = jamforelseMarkup(app.premiumPricing());
 }
 
 // ---------------------------------------------------------------------------
@@ -570,13 +581,8 @@ export function openPaywall(triggerFeature = "") {
     <button type="button" class="modal-close" data-paywall-close aria-label="Stäng">×</button>
     <p class="eyebrow">Matjakt Premium</p>
     <h2 id="paywallTitle">Lås upp hela matveckan</h2>
-    <p class="paywall-lead">Planera veckan efter familj, budget eller träning. Jämför riktiga matpriser hos alla kvalificerade butiker och få exakt inköpslista för varje butik.</p>
-    <ul class="paywall-points">
-      <li>Alla 7 veckotyper och 1–7 middagar</li>
-      <li>Alla butikers riktiga priser och butikskorgar</li>
-      <li>Näringsmål, kcal- och proteinfilter</li>
-      <li>Fullt skafferi och "Laga med det jag har"</li>
-    </ul>
+    <p class="paywall-lead">Du planerar redan veckan och ser vad den kostar hos den billigaste butiken. Premium öppnar alla butikers priser, den exakta jämförelsen, hela hushållet och sparhistoriken.</p>
+    ${jamforelseMarkup(pricing)}
     <button type="button" class="btn btn-primary paywall-yearly" data-paywall-plan="yearly">
       <span class="paywall-plan-label">${escapeHtml(yearly.badge || "Bäst värde")}</span>
       <strong>${escapeHtml(yearly.priceText || "399 kr/år")}</strong>
