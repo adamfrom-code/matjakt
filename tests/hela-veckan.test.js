@@ -123,9 +123,21 @@ test("ingen vecka alls ger sju tomma dagar, inte noll rader", () => {
   assert.deepEqual(weekPlanDays(undefined), Array(WEEK_DAY_COUNT).fill(null));
 });
 
-test("renderWeekOverview ritar listan ur weekPlanDays", () => {
+test("renderWeekOverview ritar listan ur weekPlanDays", async () => {
   // Bindningen mellan de rena dagarna ovan och skärmen. Utan den kunde
   // funktionen vara aldrig så rätt medan renderingen fortsatte klippa.
-  assert.match(app, /\$\("weekPlanList"\)\.innerHTML\s*=\s*weekPlanDays\(/,
-    "veckolistan fylls inte ur weekPlanDays()");
+  //
+  // L2 flyttade radmarkupen till veckoDagarMarkup() i samma modul, så
+  // bindningen går nu i två led - och båda prövas. Att bara läsa app.js
+  // hade låtit veckoDagarMarkup() klippa veckan utan att något test
+  // märkte det; det är exakt det fel som fanns här från början, en fil
+  // längre bort.
+  assert.match(app, /\$\("weekPlanList"\)\.innerHTML\s*=\s*veckoDagarMarkup\(/,
+    "veckolistan fylls inte ur veckoDagarMarkup()");
+  const { initWeekView, veckoDagarMarkup } = await import("../frontend/app/src/views/week.js");
+  initWeekView({ money: v => `${v} kr`, plural: (n, en, fler) => `${n} ${n === 1 ? en : fler}` });
+  const fyra = ["mån", "tis", "ons", "tor"].map(rätt);
+  const rader = veckoDagarMarkup(fyra).match(/class="vecka-dag[ "]/g) || [];
+  assert.equal(rader.length, WEEK_DAY_COUNT,
+    "veckoDagarMarkup ritade inte sju rader ur en fyradagarsvecka");
 });

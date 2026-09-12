@@ -261,6 +261,7 @@ const receptvy = läsFil("frontend/app/src/views/recipes.js");
 // lägger det den får i hjälteytan utan att rita något eget. Faller det ena
 // ledet bort är hålet öppet igen, oavsett hur det andra ser ut.
 const ikvallvy = läsFil("frontend/app/src/views/ikvall.js");
+const veckovy = läsFil("frontend/app/src/views/week.js");
 
 test("Ikväll, Veckan och receptvyn ritar sin bildyta med komponenten", () => {
   const vägar = [
@@ -268,8 +269,11 @@ test("Ikväll, Veckan och receptvyn ritar sin bildyta med komponenten", () => {
       /foto: recipePhoto\(heroRecipe, \{ namn: false \}\)/],
     ["Ikväll, vyn lägger komponentens yta i hjälten", ikvallvy,
       /class="hero-meal-photo">\$\{foto\}/],
-    ["Veckan, raden", app, /class="week-plan-photo">\$\{recipePhoto\(/],
-    ["Veckan, dagens kort", app, /class="week-today-photo">\$\{recipePhoto\(/],
+    // L2: veckoraden gick samma väg som Ikväll gjorde - ut ur app.js och in i
+    // sin egen vymodul - och ritar sina 52 px genom komponenten därifrån.
+    // "Veckans dagskort" finns inte längre: skärmen visar alla sju dagarna i
+    // stället för en i taget, så det fanns ingen dag kvar som var "dagens".
+    ["Veckan, raden", veckovy, /receptbildMarkup\(recipe, \{ klass: "vecka-dag-foto" \}\)/],
     // L4:s uppslag lägger rubriken PÅ bilden i ett pappersfält, precis som
     // Ikväll gör - alltså samma `namn: false` där.
     ["receptvyn, hjälten", receptvy, /heroMedia = receptbildMarkup\(recipe, \{[^}]*namn: false/],
