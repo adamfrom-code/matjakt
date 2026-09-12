@@ -325,6 +325,28 @@ class RattigheternaFinnsIKoden(unittest.TestCase):
             self.assertIn(städning, radering,
                           f"policyn lovar att raderingen tar {städning} - det gör den inte")
 
+    def test_sparrens_rader_ar_undantaget_och_policyn_sager_det(self):
+        """Fyra lager har `forget_user` och städas av raderingen. `ratelimit.py`
+        har ingen, så spärrens rader - IP och inskriven e-postadress - ligger
+        kvar tills de prunas. Policyn kallar dem uttryckligen undantaget.
+
+        Byggs en `forget_user` för spärren är den meningen inte längre sann,
+        och då ska den bort. Därför vänds testet om den dyker upp."""
+        spärr = (ROOT / "backend/services/accounts/ratelimit.py").read_text(encoding="utf-8")
+        städas = "def forget_user" in spärr
+        läst = brodtext(POLICY)
+        mening = "de enda uppgifter om dig som inte försvinner i samma ögonblick som du raderar kontot"
+        if städas:
+            self.assertNotIn(mening, läst,
+                             "ratelimit.py har fått en forget_user - spärrens rader är inte "
+                             "längre undantaget, och policyn ska sluta påstå det")
+        else:
+            for lager in ("household/store.py", "push/store.py", "billing/savings.py"):
+                self.assertIn("def forget_user", (ROOT / "backend/services" / lager).read_text(encoding="utf-8"),
+                              f"{lager} städas inte längre vid radering - policyn lovar att den gör det")
+            self.assertIn(mening, läst,
+                          "spärrens rader överlever kontoraderingen och policyn säger det inte")
+
     def test_exporten_innehaller_det_policyn_raknar_upp(self):
         export = (ROOT / "backend" / "services" / "accounts" / "data_export.py").read_text(encoding="utf-8")
         träff = re.search(r"CATEGORIES\s*=\s*\(([^)]*)\)", export)
