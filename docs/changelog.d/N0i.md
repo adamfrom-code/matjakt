@@ -1,4 +1,7 @@
-### Signeringsinställningarna som fick bygget att gå igenom
+---
+paket: N0i
+titel: Signeringsinställningarna som fick bygget att gå igenom
+---
 
 `DEVELOPMENT_TEAM = 8MP23RQTPV` på båda konfigurationerna, och
 `CODE_SIGN_IDENTITY` bytt från Capacitors mallvärde `"iPhone Developer"`
