@@ -2017,6 +2017,78 @@ class BrowserJourney(unittest.TestCase):
 
         self.assertEqual(self.console_errors, [])
 
+    # ---- H2: sparkvittot ----
+    def test_sparkvittot_star_dar_nar_listan_ar_avbockad(self):
+        """H2: efter sista avbockningen står veckans kostnad, besparingen mot
+        dyraste jämförbara butik och den löpande summan - inte "Redo att
+        planera nästa veckas meny?".
+
+        Det här är den enda kontrollen som prövar frågan node-testerna inte
+        kan svara på: finns det en GILTIG jämförelse kvar i det ögonblick
+        listan blir klar? Varje avbockning kör clearPriceSnapshots(), som
+        nollar state.dbComparison, och den sista gör det i samma andetag som
+        kvittot ska ritas. Mot en riktig server, med riktig prissättning.
+        """
+        page = self.page
+        page.goto(self.app())
+        self.complete_onboarding()
+        self.choose_standard_week()
+        self.wait_for_store_cards()
+        page.click('.bottom-nav-item[data-view="basket"]')
+        expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
+        expect(page.locator("#shoppingComplete")).to_be_hidden()
+
+        # Bocka av hela listan. Varje klick river listan och startar en ny
+        # prishämtning, så locatorn läses om varje varv i stället för att
+        # hållas fast vid en nod som just ritats bort.
+        for _ in range(80):
+            knappar = page.locator("#shoppingList [data-bought]")
+            if knappar.count() == 0:
+                break
+            vara = knappar.first.get_attribute("data-bought")
+            knappar.first.click()
+            self.wait_for_state(lambda s, namn=vara: namn in (s.get("avklarade") or []),
+                                what=f"{vara} som avbockad")
+        else:
+            self.fail("listan tog aldrig slut")
+
+        expect(page.locator("#shoppingComplete")).to_be_visible()
+        kvitto = page.locator("#sparkvitto")
+        expect(kvitto).to_contain_text("Veckan kostade")
+        # Markupen, inte den renderade texten: prislapparnas kapitälmarkörer
+        # sätts med text-transform och deras sr-only-rader läses också av
+        # innerText, så en textmatchning här skulle pröva CSS och inte kortet.
+        html = kvitto.inner_html()
+
+        def belopp(klass):
+            träff = re.search(rf'class="{klass}">.*?>([\d\u00a0 ]+) kr<', html)
+            self.assertIsNotNone(träff, f"{klass} bar inget belopp:\n{html}")
+            return int(träff.group(1).replace("\u00a0", "").replace(" ", ""))
+
+        # Ett riktigt belopp, mot en NAMNGIVEN jämförbar butik - och aldrig en
+        # nolla: "0 kr sparat" är en lögn de veckor underlaget inte räcker,
+        # och kortet har ett besked för det fallet i stället.
+        self.assertGreater(belopp("sparkvitto-vecka"), 0)
+        sparat = belopp("sparkvitto-besparing")
+        self.assertGreater(sparat, 0, f"kvittot påstod 0 kr sparat:\n{html}")
+        # Free ser de låsta kedjorna maskade och får ingen priciestChain med
+        # sig, så meningen står med eller utan butikens namn - men alltid med
+        # ordet JÄMFÖRA: det är hela påståendet.
+        self.assertRegex(html, r"mindre än (?:[^<.]+, )?den dyraste butiken vi kunde jämföra med")
+        self.assertIn("Ni har sparat", html)
+
+        # EN VECKA, EN SUMMA. Talet på kvittot är det som står i sparloggen -
+        # annars säger kortet och Sparat-skärmen olika om samma vecka.
+        läge = self.local_state()
+        nyckel = "|".join(sorted(läge.get("weekPlan") or []))
+        post = next((rad for rad in (läge.get("savingsLog") or []) if rad.get("weekKey") == nyckel), None)
+        self.assertIsNotNone(post, f"veckans post saknas i sparloggen: {läge.get('savingsLog')}")
+        self.assertTrue(post.get("kvitto"), f"posten bär fortfarande planerarens gissning: {post}")
+        self.assertEqual(sparat, post["savings"],
+                         f"kvittot och sparloggen säger olika om samma vecka: {post}")
+
+        self.assertEqual(self.console_errors, [])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1209,7 +1209,7 @@ button{color:inherit}
   }
 }
 
-/* ===== G11 · Inställningar =====================================================
+/* ===== G11 · Inställningar 
    Skärmen appen inte hade. Reglerna ligger sist och fristående i stället för i
    den stora display-listan högre upp: `.view-settings .settings-screen` väger
    0,2,0 mot `.screen{display:none}` och vinner utan att den raden behöver
@@ -1249,3 +1249,27 @@ button{color:inherit}
   overflow:hidden;text-overflow:ellipsis;
 }
 .settings-row.marked .settings-row-value{color:var(--text);font-weight:600}
+=======
+/* ---- H2 · SPARKVITTOT --------------------------------------------------
+   Kortet efter avbockad lista. Det är ett kvitto, inte en gratulationsruta:
+   vänsterställd text, hårlinjer, inga tonade plattor.
+
+   YTAN ÄR --paper OCH INTE --primary-soft, och det är ett kontraskrav och
+   inte en smaksak. Beloppen bär L0:s former, och ca-markören ritas i
+   --ink-3. På --paper ger --ink-3 4,68:1; på --paper-2 (som --primary-soft
+   aliasar till) ger den 4,31:1 och är förbjuden - exakt den RÄTTELSE 1 som
+   L0 hänvisar till när den lägger golvmarkören i --ink-2. Ett kvitto vars
+   ca-markör inte går att läsa är ett kvitto som ljuger om sin egen osäkerhet.
+
+   Inga färger sätts här som inte redan är tokens, och ingen siffra bär
+   accentfärg: ett sparat belopp är varken nuläge eller nästa steg (§2.3). */
+.shopping-complete{background:var(--paper);border:1px solid var(--rule);text-align:left}
+.shopping-complete strong{text-align:left}
+.sparkvitto{background:var(--paper);margin:10px 0 16px}
+.sparkvitto p{margin:0 0 8px;color:var(--ink);font-size:14px;line-height:1.45;opacity:1;text-align:left}
+.sparkvitto p:last-child{margin-bottom:0}
+.sparkvitto-vecka{font-size:15px}
+.sparkvitto-tal-stor{font-size:20px;font-weight:700}
+.sparkvitto-ingen{font-weight:700}
+.sparkvitto-skal,.sparkvitto-not{color:var(--ink-2);font-size:12.5px}
+.sparkvitto-lopande{margin-top:12px;padding-top:10px;border-top:1px solid var(--rule)}
