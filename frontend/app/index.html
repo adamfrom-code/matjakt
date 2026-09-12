@@ -548,17 +548,13 @@
 
         <div class="premium-pitch" id="premiumPitch">
           <h3>Matjakt Premium</h3>
-          <ul class="premium-feature-list">
-            <li>Upp till 7 middagar per vecka</li>
-            <li>Alla veckotyper: familj, budget, träning, bulk, snabb, vegetarisk, balanserad</li>
-            <li>Alla butikers priser och inköpslistor, inte bara den billigaste</li>
-            <li>Exakt jämförelse mellan butikerna</li>
-            <li>Automatiskt val av billigaste butik</li>
-            <li>Näringsmål: kalorier, protein, kolhydrater, fett och proteinkälla</li>
-            <li>Obegränsade byten av maträtter</li>
-            <li>Aktuella erbjudanden och kampanjer</li>
-            <li>Laga med det du redan har hemma</li>
-          </ul>
+          <!-- J2: listan här var nio handskrivna rader bredvid en kodsanning
+               i accounts/features.py, och två av dem sålde funktioner som
+               redan var gratis. Tabellen ritas nu av
+               src/views/premiumtabellen.js ur en rad per funktionsnyckel och
+               prövas mot features.py i tests/premiumtabellen.test.js. Tom
+               här med flit - precis som ångerrättsrutan nedan. -->
+          <div id="premiumJamforelse"></div>
           <div class="premium-pricing" role="tablist">
             <button type="button" class="premium-price-tab active" data-price-tab="month" data-plan="monthly"><span>Månad</span><strong></strong><small>/mån</small></button>
             <button type="button" class="premium-price-tab" data-price-tab="year" data-plan="yearly"><span>År · Bäst värde</span><strong></strong><small></small></button>

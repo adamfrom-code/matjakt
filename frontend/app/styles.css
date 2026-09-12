@@ -159,7 +159,7 @@ button.campaign-deal{cursor:pointer;font:inherit}
 .basket-line-actions{flex-wrap:wrap}.basket-feedback-btn{flex:none!important;width:42px;padding:0!important;font-size:16px;background:var(--surface)!important;color:var(--muted)!important}.basket-feedback-btn.marked{background:var(--primary-soft)!important;color:var(--primary)!important}.basket-feedback-btn[data-skipped].marked{background:#fbe4e1!important;color:var(--danger)!important}
 .back-link{display:inline-block;margin-bottom:10px;border:0;background:transparent;color:var(--primary);font-size:14px;font-weight:700}
 .store-compare-upsell{width:100%;margin-top:12px;padding:12px;border-radius:12px;font-size:12px;font-weight:700;line-height:1.5;text-align:left}
-.premium-pitch{margin-top:6px}.premium-pitch h3{margin:0 0 12px;font:700 20px var(--font-display)}.premium-feature-list{margin:0 0 18px;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}.premium-feature-list li{position:relative;padding-left:24px;color:var(--text);font-size:14px}.premium-feature-list li:before{content:"✓";position:absolute;left:0;color:var(--gold-2);font-weight:700}
+.premium-pitch{margin-top:6px}.premium-pitch h3{margin:0 0 12px;font:700 20px var(--font-display)}
 .premium-pricing{display:flex;gap:8px;margin-bottom:16px}.premium-price-tab{flex:1;padding:12px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);text-align:left}.premium-price-tab span{display:block;color:var(--muted);font-size:12px;font-weight:600}.premium-price-tab strong{display:block;margin-top:3px;font:700 19px var(--font-display);color:var(--text)}.premium-price-tab small{display:block;margin-top:2px;color:var(--muted);font-size:11px}.premium-price-tab.active{border-color:var(--gold);background:var(--gold-soft)}.premium-price-tab.active strong,.premium-price-tab.active span{color:var(--gold-2)}
 .premium-pitch-note{margin:14px 0 8px;color:var(--muted);font-size:12px;text-align:center}
 /* Ångerrätten (B3). Rutan är ett villkor för att köpet ska få starta och
@@ -373,8 +373,6 @@ button.campaign-deal{cursor:pointer;font:inherit}
 .paywall-card{background:var(--surface);border-radius:24px 24px 0 0;padding:26px 22px 30px;max-width:440px;width:100%;position:relative;max-height:88vh;overflow-y:auto}
 .paywall-card h2{margin:4px 0 8px}
 .paywall-lead{color:var(--muted);font-size:14px;margin:0 0 12px}
-.paywall-points{margin:0 0 16px;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:14px}
-.paywall-points li::before{content:"✓ ";color:var(--primary-2);font-weight:700}
 .paywall-yearly{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;margin-bottom:10px;position:relative}
 .paywall-yearly small{font-weight:400;opacity:.85}
 .paywall-plan-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em}
@@ -1249,7 +1247,6 @@ button{color:inherit}
   overflow:hidden;text-overflow:ellipsis;
 }
 .settings-row.marked .settings-row-value{color:var(--text);font-weight:600}
-=======
 /* ---- H2 · SPARKVITTOT --------------------------------------------------
    Kortet efter avbockad lista. Det är ett kvitto, inte en gratulationsruta:
    vänsterställd text, hårlinjer, inga tonade plattor.
@@ -1273,3 +1270,45 @@ button{color:inherit}
 .sparkvitto-ingen{font-weight:700}
 .sparkvitto-skal,.sparkvitto-not{color:var(--ink-2);font-size:12.5px}
 .sparkvitto-lopande{margin-top:12px;padding-top:10px;border-top:1px solid var(--rule)}
+/* ==========================================================================
+   J2 · JÄMFÖRELSETABELLEN GRATIS / PREMIUM
+
+   Premiumlistan var nio handskrivna <li> bredvid en kodsanning i
+   accounts/features.py, och två av dem sålde funktioner som var gratis.
+   Markupen byggs numera av src/views/premiumtabellen.js ur en rad per
+   funktionsnyckel; det här är bara formen på den.
+
+   FORMEN BÄR SVARET (§2.4, samma princip som de tre prisreglerna i §6):
+   ett ja är en FYLLD ruta, ett nej ett TANKSTRECK. Skillnaden överlever
+   därför gråskala, rödgrön färgblindhet och en svartvit utskrift - en tabell
+   där ja och nej bara skiljer sig i ton är oläsbar för var tolfte man.
+
+   OCH PREMIUM MÄRKS MED ORDET, INTE MED ACCENTEN. §2.3 förbjuder
+   uttryckligen accenten för "kvalitet, betyg, favorit, Premium": systemets
+   enda färg betyder "här är du, här går vägen vidare". Nivån sätts i
+   spärrade kapitäler (§2.4, R56) - ingen guldplatta, ingen andra accent.
+
+   Tankstrecket ritas i --ink-3 (4,68:1 mot --paper) och rutan i --ink: båda
+   bär betydelse och är alltså grafiska objekt med 3:1-krav (§2.4).
+   ========================================================================== */
+.jamfor{width:100%;border-collapse:collapse;margin:0 0 var(--sp-5);font-variant-numeric:tabular-nums}
+.jamfor-rubrik{width:74px;padding:0 0 var(--sp-3);border-bottom:1px solid var(--rule-2);text-align:center;vertical-align:bottom}
+.jamfor-tom{border-bottom:1px solid var(--rule-2)}
+.jamfor-niva{display:inline-block;font:400 12px/1.3 var(--f-ui);color:var(--ink-3)}
+.jamfor-premium{font:600 10px/1.3 var(--f-ui);letter-spacing:.2em;text-transform:uppercase;color:var(--ink)}
+.jamfor-etikett{padding:var(--sp-4) var(--sp-4) var(--sp-4) 0;border-top:1px solid var(--rule);font:400 14px/1.35 var(--f-ui);color:var(--ink);text-align:left}
+.jamfor-cell{padding:var(--sp-4) 0;border-top:1px solid var(--rule);text-align:center;vertical-align:middle}
+.jamfor-varde{font:400 13px/1.35 var(--f-ui);color:var(--ink)}
+.jamfor-ja{display:inline-block;width:11px;height:11px;vertical-align:middle;background:var(--ink)}
+.jamfor-nej{display:inline-block;width:11px;height:11px;vertical-align:middle;font:400 15px/11px var(--f-ui);color:var(--ink-3)}
+.jamfor-nej::before{content:"–"}
+/* Prisraden ligger överst och är inte en funktionsrad - hårlinjen hör till
+   listan under den, inte mellan rubriken och priset. */
+.jamfor-rad--pris .jamfor-etikett,.jamfor-rad--pris .jamfor-cell{border-top:0;padding-top:var(--sp-5)}
+.jamfor-per{display:block;font:400 11px/1.5 var(--f-ui);color:var(--ink-3)}
+/* Teckenförklaringen, av samma skäl som prisnyckeln i §5.7: en form som man
+   måste ha memorerat för att kunna läsa är en tystare version av att inte
+   säga något. Momsraden står här för att prisinformationslagen kräver att
+   priset som visas en konsument är det hon betalar. */
+.jamfor-not{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-6);margin:0 0 var(--sp-6);color:var(--ink-2);font:400 11px/1.5 var(--f-ui)}
+.jamfor-not-rad{display:flex;align-items:center;gap:var(--sp-3)}
