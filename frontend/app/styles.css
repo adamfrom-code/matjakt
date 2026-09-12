@@ -1377,7 +1377,10 @@ button{color:inherit}
   font:400 11.5px/1.5 var(--f-ui);text-align:center;
 }
 
-/* Betalväggen: samma uppslag, samma typografi, i en modal. */
+/* Betalväggen: samma uppslag, samma typografi, i en modal. Radien är 0 -
+   systemet har inga rundade hörn (--radius:0), och arket hade 24 px
+   hårdkodade i kanten sedan före designsystemet. */
+.paywall-card{border-radius:0}
 .paywall-card h2{
   margin:var(--sp-3) 0 0;max-width:15ch;color:var(--ink);
   font:400 29px/1.04 var(--f-disp);letter-spacing:-.02em;
@@ -1386,7 +1389,13 @@ button{color:inherit}
   margin:var(--sp-4) 0 var(--sp-6);max-width:33ch;color:var(--ink-2);
   font:400 13px/1.5 var(--f-ui);
 }
-.paywall-yearly,.paywall-monthly{gap:var(--sp-1);min-height:44px}
+/* Båda knapparna staplar namn, belopp och villkor. .paywall-yearly gjorde det
+   redan; .paywall-monthly hade bara ett <strong> och la därför de tre delarna
+   på en rad, mitt i knappen. */
+.paywall-yearly,.paywall-monthly{
+  display:flex;flex-direction:column;align-items:flex-start;
+  gap:var(--sp-1);min-height:44px;text-align:left;
+}
 .paywall-yearly .prem-plan-namn,.paywall-monthly .prem-plan-namn{
   order:2;font:600 10px/1.5 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;
 }
