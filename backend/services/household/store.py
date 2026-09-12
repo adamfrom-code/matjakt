@@ -45,6 +45,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from ..data_guard import guard_database_path
+from ..schema_version import HUSHALL, stämpla
 
 # Livscykeln för en rad i inköpslistan. "Köpt" och "Har hemma" är INTE samma
 # sak (§6): den som redan hade ketchup hemma har inte köpt något, och får
@@ -279,6 +280,10 @@ class HouseholdStore:
         columns = {row[1] for row in self._connection.execute("PRAGMA table_info(shopping_items)")}
         if "deleted" not in columns:
             self._connection.execute("ALTER TABLE shopping_items ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
+        # Schemat är nu det version HUSHALL beskriver - stämpla filen, så att en
+        # människa efter ett rollback kan LÄSA vilken version den bär i
+        # stället för att gissa. Se services/schema_version.py.
+        stämpla(self._connection, HUSHALL)
         self._connection.commit()
 
     # ---- behörighet -----------------------------------------------------

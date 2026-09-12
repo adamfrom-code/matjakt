@@ -85,3 +85,4 @@ CREATE INDEX idx_events_household ON household_events(household_id, id);
 CREATE INDEX idx_inventory_rev ON inventory_items(household_id, revision);
 CREATE INDEX idx_members_user ON household_members(user_id);
 CREATE INDEX idx_shopping_rev ON shopping_items(household_id, revision);
+PRAGMA user_version = 1;

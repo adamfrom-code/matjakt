@@ -23,6 +23,7 @@ import time
 from pathlib import Path
 
 from ..data_guard import guard_database_path
+from ..schema_version import BUTIKSDATA, stämpla
 
 from .models import CollectorRun, CurrentPrice, PriceHistoryEntry, Product, RawProduct, Store
 
@@ -351,6 +352,10 @@ class GroceryStore:
         except Exception:  # pragma: no cover - loggas, blockerar aldrig
             import logging
             logging.getLogger("matjakt.grocery.store").exception("Kunde inte seeda kedjetabellen")
+        # Schemat är nu det version BUTIKSDATA beskriver - stämpla filen, så att en
+        # människa efter ett rollback kan LÄSA vilken version den bär i
+        # stället för att gissa. Se services/schema_version.py.
+        stämpla(self._connection, BUTIKSDATA)
 
     def _txn(self):
         """Transaktionsgräns för EN operation - eller ingenting alls inne i
