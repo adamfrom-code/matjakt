@@ -207,8 +207,18 @@ class HouseholdJourney(unittest.TestCase):
                                 {"key": milk["key"], "addToInventory": True, "location": "kyl"})
         self.assertEqual(sara_bought["body"]["item"]["status"], "PURCHASED")
         self._sync(adam)
-        self.assertNotIn("Mjölk", self._shopping_rows(adam), "Adam ser inte Saras köp")
-        expect(adam.locator(".shopping-handled-row")).to_contain_text("Mjölk")
+        # L3: en avbockad vara lyfts inte längre UR listan till ett eget
+        # "Klart"-block under den. Den ligger kvar i sin avdelning,
+        # genomstruken och tonad - i butik ska raden man just bockade av
+        # stanna vid hyllan man står vid, inte hoppa till skärmens fot.
+        # Saras köp syns alltså hos Adam PÅ RADEN, och testet mäter det i
+        # stället för att mäta var raden råkade flytta.
+        self.assertIn("Mjölk", self._shopping_rows(adam), "Adam ser inte Saras köp")
+        milk = adam.locator("#shoppingList .shopping-item", has_text="Mjölk").first
+        expect(milk).to_have_class(re.compile(r"vara--klar"))
+        expect(milk.locator("button.vara")).to_have_attribute("aria-pressed", "true")
+        self.assertEqual(adam.locator(".shopping-handled-row").count(), 0,
+                         "det gamla Klart-blocket ritas fortfarande")
         self._screenshot(adam, "kopt")
 
         # --- Har hemma i Adams UI --------------------------------------------

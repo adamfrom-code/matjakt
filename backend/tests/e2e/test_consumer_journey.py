@@ -700,7 +700,19 @@ class BrowserJourney(unittest.TestCase):
             # G13: butikskorten ligger INTE kvar i Handla-skärmen.
             self.assertEqual(page.locator(".shopping-screen #storeCards").count(), 0)
             expect(page.locator("#priceSourceNote")).to_contain_text("Priser från")
-            self.assertRegex(page.locator("#shoppingCost").inner_text(), r"\d+ kr / 900 kr")
+            # L3: kassan är ett block med rubrik, tal och budget - inte en
+            # sammanskriven rad. Talet och budgeten står på var sin rad, så
+            # mellanrummet mellan dem är radbrytning och inte ett blanksteg.
+            self.assertRegex(page.locator("#shoppingCost").inner_text(), r"\d+ kr\s*/ 900 kr")
+            # Och rubriken säger vad talet ÄR. Båda lydelserna är sanna svar:
+            # "Minst att betala" så fort någon rad saknar en radtotal (C7),
+            # annars "Summa i kassan". Det som inte får stå är ett tal utan
+            # besked om vilket av de två det är.
+            # inner_text() ger den RENDERADE texten, alltså kapitälerna som
+            # CSS sätter - källan står i gemener (§8, så skärmläsaren inte
+            # stavar rubriken bokstav för bokstav).
+            self.assertIn(page.locator("#shoppingTotalLabel").inner_text().strip().casefold(),
+                          ("summa i kassan", "minst att betala"))
 
         with self.step("finns hemma (ur listan) och handlad"):
             # EN VARA KAN STÅ SOM FLERA RADER. Aggregatet nycklar på namn OCH
@@ -1540,7 +1552,12 @@ class BrowserJourney(unittest.TestCase):
         # Beskedet ska komma. 45 s är gott om tid även med några omförsök
         # och backoff - poängen är att det finns en ände, inte hur snabb den är.
         try:
-            expect(page.locator("#shoppingCost")).to_contain_text("pris saknas just nu", timeout=45_000)
+            # L3/L0: beskedet är numera prislappens tomma fack - "pris saknas",
+            # samma form och samma ord som varje annan rad utan pris. Den gamla
+            # lydelsen "pris saknas just nu" var Handlas egen sträng; att skriva
+            # den en gång till här hade bevarat exakt det som L0 finns för att
+            # ta bort. Kravet är oförändrat: beskedet ska KOMMA.
+            expect(page.locator("#shoppingCost")).to_contain_text("pris saknas", timeout=45_000)
         except AssertionError as error:
             raise AssertionError(
                 f"{error} | rubriken visade {page.locator('#shoppingCost').inner_text()!r}"
@@ -1550,6 +1567,9 @@ class BrowserJourney(unittest.TestCase):
         text = page.locator("#shoppingCost").inner_text()
         for teknik in ("HTTP", "Error", "undefined", "NaN", "500", "Failed"):
             self.assertNotIn(teknik, text, f"tekniskt läckage i väntestatusen: {text!r}")
+        # Och spinnern är BORTA, inte bara överröstad. Står "hämtas" kvar
+        # bredvid beskedet lovar skärmen fortfarande ett tal som aldrig kommer.
+        self.assertNotIn("hämtas", text, f"spinnern står kvar bredvid beskedet: {text!r}")
 
         # Listan finns kvar - ett prisfel får inte ta med sig veckan i fallet.
         self.assertGreater(page.locator("#shoppingList .shopping-item").count(), 0)

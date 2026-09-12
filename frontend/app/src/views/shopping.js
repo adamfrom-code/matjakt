@@ -406,8 +406,11 @@ function extraRowMarkup(extra, chain) {
   if (extra.source === "campaign") metaBits.push(`Kampanj hos ${extra.chain}`);
   if (fromOtherChain && !match) metaBits.push(`Ingen matchande produkt hos ${chain}`);
   if (!extra.chain && !match) metaBits.push("Ingen säker prismatch – egen rad");
-  const priceText = line != null ? app.money(line)
-    : '<span class="price-missing">–</span>';
+  // L3/L0: extravaran är en rad i Handla som alla andra och får ingen egen
+  // prisform. Ett matchat pris är hämtat hos kedjan (kontrollerat); utan
+  // matchning finns inget pris, och då är det L0:s tomma fack - inte ett
+  // tankstreck i en klass som bara den här funktionen känner till.
+  const priceLapp = line != null ? prisMarkup(app.money(line), KONTROLLERAT) : prisMarkup(null, SAKNAS);
   const unitNote = extra.qty > 1 && unit != null ? `<small>${extra.qty} × ${app.money(unit)}</small>` : "";
   return `<div class="shopping-item extra-item ${extra.checked ? "checked" : ""}">
     <input type="checkbox" data-extra-check="${extra.id}" ${extra.checked ? "checked" : ""}>
@@ -415,7 +418,7 @@ function extraRowMarkup(extra, chain) {
     <span class="shopping-item-info"><strong>${escapeHtml(displayName)}</strong>
       <small class="shopping-item-meta">${escapeHtml(metaBits.join(" · "))}</small></span>
     <span class="extra-qty"><button type="button" data-extra-minus="${extra.id}">−</button><b>${extra.qty}</b><button type="button" data-extra-plus="${extra.id}">+</button></span>
-    <span class="shopping-item-price"><strong>${priceText}</strong>${unitNote}</span>
+    <span class="shopping-item-price">${priceLapp}${unitNote}</span>
     <button type="button" class="extra-remove" data-extra-remove="${extra.id}" aria-label="Ta bort">×</button>
   </div>`;
 }
@@ -490,12 +493,16 @@ export function kassaUnderlag({ shoppingItems, total, headerDb, activeChain }) {
   // En summa som inte är butiksverifierad hela vägen är uppskattad, aldrig
   // kontrollerad. Utan ett databasresultat är talet en beräkning på
   // förpackningspriser - alltså uppskattat per definition.
+  // Talet som renderas är headerDb.totalCheckoutCost PLUS extravarorna, och
+  // det är det talet vars säkerhet ska beskrivas. summaTillstånd() äger
+  // mappningen (pricingBasis -> tillstånd); vyn skickar bara in summan den
+  // faktiskt skriver ut, i stället för att lita på att headerDb bär den.
   const tillstånd = total == null ? SAKNAS
-    : headerDb ? summaTillstånd(headerDb).tillstånd : UPPSKATTAT;
+    : headerDb ? summaTillstånd({ ...headerDb, totalCheckoutCost: total }).tillstånd : UPPSKATTAT;
   return { osäkertAntal, utanPris, hämtas, golv, tillstånd };
 }
 
-function renderKassa({ shoppingItems, total, extrasCost, headerDb, activeChain }) {
+export function renderKassa({ shoppingItems, total, extrasCost, headerDb, activeChain }) {
   const kostnad = app.$("shoppingCost");
   if (!kostnad) return;
   const { osäkertAntal, utanPris, golv, tillstånd } = kassaUnderlag({ shoppingItems, total, headerDb, activeChain });
@@ -505,8 +512,11 @@ function renderKassa({ shoppingItems, total, extrasCost, headerDb, activeChain }
   // Bara extravaror: deras summa är hela kassan, och den är exakt så långt
   // varje extrarad har ett pris.
   const enbartExtra = total == null && !shoppingItems.length && state.extraItems.length;
+  // En tom lista har inget pris att sakna. "pris saknas" vore en lögn om en
+  // vara som inte finns, så tomrummet får ett tankstreck som INTE är en av
+  // L0:s tre former - annars vore frånvaron av en lista ett pristillstånd.
   const lapp = nothingPlanned
-    ? `<span class="pris">–</span>`
+    ? `<span class="kassa-tomt">–</span>`
     : enbartExtra
       ? prisMarkup(app.money(extrasCost), KONTROLLERAT, { golv })
       // "hämtas…" bara medan det faktiskt hämtas. Är prissättningen klar och
