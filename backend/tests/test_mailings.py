@@ -210,15 +210,18 @@ class MailingsTest(unittest.TestCase):
         self.scheduler.enabled = False
         self.assertIn("MATJAKT_MAILINGS_ENABLED", self.scheduler.status()["blockerat"])
 
-    # ---- elva mallar, tre utskick ----
-    def test_the_eight_new_templates_do_not_widen_what_actually_goes_out(self):
+    # ---- tolv mallar, tre utskick ----
+    def test_the_new_templates_do_not_widen_what_actually_goes_out(self):
         """Att skriva en mall är inte att börja skicka den.
 
-        KINDS växte från tre till elva. Utskicksreglerna gjorde det inte:
-        schemaläggaren rör bara SCHEDULED_KINDS, och en mall utan
-        mottagarregel vägrar svara på frågan "vem ska ha det här?" i stället
-        för att gissa fram en mottagarkrets."""
-        self.assertEqual(len(mailings.KINDS), 11)
+        KINDS växte från tre till elva, och med J5:s förnyelsepåminnelse
+        till tolv. Utskicksreglerna gjorde det inte: schemaläggaren rör bara
+        SCHEDULED_KINDS, och en mall utan mottagarregel vägrar svara på
+        frågan "vem ska ha det här?" i stället för att gissa fram en
+        mottagarkrets. `dunning` och `fornyelse` skickas av J5:s
+        faktureringsvakt - på en Stripe-händelse respektive ett datum, aldrig
+        av den här schemaläggaren."""
+        self.assertEqual(len(mailings.KINDS), 12)
         self.assertEqual(mailings.SCHEDULED_KINDS, ("welcome_3", "welcome_7", "kampanjtorget"))
         self._user("alla@example.com", days_ago=3, butik="Willys")
         summary = self.scheduler.run_due(self._thursday())
@@ -430,6 +433,7 @@ class MallarnasFormTest(unittest.TestCase):
             "premium_uppgradering": "Sju middagar i stället för fem.",
             "hushallsinbjudan": "Ingen köper mjölk två gånger.",
             "dunning": "Det är oftast ett kort som gått ut, inget mer.",
+            "fornyelse": "Du behöver inte göra någonting.",
         }
         self.assertEqual(set(prov), set(mailings.KINDS))
         for kind, rad in prov.items():
@@ -443,7 +447,8 @@ class MallarnasFormTest(unittest.TestCase):
         for kind in mailings.KINDS:
             variants = mailings.subject_variants(kind, {
                 "vara": "x", "pris": "1 kr", "kedja": "y", "procent": 1, "v": 37, "n": 2,
-                "belopp": 1, "månad": "maj", "namn": "A", "antal": 1, "hushåll": "H"})
+                "belopp": 1, "månad": "maj", "namn": "A", "antal": 1, "hushåll": "H",
+                "datum": "24 september"})
             self.assertTrue(all(v.strip() for v in variants), kind)
             for user_id in range(1, 60):
                 index = mailings.variant_for(kind, user_id)

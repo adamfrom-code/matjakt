@@ -183,6 +183,34 @@ def fetch_price(secret_key, price_id):
     return _request(secret_key, "GET", f"/prices/{urllib.parse.quote(price_id)}")
 
 
+def fetch_subscription(secret_key, subscription_id):
+    """En prenumeration som Stripe ser den, eller None när den inte finns.
+
+    Underlaget för avstämningen (J5): stämmer vår `subscription_status` med
+    Stripes? "Finns inte" är ett SVAR här, inte ett fel - en prenumeration
+    Stripe inte känner igen är precis den avvikelse vi letar efter, och att
+    kasta hade gjort den till ett nätfel."""
+    if not subscription_id:
+        return None
+    try:
+        return _request(secret_key, "GET", f"/subscriptions/{urllib.parse.quote(str(subscription_id))}")
+    except StripeError as error:
+        if "no such subscription" in str(error).lower():
+            return None
+        raise
+
+
+def update_customer_email(secret_key, customer_id, email):
+    """Kundens adress hos Stripe följer med när kontot byter adress (J5).
+
+    Annars går kvittot till den adress som var fel från början - vilket var
+    hela anledningen till bytet."""
+    if not customer_id or not email:
+        return
+    _request(secret_key, "POST", f"/customers/{urllib.parse.quote(str(customer_id))}",
+             {"email": email})
+
+
 def create_portal_session(secret_key, customer_id, return_url):
     result = _request(secret_key, "POST", "/billing_portal/sessions", {
         "customer": customer_id,

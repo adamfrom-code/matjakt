@@ -55,7 +55,7 @@ logger = logging.getLogger("matjakt.mailings")
 KINDS = (
     "verify", "welcome_3", "welcome_7", "kampanjtorget", "veckoplan",
     "manadsrapport", "vinn_tillbaka", "overgiven_vecka",
-    "premium_uppgradering", "hushallsinbjudan", "dunning",
+    "premium_uppgradering", "hushallsinbjudan", "dunning", "fornyelse",
 )
 # De som schemaläggaren skickar. Att lägga till en mall i KINDS ändrar
 # INGENTING om vad som går ut - den listan är den här, och den är kort med
@@ -146,6 +146,18 @@ class MailingStore:
                 "INSERT OR IGNORE INTO mail_log (user_id, kind, day, sent_at) VALUES (?, ?, ?, ?)",
                 (int(user_id), kind, today.isoformat(),
                  datetime.now(timezone.utc).isoformat()))
+
+    def sent_today(self, user_id: int, kind: str, today) -> bool:
+        """Har mejlet redan gått ut till det här kontot i dag? (J5)
+
+        Transaktionella mejl som utlöses av Stripe behöver också en spärr:
+        webhooken kan leverera samma händelse flera gånger, och tre likadana
+        "din betalning gick inte igenom" på en timme läser som ett fel i
+        systemet - vilket det också vore."""
+        row = self._connection.execute(
+            "SELECT 1 FROM mail_log WHERE user_id = ? AND kind = ? AND day = ?",
+            (int(user_id), kind, today.isoformat())).fetchone()
+        return row is not None
 
     def counts(self, days: int = 30) -> dict:
         since = (datetime.now(timezone.utc).date() - timedelta(days=days)).isoformat()
@@ -485,6 +497,18 @@ TEMPLATES = {
         ),
         "preheader": "Uppdatera kortet så fortsätter allt som vanligt. Vi försöker igen automatiskt.",
         "button": "Uppdatera betalsättet",
+        "transactional": True,
+    },
+    # J5. I Sverige förväntas en påminnelse före en årsförnyelse, och den
+    # förebygger chargebacks: den som blir överraskad av 399 kr bestrider
+    # dragningen i stället för att säga upp. Transaktionellt - det är ett
+    # besked om en kommande dragning, inte reklam.
+    "fornyelse": {
+        "subjects": (
+            "Din Matjakt Premium förnyas {datum}",
+        ),
+        "preheader": "Inget behöver göras. Vill du inte fortsätta säger du upp innan dess.",
+        "button": "Hantera prenumerationen",
         "transactional": True,
     },
 }
@@ -870,6 +894,26 @@ def render_dunning(billing_url: str, app_url: str, *, namn: str, belopp, datum: 
                     button_url=billing_url)
 
 
+def render_fornyelse(billing_url: str, app_url: str, *, namn: str, datum: str,
+                     belopp=399, variant: int = 0) -> tuple:
+    """Sju dagar före en årsförnyelse. Transaktionellt.
+
+    Mejlet SÄLJER ingenting och ber inte om något - det säger vad som kommer
+    att hända och var man ändrar det. En påminnelse som försöker övertyga
+    läses som ett försök att dölja dragningen, och det är precis den känslan
+    som blir en chargeback."""
+    data = {"namn": namn, "datum": datum, "belopp": belopp}
+    blocks = [
+        ("p", f"Hej {namn},"),
+        ("p", f"Din Matjakt Premium förnyas automatiskt **{datum}** och {belopp} kr dras då "
+              f"från ditt vanliga betalsätt."),
+        ("p", "Du behöver inte göra någonting. Vill du inte fortsätta säger du upp före "
+              "dess, så ligger Premium kvar perioden ut."),
+    ]
+    return _compose("fornyelse", blocks, data, app_url, None, variant=variant,
+                    button_url=billing_url)
+
+
 # ---- Förhandsvisning ---------------------------------------------------------
 # TESTDATA, aldrig riktiga kunduppgifter: förhandsvisningen finns för att man
 # ska kunna TITTA på ett mejl innan någon får det, och ett exempel med en
@@ -884,6 +928,8 @@ PREVIEW_DATA = {
     "premium_uppgradering": {"namn": "Alex", "antal_veckor": 3},
     "hushallsinbjudan": {"inbjudare": "Alex", "hushåll": "Familjen Ek",
                          "join_url": "https://matjakt.store/app/?invite=exempel"},
+    "fornyelse": {"namn": "Alex", "datum": "24 september", "belopp": 399,
+                  "billing_url": "https://matjakt.store/app/?billing=portal"},
     "dunning": {"namn": "Alex", "belopp": 59, "datum": "24 september",
                 "billing_url": "https://matjakt.store/app/?konto=betalning"},
 }
@@ -909,6 +955,8 @@ def render_preview(kind: str, app_url: str, unsubscribe: str, *, deals=None, wee
         return render_hushallsinbjudan(data.pop("join_url"), app_url, variant=variant, **data)
     if kind == "dunning":
         return render_dunning(data.pop("billing_url"), app_url, variant=variant, **data)
+    if kind == "fornyelse":
+        return render_fornyelse(data.pop("billing_url"), app_url, variant=variant, **data)
     renderer = {"veckoplan": render_veckoplan, "manadsrapport": render_manadsrapport,
                 "vinn_tillbaka": render_vinn_tillbaka,
                 "overgiven_vecka": render_overgiven_vecka,
