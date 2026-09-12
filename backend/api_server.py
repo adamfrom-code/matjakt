@@ -60,6 +60,7 @@ from services.accounts import ratelimit  # noqa: E402
 from services.accounts import clientip  # noqa: E402
 from services.accounts import data_export  # noqa: E402
 from services import admin_audit  # noqa: E402
+from services import backup as backup_service  # noqa: E402
 from services import backup_crypto  # noqa: E402
 from services.bounded_server import BoundedThreadingHTTPServer  # noqa: E402
 from services.grocery import alerts as grocery_alerts  # noqa: E402
@@ -2233,6 +2234,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
         # "servern har fullt" ser likadana ut utifrån; här syns skillnaden.
         "connections": SERVER.stats() if SERVER is not None else {"max": MAX_CONNECTIONS},
         "backupEncryption": backup_crypto.status(),
+        # D10: ÅLDERN PÅ DEN SENASTE SÄKERHETSKOPIAN. B5 gjorde
+        # nedladdningsvägen kontrollerbar; det här gör själva backupen det.
+        # newest_age_seconds fanns men lästes bara av backuptråden själv - en
+        # backup som slutat tas var alltså osynlig ända till den dag den
+        # behövdes. Ålder, antal set och en slutsats; inga sökvägar.
+        "backup": backup_service.health(DATA_DIR),
         # Stripe-läge utan hemligheter: bara om nyckeln är en TEST- eller
         # LIVE-nyckel (prefix) och vilka delar som är satta. Svarar på
         # "används inga live-nycklar?" utan att någonsin visa nyckeln.
@@ -3957,7 +3964,6 @@ if __name__ == "__main__":
     # Nattliga, verifierade säkerhetskopior av alla databaser. Persistens är
     # inte backup - se services/backup.py för de ärliga gränserna och
     # återställningsinstruktionen.
-    from services import backup as backup_service
     backup_service.start_nightly(DATA_DIR)
     try:
         SERVER = BoundedThreadingHTTPServer(
