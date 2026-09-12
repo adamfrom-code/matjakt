@@ -52,9 +52,28 @@
         <div class="home-hero"><h1 id="homeGreeting">God morgon</h1><p id="homeSubtitle">Redo för en god och prisvärd vecka.</p></div>
 
         <!-- IKVÄLL FÖRST. Det en familj öppnar appen för klockan 16 är
-             "vad blir det för middag?" - inte en instrumentpanel. -->
+             "vad blir det för middag?" - inte en instrumentpanel.
+
+             L1: skärmen är ett FOTOKORT (design D, telefon 1). Kortet
+             ritas av src/views/ikvall.js; budgetremsan och fyndraden står
+             kvar i markupen därför att budgetknappen binds en gång vid
+             start (#budgetCardBtn) och inte ska försvinna under lyssnaren
+             vid varje omritning.
+
+             Budgetmätaren flyttade hit UR veckokortet: budgeten hör till
+             maten den betalar för, och som remsa under fotot informerar
+             den utan att bli skärmens huvudperson (DESIGNSYSTEM-D §5.8). -->
         <section class="next-meal-section" aria-label="Kvällens middag">
           <div id="nextMealCard"></div>
+          <button type="button" class="ikvall-remsa" id="budgetCardBtn">
+            <span class="ikvall-rad">
+              <span class="ikvall-kap">Veckans budget</span>
+              <span class="week-budget-text"><strong id="summaryBudgetRemaining">800 kr</strong> <span id="summaryBudgetPrefix">veckobudget</span><b id="summaryBudgetNote"></b></span>
+            </span>
+            <span class="progress-track" id="summaryBudgetMeter" role="img" aria-label="Ingen vecka planerad ännu"><i id="summaryBudgetBar"></i></span>
+            <span class="sr-only" id="budgetScopeAria"></span>
+          </button>
+          <div class="ikvall-fynd" id="ikvallFynd"></div>
         </section>
 
         <!-- ETT veckokort: rad, budgetmätare, sparande och huvudknapp.
@@ -65,10 +84,6 @@
             <span id="weekCardTitle">Din vecka</span><span class="status-dot" id="weekCardStatus">Redo</span>
             <button type="button" class="week-sheet-plus week-sheet-plus-corner" id="weekSheetOpen" aria-haspopup="dialog" aria-controls="weekSheet" aria-label="Justera personer, middagar och budget">＋</button>
           </div>
-          <button type="button" class="week-budget-row" id="budgetCardBtn">
-            <span class="week-budget-text"><strong id="summaryBudgetRemaining">800 kr</strong><span id="summaryBudgetPrefix">kvar av</span> <span id="summaryBudgetTotal">800 kr</span><b id="summaryBudgetPercent">0%</b></span>
-            <span class="progress-track"><i id="summaryBudgetBar"></i></span>
-          </button>
           <p class="nutrition-warning" id="nutritionWarning" hidden></p>
           <button class="btn btn-primary" id="generateBtn"><span id="generateBtnLabel">Skapa min vecka</span><span aria-hidden="true">→</span></button>
           <button type="button" class="week-secondary" id="newWeekBtn" hidden>Skapa ny vecka</button>

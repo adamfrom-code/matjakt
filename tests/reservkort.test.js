@@ -255,10 +255,19 @@ test("den gamla ikonfallbacken är borta ur stilmallen", () => {
 
 const app = läsFil("frontend/app/app.js");
 const receptvy = läsFil("frontend/app/src/views/recipes.js");
+// L1 flyttade hjältekortet ur app.js till sin egen vymodul. Kravet är
+// oförändrat, men vägen går nu genom två filer och prövas därför i två led:
+// app.js hämtar bildytan ur komponenten med `namn: false`, och vymodulen
+// lägger det den får i hjälteytan utan att rita något eget. Faller det ena
+// ledet bort är hålet öppet igen, oavsett hur det andra ser ut.
+const ikvallvy = läsFil("frontend/app/src/views/ikvall.js");
 
 test("Ikväll, Veckan och receptvyn ritar sin bildyta med komponenten", () => {
   const vägar = [
-    ["Ikväll", app, /class="hero-meal-photo">\$\{recipePhoto\(recipe, \{ namn: false \}\)\}/],
+    ["Ikväll, bildytan hämtas ur komponenten", app,
+      /foto: recipePhoto\(heroRecipe, \{ namn: false \}\)/],
+    ["Ikväll, vyn lägger komponentens yta i hjälten", ikvallvy,
+      /class="hero-meal-photo">\$\{foto\}/],
     ["Veckan, raden", app, /class="week-plan-photo">\$\{recipePhoto\(/],
     ["Veckan, dagens kort", app, /class="week-today-photo">\$\{recipePhoto\(/],
     // L4:s uppslag lägger rubriken PÅ bilden i ett pappersfält, precis som
