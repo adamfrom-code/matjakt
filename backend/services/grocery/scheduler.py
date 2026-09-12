@@ -391,13 +391,19 @@ class GroceryScheduler:
         Gäller bara Primat-kedjorna: Willys, Hemköp och City Gross hämtas
         från kedjornas egna sidor och kostar ingen kvot alls.
 
+        D9: "bara Primat-kedjorna" är inte längre en fast lista. Flyttas
+        Willys eller Hemköp till Primat-reservvägen (MATJAKT_PRIMAT_CHAINS,
+        se importer.py) kostar de plötsligt kvot som alla andra, och då ska
+        spärren gälla dem också - annars vore reservvägen ett sätt att gå
+        förbi den enda kontroll som står mellan oss och ett 429.
+
         Kontrollen ligger FÖRE start med flit. `_rows_spent` fanns i
         providern men bara inom en körning, i minnet, och ingen frågade den
         innan nästa startade. Natten 2026-09-11 blev utfallet
         ICA=0/0p, Coop=12 079, Lidl=0/0p: Coop hann först och tog det som
         fanns, de andra två fick 429 och lämnade varsin blocked-markering
         utan en enda rad."""
-        if chain not in PRIMAT_ONLY_CHAINS:
+        if chain not in PRIMAT_ONLY_CHAINS and chain not in importer.primat_fallback_stores():
             return True
         from . import quota
         ok, skäl = quota.can_start(kv=self._kv())
