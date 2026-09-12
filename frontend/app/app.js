@@ -2214,7 +2214,9 @@ function renderWeekOverview(selected, shoppingItems, total) {
   document.querySelectorAll("[data-week-day]").forEach(button => button.addEventListener("click", () => { weekOverviewDay = Number(button.dataset.weekDay); renderWeekOverview(selected, shoppingItems, total); }));
   document.querySelectorAll("[data-week-details]").forEach(button => button.addEventListener("click", () => openRecipeTab(button.dataset.weekDetails)));
   document.querySelectorAll("[data-week-add-meal]").forEach(button => button.addEventListener("click", () => setView("recipes")));
-  document.querySelectorAll("[data-hem-create]").forEach(button => button.addEventListener("click", () => openPlanComparison()));
+  // Hjälteytans inbjudan lovar i klartext att "Matjakt sätter ihop veckans
+  // middagar". Den ska göra det, inte visa ett formulär (G7).
+  document.querySelectorAll("[data-hem-create]").forEach(button => button.addEventListener("click", () => chooseMenu()));
   // "Ser något fel ut?" binds INTE här. Knappen finns bara i kedjelistan och
   // ritas aldrig om av den här funktionen - men den här funktionen körs vid
   // varje livepris, varje synksvar och varje avbockning, så bindningen
@@ -3901,20 +3903,31 @@ $("mealsPlus").addEventListener("click", () => {
   if (state.middagar >= maxDinners() && !hasPremium()) { openPaywall("seven_dinners"); return; }
   step("middagar", 1, 1, Math.min(MAX_MEALS, maxDinners()));
 });
-// One primary action: create the week when there is none, open it when
-// there is. "Skapa ny vecka" stays as a quiet secondary path.
+// G7: EN KNAPP SOM LOVAR ETT RESULTAT SKA LEVERERA RESULTATET.
+//
+// "Skapa min vecka" öppnade planjämförelsen - ett formulär. Det är den
+// klassiska tillitsläckan: knappen säger vad den ska göra, och gör något
+// annat. (Samma fel som G8 lagade i onboardingens sista knapp; det här är
+// resten av dem: "Skapa ny vecka", "Skapa nästa vecka" och hjälteytans
+// "Tryck här så sätter Matjakt ihop veckans middagar".)
+//
+// chooseMenu() bygger veckan av de svar användaren redan gett och tar henne
+// till Vecka-vyn. "Välj veckotyp" finns kvar som SEKUNDÄR väg: raden i
+// veckoarket (#sheetPlanBtn) och raden ovanför den färdiga veckan
+// (#weekPlanUpsell). Ett val man kan göra är inte samma sak som ett val man
+// måste göra innan man sett något.
 $("generateBtn").addEventListener("click", () => {
   if (plannedRecipes().length) setView("week");
-  else openPlanComparison();
+  else chooseMenu();
 });
-$("newWeekBtn").addEventListener("click", () => openPlanComparison()); $("refreshBtn").addEventListener("click", () => {
+$("newWeekBtn").addEventListener("click", () => chooseMenu()); $("refreshBtn").addEventListener("click", () => {
   // Roterar ENDAST förslagsraden. Tidigare regenererades hela veckan (och
   // avbockade/borttagna varor rensades) plus att fliken byttes - av en knapp
   // som lovar nya förslag.
   RECEPT.push(...RECEPT.splice(0, 8));
   render();
 });
-$("startNewWeekBtn").addEventListener("click", () => openPlanComparison());
+$("startNewWeekBtn").addEventListener("click", () => chooseMenu());
 let pantryPickLocation = "skafferi";
 function renderPantryPicker(query) {
   const search = query.trim().toLowerCase();

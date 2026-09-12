@@ -87,7 +87,7 @@ export const PLACEHOLDER = "__MATJAKT_VERSION__";
 
 /** Eran. Läsbar etikett, inte cache-nyckel. Höjs av `--bump`, aldrig av ett
  *  arbetspaket. Raden nedan skrivs om av skriptet självt - lämna formen. */
-export const RELEASE = 120;
+export const RELEASE = 121;
 
 // Förankrade i tilldelningen respektive attributet, inte i namnet: en
 // kommentar som NÄMNER cachenamnet är inte cachenamnet. `[^"']*` och inte
