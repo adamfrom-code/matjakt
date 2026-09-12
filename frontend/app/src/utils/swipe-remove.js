@@ -91,3 +91,56 @@ export function kopplaSvepBort(behållare, { väljRad, taBort } = {}) {
     behållare.removeEventListener?.("pointercancel", nollställ);
   };
 }
+
+/**
+ * L3 · SAMMA HANDLING, UTAN FINGER.
+ *
+ * Ett svep är en otillgänglig gest i samma sekund som det är enda vägen. Den
+ * som styr med tangentbord har inget finger att dra med, och den som kör
+ * skärmläsare får aldrig veta att gesten finns. G5 lät krysset ligga kvar i
+ * DOM:en och komma fram vid fokus - rätt, men det är en ANNAN kontroll, med
+ * en egen tabbstopp per rad. Design D:s rad har inget kryss i sig alls.
+ *
+ * Därför får raden själv en tangentbordsväg: Delete eller Backspace på den
+ * fokuserade raden gör exakt det svepet gör - samma `taBort`, alltså samma
+ * borttagning och samma Ångra-toast. Två vägar, en handling; skulle de kalla
+ * olika funktioner vore den ena vägen en sämre kopia av den andra, och den
+ * skillnaden syns inte förrän någon står utan mus.
+ *
+ * Backspace är med därför att det är det tangentbordsvana handgreppet för
+ * "bort med det här", och Delete därför att det är det formella. Ingen av
+ * dem får kapa en textinmatning: står markören i ett fält betyder Backspace
+ * "radera ett tecken" och ingenting annat.
+ *
+ * @param {EventTarget} behållare  elementet listan ritas i
+ * @param {(mål:any)=>any} väljRad  ger raden för ett träffat element, eller null
+ * @param {(rad:any)=>void} taBort  körs när raden ska bort - SAMMA som svepets
+ * @returns {() => void} avkoppling
+ */
+export const BORTTAGSTANGENTER = ["Delete", "Backspace"];
+
+/** Fält där Backspace betyder "radera ett tecken", inte "ta bort raden". */
+function skriverText(nod) {
+  const tagg = String(nod?.tagName || "").toLowerCase();
+  if (tagg === "input" || tagg === "textarea" || tagg === "select") return true;
+  return nod?.isContentEditable === true;
+}
+
+export function kopplaTangentbordsBorttag(behållare, { väljRad, taBort } = {}) {
+  if (!behållare?.addEventListener || typeof väljRad !== "function" || typeof taBort !== "function") {
+    return () => {};
+  }
+  const tryck = (e) => {
+    if (!BORTTAGSTANGENTER.includes(e.key)) return;
+    // En modifierare betyder något annat i systemet (bakåt i historiken,
+    // radera ord) och ska inte tolkas som "ta bort varan".
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (skriverText(e.target)) return;
+    const rad = väljRad(e.target);
+    if (!rad) return;
+    e.preventDefault?.();
+    taBort(rad);
+  };
+  behållare.addEventListener("keydown", tryck);
+  return () => behållare.removeEventListener?.("keydown", tryck);
+}
