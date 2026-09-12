@@ -30,7 +30,12 @@ import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.
 import { PACKAGE_INFO, PRODUCT_CATALOG, RECIPE_DETAILS, RECIPE_QUANTITIES } from "./src/data/legacy-catalog.js";
 import { dinnerCandidates } from "./src/data/meal-type.js";
 import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
-import { weekPlanDays } from "./src/views/week.js";
+// L2: veckans dagar, dagraderna och summeringen bor i vymodulen. DAYS och
+// DAYS_LONG följde med dit - "vilka dagar har en vecka" är veckans fråga, och
+// app.js hade dem bara för att de råkade skrivas här först.
+import { SAKNAS as PRIS_SAKNAS, prisTillstånd } from "./src/views/pris.js";
+import { DAYS, DAYS_LONG, initWeekView, todayIndex, veckoDagarMarkup, veckoIntervall,
+  veckoUnderlag, veckofotMarkup, weekPlanDays } from "./src/views/week.js";
 import { initSettingsView, renderSettings } from "./src/views/settings.js";
 // L1: Ikväll-skärmen ritas av sin egen modul. app.js skickar in fotot,
 // dagen och pengarna; vyn bestämmer formen - och priset skrivs av
@@ -49,6 +54,7 @@ import { notificationIntent, syncWeeklyPush } from "./src/services/weekly-push.j
 import { branchChoiceKey, canPlanWeek, chooseBranch } from "./src/services/branch-choice.js";
 import { createSeededRandom, newSeed } from "./src/services/seeded-random.js";
 import { debounce } from "./src/services/debounce.js";
+import { createEntitlementRefresh } from "./src/services/entitlement-refresh.js";
 import { closeOnboarding, initAccountView, isAwaitingPremium, openOnboarding, openPaywall, openPremiumPitch, renderAccount, renderHousehold, renderNotificationPrefs, renderPostcodePrompt, renderWeekPlanUpsell, setAwaitingPremium, wireHouseholdUi } from "./src/views/account.js";
 import { delaMånaden, initSparatView, renderSparat, sparatModell } from "./src/views/sparat.js";
 
@@ -136,8 +142,6 @@ function wireFeedbackButtons(container, recipeId) {
   });
 }
 
-const DAYS_LONG = ["måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag", "söndag"];
-const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 // One dinner per weekday is the real ceiling - derived from DAYS so the
 // stepper, the onboarding stepper and the week view can never disagree
 // about how many meals a week can hold (they previously all hardcoded 6).
@@ -793,13 +797,25 @@ async function fetchEntitlements() {
     const token = getStoredToken();
     const response = await fetch(entitlementsApiUrl(), {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
+      // J4: backend svarar redan `Cache-Control: no-store` (send_json), men
+      // ett cachat svar är per definition en gammal plan - be aldrig om ett.
+      cache: "no-store",
       signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     entitlements = await response.json();
+    // hasPremium() läser entitlements.isPremium ELLER state.user.premium, och
+    // kontoarket (views/account.js) läser flaggan rakt av. Båda kommer ur
+    // samma kontopost i backend, men user-svaret hämtas bara vid inloggning -
+    // så utan den här raden står den uppsagda kvar som Premium fast det
+    // färska svaret säger free.
+    if (state.user && typeof entitlements.isPremium === "boolean") state.user.premium = entitlements.isPremium;
   } catch {
     // Nätet nere: behåll det vi har. Free är alltid ett säkert antagande.
   }
+  // Varje väg hit räknas som ett färskt svar - också boot och inloggning, som
+  // hämtar utan att gå via uppvakningsregeln i entitlement-refresh.js.
+  entitlementRefresh.markRefreshed();
   // A plan change makes every cached pricing answer stale: the masked
   // Free response must not survive into Premium (locked cards after an
   // upgrade), and a Premium snapshot must not leak into Free. Throw the
@@ -811,8 +827,12 @@ async function fetchEntitlements() {
   }
   lastEntitlementPlan = entitlements.plan;
   // Priserna kommer med svaret - rita om flikarna nu, annars står de kvar
-  // med reservvärdena tills något annat råkar rendera kontoarket.
+  // med reservvärdena tills något annat råkar rendera kontoarket. Och hela
+  // kontoarket, inte bara flikarna: den som sagt upp sig i kundportalen står
+  // framför öppet ark när svaret landar, och "✓ Premium aktiverat" ska inte
+  // få stå kvar där tills hon råkar stänga och öppna det igen (J4).
   renderPriceTabs();
+  renderAccount();
   // A saved dinner count above the plan's cap quietly clamps for the NEXT
   // generated week. The already-chosen week is untouched - a paywall must
   // never eat food someone already planned.
@@ -822,6 +842,10 @@ async function fetchEntitlements() {
   }
   render();
 }
+// J4: entitlementen hämtades bara vid boot och vid inloggning, och en PWA
+// bootar aldrig om. Regeln för när svaret är för gammalt bor i modulen; här
+// står bara vem som ska hämtas när den säger till.
+const entitlementRefresh = createEntitlementRefresh({ refresh: fetchEntitlements });
 function can(feature) {
   if (hasPremium()) return true;
   const features = entitlements.features || {};
@@ -1989,14 +2013,15 @@ function renderHouseholdPantryNote() {
   if (householdActive()) note.textContent = `Delas med ${state.household.name}`;
 }
 
-// Which day tab is showing in the "Min matvecka" overview - defaults to
-// today (Mon=0..Sun=6, converting from JS's native Sun=0..Sat=6), since
-// "Dagens middag" only makes sense pointed at the actual current day.
-// Recipes aren't stored per-weekday anywhere in the data model - a recipe's
-// "day" has always just been its position in the selected list (see DAYS
-// use in renderBasket) - so this only ever indexes into that same array,
-// never a separate day-assignment concept.
-let weekOverviewDay = (new Date().getDay() + 6) % 7;
+// L2: DEN VALDA DAGEN FINNS INTE LÄNGRE, FÖR DET FINNS INGEN VALD DAG.
+//
+// `weekOverviewDay` var vilken dagflik som var aktiv i Vecka-vyn, och den
+// bar ett dagskort som visade EN dag i taget. Två påståenden om samma vecka
+// på samma skärm - sju flikar ovanför ett kort - och frågan appen finns för
+// besvarades bara för den dag man råkade ha klickat på. Design D visar alla
+// sju dagarna samtidigt; då behövs varken fliken, kortet eller minnet av
+// vilken dag som var vald. Hem-ytans "Nästa middag" pekar på den riktiga
+// dagen genom todayIndex() ur src/views/week.js, precis som förut.
 // En 4-middagarsvecka har inget på fre-sön: att öppna Vecka på en tom dag
 // (och visa "Ingen middag planerad" på Hem) fast fyra rätter väntar läser
 // som en trasig app. Först dagens middag, annars nästa planerade.
@@ -2012,35 +2037,15 @@ function firstPlannedDayFrom(selected, startIndex) {
 // lager mellan användaren och det enda hon öppnade appen för. Antalet rader
 // bestäms nu av weekPlanDays() i src/views/week.js: sju, alltid.
 const WEEK_SHOPPING_PREVIEW_COUNT = 4;
-// Small line icons reused everywhere a "time" or "portions" fact is shown
-// next to a recipe (Vecka's Dagens middag, the full recipe page) - one
-// definition so they stay visually identical instead of drifting.
-const CLOCK_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
-const PORTIONS_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>';
-function metaIconItem(icon, text) { return `<span class="meta-icon-item">${icon}${escapeHtml(text)}</span>`; }
-function weekTodayCardMarkup(recipe) {
-  const fb = recipeFeedback(recipe.id);
-  const badge = recipe.typ && recipe.typ !== "Provider-recept" ? `<span class="week-today-badge">${escapeHtml(recipe.typ)}</span>` : "";
-  const portion = recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? `${money(recipe.portionspris)}/portion` : "";
-  const meta = [recipe.tid ? metaIconItem(CLOCK_ICON, `${recipe.tid} min`) : "", metaIconItem(PORTIONS_ICON, `${state.personer} port`), portion ? metaIconItem(PRICE_TAG_ICON, portion) : ""].filter(Boolean).join("");
-  const dayName = DAYS_LONG[weekOverviewDay] || DAYS[weekOverviewDay] || "";
-  // Byt ligger som syskon ovanpå kortet (inte knapp-i-knapp) - listan
-  // "Veckans plan" som bar den förut är dold.
-  return `<div class="week-today-wrap"><button type="button" class="week-today-swap" data-week-swap="${escapeHtml(recipe.id)}">Byt</button><button type="button" class="week-today-card" data-week-details="${escapeHtml(recipe.id)}"><span class="week-today-photo">${recipePhoto(recipe)}</span><span class="week-today-info"><span class="week-today-day">${escapeHtml(dayName)}</span><strong>${escapeHtml(recipe.namn)}</strong>${badge}<span class="week-today-meta">${meta}</span></span><span class="week-today-arrow" aria-hidden="true">›</span>${fb.cooked ? '<span class="week-today-flag" title="Lagade den här">✓</span>' : ""}</button></div>`;
-}
-function weekEmptyDayMarkup() {
-  // data-week-add-meal, not an id - this markup can end up on screen twice at
-  // once (the Vecka day card and the Hem "Nästa middag" card can both be
-  // showing an empty day simultaneously), and two elements sharing one id
-  // would leave the second's button silently unwired.
-  return `<div class="week-today-empty"><p>Ingen middag inplanerad den här dagen ännu.</p><button type="button" class="btn btn-ghost" data-week-add-meal>+ Lägg till middag</button></div>`;
-}
-function todayIndex() { return (new Date().getDay() + 6) % 7; }
 // L1: kortet självt ritas av src/views/ikvall.js. app.js äger det vyn inte
 // kan veta - vilket foto receptet har, vad klockan är och hur pengar skrivs
 // på svenska - och skickar in det. Ögonbrynet är "Ikväll · onsdag" när
 // hjälten faktiskt är i dag, annars "På lördag": skärmen får aldrig säga
 // "Ikväll" om en rätt som ligger tre dagar bort.
+//
+// L2: todayIndex() bor numera i src/views/week.js och importeras här. Frågan
+// "vilken dag är det, räknat från måndag" är veckans, och två svar på den
+// hade kunnat glida isär.
 function ikvallÖgonbryn(index) {
   return index === todayIndex()
     ? `Ikväll · ${DAYS_LONG[index] || DAYS[index]}`
@@ -2049,44 +2054,6 @@ function ikvallÖgonbryn(index) {
 function ikvallMeta(recipe) {
   return [recipe.tid ? `${recipe.tid} min` : null,
           `${recipe.servings || state.personer} portioner`].filter(Boolean).join(" · ");
-}
-function weekPlanRowMarkup(recipe, index) {
-  // En dag utan rätt behåller sin plats i listan. Att hoppa över den sköt
-  // varje senare dag ett steg uppåt, så torsdagens rätt stod på onsdagen -
-  // samma namn, fel dag, och ingen väg tillbaka till den tomma dagen.
-  // Samma klasser som en vanlig rad, så inga nya stilregler behövs: dagen, en
-  // tom bildruta och texten i samma tre spalter.
-  if (!recipe) {
-    return `<div class="week-plan-row is-empty ${index === weekOverviewDay ? "active" : ""}">
-      <span class="week-plan-row-main">
-        <span class="week-plan-day">${DAYS[index] || `Dag ${index + 1}`}</span>
-        <span class="week-plan-photo"></span>
-        <span class="week-plan-name">Ingen middag inplanerad</span>
-      </span>
-      <button type="button" class="week-plan-swap-btn" data-week-add-meal>+ Lägg till</button>
-    </div>`;
-  }
-  const price = recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? money(recipe.portionspris) : "–";
-  const fb = recipeFeedback(recipe.id);
-  // Not a nested button-in-button: opening the recipe, swapping the day, and
-  // the cooked/skipped menu are three separate interactive siblings inside a
-  // plain container, not one control nested inside another.
-  return `<div class="week-plan-row ${index === weekOverviewDay ? "active" : ""}">
-    <button type="button" class="week-plan-row-main" data-week-details="${escapeHtml(recipe.id)}">
-      <span class="week-plan-day">${DAYS[index] || `Dag ${index + 1}`}</span>
-      <span class="week-plan-photo">${recipePhoto(recipe)}</span>
-      <span class="week-plan-name">${escapeHtml(recipe.namn)}</span>
-      <strong class="week-plan-price">${price}</strong>
-    </button>
-    <button type="button" class="week-plan-swap-btn" data-week-swap="${escapeHtml(recipe.id)}">Byt</button>
-    <details class="week-plan-menu">
-      <summary aria-label="Fler val">⋯</summary>
-      <div class="week-plan-menu-options">
-        <button type="button" class="${fb.cooked ? "marked" : ""}" data-cooked="${escapeHtml(recipe.id)}">✓ Lagad</button>
-        <button type="button" class="${fb.skipped ? "marked" : ""}" data-skipped="${escapeHtml(recipe.id)}">✗ Hoppade över</button>
-      </div>
-    </details>
-  </div>`;
 }
 function weekShoppingRowMarkup(item) {
   // SAMMA prisdisciplin som Handla-fliken: databasens riktiga pris först,
@@ -2106,7 +2073,6 @@ function weekShoppingRowMarkup(item) {
   const photo = image ? `<img class="shopping-item-image has-image" src="${escapeHtml(safeHttpUrl(image) || "")}" alt="" loading="lazy">` : categoryIconMarkup(itemCategory(item.namn));
   return `<label class="week-shopping-row"><input type="checkbox" data-week-shopping="${escapeHtml(item.namn)}">${photo}<span class="week-shopping-info"><strong>${escapeHtml(item.namn)}</strong>${campaign}</span><strong class="week-shopping-price ${missing ? "price-missing" : ""}">${price}</strong></label>`;
 }
-let weekDayAutoPicked = false;
 // §14: veckan sammanfattad i fyra rader innan man dyker ner i dagarna.
 //
 // Varje rad är RÄKNAD, inte påstådd. "3 familjefavoriter" räknas på
@@ -2153,30 +2119,29 @@ function renderWeekSummary(selected, shoppingItems, total) {
 
 function renderWeekOverview(selected, shoppingItems, total) {
   renderWeekSummary(selected, shoppingItems, total);
-  // Bara vid FÖRSTA målningen: att öppna appen en fredag med en
-  // 4-middagarsvecka ska visa en planerad dag, inte "Ingen middag". Men den
-  // som själv klickar på söndagsfliken ska självklart få se söndagen.
-  if (!weekDayAutoPicked) {
-    weekDayAutoPicked = true;
-    if (!selected[weekOverviewDay]) weekOverviewDay = firstPlannedDayFrom(selected, weekOverviewDay);
+  // L2 · VECKAN ÄR SJU RADER OCH EN SUMMERING (design D, telefon 2).
+  //
+  // Ögonbrynet säger vilken vecka det är. "Mån" är sant varje vecka; ett
+  // datumintervall är det inte.
+  const range = $("weekRangeLabel");
+  if (range) range.textContent = veckoIntervall();
+  // Sju rader, alla synliga, ingen kalender emellan. weekPlanDays() inuti
+  // veckoDagarMarkup() fyller ut veckan till sju - den klipper den aldrig.
+  // Dagens rad märks i TVÅ kanaler: accentfärgad dagförkortning och ordet
+  // "Ikväll" först i metaraden. Färgen ensam överlever inte gråskala.
+  $("weekPlanList").innerHTML = veckoDagarMarkup(selected, { idag: todayIndex() });
+  // Summeringen: delposter, linje, summa - och under summan vad den grundar
+  // sig på. Saknar en rad sitt pris står det "minst", aldrig ett exakt tal.
+  const fot = $("weekTotals");
+  if (fot) {
+    fot.innerHTML = veckofotMarkup(veckoUnderlag({
+      selected, shoppingItems, total,
+      // Samma kedjeresultat som Handla-headern läser, inte ett eget urval:
+      // två ställen som väljer kedja var för sig är två svar på frågan vad
+      // veckan kostar.
+      headerDb: state.dbChainTotals[headerPricedChain()] || null,
+    }));
   }
-  // Dagfliken bär portionspriset: veckan läses som en rad siffror utan att
-  // öppna varje dag. Tom dag visar en punkt, saknat pris ett streck.
-  $("weekDayTabs").innerHTML = DAYS.map((day, index) => {
-    const recipe = selected[index];
-    const price = !recipe ? "·" : recipe.priceStatus === "unavailable" ? "–" : recipe.portionspris ? money(recipe.portionspris) : "–";
-    return `<button type="button" class="week-day-tab ${index === weekOverviewDay ? "active" : ""} ${recipe ? "" : "empty"}" data-week-day="${index}" role="tab" aria-selected="${index === weekOverviewDay}"><span class="week-day-tab-name">${day}</span><small class="week-day-tab-price">${escapeHtml(price)}</small></button>`;
-  }).join("");
-
-  const todayRecipe = selected[weekOverviewDay];
-  $("weekTodayCard").innerHTML = todayRecipe ? weekTodayCardMarkup(todayRecipe) : weekEmptyDayMarkup();
-
-  // G3: HELA veckan, i en lista som syns utan att någon klickar. Sju rader -
-  // weekPlan är bara så lång som antalet middagar, medan dagflikarna ovanför
-  // alltid ritar sju dagar, så en vecka med fyra middagar sa två olika saker
-  // om samma vecka. En dag utan rätt är en rad som säger just det, med en
-  // väg tillbaka till den ("+ Lägg till").
-  $("weekPlanList").innerHTML = weekPlanDays(selected).map(weekPlanRowMarkup).join("");
 
   const remainingItems = shoppingItems.filter(item => itemStatus(item.namn) === NEED_TO_BUY);
   $("weekShoppingSummary").textContent = shoppingItems.length ? `${plural(remainingItems.length, "vara kvar", "varor kvar")}${total == null ? "" : ` · ${money(total)}`}` : "";
@@ -2229,7 +2194,6 @@ function renderWeekOverview(selected, shoppingItems, total) {
   // DOM in place - wiring data-week-details right after only the today-card
   // was rendered would miss the plan list's own rows, which don't exist yet
   // at that point.
-  document.querySelectorAll("[data-week-day]").forEach(button => button.addEventListener("click", () => { weekOverviewDay = Number(button.dataset.weekDay); renderWeekOverview(selected, shoppingItems, total); }));
   document.querySelectorAll("[data-week-details]").forEach(button => button.addEventListener("click", () => openRecipeTab(button.dataset.weekDetails)));
   document.querySelectorAll("[data-week-add-meal]").forEach(button => button.addEventListener("click", () => setView("recipes")));
   // Hjälteytans inbjudan lovar i klartext att "Matjakt sätter ihop veckans
@@ -2478,6 +2442,27 @@ const VALID_CHAINS = RELEASED_CHAINS;
 // numera i src/pricing/sync.js och frågas via pricingIsPending och
 // livePricesLoading.
 // ---------------------------------------------------------------------------
+// L2 · VECKAN. Vymodulen ritar DOM men känner varken prisdatabasen,
+// skafferiet eller receptbanken; det den behöver skickas in en gång här,
+// samma mönster som initShoppingView nedan.
+//
+// itemHasPrice går genom L0:s prisTillstånd i stället för att räkna om
+// "har den här raden ett pris" en tredje gång. Summan i veckofoten är ett
+// GOLV så fort svaret är nej på någon rad (C7), och den frågan får inte
+// besvaras olika på Vecka och i Handla.
+initWeekView({
+  money, plural,
+  personer: () => state.personer,
+  recipeFeedback,
+  itemHasPrice: item => {
+    const match = databaseItemFor(item.namn);
+    if (match) return prisTillstånd(match) !== PRIS_SAKNAS;
+    const live = state.livePriser[item.namn];
+    return !!live && live.pris_kr != null;
+  },
+  itemAtHome: item => (pantryForPricing()[item.namn] || 0) > 0,
+});
+
 initShoppingView({
   $, money, plural,
   categoryIconMarkup, itemCategory, itemStatus, setItemStatus,
@@ -4045,6 +4030,10 @@ $("manageBillingBtn").addEventListener("click", async () => {
   try {
     await flushServerSync();
     const { url } = await openBillingPortal(state.authToken);
+    // J4: hos Stripe kan hon säga upp, byta plan eller byta kort. Köpflödet
+    // pollar efter webhooken; portalflödet hade ingenting alls. Stämpeln gör
+    // att nästa uppvaknande hämtar planen på nytt direkt, utan åldersspärr.
+    entitlementRefresh.markBillingVisit();
     openExternal(url);
   } catch (error) { $("portalError").textContent = errorText(error); }
 });
@@ -4264,6 +4253,9 @@ handlePendingInvite();
 // att vi bygger en WebSocket-infrastruktur för det.
 function onAppResumed() {
   pullHousehold(); loadNotifications();
+  // J4: och planen. Den som sagt upp sig på en annan enhet - eller vars kort
+  // nekades i natt - ska inte fortsätta se Premium tills någon laddar om.
+  entitlementRefresh.onResume();
   // Tillbaka från Stripe i native-appen: hämta Premium-status.
   if (isAwaitingPremium() && isNativeApp()) activatePremiumAfterCheckout();
 }

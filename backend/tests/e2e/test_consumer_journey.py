@@ -510,7 +510,9 @@ class BrowserJourney(unittest.TestCase):
         # ovanför den.
         expect(page.locator("#planModal")).to_be_hidden()
         expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
-        expect(page.locator('#weekDayTabs [data-week-day="0"]')).to_be_visible()
+        # L2: veckan är sju rader, inte sju dagflikar och ett kort. Den första
+        # raden syns direkt - det är hela skärmen, inte en flik man valt.
+        expect(page.locator("#weekPlanList .vecka-dag").first).to_be_visible()
         expect(page.locator("#weekPlanUpsell")).to_be_visible()
 
     def choose_standard_week(self):
@@ -535,10 +537,9 @@ class BrowserJourney(unittest.TestCase):
             page.click('[data-choose-plan="standard"]')
             expect(plan_modal).to_be_hidden()
         expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
-        # Dagfliken följer veckodagen; en söndag utan middag har inget att
-        # byta. Måndagen har alltid veckans första rätt.
-        page.click('#weekDayTabs [data-week-day="0"]')
-        expect(page.locator("#weekTodayCard [data-week-swap]")).to_be_visible()
+        # L2: ingen flik att klicka på först. Alla sju dagarna ligger på
+        # skärmen, och den första planerade radens "Byt" är där den syns.
+        expect(page.locator("#weekPlanList [data-week-swap]").first).to_be_visible()
 
     def wait_for_store_cards(self):
         """Butikskorten - G13: de bor på Vecka, inte i Handla.
@@ -658,7 +659,11 @@ class BrowserJourney(unittest.TestCase):
             # bytet skedde av "Byt till denna rätt" längst ner - två tryck där
             # ett räcker, och en bekräftelse för en handling som Ångra i
             # toasten ändå tar tillbaka. Knappen finns inte längre.
-            page.click("#weekTodayCard [data-week-swap]")
+            #
+            # L2: bytet trycks i veckolistan. Dagskortet (#weekTodayCard) bar
+            # knappen när skärmen visade en dag i taget; nu har varje planerad
+            # dag sin egen Byt, och den första raden är den första dagen.
+            page.click("#weekPlanList [data-week-swap] >> nth=0")
             expect(page.locator("#swapModal")).to_be_visible()
             expect(page.locator("[data-choose-swap]").first).to_be_visible()
             page.click("[data-choose-swap] >> nth=0")
@@ -675,7 +680,7 @@ class BrowserJourney(unittest.TestCase):
             expect(page.locator("#undoToast button")).to_have_text("Ångra")
 
         with self.step("recept: mängder och steg"):
-            page.click("#weekTodayCard [data-week-details]")
+            page.click("#weekPlanList [data-week-details] >> nth=0")
             expect(page.locator("#recipePage")).to_be_visible()
             # L4: steget är en avbockningsbar rad (.steg) med sitt nummer i
             # egen kolumn. Bocken är kvar, klassen heter som i design D.
@@ -807,7 +812,7 @@ class BrowserJourney(unittest.TestCase):
             self.assertEqual(state["postnummer"], fixture.POSTCODE)
             self.close_account_modal()
             page.click('.bottom-nav-item[data-view="week"]')
-            expect(page.locator("#weekTodayCard [data-week-details]")).to_be_visible()
+            expect(page.locator("#weekPlanList [data-week-details]").first).to_be_visible()
             page.click('.bottom-nav-item[data-view="pantry"]')
             expect(page.locator("#pantryCount")).to_have_text("2")
 
@@ -947,29 +952,172 @@ class BrowserJourney(unittest.TestCase):
 
         lista = page.locator("#weekPlanList")
         expect(lista).to_be_visible()
-        rader = lista.locator(".week-plan-row")
+        rader = lista.locator(".vecka-dag")
         # Sju dagar, alltid - weekPlan är bara så lång som antalet middagar
-        # (fyra på Free), medan dagflikarna ovanför ritar sju. Stod det fyra
-        # rader under sju flikar sa skärmen två saker om samma vecka.
+        # (fyra på Free). Var listan kortare än sju stod veckan och sa att
+        # onsdagen inte finns.
         expect(rader).to_have_count(7)
-        self.assertEqual(page.locator("#weekDayTabs .week-day-tab").count(), 7)
+        # L2: och det finns ingen kalender kvar att klicka i. Dagflikarna och
+        # dagskortet sa två saker om samma vecka på samma skärm; nu är listan
+        # hela svaret.
+        self.assertEqual(page.locator("#weekDayTabs").count(), 0, "dagflikarna finns kvar")
+        self.assertEqual(page.locator("#weekTodayCard").count(), 0, "dagskortet finns kvar")
 
-        # Veckans rätter står i listan, inte bara i dagskortet.
+        # Veckans rätter står i listan, var och en på sin dag.
         state = self.wait_for_state(lambda s: s.get("weekPlan"), what="veckan")
-        planerade = lista.locator(".week-plan-row:not(.is-empty)")
+        planerade = lista.locator(".vecka-dag:not(.vecka-dag--tom)")
         expect(planerade).to_have_count(len(state["weekPlan"]))
         # ...och de planlösa dagarna behåller sin plats i stället för att
         # skjuta senare dagar uppåt (E2:s dagsindexfel i ett annat lager).
-        expect(lista.locator(".week-plan-row.is-empty"))\
+        expect(lista.locator(".vecka-dag--tom"))\
             .to_have_count(7 - len(state["weekPlan"]))
 
         # Ingen kvarglömd knapp mellan användaren och veckan.
         expect(page.locator("#weekPlanToggle")).to_have_count(0)
 
         # "✓ Lagad" / "✗ Hoppade över" är åtkomliga först nu.
-        expect(lista.locator(".week-plan-menu").first).to_be_visible()
-        lista.locator(".week-plan-menu summary").first.click()
+        expect(lista.locator(".vecka-dag-meny").first).to_be_visible()
+        lista.locator(".vecka-dag-meny summary").first.click()
         expect(lista.locator("[data-cooked]").first).to_be_visible()
+
+    # ---- L2: Veckan som i design D ----
+    def test_veckan_ryms_pa_en_skarm_med_rubrik_och_summering(self):
+        """L2:s acceptanskriterium, mätt i en riktig webbläsare på 390x844.
+
+        "Sju rader ryms utan scroll på 844 px tillsammans med rubrik och
+        summering." Kravet är inte att listan finns - G3 gjorde den synlig -
+        utan att HELA veckan går att LÄSA i ett ögonkast. En sjunde rad som
+        ligger 200 px under vikten är sju rader i markupen och fem på skärmen,
+        och då är frågan appen finns för fortfarande obesvarad.
+
+        Andra halvan av kriteriet: "Två tomma dagar renderas rätt." Veckan
+        körs dit genom den riktiga vägen - plustecknet på en tom dag leder
+        till recepten, ett recept läggs till, och en Free-vecka på fyra
+        middagar blir fem. Då är exakt två dagar tomma, och de prövas där de
+        står.
+        """
+        page = self.page
+        page.set_viewport_size(MOBILE)
+        page.goto(self.app())
+        self.complete_onboarding()
+
+        lista = page.locator("#weekPlanList")
+        expect(lista.locator(".vecka-dag")).to_have_count(7)
+        tomma = lista.locator(".vecka-dag--tom")
+        self.assertGreaterEqual(tomma.count(), 3, "en Free-vecka har fyra middagar")
+
+        with self.step("plustecknet på en tom dag leder till recepten"):
+            # En tom dag är en öppen plats med en väg in, inte ett hål.
+            plan_innan = self.local_state().get("weekPlan") or []
+            tomma.first.locator("[data-week-add-meal]").click()
+            expect(page.locator("#top")).to_have_class(re.compile(r"view-recipes"))
+            # Hyllorna ÄR listan när ingenting är filtrerat. Välj en rätt som
+            # inte redan ligger i veckan - annars tar knappen bort den i
+            # stället för att lägga till den.
+            expect(page.locator("#recipeShelves [data-shelf-recipe]").first).to_be_visible()
+            ny = page.evaluate(
+                """(plan) => {
+                     const kort = [...document.querySelectorAll('#recipeShelves [data-shelf-recipe]')];
+                     const val = kort.find(el => !plan.includes(el.dataset.shelfRecipe));
+                     return val ? val.dataset.shelfRecipe : null;
+                   }""", plan_innan)
+            self.assertTrue(ny, "hyllorna erbjöd bara rätter som redan låg i veckan")
+            page.click(f'#recipeShelves [data-shelf-recipe="{ny}"]')
+            expect(page.locator("#recipePage [data-recipe-add]")).to_be_visible()
+            page.click("#recipePage [data-recipe-add]")
+            page.click('.bottom-nav-item[data-view="week"]')
+
+        with self.step("två tomma dagar renderas rätt"):
+            expect(lista.locator(".vecka-dag")).to_have_count(7)
+            expect(lista.locator(".vecka-dag--tom")).to_have_count(2)
+            plan = self.local_state().get("weekPlan") or []
+            self.assertEqual(len(plan), 5, plan)
+            # Varje tom dag bär sin egen dag, sin streckade ruta och sin väg
+            # in - och ingen bild. Att rita en grå fylld ruta där fotot skulle
+            # stått läser som ett foto som inte laddade.
+            for i in range(2):
+                rad = lista.locator(".vecka-dag--tom").nth(i)
+                expect(rad).to_contain_text("Ingen middag planerad")
+                self.assertEqual(rad.locator("img").count(), 0, "den tomma dagen ritade en bild")
+                self.assertEqual(rad.locator("[data-week-swap]").count(), 0)
+                knapp = rad.locator("[data-week-add-meal]")
+                expect(knapp).to_be_visible()
+                # Sju likadana plus i rad är sju likadana knappar för den som
+                # lyssnar; varje knapp säger vilken dag den gäller.
+                self.assertRegex(knapp.get_attribute("aria-label") or "",
+                                 r"Lägg till middag på \w+")
+                # Träffytan är 44x44 även när knappen SER smalare ut: raden
+                # ska rymma rättens namn, och .tapmin-mönstret ur kap. 5
+                # vidgar ytan utan att flytta något visuellt. Den mäts därför
+                # som en tumme möter den - träffar ett tryck strax utanför
+                # den synliga kanten fortfarande knappen? - och inte som ett
+                # mått i CSS.
+                träff = knapp.evaluate("""
+                    (el) => {
+                      const r = el.getBoundingClientRect();
+                      const mitt = r.top + r.height / 2;
+                      const träffar = (x, y) => {
+                        const t = document.elementFromPoint(x, y);
+                        return !!(t && (t === el || el.contains(t)));
+                      };
+                      const kant = (44 - r.width) / 2;
+                      return {
+                        hojd: r.height,
+                        vanster: kant <= 0 || träffar(r.left - kant + 1, mitt),
+                        hoger: kant <= 0 || träffar(r.right + kant - 1, mitt),
+                      };
+                    }
+                """)
+                self.assertGreaterEqual(träff["hojd"], 44, träff)
+                self.assertTrue(träff["vanster"] and träff["hoger"],
+                                f"träffytan är smalare än 44 px: {träff}")
+
+        with self.step("sju rader, rubrik och summering ryms på 844 px"):
+            # Mätningen görs med varje rullbar förfader i toppläge: det som
+            # räknas är vad man ser NÄR SKÄRMEN ÖPPNAS, inte vad man kan
+            # skrolla fram.
+            mått = page.evaluate("""
+                () => {
+                  for (let el = document.getElementById('weekTotals'); el; el = el.parentElement) {
+                    if (el.scrollTop) el.scrollTop = 0;
+                  }
+                  window.scrollTo(0, 0);
+                  const rader = [...document.querySelectorAll('#weekPlanList .vecka-dag')];
+                  const nav = document.querySelector('.bottom-nav');
+                  return {
+                    rubrik: document.getElementById('weekOverviewHeading').getBoundingClientRect().top,
+                    sista: rader.length ? rader[rader.length - 1].getBoundingClientRect().bottom : null,
+                    summering: document.getElementById('weekTotals').getBoundingClientRect().bottom,
+                    navTopp: nav ? nav.getBoundingClientRect().top : window.innerHeight,
+                    hojd: window.innerHeight,
+                    rader: rader.length,
+                    // Vid fel vill man veta VAD som tar plats, inte bara att
+                    // något gör det.
+                    block: [...document.querySelectorAll('.week-overview > *')].map(el => ({
+                      namn: el.id || el.className,
+                      topp: Math.round(el.getBoundingClientRect().top),
+                      botten: Math.round(el.getBoundingClientRect().bottom),
+                    })),
+                    rad1: rader.length ? Math.round(rader[0].getBoundingClientRect().height) : null,
+                  };
+                }
+            """)
+            self.assertEqual(mått["rader"], 7, mått)
+            self.assertGreaterEqual(mått["rubrik"], 0, f"rubriken låg ovanför vikten: {mått}")
+            gräns = min(mått["navTopp"], mått["hojd"])
+            self.assertLessEqual(
+                mått["sista"], gräns,
+                f"den sjunde raden ligger under vikten - veckan går inte att läsa: {mått}")
+            self.assertLessEqual(
+                mått["summering"], gräns,
+                f"summeringen ligger under vikten: {mått}")
+
+        # Och summan säger VAD den är. Ett tal utan det beskedet är precis det
+        # C7 förbjuder: en summa som utelämnar de osäkra radernas kostnad får
+        # aldrig visas som ett exakt belopp.
+        rubrik = page.locator("#weekTotalLabel").inner_text().strip().casefold()
+        self.assertIn(rubrik, ("att handla för", "minst att handla för"))
+        self.assertEqual(self.console_errors, [])
 
     def test_forsta_veckan_kommer_utan_betalvagg(self):
         """G8: det dyraste avhoppet - hänglåsväggen före första måltiden.
@@ -998,8 +1146,7 @@ class BrowserJourney(unittest.TestCase):
         state = self.wait_for_state(lambda s: s.get("weekPlan"), what="veckan")
         self.assertTrue(1 <= len(state["weekPlan"]) <= 4, state["weekPlan"])
         expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
-        page.click('#weekDayTabs [data-week-day="0"]')
-        expect(page.locator("#weekTodayCard [data-week-details]")).to_be_visible()
+        expect(page.locator("#weekPlanList [data-week-details]").first).to_be_visible()
 
         # Raden ovanför veckan är erbjudandet - och den leder till exakt den
         # jämförelse som förut stod i vägen.
@@ -1010,8 +1157,10 @@ class BrowserJourney(unittest.TestCase):
         # det G8 beskriver.
         ordning = page.evaluate(
             "() => [...document.querySelectorAll('.week-overview > *')]"
-            ".map(el => el.id || el.className.split(' ')[0])")
-        self.assertLess(ordning.index("weekPlanUpsell"), ordning.index("weekDayTabs"), ordning)
+            ".map(el => el.id || el.className)")
+        # L2: veckan ÄR listan nu, så "ovanför veckan" mäts mot listan.
+        veckan = next(i for i, namn in enumerate(ordning) if "week-plan-section" in namn)
+        self.assertLess(ordning.index("weekPlanUpsell"), veckan, ordning)
         upsell.click()
         expect(page.locator("#planModal")).to_be_visible()
         # J3: veckotyperna är gratis, så jämförelsen är ett ERBJUDANDE om en
@@ -1162,12 +1311,15 @@ class BrowserJourney(unittest.TestCase):
         page = self.page
         page.goto(self.app())
         self.complete_onboarding()
-        page.click('#weekDayTabs [data-week-day="0"]')
+        # L2: dagflikarna finns inte längre - veckan visar alla sju dagarna
+        # samtidigt, och måndagen ÄR första raden. Det som förut krävde ett
+        # klick på en flik för att peka testet mot måndagen är nu bara
+        # `nth=0`, och kravet nedan (bara måndagens rätt byts) är oförändrat.
 
         före = list(self.wait_for_state(lambda s: s.get("weekPlan"), what="veckan")["weekPlan"])
 
         with self.step("ett tryck byter"):
-            page.click("#weekTodayCard [data-week-swap]")
+            page.click("#weekPlanList [data-week-swap] >> nth=0")
             expect(page.locator("#swapModal")).to_be_visible()
             page.click("[data-choose-swap] >> nth=0")
             # ETT tryck: modalen är stängd och veckan är bytt, utan ett andra.
@@ -1189,7 +1341,7 @@ class BrowserJourney(unittest.TestCase):
         with self.step("fyra byten utan tak"):
             plan = före
             for varv in range(4):
-                page.click("#weekTodayCard [data-week-swap]")
+                page.click("#weekPlanList [data-week-swap] >> nth=0")
                 expect(page.locator("#swapModal")).to_be_visible()
                 # Inget hänglås mellan användaren och bytet - taket var det
                 # enda som fanns här, och det är borta.
@@ -1202,7 +1354,7 @@ class BrowserJourney(unittest.TestCase):
                                            what=f"byte {varv + 1}")["weekPlan"]
 
         with self.step("avsikten är det som säljs"):
-            page.click("#weekTodayCard [data-week-swap]")
+            page.click("#weekPlanList [data-week-swap] >> nth=0")
             expect(page.locator("#swapModal")).to_be_visible()
             # "Något annat" är gratis och byter som vanligt...
             fritt = page.locator('[data-swap-intent=""]')
@@ -1243,7 +1395,7 @@ class BrowserJourney(unittest.TestCase):
         state = self.wait_for_state(lambda s: s.get("weekPlan"), what="veckan")
         self.assertTrue(len(state["weekPlan"]) >= 1, state["weekPlan"])
         expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
-        expect(page.locator("#weekPlanList .week-plan-row:not(.is-empty)").first).to_be_visible()
+        expect(page.locator("#weekPlanList .vecka-dag:not(.vecka-dag--tom)").first).to_be_visible()
 
         # "Välj veckotyp" finns kvar - efter leveransen, inte före den.
         page.click('.bottom-nav-item[data-view="home"]')
@@ -1303,15 +1455,13 @@ class BrowserJourney(unittest.TestCase):
         # fokus tillbaka till. Det är en väntan på ett lugnt läge, inte en
         # höjd timeout.
         self.wait_for_store_cards()
-        # Dagfliken följer veckodagen, och en Free-vecka har fyra middagar -
-        # öppnas resan en fredag står dagskortet på en tom dag och har ingen
-        # "Byt"-knapp alls. Måndagen har alltid veckans första rätt.
-        page.click('#weekDayTabs [data-week-day="0"]')
-        expect(page.locator("#weekTodayCard [data-week-swap]")).to_be_visible()
+        # L2: veckans rader ligger alla på skärmen, så "Byt" finns utan att
+        # först välja en dag - och den första planerade radens knapp duger.
+        expect(page.locator("#weekPlanList [data-week-swap]").first).to_be_visible()
 
         fall = [
             ("week", "#weekPlanUpsell", "#planModal"),
-            ("week", "#weekTodayCard [data-week-swap]", "#swapModal"),
+            ("week", "#weekPlanList .vecka-dag [data-week-swap]", "#swapModal"),
             ("home", "#weekSheetOpen", "#weekSheet"),
             ("home", "#feedbackBtn", "#feedbackSheet"),
             # G11: kontoarket nås via Inställningar-skärmen, som inte har
@@ -2060,39 +2210,36 @@ class BrowserJourney(unittest.TestCase):
         """)
         page.reload()
         page.click('.bottom-nav-item[data-view="week"]')
-        expect(page.locator("#weekDayTabs .week-day-tab").first).to_be_visible()
+        # L2: veckan är sju rader. Testet klickade förut sig fram genom
+        # dagflikarna för att se en dag i taget; nu står alla sju på skärmen
+        # och förskjutningen - om den fanns - syns utan ett enda klick.
+        rader = page.locator("#weekPlanList .vecka-dag")
+        expect(rader.first).to_be_visible()
+        expect(rader).to_have_count(7)
 
-        # Tisdagsfliken är den tomma dagen, och den säger det.
-        page.click('#weekDayTabs [data-week-day="1"]')
-        expect(page.locator("#weekTodayCard .week-today-empty")).to_be_visible()
-        expect(page.locator('#weekDayTabs [data-week-day="1"]')).to_have_class(re.compile(r"empty"))
+        # Tisdagen är den tomma dagen, och raden säger det - med orden, inte
+        # bara med en tonad flik.
+        tisdag = rader.nth(1)
+        expect(tisdag).to_have_class(re.compile(r"vecka-dag--tom"))
+        expect(tisdag).to_contain_text("Ingen middag planerad")
+        self.assertIn("Tis", tisdag.evaluate("el => el.textContent"))
 
         # Onsdagen bär veckoplanens TREDJE id - inte tisdagens rätt uppflyttad.
-        # (Namnet läses ur tillståndet, så det är planens id som avgör facit.)
-        page.click('#weekDayTabs [data-week-day="2"]')
-        kort = page.locator("#weekTodayCard .week-today-card")
-        expect(kort).to_be_visible()
-        expect(page.locator("#weekTodayCard .week-today-day")).to_have_text("onsdag")
-        namn_pa_kortet = kort.locator(".week-today-info strong").first.inner_text().strip()
+        # (Namnet läses ur raden, så det är planens id som avgör facit.)
+        onsdag = rader.nth(2)
+        self.assertNotIn("vecka-dag--tom", onsdag.get_attribute("class"))
+        self.assertIn("Ons", onsdag.evaluate("el => el.textContent"))
+        namn_pa_raden = onsdag.locator(".vecka-dag-namn").first.inner_text().strip()
 
-        # Bytesrutan är överens med kortet: samma dag, samma rätt. Det var
-        # precis de två som drev isär - kortet numrerade i den filtrerade
-        # listan, bytesrutan i den ofiltrerade weekPlan.
-        page.click("#weekTodayCard [data-week-swap]")
+        # Bytesrutan är överens med raden: samma dag, samma rätt. Det var
+        # precis de två som drev isär - listan numrerade i den filtrerade
+        # veckan, bytesrutan i den ofiltrerade weekPlan.
+        onsdag.locator("[data-week-swap]").click()
         expect(page.locator("#swapModal")).to_be_visible()
         hint = page.locator("#swapModalHint").inner_text()
-        self.assertIn("Ons", hint, f"bytesrutan pekade på en annan dag än kortet: {hint!r}")
-        self.assertIn(namn_pa_kortet, hint,
-                      f"bytesrutan pekade på en annan rätt än kortet ({namn_pa_kortet!r}): {hint!r}")
-
-        # Den dolda "Veckans plan"-listan ritar också en rad per dag, med den
-        # tomma dagen kvar på sin plats (G3 tänder listan; den ska inte tändas
-        # på en förskjuten vecka).
-        rader = page.locator("#weekPlanList .week-plan-row")
-        self.assertGreaterEqual(rader.count(), 3)
-        self.assertIn("is-empty", rader.nth(1).get_attribute("class"))
-        self.assertIn("Tis", rader.nth(1).evaluate("el => el.textContent"))
-        self.assertIn(namn_pa_kortet, rader.nth(2).evaluate("el => el.textContent"))
+        self.assertIn("Ons", hint, f"bytesrutan pekade på en annan dag än raden: {hint!r}")
+        self.assertIn(namn_pa_raden, hint,
+                      f"bytesrutan pekade på en annan rätt än raden ({namn_pa_raden!r}): {hint!r}")
 
         self.assertEqual(self.console_errors, [])
 
