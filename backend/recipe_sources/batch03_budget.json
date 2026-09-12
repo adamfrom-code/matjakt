@@ -134,7 +134,8 @@
       },
       {
         "name": "Paprikapulver",
-        "pantryStaple": true
+        "amount": 10,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -301,8 +302,7 @@
       },
       {
         "name": "Smör",
-        "amount": 40,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Salt",
@@ -385,8 +385,7 @@
       },
       {
         "name": "Olivolja",
-        "amount": 4,
-        "unit": "msk"
+        "pantryStaple": true
       },
       {
         "name": "Basilika",
@@ -485,8 +484,7 @@
       },
       {
         "name": "Smör",
-        "amount": 40,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Salt",
@@ -573,8 +571,7 @@
       },
       {
         "name": "Olivolja",
-        "amount": 2,
-        "unit": "msk"
+        "pantryStaple": true
       },
       {
         "name": "Salt",
@@ -657,8 +654,7 @@
       },
       {
         "name": "Smör",
-        "amount": 20,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Salt",
@@ -750,8 +746,7 @@
       },
       {
         "name": "Smör",
-        "amount": 40,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Salt",
