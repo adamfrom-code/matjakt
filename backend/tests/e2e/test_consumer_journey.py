@@ -856,6 +856,49 @@ class BrowserJourney(unittest.TestCase):
 
         self.assertEqual(self.console_errors, [])
 
+    def test_hela_veckan_syns_utan_ett_enda_klick(self):
+        """G3: sju rader syns utan att man klickar.
+
+        "Veckans plan" var `hidden` i markupen, och koden bakom ritade
+        dessutom bara fyra rader med resten bakom "Visa hela veckan". Kvar på
+        skärmen fanns sju dagflikar och ETT dagskort i taget - alltså gick
+        frågan appen finns för, *vad äter vi i veckan*, inte att besvara med
+        ögonen. "✓ Lagad" och "✗ Hoppade över" fanns bara i den dolda listan
+        och var därmed oåtkomliga.
+
+        Testet rör ingenting efter onboardingen. Varje klick det INTE gör är
+        en del av påståendet.
+        """
+        page = self.page
+        page.goto(self.app())
+        self.complete_onboarding()
+
+        lista = page.locator("#weekPlanList")
+        expect(lista).to_be_visible()
+        rader = lista.locator(".week-plan-row")
+        # Sju dagar, alltid - weekPlan är bara så lång som antalet middagar
+        # (fyra på Free), medan dagflikarna ovanför ritar sju. Stod det fyra
+        # rader under sju flikar sa skärmen två saker om samma vecka.
+        expect(rader).to_have_count(7)
+        self.assertEqual(page.locator("#weekDayTabs .week-day-tab").count(), 7)
+
+        # Veckans rätter står i listan, inte bara i dagskortet.
+        state = self.wait_for_state(lambda s: s.get("weekPlan"), what="veckan")
+        planerade = lista.locator(".week-plan-row:not(.is-empty)")
+        expect(planerade).to_have_count(len(state["weekPlan"]))
+        # ...och de planlösa dagarna behåller sin plats i stället för att
+        # skjuta senare dagar uppåt (E2:s dagsindexfel i ett annat lager).
+        expect(lista.locator(".week-plan-row.is-empty"))\
+            .to_have_count(7 - len(state["weekPlan"]))
+
+        # Ingen kvarglömd knapp mellan användaren och veckan.
+        expect(page.locator("#weekPlanToggle")).to_have_count(0)
+
+        # "✓ Lagad" / "✗ Hoppade över" är åtkomliga först nu.
+        expect(lista.locator(".week-plan-menu").first).to_be_visible()
+        lista.locator(".week-plan-menu summary").first.click()
+        expect(lista.locator("[data-cooked]").first).to_be_visible()
+
     def test_forsta_veckan_kommer_utan_betalvagg(self):
         """G8: det dyraste avhoppet - hänglåsväggen före första måltiden.
 
