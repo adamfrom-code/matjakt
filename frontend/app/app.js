@@ -24,6 +24,7 @@ import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, 
 // svenska, och en användare kan inte göra något åt ett "HTTP 500" (E7).
 import { errorText } from "./src/api/http.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
+import { closeModal, openModal } from "./src/utils/modal.js";
 import { kopplaSvepBort } from "./src/utils/swipe-remove.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.js";
 import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
@@ -3029,9 +3030,18 @@ function refreshAfterSettingsChange() {
   else chooseMenu(false);
 }
 
-$("feedbackBtn").addEventListener("click", () => { $("feedbackSheet").hidden = false; $("feedbackStatus").textContent = ""; $("feedbackText").focus(); });
-$("feedbackClose").addEventListener("click", () => { $("feedbackSheet").hidden = true; });
-$("feedbackSheet").addEventListener("click", event => { if (event.target === $("feedbackSheet")) $("feedbackSheet").hidden = true; });
+// G6: samma lager som alla andra ark. Här fokuseras textrutan i stället för
+// rubriken - skärmen har EN uppgift och den är att skriva - men fokusfällan,
+// Escape och återlämnandet av fokus är gemensamma.
+function openFeedbackSheet() {
+  $("feedbackStatus").textContent = "";
+  openModal($("feedbackSheet"), { onClose: closeFeedbackSheet, focus: false });
+  $("feedbackText").focus();
+}
+function closeFeedbackSheet() { closeModal($("feedbackSheet")); }
+$("feedbackBtn").addEventListener("click", openFeedbackSheet);
+$("feedbackClose").addEventListener("click", closeFeedbackSheet);
+$("feedbackSheet").addEventListener("click", event => { if (event.target === $("feedbackSheet")) closeFeedbackSheet(); });
 $("feedbackSend").addEventListener("click", async () => {
   const text = $("feedbackText").value.trim();
   if (!text) { $("feedbackStatus").textContent = "Skriv något först."; return; }
@@ -3044,7 +3054,7 @@ $("feedbackSend").addEventListener("click", async () => {
     if (!response.ok) throw new Error();
     $("feedbackText").value = "";
     $("feedbackStatus").textContent = "Tack! Din feedback är framme.";
-    setTimeout(() => { $("feedbackSheet").hidden = true; }, 1400);
+    setTimeout(closeFeedbackSheet, 1400);
   } catch {
     $("feedbackStatus").textContent = "Gick inte att skicka just nu - försök igen.";
   } finally {
@@ -3054,15 +3064,18 @@ $("feedbackSend").addEventListener("click", async () => {
 
 function openWeekSheet() {
   $("restoreWeekBtn").hidden = !(state.weekHistory || []).length;
-  $("weekSheet").hidden = false; document.body.style.overflow = "hidden";
+  openModal($("weekSheet"), { onClose: closeWeekSheet });
 }
-function closeWeekSheet() { $("weekSheet").hidden = true; document.body.style.overflow = ""; }
+function closeWeekSheet() { closeModal($("weekSheet")); }
 $("budgetCardBtn").addEventListener("click", openWeekSheet);
 $("weekSheetOpen").addEventListener("click", openWeekSheet);
 $("weekSheetClose").addEventListener("click", closeWeekSheet);
 $("weekSheetDone").addEventListener("click", closeWeekSheet);
 $("weekSheet").addEventListener("click", event => { if (event.target === $("weekSheet")) closeWeekSheet(); });
-document.addEventListener("keydown", event => { if (event.key === "Escape" && !$("weekSheet").hidden) closeWeekSheet(); });
+// G6: den gamla, ENDA Escape-lyssnaren i hela appen stod här och kunde bara
+// stänga veckoarket. Escape bor numera i openModal() och stänger det översta
+// lagret, vilket det än är - inklusive onboardingmodalen, som inte gick att
+// stänga med tangentbord alls.
 $("sheetPlanBtn").addEventListener("click", () => { closeWeekSheet(); openPlanComparison(); });
 $("restoreWeekBtn").addEventListener("click", () => { closeWeekSheet(); restorePreviousWeek(); });
 
@@ -3312,20 +3325,23 @@ async function handlePendingInvite() {
   try {
     preview = await previewInvite(pendingInviteToken);
   } catch (error) {
-    $("inviteLanding").hidden = false;
+    openModal($("inviteLanding"));
     $("inviteLandingTitle").textContent = "Inbjudan gäller inte längre";
     $("inviteLandingBody").textContent = "Be den som bjöd in dig att skicka en ny länk.";
     $("inviteJoinBtn").hidden = true;
     return;
   }
-  $("inviteLanding").hidden = false;
+  // G6: inbjudningslandningen är ett modalt lager som alla andra. Den öppnas
+  // av en LÄNK, inte av en knapp i appen, så det finns ingen öppnare att ge
+  // fokus tillbaka till - men fällan och Escape gäller ändå.
+  openModal($("inviteLanding"));
   $("inviteLandingTitle").textContent = `${preview.invitedBy || "Någon"} har bjudit in dig till ${preview.householdName}`;
   $("inviteLandingBody").textContent = state.authToken
     ? "Ni delar veckan, inköpslistan och skafferiet."
     : "Logga in eller skapa ett konto så är du med.";
   $("inviteJoinBtn").querySelector("span").textContent = state.authToken ? `Gå med i ${preview.householdName}` : "Logga in och gå med";
   $("inviteJoinBtn").onclick = async () => {
-    if (!state.authToken) { $("inviteLanding").hidden = true; openAccountModal(); return; }
+    if (!state.authToken) { closeModal($("inviteLanding")); openAccountModal(); return; }
     $("inviteLandingError").textContent = "";
     try {
       const { household } = await joinHousehold(state.authToken, pendingInviteToken);
@@ -3333,7 +3349,7 @@ async function handlePendingInvite() {
       await pullHousehold(true);
       startHouseholdSync();
       clearInviteFromUrl();
-      $("inviteLanding").hidden = true;
+      closeModal($("inviteLanding"));
       renderHousehold();
       loadNotifications();
       render();
@@ -3372,7 +3388,7 @@ function openSwapModal(currentId) {
     $("swapOptions").innerHTML = `<button type="button" class="store-compare-upsell" id="swapUpsell">Du har använt dina ${FREE_SWAP_LIMIT} gratis byten den här veckan. Med Premium byter du hur mycket du vill.</button>`;
     $("swapUpsell").addEventListener("click", () => { closeSwapModal(); openPremiumPitch(); });
     $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true;
-    $("swapModal").hidden = false;
+    openModal($("swapModal"), { onClose: closeSwapModal });
     return;
   }
   // Dagordnad, med tomma dagar kvar som null: dayIndex kommer ur den
@@ -3387,10 +3403,10 @@ function openSwapModal(currentId) {
   // "billigast först" blev slumpartad.
   const current = selected.find(recipe => recipe?.id === currentId);
   const allOptions = swapOptionsFor(current, candidates, "");
-  if (!allOptions.length) { $("swapModalHint").textContent = ""; $("swapOptions").innerHTML = `<p class="live-loading">Inga alternativ hittades som passar budget, butik och dina filter just nu.</p>`; $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true; $("swapModal").hidden = false; return; }
+  if (!allOptions.length) { $("swapModalHint").textContent = ""; $("swapOptions").innerHTML = `<p class="live-loading">Inga alternativ hittades som passar budget, butik och dina filter just nu.</p>`; $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true; openModal($("swapModal"), { onClose: closeSwapModal }); return; }
   swapContext = { currentId, dayIndex, current, candidates, intent: "", allOptions, visibleCount: SWAP_OPTIONS_BATCH, selectedId: null };
   renderSwapModal();
-  $("swapModal").hidden = false;
+  openModal($("swapModal"), { onClose: closeSwapModal });
 }
 // Alternativen som faktiskt är bättre i den valda meningen. Rankningen och
 // ärlighetsreglerna bor i src/services/swap.js.
@@ -3444,7 +3460,7 @@ $("swapConfirmBtn").addEventListener("click", () => {
   clearPriceSnapshots();
   saveState(); render(); closeSwapModal();
 });
-function closeSwapModal() { $("swapModal").hidden = true; swapContext = null; }
+function closeSwapModal() { closeModal($("swapModal")); swapContext = null; }
 document.querySelectorAll("[data-swap-close]").forEach(button => button.addEventListener("click", closeSwapModal));
 
 // =============================================================================
@@ -3638,9 +3654,9 @@ function openPlanComparison() {
     clearPriceSnapshots();
     saveState(); render(); closePlanModal(); setView("week");
   }));
-  $("planModal").hidden = false;
+  openModal($("planModal"), { onClose: closePlanModal });
 }
-function closePlanModal() { $("planModal").hidden = true; }
+function closePlanModal() { closeModal($("planModal")); }
 document.querySelectorAll("[data-plan-close]").forEach(button => button.addEventListener("click", closePlanModal));
 
 function logEntriesSince(daysAgo) {
@@ -3701,8 +3717,8 @@ function renderStats() {
 $("openStatsBtn").addEventListener("click", () => { renderStats(); setView("stats"); });
 $("homeShoppingStat").addEventListener("click", () => setView("basket"));
 
-function openAccountModal() { $("accountModal").hidden = false; }
-function closeAccountModal() { $("accountModal").hidden = true; $("loginError").textContent = ""; $("registerError").textContent = ""; $("redeemError").textContent = ""; $("forgotError").textContent = ""; $("resetError").textContent = ""; $("deleteError").textContent = ""; }
+function openAccountModal() { openModal($("accountModal"), { onClose: closeAccountModal }); }
+function closeAccountModal() { closeModal($("accountModal")); $("loginError").textContent = ""; $("registerError").textContent = ""; $("redeemError").textContent = ""; $("forgotError").textContent = ""; $("resetError").textContent = ""; $("deleteError").textContent = ""; }
 $("profileBtn").addEventListener("click", openAccountModal);
 document.querySelectorAll("[data-account-close]").forEach(button => button.addEventListener("click", closeAccountModal));
 function showAccountForm(name) {
@@ -3891,7 +3907,7 @@ async function resumePendingInvite() {
     await pullHousehold(true);
     startHouseholdSync();
     clearInviteFromUrl();
-    $("inviteLanding").hidden = true;
+    closeModal($("inviteLanding"));
     renderAccount();
     render();
     showUndoToast(`Du är med i ${household.name}`, null);
@@ -4124,9 +4140,13 @@ function openPantryAddConfirm(key, product) {
 document.querySelectorAll("#pantryAddLocation button").forEach(button => button.addEventListener("click", () => { pantryPickLocation = button.dataset.location; document.querySelectorAll("#pantryAddLocation button").forEach(b => b.classList.toggle("active", b === button)); }));
 function openPantryModal() {
   $("pantrySearch").value = ""; $("pantrySearch").hidden = false; $("pantryPickerList").hidden = false; $("pantryLiveResults").hidden = false; $("pantryAddConfirm").hidden = true;
-  renderPantryPicker(""); $("pantryLiveResults").innerHTML = ""; $("pantryModal").hidden = false; $("pantrySearch").focus();
+  renderPantryPicker(""); $("pantryLiveResults").innerHTML = "";
+  // Sökrutan är skärmens enda uppgift, så fokus går dit i stället för till
+  // rubriken - men fällan, Escape och fokusåterlämningen är gemensamma.
+  openModal($("pantryModal"), { onClose: closePantryModal, focus: false });
+  $("pantrySearch").focus();
 }
-function closePantryModal() { $("pantryModal").hidden = true; }
+function closePantryModal() { closeModal($("pantryModal")); }
 $("addPantryBtn").addEventListener("click", openPantryModal);
 document.querySelectorAll("[data-pantry-close]").forEach(button => button.addEventListener("click", closePantryModal));
 document.querySelectorAll("#pantryTabs button").forEach(button => button.addEventListener("click", () => { state.pantryTab = button.dataset.pantryTab; renderPantry(); }));
@@ -4148,7 +4168,7 @@ function renderCookResults(localMatches, externalRecipes, hiddenByDiet = false) 
   document.querySelectorAll("[data-cook-open]").forEach(button => button.addEventListener("click", () => { closeCookModal(); openRecipeTab(button.dataset.cookOpen); }));
 }
 async function openCookModal() {
-  $("cookModal").hidden = false;
+  openModal($("cookModal"), { onClose: closeCookModal });
   const pantryNames = pantryNamesForCooking();
   const dietFilterActive = dietFilterIsActive();
   const localMatches = matchLocalRecipesToPantry(localRecipesForUser(), pantryNames);
@@ -4164,7 +4184,7 @@ async function openCookModal() {
     renderCookResults(localMatches, []);
   }
 }
-function closeCookModal() { $("cookModal").hidden = true; }
+function closeCookModal() { closeModal($("cookModal")); }
 $("cookFromPantryBtn").addEventListener("click", openCookModal);
 document.querySelectorAll("[data-cook-close]").forEach(button => button.addEventListener("click", closeCookModal));
 restoreNutritionGoalsForm();

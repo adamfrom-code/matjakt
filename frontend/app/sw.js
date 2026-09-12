@@ -23,7 +23,7 @@
 // isär, så det räknas numera från det högsta som någonsin setts och aldrig
 // från det som råkar ligga i den egna grenen.
 // Se scripts/frontend_version.mjs.
-const CACHE_NAME = "matjakt-shell-v109";
+const CACHE_NAME = "matjakt-shell-v110";
 
 self.addEventListener("install", () => self.skipWaiting());
 
