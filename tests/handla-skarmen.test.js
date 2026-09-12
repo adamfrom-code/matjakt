@@ -143,7 +143,7 @@ test("medan priset hämtas lånar raden ingen av de tre formerna", () => {
 // ---------------------------------------------------------------------------
 
 test("raden är kryssrutan: en knapp, inte tre", () => {
-  rigga({ matchningar: { "Gul lök": RADER.kontrollerat.match } });
+  rigga({ matchningar: { "Gul lök": { ...RADER.kontrollerat.match, neededAmount: 1, neededUnit: "kg" } } });
   const html = shoppingRowMarkup(vara("Gul lök", { total: 1, unit: "kg" }));
   assert.ok(html.includes('<button type="button" class="vara" data-bought="Gul lök"'), html);
   assert.ok(html.includes('aria-pressed="false"'), "obockad rad saknar aria-pressed");
@@ -243,13 +243,13 @@ function kassaDom() {
 }
 
 test("foten säger MINST när talet är ett golv, och SUMMA när det inte är det", async () => {
-  const { renderKassaFörTest } = await import("../frontend/app/src/views/shopping.js");
+  const { renderKassa } = await import("../frontend/app/src/views/shopping.js");
   const osäker = { productName: "Honung", totalCost: null, packages: 1, exactPackaging: false, priceStatus: "current" };
   const dom = kassaDom();
   rigga({ matchningar: { Honung: osäker, "Gul lök": RADER.kontrollerat.match } });
   initShoppingView({ $: dom.$ });
 
-  renderKassaFörTest({
+  renderKassa({
     shoppingItems: [vara("Honung"), vara("Gul lök")], total: 612, extrasCost: 0,
     headerDb: { totalIsFloor: true, pricingBasis: "VERIFIED" }, activeChain: "Willys",
   });
@@ -262,7 +262,7 @@ test("foten säger MINST när talet är ett golv, och SUMMA när det inte är de
   assert.ok(dom.noder.shoppingCost.innerHTML.includes("/ 800 kr"), "budgeten försvann ur kassan");
   assert.ok(dom.noder.prisnyckel.innerHTML.includes("prisnyckel"), "teckenförklaringen saknas i foten");
 
-  renderKassaFörTest({
+  renderKassa({
     shoppingItems: [vara("Gul lök")], total: 39, extrasCost: 0,
     headerDb: { totalIsFloor: false, pricingBasis: "VERIFIED" }, activeChain: "Willys",
   });
@@ -276,9 +276,8 @@ test("en misslyckad prissättning visar L0:s tomma ram, inte en evig spinner", (
   rigga();
   state.dbPricingFailedAt = Date.now();
   initShoppingView({ $: dom.$, pricingPending: () => false });
-  // eslint-disable-next-line no-undef
-  return import("../frontend/app/src/views/shopping.js").then(({ renderKassaFörTest }) => {
-    renderKassaFörTest({ shoppingItems: [vara("Dill")], total: null, extrasCost: 0, headerDb: null, activeChain: "Willys" });
+  return import("../frontend/app/src/views/shopping.js").then(({ renderKassa }) => {
+    renderKassa({ shoppingItems: [vara("Dill")], total: null, extrasCost: 0, headerDb: null, activeChain: "Willys" });
     assert.ok(dom.noder.shoppingCost.innerHTML.startsWith(prisMarkup(null, SAKNAS)), dom.noder.shoppingCost.innerHTML);
     assert.ok(!dom.noder.shoppingCost.innerHTML.includes("hämtas"), "beskedet uteblev - det är en spinner utan ände");
   });
