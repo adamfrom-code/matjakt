@@ -60,7 +60,7 @@ const KLASSER = ["prem-kap", "prem-ingress", "prem-moms", "prem-avsluta",
   "premium-pitch", "premium-pricing", "premium-price-tab"];
 
 /** Reglerna L7 äger - allt annat i filen tillhör andra paket. */
-const L7 = /\.prem-|\.premium-pitch\b|\.premium-pricing\b|\.premium-price-tab\b|\.paywall-lead\b|\.paywall-card h2|\.paywall-yearly\b|\.paywall-monthly\b/;
+const L7 = /\.prem-|\.premium-pitch\b|\.premium-pricing\b|\.premium-price-tab\b|\.paywall-lead\b|\.paywall-card\b|\.paywall-yearly\b|\.paywall-monthly\b/;
 const minaRegler = regler.filter(r => r.delar.some(del => L7.test(del)));
 // SISTA regeln med selektorn, inte första: kaskaden gäller, och de gamla
 // .premium-*-raderna högre upp i filen har samma selektorer som L7:s.
