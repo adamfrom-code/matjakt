@@ -1,6 +1,6 @@
 # Retention – hur länge Matjakt sparar vad
 
-*Uppdaterad 2026-09-06. Hör ihop med `docs/DATA_MAP.md`. "Automatiskt" = koden gör det; "manuellt" = kräver ett beslut.*
+*Uppdaterad 2026-09-13. Hör ihop med `docs/DATA_MAP.md`. "Automatiskt" = koden gör det; "manuellt" = kräver ett beslut.*
 
 | Data | Sparas | Rensas | Hur |
 |---|---|---|---|
@@ -14,8 +14,8 @@
 | Web Push-prenumeration (`push_subscriptions`) | så länge kontot finns och veckonotisen är påslagen | vid utloggning, vid avstängd veckonotis, vid raderat konto, och när push-tjänsten svarar 404/410 | automatiskt, `services/push/store.py` |
 | Skickade veckonotiser (`push_log`) | tills vidare | – | manuellt: en rad per konto och söndag; rensa rader äldre än 90 dygn vid behov. Raden bär ingen text och inget klockslag, bara att notisen gick ut |
 | Feedback (fritext) | tills vidare | – | manuellt; förslag 12 månader |
-| Analytics-räknare | tills vidare, utan identitet | – | inget personuppgiftsskäl att rensa |
-| Rate limit-räknare | i processminne, max 1 timme | vid omstart | automatiskt |
+| Analytics-räknare | `analytics_daily` tills vidare, utan identitet; `analytics_user_days` så länge kontot finns | dagsräknarna: aldrig – inget personuppgiftsskäl att rensa. Kontots egna rader: vid kontoradering | automatiskt, `delete_account` rensar `analytics_user_days` |
+| Rate limit-räknare | på disk i `ratelimit.db` i datakatalogen, högst det längsta fönstret i `LIMITS` (1 timme) | när raderna faller ur det längsta fönstret; en omstart rensar dem inte – räknarna överlever en deploy, och det är hela poängen: en deploy ska inte förlåta en pågående attack | automatiskt, `services/accounts/ratelimit.py` (`_check_db` rensar var 200:e anrop) |
 | Serverlogg | Renders logglagring (7 dygn på starter-planen) | av Render | automatiskt |
 | Backupset på servern | 7 dygn | äldre set rensas nattligen | automatiskt, `services/backup.py` |
 | Off-site-backup | 30 dygn (`--keep 30`), månadskopior 12 | av `pull_backup.py` | automatiskt/manuellt, se `docs/BACKUP.md` |

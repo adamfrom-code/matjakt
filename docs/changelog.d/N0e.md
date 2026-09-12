@@ -1,4 +1,7 @@
-### Appens egna bilder
+---
+paket: N0e
+titel: Appens egna bilder
+---
 
 Appikonen var **Capacitors blå logotyp**. `npx cap add ios` lägger in den, och
 den följer med till hemskärmen om ingen byter ut den — projektet hann bygga

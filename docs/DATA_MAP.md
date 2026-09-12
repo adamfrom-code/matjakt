@@ -1,11 +1,11 @@
 # Datakarta – vilken personlig data Matjakt hanterar, var och varför
 
-*Uppdaterad 2026-09-06. Grund för integritetspolicyn och App Store-etiketterna. Retentionstider i `docs/RETENTION.md`.*
+*Uppdaterad 2026-09-13. Grund för integritetspolicyn och App Store-etiketterna. Retentionstider i `docs/RETENTION.md`.*
 
 ## Principer
 
 - Matjakt samlar in det som behövs för att planera en vecka, jämföra butiker och sköta ett konto. Inget mer.
-- Inga tredjeparts-SDK:er, ingen reklam, ingen spårning över sajter. Analytics är egna, namngivna räknare utan identitet.
+- Inga tredjeparts-SDK:er, ingen reklam, ingen spårning över sajter. Analytics är egna, namngivna räknare: anonyma per dag, och per konto för inloggade – dag, aldrig klockslag, aldrig IP, aldrig fritext.
 - Lösenord och sessionstoken lagras bara hashade. Reset- och verifieringstoken likaså.
 - Betalkortsuppgifter når aldrig Matjakt – de hanteras helt av Stripe.
 
@@ -30,8 +30,8 @@
 | Premiumstatus | `users.premium`, `subscription_*`, `stripe_customer_id`, `stripe_subscription_id`, `stripe_event_created` | låsa upp Premium, sköta prenumerationen | Adam, Stripe | avtal |
 | Provperiodsfält (`trial_*`) | `matjakt.db` | historik för två gamla konton; ingen ny trial ges | Adam | – (utfasas) |
 | Feedback (fritext + skärm) | `matjakt.db` → `feedback` | produktförbättring; ingen koppling till konto | Adam | berättigat intresse |
-| Klient-IP | bara i processminne för rate limit (`services/accounts/ratelimit.py`); Renders åtkomstlogg | skydd mot missbruk | Render, Adam | berättigat intresse |
-| Analytics-händelser | `prices.db` (KV-cache) – bara räknare per händelsenamn (`view_home`, `cta_logga_in` …) | förstå användning | Adam | berättigat intresse; ingen identitet |
+| Klient-IP | `rate_limit_hits` (action, identifier, ts) i `ratelimit.db` i datakatalogen (`services/accounts/ratelimit.py`, rubriken PERSISTENT). `identifier` är klient-IP på varje väg, och dessutom e-postadressen på login, registrering och lösenordsåterställning; sessionsvägar använder en domänseparerad hash av tokenen, aldrig tokenen själv. Filen ligger i datakatalogen och följer därmed med i de nattliga backupseten (`services/backup.py`) och i tar.gz:en från `/api/admin/backup-download`. Dessutom Renders åtkomstlogg | skydd mot missbruk; raderna rensas när de faller ur det längsta fönstret i `LIMITS` (3600 s) | Render, Adam (drift) | berättigat intresse |
+| Analytics-händelser | kontodatabasen `matjakt.db` → `analytics_daily` (händelse × dag → antal, ingen identitet) och `analytics_user_days` (konto × dag × händelse → antal, bara inloggade) – `services/analytics/store.py` | förstå användning; per konto och dag går det att svara på om någon kommer tillbaka vecka två. Aldrig klockslag, aldrig IP, aldrig fritext, och händelsenamnen är en fast lista (`view_home`, `cta_logga_in` …) | Adam (kontrollrummet); kontoinnehavaren ser sina egna rader via `GET /api/account/export` | berättigat intresse; `analytics_daily` bär ingen identitet, `analytics_user_days` pekar på konto-id och raderas med kontot |
 | Serverlogg | Render (stdout) | felsökning | Adam | berättigat intresse; innehåller e-post vid vissa varningar (verifieringsmejl), aldrig lösenord/token/nycklar |
 
 ### Hos tredje part
@@ -57,6 +57,6 @@
 | Rättighet | Hur |
 |---|---|
 | Radering | "Radera konto" i appen: sessioner, konto och synkat tillstånd raderas; hushållsmedlemskap, profil, notisinställningar, enhetstoken och köade notiser raderas; gemensam hushållsdata stannar hos övriga medlemmar (raderas helt om kontot var ensamt i hushållet); Stripe-prenumerationen sägs upp först och Stripe-kunden raderas (`POST /api/auth/delete-account`) |
-| Tillgång/export | Synkat tillstånd hämtas som JSON via `GET /api/account/state` med sessionstoken. En knapp i UI saknas – se `docs/RETENTION.md` |
+| Tillgång/export | `GET /api/account/export` med sessionstoken ger hela kontot som JSON i sju kategorier (`services/accounts/data_export.py`: konto, syncedState, hushall, skafferi, lista, analytics, prenumeration) – aldrig lösenordshash, salt, token eller sessioner. `GET /api/account/state` ger fortfarande bara appstaten. En knapp i UI saknas fortfarande: ingen fil under `frontend/app/` anropar endpointen |
 | Rättelse | E-post kan inte bytas i UI ännu; lösenord kan bytas |
-| Invändning mot analytics | Räknarna bär ingen identitet – inget att invända mot per person |
+| Invändning mot analytics | Dagsräknarna (`analytics_daily`) bär ingen identitet. Kontoraderna (`analytics_user_days`) gör det: de ingår i exporten och raderas med kontot, men någon egen avstängning av mätningen finns inte i dag |
