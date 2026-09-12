@@ -24,6 +24,7 @@ import sqlite3
 
 import api_server
 from services.billing import StripeError  # noqa: E402
+from services.billing.codes import PremiumCodeStore  # noqa: E402
 from services.email import MailSendFailed  # noqa: E402  # noqa: E402
 from services.accounts import ratelimit  # noqa: E402
 from api_server import clean_text, parse_price, parse_willys_price  # noqa: E402
@@ -477,6 +478,12 @@ class ApiServerHttpTest(unittest.TestCase):
     def setUp(self):
         self._original_code = api_server.PREMIUM_CODE
         api_server.PREMIUM_CODE = "hemlig-kod"
+        # H5: en premium-kod är en RAD med gränser, inte en sträng i miljön.
+        # Env-variabeln lyfts in i koddatabasen vid uppstart; här seedas den
+        # per test, utan tak så flera testkonton kan lösa in den (samma konto
+        # kan fortfarande bara göra det en gång).
+        api_server.PREMIUM_CODES.create(label="test", grant_days=365,
+                                        max_uses=None, code="hemlig-kod")
         # Admin-tokenens gissningsbudget är per IP och alla tester delar
         # 127.0.0.1 - ett test som provar fel token får inte låsa nästa.
         ratelimit.clear_on_success("admin", "127.0.0.1")
@@ -1302,13 +1309,25 @@ class AuthHttpTest(unittest.TestCase):
         self._tmpdir = tempfile.TemporaryDirectory()
         self._original_store = api_server.ACCOUNT_STORE
         self._original_code = api_server.PREMIUM_CODE
+        self._original_codes = api_server.PREMIUM_CODES
         api_server.ACCOUNT_STORE = AccountStore(Path(self._tmpdir.name) / "test.db")
         api_server.PREMIUM_CODE = "hemlig-kod"
+        # H5: en premium-kod är en RAD med gränser, inte en sträng i miljön.
+        # Env-variabeln lyfts in i koddatabasen vid uppstart; här seedas den
+        # per test, utan tak så flera testkonton kan lösa in den (samma konto
+        # kan fortfarande bara göra det en gång).
+        # Koderna bor i KONTOdatabasen, så de måste bytas ut med den - annars
+        # skriver inlösningarna i den riktiga filen medan kontona ligger här.
+        api_server.PREMIUM_CODES = PremiumCodeStore(api_server.ACCOUNT_STORE.connection,
+                                                    lock=api_server.ACCOUNT_STORE.lock)
+        api_server.PREMIUM_CODES.create(label="test", grant_days=365,
+                                        max_uses=None, code="hemlig-kod")
 
     def tearDown(self):
         api_server.ACCOUNT_STORE.close()
         api_server.ACCOUNT_STORE = self._original_store
         api_server.PREMIUM_CODE = self._original_code
+        api_server.PREMIUM_CODES = self._original_codes
         self._tmpdir.cleanup()
 
     def post(self, path, payload=None, token=None):
@@ -1365,6 +1384,9 @@ class AuthHttpTest(unittest.TestCase):
             # bekräftelse. Null när inget är på gång - en banderoll ska inte
             # kunna ritas av misstag.
             "subscriptionGraceUntil": None, "pendingEmail": None,
+            # H5: Premium med slutdatum. Null när kontot inte har någon
+            # inlöst tid - en nedräkning ska inte kunna ritas av misstag.
+            "premiumUntil": None,
             "emailVerified": False, "marketingConsent": False,
         })
         status, payload = self.get("/api/auth/me", token=token)
