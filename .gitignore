@@ -54,6 +54,18 @@ dist/
 # xcodebuild (scripts/ios_mac_pass.sh) - derived data, aldrig i repot.
 build/
 
+# Signeringshemligheter för iOS. En .p8-nyckel från App Store Connect ger
+# den som har den rätt att ladda upp byggen i Adams namn, och Apple visar
+# den bara en gång vid nedladdningen - den går inte att rotera tyst.
+# Mönstren står här för att filen ofta hamnar i reporoten av misstag: den
+# laddas ner till ~/Downloads och dras in i projektmappen för att
+# xcodebuild ska hitta den.
+*.p8
+AuthKey_*
+*.mobileprovision
+*.p12
+*.cer
+
 # Agenternas arbetsträd - aldrig i git
 .claude/worktrees/
 

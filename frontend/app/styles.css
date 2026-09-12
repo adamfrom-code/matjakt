@@ -1,4 +1,58 @@
 /* ==========================================================================
+   TYPSNITTEN LIGGER I APPEN (N0b). DESIGNSYSTEM-D.md §3.1.
+
+   Newsreader och Archivo hämtades tidigare från Googles fontvärdar. Det
+   kostade två saker: appens första start utan nät visade fel typsnitt, och
+   CSP:n måste släppa in två tredjepartsvärdar - en i style-src, en i
+   font-src - enbart för att hämta bokstäver. Bägge är borta nu; filerna
+   nedan ligger i bundlet och laddas från 'self'.
+
+   tests/typsnitt.test.js failar om någon av värdarna kommer tillbaka, i den
+   här filen eller i index.html. Därför nämns de inte vid namn någonstans
+   under frontend/app/ - grinden är en ren textsökning, utan undantag att
+   smita igenom.
+
+   Proveniens, version och det exakta delmängdskommandot står i
+   assets/fonts/README.md. Licensen (SIL OFL 1.1) följer med i samma katalog.
+
+   Delmängd: Google Fonts latin-omfång. Tecken utanför det sätts ur
+   fallbackstacken i --f-disp/--f-ui i stället - kyrilliska och arabiska som
+   förut, och numera även latin-ext (ł, ș). Hela repot innehåller fem sådana
+   tecken; att täcka dem hade kostat 58 kB i appbundlet.
+
+   Vikterna är de som faktiskt förekommer i den här filen: Newsreader 400 och
+   700, Archivo 400/500/600/700 rak plus 400 kursiv (<em> i ingredienslistan
+   och tidsstämpeln i butiksjämförelsen). Variabel wght slår statiska snitt i
+   båda familjerna - siffrorna står i changelog.d/N0b.md. Newsreader behåller
+   opsz: §3.2 sätter samma familj från 13px till 82px, och stortalet på
+   Sparat-skärmen är synligt grövre när opsz spikas.
+
+   font-display:swap + fallbackstackarna gör att sidan är LÄSBAR i väntan på
+   typsnittet, aldrig osynlig.
+   ========================================================================== */
+@font-face{
+  font-family:"Newsreader";
+  src:url("assets/fonts/newsreader-variable-latin.woff2") format("woff2");
+  font-weight:400 700;
+  font-style:normal;
+  font-display:swap;
+}
+@font-face{
+  font-family:"Archivo";
+  src:url("assets/fonts/archivo-variable-latin.woff2") format("woff2");
+  font-weight:400 700;
+  font-style:normal;
+  font-display:swap;
+}
+@font-face{
+  font-family:"Archivo";
+  src:url("assets/fonts/archivo-italic-latin.woff2") format("woff2");
+  font-weight:400;
+  font-style:italic;
+  font-display:swap;
+}
+
+/* ==========================================================================
    DESIGNSYSTEM D - "Middagskortet". ALIASSKIKT (DESIGNSYSTEM-D.md §9.1).
 
    Riktningen: en mattidning i telefonformat. Sval pappersvit, oxblod som enda
@@ -34,6 +88,17 @@
   --sp-1:2px; --sp-2:5px; --sp-3:7px; --sp-4:10px;
   --sp-5:12px; --sp-6:16px; --sp-7:20px; --sp-8:28px;
   --gutter:20px; --radius:0;
+
+  /* Två komponentvärden som måste ha ett golv i :root, för de sätts per
+     komponent och ett var() utan definition blir tyst tomt (L1).
+     --hjalte-text: höjden på zonen längst ned i ett helbleed-foto där
+       gradienten är FULL --scrim. Texten på fotot får inte bli högre än den,
+       och gradienten blir full exakt vid dess överkant - samma tal på båda
+       ställena, annars kan en lång rubrik krypa upp ur skyddet (§5.2).
+     --andel: budgetmätarens fyllnadsgrad. Ett värde, två användningar -
+       fyllnadens bredd och markörens läge - så de aldrig glider isär (§5.8). */
+  --hjalte-text:116px; --andel:0%;
+
   --ease:cubic-bezier(.2,.6,.2,1);
   --t-snabb:120ms; --t-normal:180ms; --t-lugn:240ms;
 
@@ -179,7 +244,7 @@ button.campaign-deal{cursor:pointer;font:inherit}
 .week-store-status{min-height:16px;margin:0 0 14px;color:var(--muted);font-size:12px}.week-store-status.loading{color:var(--accent)}.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}.stats-card{padding:16px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);box-shadow:var(--shadow)}.stats-card span{display:block;color:var(--muted);font-size:12px;font-weight:600}.stats-card strong{display:block;margin-top:8px;font:700 22px var(--font-display);color:var(--text)}.stats-card.highlight{box-shadow:var(--shadow-lg)}.stats-waste{padding:16px;border-radius:var(--r-md);background:var(--primary-soft)}.stats-waste span{display:block;color:var(--primary);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}.stats-waste strong{display:block;margin-top:6px;font:700 16px var(--font-display);color:var(--primary)}.stats-note{margin:16px 4px;color:var(--muted);font-size:13px;text-align:center}
 .shopping-complete{margin-bottom:18px;padding:20px;border-radius:var(--r-lg);background:var(--primary-soft);text-align:center;animation:screen-in .35s var(--ease)}.shopping-complete strong{display:block;font:700 20px var(--font-display);color:var(--primary)}.shopping-complete p{margin:6px 0 14px;color:var(--primary);font-size:14px;opacity:.8}.shopping-complete .btn-primary{width:100%}
 .pantry-pick-photo{flex-shrink:0;width:40px;height:40px;border-radius:10px;object-fit:contain;background:white;border:1px solid var(--border)}span.pantry-pick-photo{display:flex;align-items:center;justify-content:center;background:var(--primary-soft);color:var(--primary);font:700 15px var(--font-display);border:0}.pantry-picker-section-label{margin:14px 4px 8px;color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}.pantry-picker-live{margin-top:4px}
-.week-overview{margin-bottom:8px}.week-overview-header{padding:4px 4px 18px}.week-overview-header h1{margin:0;font:700 30px var(--font-display);letter-spacing:-.03em}.week-day-tabs{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:16px}.week-day-tab{min-height:46px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--muted);font-size:13px;font-weight:700;transition:background .2s var(--ease),color .2s var(--ease),border-color .2s var(--ease)}.week-day-tab.active{border-color:var(--primary);background:var(--primary);color:#fff;box-shadow:0 6px 16px -6px rgba(23,33,27,.4)}.week-day-tab.empty:not(.active){opacity:.55}.week-today-card{position:relative;display:flex;align-items:center;gap:14px;width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow-lg);text-align:left;margin-bottom:22px}.week-today-photo{flex-shrink:0;width:100px;height:100px;border-radius:14px;overflow:hidden;background:var(--primary-soft)}.week-today-photo .recipe-photo{width:100%;height:100%;object-fit:cover}.week-today-photo .recipe-fallback{width:100%;height:100%}.week-today-info{min-width:0;flex:1;display:flex;flex-direction:column;gap:6px}.week-today-info strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font:700 18px/1.2 var(--font-display);letter-spacing:-.02em}.week-today-badge{align-self:flex-start;padding:4px 10px;border-radius:99px;background:var(--primary-soft);color:var(--primary);font-size:11px;font-weight:700}.week-today-meta{display:flex;gap:14px}.meta-icon-item{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;font-weight:600}.meta-icon-item svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.week-today-arrow{flex-shrink:0;color:var(--muted);font-size:24px}.week-today-flag{position:absolute;top:8px;right:8px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--primary);color:#fff;font-size:13px;font-weight:700;box-shadow:0 4px 10px rgba(0,0,0,.25)}.week-today-empty{padding:34px 20px;border-radius:var(--r-lg);background:var(--primary-soft);text-align:center;margin-bottom:22px}.week-today-empty p{margin:0 0 14px;color:var(--primary);font-size:14px}.week-overview-section{margin-bottom:22px}.week-overview-section .section-heading{margin-bottom:10px}.week-overview-section .section-heading h2{margin:0;font:700 19px var(--font-display)}.week-overview-section .section-heading span{color:var(--muted);font-size:13px;font-weight:600}.week-plan-list{display:flex;flex-direction:column;gap:8px}.week-plan-row{display:flex;align-items:center;gap:4px;width:100%;padding:6px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);transition:border-color .2s var(--ease)}.week-plan-row.active{border-color:var(--primary)}.week-plan-row-main{display:grid;grid-template-columns:30px 40px 1fr auto;align-items:center;gap:8px;flex:1;min-width:0;padding:2px;border:0;background:transparent;text-align:left}.week-plan-swap-btn{flex-shrink:0;min-height:44px;padding:0 11px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--primary);font-size:12px;font-weight:700}.week-plan-swap-btn:active{background:var(--primary-soft)}.week-plan-menu{position:relative;flex-shrink:0}.week-plan-menu summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:8px;color:var(--muted);font-size:17px;font-weight:700;list-style:none;cursor:pointer}.week-plan-menu summary::-webkit-details-marker{display:none}.week-plan-menu[open] summary{background:var(--primary-soft);color:var(--primary)}.week-plan-menu-options{position:absolute;top:32px;right:0;z-index:5;display:flex;flex-direction:column;min-width:152px;padding:6px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);box-shadow:var(--shadow-lg)}.week-plan-menu-options button{min-height:44px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:var(--text);font-size:13px;font-weight:600;text-align:left}.week-plan-menu-options button:active{background:var(--primary-soft)}.week-plan-menu-options button.marked{color:var(--primary);font-weight:700}.week-plan-day{color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}.week-plan-photo{width:40px;height:40px;border-radius:10px;overflow:hidden;background:var(--primary-soft)}.week-plan-photo .recipe-photo{width:100%;height:100%;object-fit:cover}.week-plan-photo .recipe-fallback{width:100%;height:100%}.week-plan-name{overflow:hidden;font-size:14px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}.week-plan-price{font-size:13px;color:var(--primary);white-space:nowrap}.week-overview-toggle{width:100%;margin-top:6px;text-align:center}.week-shopping-preview{display:flex;flex-direction:column;gap:8px}.week-shopping-row{display:grid;grid-template-columns:24px 40px 1fr auto;align-items:center;gap:10px;min-height:44px;padding:8px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface)}.week-shopping-row input{appearance:none;width:22px;height:22px;margin:0;border:2px solid #b7c1b9;border-radius:7px;transition:transform .2s var(--ease-spring),border-color .2s var(--ease)}.week-shopping-row input:checked{border-color:var(--primary);background:var(--primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3'%3E%3Cpath d='m5 12 4 4L19 6'/%3E%3C/svg%3E") center/14px}.week-shopping-row .shopping-item-image{width:40px;height:40px;border-radius:10px}.week-shopping-row .shopping-item-image.placeholder svg{width:20px;height:20px}.week-shopping-info{min-width:0;display:flex;flex-direction:column;gap:2px}.week-shopping-info strong{overflow:hidden;font-size:13px;text-overflow:ellipsis;white-space:nowrap}.week-shopping-campaign{color:var(--accent-2);font-size:11px;font-weight:700}.week-shopping-price{font-size:13px;white-space:nowrap}.week-shopping-done{padding:16px;border-radius:var(--r-md);background:var(--primary-soft);color:var(--primary);text-align:center;font-weight:700;font-size:14px}.week-overview-open{width:100%;margin-top:4px}
+.week-overview{margin-bottom:8px}.week-overview-header{padding:4px 4px 18px}.week-overview-header h1{margin:0;font:700 30px var(--font-display);letter-spacing:-.03em}.meta-icon-item{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;font-weight:600}.meta-icon-item svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.week-overview-section{margin-bottom:22px}.week-overview-section .section-heading{margin-bottom:10px}.week-overview-section .section-heading h2{margin:0;font:700 19px var(--font-display)}.week-overview-section .section-heading span{color:var(--muted);font-size:13px;font-weight:600}.week-plan-list{display:flex;flex-direction:column;gap:8px}.week-plan-row{display:flex;align-items:center;gap:4px;width:100%;padding:6px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);transition:border-color .2s var(--ease)}.week-plan-row.active{border-color:var(--primary)}.week-plan-row-main{display:grid;grid-template-columns:30px 40px 1fr auto;align-items:center;gap:8px;flex:1;min-width:0;padding:2px;border:0;background:transparent;text-align:left}.week-plan-swap-btn{flex-shrink:0;min-height:44px;padding:0 11px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--primary);font-size:12px;font-weight:700}.week-plan-swap-btn:active{background:var(--primary-soft)}.week-plan-menu{position:relative;flex-shrink:0}.week-plan-menu summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:8px;color:var(--muted);font-size:17px;font-weight:700;list-style:none;cursor:pointer}.week-plan-menu summary::-webkit-details-marker{display:none}.week-plan-menu[open] summary{background:var(--primary-soft);color:var(--primary)}.week-plan-menu-options{position:absolute;top:32px;right:0;z-index:5;display:flex;flex-direction:column;min-width:152px;padding:6px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);box-shadow:var(--shadow-lg)}.week-plan-menu-options button{min-height:44px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:var(--text);font-size:13px;font-weight:600;text-align:left}.week-plan-menu-options button:active{background:var(--primary-soft)}.week-plan-menu-options button.marked{color:var(--primary);font-weight:700}.week-plan-day{color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}.week-plan-photo{width:40px;height:40px;border-radius:10px;overflow:hidden;background:var(--primary-soft)}.week-plan-photo .recipe-photo{width:100%;height:100%;object-fit:cover}.week-plan-photo .recipe-fallback{width:100%;height:100%}.week-plan-name{overflow:hidden;font-size:14px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}.week-plan-price{font-size:13px;color:var(--primary);white-space:nowrap}.week-overview-toggle{width:100%;margin-top:6px;text-align:center}.week-shopping-preview{display:flex;flex-direction:column;gap:8px}.week-shopping-row{display:grid;grid-template-columns:24px 40px 1fr auto;align-items:center;gap:10px;min-height:44px;padding:8px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface)}.week-shopping-row input{appearance:none;width:22px;height:22px;margin:0;border:2px solid #b7c1b9;border-radius:7px;transition:transform .2s var(--ease-spring),border-color .2s var(--ease)}.week-shopping-row input:checked{border-color:var(--primary);background:var(--primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3'%3E%3Cpath d='m5 12 4 4L19 6'/%3E%3C/svg%3E") center/14px}.week-shopping-row .shopping-item-image{width:40px;height:40px;border-radius:10px}.week-shopping-row .shopping-item-image.placeholder svg{width:20px;height:20px}.week-shopping-info{min-width:0;display:flex;flex-direction:column;gap:2px}.week-shopping-info strong{overflow:hidden;font-size:13px;text-overflow:ellipsis;white-space:nowrap}.week-shopping-campaign{color:var(--accent-2);font-size:11px;font-weight:700}.week-shopping-price{font-size:13px;white-space:nowrap}.week-shopping-done{padding:16px;border-radius:var(--r-md);background:var(--primary-soft);color:var(--primary);text-align:center;font-weight:700;font-size:14px}.week-overview-open{width:100%;margin-top:4px}
 .comparison-summary-card{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;margin-bottom:16px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow)}
 .comparison-summary-card>div{display:flex;flex-direction:column;gap:3px}
 .comparison-summary-card>div>span{color:var(--muted);font-size:13px;font-weight:600}
@@ -240,8 +305,8 @@ button.campaign-deal{cursor:pointer;font:inherit}
 
   .view-week .week-overview{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
   .view-week .week-overview-header{grid-column:1/-1}
-  .view-week .week-day-tabs,#weekTodayCard,#weekTodayCard+.week-overview-section{grid-column:1}
-  .view-week .week-store-switch,.view-week .week-store-status,#storeCompare,.week-overview-section+.week-overview-section{grid-column:2}
+  .view-week .week-plan-section,.view-week .vecka-fot{grid-column:1}
+  .view-week .week-store-switch,.view-week .week-store-status,#storeCompare,.view-week .week-store-block,.week-overview-section+.week-overview-section{grid-column:2}
 
   .recipe-scroll{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
 
@@ -419,20 +484,6 @@ button.campaign-deal{cursor:pointer;font:inherit}
 /* ---- Nya Hem: Ikväll-hjälten + samlat veckokort -------------------------- */
 .home-hero h1{font-size:30px}
 .home-hero{margin-bottom:14px}
-.hero-meal-card{position:relative;border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow)}
-.hero-meal-open{display:block;width:100%;border:0;padding:0;background:var(--primary);text-align:left;cursor:pointer}
-.hero-meal-photo{display:block;height:210px}
-.hero-meal-photo .recipe-photo,.hero-meal-photo img{width:100%;height:210px;object-fit:cover;display:block}
-.hero-meal-photo .recipe-fallback{width:100%;height:210px;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.hero-meal-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,26,19,0) 35%,rgba(12,26,19,.82) 100%);pointer-events:none}
-.hero-meal-info{position:absolute;left:16px;right:16px;bottom:14px;color:#fff;display:flex;flex-direction:column;gap:2px;pointer-events:none}
-.hero-meal-info small{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.86)}
-.hero-meal-info strong{font-family:var(--font-display);font-size:22px;line-height:1.15;text-shadow:0 2px 14px rgba(0,0,0,.35)}
-.hero-meal-meta{font-size:13px;color:rgba(255,255,255,.85)}
-.hero-meal-swap{position:absolute;top:12px;right:12px;border:0;border-radius:99px;padding:7px 14px;background:rgba(255,255,255,.92);color:var(--primary);font:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:var(--shadow)}
-.hero-meal-invite{border:0;width:100%;text-align:left;font:inherit;cursor:pointer;background:var(--primary);background-image:linear-gradient(155deg,var(--primary-2),var(--primary) 70%);color:#fff;padding:26px 22px}
-.hero-meal-invite strong{font-family:var(--font-display);font-size:23px;display:block;margin-bottom:8px}
-.hero-meal-invite p{margin:0;color:rgba(255,255,255,.85);font-size:14px;line-height:1.55}
 .week-budget-row{display:block;width:100%;border:0;background:transparent;padding:2px 2px 0;font:inherit;text-align:left;cursor:pointer}
 .week-budget-text{display:flex;align-items:baseline;gap:6px;font-size:13px;color:var(--muted);margin-bottom:6px}
 .week-budget-text strong{color:var(--primary);font-size:15px}
@@ -596,21 +647,98 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.02em}
 .week-secondary{color:var(--muted);font-weight:600;text-decoration:none}
 .nutrition-warning{margin:0;padding:10px 12px;border-radius:14px;background:var(--gold-soft);color:var(--gold-2);font-size:13px}
 
-/* ---- Hem: Ikväll som rad --------------------------------------------- */
-.next-meal-section{margin-bottom:14px}
-.hero-meal-card{border:1px solid var(--border);border-radius:20px;background:var(--surface);box-shadow:none}
-.hero-meal-open{display:flex;align-items:center;gap:14px;padding:12px;background:var(--surface)}
-.hero-meal-photo{flex:none;display:block;width:76px;height:76px;border-radius:14px;overflow:hidden;background:var(--surface-2)}
-.hero-meal-photo .recipe-photo,.hero-meal-photo img,.hero-meal-photo .recipe-fallback{width:76px;height:76px}
-.hero-meal-scrim{display:none}
-.hero-meal-info{position:static;flex:1;min-width:0;gap:3px;padding-right:52px;color:var(--text)}
-.hero-meal-info small{color:var(--muted);font-size:12px;letter-spacing:.06em}
-.hero-meal-info strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font:700 18px/1.2 var(--font-display);letter-spacing:-.01em;text-shadow:none}
-.hero-meal-meta{color:var(--muted);font-size:13px;font-weight:600}
-.hero-meal-swap{top:50%;right:12px;transform:translateY(-50%);min-height:44px;border:0;background:var(--surface-2);color:var(--text);box-shadow:none}
-.hero-meal-invite{padding:22px 20px;border:1px solid var(--border);border-radius:20px;background:var(--surface);background-image:none;color:var(--text)}
-.hero-meal-invite strong{margin-bottom:6px;font:700 20px/1.15 var(--font-display);letter-spacing:-.02em}
-.hero-meal-invite p{color:var(--muted)}
+/* ---- Hem: Ikväll som fotokort (L1, design D telefon 1) ----------------
+   Ett helbleed foto, rubriken PÅ bilden, priset som bildtext under och
+   budgeten som en remsa. Skärmen (gradienten) är inte dekoration - den är
+   det enda som gör den vita texten läsbar över ett foto vi inte har valt.
+
+   VÄRSTA FALLET ÄR MÅTTET, INTE SNITTET.
+   Ett recept kan ha en nästan vit bild. Räknat mot ett HELVITT foto ger
+   --scrim (rgba(10,12,13,.78)) vit text 10,23:1 (DESIGNSYSTEM-D.md §2.2,
+   §5.2). Det är golvet - mot ett normalt matfoto är det bättre.
+
+   Därför står textblockets höjd i EN variabel som både gradienten och
+   textblocket läser: gradienten är full --scrim från och med
+   `calc(100% - var(--hjalte-text))`, och textblocket kan inte bli
+   högre än samma tal. En lång rubrik kan alltså inte skjuta upp texten ur
+   den skyddade zonen - zonen ritas av samma tal som begränsar texten.
+   Ingen text-shadow: skärmen gör jobbet (§5.2). */
+.next-meal-section{margin:0 0 14px}
+.hero-meal-card{position:relative;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+
+/* Helbleed: fotot går kant till kant, alltså ut ur .app:s sidmarginal (§4.2). */
+.ikvall-bild{position:relative;margin-inline:-20px;background:var(--shot)}
+.hero-meal-open{display:block;width:100%;padding:0;border:0;border-radius:0;background:var(--shot);text-align:left;cursor:pointer}
+.hero-meal-photo{display:block;height:278px}
+.hero-meal-photo img{display:block;width:100%;height:278px;border-radius:0;object-fit:cover}
+/* SAKNAS FOTOT ÄR RESERVKORTET UNDERLAGET (M2, src/views/receptbild.js).
+   Tio av receptbankens elva bildlösa rätter är middagar - alltså rätter
+   veckoplaneraren faktiskt lägger här. Det här är hjälteytans ANDRA
+   normalläge, inte ett randfall, och toningen räknas mot det (se
+   tests/ikvall.test.js).
+
+   Hjälten sätter bara MÅTTET. Utseendet - pappersytan, hårlinjen,
+   kapitälerna, monogrammet - ägs av komponenten, och app.js ber om
+   `namn: false` eftersom rubriken redan ligger på bilden. Att sätta egen
+   bakgrund (--shot) eller egen layout här hade lagt tillbaka den grå rutan
+   ovanpå kortet, med rubriken på. Selektorn ovan är därför `img` och inte
+   `.recipe-photo`: reservkortet bär den klassen också, och en
+   `object-fit`-regel har inget att göra på en textplåt. */
+.hero-meal-photo .recipe-fallback{width:100%;height:278px;border-radius:0}
+.hero-meal-scrim{position:absolute;inset:0;display:block;pointer-events:none;background:linear-gradient(180deg,transparent 30%,var(--scrim) calc(100% - var(--hjalte-text)),var(--scrim) 100%)}
+.hero-meal-info{position:absolute;left:20px;right:92px;bottom:14px;z-index:1;display:flex;flex-direction:column;gap:4px;max-height:calc(var(--hjalte-text) - 14px);overflow:hidden;padding:0;color:#FFFFFF;pointer-events:none}
+.hero-meal-info small{font:600 10px/1.4 var(--f-ui);letter-spacing:.2em;text-transform:uppercase;color:#FFFFFF}
+.hero-meal-info strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font:400 30px/1.05 var(--f-disp);letter-spacing:-.02em;text-shadow:none;color:#FFFFFF}
+.hero-meal-meta{font:400 12px/1.4 var(--f-ui);color:#FFFFFF}
+/* Tryckt: skärmen kryper uppåt. Ingen skalning av fotot (§5.2). */
+.hero-meal-open:active .hero-meal-scrim{background:linear-gradient(180deg,transparent 18%,var(--scrim) calc(100% - var(--hjalte-text)),var(--scrim) 100%)}
+/* Fokusringen går INÅT - en ring utanför helbleed-kanten syns inte (§5.2). */
+.hero-meal-open:focus-visible{outline:2px solid #FFFFFF;outline-offset:-4px}
+/* Byt ligger i den zon där skärmen är full, inte uppe i fotots ljusa del. */
+.hero-meal-swap{position:absolute;top:auto;right:20px;bottom:10px;z-index:2;display:inline-flex;align-items:center;min-height:44px;padding:0 2px;transform:none;border:0;border-radius:0;background:none;box-shadow:none;font:600 10px/1 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:#FFFFFF;cursor:pointer}
+.hero-meal-swap span{padding-bottom:2px;border-bottom:1px solid #FFFFFF}
+.hero-meal-swap:focus-visible{outline-color:#FFFFFF}
+
+/* Prisraden under fotot: portionspriset till vänster, vägen vidare till
+   höger. Baslinjerad, med en hårlinje över - bildtextens förhållande. */
+.ikvall-prisrad{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:12px;padding-top:9px;border-top:1px solid var(--rule)}
+.ikvall-portion{display:flex;align-items:baseline;gap:7px;min-width:0}
+.ikvall-belopp{font-family:var(--f-disp);font-size:19px}
+.ikvall-kap{font:600 10px/1.4 var(--f-ui);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
+.ikvall-recept{display:inline-flex;align-items:center;min-height:44px;padding:0 2px;border:0;border-radius:0;background:none;box-shadow:none;font:600 10px/1 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);cursor:pointer;white-space:nowrap}
+.ikvall-recept span{padding-bottom:2px;border-bottom:1px solid var(--accent)}
+
+/* Budgeten som REMSA (§5.8): etikett, kronor, 6 px mätare. Inte en
+   mätartavla. Markören - det 1px strecket som sticker ut över och under
+   spåret - är formkodningen: en färgad fyllnad går inte att läsa i
+   gråskala, det gör strecket. Över budget blir remsan inte röd; texten
+   byter ord i stället ("84 kr över 800 kr").
+   --ink-3 får inte ligga på --paper-2 (RÄTTELSE 1), därför --ink-2 här. */
+.ikvall-remsa{display:block;width:100%;min-height:44px;margin:10px 0 0;padding:9px 20px 11px;border:0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);border-radius:0;background:var(--paper-2);box-shadow:none;font:inherit;text-align:left;cursor:pointer}
+.ikvall-remsa .ikvall-rad{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.ikvall-remsa .ikvall-kap{color:var(--ink-2)}
+.ikvall-remsa .week-budget-text{margin:0}
+.ikvall-remsa .week-budget-text b{color:var(--ink-2)}
+.ikvall-remsa .progress-track{display:block;position:relative;height:6px;margin-top:7px;border-radius:0;background:var(--rule);overflow:visible}
+.ikvall-remsa .progress-track i{display:block;height:100%;width:var(--andel,0%);border-radius:0;background:var(--accent)}
+.ikvall-remsa .progress-track::after{content:"";position:absolute;top:-3px;bottom:-3px;left:var(--andel,0%);width:1px;background:var(--ink)}
+
+/* Fyndraden: rubrik i kapitäler med en utfyllnadslinje, en mening, en väg
+   vidare. C11 ger fynden recipeIds - då säger raden vad fyndet gör med
+   VECKAN. Utan dem säger den vad den faktiskt vet. */
+.ikvall-fynd:empty{display:none}
+.ikvall-rubrikrad{display:flex;align-items:center;gap:12px;margin:14px 0 8px}
+.ikvall-linje{flex:1;height:1px;background:var(--rule-2)}
+.ikvall-fyndtext{margin:0;font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+
+/* Ingen vecka alls: inbjudan på papper, inte vit text utan foto under. */
+.hero-meal-invite{display:block;width:100%;padding:22px 0;border:0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);border-radius:0;background:transparent;background-image:none;box-shadow:none;color:var(--ink);text-align:left;font:inherit;cursor:pointer}
+.hero-meal-invite .ikvall-kap{display:block;margin-bottom:6px}
+.hero-meal-invite strong{display:block;margin-bottom:8px;font:400 26px/1.1 var(--f-disp);letter-spacing:-.02em}
+.hero-meal-invite p{margin:0;color:var(--ink-2);font-size:14px;line-height:1.55}
+
+@media(max-width:340px){.ikvall-bild{margin-inline:-12px}}
+@media(min-width:1024px){.ikvall-bild{margin-inline:0}}
 
 /* ---- Hem: två siffror ------------------------------------------------ */
 .home-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 24px}
@@ -650,25 +778,20 @@ input:focus,select:focus,textarea:focus{border-color:var(--primary)}
 .budget-row span{color:var(--muted);font-weight:700}
 
 /* ---- Chips ----------------------------------------------------------- */
-.recipe-tag,.recipe-filters select,.favorite-filter,.week-store-switch button,.protein-source-chips label,.recipe-detail-meta span,.next-meal-badge,.hem-recipe-badge,.week-today-badge,.swap-option-badge,.week-shopping-campaign,.shopping-item-campaign,.live-badge{border:0;border-radius:999px;background:var(--surface-2);color:var(--text);font-weight:600}
+.recipe-tag,.recipe-filters select,.favorite-filter,.week-store-switch button,.protein-source-chips label,.recipe-detail-meta span,.next-meal-badge,.hem-recipe-badge,.swap-option-badge,.week-shopping-campaign,.shopping-item-campaign,.live-badge{border:0;border-radius:999px;background:var(--surface-2);color:var(--text);font-weight:600}
 .recipe-tag.active,.week-store-switch button.active,.protein-source-chips label:has(input:checked){background:var(--text);border-color:var(--text);color:#fff}
 .segmented{padding:4px;border-radius:999px;background:var(--surface-2)}
 .segmented button{border-radius:999px;color:var(--muted)}
 .segmented button.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.week-day-tabs{gap:6px}
-.week-day-tab{border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--muted)}
-.week-day-tab.active{border-color:var(--primary);background:var(--primary);color:#fff}
 .premium-badge,
 
 /* ---- Kort ------------------------------------------------------------ */
-.recipe-card,.shopping-item,.week-plan-row,.basket-line,.store-card,.campaign-deal,.plan-card,.swap-option,.week-today-card,.hem-recipe-card,.week-shopping-row,.comparison-summary-card,.stats-card,.pantry-item,.cook-match,.pantry-pick,.live-product,.week-summary-row,.next-meal-card,.savings-card,.recipe-shelf-card,.comparison-store-row,.comparison-campaign-card,.stats-waste,.extra-item,.followed-item{border:1px solid var(--border);border-radius:20px;background:var(--surface);box-shadow:none}
+.recipe-card,.shopping-item,.week-plan-row,.basket-line,.store-card,.campaign-deal,.plan-card,.swap-option,.hem-recipe-card,.week-shopping-row,.comparison-summary-card,.stats-card,.pantry-item,.cook-match,.pantry-pick,.live-product,.week-summary-row,.next-meal-card,.savings-card,.recipe-shelf-card,.comparison-store-row,.comparison-campaign-card,.stats-waste,.extra-item,.followed-item{border:1px solid var(--border);border-radius:20px;background:var(--surface);box-shadow:none}
 .recipe-card.selected{box-shadow:0 0 0 2px var(--primary)}
 .pantry-item{margin-bottom:8px;padding:14px 16px;border-radius:16px}
 .week-plan-row{padding:8px;border-radius:16px}
 .week-plan-row.active{border-color:var(--primary)}
 .week-shopping-row{border-radius:16px}
-.week-today-card{box-shadow:none}
-.week-today-photo{border-radius:16px}
 .shopping-item{grid-template-columns:28px 56px 1fr auto;gap:12px;min-height:44px;padding:12px;border-radius:18px}
 .shopping-item>input{width:26px;height:26px;border:2px solid #cfd5d0;border-radius:50%}
 .shopping-item>input:checked{border-color:var(--primary);background-color:var(--primary)}
@@ -697,7 +820,7 @@ img.shopping-item-image,.shopping-item-image{width:56px;height:56px;border-radiu
 .recipe-store{color:var(--muted)}
 .price-tag{color:var(--text)}
 .portion-price{color:var(--muted)}
-.empty-state,.pantry-empty,.basket-empty,.live-loading,.next-meal-empty,.week-today-empty{border:1px dashed #cfd5d0;border-radius:20px;background:var(--surface)}
+.empty-state,.pantry-empty,.basket-empty,.live-loading,.next-meal-empty{border:1px dashed #cfd5d0;border-radius:20px;background:var(--surface)}
 .plan-card{background:var(--surface)}
 .plan-card.recommended,.plan-card.selected{border-color:var(--text)}
 .swap-option{border-width:1px;background:var(--surface)}
@@ -789,43 +912,10 @@ button{color:inherit}
 .shopping-screen>#storeCompareTitle{margin-top:4px}
 .store-cards{margin-bottom:6px}
 .store-card span{color:var(--text)}
-.week-today-info strong,.week-plan-name,.week-plan-row-main,.hem-recipe-card,.hero-meal-open,.recipe-shelf-card,.recipe-details,.swap-option,.cook-match,.pantry-pick{color:var(--text)}
-
-/* ---- Vecka: veckoblocket ---------------------------------------------- */
-.week-day-tabs{gap:6px;margin-bottom:14px}
-.week-day-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:60px;padding:0 2px;border:1px solid var(--border);border-radius:16px;background:var(--surface);color:var(--text);box-shadow:none}
-.week-day-tab-name{font-size:12px;font-weight:700;line-height:1}
-.week-day-tab-price{font-size:10px;font-weight:700;line-height:1;color:var(--muted);white-space:nowrap}
-.week-day-tab.active{border-color:var(--primary);background:var(--primary);color:#fff;box-shadow:none}
-.week-day-tab.active .week-day-tab-price{color:rgba(255,255,255,.8)}
-.week-day-tab.empty:not(.active){opacity:1;color:var(--muted)}
-.week-today-card{flex-direction:column;align-items:stretch;gap:0;padding:0;margin-bottom:22px;overflow:hidden;border-radius:22px;box-shadow:none}
-.week-today-photo{width:100%;height:180px;border-radius:0;background:var(--surface-2)}
-.week-today-info{padding:14px 16px 16px;gap:6px}
-.week-today-day{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--primary)}
-.week-today-info strong{font-size:22px;line-height:1.15}
-.week-today-badge{background:var(--surface-2);color:var(--text)}
-.week-today-meta{flex-wrap:wrap;gap:12px;color:var(--muted);font-size:13px;font-weight:600}
-.week-today-arrow{display:none}
-.week-today-flag{top:12px;right:12px;background:var(--text)}
-.week-today-empty{border:1px dashed #cfd5d0;background:var(--surface)}
-.week-today-empty p{color:var(--muted)}
-.week-plan-row{padding:8px 8px 8px 12px;border-radius:18px}
-.week-plan-row.active{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary)}
-.week-plan-row-main{grid-template-columns:34px 44px 1fr auto;gap:10px}
-.week-plan-photo{width:44px;height:44px;border-radius:12px;background:var(--surface-2)}
-.week-plan-name{font-size:15px}
-.week-plan-price{color:var(--text);font-weight:700}
-.week-plan-menu[open] summary{background:var(--surface-2);color:var(--text)}
-.week-plan-menu-options{border-radius:14px;box-shadow:0 12px 30px -12px rgba(0,0,0,.3)}
-.week-plan-menu-options button:active,.week-plan-swap-btn:active{background:var(--primary-soft)}
+.week-plan-name,.week-plan-row-main,.hem-recipe-card,.hero-meal-open,.recipe-shelf-card,.recipe-details,.swap-option,.cook-match,.pantry-pick{color:var(--text)}
 
 .week-overview .week-store-status,.week-screen .week-store-status{display:none!important}
 .week-plan-section[hidden]{display:none!important}
-.week-today-wrap{position:relative;margin-bottom:22px}
-.week-today-wrap .week-today-card{margin-bottom:0}
-.week-today-swap{position:absolute;top:12px;right:12px;z-index:2;min-height:44px;padding:0 16px;border:0;border-radius:999px;background:rgba(255,255,255,.94);color:var(--text);font:inherit;font-size:13px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.14);cursor:pointer}
-.week-today-flag{top:auto;bottom:14px;right:14px}
 
 /* ---- Kedjemärken ------------------------------------------------------ */
 .chain-mark{display:inline-flex;flex:none;align-items:center;justify-content:center;width:30px;height:30px;border-radius:10px;color:#fff;font:700 11px/1 var(--font-display);letter-spacing:-.02em}
@@ -930,6 +1020,11 @@ button{color:inherit}
 .swap-intents{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
 .swap-intent{min-height:44px;padding:0 13px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .swap-intent.active{border-color:var(--primary);background:var(--primary);color:#fff}
+/* G10: låset på en avsikt bärs av ett ORD, inte av en ikon eller en färg -
+   "Premium" överlever gråskala och läses upp av skärmläsaren. Etiketten är
+   nedtonad och spärrad, som resten av systemets kapitäler. */
+.swap-intent.locked{color:var(--muted)}
+.swap-intent-lock{margin-left:2px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .swap-option-reason{display:block;margin-top:3px;color:var(--primary);font-size:12px;font-weight:600}
 /* ---- Budgethjälpen: en mening och en knapp --------------------------- */
 .week-cost-alert{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;margin:0 0 16px;border:1px solid var(--border);border-radius:18px;background:var(--surface)}
@@ -990,7 +1085,13 @@ button{color:inherit}
    Minsta träffyta är 44x44 CSS-px. Ska kontrollen SE mindre ut används
    .tapmin: den vidgar träffytan utan att flytta något visuellt. */
 .tapmin{position:relative}
-.tapmin::after,.ob-tag button::after{
+/* L2: veckoradens tre kontroller ser smalare ut än 44 px för att raden ska
+   rymma rättens namn - men träffytan är 44x44 ändå, precis som .ob-tag
+   nedan. Selektorerna står HÄR och inte som en klass i markupen, för det är
+   den här regeln tests/traffytor.test.js läser: en vidgning som bara syns i
+   markupen är en vidgning testet inte kan bevisa. */
+.tapmin::after,.ob-tag button::after,
+.vecka-dag-byt::after,.vecka-dag-meny summary::after,.vecka-dag-lagg::after{
   content:"";position:absolute;top:50%;left:50%;
   width:max(100%,44px);height:max(100%,44px);
   transform:translate(-50%,-50%);
@@ -1005,7 +1106,7 @@ button{color:inherit}
   outline-offset:2px;
 }
 /* På accentfärgad yta försvinner en accentfärgad ring. */
-.btn-primary:focus-visible,.week-day-tab.active:focus-visible,
+.btn-primary:focus-visible,
 .account-tab.active:focus-visible,.undo-toast button:focus-visible{
   outline-color:var(--on-accent);
 }
@@ -1209,47 +1310,6 @@ button{color:inherit}
   }
 }
 
-/* ===== G11 · Inställningar 
-   Skärmen appen inte hade. Reglerna ligger sist och fristående i stället för i
-   den stora display-listan högre upp: `.view-settings .settings-screen` väger
-   0,2,0 mot `.screen{display:none}` och vinner utan att den raden behöver
-   röras - en fil som fyra L-paket skriver i samtidigt ska få så få nya
-   redigeringspunkter som möjligt.
-
-   L6 bygger om skärmen efter design D (telefon 7). Det här är den enkla
-   varianten: hårfina linjer, rubrik per grupp, värdet till höger. */
-.view-settings .settings-screen{display:block}
-.settings-screen .screen-header{padding-bottom:10px}
-.settings-groups{display:flex;flex-direction:column}
-.settings-group-title{
-  margin:22px 0 2px;color:var(--muted);
-  font:700 11px/1 var(--font-body);letter-spacing:.12em;text-transform:uppercase;
-}
-.settings-group-title:first-child{margin-top:6px}
-.settings-row{
-  display:flex;align-items:center;justify-content:space-between;gap:14px;
-  width:100%;min-height:52px;padding:10px 2px;
-  border:0;border-bottom:1px solid var(--border);background:transparent;
-  color:var(--text);text-align:left;
-}
-.settings-row:active{background:var(--surface-2)}
-.settings-row-text{min-width:0;display:flex;flex-direction:column;gap:3px}
-.settings-row-label{font-size:15px;font-weight:600}
-.settings-row-note{color:var(--muted);font-size:12px}
-/* Allergiraden när den är tom. Märkningen bärs av ett ORD, inte bara av en
-   färg - "Ej ifyllt" går att läsa i gråskala och av en skärmläsare, och det
-   är appens mest säkerhetskritiska inställning. */
-.settings-row-flag{
-  align-self:flex-start;margin-top:2px;padding:2px 8px;
-  border:1px solid var(--ink-3);border-radius:999px;
-  color:var(--ink-2);font-size:11px;font-weight:700;letter-spacing:.04em;
-}
-.settings-row-value{
-  flex:none;max-width:52%;color:var(--muted);font-size:14px;text-align:right;
-  overflow:hidden;text-overflow:ellipsis;
-}
-.settings-row.marked .settings-row-value{color:var(--text);font-weight:600}
-=======
 /* ---- H2 · SPARKVITTOT --------------------------------------------------
    Kortet efter avbockad lista. Det är ett kvitto, inte en gratulationsruta:
    vänsterställd text, hårlinjer, inga tonade plattor.
@@ -1273,3 +1333,301 @@ button{color:inherit}
 .sparkvitto-ingen{font-weight:700}
 .sparkvitto-skal,.sparkvitto-not{color:var(--ink-2);font-size:12.5px}
 .sparkvitto-lopande{margin-top:12px;padding-top:10px;border-top:1px solid var(--rule)}
+
+/* ---- INSTÄLLNINGAR (L6) -------------------------------------------------
+   Facit: docs/matjakt-design-D.html, telefon 7. G11 gjorde att skärmen FINNS;
+   det här blocket bygger den som i D - hårfina linjer mellan grupperna, en
+   rad per inställning på minst 52 px med värdet till höger, och ingenting
+   som liknar ett kort.
+
+   Blocket ligger sist och fristående, precis som G11:s gjorde, och av samma
+   skäl: `.view-settings .settings-screen` väger 0,2,0 mot `.screen{display:none}`
+   och vinner utan att den stora display-listan högre upp behöver röras.
+
+   TOKENS, INTE ALIAS. G11 skrev skärmen i aliasnamnen (--muted, --border,
+   --text, --font-body). De pekar rätt idag, men §9.1 säger att skiktet rivs i
+   etapp 7 och att nya komponenter skrivs i systemets egna tokens. Skärmen är
+   ny; den skrivs i --ink/--ink-2/--rule/--paper-2/--f-disp/--f-ui direkt, och
+   följer därmed med när mörkt läge kopplas på utan en enda extra regel.
+
+   ALLERGIRADEN NÄR DEN ÄR TOM - och varför den INTE är accentfärgad.
+   Riktningen ritar den markerade raden med accent: vänsterkant, värde och
+   märkkapitäl i oxblod. Det går inte att göra i den här appen. §2.3 räknar
+   upp accentens förbjudna betydelser och "status, varning, fel, 'över
+   budget', 'saknas'" står med: accenten betyder nuläget och vägen vidare,
+   ingenting annat. §2.4 säger i stället exakt hur "kräver uppmärksamhet" ska
+   se ut - NEDSÄNKT --paper-2-FÄLT MED 3 PX KANTMARKERING I --ink-3 TILL
+   VÄNSTER - och motiverar det: "en varning är inte 'här går vägen vidare'.
+   Den är ett fält som skiljer sig i relief, inte i temperatur."
+
+   Det är den formen som står här, och den bär märkningen i tre kanaler som
+   alla överlever gråskala: ordet "Ej ifyllt", kantmarkeringen (en BREDD, inte
+   en färg) och reliefen. tests/installningar-formen.test.js river färgen ur
+   båda lägena och kräver att de fortfarande går att skilja åt - samma prov
+   som L0 lät de tre prisreglerna gå igenom, och av samma skäl: det här är
+   appens mest säkerhetskritiska inställning, och den läses i butiksbelysning
+   av någon som i vart tolfte fall inte ser rödgrönt.
+
+   RÄTTELSE 1 gäller i fältet: --ink-3 får aldrig bära TEXT på --paper-2
+   (4,31:1). Inne i den markerade raden står därför etiketten i --ink och
+   underraden i --ink-2 (4,86:1). --ink-3 används bara till kantmarkeringen
+   och märkets ram, som är grafiska objekt med 3:1-krav - och klarar det. */
+.view-settings .settings-screen{display:block}
+
+/* Toppen (.insttopp). Kapitälen är INTE appens vanliga .eyebrow: den står i
+   accent, och en skärm får ha högst två accentmarkeringar synliga samtidigt
+   (§2.3). På Inställningar är de redan slut - bottennavigeringens aktiva flik
+   och ingenting mer ska tävla med allergiraden om blicken. */
+.settings-screen .screen-header{padding:10px 0 5px}
+.settings-screen .eyebrow{
+  margin:0;color:var(--ink-3);
+  font:600 10px/1.5 var(--f-ui);letter-spacing:.2em;text-transform:uppercase;
+}
+.settings-screen .screen-header h1{
+  margin:4px 0 0;font:400 26px/1 var(--f-disp);letter-spacing:-.01em;
+}
+.settings-screen .back-link{
+  display:inline-flex;align-items:center;min-height:44px;margin:0;
+  color:var(--ink-2);font:600 10.5px/1 var(--f-ui);
+  letter-spacing:.16em;text-transform:uppercase;
+}
+
+/* Grupperna (.grupp). Hårlinjen hör till gruppen ovanför rubriken, så
+   skärmen läses som en följd av avdelningar och inte som en enda lång lista.
+   --rule-2 är rätt här: linjen avdelar och bär ingen betydelse (§2.2). */
+.settings-groups{display:flex;flex-direction:column}
+.settings-group-title{
+  margin:0;padding:var(--sp-5) 0 var(--sp-1);
+  border-top:1px solid var(--rule-2);
+  color:var(--ink-2);
+  font:600 10px/1.5 var(--f-ui);letter-spacing:.2em;text-transform:uppercase;
+}
+.settings-group-title:first-child{border-top:0;padding-top:var(--sp-3)}
+
+/* Raden (.instrad). 52 px är golvet i uppdraget och i G5:s svep; padding och
+   radhöjd får den att växa, aldrig krympa. */
+.settings-row{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  width:100%;min-height:52px;padding:var(--sp-3) 0;
+  border:0;border-bottom:1px solid var(--rule);background:transparent;
+  color:var(--ink);text-align:left;
+}
+.settings-row:active{background:var(--paper-2)}
+.settings-row-text{min-width:0;display:flex;flex-direction:column;gap:var(--sp-1)}
+.settings-row-label{font:400 14px/1.35 var(--f-ui);color:var(--ink)}
+.settings-row-note{font:400 11.5px/1.45 var(--f-ui);color:var(--ink-2)}
+/* Värdet till höger, i kolumn med de andra värdena. tabular-nums gör att
+   "950 kr/vecka" och "802 52" står på samma siffra (§3.3). */
+.settings-row-value{
+  flex:none;max-width:52%;
+  font:400 13.5px/1.35 var(--f-ui);color:var(--ink-2);text-align:right;
+  font-variant-numeric:tabular-nums;
+  overflow:hidden;text-overflow:ellipsis;
+}
+
+/* Den obesvarade raden. Formen bär märkningen: 3 px kantmarkering och en
+   indragning som inte finns på någon annan rad. Bakgrunden är reliefen ovanpå
+   det - aldrig det enda som skiljer. */
+/* Fältet bleder 10 px utanför textspalten åt båda håll och tar tillbaka samma
+   10 px som kantmarkering plus inre luft (3 + 7 = 10). Etiketten och värdet
+   står därför kvar på exakt samma x som i varje annan rad: det är RELIEFEN som
+   flyttar sig, inte innehållet. Skrivs det som en ren padding-left i stället
+   hoppar raden inåt och värdekolumnen bryts mitt i skärmen. */
+.settings-row.marked{
+  margin-inline:calc(var(--sp-4) * -1);
+  padding-left:var(--sp-3);padding-right:var(--sp-4);
+  border-left:3px solid var(--ink-3);
+  background:var(--paper-2);
+}
+.settings-row.marked .settings-row-value{color:var(--ink);font-weight:600}
+/* Märket är ett ORD i en ram, inte en färgprick: det går att läsa i gråskala,
+   det går att läsa upp, och det säger vad som är fel i stället för att
+   signalera att något är det. */
+.settings-row-flag{
+  align-self:flex-start;margin-top:var(--sp-1);padding:1px var(--sp-3);
+  border:1px solid var(--ink-3);
+  color:var(--ink-2);
+  font:600 9.5px/1.5 var(--f-ui);letter-spacing:.16em;text-transform:uppercase;
+}
+
+/* ====================================================================
+   L2 · VECKAN, SOM I DESIGN D (telefon 2)
+
+   Skärmen var en kalender: sju dagflikar och ETT dagskort i taget, med
+   veckolistan som en stapel kort under. Två påståenden om samma vecka på
+   samma skärm, och frågan appen finns för - vad äter vi i veckan - besvarad
+   bara för den dag man råkade ha klickat på.
+
+   Nu är den ett uppslag. Sju rader skilda av hårlinjer, ingen ram, ingen
+   radie, ingen skugga; det man öppnade skärmen för står överst, och allt som
+   FÖRKLARAR veckan - butiksval, jämförelse, inköpsförhandsvisning - står
+   under. Sju rader, rubrik och summering ryms tillsammans på 844 px.
+
+   Reglerna ligger sist i filen med avsikt: de vinner över det äldre
+   .week-plan-skiktet utan att någon annan vy rörs. -------------------- */
+
+/* ÖGONBRYNET OCH RUBRIKEN. "Mån" är sant varje vecka; datumintervallet är
+   det enda på skärmen som säger VILKEN vecka det här är. */
+/* Samma räkning som raderna: skärmens krav är att allt ryms, och luften
+   kring ögonbrynet är billigare att ge än en rad man inte ser. */
+.week-overview-header.vecka-topp{padding:8px 0 6px}
+.vecka-topp .kap{
+  display:block;
+  font:600 10px/1.5 var(--font-body);letter-spacing:.2em;text-transform:uppercase;
+  color:var(--ink-3)
+}
+.vecka-topp h1{
+  margin:3px 0 0;font:400 26px/1 var(--font-display);letter-spacing:-.01em;color:var(--ink)
+}
+
+/* DAGARNA. Hårlinjen ovanför listan och under varje rad är hela ramverket. */
+.week-plan-section{margin-bottom:0}
+.vecka-dagar{display:block;gap:0;border-top:1px solid var(--rule)}
+
+/* RADEN. 72 px hög med ett 52-pixelsfoto: golvet är 44, men en rad med bild
+   blir högre av bilden - inte av padding. Högerkanten hålls fri åt radens
+   två handlingar, så priset aldrig hamnar under dem. */
+.vecka-dag{
+  position:relative;display:block;
+  margin:0;padding:0;border:0;border-bottom:1px solid var(--rule);border-radius:0;
+  background:none;box-shadow:none
+}
+.vecka-dag-oppna{
+  display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;
+  /* 52 px foto + 4 px luft över och under = 60, plus radens hårlinje = 61.
+     Kravet på den här skärmen ÄR att sju rader, rubrik och summering ryms
+     ovanför vikten på 844 px, och den fick inte plats på fem pixlar: G8:s
+     erbjudanderad står kvar ovanför veckan (dess eget test kräver det) och
+     kostar 56 px. Luften kring fotot är det enda i raden som är mitt att
+     sätta - fotots 52 px är design D:s mått, och 61 px är fortfarande långt
+     över 44 px träffyta. */
+  gap:0 8px;width:100%;min-height:60px;padding:4px 76px 4px 0;
+  border:0;background:none;text-align:left;color:var(--ink)
+}
+.vecka-dag-oppna:active{background:var(--paper-2)}
+.vecka-dag-oppna:focus-visible{outline-offset:-2px}
+
+/* Dagförkortningen. Kapitäler sätts i CSS, inte i källan (§8). */
+.vecka-dag-d{
+  align-self:start;padding-top:3px;
+  font:600 10px/1.4 var(--font-body);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3)
+}
+.vecka-dag-mitt{display:flex;align-items:center;gap:10px;min-width:0}
+/* M2: bildytan är receptbildMarkup() - ett foto, eller reservkortet. Aldrig
+   ett hål. Tio av de elva rätter som saknar foto är middagar, så kortet står
+   i den här raden till vardags. */
+.vecka-dag-foto,.vecka-dag-mitt .recipe-photo{
+  flex:0 0 52px;width:52px;height:52px;
+  border-radius:0;object-fit:cover;background:var(--shot)
+}
+.vecka-dag-text{min-width:0}
+.vecka-dag-namn{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  font:400 16px/1.12 var(--font-display);letter-spacing:-.01em;color:var(--ink)
+}
+.vecka-dag-meta{
+  display:block;margin-top:2px;
+  font:400 10.5px/1.3 var(--font-body);color:var(--ink-3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.vecka-dag-hoger{justify-self:end;text-align:right;white-space:nowrap}
+.vecka-dag-hoger .pris{font-size:13px}
+
+/* IDAG KODAS I TVÅ KANALER: accentfärgad dagförkortning OCH ordet "Ikväll"
+   först i metaraden. Färgen ensam överlever inte gråskala. */
+.vecka-dag--idag .vecka-dag-d{color:var(--accent)}
+
+/* RADENS TVÅ HANDLINGAR, båda 44x44, vid högerkanten. Att öppna rätten, att
+   byta den och att säga vad som blev av den är tre SYSKON - aldrig en knapp
+   inuti en knapp. */
+.vecka-dag-byt,.vecka-dag-meny{position:absolute;top:50%;transform:translateY(-50%)}
+.vecka-dag-byt{
+  right:34px;display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:44px;padding:0;border:0;border-radius:0;background:none;
+  font:600 10px/1 var(--font-body);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent)
+}
+.vecka-dag-byt span{border-bottom:1px solid var(--accent);padding-bottom:2px}
+.vecka-dag-byt:active{background:var(--paper-2)}
+.vecka-dag-meny{right:0}
+.vecka-dag-meny summary{
+  position:relative;
+  display:flex;align-items:center;justify-content:center;width:34px;height:44px;
+  border-radius:0;color:var(--ink-3);font-size:17px;list-style:none;cursor:pointer
+}
+.vecka-dag-meny summary::-webkit-details-marker{display:none}
+.vecka-dag-meny[open] summary{background:var(--paper-2);color:var(--ink)}
+.vecka-dag-meny-val{
+  position:absolute;top:40px;right:0;z-index:5;
+  display:flex;flex-direction:column;min-width:170px;
+  border:1px solid var(--rule-2);border-radius:0;background:var(--paper);
+  box-shadow:0 12px 30px -12px var(--shadow-color)
+}
+.vecka-dag-meny-val button{
+  min-height:44px;padding:0 14px;border:0;border-radius:0;background:none;
+  color:var(--ink);font:400 13px/1.4 var(--font-body);text-align:left
+}
+.vecka-dag-meny-val button+button{border-top:1px solid var(--rule)}
+.vecka-dag-meny-val button.marked{color:var(--accent);font-weight:600}
+
+/* TOM DAG. Nedsänkt fält OCH kursiv Newsreader - två kanaler, som allt annat
+   som bär betydelse. Streckad ruta i stället för foto: en ram utan innehåll
+   säger "här finns plats", en fylld grå ruta säger "här skulle en bild ha
+   laddats". --ink-3 är förbjudet på --paper-2 (RÄTTELSE 1, 4,31:1), så
+   dagförkortningen går till --ink-2 här. */
+.vecka-dag--tom{
+  display:grid;grid-template-columns:30px minmax(0,1fr) 34px;align-items:center;
+  gap:0 8px;min-height:62px;padding:5px 0;background:var(--paper-2)
+}
+.vecka-dag--tom .vecka-dag-d{color:var(--ink-2)}
+.vecka-dag-ruta{
+  flex:0 0 52px;width:52px;height:52px;border:1px dashed var(--rule-2);background:none
+}
+.vecka-dag-tomtext{
+  min-width:0;font:italic 400 15.5px/1.3 var(--font-display);color:var(--ink-2)
+}
+.vecka-dag-lagg{
+  position:relative;
+  justify-self:end;display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:44px;padding:0;border:0;border-radius:0;background:none;
+  color:var(--accent);font:400 21px/1 var(--font-body)
+}
+.vecka-dag-lagg:active{background:var(--rule)}
+
+/* SUMMERINGEN · KVITTOTS LOGIK, INTE KVITTOTS UTSEENDE.
+   Delposterna står kvar under summan så att man kan räkna efter; det är
+   det som gör ett kvitto trovärdigt, inte den perforerade remsan. */
+.vecka-fot{
+  margin:0 0 18px;padding:9px 16px 10px;
+  border-top:1px solid var(--rule-2);background:var(--paper-2)
+}
+/* Delposterna: talet först, ordet efter, prickar emellan. En rad som ryms
+   under vikten är en rad man läser; ett block man måste skrolla fram till är
+   det inte, och då är det ingen summering. */
+.vecka-fot-poster{
+  display:flex;flex-wrap:wrap;gap:0 10px;margin:0;
+  font:400 12px/1.5 var(--font-body);color:var(--ink-2)
+}
+.vecka-fot-poster b{font-weight:600;color:var(--ink)}
+/* Pricken mellan delposterna är ett TECKEN, inte en linje, och ett tecken
+   mäts som text. Skriven i --rule-2 låg den på 1,5:1 - en hårlinjefärg som
+   råkade hamna i ett textflöde. Den ärver färgen från raden i stället: samma
+   --ink-2 som orden omkring, alltså samma kontrast som redan är godkänd. */
+.vecka-fot-poster span+span::before{content:"·";margin-right:10px}
+.vecka-fot-summa{
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  margin-top:7px;padding-top:7px;border-top:1px solid var(--rule-2)
+}
+.vecka-fot-summa .kap{
+  font:600 10px/1.5 var(--font-body);letter-spacing:.2em;text-transform:uppercase;
+  color:var(--ink-2)
+}
+.vecka-fot-tal{font-family:var(--font-display);font-size:23px;line-height:1.1;color:var(--ink)}
+.vecka-fot-tal .cirka,.vecka-fot-tal .minst{font-family:var(--font-body);color:var(--ink-2)}
+.vecka-fot-tal .saknas{font-family:var(--font-body)}
+.vecka-fot-grund{margin:5px 0 0;font:400 11px/1.35 var(--font-body);color:var(--ink-2)}
+
+/* G8:s erbjudanderad står kvar ovanför veckan - men luften omkring den är
+   sju rader dyr, så den hålls stram. */
+.week-overview .week-plan-upsell{margin:6px 0}

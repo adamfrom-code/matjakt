@@ -25,6 +25,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 from services.recipes import RecipeStore, normalize_ingredient_id  # noqa: E402
 from services.recipes.images import find_image, placeholder  # noqa: E402
+from services.recipes.pantry import is_pantry_staple, reason  # noqa: E402
 
 RECIPE_DIR = ROOT / "backend" / "recipe_sources"
 DB_PATH = ROOT / "backend" / "data" / "recipes.db"
@@ -76,8 +77,21 @@ def validate(recipe: dict, seen_ids: set, seen_names: set) -> list[str]:
         if not ingredient.get("name"):
             problems.append("ingrediens utan namn")
             continue
-        if ingredient.get("pantryStaple"):
+        # M3: listan avgör, inte raden. Förut räckte det att en rad kallade
+        # sig skafferivara för att slippa mängdkravet - och då blev samma
+        # ingrediens prissatt i ett recept och gratis i nästa. Butiken
+        # härleder flaggan ändå; det här gör att felet syns för den som
+        # skriver källfilen i stället för att rättas tyst vid importen.
+        if is_pantry_staple(ingredient["name"]):
+            if ingredient.get("amount") is not None:
+                problems.append(
+                    f"skafferivara med mängd: {ingredient['name']} "
+                    f"({reason(ingredient['name'])})")
             continue
+        if ingredient.get("pantryStaple"):
+            problems.append(
+                f"märkt skafferivara men står inte i PANTRY_STAPLES: "
+                f"{ingredient['name']} - en vara man köper ska prissättas")
         if ingredient.get("amount") is None:
             problems.append(f"ingrediens utan mängd: {ingredient['name']}")
         unit = ingredient.get("unit")

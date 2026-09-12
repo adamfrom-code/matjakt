@@ -14,7 +14,7 @@
 // Testerna (node --test, backend, Playwright-E2E) körs mot källorna; E2E:n
 // kan pekas mot bygget med MATJAKT_E2E_FRONTEND_DIR=dist/frontend.
 import { build } from "esbuild";
-import { cpSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stampBuild } from "./frontend_version.mjs";
@@ -73,6 +73,28 @@ if (native) {
   index = index.replace(/\s*<script src="\.\.\/traffic\.js" defer><\/script>/, "");
 }
 writeFileSync(indexPath, index);
+
+// KONTROLLRUMMET FÖLJER INTE MED IN I APPEN.
+//
+// admin.html och admin.js ligger i app/ för att backend-servern ska kunna
+// servera dem på samma origin som API:t - kontrollrummet är en driftsida,
+// inte en konsumentskärm. I ett webbygge är det rätt: den som kan adressen
+// möts ändå av en admin-tokengrind som svarar 404 för alla andra.
+//
+// I native-bundlet är det fel. Sidan hamnar i en app som laddas ner från
+// App Store, och den som packar upp .ipa:n hittar den. Ingen säkerhetslucka
+// - grinden ligger på servern - men en granskare som ser en inloggningssida
+// för "drift" i en matbudgetapp kommer att fråga, och frågan är dyrare att
+// besvara än filen är att utesluta.
+//
+// Tas bort EFTER att index.html skrivits och FÖRE stampBuild, så
+// cache-digesten räknas på det som faktiskt paketeras.
+if (native) {
+  for (const namn of ["admin.html", "admin.js"]) {
+    const sökväg = join(out, "app", namn);
+    if (existsSync(sökväg)) rmSync(sökväg);
+  }
+}
 
 // CACHE-STÄMPELN SKRIVS HÄR, OCH FINNS INGEN ANNANSTANS.
 //

@@ -1592,7 +1592,8 @@
       },
       {
         "name": "Sirap",
-        "pantryStaple": true
+        "amount": 1,
+        "unit": "msk"
       },
       {
         "name": "Salt",
@@ -1658,8 +1659,7 @@
       },
       {
         "name": "Smör",
-        "amount": 125,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Broccoli",
@@ -1773,8 +1773,7 @@
       },
       {
         "name": "Spiskummin",
-        "amount": 5,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Paprikapulver",

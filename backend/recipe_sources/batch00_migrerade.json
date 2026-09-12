@@ -306,12 +306,14 @@
       {
         "name": "Vitlök",
         "normalizedId": "vitlok",
-        "pantryStaple": true
+        "amount": 2,
+        "unit": "klyfta"
       },
       {
         "name": "Ingefära",
         "normalizedId": "ingefara",
-        "pantryStaple": true
+        "amount": 20,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -397,17 +399,20 @@
       {
         "name": "Vitlök",
         "normalizedId": "vitlok",
-        "pantryStaple": true
+        "amount": 2,
+        "unit": "klyfta"
       },
       {
         "name": "Ingefära",
         "normalizedId": "ingefara",
-        "pantryStaple": true
+        "amount": 20,
+        "unit": "g"
       },
       {
         "name": "Ris",
         "normalizedId": "ris",
-        "pantryStaple": true
+        "amount": 250,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -753,7 +758,8 @@
       {
         "name": "Lök",
         "normalizedId": "lok",
-        "pantryStaple": true
+        "amount": 1,
+        "unit": "st"
       },
       {
         "name": "Salt",
@@ -838,7 +844,8 @@
       {
         "name": "Vitlök",
         "normalizedId": "vitlok",
-        "pantryStaple": true
+        "amount": 2,
+        "unit": "klyfta"
       },
       {
         "name": "Salt",
@@ -1015,7 +1022,8 @@
       {
         "name": "Vitlök",
         "normalizedId": "vitlok",
-        "pantryStaple": true
+        "amount": 2,
+        "unit": "klyfta"
       },
       {
         "name": "Salt",
@@ -1117,7 +1125,8 @@
       {
         "name": "Timjan",
         "normalizedId": "timjan",
-        "pantryStaple": true
+        "amount": 5,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -1366,7 +1375,8 @@
       {
         "name": "Vitlök",
         "normalizedId": "vitlok",
-        "pantryStaple": true
+        "amount": 2,
+        "unit": "klyfta"
       },
       {
         "name": "Salt",
@@ -1544,17 +1554,20 @@
       {
         "name": "Vetemjöl",
         "normalizedId": "vetemjol",
-        "pantryStaple": true
+        "amount": 60,
+        "unit": "g"
       },
       {
         "name": "Ägg",
         "normalizedId": "agg",
-        "pantryStaple": true
+        "amount": 2,
+        "unit": "st"
       },
       {
         "name": "Ströbröd",
         "normalizedId": "strobrod",
-        "pantryStaple": true
+        "amount": 80,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -1637,17 +1650,20 @@
       {
         "name": "Vetemjöl",
         "normalizedId": "vetemjol",
-        "pantryStaple": true
+        "amount": 60,
+        "unit": "g"
       },
       {
         "name": "Ägg",
         "normalizedId": "agg",
-        "pantryStaple": true
+        "amount": 2,
+        "unit": "st"
       },
       {
         "name": "Ströbröd",
         "normalizedId": "strobrod",
-        "pantryStaple": true
+        "amount": 80,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -2078,12 +2094,14 @@
       {
         "name": "Vitlök",
         "normalizedId": "vitlok",
-        "pantryStaple": true
+        "amount": 2,
+        "unit": "klyfta"
       },
       {
         "name": "Sesamfrön",
         "normalizedId": "sesamfron",
-        "pantryStaple": true
+        "amount": 20,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -2169,7 +2187,8 @@
       {
         "name": "Paprikapulver",
         "normalizedId": "paprikapulver",
-        "pantryStaple": true
+        "amount": 10,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -2330,7 +2349,8 @@
       {
         "name": "Buljong",
         "normalizedId": "buljong",
-        "pantryStaple": true
+        "amount": 500,
+        "unit": "ml"
       },
       {
         "name": "Peppar",
@@ -2505,12 +2525,14 @@
       {
         "name": "Lök",
         "normalizedId": "lok",
-        "pantryStaple": true
+        "amount": 1,
+        "unit": "st"
       },
       {
         "name": "Vitlök",
         "normalizedId": "vitlok",
-        "pantryStaple": true
+        "amount": 2,
+        "unit": "klyfta"
       },
       {
         "name": "Salt",
@@ -3115,7 +3137,8 @@
       {
         "name": "Buljong",
         "normalizedId": "buljong",
-        "pantryStaple": true
+        "amount": 700,
+        "unit": "ml"
       },
       {
         "name": "Olja",
@@ -3206,7 +3229,8 @@
       {
         "name": "Persilja",
         "normalizedId": "persilja",
-        "pantryStaple": true
+        "amount": 20,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -3304,7 +3328,8 @@
       {
         "name": "Parmesan",
         "normalizedId": "parmesan",
-        "pantryStaple": true
+        "amount": 60,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -3552,7 +3577,8 @@
       {
         "name": "Vitlök",
         "normalizedId": "vitlok",
-        "pantryStaple": true
+        "amount": 2,
+        "unit": "klyfta"
       },
       {
         "name": "Salt",
@@ -3638,12 +3664,14 @@
       {
         "name": "Honung",
         "normalizedId": "honung",
-        "pantryStaple": true
+        "amount": 1,
+        "unit": "tsk"
       },
       {
         "name": "Ingefära",
         "normalizedId": "ingefara",
-        "pantryStaple": true
+        "amount": 20,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -3725,12 +3753,14 @@
       {
         "name": "Honung",
         "normalizedId": "honung",
-        "pantryStaple": true
+        "amount": 1,
+        "unit": "tsk"
       },
       {
         "name": "Ingefära",
         "normalizedId": "ingefara",
-        "pantryStaple": true
+        "amount": 20,
+        "unit": "g"
       }
     ],
     "instructions": [
@@ -3908,7 +3938,8 @@
       {
         "name": "Basilika",
         "normalizedId": "basilika",
-        "pantryStaple": true
+        "amount": 1,
+        "unit": "st"
       }
     ],
     "instructions": [
@@ -3993,7 +4024,8 @@
       {
         "name": "Basilika",
         "normalizedId": "basilika",
-        "pantryStaple": true
+        "amount": 1,
+        "unit": "st"
       }
     ],
     "instructions": [
@@ -4504,7 +4536,8 @@
       {
         "name": "Vitlök",
         "normalizedId": "vitlok",
-        "pantryStaple": true
+        "amount": 2,
+        "unit": "klyfta"
       },
       {
         "name": "Salt",

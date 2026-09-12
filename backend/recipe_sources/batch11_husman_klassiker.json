@@ -327,8 +327,7 @@
       },
       {
         "name": "Ättika",
-        "amount": 1,
-        "unit": "msk"
+        "pantryStaple": true
       },
       {
         "name": "Potatis",

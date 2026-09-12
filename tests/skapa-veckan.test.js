@@ -24,6 +24,10 @@ import { läsFil } from "./fixtures/css-parser.mjs";
 
 const html = läsFil("frontend/app/index.html");
 const app = läsFil("frontend/app/app.js");
+// L1 flyttade hjälteytans inbjudan ur app.js till sin egen vymodul. LÖFTET
+// läses därför ur båda filerna; KOPPLINGEN läses fortfarande bara ur app.js,
+// där bindningen bor.
+const ikvall = läsFil("frontend/app/src/views/ikvall.js");
 
 /** Klickhanterarens kropp för ett id, så långt den går på en rad. */
 function klickHanterare(id) {
@@ -42,7 +46,12 @@ test("knapparna lovar fortfarande en vecka - annars prövar testet fel sak", () 
   assert.match(html, /id="generateBtnLabel">Skapa min vecka</);
   assert.match(html, /id="newWeekBtn"[^>]*>Skapa ny vecka</);
   assert.match(html, /id="startNewWeekBtn"[^>]*><span>Skapa nästa vecka</);
-  assert.match(app, /data-hem-create>\s*<strong>Vad blir det för middag i veckan\?<\/strong>/);
+  // Källan har flyttat, kravet inte: löftet ska stå i den knapp som bär
+  // data-hem-create, inte någon annanstans på skärmen. L1 satte ett ögonbryn
+  // ("Ikväll") mellan knappen och löftet - därför tillåts lite text emellan,
+  // men inte mer än ett kort ögonbryn.
+  assert.match(app + ikvall,
+    /data-hem-create>[\s\S]{0,160}<strong>Vad blir det för middag i veckan\?<\/strong>/);
 });
 
 // ---------------------------------------------------------------------------

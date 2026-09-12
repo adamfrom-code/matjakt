@@ -13,8 +13,14 @@
        style-src keeps 'unsafe-inline' because the app sets style="" on
        elements; injected CSS is a far smaller problem than injected JS.
        frame-ancestors is ignored in a meta tag - the backend sends it as
-       a real header (see api_server.end_headers). -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://plausible.io https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com https://plausible.io https://cloud.umami.is; base-uri 'self'; form-action 'self'">
+       a real header (see api_server.end_headers).
+       style-src and font-src are 'self' only: Newsreader and Archivo ship
+       inside the app as woff2 (styles.css, assets/fonts/), so Google's two
+       font hosts are no longer allowed anywhere. tests/typsnitt.test.js
+       fails if either name reappears in this file or in styles.css, which
+       is why neither is spelled out here - the gate is a plain text search
+       with no exception to slip through. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://plausible.io https://cloud.umami.is; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://matjakt.onrender.com https://plausible.io https://cloud.umami.is; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ECEEEF">
   <meta name="description" content="Matjakt hjälper dig planera billigare middagar efter din budget.">
@@ -33,9 +39,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Matjakt">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&display=swap" rel="stylesheet">
+  <!-- Newsreader och Archivo ligger i appen (assets/fonts/), deklarerade
+       överst i styles.css. Ingen preconnect, ingen tredjepartslänk: första
+       starten utan nät visar rätt typsnitt, och CSP:n behöver inte släppa
+       in någon fontvärd. -->
   <link rel="stylesheet" href="styles.css?v=__MATJAKT_VERSION__">
 </head>
 <body>
@@ -52,9 +59,28 @@
         <div class="home-hero"><h1 id="homeGreeting">God morgon</h1><p id="homeSubtitle">Redo för en god och prisvärd vecka.</p></div>
 
         <!-- IKVÄLL FÖRST. Det en familj öppnar appen för klockan 16 är
-             "vad blir det för middag?" - inte en instrumentpanel. -->
+             "vad blir det för middag?" - inte en instrumentpanel.
+
+             L1: skärmen är ett FOTOKORT (design D, telefon 1). Kortet
+             ritas av src/views/ikvall.js; budgetremsan och fyndraden står
+             kvar i markupen därför att budgetknappen binds en gång vid
+             start (#budgetCardBtn) och inte ska försvinna under lyssnaren
+             vid varje omritning.
+
+             Budgetmätaren flyttade hit UR veckokortet: budgeten hör till
+             maten den betalar för, och som remsa under fotot informerar
+             den utan att bli skärmens huvudperson (DESIGNSYSTEM-D §5.8). -->
         <section class="next-meal-section" aria-label="Kvällens middag">
           <div id="nextMealCard"></div>
+          <button type="button" class="ikvall-remsa" id="budgetCardBtn">
+            <span class="ikvall-rad">
+              <span class="ikvall-kap">Veckans budget</span>
+              <span class="week-budget-text"><strong id="summaryBudgetRemaining">800 kr</strong> <span id="summaryBudgetPrefix">veckobudget</span><b id="summaryBudgetNote"></b></span>
+            </span>
+            <span class="progress-track" id="summaryBudgetMeter" role="img" aria-label="Ingen vecka planerad ännu"><i id="summaryBudgetBar"></i></span>
+            <span class="sr-only" id="budgetScopeAria"></span>
+          </button>
+          <div class="ikvall-fynd" id="ikvallFynd"></div>
         </section>
 
         <!-- ETT veckokort: rad, budgetmätare, sparande och huvudknapp.
@@ -65,10 +91,6 @@
             <span id="weekCardTitle">Din vecka</span><span class="status-dot" id="weekCardStatus">Redo</span>
             <button type="button" class="week-sheet-plus week-sheet-plus-corner" id="weekSheetOpen" aria-haspopup="dialog" aria-controls="weekSheet" aria-label="Justera personer, middagar och budget">＋</button>
           </div>
-          <button type="button" class="week-budget-row" id="budgetCardBtn">
-            <span class="week-budget-text"><strong id="summaryBudgetRemaining">800 kr</strong><span id="summaryBudgetPrefix">kvar av</span> <span id="summaryBudgetTotal">800 kr</span><b id="summaryBudgetPercent">0%</b></span>
-            <span class="progress-track"><i id="summaryBudgetBar"></i></span>
-          </button>
           <p class="nutrition-warning" id="nutritionWarning" hidden></p>
           <button class="btn btn-primary" id="generateBtn"><span id="generateBtnLabel">Skapa min vecka</span><span aria-hidden="true">→</span></button>
           <button type="button" class="week-secondary" id="newWeekBtn" hidden>Skapa ny vecka</button>
@@ -98,11 +120,35 @@
 
       <section class="screen week-screen" aria-labelledby="weekOverviewHeading">
         <section class="week-overview" id="weekOverview" aria-label="Min matvecka">
-          <header class="screen-header week-overview-header"><h1 id="weekOverviewHeading">Min matvecka</h1></header>
+          <!-- L2: VECKAN ÄR SJU RADER OCH EN SUMMERING (design D, telefon 2).
+               Ögonbrynet bär datumintervallet, rubriken heter Veckan, och
+               sedan kommer dagarna. Allt som förklarar veckan - butiksval,
+               jämförelse, inköpsförhandsvisning - står UNDER den, av samma
+               skäl som listan kommer först i Handla: det man öppnade skärmen
+               för ska stå överst. Sju rader, rubrik och summering ryms
+               tillsammans på 844 px utan att man skrollar. -->
+          <header class="screen-header week-overview-header vecka-topp">
+            <span class="kap" id="weekRangeLabel"></span>
+            <h1 id="weekOverviewHeading">Veckan</h1>
+          </header>
           <!-- G8: erbjudandet om en annan veckotyp står OVANFÖR den färdiga
                veckan, inte i stället för den. Onboardingens sista knapp
                skapar veckan direkt; den här raden säljer efteråt. -->
           <button type="button" class="store-compare-upsell week-plan-upsell" id="weekPlanUpsell" hidden>Vill du ha en familjevecka i stället? Välj veckotyp <span aria-hidden="true">&rarr;</span></button>
+          <!-- G3: HELA VECKAN SYNLIG. Listan var permanent dold, och kvar
+               fanns sju dagflikar och ETT dagskort i taget - alltså gick
+               frågan appen finns för, "vad äter vi i veckan", inte att
+               besvara med ögonen. L2 tog bort flikarna och dagskortet: sju
+               rader, alla synliga, ingen kalender emellan. -->
+          <div class="week-overview-section week-plan-section">
+            <h2 class="sr-only">Veckans plan</h2>
+            <div class="week-plan-list vecka-dagar" id="weekPlanList"></div>
+          </div>
+          <!-- Summeringen: delposter, linje, summa. Kvittots LOGIK - man ska
+               kunna räkna efter - inte kvittots utseende. Och summan säger
+               vad den grundar sig på: saknar en rad sitt pris står det
+               "minst", aldrig ett exakt tal (C7). -->
+          <div class="vecka-fot" id="weekTotals"></div>
           <div class="week-store-switch" id="weekStoreSwitch" role="tablist" aria-label="Byt butik för veckan">
             <button type="button" data-week-store="auto">Auto</button>
             <button type="button" data-week-store="alla">Alla</button>
@@ -119,17 +165,6 @@
             <div class="store-cards" id="storeCards"></div>
             <p class="store-spread-teaser" id="storeSpreadTeaser" hidden></p>
             <div id="basketStoreCompare" hidden></div>
-          </div>
-          <div class="week-day-tabs" id="weekDayTabs" role="tablist" aria-label="Välj dag"></div>
-          <div id="weekTodayCard"></div>
-          <!-- G3: HELA VECKAN SYNLIG. Listan var permanent dold, och kvar
-               fanns sju dagflikar och ETT dagskort i taget - alltså gick
-               frågan appen finns för, "vad äter vi i veckan", inte att
-               besvara med ögonen. Sju rader, alla synliga, ingen knapp
-               emellan. (L2 bygger om raderna till design D.) -->
-          <div class="week-overview-section week-plan-section">
-            <div class="section-heading"><h2>Veckans plan</h2></div>
-            <div class="week-plan-list" id="weekPlanList"></div>
           </div>
           <div class="week-overview-section">
             <div class="section-heading"><h2>Handla-listan</h2><span id="weekShoppingSummary"></span></div>
@@ -555,7 +590,10 @@
             <li>Exakt jämförelse mellan butikerna</li>
             <li>Automatiskt val av billigaste butik</li>
             <li>Näringsmål: kalorier, protein, kolhydrater, fett och proteinkälla</li>
-            <li>Obegränsade byten av maträtter</li>
+            <!-- G10: byten är obegränsade OCH gratis. Raden lovade något
+                 som numera ingår i gratisversionen; det som faktiskt är
+                 Premium är byten med en avsikt. -->
+            <li>Byten med avsikt: billigare, snabbare, barnvänligare, mer protein</li>
             <li>Aktuella erbjudanden och kampanjer</li>
             <li>Laga med det du redan har hemma</li>
           </ul>
@@ -652,7 +690,9 @@
       <p class="plan-modal-hint" id="swapModalHint">Tre förslag som fortfarande passar din budget, butik, allergier och näringsmål.</p>
       <div id="swapOptions"></div>
       <button type="button" class="btn-ghost swap-show-more" id="swapShowMoreBtn" hidden>Visa fler alternativ</button>
-      <button type="button" class="btn btn-primary swap-confirm-btn" id="swapConfirmBtn" hidden><span>Byt till denna rätt</span></button>
+      <!-- G10: "Byt till denna rätt" är borta. Ett tryck på alternativet ÄR
+           bytet, och Ångra ligger i toasten efteråt - en bekräftelseknapp för
+           en handling som går att ångra är ett tryck till utan ett svar till. -->
       <button type="button" class="btn btn-ghost swap-cancel-btn" data-swap-close>Avbryt</button>
     </div>
   </div>

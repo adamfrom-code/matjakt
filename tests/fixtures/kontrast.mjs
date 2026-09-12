@@ -114,6 +114,10 @@ function namnprefix(compound) {
 export const STRUKTUR = {
   ".hero-meal-info": ".hero-meal-scrim",   // skärmen ligger som syskon över fotot
   ".hero-meal-meta": ".hero-meal-scrim",
+  // "Byt" ligger på samma foto och under samma skärm som rubriken, men som
+  // syskon till hjälteknappen - en knapp kan inte ligga inuti en knapp. Den
+  // sitter i fotots nedre zon, där gradienten är full --scrim (L1, §5.2).
+  ".hero-meal-swap": ".hero-meal-scrim",
   ".invite-landing-eyebrow": ".invite-landing-card",
 };
 

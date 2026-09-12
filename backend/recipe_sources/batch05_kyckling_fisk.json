@@ -901,8 +901,7 @@
       },
       {
         "name": "Spiskummin",
-        "amount": 5,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Paprikapulver",
@@ -1366,8 +1365,7 @@
       },
       {
         "name": "Smör",
-        "amount": 100,
-        "unit": "g"
+        "pantryStaple": true
       },
       {
         "name": "Potatis",

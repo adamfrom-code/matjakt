@@ -40,7 +40,7 @@
 **Native-drift.**
 - `<meta name="matjakt-api-url">` i `frontend/app/index.html` är tom ⇒ sätt `https://matjakt.onrender.com` före `cap sync` (webben körs same-origin, appen inte).
 - Utvecklingslåset är avvecklat (2026-09-06): servern svarar `gate: false` och native-origin `capacitor://localhost` är CORS-betrodd - appen behöver ingen låsinloggning.
-- Typsnitten laddas från fonts.googleapis.com; bunta Bricolage Grotesque/Manrope lokalt så första start fungerar offline och CSP kan stängas ytterligare.
+- Typsnitten ligger i appen sedan N0b: Newsreader och Archivo som woff2 under `frontend/app/assets/fonts/`, deklarerade överst i `styles.css`. Första start utan nät visar rätt typsnitt, och appens CSP är `style-src 'self' 'unsafe-inline'; font-src 'self'` - ingen fontvärd. (`backend/api_server.py` skickar fortfarande fontvärdarna i sin header: landningssidan under `frontend/` hämtar dem ännu från Google. Appen påverkas inte - metataggen är den snävare av de två och webbläsaren tillämpar snittet.)
 
 ## Ikoner – not om källa
 
