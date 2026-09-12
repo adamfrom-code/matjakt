@@ -34,6 +34,17 @@
   --sp-1:2px; --sp-2:5px; --sp-3:7px; --sp-4:10px;
   --sp-5:12px; --sp-6:16px; --sp-7:20px; --sp-8:28px;
   --gutter:20px; --radius:0;
+
+  /* Två komponentvärden som måste ha ett golv i :root, för de sätts per
+     komponent och ett var() utan definition blir tyst tomt (L1).
+     --hjalte-text: höjden på zonen längst ned i ett helbleed-foto där
+       gradienten är FULL --scrim. Texten på fotot får inte bli högre än den,
+       och gradienten blir full exakt vid dess överkant - samma tal på båda
+       ställena, annars kan en lång rubrik krypa upp ur skyddet (§5.2).
+     --andel: budgetmätarens fyllnadsgrad. Ett värde, två användningar -
+       fyllnadens bredd och markörens läge - så de aldrig glider isär (§5.8). */
+  --hjalte-text:116px; --andel:0%;
+
   --ease:cubic-bezier(.2,.6,.2,1);
   --t-snabb:120ms; --t-normal:180ms; --t-lugn:240ms;
 
@@ -419,20 +430,6 @@ button.campaign-deal{cursor:pointer;font:inherit}
 /* ---- Nya Hem: Ikväll-hjälten + samlat veckokort -------------------------- */
 .home-hero h1{font-size:30px}
 .home-hero{margin-bottom:14px}
-.hero-meal-card{position:relative;border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow)}
-.hero-meal-open{display:block;width:100%;border:0;padding:0;background:var(--primary);text-align:left;cursor:pointer}
-.hero-meal-photo{display:block;height:210px}
-.hero-meal-photo .recipe-photo,.hero-meal-photo img{width:100%;height:210px;object-fit:cover;display:block}
-.hero-meal-photo .recipe-fallback{width:100%;height:210px;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.hero-meal-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,26,19,0) 35%,rgba(12,26,19,.82) 100%);pointer-events:none}
-.hero-meal-info{position:absolute;left:16px;right:16px;bottom:14px;color:#fff;display:flex;flex-direction:column;gap:2px;pointer-events:none}
-.hero-meal-info small{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.86)}
-.hero-meal-info strong{font-family:var(--font-display);font-size:22px;line-height:1.15;text-shadow:0 2px 14px rgba(0,0,0,.35)}
-.hero-meal-meta{font-size:13px;color:rgba(255,255,255,.85)}
-.hero-meal-swap{position:absolute;top:12px;right:12px;border:0;border-radius:99px;padding:7px 14px;background:rgba(255,255,255,.92);color:var(--primary);font:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:var(--shadow)}
-.hero-meal-invite{border:0;width:100%;text-align:left;font:inherit;cursor:pointer;background:var(--primary);background-image:linear-gradient(155deg,var(--primary-2),var(--primary) 70%);color:#fff;padding:26px 22px}
-.hero-meal-invite strong{font-family:var(--font-display);font-size:23px;display:block;margin-bottom:8px}
-.hero-meal-invite p{margin:0;color:rgba(255,255,255,.85);font-size:14px;line-height:1.55}
 .week-budget-row{display:block;width:100%;border:0;background:transparent;padding:2px 2px 0;font:inherit;text-align:left;cursor:pointer}
 .week-budget-text{display:flex;align-items:baseline;gap:6px;font-size:13px;color:var(--muted);margin-bottom:6px}
 .week-budget-text strong{color:var(--primary);font-size:15px}
@@ -596,21 +593,98 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.02em}
 .week-secondary{color:var(--muted);font-weight:600;text-decoration:none}
 .nutrition-warning{margin:0;padding:10px 12px;border-radius:14px;background:var(--gold-soft);color:var(--gold-2);font-size:13px}
 
-/* ---- Hem: Ikväll som rad --------------------------------------------- */
-.next-meal-section{margin-bottom:14px}
-.hero-meal-card{border:1px solid var(--border);border-radius:20px;background:var(--surface);box-shadow:none}
-.hero-meal-open{display:flex;align-items:center;gap:14px;padding:12px;background:var(--surface)}
-.hero-meal-photo{flex:none;display:block;width:76px;height:76px;border-radius:14px;overflow:hidden;background:var(--surface-2)}
-.hero-meal-photo .recipe-photo,.hero-meal-photo img,.hero-meal-photo .recipe-fallback{width:76px;height:76px}
-.hero-meal-scrim{display:none}
-.hero-meal-info{position:static;flex:1;min-width:0;gap:3px;padding-right:52px;color:var(--text)}
-.hero-meal-info small{color:var(--muted);font-size:12px;letter-spacing:.06em}
-.hero-meal-info strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font:700 18px/1.2 var(--font-display);letter-spacing:-.01em;text-shadow:none}
-.hero-meal-meta{color:var(--muted);font-size:13px;font-weight:600}
-.hero-meal-swap{top:50%;right:12px;transform:translateY(-50%);min-height:44px;border:0;background:var(--surface-2);color:var(--text);box-shadow:none}
-.hero-meal-invite{padding:22px 20px;border:1px solid var(--border);border-radius:20px;background:var(--surface);background-image:none;color:var(--text)}
-.hero-meal-invite strong{margin-bottom:6px;font:700 20px/1.15 var(--font-display);letter-spacing:-.02em}
-.hero-meal-invite p{color:var(--muted)}
+/* ---- Hem: Ikväll som fotokort (L1, design D telefon 1) ----------------
+   Ett helbleed foto, rubriken PÅ bilden, priset som bildtext under och
+   budgeten som en remsa. Skärmen (gradienten) är inte dekoration - den är
+   det enda som gör den vita texten läsbar över ett foto vi inte har valt.
+
+   VÄRSTA FALLET ÄR MÅTTET, INTE SNITTET.
+   Ett recept kan ha en nästan vit bild. Räknat mot ett HELVITT foto ger
+   --scrim (rgba(10,12,13,.78)) vit text 10,23:1 (DESIGNSYSTEM-D.md §2.2,
+   §5.2). Det är golvet - mot ett normalt matfoto är det bättre.
+
+   Därför står textblockets höjd i EN variabel som både gradienten och
+   textblocket läser: gradienten är full --scrim från och med
+   `calc(100% - var(--hjalte-text))`, och textblocket kan inte bli
+   högre än samma tal. En lång rubrik kan alltså inte skjuta upp texten ur
+   den skyddade zonen - zonen ritas av samma tal som begränsar texten.
+   Ingen text-shadow: skärmen gör jobbet (§5.2). */
+.next-meal-section{margin:0 0 14px}
+.hero-meal-card{position:relative;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+
+/* Helbleed: fotot går kant till kant, alltså ut ur .app:s sidmarginal (§4.2). */
+.ikvall-bild{position:relative;margin-inline:-20px;background:var(--shot)}
+.hero-meal-open{display:block;width:100%;padding:0;border:0;border-radius:0;background:var(--shot);text-align:left;cursor:pointer}
+.hero-meal-photo{display:block;height:278px}
+.hero-meal-photo img{display:block;width:100%;height:278px;border-radius:0;object-fit:cover}
+/* SAKNAS FOTOT ÄR RESERVKORTET UNDERLAGET (M2, src/views/receptbild.js).
+   Tio av receptbankens elva bildlösa rätter är middagar - alltså rätter
+   veckoplaneraren faktiskt lägger här. Det här är hjälteytans ANDRA
+   normalläge, inte ett randfall, och toningen räknas mot det (se
+   tests/ikvall.test.js).
+
+   Hjälten sätter bara MÅTTET. Utseendet - pappersytan, hårlinjen,
+   kapitälerna, monogrammet - ägs av komponenten, och app.js ber om
+   `namn: false` eftersom rubriken redan ligger på bilden. Att sätta egen
+   bakgrund (--shot) eller egen layout här hade lagt tillbaka den grå rutan
+   ovanpå kortet, med rubriken på. Selektorn ovan är därför `img` och inte
+   `.recipe-photo`: reservkortet bär den klassen också, och en
+   `object-fit`-regel har inget att göra på en textplåt. */
+.hero-meal-photo .recipe-fallback{width:100%;height:278px;border-radius:0}
+.hero-meal-scrim{position:absolute;inset:0;display:block;pointer-events:none;background:linear-gradient(180deg,transparent 30%,var(--scrim) calc(100% - var(--hjalte-text)),var(--scrim) 100%)}
+.hero-meal-info{position:absolute;left:20px;right:92px;bottom:14px;z-index:1;display:flex;flex-direction:column;gap:4px;max-height:calc(var(--hjalte-text) - 14px);overflow:hidden;padding:0;color:#FFFFFF;pointer-events:none}
+.hero-meal-info small{font:600 10px/1.4 var(--f-ui);letter-spacing:.2em;text-transform:uppercase;color:#FFFFFF}
+.hero-meal-info strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font:400 30px/1.05 var(--f-disp);letter-spacing:-.02em;text-shadow:none;color:#FFFFFF}
+.hero-meal-meta{font:400 12px/1.4 var(--f-ui);color:#FFFFFF}
+/* Tryckt: skärmen kryper uppåt. Ingen skalning av fotot (§5.2). */
+.hero-meal-open:active .hero-meal-scrim{background:linear-gradient(180deg,transparent 18%,var(--scrim) calc(100% - var(--hjalte-text)),var(--scrim) 100%)}
+/* Fokusringen går INÅT - en ring utanför helbleed-kanten syns inte (§5.2). */
+.hero-meal-open:focus-visible{outline:2px solid #FFFFFF;outline-offset:-4px}
+/* Byt ligger i den zon där skärmen är full, inte uppe i fotots ljusa del. */
+.hero-meal-swap{position:absolute;top:auto;right:20px;bottom:10px;z-index:2;display:inline-flex;align-items:center;min-height:44px;padding:0 2px;transform:none;border:0;border-radius:0;background:none;box-shadow:none;font:600 10px/1 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:#FFFFFF;cursor:pointer}
+.hero-meal-swap span{padding-bottom:2px;border-bottom:1px solid #FFFFFF}
+.hero-meal-swap:focus-visible{outline-color:#FFFFFF}
+
+/* Prisraden under fotot: portionspriset till vänster, vägen vidare till
+   höger. Baslinjerad, med en hårlinje över - bildtextens förhållande. */
+.ikvall-prisrad{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:12px;padding-top:9px;border-top:1px solid var(--rule)}
+.ikvall-portion{display:flex;align-items:baseline;gap:7px;min-width:0}
+.ikvall-belopp{font-family:var(--f-disp);font-size:19px}
+.ikvall-kap{font:600 10px/1.4 var(--f-ui);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
+.ikvall-recept{display:inline-flex;align-items:center;min-height:44px;padding:0 2px;border:0;border-radius:0;background:none;box-shadow:none;font:600 10px/1 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);cursor:pointer;white-space:nowrap}
+.ikvall-recept span{padding-bottom:2px;border-bottom:1px solid var(--accent)}
+
+/* Budgeten som REMSA (§5.8): etikett, kronor, 6 px mätare. Inte en
+   mätartavla. Markören - det 1px strecket som sticker ut över och under
+   spåret - är formkodningen: en färgad fyllnad går inte att läsa i
+   gråskala, det gör strecket. Över budget blir remsan inte röd; texten
+   byter ord i stället ("84 kr över 800 kr").
+   --ink-3 får inte ligga på --paper-2 (RÄTTELSE 1), därför --ink-2 här. */
+.ikvall-remsa{display:block;width:100%;min-height:44px;margin:10px 0 0;padding:9px 20px 11px;border:0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);border-radius:0;background:var(--paper-2);box-shadow:none;font:inherit;text-align:left;cursor:pointer}
+.ikvall-remsa .ikvall-rad{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.ikvall-remsa .ikvall-kap{color:var(--ink-2)}
+.ikvall-remsa .week-budget-text{margin:0}
+.ikvall-remsa .week-budget-text b{color:var(--ink-2)}
+.ikvall-remsa .progress-track{display:block;position:relative;height:6px;margin-top:7px;border-radius:0;background:var(--rule);overflow:visible}
+.ikvall-remsa .progress-track i{display:block;height:100%;width:var(--andel,0%);border-radius:0;background:var(--accent)}
+.ikvall-remsa .progress-track::after{content:"";position:absolute;top:-3px;bottom:-3px;left:var(--andel,0%);width:1px;background:var(--ink)}
+
+/* Fyndraden: rubrik i kapitäler med en utfyllnadslinje, en mening, en väg
+   vidare. C11 ger fynden recipeIds - då säger raden vad fyndet gör med
+   VECKAN. Utan dem säger den vad den faktiskt vet. */
+.ikvall-fynd:empty{display:none}
+.ikvall-rubrikrad{display:flex;align-items:center;gap:12px;margin:14px 0 8px}
+.ikvall-linje{flex:1;height:1px;background:var(--rule-2)}
+.ikvall-fyndtext{margin:0;font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+
+/* Ingen vecka alls: inbjudan på papper, inte vit text utan foto under. */
+.hero-meal-invite{display:block;width:100%;padding:22px 0;border:0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);border-radius:0;background:transparent;background-image:none;box-shadow:none;color:var(--ink);text-align:left;font:inherit;cursor:pointer}
+.hero-meal-invite .ikvall-kap{display:block;margin-bottom:6px}
+.hero-meal-invite strong{display:block;margin-bottom:8px;font:400 26px/1.1 var(--f-disp);letter-spacing:-.02em}
+.hero-meal-invite p{margin:0;color:var(--ink-2);font-size:14px;line-height:1.55}
+
+@media(max-width:340px){.ikvall-bild{margin-inline:-12px}}
+@media(min-width:1024px){.ikvall-bild{margin-inline:0}}
 
 /* ---- Hem: två siffror ------------------------------------------------ */
 .home-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 24px}
