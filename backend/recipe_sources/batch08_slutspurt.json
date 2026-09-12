@@ -163,7 +163,14 @@
     ],
     "dietFlags": [
       "blandkost"
-    ]
+    ],
+    "image": "assets/recipes/varmkorv-gourmet.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Hot_dog_on_a_plate_-_Evan_Swigart.jpg",
+    "imageCredit": "Evan Swigart from Chicago, USA",
+    "imageLicense": "CC BY 2.0",
+    "imageAlt": "Varmkorv i bröd med relish och senap på tallrik",
+    "imageStatus": "ok"
   },
   {
     "id": "laxpoke",
@@ -840,7 +847,14 @@
     "dietFlags": [
       "blandkost",
       "glutenfritt"
-    ]
+    ],
+    "image": "assets/recipes/lantlig-potatissoppa-purjolok.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Leek_Soup.jpg",
+    "imageCredit": "Roundhere44",
+    "imageLicense": "CC0",
+    "imageAlt": "Tallrik med potatis- och purjolökssoppa",
+    "imageStatus": "ok"
   },
   {
     "id": "kyckling-parmesan-pasta-bulk",

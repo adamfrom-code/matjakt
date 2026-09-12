@@ -1708,7 +1708,14 @@
     ],
     "dietFlags": [
       "blandkost"
-    ]
+    ],
+    "image": "assets/recipes/kycklingwraps-lunch.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Fajitas_Wraps.JPG",
+    "imageCredit": "Miansari66",
+    "imageLicense": "CC0",
+    "imageAlt": "Två kycklingwraps med paprika och lök på tallrik",
+    "imageStatus": "ok"
   },
   {
     "id": "sillunch-potatis",
@@ -1789,7 +1796,14 @@
     "dietFlags": [
       "blandkost",
       "pescetariskt"
-    ]
+    ],
+    "image": "assets/recipes/sillunch-potatis.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Midsummer_pickled_herring.jpg",
+    "imageCredit": "Fluff",
+    "imageLicense": "CC BY-SA 3.0",
+    "imageAlt": "Sill med färskpotatis, gräddfil, gräslök och ägg på tallrik",
+    "imageStatus": "ok"
   },
   {
     "id": "kyckling-caesarsallad",

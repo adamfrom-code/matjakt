@@ -2,12 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
-  RECIPE_FALLBACK_ART, RECIPE_FALLBACK_KINDS, RECIPE_FALLBACK_LABEL, kindFor,
+  RECIPE_FALLBACK_KINDS, RECIPE_FALLBACK_LABEL, kindFor,
 } from "../frontend/app/src/services/recipe-fallback.js";
 
-test("varje sort har både ikon och etikett", () => {
+test("varje sort har en etikett", () => {
   for (const kind of RECIPE_FALLBACK_KINDS) {
-    assert.ok(RECIPE_FALLBACK_ART[kind], `ikon saknas för ${kind}`);
     assert.ok(RECIPE_FALLBACK_LABEL[kind], `etikett saknas för ${kind}`);
   }
 });
@@ -29,7 +28,7 @@ test("kött går före vego i namnsökningen", () => {
   assert.equal(kindFor({ namn: "Bruna bönor med stekt fläsk" }), "kott");
 });
 
-test("okänd rätt får den neutrala karotten i stället för en gissning", () => {
+test("okänd rätt får ordmärket i stället för en gissning", () => {
   assert.equal(kindFor({ namn: "Kroppkakor med smör och lingon" }), "standard");
   assert.equal(kindFor({ namn: "" }), "standard");
   assert.equal(kindFor({}), "standard");
@@ -46,6 +45,8 @@ test("varje bildlös rätt i receptbanken får en giltig sort", () => {
   }
   // Om receptbanken en dag har foton överallt är testet meningslöst, inte grönt.
   assert.ok(utanBild.length > 0, "inga bildlösa recept - testet mäter ingenting");
+  // M2 fyllde 20 av de 31 luckorna. Resten är rätter där Commons bara har
+  // hemmaknäppta bilder, och ett foto av fel mat är sämre än inget foto.
   for (const recept of utanBild) {
     const kind = kindFor({ namn: recept.name, tags: recept.tags || [], typ: (recept.categories || []).join(" ") });
     assert.ok(RECIPE_FALLBACK_KINDS.includes(kind), `${recept.name} gav okänd sort ${kind}`);

@@ -162,8 +162,13 @@
     "dietFlags": [
       "blandkost"
     ],
-    "imageAlt": "Biff med lökröra och potatismos",
-    "imageStatus": "needs_image"
+    "imageAlt": "Biff med rostad lök, sås och potatis på tallrik",
+    "imageStatus": "ok",
+    "image": "assets/recipes/biffmedlok.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Beef_medallion_topped_with_fried_onions.jpg",
+    "imageCredit": "Armineaghayan",
+    "imageLicense": "CC BY-SA 4.0"
   },
   {
     "id": "biffmatvetesallad",
@@ -1044,8 +1049,13 @@
     "dietFlags": [
       "blandkost"
     ],
-    "imageAlt": "Fläskfilé i tomatsås med pasta",
-    "imageStatus": "needs_image"
+    "imageAlt": "Pasta med tomatsås av fläskkött på tallrik",
+    "imageStatus": "ok",
+    "image": "assets/recipes/flasktomatpasta.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:04666_Polish_spaghetti_pasta_with_sauce_made_of_pork_meat,_tomatoes,_garlic_and_olive.JPG",
+    "imageCredit": "Silar",
+    "imageLicense": "CC BY-SA 3.0"
   },
   {
     "id": "flaskkarre",
@@ -2010,8 +2020,13 @@
     "dietFlags": [
       "blandkost"
     ],
-    "imageAlt": "Korvstroganoff",
-    "imageStatus": "needs_image"
+    "imageAlt": "Korvstroganoff serverad över kokt ris på tallrik",
+    "imageStatus": "ok",
+    "image": "assets/recipes/korvstroganoff.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Korvstroganoff_with_rice_4.jpg",
+    "imageCredit": "Blockhaj",
+    "imageLicense": "CC BY 4.0"
   },
   {
     "id": "tofuwok",
@@ -3915,8 +3930,13 @@
     "dietFlags": [
       "pescetariskt"
     ],
-    "imageAlt": "Torsk i tomatsås",
-    "imageStatus": "needs_image"
+    "imageAlt": "Torskrygg i tomatsås med färskpotatis och grönsaker",
+    "imageStatus": "ok",
+    "image": "assets/recipes/torskitomatsas.jpg",
+    "imageSource": "Wikimedia Commons",
+    "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:Cod_in_tomato_sauce_(Oslo).jpg",
+    "imageCredit": "MOs810",
+    "imageLicense": "CC BY-SA 4.0"
   },
   {
     "id": "fetapasta",
