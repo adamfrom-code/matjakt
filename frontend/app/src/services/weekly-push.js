@@ -72,6 +72,34 @@ export function pushSupported(scope = globalThis) {
     && scope.PushManager && scope.Notification);
 }
 
+// Hur länge vi väntar på service workern innan vi ger upp.
+export const READY_TIMEOUT_MS = 3000;
+
+/**
+ * `navigator.serviceWorker.ready` med ett tak - och taket är inte försiktighet,
+ * det är en bugg som browser-E2E:n fångade.
+ *
+ * `ready` är en utfästelse som varken infrias ELLER avvisas så länge ingen
+ * service worker blivit aktiv. Ett try/catch räcker därför inte: det finns
+ * inget fel att fånga, bara ett `await` som aldrig återvänder. Utloggningen
+ * väntade på precis det anropet, och kontomodalen blev stående öppen för
+ * alltid - `test_full_consumer_journey` föll på att den fortfarande syntes.
+ *
+ * En prenumeration är aldrig värd att hålla ett gränssnitt gisslan. Efter
+ * taket svarar vi `null`, och varje anropare behandlar det som "ingen
+ * registrering finns" - vilket är sant nog: en service worker som inte blivit
+ * aktiv på tre sekunder tar inte emot någon push heller.
+ */
+function readyRegistration(scope) {
+  const timer = scope.setTimeout || setTimeout;
+  let ready;
+  try { ready = scope.navigator.serviceWorker.ready; } catch { return Promise.resolve(null); }
+  return Promise.race([
+    Promise.resolve(ready).catch(() => null),
+    new Promise(resolve => { timer(() => resolve(null), READY_TIMEOUT_MS); }),
+  ]);
+}
+
 async function permissionFor(scope, prompt) {
   const current = scope.Notification.permission;
   if (current === "granted") return "granted";
@@ -113,7 +141,7 @@ export async function syncWeeklyPush({ scope = globalThis, publicKey = "", wants
   if (permission === "denied") return { ok: false, reason: PUSH_DENIED };
   if (permission !== "granted") return { ok: false, reason: PUSH_NOT_ASKED };
 
-  const registration = await scope.navigator.serviceWorker.ready;
+  const registration = await readyRegistration(scope);
   const manager = registration && registration.pushManager;
   if (!manager) return { ok: false, reason: PUSH_UNSUPPORTED };
   // En befintlig prenumeration återanvänds. Att avregistrera och registrera
@@ -134,7 +162,7 @@ export async function syncWeeklyPush({ scope = globalThis, publicKey = "", wants
 
 async function dropSubscription(scope, forget) {
   try {
-    const registration = await scope.navigator.serviceWorker.ready;
+    const registration = await readyRegistration(scope);
     const subscription = registration && registration.pushManager
       && await registration.pushManager.getSubscription();
     if (!subscription) return;

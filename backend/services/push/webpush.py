@@ -39,6 +39,8 @@ import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
 
+from ..data_guard import guard_outbound_http
+
 logger = logging.getLogger("matjakt.push")
 
 # En söndagsnotis som inte nått fram till måndag morgon ska inte nå fram
@@ -162,7 +164,13 @@ class WebPushSender:
 
     `opener(request)` finns för testernas skull och är urlopen i drift.
     Repots sjunde absoluta förbud - ingen riktig utgående trafik i tester -
-    är hela anledningen till att den är ett argument och inte en import."""
+    är hela anledningen till att den är ett argument och inte en import.
+
+    Men ett argument räcker inte som spärr, och test_db_guard säger varför:
+    ett test som GLÖMMER att skicka in sin opener får den äkta urlopen, och
+    då är förbudet bara en vana. Standardöppnaren går därför genom
+    guard_outbound_http() precis som varje annan utgående väg i services/ -
+    en glömd mock blir ett fel i testet i stället för ett paket på nätet."""
 
     def __init__(self, public_key: str = "", private_key: str = "",
                  subject: str = DEFAULT_SUBJECT, opener=None, timeout: float = 10.0):
@@ -170,7 +178,12 @@ class WebPushSender:
         self.private_key = (private_key or "").strip()
         self.subject = (subject or DEFAULT_SUBJECT).strip()
         self.timeout = timeout
-        self._opener = opener or (lambda request: urllib.request.urlopen(request, timeout=self.timeout))
+        self._opener = opener or self._guarded_urlopen
+
+    def _guarded_urlopen(self, request):
+        """urlopen som vägrar under en testkörning - se services/data_guard."""
+        guard_outbound_http("Web Push")
+        return urllib.request.urlopen(request, timeout=self.timeout)
 
     @classmethod
     def from_env(cls, env=None, opener=None) -> "WebPushSender":

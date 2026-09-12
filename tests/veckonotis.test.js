@@ -261,3 +261,47 @@ test("H1: VAPID-nyckeln blir samma byte som base64url beskriver", () => {
   const bytes = applicationServerKey("BAEC_-8", globalThis);
   assert.deepEqual([...bytes], [4, 1, 2, 255, 239]);
 });
+
+// ---------------------------------------------------------------------------
+// Utloggningen får aldrig hänga på en service worker som inte finns
+//
+// navigator.serviceWorker.ready varken infrias eller avvisas när ingen worker
+// blivit aktiv. Utloggningsknappen väntade på det anropet, och kontomodalen
+// blev stående öppen - browser-E2E:n (test_full_consumer_journey) föll på att
+// den fortfarande syntes. Ett try/catch hade inte hjälpt: det finns inget fel
+// att fånga, bara ett await som aldrig återvänder.
+// ---------------------------------------------------------------------------
+
+/** Ett scope vars `ready` ALDRIG settlar - precis som en riktig webbläsare
+ *  utan aktiv service worker. setTimeout skjuts fram direkt, så testet mäter
+ *  att det finns ett tak, inte hur många millisekunder taket är. */
+function hangingScope(permission = "granted") {
+  return {
+    atob: globalThis.atob,
+    PushManager: class {},
+    Notification: { permission, requestPermission: () => Promise.resolve(permission) },
+    navigator: { serviceWorker: { ready: new Promise(() => { /* aldrig */ }) } },
+    setTimeout: fn => globalThis.setTimeout(fn, 0),
+  };
+}
+
+test("H1: avstängning ger upp när service workern aldrig blir klar - utloggningen hänger inte", async () => {
+  const scope = hangingScope();
+  // MUTATIONSPROVET: utan taket i readyRegistration() återvänder det här
+  // await:et aldrig och testet tajmar ut i stället för att passera.
+  const svar = await syncWeeklyPush({
+    scope, publicKey: NYCKEL, wantsWeek: false,
+    save: () => assert.fail("inget ska sparas"),
+    forget: () => assert.fail("det finns ingen prenumeration att glömma"),
+  });
+  assert.deepEqual(svar, { ok: false, reason: PUSH_OFF });
+});
+
+test("H1: påslagning ger också upp - en worker som inte svarar tar inte emot push heller", async () => {
+  const scope = hangingScope();
+  const svar = await syncWeeklyPush({
+    scope, publicKey: NYCKEL, wantsWeek: true, prompt: false,
+    save: () => assert.fail("ingen prenumeration kunde skapas"),
+  });
+  assert.deepEqual(svar, { ok: false, reason: PUSH_UNSUPPORTED });
+});
