@@ -1,4 +1,7 @@
-### Granskningskontot kan inte committas ifyllt
+---
+paket: N0h
+titel: Granskningskontot kan inte committas ifyllt
+---
 
 Hemlighetsskanningen kontrollerar nu butiksmetadatan under `store/`: står det
 `Lösenord:` och något som inte är en platshållare efter, är raden ifylld och
