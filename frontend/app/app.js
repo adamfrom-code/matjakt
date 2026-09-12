@@ -3313,7 +3313,7 @@ async function handlePendingInvite() {
 
 let swapContext = null;
 const SWAP_OPTIONS_BATCH = 3;
-function swapOptionMarkup(option, isSelected) {
+function swapOptionMarkup(option) {
   const recipe = option.candidate;
   const badge = recipe.typ && recipe.typ !== "Provider-recept" ? `<span class="swap-option-badge">${escapeHtml(recipe.typ)}</span>` : "";
   const price = recipe.priceStatus === "unavailable" ? "Pris saknas" : recipe.portionspris ? `${money(recipe.portionspris)}/portion` : "";
@@ -3330,18 +3330,25 @@ function swapOptionMarkup(option, isSelected) {
   // säger exakt samma sak, så raden inte upprepar sig själv.
   const kostnad = option.cost && option.cost !== option.reason
     ? `<small class="swap-option-cost">${escapeHtml(option.cost)}</small>` : "";
-  return `<button type="button" class="swap-option ${isSelected ? "selected" : ""}" data-choose-swap="${escapeHtml(recipe.id)}"><span class="swap-option-photo">${recipePhoto(recipe)}</span><span class="swap-option-info"><strong>${escapeHtml(recipe.namn)}</strong>${badge}<small class="swap-option-meta">${[recipe.tid ? `${recipe.tid} min` : "", price].filter(Boolean).join(" · ")}</small>${reason}${kostnad}${campaignNote}</span>${isSelected ? '<span class="swap-option-check" aria-hidden="true">✓</span>' : ""}</button>`;
+  // G10: ETT TRYCK ÄR BYTET. Kortet markerade förut bara, och bytet skedde
+  // först av "Byt till denna rätt" längst ner - två tryck där ett räcker, och
+  // en bekräftelseknapp för en handling som är helt riskfri eftersom Ångra
+  // ligger i toasten efteråt.
+  return `<button type="button" class="swap-option" data-choose-swap="${escapeHtml(recipe.id)}"><span class="swap-option-photo">${recipePhoto(recipe)}</span><span class="swap-option-info"><strong>${escapeHtml(recipe.namn)}</strong>${badge}<small class="swap-option-meta">${[recipe.tid ? `${recipe.tid} min` : "", price].filter(Boolean).join(" · ")}</small>${reason}${kostnad}${campaignNote}</span></button>`;
 }
-const FREE_SWAP_LIMIT = 3;
+// G10: BYTENA ÄR OBEGRÄNSADE OCH GRATIS.
+//
+// FREE_SWAP_LIMIT = 3 stängde dörren efter tre byten, utan förvarning, och
+// visade taket först när man slagit i det. Byte är den handling som gör veckan
+// TILL DIN - att strypa den straffar precis det engagemang som bygger vana,
+// och det som såldes var dessutom "fler av samma sak", vilket ingen vaknar på
+// måndag och vill ha.
+//
+// Det som säljs i stället är byten MED AVSIKT: "Billigare", "Snabbare",
+// "Barnvänligare", "Mer protein", "Använd det vi har hemma". De är ett annat
+// slags handling - ett mål i stället för ett kast - och de kostar oss riktigt
+// arbete att svara på. Se swapIntentLocked() nedan.
 function openSwapModal(currentId) {
-  if (!hasPremium() && state.swapsThisWeek >= FREE_SWAP_LIMIT) {
-    $("swapModalHint").textContent = "";
-    $("swapOptions").innerHTML = `<button type="button" class="store-compare-upsell" id="swapUpsell">Du har använt dina ${FREE_SWAP_LIMIT} gratis byten den här veckan. Med Premium byter du hur mycket du vill.</button>`;
-    $("swapUpsell").addEventListener("click", () => { closeSwapModal(); openPremiumPitch(); });
-    $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true;
-    openModal($("swapModal"), { onClose: closeSwapModal });
-    return;
-  }
   // Dagordnad, med tomma dagar kvar som null: dayIndex kommer ur den
   // OFILTRERADE weekPlan, och de två indexrymderna måste vara samma.
   const selected = selectedRecipes();
@@ -3356,8 +3363,8 @@ function openSwapModal(currentId) {
   // "billigast först" blev slumpartad.
   const current = selected.find(recipe => recipe?.id === currentId);
   const allOptions = swapOptionsFor(current, candidates, "");
-  if (!allOptions.length) { $("swapModalHint").textContent = ""; $("swapOptions").innerHTML = `<p class="live-loading">Inga alternativ hittades som passar budget, butik och dina filter just nu.</p>`; $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true; openModal($("swapModal"), { onClose: closeSwapModal }); return; }
-  swapContext = { currentId, dayIndex, current, candidates, intent: "", allOptions, visibleCount: SWAP_OPTIONS_BATCH, selectedId: null };
+  if (!allOptions.length) { $("swapModalHint").textContent = ""; $("swapOptions").innerHTML = `<p class="live-loading">Inget alternativ passar dina val just nu. Prova en annan avsikt ovan.</p>`; $("swapShowMoreBtn").hidden = true; openModal($("swapModal"), { onClose: closeSwapModal }); return; }
+  swapContext = { currentId, dayIndex, current, candidates, intent: "", allOptions, visibleCount: SWAP_OPTIONS_BATCH };
   renderSwapModal();
   openModal($("swapModal"), { onClose: closeSwapModal });
 }
@@ -3371,48 +3378,79 @@ function swapOptionsFor(current, candidates, intent) {
                       cost: swapCostText(option, current) }));
 }
 
+// G10: AVSIKTEN ÄR DET SOM SÄLJS, INTE ANTALET.
+//
+// "Något annat" är och förblir gratis - det är det byte som gör veckan till
+// din. De fem avsikterna är ett annat slags handling: ett mål i stället för
+// ett kast, och det som kostar oss arbete att svara på.
+const swapIntentLocked = intentId => Boolean(intentId) && !hasPremium();
+
 function renderSwapModal() {
   if (!swapContext) return;
-  const { currentId, dayIndex, allOptions, visibleCount, selectedId, intent } = swapContext;
+  const { currentId, dayIndex, allOptions, visibleCount, intent } = swapContext;
   const currentRecipe = selectedRecipes().find(recipe => recipe?.id === currentId);
   const dayLabel = DAYS[dayIndex] || `Dag ${dayIndex + 1}`;
   // Avsikten först, alternativen sedan. Fem knappar räcker - det här ska
-  // vara ett val, inte ett formulär.
+  // vara ett val, inte ett formulär. Låset står PÅ knappen, inte bakom den:
+  // en gratisanvändare ska se vad Premium är innan hon trycker, inte mötas
+  // av en vägg efteråt. Och det bärs av ett ORD, inte av en ikon eller en
+  // färg - "Premium" överlever gråskala och når skärmläsaren, precis som
+  // "Se pris med Premium" gör på det låsta butikskortet. Ett hänglås i emoji
+  // hade dessutom brutit designregeln som test_frontend_contract vaktar.
   const intents = `<div class="swap-intents">${["", ...SWAP_INTENTS.map(option => option.id)].map(id => {
     const label = id ? SWAP_INTENTS.find(option => option.id === id).label : "Något annat";
-    return `<button type="button" class="swap-intent ${id === intent ? "active" : ""}" data-swap-intent="${escapeHtml(id)}">${escapeHtml(label)}</button>`;
+    const locked = swapIntentLocked(id);
+    return `<button type="button" class="swap-intent ${id === intent ? "active" : ""}${locked ? " locked" : ""}" data-swap-intent="${escapeHtml(id)}"${locked ? ' data-swap-intent-locked aria-label="' + escapeHtml(label) + ' - ingår i Premium"' : ""}>${escapeHtml(label)}${locked ? ' <span class="swap-intent-lock">Premium</span>' : ""}</button>`;
   }).join("")}</div>`;
   $("swapModalHint").innerHTML = `${dayLabel}s middag${currentRecipe ? ` · nuvarande: ${escapeHtml(currentRecipe.namn)}` : ""}` + intents;
   $("swapModalHint").querySelectorAll("[data-swap-intent]").forEach(button => button.addEventListener("click", () => {
-    swapContext.intent = button.dataset.swapIntent;
-    swapContext.allOptions = swapOptionsFor(swapContext.current, swapContext.candidates, swapContext.intent);
+    const id = button.dataset.swapIntent;
+    if (swapIntentLocked(id)) { trackEvent("byte_avsikt_last"); openPaywall("swap_intent"); return; }
+    swapContext.intent = id;
+    swapContext.allOptions = swapOptionsFor(swapContext.current, swapContext.candidates, id);
     swapContext.visibleCount = SWAP_OPTIONS_BATCH;
-    swapContext.selectedId = null;
     renderSwapModal();
   }));
   // En tom lista är ett ärligare svar än en påhittad: det finns helt enkelt
   // inget billigare/snabbare alternativ som också passar kost och budget.
   $("swapOptions").innerHTML = allOptions.length
-    ? allOptions.slice(0, visibleCount).map(option => swapOptionMarkup(option, option.candidate.id === selectedId)).join("")
+    ? allOptions.slice(0, visibleCount).map(swapOptionMarkup).join("")
     : `<p class="live-loading">Ingen av de rätter som passar er är ${escapeHtml((SWAP_INTENTS.find(o => o.id === intent)?.label || "annorlunda").toLowerCase())} än den här.</p>`;
-  document.querySelectorAll("[data-choose-swap]").forEach(button => button.addEventListener("click", () => {
-    swapContext.selectedId = swapContext.selectedId === button.dataset.chooseSwap ? null : button.dataset.chooseSwap;
-    renderSwapModal();
-  }));
+  document.querySelectorAll("[data-choose-swap]").forEach(button =>
+    button.addEventListener("click", () => swapDay(dayIndex, button.dataset.chooseSwap)));
   $("swapShowMoreBtn").hidden = visibleCount >= allOptions.length;
-  $("swapConfirmBtn").hidden = !selectedId;
 }
-$("swapShowMoreBtn").addEventListener("click", () => { if (swapContext) { swapContext.visibleCount += SWAP_OPTIONS_BATCH; renderSwapModal(); } });
-$("swapConfirmBtn").addEventListener("click", () => {
-  if (!swapContext?.selectedId) return;
-  swapWeekPlanDay(swapContext.dayIndex, swapContext.selectedId);
+
+// Bytet självt. ETT tryck, och Ångra i toasten efteråt (samma mönster som
+// borttagna varurader) - det är därför bekräftelseknappen kunde tas bort helt
+// i stället för att bara flyttas.
+function swapDay(dayIndex, newId) {
+  const previousId = state.weekPlan[dayIndex];
+  if (!newId || newId === previousId) return;
+  const nyRätt = [...RECEPT, ...state.apiRecipes].find(recipe => recipe.id === newId);
+  // Stäng FÖRE omritningen: closeModal ger fokus tillbaka till "Byt"-knappen,
+  // och den knappen ritas om av render() en rad senare. Stängdes arket efteråt
+  // fanns öppnaren inte längre kvar att lämna fokus till.
+  closeSwapModal();
+  // Räknaren FÖRE applySwap: den sparar, och en räkning efter sparningen hade
+  // legat kvar i minnet till nästa gång något annat råkade spara.
+  state.swapsThisWeek++;
+  applySwap(dayIndex, newId);
   trackEvent("recept_bytt");
-  if (!hasPremium()) state.swapsThisWeek++;
+  const dagen = DAYS_LONG[dayIndex] || DAYS[dayIndex] || `dag ${dayIndex + 1}`;
+  showUndoToast(`${nyRätt ? nyRätt.namn : "Rätten"} på ${dagen}`,
+                () => { state.swapsThisWeek = Math.max(0, state.swapsThisWeek - 1); applySwap(dayIndex, previousId); });
+}
+
+function applySwap(dayIndex, id) {
+  swapWeekPlanDay(dayIndex, id);
   // Ett byte är en ny lista: förra listans totaler och Billigast-krona får
   // inte målas som fakta medan omhämtningen pågår.
   clearPriceSnapshots();
-  saveState(); render(); closeSwapModal();
-});
+  saveState();
+  render();
+}
+$("swapShowMoreBtn").addEventListener("click", () => { if (swapContext) { swapContext.visibleCount += SWAP_OPTIONS_BATCH; renderSwapModal(); } });
 function closeSwapModal() { closeModal($("swapModal")); swapContext = null; }
 document.querySelectorAll("[data-swap-close]").forEach(button => button.addEventListener("click", closeSwapModal));
 

@@ -555,7 +555,10 @@
             <li>Exakt jämförelse mellan butikerna</li>
             <li>Automatiskt val av billigaste butik</li>
             <li>Näringsmål: kalorier, protein, kolhydrater, fett och proteinkälla</li>
-            <li>Obegränsade byten av maträtter</li>
+            <!-- G10: byten är obegränsade OCH gratis. Raden lovade något
+                 som numera ingår i gratisversionen; det som faktiskt är
+                 Premium är byten med en avsikt. -->
+            <li>Byten med avsikt: billigare, snabbare, barnvänligare, mer protein</li>
             <li>Aktuella erbjudanden och kampanjer</li>
             <li>Laga med det du redan har hemma</li>
           </ul>
@@ -652,7 +655,9 @@
       <p class="plan-modal-hint" id="swapModalHint">Tre förslag som fortfarande passar din budget, butik, allergier och näringsmål.</p>
       <div id="swapOptions"></div>
       <button type="button" class="btn-ghost swap-show-more" id="swapShowMoreBtn" hidden>Visa fler alternativ</button>
-      <button type="button" class="btn btn-primary swap-confirm-btn" id="swapConfirmBtn" hidden><span>Byt till denna rätt</span></button>
+      <!-- G10: "Byt till denna rätt" är borta. Ett tryck på alternativet ÄR
+           bytet, och Ångra ligger i toasten efteråt - en bekräftelseknapp för
+           en handling som går att ångra är ett tryck till utan ett svar till. -->
       <button type="button" class="btn btn-ghost swap-cancel-btn" data-swap-close>Avbryt</button>
     </div>
   </div>
