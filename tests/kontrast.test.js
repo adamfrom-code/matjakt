@@ -189,3 +189,127 @@ test("L5: svepet ser en hjältesiffra som tappat sin mörka yta", () => {
     assert.ok(f.ratio < 1.1, `${f.selektor} räknades till ${f.ratio.toFixed(2)}:1, väntat ~1:1`);
   }
 });
+
+// ---------------------------------------------------------------------------
+// G15 · MÖRKT LÄGE, HELA FILEN
+//
+// L5 sveper mörkt läge, men bara `.sparat*` och `.btn-sekundar*` - skärmen
+// paketet byggde. Utanför det filtret mätte ingenting mörkt läge alls, och
+// där stod `.btn-primary{background:var(--text);color:#fff}`: i mörkt läge
+// aliasar --text till --ink = #E9ECEE, alltså vit text på nästan vit platta.
+// 1,19:1, på varenda primärknapp i appen - betalväggens köpknapp inräknad.
+//
+// Felet är inte att någon skrev #fff. Det är att #fff inte kan vändas. Ett
+// hårdkodat ljust värde är per definition rätt i ett läge och fel i det
+// andra, och filen hade 85 av dem. Svepet nedan är därför ofiltrerat: varje
+// regel i filen mäts i båda lägena, och den enda vägen att klara det är att
+// färgen kommer ur en token som vänder med temat.
+// ---------------------------------------------------------------------------
+
+const MÖRKT = '[data-theme="dark"]';
+
+test("G15: ingen textfärg i styles.css underskrider WCAG AA i MÖRKT läge", () => {
+  const fynd = svepKontrast(css, { tema: MÖRKT });
+  assert.deepEqual(fynd.map(beskriv), [],
+    `\n${fynd.length} kontrastfel i mörkt läge:\n` +
+    fynd.map((f) => "  " + beskriv(f)).join("\n") +
+    "\n\nFärgen måste komma ur en token som vänder med temat: --paper på mörk platta, " +
+    "--on-accent på accentfärgad, --ink/--ink-2/--ink-3 på papper (DESIGNSYSTEM-D.md §2.1).\n");
+});
+
+test("G15: svepet ser primärknappen tillbaka i hårdkodad vit", () => {
+  // Den riktiga muteringen, där regeln står. Utan den säger testet ovan bara
+  // att filen är grön just nu - inte att den skulle bli röd om felet kom åter.
+  const trasig = css.replace("background:var(--text);color:var(--paper);",
+                             "background:var(--text);color:#fff;");
+  assert.notEqual(trasig, css,
+    "muteringen träffade ingenting - står .btn-primary fortfarande på var(--text)?");
+  const fynd = svepKontrast(trasig, { tema: MÖRKT }).filter((f) => f.selektor === ".btn-primary");
+  assert.equal(fynd.length, 1, "svepet missade vit text på nästan vit platta i mörkt läge");
+  assert.ok(fynd[0].ratio < 1.3,
+    `kontrasten räknades till ${fynd[0].ratio.toFixed(2)}:1, väntat ~1,19:1`);
+});
+
+test("G15: betalväggens köpknapp och prisflikar är läsbara i båda lägena", () => {
+  // Den dyraste ytan i appen: går den inte att läsa går köpet inte att göra.
+  // Namngiven för sig så att ett fel här aldrig drunknar i en lång lista.
+  for (const [namn, tema] of [["ljust", ""], ["mörkt", MÖRKT]]) {
+    const fynd = svepKontrast(css, { tema }).filter((f) =>
+      f.selektor === ".btn-primary" || f.selektor.startsWith(".premium-price-tab"));
+    assert.deepEqual(fynd.map(beskriv), [],
+      `\nBetalväggen är oläsbar i ${namn} läge:\n` + fynd.map((f) => "  " + beskriv(f)).join("\n") + "\n");
+  }
+});
+
+/**
+ * Selektorer som FÅR bära ett hårdkodat ljust värde, med skälet utskrivet.
+ * Gemensamt för alla: ytan under texten följer inte heller temat, så en
+ * token som vände med temat vore FEL här - inte mer rätt.
+ */
+const LJUS_MED_FLIT = new Set([
+  // Hela hjältekortet ligger på fotot, under .hero-meal-scrim. Scrim är
+  // "samma i båda lägen - den ska mörklägga fotot, inte följa temat" (§2.1),
+  // och §2.2 räknar vit på foto+scrim till 10,23:1 i värsta fall. Texten,
+  // bytlänkens understrykning och båda fokusringarna hör alla dit.
+  ".hero-meal-info", ".hero-meal-info small", ".hero-meal-info strong",
+  ".hero-meal-meta", ".hero-meal-open:focus-visible",
+  ".hero-meal-swap", ".hero-meal-swap span", ".hero-meal-swap:focus-visible",
+  // app.js sätter bakgrunden inline per butikskedja - en varumärkesfärg.
+  ".chain-mark",
+  ".store-card .chain-mark,.week-store-switch .chain-mark,.comparison-store-main .chain-mark",
+]);
+
+test("G15: inget hårdkodat ljust värde står kvar utan ett utskrivet skäl", () => {
+  // Spärren mot återfall, och den mäter LJUSHET - inte stavningen "#fff".
+  // Skälet är konkret: .topbar stod på rgba(246,247,244,.86), alltså en
+  // ljus platta som ingen sökning efter "white" hittar, och som i mörkt läge
+  // gav en ljus remsa tvärs över toppen med appens namn nästan osynligt i.
+  // Det enda som skiljer den från #fff är två siffror.
+  const kvar = [];
+  for (const regel of parseRegler(css)) {
+    if (regel.delar.some((d) => d.startsWith(":root"))) continue;   // tokenblocken ÄR paletten
+    if (LJUS_MED_FLIT.has(regel.selektor)) continue;
+    for (const d of deklarationer(regel.block)) {
+      for (const m of d.värde.matchAll(/#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)/g)) {
+        const f = tolkaFärg(m[0]);
+        if (!f || f[3] < 0.2) continue;              // nästan genomskinligt skymmer ingenting
+        if (luminans(f) < 0.35) continue;            // mörka literaler vänder inte fel håll
+        kvar.push(`styles.css:${regel.rad}  ${regel.selektor.slice(0, 60)}  ${d.prop}:${m[0]}`);
+      }
+    }
+  }
+  assert.deepEqual(kvar, [],
+    `\n${kvar.length} hårdkodade ljusa värden i styles.css:\n  ` + kvar.join("\n  ") +
+    "\n\nEtt hårdkodat ljust värde är rätt i ett läge och fel i det andra. Använd en token " +
+    "(--paper, --paper-2, --paper-frost, --on-accent, --on-accent-2, --shot), eller skriv i " +
+    "filen varför ytan under inte heller vänder med temat och lägg selektorn i " +
+    "LJUS_MED_FLIT här.\n");
+});
+
+test("G15: de tillåtna undantagen finns kvar - annars är listan en lögn", () => {
+  // En undantagslista som pekar på selektorer som inte längre finns döljer
+  // nästa fel i stället för att beskriva det här.
+  const selektorer = new Set(parseRegler(css).map((r) => r.selektor));
+  for (const sel of LJUS_MED_FLIT) {
+    assert.ok(selektorer.has(sel), `${sel} finns inte längre - städa LJUS_MED_FLIT ovan`);
+  }
+});
+
+test("G15: color-scheme deklareras i båda lägena", () => {
+  // Tokens når inte in i NATIVA kontroller. Kryssrutan i samtyckesraden,
+  // select, rullningslist, textmarkör och datumväljare ritas av webbläsaren,
+  // och utan color-scheme ritas de i ljust standardutseende även när resten
+  // av appen är mörk - en vit ruta mitt i en mörk rad. Det är en deklaration,
+  // och den är den enda som styr dem.
+  const lägen = new Map([[":root", "light"], [':root[data-theme="dark"]', "dark"]]);
+  for (const [selektor, väntat] of lägen) {
+    let värde = null;
+    for (const r of parseRegler(css)) {
+      if (!r.delar.includes(selektor)) continue;
+      for (const d of deklarationer(r.block)) if (d.prop === "color-scheme") värde = d.värde.trim();
+    }
+    assert.equal(värde, väntat,
+      `${selektor} deklarerar color-scheme:${värde} - väntat ${väntat}. ` +
+      "Utan den ritas nativa kontroller i fel läge.");
+  }
+});
