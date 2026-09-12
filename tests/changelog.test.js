@@ -6,13 +6,14 @@
 // ingenting om det inte också visas att det gamla faktiskt gick sönder.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { läsFragment, väv } from "../scripts/weave_checkpoint.mjs";
 
 const root = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+const FRAGMENTKATALOG = join(root, "docs", "changelog.d");
 
 function git(cwd, ...arg) {
   return execFileSync("git", arg, { cwd, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
@@ -123,4 +124,48 @@ test("CHECKPOINT.md säger att den inte ska redigeras direkt", () => {
   const text = readFileSync(join(root, "CHECKPOINT.md"), "utf8");
   assert.match(text, /changelog\.d/,
     "CHECKPOINT.md pekar inte på docs/changelog.d - då kommer nästa agent att redigera den direkt");
+});
+
+/** Kör parsern på ett fragment i taget och returnerar felmeddelandena. */
+function trasigaFragment() {
+  const fel = [];
+  for (const namn of readdirSync(FRAGMENTKATALOG)) {
+    if (!namn.endsWith(".md") || namn === "README.md") continue;
+    const en = mkdtempSync(join(tmpdir(), "matjakt-fragment-"));
+    try {
+      copyFileSync(join(FRAGMENTKATALOG, namn), join(en, namn));
+      läsFragment(en);
+    } catch (enskilt) {
+      fel.push(enskilt.message);
+    } finally { rmSync(en, { recursive: true, force: true }); }
+  }
+  return fel;
+}
+
+// Testerna ovan bygger sina egna tempkataloger. Det bevisar att läsFragment
+// har rätt regler - men ingenting om filerna som faktiskt ligger i repot.
+// N0d, N0e och N0f låg incheckade utan front matter och hela vävningen var
+// död så länge: `node scripts/weave_checkpoint.mjs` kastade i stället för att
+// skriva. Det hade upptäckts på releasedagen, av den som minst av allt ville
+// felsöka en parser just då. Alltså körs parsern här mot den riktiga
+// katalogen, så ett trasigt fragment failar CI i den PR som lägger in det.
+test("varje fragment i docs/changelog.d/ går att väva", () => {
+  let fragment;
+  try {
+    fragment = läsFragment();
+  } catch (fel) {
+    // läsFragment stannar på det första trasiga fragmentet och readdirSync
+    // bestämmer vilket - därför dolde N0d både N0e och N0f. Ett fel per
+    // körning är ett CI-varv per trasig fil, så när det ändå har gått fel
+    // får felmeddelandet kosta: räkna upp allihop på en gång.
+    const trasiga = trasigaFragment();
+    assert.fail(trasiga.length
+      ? `${trasiga.length} fragment i docs/changelog.d/ kan inte vävas:\n` +
+        trasiga.map(m => `  ${m}`).join("\n") +
+        `\nSe docs/changelog.d/README.md för formatet.`
+      : `docs/changelog.d/ kan inte läsas: ${fel.message}`);
+  }
+  // Tom katalog är inte heller grönt: då har vävningen inget att väva och
+  // testet skulle passera på en katalog som råkat försvinna.
+  assert.ok(fragment.length > 0, "inga fragment i docs/changelog.d/ - katalogen borta?");
 });
