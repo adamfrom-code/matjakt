@@ -191,16 +191,111 @@ test("det lilla läget: monogrammet är det som syns, och det syns", () => {
     "monogrammet sätts inte i display-serifen");
 });
 
+/**
+ * Container-frågans tröskel. Den mäter containerns CONTENT-box - kortet MINUS
+ * paddingen - och är därför inte samma tal som kortets utvändiga bredd.
+ */
+function containerTröskel() {
+  const frågor = regler.flatMap(r => r.media.filter(m => m.startsWith("@container")));
+  assert.ok(frågor.length > 0, "det finns ingen @container-fråga - kortet har bara en storlek");
+  const träff = /min-width:\s*([\d.]+)px/.exec(frågor[0]);
+  assert.ok(träff, `container-frågan mäter inte en bredd: ${frågor[0]}`);
+  return Number(träff[1]);
+}
+
+/**
+ * Kortets padding som funktion av dess UTVÄNDIGA bredd, räknad ur CSS:en.
+ *
+ * Paddingen står i procent och inte i `cqi`, och det är hela poängen. `cqi` i
+ * en deklaration PÅ själva query-containern kan inte lösa mot containern - det
+ * vore cirkulärt - så den löser mot närmaste förfaders container, och finns
+ * ingen sådan mot viewporten. Den skrivningen gav 18 px padding på varje kort
+ * på en 390-pixelsskärm: lika mycket på en 44-pixelsruta som på en
+ * 350-pixelshjälte. Procent mäter förälderns bredd, och kortet fyller sin
+ * förälder i varje kontext - alltså kortets egen bredd, utan cirkeln.
+ */
+function paddingVid() {
+  const padding = (regelFör(".recipe-fallback.reservkort").get("padding") || "").trim();
+  assert.ok(!/\bcq(i|w|b|h|min|max)\b/.test(padding),
+    `kortets padding är satt i container-enheter: ${padding}. På själva ` +
+    "query-containern löser de mot viewporten, inte mot kortet.");
+  const c = /^clamp\(\s*([\d.]+)px\s*,\s*([\d.]+)%\s*,\s*([\d.]+)px\s*\)$/.exec(padding);
+  assert.ok(c, `paddingen går inte att räkna på: ${padding}`);
+  const [, min, procent, max] = c.map(Number);
+  return bredd => Math.min(max, Math.max(min, (procent / 100) * bredd));
+}
+
+/** Kortets content-box vid en given utvändig bredd. */
+const innerBredd = (bredd, pad) => bredd - 2 * pad(bredd);
+
+/** Den UTVÄNDIGA bredd där kortet byter till det stora läget. */
+function brytpunkt() {
+  const pad = paddingVid(), tröskel = containerTröskel();
+  let låg = 0, hög = 1000;                 // innerBredd() växer med bredden
+  for (let i = 0; i < 50; i++) {
+    const mitt = (låg + hög) / 2;
+    if (innerBredd(mitt, pad) >= tröskel) hög = mitt; else låg = mitt;
+  }
+  return hög;
+}
+
+// De fyra ytor kortet faktiskt ligger på, uppmätta i Chromium på 390 px bred
+// skärm. `litet` = monogrammet ensamt, `stort` = kapitäler, linje och namnet.
+const KONTEXTER = [
+  ["veckoraden", 44, "litet"],
+  ["Ikväll-thumbnailen", 76, "litet"],
+  ["recepthyllan", 146, "stort"],
+  ["receptvyns hjälte", 350, "stort"],
+];
+
+test("brytpunkten ligger på den UTVÄNDIGA bredd kommentaren lovar", () => {
+  // Det här är testet som inte fanns. Att läsa talet i @container-frågan
+  // bevisar ingenting om kortet: frågan mäter content-boxen, så den bredd
+  // användaren ser byta läge är tröskeln PLUS paddingen. Med 18 px per sida
+  // slog det stora läget inte in förrän kortet var ~168 px brett utvändigt,
+  // och @container-frågan sa fortfarande 132.
+  const vid = brytpunkt();
+  assert.ok(Math.abs(vid - 132) <= 1,
+    `det stora läget slår in vid ${vid.toFixed(1)} px utvändigt, inte vid 132 px ` +
+    `(tröskeln i @container är ${containerTröskel()} px och mäter content-boxen)`);
+});
+
+test("varje kontext hamnar i sitt läge - recepthyllan visar namnet", () => {
+  // Talen är mätta, men två av dem står i stilmallen och kan ändras av ett
+  // annat paket. Då ska kontexterna mätas om, inte glida i tysthet.
+  for (const [väljare, bredd] of [[".week-plan-photo", 44], [".hero-meal-photo", 76]]) {
+    const iCss = /([\d.]+)px/.exec(regelFör(väljare).get("width") || "");
+    assert.equal(Number(iCss?.[1]), bredd,
+      `${väljare} är inte längre ${bredd} px - mät om kontexterna i webbläsaren`);
+  }
+  const pad = paddingVid(), tröskel = containerTröskel();
+  for (const [namn, bredd, väntat] of KONTEXTER) {
+    const inner = innerBredd(bredd, pad);
+    assert.equal(inner >= tröskel ? "stort" : "litet", väntat,
+      `${namn} (${bredd} px utvändigt) får fel läge: content-boxen är ` +
+      `${inner.toFixed(1)} px mot tröskeln ${tröskel} px`);
+  }
+});
+
+test("paddingen äter aldrig upp kortet - content-boxen är en yta, inte en rest", () => {
+  // Det lilla lägets monogram är `position:absolute;inset:0` och struntar i
+  // paddingen. Därför SYNTES det inte att 44-pixelskortet hade 18 px per sida
+  // och en content-box på 8 px. Gör någon monogrammet statiskt även i det
+  // lilla läget kollapsar kortet - och den fällan gillrar man inte om igen.
+  const pad = paddingVid();
+  for (const [namn, bredd] of KONTEXTER) {
+    const inner = innerBredd(bredd, pad);
+    assert.ok(inner >= 0.6 * bredd,
+      `${namn}: paddingen lämnar ${inner.toFixed(1)} px av ${bredd} px åt innehållet`);
+  }
+});
+
 test("det stora läget: container-frågan byter kort, inte skärmen", () => {
   // En mediefråga kan inte skilja dem åt: samma kort ligger i en
-  // 52-pixelsrad och i en 278-pixelshjälte på SAMMA skärm.
-  const container = regler.filter(r => r.media.some(m => m.startsWith("@container")));
-  assert.ok(container.length > 0, "det finns ingen @container-fråga - kortet har bara en storlek");
-  const fråga = container[0].media.find(m => m.startsWith("@container"));
-  const bredd = /min-width:\s*(\d+)px/.exec(fråga);
-  assert.ok(bredd, `container-frågan mäter inte en bredd: ${fråga}`);
-  assert.ok(Number(bredd[1]) > 52,
-    "brytpunkten ligger på eller under 52 px - då får veckoraden det stora kortet");
+  // 44-pixelsrad och i en 350-pixelshjälte på SAMMA skärm. Att frågan finns
+  // och VAR den går mäts av de tre testerna ovan - containerTröskel() failar
+  // om frågan försvinner. Här mäts vad den byter.
+  containerTröskel();
 
   const namn = regelFör(".reservkort-namn", { container: "min-width" });
   assert.ok(namn.get("display") && namn.get("display") !== "none",

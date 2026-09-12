@@ -1143,10 +1143,33 @@ button{color:inherit}
    på samma skärm, och en mediefråga kan inte skilja dem åt.
 
      grundläge   monogrammet ensamt, centrerat - får plats i 40 px
-     >=132px     kapitäler, linje, hela namnet
+     >=132px     kapitäler, linje, hela namnet (kortets UTVÄNDIGA bredd)
 
    Grundläget är det LILLA med flit. En webbläsare utan container-queries
    får monogramkortet överallt: magrare, men aldrig tomt.
+
+   TVÅ FÄLLOR I SAMMA TRE RADER, BÅDA BETALDA EN GÅNG
+
+   1. `cqi` I EN DEKLARATION PÅ SJÄLVA CONTAINERN MÄTER INTE CONTAINERN.
+   Kortets padding stod en gång `clamp(7px,6cqi,18px)` - på `.reservkort`,
+   som ÄR query-containern. Det kan inte lösa mot kortet (bredden skulle bero
+   på sig själv), så det löser mot närmaste FÖRFADERS container, och finns
+   ingen sådan mot viewporten. Mätt i Chromium på 390 px blev paddingen
+   därför 18 px på varje kort: 18 px i en 44-pixelsruta, samma 18 px på en
+   350-pixelshjälte. Paddingen står i PROCENT i stället. Kortet fyller sin
+   förälder i varje kontext (`width:100%` eller en förälder som är lika
+   bred), så procenten mäter samma bredd som `cqi` skulle ha mätt - men
+   utan cirkeln. Barnen nedan behåller `cqi`: de är descendants, och för dem
+   löser den mot `.reservkort` precis som avsett.
+
+   2. FRÅGAN MÄTER CONTENT-BOXEN, INTE KORTET. `@container (min-width:X)`
+   läser containerns content-box, alltså kortet MINUS paddingen. Med 18 px
+   per sida slog det stora läget inte in förrän kortet var ~168 px brett
+   utvändigt, och ett 146-pixelskort i recepthyllan visade monogrammet fast
+   namnet fick plats. Tröskeln är därför 116 px och inte 132: vid 132 px
+   utvändigt är paddingen 6 % = 7,92 px och content-boxen 132 - 15,84 =
+   116,2 px. Ändras paddingformeln ovan måste det här talet räknas om -
+   `tests/reservkort.test.js` räknar samma sak och failar om de glider isär.
    ========================================================================== */
 .reservkort{
   container-type:inline-size;
@@ -1158,7 +1181,7 @@ button{color:inherit}
 .recipe-fallback.reservkort{
   display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;
   gap:var(--sp-3);
-  padding:10px;padding:clamp(7px,6cqi,18px);
+  padding:10px;padding:clamp(7px,6%,18px);
   outline:1px solid var(--rule-2);outline-offset:-1px;
 }
 .reservkort-kap,.reservkort-linje,.reservkort-namn{display:none}
@@ -1168,7 +1191,7 @@ button{color:inherit}
   font-size:22px;font-size:clamp(15px,42cqi,34px);
   color:var(--ink);
 }
-@container (min-width:132px){
+@container (min-width:116px){
   /* Kapitälerna versaliseras här och inte i källan: versaler i HTML får
      skärmläsaren att stava dem bokstav för bokstav. */
   .reservkort-kap{
