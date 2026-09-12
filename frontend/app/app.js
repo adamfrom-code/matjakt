@@ -32,7 +32,7 @@ import { dinnerCandidates } from "./src/data/meal-type.js";
 import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
 import { weekPlanDays } from "./src/views/week.js";
 import { initSettingsView, renderSettings } from "./src/views/settings.js";
-import { adjustInventory, fetchHousehold, fetchNotifications, joinHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, replaceWeekItems, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
+import { adjustInventory, fetchHousehold, fetchNotifications, forgetPushSubscription, joinHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, replaceWeekItems, savePushSubscription, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, pantryEntriesFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor } from "./src/services/categories.js";
 import { SWAP_INTENTS, pantryOverlap, rankSwapOptions, recentlyEatenPenalty, swapCostText, swapReasonText, weekCostAlert } from "./src/services/swap.js";
@@ -41,6 +41,7 @@ import { budgetScopeText as budgetScopeFor } from "./src/services/budget-scope.j
 import { planWarning } from "./src/services/plan-warning.js";
 import { ASSUMED_STATE, assumedHomeItems, assumedState } from "./src/services/assumed-home.js";
 import { takeUrlTokens } from "./src/services/url-tokens.js";
+import { notificationIntent, syncWeeklyPush } from "./src/services/weekly-push.js";
 import { branchChoiceKey, canPlanWeek, chooseBranch } from "./src/services/branch-choice.js";
 import { createSeededRandom, newSeed } from "./src/services/seeded-random.js";
 import { debounce } from "./src/services/debounce.js";
@@ -3166,13 +3167,59 @@ async function pollPremiumAfterCheckout() {
 // ---------------------------------------------------------------------------
 
 async function loadNotifications() {
-  if (!state.authToken || !householdActive()) return;
+  // H1: kravet på ett HUSHÅLL är borta. Söndagsnotisen går till ett KONTO -
+  // den som planerar sin vecka ensam behöver påminnelsen precis lika mycket,
+  // och det är samma svar som bär den publika VAPID-nyckeln. Vägen har
+  // aldrig krävt ett hushåll; det gjorde bara den här raden.
+  if (!state.authToken) return;
   try {
     const payload = await fetchNotifications(state.authToken);
     state.notisInstallningar = payload.preferences;
+    state.pushPublicKey = payload.push?.publicKey || "";
     if (payload.notifications.length) showHouseholdNotice(payload.notifications);
     renderNotificationPrefs();
+    // Utan prompt: en bakgrundssynk får ALDRIG visa tillståndsdialogen.
+    // Endpointer roteras av webbläsaren, så det här är vad som håller
+    // prenumerationen levande för den som redan sagt ja.
+    syncWeeklyNotification();
   } catch { /* notiser är aldrig värt att störa appen för */ }
+}
+
+// ---------------------------------------------------------------------------
+// H1: SÖNDAGSNOTISEN
+//
+// Prenumerationen följer notification_prefs.week ("Ny vecka"), inget annat.
+// `prompt` är sant bara när anropet kommer ur ett tryck på den brytaren -
+// se src/services/weekly-push.js för varför.
+// ---------------------------------------------------------------------------
+function syncWeeklyNotification({ prompt = false, off = false } = {}) {
+  if (!state.authToken) return Promise.resolve({ ok: false, reason: "utloggad" });
+  const prefs = state.notisInstallningar || {};
+  return syncWeeklyPush({
+    publicKey: state.pushPublicKey || "",
+    // `off` är utloggningen: prenumerationen ska bort oavsett vad brytaren
+    // säger, för brytaren hör till kontot som just lämnade telefonen.
+    wantsWeek: !off && prefs.all !== false && prefs.week !== false,
+    prompt,
+    platform: isNativeApp() ? "ios" : "web",
+    save: (subscription, platform) => savePushSubscription(state.authToken, subscription, platform),
+    forget: endpoint => forgetPushSubscription(state.authToken, endpoint),
+  }).catch(() => ({ ok: false, reason: "fel" }));
+}
+
+// ETT TRYCK → FÄRDIG VECKA. Notisen får inte landa på en tom startsida:
+// chooseMenu() bygger veckan, rensar förra veckans avbockningar och går till
+// Vecka-vyn. Avsikten plockas bort ur adressen FÖRST, så en omladdning inte
+// bygger om veckan en gång till.
+function openWeekFromNotification() {
+  try {
+    const url = new URL(location.href);
+    if (url.searchParams.has("notis")) {
+      url.searchParams.delete("notis");
+      history.replaceState(null, "", url.pathname + url.search + url.hash);
+    }
+  } catch { /* en webbläsare som vägrar skriva om historiken stoppar inte veckan */ }
+  chooseMenu();
 }
 
 // Notisen i appen. När push är produktionsklart är detta samma data från
@@ -3195,6 +3242,7 @@ function openDeeplink(deeplink) {
 function clearHouseholdSession() {
   state.household = emptyHouseholdState();
   state.notisInstallningar = null;
+  state.pushPublicKey = "";
   lastWeekPushKey = null;
   clearInterval(householdPollTimer);
 }
@@ -3927,6 +3975,10 @@ $("manageBillingBtn").addEventListener("click", async () => {
   } catch (error) { $("portalError").textContent = errorText(error); }
 });
 $("logoutBtn").addEventListener("click", async () => {
+  // H1: säg upp veckonotisen MEDAN sessionen fortfarande gäller. En
+  // söndagsnotis som landar på en telefon där någon annan loggat in bär det
+  // förra kontots egna tal - "5 middagar för 4 personer" om en främling.
+  if (state.authToken) { try { await syncWeeklyNotification({ off: true }); } catch { /* en prenumeration som inte gick att säga upp stoppar ingen utloggning */ } }
   if (state.authToken) { try { await logoutRequest(state.authToken, state.pushDeviceToken || null); } catch { /* session redan ogiltig server-side, städa lokalt ändå */ } }
   state.authToken = null; state.user = null; storeToken(null);
   clearHouseholdSession();
@@ -4114,7 +4166,7 @@ initAccountView({
   // lastWeekPushKey är app.js egen debounce-nyckel. Ett nytt hushåll ska få
   // veckan skickad även om exakt samma lista redan gått iväg en gång.
   resetWeekPushKey: () => { lastWeekPushKey = null; },
-  openAccountModal, openPlanComparison, chooseMenu, setView,
+  openAccountModal, openPlanComparison, chooseMenu, setView, syncWeeklyNotification,
   syncNearbyBranches, clearLocationDerivedState, storeOptionsMarkup, openWeekSheet,
   budgetScopeText, maxDinners, maxMeals: () => MAX_MEALS,
   isNativeApp, openExternal, plural, render, trackEvent,
@@ -4204,7 +4256,10 @@ loadRecipes().then(recipes => {
   RECEPT.push(...recipes);
   if (new URLSearchParams(location.search).get("recept")) renderRecipePage();
   if (!RECEPT.length) return;
-  if (!state.valda.size && state.onboardingComplete) chooseMenu(false);
+  // H1: personen kom hit genom att trycka på söndagsnotisen. Då är veckan
+  // det ENDA som ska hända - före "har du redan en vecka"-logiken nedan.
+  if (notificationIntent(location.href) === "vecka") openWeekFromNotification();
+  else if (!state.valda.size && state.onboardingComplete) chooseMenu(false);
   else render();
   renderRecipes();
 });
@@ -4234,6 +4289,12 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => { /* offline-stödet är ett tillägg - appen funkar utan det */ }));
   // När en ny service worker tagit över kör fliken fortfarande gammal
   // app.js mot ett nytt API. En diskret rad i stället för tyst skevhet.
+  // H1: appen var redan öppen när notisen trycktes. Service workern lyfter
+  // fram fliken och skickar avsikten hit - utan det hade fliken kommit upp
+  // på vilken vy den nu råkade stå.
+  navigator.serviceWorker.addEventListener("message", event => {
+    if (event.data?.type === "matjakt-notis") openWeekFromNotification();
+  });
   let hadController = Boolean(navigator.serviceWorker.controller);
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (!hadController) { hadController = true; return; }   // första installationen
