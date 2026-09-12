@@ -31,12 +31,18 @@ import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, foldName, shoppingRows }
 import { saveState, selectedRecipes, state } from "../state/app-state.js";
 import { escapeHtml, safeHttpUrl } from "../utils/html.js";
 import { teckenförklaringMarkup } from "./pris.js";
+import { initSparkvitto, renderSparkvitto } from "./sparkvitto.js";
 
 // Allt vyn behöver men inte äger. Skickas in en gång vid uppstart; namnen
 // är exakt de app.js använder, så varje flyttad rad står oförändrad nedan.
 const app = {};
 export function initShoppingView(dependencies) {
   Object.assign(app, dependencies);
+  // H2 · sparkvittot ritar i sin egen nod inne i #shoppingComplete och behöver
+  // inget annat av appen än vägen till DOM:en. Det är Handla som vet när
+  // listan är avbockad, så det är härifrån kvittot beställs - aldrig med en
+  // egen andra bedömning av när veckan är färdighandlad.
+  initSparkvitto({ $: app.$ });
 }
 
 // ---------------------------------------------------------------------------
@@ -531,8 +537,14 @@ export function renderBasket() {
   // "Allt handlat" celebrates a finished list, never an empty one - and
   // extras count: a week isn't done while the added coffee is unbought.
   const extrasDone = state.extraItems.every(extra => extra.checked);
-  app.$("shoppingComplete").hidden = !((shoppingItems.length || state.extraItems.length)
+  const alltHandlat = Boolean((shoppingItems.length || state.extraItems.length)
     && completed === shoppingItems.length && extrasDone);
+  app.$("shoppingComplete").hidden = !alltHandlat;
+  // H2 · sparkvittot. EN bedömning av "klar", inte två: kortet och kvittot
+  // läser samma `alltHandlat`. Kallas vid varje omritning också när listan
+  // inte är klar - kvittot måste se jämförelsen MEDAN den är giltig, eftersom
+  // varje avbockning nollar state.dbComparison (clearPriceSnapshots).
+  renderSparkvitto({ synligt: alltHandlat });
   const basketNote = app.$("basketHouseholdNote");
   if (basketNote) {
     basketNote.hidden = !app.householdActive();

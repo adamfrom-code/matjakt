@@ -186,7 +186,12 @@
           <button type="button" class="btn btn-ghost" id="manualItemAdd">+ Lägg till vara</button>
         </div>
         <section class="shopping-progress"><div><strong id="shoppingProgress">0 varor kvar</strong><span id="shoppingCost">0 / 0 kr</span></div><div class="progress-track"><i id="shoppingProgressBar"></i></div></section>
-        <div class="shopping-complete" id="shoppingComplete" hidden><strong>Allt handlat!</strong><p>Redo att planera nästa veckas meny?</p><button type="button" class="btn btn-primary" id="startNewWeekBtn"><span>Skapa nästa vecka</span><span aria-hidden="true">→</span></button></div>
+        <!-- H2 · SPARKVITTOT. Fylls av renderSparkvitto() i
+             src/views/sparkvitto.js: vad veckan kostade, hur mycket mindre det
+             är än dyraste JÄMFÖRBARA butik, och den löpande summan. Här stod
+             förut "Redo att planera nästa veckas meny?" - en artig fråga i
+             precis det ögonblick användaren gjort jobbet. -->
+        <div class="shopping-complete" id="shoppingComplete" hidden><strong>Allt handlat!</strong><div id="sparkvitto"></div><button type="button" class="btn btn-primary" id="startNewWeekBtn"><span>Skapa nästa vecka</span><span aria-hidden="true">→</span></button></div>
         <div class="week-cost-alert" id="weekCostAlert" hidden></div>
         <div class="staple-prompt" id="staplePrompt" hidden></div>
         <p class="price-source-note" id="priceSourceNote" hidden></p>
