@@ -3,10 +3,10 @@
   "appName": "Matjakt",
   "webDir": "dist/native/app",
   "ios": {
-    "backgroundColor": "#f6f7f4",
+    "backgroundColor": "#ECEEEF",
     "allowsLinkPreview": false
   },
   "android": {
-    "backgroundColor": "#f6f7f4"
+    "backgroundColor": "#ECEEEF"
   }
 }
