@@ -61,19 +61,26 @@ class AdminPanel(unittest.TestCase):
             raise unittest.SkipTest(f"Chromium kunde inte startas: {str(error)[:120]}")
         cls._orig_admin = api_server.ADMIN_TOKEN
         api_server.ADMIN_TOKEN = ADMIN
-        # En misslyckad ICA-körning med LÅNGT fel + en lyckad Willys-körning
-        # med datum: raderna som ska synas i kortet.
+        # En misslyckad ICA-körning med LÅNGT fel (släppt kedja -> kunder
+        # berörs) plus en misslyckad Coop-körning (osläppt -> "inte släppt").
+        # Båda behövs: kortet ska kunna skilja en incident som når kunder
+        # från en som inte gör det, och det går bara att pröva med en av
+        # varje. Dessutom en lyckad Willys-körning med datum.
         db = grocery_api.open_store()
         try:
             nu = time.time()
             db.connection.execute(
                 "INSERT INTO grocery_collector_runs (chain, store_id, started_at, finished_at, status, error_message) "
                 "VALUES ('ICA', NULL, ?, ?, 'failed', ?)", (nu - 7200, nu - 7100, LANGT_FEL))
+            db.connection.execute(
+                "INSERT INTO grocery_collector_runs (chain, store_id, started_at, finished_at, status, error_message) "
+                "VALUES ('Coop', NULL, ?, ?, 'failed', ?)",
+                (nu - 7300, nu - 7250, "429: dygnskvoten är slut"))
             db.connection.commit()
         finally:
             db.close()
         grocery_api.clear_cache()
-        # En öppen incident (ICA misslyckad, ej släppt) + en i historiken.
+        # Två öppna incidenter (ICA släppt, Coop ej) + en i historiken.
         panel = grocery_api.provider_status()
         alerts.process(panel, api_server.KV_CACHE, api_server.MAIL_CONFIG, now=time.time(), to_email="")
         alerts._arkivera(api_server.KV_CACHE, {"openedAt": time.time() - 40000, "chain": "Willys",
@@ -135,16 +142,22 @@ class AdminPanel(unittest.TestCase):
         self.assertFalse(page.evaluate("(el) => el.scrollWidth > el.clientWidth + 1", fel.element_handle()),
                          f"{width}px: felraden klipps")
         # 5. Released och Drift är skilda etiketter med begripliga värden.
-        ica = page.locator("#chains tbody tr", has_text="ICA").first
-        self.assertEqual(ica.locator('td[data-label="Släppt"]').inner_text().strip().lower(), "nej")
-        self.assertIn(ica.locator('td[data-label="Drift"]').inner_text().strip().split()[0], ("Trasig", "Aldrig"))
+        # Coop är exemplet på en OSLÄPPT kedja sedan D11 släppte ICA. Båda
+        # riktningarna prövas: en kedja som importeras men inte är släppt får
+        # aldrig läsas som släppt, och tvärtom.
+        coop = page.locator("#chains tbody tr", has_text="Coop").first
+        self.assertEqual(coop.locator('td[data-label="Släppt"]').inner_text().strip().lower(), "nej")
+        self.assertIn(coop.locator('td[data-label="Drift"]').inner_text().strip().split()[0], ("Trasig", "Aldrig"))
         willys = page.locator("#chains tbody tr", has_text="Willys").first
         self.assertEqual(willys.locator('td[data-label="Släppt"]').inner_text().strip(), "JA")
         # 6. Saknade värden visas som streck, inte som "undefined".
         self.assertNotIn("undefined", page.locator("#chains").inner_text())
         self.assertNotIn("null", page.locator("#chains").inner_text())
         # 7. Övriga kort finns och har innehåll.
-        expect(page.locator("#incidentsActive")).to_contain_text("ICA")
+        # En trasig import på en OSLÄPPT kedja ska stå som "inte släppt" -
+        # ingen kund berörs. Sedan D11 är ICA släppt, så dess trasiga import
+        # är en riktig kundpåverkande incident; Coop bär exemplet i stället.
+        expect(page.locator("#incidentsActive")).to_contain_text("Coop")
         expect(page.locator("#incidentsActive")).to_contain_text("inte släppt")
         page.locator("#incidentsHistory").locator("xpath=ancestor::details").evaluate("d => d.open = true")
         hist = page.locator("#incidentsHistory tbody tr").first

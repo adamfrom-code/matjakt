@@ -339,7 +339,7 @@ class ChainHealthTest(unittest.TestCase):
     och en lyckad import får aldrig i sig själv göra en kedja publik.
     """
 
-    def _entry(self, chain="ICA", status="working_via_primat", last=None, success=None):
+    def _entry(self, chain="Coop", status="working_via_primat", last=None, success=None):
         return {"chain": chain, "status": status, "lastRun": last, "lastSuccessfulRun": success}
 
     def test_a_chain_that_never_imported_is_not_healthy(self):
@@ -428,7 +428,7 @@ class ChainHealthTest(unittest.TestCase):
         släppt = grocery_api.chain_health(self._entry(
             chain="Willys", status="working", success=körning), now=now)
         self.assertEqual(släppt["status"], "stale")
-        osläppt = grocery_api.chain_health(self._entry(chain="ICA", success=körning), now=now)
+        osläppt = grocery_api.chain_health(self._entry(chain="Coop", success=körning), now=now)
         self.assertNotEqual(osläppt["status"], "stale")
 
     def test_a_normal_night_never_reaches_the_released_window(self):
@@ -446,10 +446,10 @@ class ChainHealthTest(unittest.TestCase):
         ready_for_release och väntar på ett uttryckligt beslut."""
         now = 1_000_000.0
         health = grocery_api.chain_health(self._entry(
-            chain="ICA", success={"status": "success", "finishedAt": now - 3600}), now=now)
+            chain="Coop", success={"status": "success", "finishedAt": now - 3600}), now=now)
         self.assertEqual(health["status"], "ready_for_release")
         self.assertFalse(health["released"])
-        self.assertNotIn("ICA", grocery_api.RELEASED_CHAINS)
+        self.assertNotIn("Coop", grocery_api.RELEASED_CHAINS)
 
     def test_a_released_chain_with_fresh_data_is_healthy(self):
         now = 1_000_000.0
