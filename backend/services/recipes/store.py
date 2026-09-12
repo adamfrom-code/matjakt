@@ -37,6 +37,7 @@ import unicodedata
 from pathlib import Path
 
 from ..data_guard import guard_database_path
+from ..schema_version import RECEPT, stämpla
 
 
 def normalize_ingredient_id(name: str) -> str:
@@ -105,6 +106,10 @@ class RecipeStore:
                 if column not in have:
                     self._connection.execute(
                         f"ALTER TABLE recipes ADD COLUMN {column} {kind}")
+        # Schemat är nu det version RECEPT beskriver - stämpla filen, så att en
+        # människa efter ett rollback kan LÄSA vilken version den bär i
+        # stället för att gissa. Se services/schema_version.py.
+        stämpla(self._connection, RECEPT)
 
     def get_meta(self, key: str):
         try:

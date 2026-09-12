@@ -23,6 +23,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from ..data_guard import guard_database_path
+from ..schema_version import KONTON, stämpla
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # Statusar där Stripe anser prenumerationen levande nog att äga kontot.
@@ -152,6 +153,10 @@ class AccountStore:
             except sqlite3.OperationalError:
                 pass
         self._migrate_session_tokens_to_hashes()
+        # Schemat är nu det version KONTON beskriver - stämpla filen, så att en
+        # människa efter ett rollback kan LÄSA vilken version den bär i
+        # stället för att gissa. Se services/schema_version.py.
+        stämpla(self._connection, KONTON)
         self._connection.commit()
 
     def _migrate_session_tokens_to_hashes(self):

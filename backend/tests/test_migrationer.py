@@ -43,6 +43,7 @@ from services.grocery import GroceryStore  # noqa: E402
 from services.household.store import HouseholdStore  # noqa: E402
 from services.pricing.store import PriceCacheStore  # noqa: E402
 from services.recipes.store import RecipeStore  # noqa: E402
+from services.schema_version import VERSIONER, läs  # noqa: E402
 
 SCHEMAN = HÄR / "fixturer" / "scheman"
 
@@ -103,9 +104,11 @@ class Lagerprov(unittest.TestCase):
     def _migrera(self, fixtur, klass, tabell, rad):
         katalog = tempfile.TemporaryDirectory()
         self.addCleanup(katalog.cleanup)
-        väg = Path(katalog.name) / f"{fixtur}.db"
+        väg = self.väg = Path(katalog.name) / f"{fixtur}.db"
 
         gammal = bygg_foregaende(väg, fixtur)
+        # Fixturens EGEN stämpel, läst innan dagens kod hinner höja den.
+        self.version_före = läs(gammal)
         före = schema(gammal)
         skriv(gammal, tabell, rad)
         gammal.close()
@@ -241,12 +244,154 @@ class SessionsmigreringenDubbelhashar_Inte(unittest.TestCase):
                          "migrationen dubbelhashade - varje inloggad användare är utlåst")
 
 
+class VersionenFoljerSchemat(Lagerprov):
+    """K6b: `PRAGMA user_version` - databasen säger själv vad den bär.
+
+    K6 bevisade att migrationerna är rollback-säkra. Det som saknades var
+    stämpeln: efter att K4:s `rollback`-jobb startat föregående live-deploy
+    mitt i natten var "vilken schemaversion bär den här filen?" en gissning,
+    och den gissningen gjordes med en incident igång. Fyra byte i
+    databashuvudet gör den till en avläsning i stället - se
+    services/schema_version.py.
+    """
+
+    def test_varje_lager_stamplar_en_tom_databas(self):
+        # Enklaste fallet, och det som gäller varje ny miljö: ingen fixtur,
+        # bara dagens kod mot en fil som inte finns än.
+        for fixtur, klass, *_ in LAGER:
+            with self.subTest(lager=fixtur):
+                katalog = tempfile.TemporaryDirectory()
+                self.addCleanup(katalog.cleanup)
+                väg = Path(katalog.name) / f"{fixtur}.db"
+                klass(väg)
+                anslutning = sqlite3.connect(väg)
+                self.addCleanup(anslutning.close)
+                self.assertEqual(läs(anslutning), VERSIONER[fixtur],
+                                 f"{fixtur}: lagret stämplar inte sin databas - "
+                                 f"saknas stämpla() efter migreringarna?")
+                self.assertGreater(läs(anslutning), 0,
+                                   f"{fixtur}: 0 betyder 'aldrig stämplad' och kan "
+                                   f"aldrig vara ett lagers version")
+
+    def test_en_baslinjedatabas_far_lagrets_version_efter_migrering(self):
+        # Det verkliga fallet: en databas ur föregående release, migrerad av
+        # dagens kod. Efteråt ska den bära dagens nummer, inte gårdagens.
+        for fixtur, klass, tabell, rad in LAGER:
+            with self.subTest(lager=fixtur):
+                *_, anslutning = self._migrera(fixtur, klass, tabell, rad)
+                self.assertEqual(läs(anslutning), VERSIONER[fixtur],
+                                 f"{fixtur}: migreringen körde men stämplade inte")
+
+    def test_en_ostamplad_produktionsdatabas_far_sin_version(self):
+        # VARJE databas i produktion ser ut så här i dag: schemat är
+        # migrerat, men huvudet säger 0 eftersom ingen release före den här
+        # skrev något där. Första gången dagens kod öppnar en sådan fil ska
+        # nollan bli lagrets nummer - annars stämplas bara nya miljöer, och
+        # stämpeln finns inte där frågan faktiskt ställs.
+        for fixtur, klass, tabell, rad in LAGER:
+            with self.subTest(lager=fixtur):
+                katalog = tempfile.TemporaryDirectory()
+                self.addCleanup(katalog.cleanup)
+                väg = Path(katalog.name) / f"{fixtur}.db"
+                gammal = bygg_foregaende(väg, fixtur)
+                gammal.execute("PRAGMA user_version = 0")   # före K6b
+                skriv(gammal, tabell, rad)
+                gammal.close()
+
+                klass(väg)
+
+                anslutning = sqlite3.connect(väg)
+                self.addCleanup(anslutning.close)
+                self.assertEqual(läs(anslutning), VERSIONER[fixtur],
+                                 f"{fixtur}: en ostämplad databas förblev ostämplad - "
+                                 f"stämpla() körs inte efter migreringarna")
+                self.assertGreater(läs(anslutning), 0)
+                self.assertEqual(
+                    anslutning.execute(f"SELECT COUNT(*) FROM {tabell}").fetchone()[0], 1,
+                    f"{fixtur}: stämplingen rörde datan")
+
+    def test_versionen_sjunker_inte_nar_en_aterstalld_release_oppnar_databasen(self):
+        # DET HÄR är varför stämpeln är max() och inte tilldelning. Efter ett
+        # rollback kör gammal kod mot en databas som nyare kod har migrerat.
+        # Skrev den gamla koden ner numret vore upplysningen borta i exakt
+        # det läge den finns till för.
+        for fixtur, klass, tabell, rad in LAGER:
+            with self.subTest(lager=fixtur):
+                katalog = tempfile.TemporaryDirectory()
+                self.addCleanup(katalog.cleanup)
+                väg = Path(katalog.name) / f"{fixtur}.db"
+                gammal = bygg_foregaende(väg, fixtur)
+                framtiden = VERSIONER[fixtur] + 10
+                gammal.execute(f"PRAGMA user_version = {framtiden}")
+                gammal.close()
+
+                klass(väg)   # dagens (nu "gamla") kod öppnar den
+
+                anslutning = sqlite3.connect(väg)
+                self.addCleanup(anslutning.close)
+                self.assertEqual(läs(anslutning), framtiden,
+                                 f"{fixtur}: en äldre release skrev ner versionen från "
+                                 f"{framtiden} till {läs(anslutning)}. Databasen påstår nu "
+                                 f"att den bär ett schema den inte bär.")
+
+    def test_ett_vaxande_schema_kraver_ett_hojt_nummer(self):
+        # Grinden som gör stämpeln värd att lita på. Fixturen bär numret den
+        # skrevs med; skiljer sig schemat mot dagens kod har någon lagt till
+        # en kolumn, och då MÅSTE numret ha gått upp. Annars betyder två
+        # databaser med samma version två olika scheman, och stämpeln är
+        # sämre än ingen stämpel alls.
+        for fixtur, klass, tabell, rad in LAGER:
+            with self.subTest(lager=fixtur):
+                före, efter, _ = self._migrera(fixtur, klass, tabell, rad)
+                if före == efter:
+                    # Oförändrat schema får ha ett höjt nummer - en migration
+                    # som bara skriver om DATA (som sessionshashningen nedan)
+                    # är ett fullgott skäl. Sjunka får det aldrig.
+                    self.assertGreaterEqual(
+                        VERSIONER[fixtur], self.version_före,
+                        f"{fixtur}: fixturen bär {self.version_före} men koden skriver "
+                        f"{VERSIONER[fixtur]}. En version får inte gå bakåt.")
+                    continue
+                nya = {f"{tab}.{kol}" for tab, kolumner in efter.items()
+                       for kol in kolumner - före.get(tab, set())}
+                self.assertGreater(
+                    VERSIONER[fixtur], self.version_före,
+                    f"{fixtur}: schemat växte ({', '.join(sorted(nya)) or 'nya tabeller'}) "
+                    f"men versionen står kvar på {self.version_före}. Höj {fixtur.upper()} i "
+                    f"services/schema_version.py och kör "
+                    f"`python backend/tests/test_migrationer.py --spara` i SAMMA commit.")
+
+    def test_en_omstart_andrar_inte_versionen(self):
+        # Render startar om, en deploy körs om: samma kod öppnar samma
+        # databas två gånger. Numret ska stå still.
+        for fixtur, klass, tabell, rad in LAGER:
+            with self.subTest(lager=fixtur):
+                *_, anslutning = self._migrera(fixtur, klass, tabell, rad)
+                först = läs(anslutning)
+                klass(self.väg)          # samma kod öppnar samma fil igen
+                self.assertEqual(läs(anslutning), först,
+                                 f"{fixtur}: andra öppningen flyttade versionen")
+
+
 class FixturernaFinnsOchAktuella(unittest.TestCase):
     def test_ett_schema_per_lager(self):
         for fixtur, *_ in LAGER:
             self.assertTrue((SCHEMAN / f"{fixtur}.sql").exists(),
                             f"fixturer/scheman/{fixtur}.sql saknas - kör "
                             f"`python backend/tests/test_migrationer.py --spara`")
+
+    def test_varje_lager_har_ett_nummer(self):
+        # Ett nytt lager utan rad i VERSIONER stämplar ingenting, och det
+        # syns inte förrän någon frågar en databas som inte kan svara.
+        self.assertEqual(sorted(fixtur for fixtur, *_ in LAGER), sorted(VERSIONER),
+                         "LAGER och services/schema_version.VERSIONER är inte samma lager")
+
+    def test_varje_fixtur_bar_sin_version(self):
+        for fixtur, *_ in LAGER:
+            with self.subTest(lager=fixtur):
+                self.assertIn("PRAGMA user_version = ", (SCHEMAN / f"{fixtur}.sql").read_text(encoding="utf-8"),
+                              f"{fixtur}.sql saknar sin stämpel - kör "
+                              f"`python backend/tests/test_migrationer.py --spara`")
 
     def test_ingen_sparad_databasfil_smog_in(self):
         # Spårade databasfiler är förbjudna i det här repot (kontodatabasen
@@ -267,10 +412,23 @@ def spara_scheman():
             rader = [rad[0] for rad in anslutning.execute(
                 "SELECT sql FROM sqlite_master WHERE sql IS NOT NULL "
                 "AND name NOT LIKE 'sqlite_%' ORDER BY type DESC, name")]
+            version = läs(anslutning)
             anslutning.close()
-            (SCHEMAN / f"{fixtur}.sql").write_text(
-                ";\n".join(rad.strip() for rad in rader) + ";\n", encoding="utf-8")
-            print(f"  {fixtur}.sql: {len(rader)} objekt")
+            # Versionen med i dumpen. Utan den vet nästa release inte vilken
+            # version den ÄRVER, och "schemat växte men numret stod still"
+            # går inte att upptäcka - se VersionenFoljerSchemat nedan.
+            ny = (";\n".join(rad.strip() for rad in rader) + ";\n"
+                  + f"PRAGMA user_version = {version};\n")
+            fil = SCHEMAN / f"{fixtur}.sql"
+            if fil.exists():
+                gammal_text = fil.read_text(encoding="utf-8")
+                gammalt_schema = gammal_text.rsplit("PRAGMA user_version", 1)[0]
+                if gammalt_schema != ny.rsplit("PRAGMA user_version", 1)[0] \
+                        and f"PRAGMA user_version = {version};" in gammal_text:
+                    print(f"  !! {fixtur}: schemat ändrades men {fixtur.upper()} står kvar på "
+                          f"{version} - höj numret i services/schema_version.py")
+            fil.write_text(ny, encoding="utf-8")
+            print(f"  {fixtur}.sql: {len(rader)} objekt, user_version {version}")
 
 
 if __name__ == "__main__":
