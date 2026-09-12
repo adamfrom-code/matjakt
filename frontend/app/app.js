@@ -43,6 +43,7 @@ import { branchChoiceKey, canPlanWeek, chooseBranch } from "./src/services/branc
 import { createSeededRandom, newSeed } from "./src/services/seeded-random.js";
 import { debounce } from "./src/services/debounce.js";
 import { closeOnboarding, initAccountView, isAwaitingPremium, openOnboarding, openPaywall, openPremiumPitch, renderAccount, renderHousehold, renderNotificationPrefs, renderWeekPlanUpsell, setAwaitingPremium, wireHouseholdUi } from "./src/views/account.js";
+import { delaMånaden, initSparatView, renderSparat, sparatModell } from "./src/views/sparat.js";
 
 // FÖRST AV ALLT, före en enda rad annan startkod: engångstoken ur
 // adressfältet. `?reset=` är ett fullständigt kontoövertagande i klartext
@@ -3517,36 +3518,22 @@ function openPlanComparison() {
 function closePlanModal() { closeModal($("planModal")); }
 document.querySelectorAll("[data-plan-close]").forEach(button => button.addEventListener("click", closePlanModal));
 
-function logEntriesSince(daysAgo) {
-  const cutoff = Date.now() - daysAgo * 86400000;
-  return state.savingsLog.filter(entry => new Date(entry.date).getTime() >= cutoff);
-}
-function reusedIngredientCount() {
+// L5: veckan som ligger planerad NU, som två räknade tal. Båda är `null` när
+// de inte GÅR att räkna - ingen vecka planerad, eller inga priser hämtade än.
+// Noll kampanjvaror och "vi vet inte om det finns kampanjvaror" är två olika
+// svar, och Sparat skriver ut skillnaden i stället för att gissa en nolla.
+function veckansNyckeltal() {
   const selected = plannedRecipes();
-  if (!selected.length) return 0;
+  if (!selected.length) return { middagar: null, kampanjvaror: null };
   const shoppingItems = aggregateShopping(selected);
-  return shoppingItems.filter(item => selected.filter(recipe => recipe.ingredienser.includes(item.namn)).length > 1).length;
+  const prissatt = shoppingItems.some(item => databaseItemFor(item.namn));
+  return {
+    middagar: selected.length,
+    kampanjvaror: prissatt ? weekSummaryFacts(selected, shoppingItems, null).onCampaign : null,
+  };
 }
 function renderStats() {
-  const weekEntries = logEntriesSince(7).filter(entry => entry.hasComparison);
-  const monthEntries = logEntriesSince(30).filter(entry => entry.hasComparison);
-  const savedWeek = weekEntries.reduce((sum, entry) => sum + entry.savings, 0);
-  const savedMonth = monthEntries.reduce((sum, entry) => sum + entry.savings, 0);
-  // OFTAST VALD, INTE BILLIGAST. Det här är läget av entry.branch - alltså
-  // vilken butik användaren valt flest gånger. Ingen prisjämförelse ingår.
-  // Etiketten hette "Billigaste butiken för dig", vilket var ett osant
-  // påstående om användarens pengar: en butik kan vara vald av vana, för
-  // att den ligger nära, eller för att den var förvald.
-  const branchCounts = {};
-  state.savingsLog.forEach(entry => { if (entry.branch) branchCounts[entry.branch] = (branchCounts[entry.branch] || 0) + 1; });
-  const mostChosenName = Object.entries(branchCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || selectedBranch()?.namn || "-";
-  const avgPortion = state.savingsLog.length ? state.savingsLog.reduce((sum, entry) => sum + entry.portionCost, 0) / state.savingsLog.length : 0;
-  const reused = reusedIngredientCount();
-  $("statSavedWeek").textContent = weekEntries.length ? money(savedWeek) : "Underlag saknas";
-  $("statSavedMonth").textContent = monthEntries.length ? money(savedMonth) : "Underlag saknas";
-  $("statCheapestStore").textContent = mostChosenName;
-  $("statAvgPortion").textContent = state.savingsLog.length ? money(avgPortion) : "-";
-  $("statWasteReduced").textContent = reused ? `${plural(reused, "ingrediens", "ingredienser")} återanvänds i flera rätter denna vecka` : "Skapa en vecka för att se detta";
+  renderSparat(sparatModell(state.savingsLog, { vecka: veckansNyckeltal() }));
   // The hero savings card only ever shows REAL arithmetic: the server's own
   // verdict for the CURRENT week (cheapest vs priciest comparable chain).
   // The old estimate-based log said "Uppskattat sparat" - a number nobody
@@ -3574,6 +3561,10 @@ function renderStats() {
 }
 $("openStatsBtn").addEventListener("click", () => { renderStats(); setView("stats"); });
 $("homeShoppingStat").addEventListener("click", () => setView("basket"));
+initSparatView({ $ });
+// "Dela din månad" delar tills vidare meningen som ren text. H4 gör samma
+// mening till en 1080x1080-bild; knappen byter väg då, inte plats.
+$("sparatShareBtn").addEventListener("click", () => { delaMånaden(); });
 
 function openAccountModal() { openModal($("accountModal"), { onClose: closeAccountModal }); }
 function closeAccountModal() { closeModal($("accountModal")); $("loginError").textContent = ""; $("registerError").textContent = ""; $("redeemError").textContent = ""; $("forgotError").textContent = ""; $("resetError").textContent = ""; $("deleteError").textContent = ""; }

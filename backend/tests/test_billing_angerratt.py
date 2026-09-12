@@ -64,8 +64,14 @@ class AngerrattenKravsForCheckout(unittest.TestCase):
 
     # ---- hjälpare -------------------------------------------------------
     def _konto(self):
-        token, _ = api_server.ACCOUNT_STORE.register(f"b3-{uuid.uuid4().hex[:10]}@example.com", "hemligt123")
+        email = f"b3-{uuid.uuid4().hex[:10]}@example.com"
+        token, _ = api_server.ACCOUNT_STORE.register(email, "hemligt123")
         user_id, _, _ = api_server.ACCOUNT_STORE.billing_identity_for_token(token)
+        # J5 kräver verifierad adress före köp. Det är inte vad B3 prövar -
+        # spärren som ska falla här är ångerrätten, inte adressen.
+        api_server.ACCOUNT_STORE.connection.execute(
+            "UPDATE users SET email_verified = 1 WHERE id = ?", (user_id,))
+        api_server.ACCOUNT_STORE.connection.commit()
         return token, user_id
 
     def _checkout(self, token, **kropp):
