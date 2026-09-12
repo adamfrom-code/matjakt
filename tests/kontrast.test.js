@@ -18,7 +18,7 @@ import test from "node:test";
 import { deklarationer, läsStyles, lösVar, parseRegler, rotVariabler }
   from "./fixtures/css-parser.mjs";
 import {
-  KRAV_BRÖDTEXT, KRAV_STOR_TEXT, beskriv, kontrast, svepKontrast, tolkaFärg,
+  KRAV_BRÖDTEXT, KRAV_STOR_TEXT, beskriv, kontrast, luminans, svepKontrast, tolkaFärg,
 } from "./fixtures/kontrast.mjs";
 
 const css = läsStyles();
@@ -95,6 +95,9 @@ test("besparingar och prisstatus bär ingen accentfärg (§2.3)", () => {
     ".stats-card.highlight strong",   // "Uppskattat sparat denna vecka" / "denna månad"
     ".week-summary .remaining strong",
     ".chain-list-savings",
+    ".sparat-hero-value",             // L5: appens hjältesiffra
+    ".sparat-varde b",                // L5: månadsvärdena under staplarna
+    ".sparat-tal-varde",              // L5: nyckeltalsraderna
   ];
   for (const selektor of siffror) {
     let färg = null;
@@ -105,5 +108,84 @@ test("besparingar och prisstatus bär ingen accentfärg (§2.3)", () => {
     assert.ok(färg, `${selektor} har ingen färgregel längre - har selektorn bytt namn?`);
     assert.notEqual(lösVar(färg, vars).trim().toLowerCase(), accent,
       `${selektor} står i accentfärg. Sparsiffror är varken nuläge eller nästa steg (§2.3).`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// L5 · SPARSUMMAN PÅ DEN MÖRKA YTAN
+//
+// G4 rättade en siffra som stod mörkgrönt på mörkgrönt. L5 flyttar samma
+// siffra till motsatsen: appens starkaste kontrast, papper på bläck. Det är
+// ett påstående om två färger, alltså ett påstående som måste mätas - och
+// mätas i BÅDA lägena, för hela poängen med en tokenbaserad yta är att den
+// vänder med temat i stället för att bli ljus text på ljus platta.
+// ---------------------------------------------------------------------------
+
+/** Det sista värdet en regel sätter för `prop` på `selektor`, variabler lösta. */
+function deklareratVärde(selektor, prop, tema = "") {
+  const regler = parseRegler(css);
+  const vars = rotVariabler(regler, tema);
+  let värde = null;
+  for (const r of regler) {
+    if (!r.delar.includes(selektor)) continue;
+    for (const d of deklarationer(r.block)) if (d.prop === prop) värde = d.värde;
+  }
+  return värde === null ? null : lösVar(värde, vars).trim().toLowerCase();
+}
+
+test("L5: sparsumman ligger på en yta som faktiskt är mörk", () => {
+  // "Mörk yta" är inte en smaksak. Den mäts som relativ luminans, och den ska
+  // ligga under allt annat papper i systemet - annars är det ingen mörk yta,
+  // det är bara en till platta.
+  const yta = deklareratVärde(".sparat-hero", "background");
+  assert.ok(yta, ".sparat-hero har ingen bakgrundsregel - har klassen bytt namn?");
+  const ljushet = luminans(tolkaFärg(yta));
+  assert.ok(ljushet < 0.05,
+    `.sparat-hero har luminans ${ljushet.toFixed(4)} - det är ingen mörk yta`);
+  for (const papper of ["--paper", "--paper-2"]) {
+    const annat = luminans(tolkaFärg(rotVariabler(parseRegler(css)).get(papper)));
+    assert.ok(ljushet < annat, `.sparat-hero är inte mörkare än ${papper}`);
+  }
+});
+
+test("L5: hjältesiffran klarar AAA på den mörka ytan - i båda lägena", () => {
+  for (const [namn, tema] of [["ljust", ""], ["mörkt", '[data-theme="dark"]']]) {
+    const bakgrund = tolkaFärg(deklareratVärde(".sparat-hero", "background", tema));
+    for (const selektor of [".sparat-hero-value", ".sparat-hero-label", ".sparat-hero-note"]) {
+      const färg = deklareratVärde(selektor, "color", tema);
+      assert.ok(färg, `${selektor} saknar färgregel`);
+      const r = kontrast(tolkaFärg(färg), bakgrund);
+      assert.ok(r >= 7,
+        `${namn} läge: ${selektor} ger ${r.toFixed(2)}:1 mot .sparat-hero. `
+        + "Appens viktigaste siffra ska ha appens starkaste kontrast, alltså AAA (7:1).");
+    }
+  }
+});
+
+test("L5: svepet hittar Sparat-skärmen även i mörkt läge", () => {
+  // Ytan är byggd av tokens just för att vända med temat. Går den sönder är
+  // det ljus text på ljus platta - exakt G4:s fel, en gång till.
+  const fynd = svepKontrast(css, { tema: '[data-theme="dark"]' })
+    .filter((f) => f.selektor.startsWith(".sparat") || f.selektor.startsWith(".btn-sekundar"));
+  assert.deepEqual(fynd.map(beskriv), [],
+    `\n${fynd.length} kontrastfel på Sparat i mörkt läge:\n`
+    + fynd.map((f) => "  " + beskriv(f)).join("\n") + "\n");
+});
+
+test("L5: svepet ser en hjältesiffra som tappat sin mörka yta", () => {
+  // Ett grönt test säger bara något om det kan bli rött. Det här är den
+  // riktiga muteringen, inte en tillagd regel på slutet: ytan görs ljus DÄR
+  // DEN STÅR, så siffran mäts mot papper på papper - 1:1, och den siffran är
+  // hela skärmen.
+  const trasig = css.replace("background:var(--ink);color:var(--paper);",
+                             "background:var(--paper);color:var(--paper);");
+  assert.notEqual(trasig, css,
+    "muteringen träffade ingenting - står `.sparat-hero` fortfarande på var(--ink)?");
+  const fynd = svepKontrast(trasig)
+    .filter((f) => f.selektor === ".sparat-hero-value" || f.selektor === ".sparat-hero");
+  assert.ok(fynd.length >= 2,
+    `svepet missade hjältesiffran utan sin mörka yta (hittade ${fynd.length} av 2)`);
+  for (const f of fynd) {
+    assert.ok(f.ratio < 1.1, `${f.selektor} räknades till ${f.ratio.toFixed(2)}:1, väntat ~1:1`);
   }
 });

@@ -209,16 +209,24 @@
         </section>
       </section>
 
-      <section class="screen stats-screen" aria-labelledby="statsTitle">
-        <header class="screen-header"><button class="back-link" type="button" data-view="home">← Ikväll</button><p class="eyebrow">Din historik</p><h1 id="statsTitle">Sparanderesultat</h1></header>
-        <div class="stats-grid">
-          <div class="stats-card highlight"><span>Uppskattat sparat denna vecka</span><strong id="statSavedWeek">–</strong></div>
-          <div class="stats-card highlight"><span>Uppskattat sparat denna månad</span><strong id="statSavedMonth">–</strong></div>
-          <div class="stats-card"><span>Oftast vald butik</span><strong id="statCheapestStore">-</strong></div>
-          <div class="stats-card"><span>Snittkostnad per portion <small>uppskattad</small></span><strong id="statAvgPortion">-</strong></div>
+      <!-- SPARAT (L5). Hjältesiffran ligger på appens ENDA mörka yta - den
+           starkaste kontrast systemet har. Staplarna står mot en gemensam
+           skala och värdena står utskrivna under dem, så diagrammet går att
+           läsa utan att tolka en stapellängd. En månad utan underlag ritas
+           som ett tomt fack, aldrig som en nolla. -->
+      <section class="screen stats-screen sparat" aria-labelledby="statsTitle">
+        <header class="screen-header"><button class="back-link" type="button" data-view="home">← Ikväll</button><p class="eyebrow">Din historik</p><h1 id="statsTitle">Sparat</h1></header>
+        <div class="sparat-hero">
+          <span class="sparat-hero-label" id="sparatHeroLabel">Uppskattat sparat</span>
+          <p class="sparat-hero-value" id="sparatHeroValue"><span class="sparat-hero-tom">Ingen handlad vecka än</span></p>
+          <p class="sparat-hero-note" id="sparatHeroNote">Välj en vecka i Matjakt, så börjar siffran här räknas.</p>
         </div>
-        <div class="stats-waste"><span>Minskat matsvinn</span><strong id="statWasteReduced">Skapa en vecka för att se detta</strong></div>
-        <p class="stats-note">Baserat på de veckor du skapat och valt i Matjakt. Uppskattade priser tills du bekräftar i kassan.</p>
+        <div class="sparat-manader" id="sparatManader" role="img" aria-label="Sparat per månad."></div>
+        <div class="sparat-manvarden" id="sparatManvarden" aria-hidden="true"></div>
+        <ul class="sparat-tal" id="sparatTal"></ul>
+        <p class="stats-note">Middagar och kampanjvaror gäller veckan du har planerad nu. Beloppen är uppskattade mot den dyraste jämförbara kedjan, tills du bekräftar i kassan.</p>
+        <button class="btn-sekundar sparat-dela" id="sparatShareBtn" type="button" hidden>Dela din månad</button>
+        <p class="sparat-dela-status" id="sparatShareStatus" role="status"></p>
       </section>
 
       <section class="screen comparison-screen" aria-labelledby="comparisonTitle">
