@@ -25,10 +25,11 @@ import logging
 import os
 import threading
 import time
+from collections import OrderedDict
 from pathlib import Path
 
 from .pricing import RecipePricingEngine, comparability_reasons, pantry_entry
-from .store import GroceryStore
+from .store import GroceryStore, shared_store
 
 logger = logging.getLogger("matjakt.grocery.api")
 
@@ -60,45 +61,105 @@ MAX_AGE_SECONDS_FOR_COMPARISON = 14 * 24 * 3600
 
 # Results are cached briefly: the same week's list gets priced again on every
 # re-render, and the underlying data only changes when a collector runs.
-_CACHE: dict = {}
+_CACHE: "OrderedDict[str, tuple]" = OrderedDict()
 _CACHE_TTL_SECONDS = 300
 _CACHE_MAX_ENTRIES = 200
 _LOCK = threading.Lock()
 
 
+# D8. CACHEN MÅSTE KUNNA SJÄLVLÄKA NÄR EN ANNAN PROCESS ÄNDRAR DATA.
+# clear_cache() tömmer den HÄR processens dict. Med två instanser betyder
+# det att instans B fortsätter servera gamla priser i upp till fem minuter
+# efter att instans A importerat - ingen av dem har fel, de har bara aldrig
+# pratat med varandra.
+#
+# Varje post bär därför databasens data_version från när den lades in, och
+# en post vars stämpel inte längre stämmer är ingen träff. Motorns prisbild
+# och ordindex (pricing._PRICE_CACHE/_INDEX_CACHE) har nycklats på samma
+# version sedan de skrevs; det här är samma idé, äntligen också här.
+#
+# Versionen läses högst var TTL:e sekund. Den kostar ett par COUNT över
+# katalogen, och att läsa den per cacheuppslag vore att byta en inaktuell
+# cache mot en långsam.
+_VERSION_TTL_SECONDS = 2.0
+_version_state = {"value": None, "at": 0.0}
+
+
+def data_version(force: bool = False) -> str | None:
+    """Databasens datastämpel som cachen nycklas på, högst en läsning per TTL.
+
+    None när databasen inte går att läsa - då fungerar cachen som en ren
+    TTL-cache i stället för att sluta svara. En trasig databas ska inte bli
+    ett kastat anrop inne i en cachefunktion."""
+    now = time.time()
+    with _LOCK:
+        if (not force and _version_state["value"] is not None
+                and now - _version_state["at"] < _VERSION_TTL_SECONDS):
+            return _version_state["value"]
+    try:
+        # Utanför låset: databasen läses aldrig med cachelåset i handen.
+        version = open_store().data_version()
+    except Exception:
+        return _version_state["value"]
+    with _LOCK:
+        _version_state.update(value=version, at=now)
+    return version
+
+
 def _cache_get(key):
+    version = data_version()
     with _LOCK:
         entry = _CACHE.get(key)
         if not entry:
             return None
-        value, expires = entry
-        if expires < time.time():
+        value, expires, stamp = entry
+        if expires < time.time() or stamp != version:
             _CACHE.pop(key, None)
             return None
+        # Färskast sist - det är den ordningen utrensningen nedan läser.
+        _CACHE.move_to_end(key)
         return value
 
 
 def _cache_set(key, value):
+    version = data_version()
     with _LOCK:
-        if len(_CACHE) >= _CACHE_MAX_ENTRIES:
-            _CACHE.clear()
-        _CACHE[key] = (value, time.time() + _CACHE_TTL_SECONDS)
+        # D8: kasta ut den ÄLDSTA posten, inte alla.
+        # `_CACHE.clear()` vid 200 poster betydde att den 201:a veckan som
+        # prissattes slängde de 200 som just värmts upp, och nästa anrop
+        # fyllde dem igen. Trafikvariation blev cache-thrashing i stället
+        # för utslagning av det minst använda.
+        while len(_CACHE) >= _CACHE_MAX_ENTRIES:
+            _CACHE.popitem(last=False)
+        _CACHE[key] = (value, time.time() + _CACHE_TTL_SECONDS, version)
+        _CACHE.move_to_end(key)
 
 
 def clear_cache():
     """Called after an import, so newly collected prices are visible at once
     instead of after the TTL. Tömmer även motorns prisbild/ordindex: en
     partnerpaus som raderar priser eller en referensbackfill ändrar vad
-    kunden ska se utan att någon körning avslutats."""
+    kunden ska se utan att någon körning avslutats.
+
+    D8: nollställer dessutom den kända dataversionen, så nästa uppslag läser
+    den ur databasen i stället för ur en två sekunder gammal minnesbild."""
     with _LOCK:
         _CACHE.clear()
+        _version_state.update(value=None, at=0.0)
     from . import pricing
     pricing._PRICE_CACHE.clear()
     pricing._INDEX_CACHE.clear()
 
 
 def open_store() -> GroceryStore:
-    return GroceryStore(DB_PATH)
+    """Trådens delade anslutning till grocery-databasen.
+
+    D8: förut en ny anslutning OCH en hel schemamigrering per anrop - alltså
+    per HTTP-request som rörde grocery. shared_store() återanvänder trådens
+    anslutning och lägger upp schemat en gång per process och databasfil.
+    close() på det som kommer tillbaka är en no-op: anslutningen tillhör
+    tråden, inte anroparen."""
+    return shared_store(DB_PATH)
 
 
 # Kampanjer är veckovaror: data äldre än så här visas inte som "aktiv
@@ -241,6 +302,10 @@ def store_counts(store, chain: str, now: float | None = None) -> dict:
         "mattVid": now,
         "farskGrans": f"pris yngre än {MAX_STORE_PRICE_AGE_SECONDS // 86400} dygn",
         "slapptKedja": slappt,
+        # En STORE_SPECIFIC-kedja som är släppt vilar på sin referensnivå i
+        # alla butiker utom de partnertecknade. Är den noll når kunden inga
+        # priser alls, och det ska synas utan admin-token.
+        "referenspriser": store.reference_price_count(chain),
     }
 
 
@@ -385,12 +450,39 @@ CHAIN_STALE_AFTER_SECONDS = 36 * 3600
 #
 # Uppåt finns gott om marginal: en kedja som kör varje natt har som mest ~24
 # timmar gammal data precis innan nästa körning, plus körningens egen längd
-# (tiotals minuter). 27 timmar nås aldrig av en kedja som fungerar.
+# (tiotals minuter). 25 timmar nås aldrig av en kedja som fungerar - ICA:s
+# lyckade import är två timmar gammal när driftkollen går.
+#
+# SIFFRAN ÄR RÄKNAD UR SCHEMAT, INTE VALD. En utebliven natt upptäcks först
+# när kedjans senaste lyckade import passerat gränsen, och den åldern är
+# 24 + driftkollen - kedjans körtid. Den snävaste SLÄPPTA kedjan sätter taket:
+#
+#   Willys     02:00 -> 29,5 h      City Gross 04:00 -> 27,5 h
+#   Hemköp     03:00 -> 28,5 h      ICA        04:30 -> 27,0 h
+#
+# Gränsen låg på 27 h, räknad när bara de tre första var släppta. D11 släppte
+# ICA, som går 05:30 - en utebliven ICA-natt hade då inte upptäckts förrän
+# nästa morgon, vilket är precis det D4 byggdes för att förhindra. Därför 25 h.
+#
+# FÖNSTRET ÄR EN TIMME BRETT OCH DET ÄR TRÅNGT. Nedåt får siffran inte gå
+# under 25 h: precis före nästa körning är en fungerande kedjas data ~24 h
+# gammal plus körningens längd (ICA:s tar ~10 min), och larmar vi där larmar
+# vi varje natt. Uppåt sätter ICA:s 26,0 h taket. 25,5 h ger 1,3 h marginal
+# mot falsklarm och 0,5 h mot missad upptäckt.
+#
+# Den tunna marginalen är en följd av att ICA kör sent (05:30), och den
+# ordningen kom av att Primat-kedjorna lades efter de fria. Nu när ICA är
+# släppt hör den hemma bland de släppta: flyttas den till 04:30 blir åldern
+# 27,0 h och gränsen kan gå tillbaka till 26 h med råge åt båda håll. Den
+# ändringen ligger i scheduler.py, som vågen D arbetar i just nu.
+#
+# Släpps Coop (06:30 -> 25,0 h) eller Lidl (07:00 -> 24,5 h) räcker ingen
+# siffra alls - då MÅSTE kedjan flyttas tidigare i schemat.
 #
 # test_the_stale_window_catches_a_skipped_night (test_grocery_scheduler.py)
-# håller ihop siffran med schemat: flyttas en släppt kedja tidigare, eller
-# driftkollen senare, failar testet.
-RELEASED_CHAIN_STALE_AFTER_SECONDS = 27 * 3600
+# håller ihop siffran med schemat: flyttas en släppt kedja senare, eller
+# driftkollen tidigare, failar testet.
+RELEASED_CHAIN_STALE_AFTER_SECONDS = 26 * 3600
 
 # Körningsstatusar som betyder "försöket gav ingen ny data".
 #
@@ -567,14 +659,35 @@ def provider_status() -> list[dict]:
     return panel
 
 
-# Kedjor som är SLÄPPTA mot användare. ICA, Coop och Lidl har en färdig
-# provider (Primat, se providers/primat.py) och kan importeras manuellt, men
-# de får inte dyka upp i jämförelsen förrän de klarat samma kvalitetsgate som
-# de tre befintliga: kanonisk matchning, paketmatte, fail-closed, full audit
-# på full katalog. En partiell katalog i databasen får ALDRIG räcka för att
-# en kedja ska börja kröna "Billigast" - därav uttrycklig lista i stället
-# för "allt som råkar ha rader".
-RELEASED_CHAINS = ("Willys", "Hemköp", "City Gross")
+# Kedjor som är SLÄPPTA mot användare. Coop och Lidl har en färdig provider
+# (Primat, se providers/primat.py) och kan importeras, men de får inte dyka
+# upp i jämförelsen förrän de klarat samma kvalitetsgate som de övriga:
+# kanonisk matchning, paketmatte, fail-closed, full audit på full katalog.
+# En partiell katalog i databasen får ALDRIG räcka för att en kedja ska
+# börja kröna "Billigast" - därav uttrycklig lista i stället för "allt som
+# råkar ha rader".
+#
+# ICA SLÄPPS PÅ REFERENSNIVÅ, OCH DET ÄR ETT ANNAT LÖFTE ÄN DE ANDRA TRE.
+#
+# Willys och Hemköp är centralt prissatta: ett rikspris ÄR priset, i varje
+# butik. ICA är handlarägt (CHAIN_OWNERSHIP["ICA"] = "FRANCHISE") och
+# priserna skiljer sig bevisat mellan butiker. Att hålla alla 463 aktiva
+# ICA-butiker butiksverifierade är dessutom omöjligt på dagens Primat-kvot:
+# en butikskatalog kostar ~19 700 rader mot en dygnsbudget på 100 000, så
+# en full omgång tar ~91 dygn och priserna hinner bli 23 gånger för gamla.
+#
+# Därför får ICA i stället ett RIKTPRIS på kedjenivå, byggt ur
+# CHAIN_REFERENCE_STORE["ICA"] (Maxi ICA Stormarknad Gävle, full täckning)
+# och publicerat som REFERENCE_PRICE. Varje ICA-butik i landet blir därmed
+# prissatt - vilket är poängen - men _pricing_basis och _comparison_basis
+# märker korgen som "reference", så kunden ser vad "Billigast" vilar på.
+# Motorn ljuger alltså inte; den säger "ungefär så här" i stället för att
+# låtsas veta.
+#
+# Uppgraderingsvägen finns: en ICA-handlare som tecknar partneravtal skickar
+# sin prisfil genom partner_feed och får VERIFIED_STORE_PRICE för sin butik,
+# som då slutar vila på riktpriset.
+RELEASED_CHAINS = ("Willys", "Hemköp", "City Gross", "ICA")
 
 
 def priceable_chains() -> list[str]:

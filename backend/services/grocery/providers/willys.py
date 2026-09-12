@@ -24,6 +24,17 @@ consecutive runs, no blocking:
 This is the first chain proven to tolerate a repeated automated import -
 ICA is WAF-rate-limited and Coop needs a vendor API key.
 
+RESERVVÄG (D9). Willys och Hemköp hämtas från kedjans egna sidor, och den
+vägen kan stängas: Axfood kan lägga på samma WAF som ICA redan har, eller
+skriva ett Disallow i sin robots.txt, vilken natt som helst. Primat täcker
+båda kedjorna butiksvis, och importern flyttar dem dit utan kodändring:
+
+    MATJAKT_PRIMAT_CHAINS="Willys=2178,Hemköp=4409"
+
+Butiks-id:t är PRIMATS, inte Axfoods - det är två olika nummerrymder, och ett
+id ur fel rymd ger en körning som dör på "butiken finns inte". Se
+services/grocery/importer.py (primat_fallback_stores) för hela resonemanget.
+
 LIMITATION - prices are NATIONAL, not per store. Verified: the same query
 with storeId=2132 (Gävle Gestrike) and storeId=2223 (Gävle Hemsta) returns
 byte-identical responses (35593 B both) with identical prices on every

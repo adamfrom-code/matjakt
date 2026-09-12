@@ -86,6 +86,7 @@ import urllib.error
 import urllib.request
 from urllib.parse import quote
 
+from .. import robots
 from ..base import GroceryProvider
 from ..errors import ProviderBlockedError, ProviderRequestError
 from .axfood import CATEGORY_PATH_SEPARATOR
@@ -99,7 +100,10 @@ BASE = "https://www.citygross.se"
 SITES_URL = f"{BASE}/api/v1/sites?siteTypeId=3"
 STORE_PAGES_URL = f"{BASE}/api/v1/PageData/stores"
 IMAGE_BASE = f"{BASE}/images/products"
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Matjakt/1.0 (+grocery-collector)"
+# D9: samma ärliga identitet som Axfood-providern och robots-kontrollen.
+# Se services/grocery/robots.py för varför den halva maskeringen var
+# sämre än båda alternativen.
+USER_AGENT = robots.USER_AGENT
 REQUEST_TIMEOUT_SECONDS = 20
 # Measured, not guessed: at 1.0s between requests a full 14-term run had
 # 13/14 terms fail with connection errors (URLError), while a controlled
@@ -307,6 +311,24 @@ class CityGrossProvider(GroceryProvider):
         # testerna: "elva av elva" är det enda svaret som betyder att inget
         # tappades.
         self.collected_categories: list[str] = []
+
+    @property
+    def robots_urls(self) -> list[str]:
+        """De fem adressformer insamlingen faktiskt hämtar.
+
+        D9: en riktig adress per endpoint, inte ett gissat prefix - ett
+        `Disallow: /api/v1/Loop54/` förbjuder både avdelningarna och
+        termsökningen men inte butikslistan, och den skillnaden syns bara om
+        varje form prövas för sig. Avdelnings-id:t nedan är Mejeri (1503),
+        verifierat live; regler matchar på sökvägsprefix, så vilket giltigt
+        id som helst svarar på samma fråga."""
+        return [
+            SITES_URL,
+            STORE_PAGES_URL,
+            NAVIGATION_URL,
+            f"{BASE}/api/v1/Loop54/category/1503/products?skip=0&take={CATEGORY_PAGE_SIZE}",
+            f"{BASE}/api/v1/Loop54/search?SearchQuery=mj%C3%B6lk&skip=0&take={self.page_size}",
+        ]
 
     def _request(self, url: str) -> dict:
         request = urllib.request.Request(url, headers={

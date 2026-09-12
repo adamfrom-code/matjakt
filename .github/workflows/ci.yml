@@ -216,26 +216,37 @@ jobs:
           # video. Grinden är det som faktiskt håller.
           tracked=$(git ls-files '*.tsv' 'audit_*.json' 'backend/data/*' 'marketing/build/*' 'dist/*' 'build/*' '.coverage' '.coverage.*' 'htmlcov/*')
           if [ -n "$tracked" ]; then echo "Spårade genererade artefakter:"; echo "$tracked"; exit 1; fi
-      - name: Versionsnumren följs åt (sw.js, app.js?v=, styles.css?v=)
+      # L9 - VERSIONEN STÅR INTE I KÄLLAN. Steget nedan kräver att de tre
+      # ställena (sw.js CACHE_NAME, app.js?v=, styles.css?v=) bär en
+      # platshållare och inget tal. Ett tal där är tre handredigerade rader som
+      # måste vara lika, som kan SJUNKA när grenar mergas i annan ordning än de
+      # skapades, och som varje gren som rör frontenden måste ändra - alltså en
+      # garanterad konflikt. G5 låg DIRTY med grön CI i fyra timmar och D11
+      # baserades om fyra gånger, enbart på de raderna.
+      - name: Versionen står inte i källan
         run: python backend/scripts/check_frontend_version.py
-      # K5 - LIKHET ÄR INTE FÄRSKHET. Steget ovan kräver att de tre talen är
-      # LIKA. Det säger ingenting om att de ska ha HÖJTS när frontenden
-      # ändrats, och det var precis det som saknades: en PR som rörde
-      # frontend/app/app.js utan bump var grön, Pages HTTP-cache serverade
-      # gammal app.js under samma URL, och service workern behöll sin kopia
-      # tills CACHE_NAME bytte. Felet står beskrivet överst i sw.js - "the
-      # site was updated, phones still showed the old three week types" - och
-      # den enda kontrollen mot det var att någon kom ihåg.
+      # K5 - LIKHET ÄR INTE FÄRSKHET, och färskheten kontrolleras på BYGGET.
+      # Den första kontrollen krävde bara att de tre talen var LIKA. Den sa
+      # ingenting om att de ska ha HÖJTS när frontenden ändrats, och det var
+      # precis det som saknades: en PR som rörde frontend/app/app.js utan bump
+      # var grön, Pages HTTP-cache serverade gammal app.js under samma URL, och
+      # service workern behöll sin kopia tills CACHE_NAME bytte. Felet står
+      # beskrivet överst i sw.js - "sidan var uppdaterad, telefonerna visade de
+      # gamla tre veckotyperna" - och den enda kontrollen mot det var att någon
+      # kom ihåg.
       #
-      # Basen kommer ur händelsen, för bara den vet exakt vad ändringen är:
-      # pull_request -> basgrenens SHA, merge_group -> köns bas, push ->
-      # committen före. Saknas alla tre (workflow_dispatch) faller skriptet
-      # tillbaka på merge-base mot origin/main. fetch-depth: 0 ovan är det
-      # som gör basen läsbar över huvud taget.
-      - name: Ändrad frontend kräver HÖJD version
-        env:
-          BAS: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
-        run: python backend/scripts/check_frontend_version.py --require-bump --base "$BAS"
+      # Grinden frågar numera något starkare: ÄR cache-nyckeln det som ligger i
+      # bygget? Byggsteget stämplar in eran plus en digest över varje fil under
+      # app/, och skriptet räknar om digesten med en EGEN implementation och
+      # jämför. En kontroll som bara frågade byggskriptet om dess eget svar
+      # hade inte kontrollerat något; två implementationer som är eniga gör
+      # regeln entydig. Ingen bas ur händelsen behövs längre - bygget bär
+      # svaret i sig.
+      - name: Cache-stämpeln i bygget är digesten av bygget
+        run: |
+          npm ci
+          npm run build
+          python backend/scripts/check_frontend_version.py --build dist/frontend
       - name: Juridiska platshållare (varning - släppgrind, inte byggfel)
         run: |
           if grep -rn 'class="placeholder"' frontend/*.html; then
@@ -274,16 +285,42 @@ jobs:
             --platform manylinux1_x86_64 --platform any \
             -r backend/requirements.txt -d "${RUNNER_TEMP}/hjul-py310"
           echo "Alla låsta paket finns som hjul för imagens python."
+      # ── K2b: EN SÅRBARHET ÄR RÖD, EN BLIPP ÄR DET INTE ────────────────
+      #
+      # Båda stegen nedan ställer en fråga över nätet - till PyPI respektive
+      # npm-registret - så båda kan falla av skäl som inte har med beroendena
+      # att göra. 2026-09-11 gjorde de det, på main-committen d34d294
+      # (körning 34650990118):
+      #
+      #     requests.exceptions.ConnectionError: ('Connection aborted.',
+      #         ConnectionResetError(104, 'Connection reset by peer'))
+      #
+      # En omkörning av exakt samma commit blev grön. Ingenting var sårbart.
+      # Men "Hemligheter och versioner" är en av fyra obligatoriska
+      # statuscheckar OCH står sedan K4/K6 i releasekedjan (deploy-staging
+      # behöver security), så den blippen blockerade varje öppen PR från varje
+      # agent och stoppade hela deployen tills en människa körde om jobbet.
+      #
+      # audit_deps.py gör om frågan tre gånger med växande paus, och först när
+      # samtliga försök föll på en KÄND transportsignatur blir det en
+      # `::warning::` i stället för rött. Nedgraderingen kräver positivt bevis:
+      # finns en tolkbar rapport är rapporten facit, och allt annat som
+      # misslyckas - trasig låsfil, trasigt verktyg, borttagen flagga - är
+      # fortfarande rött. Hela resonemanget står i skriptets docstring.
+      #
+      # Kommandona står i skriptet och inte här, för flaggorna som ger
+      # maskinläsbar utdata hör ihop med tolken som läser den. Skiljer man dem
+      # åt kan en ändring här tyst göra varje körning otolkbar, och då blir
+      # varje körning ett "nätfall" - en grind som aldrig mer kan bli röd.
+      # backend/tests/test_sarbarhetsgrind.py håller båda riktningarna.
       - name: Kända sårbarheter i python-beroendena (pip-audit)
-        run: |
-          pip install --quiet pip-audit
-          pip-audit -r backend/requirements.txt
+        run: python backend/scripts/audit_deps.py pip
       - name: Kända sårbarheter i npm-beroendena (hög och uppåt)
-        # --audit-level=high: MEDEL blockerar inte. En grind som failar på
-        # varje moderate i ett transitivt Capacitor-beroende blir avstängd
-        # inom en vecka, och då fångas inte heller de allvarliga.
+        # --audit-level=high (satt i skriptet): MEDEL blockerar inte. En grind
+        # som failar på varje moderate i ett transitivt Capacitor-beroende blir
+        # avstängd inom en vecka, och då fångas inte heller de allvarliga.
         # npm audit behöver bara package-lock.json, inte node_modules.
-        run: npm audit --audit-level=high
+        run: python backend/scripts/audit_deps.py npm
 
   e2e:
     name: "Browser-E2E (Playwright: konsumentresan, Premium/Stripe, hushållet med två personer)"

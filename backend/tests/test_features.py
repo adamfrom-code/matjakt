@@ -53,15 +53,34 @@ class FeatureMatrix(unittest.TestCase):
             self.assertTrue(features.allowed("free", feature), feature)
 
     def test_free_does_not_get_the_premium_set(self):
-        for feature in ("family_week", "budget_week", "training_week", "bulk_week",
-                        "quick_week", "vegetarian_week", "balanced_week",
-                        "all_store_prices", "all_store_baskets", "store_comparison",
-                        "advanced_nutrition", "full_pantry", "seven_dinners"):
+        """J3 flyttade gränsen: veckotyperna, skafferiet och näringsfiltret
+        gick NER till gratis (de går inte att skydda och de är vad som gör
+        en ny användare beroende), hushållet och sparhistoriken UPP. Kvar
+        att sälja är det som är dyrt för oss och omöjligt att generera
+        lokalt: färsk prisdata, och delning."""
+        for feature in ("all_store_prices", "all_store_baskets", "store_comparison",
+                        "live_prices", "seven_dinners",
+                        "household_sharing", "savings_history"):
             self.assertFalse(features.allowed("free", feature), feature)
 
+    def test_the_features_j3_moved_down_are_free(self):
+        for feature in ("family_week", "budget_week", "training_week", "bulk_week",
+                        "quick_week", "vegetarian_week", "balanced_week",
+                        "advanced_nutrition", "meal_prep", "full_pantry"):
+            self.assertTrue(features.allowed("free", feature), feature)
+
     def test_dinner_caps(self):
-        self.assertEqual(features.entitlements("free")["maxDinners"], 4)
+        """J3: 4 -> 5. En arbetsvecka är den naturliga enheten."""
+        self.assertEqual(features.entitlements("free")["maxDinners"], 5)
         self.assertEqual(features.entitlements("premium_yearly")["maxDinners"], 7)
+
+    def test_household_caps(self):
+        """Två personer delar gratis; familjen kostar."""
+        self.assertEqual(features.entitlements("free")["maxHouseholdMembers"], 2)
+        self.assertEqual(features.entitlements("premium_yearly")["maxHouseholdMembers"], 12)
+        self.assertEqual(features.max_household_members("free"), 2)
+        self.assertEqual(features.max_savings_weeks("free"), 1)
+        self.assertGreater(features.max_savings_weeks("premium_monthly"), 1)
 
     def test_pricing_copy_is_arithmetically_honest(self):
         """59*12 - 399 = 309. The savings line is maths, not marketing."""

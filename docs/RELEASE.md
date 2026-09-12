@@ -4,7 +4,7 @@
 
 ## Vad som händer vid `git push origin main`
 
-1. **CI** (`.github/workflows/ci.yml`): kompilering, hela backend-sviten i en isolerad tempkatalog utan riktiga anrop, frontend-tester, `node --check`, hemlighetsskanning, kontroll att `.env` inte är spårad, kontroll att frontendens tre versionsnummer följs åt.
+1. **CI** (`.github/workflows/ci.yml`): kompilering, hela backend-sviten i en isolerad tempkatalog utan riktiga anrop, frontend-tester, `node --check`, hemlighetsskanning, kontroll att `.env` inte är spårad, kontroll att frontendens cache-version inte står i källan och att stämpeln i bygget är digesten av bygget.
 2. **Pages** (`.github/workflows/deploy.yml`): startar när CI är GRÖN på main (`workflow_run`), kör `npm test`, bygger `dist/frontend` med `npm run build` (esbuild: `app.js` buntad + minifierad, `styles.css` minifierad, källorna orörda) och deployar den till matjakt.store med `matjakt-api-url` satt till Render.
 3. **Render**: bygger `backend/Dockerfile` och deployar. *Observera:* Render lyssnar på pushen direkt – inte på CI. En röd svit stoppar i dag Pages men inte backend. Åtgärd (Adam, Render-dashboarden): stäng av *Auto-Deploy* och lägg ett deploy-hook-steg sist i `ci.yml` (`curl -X POST "$RENDER_DEPLOY_HOOK"` med hooken som GitHub-secret). Tills dess: pusha bara grönt.
 
@@ -16,7 +16,7 @@
 | Frontend-svit | `node --test` | alla gröna |
 | Syntax | `node --check frontend/app/app.js && python -m compileall -q backend` | ok |
 | Hemligheter | `python backend/scripts/secret_scan.py` | inga träffar |
-| Versioner | `python backend/scripts/check_frontend_version.py` | samma nummer på tre ställen |
+| Versioner | `python backend/scripts/check_frontend_version.py` och `... --build dist/frontend` | platshållare i källan, stämpeln i bygget = digesten av bygget |
 | Prisaudit | `python backend/scripts/audit_pricing.py` (lokalt) och `POST /api/admin/pricing-audit` (prod, admin-token) | `gate: GRÖN` = 0 gram→styck, 0 volym→styck, 0 estimat, 0 otolkade, 0 kilopris-som-paketpris |
 | Auth | svitens `test_accounts`, `test_auth_hardening`, `test_session_tokens` + ett manuellt registrera/logga ut/logga in i prod | gröna, veckan finns kvar |
 | Stripe | `GET /api/health` → `stripe.mode`, `stripe.pricesVerified: true`; `GET /api/admin/stripe-check` → `ok: true` | test-läge tills live beslutas |
@@ -32,8 +32,14 @@
 # 1. Grönt lokalt
 python backend/tests/run.py && node --test && python backend/scripts/secret_scan.py && python backend/scripts/check_frontend_version.py
 
-# 2. Frontend-ändring? Höj cache-versionen (alla tre ställen på en gång)
-python backend/scripts/check_frontend_version.py --bump
+# 2. Frontend-ändring? Ingenting att göra (L9). Versionen står inte i källan -
+#    bygget stämplar in eran plus en digest över det som byggts, så en ändrad
+#    frontend byter cache-nyckel av sig själv. Kontrollera bygget om du vill:
+npm run build && python backend/scripts/check_frontend_version.py --build dist/frontend
+
+#    Eran (den läsbara etiketten "v110", inte cache-nyckeln) höjs vid en riktig
+#    release - inte per paket:
+node scripts/frontend_version.mjs --bump
 
 # 3. Små logiska commits, push
 git push origin main

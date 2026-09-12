@@ -1,6 +1,6 @@
 # Backup och återställning
 
-*Uppdaterad 2026-09-03. Persistens är inte backup; en backup på samma disk är inte off-site.*
+*Uppdaterad 2026-09-11. Persistens är inte backup; en backup på samma disk är inte off-site; och en återställning ingen provat är en förhoppning.*
 
 ## Vad som finns i dag
 
@@ -90,8 +90,42 @@ Databaserna är självbärande: inga migreringar behöver köras om, `store.py` 
 
 Rekommendation: kör off-site-kopian via `pull_backup.py` nu (0 kr, i dag), och lägg till R2-push som steg två när det finns ett Cloudflare-konto att sätta nycklar i.
 
+## Övervakningen (D10)
+
+Backupen var rätt byggd men helt oövervakad: åldern lästes bara av
+backuptråden själv. Numera gäller tre saker.
+
+* `GET /api/health` → `backup` visar antal set, ålder i timmar och en
+  slutsats. Ingen sökväg och ingen filstorlek — de ligger kvar bakom
+  admin-token i `storage`.
+* Driftkollen larmar när det inte finns någon säkerhetskopia alls, eller när
+  den senaste är äldre än 36 timmar (ett missat dygn plus marginal). Larmet
+  är `critical` och går samma väg som kedjelarmen.
+* **Återställningen är ett test, inte en bock.**
+  `backend/tests/test_backup_aterstallning.py` tar en backup av en
+  fixturdatabas, raderar originalet, återställer setet och **startar
+  servern** mot den återställda katalogen i en egen process. Går den inte att
+  starta, failar sviten — och sviten körs i CI vid varje PR.
+
+Dessutom kontrolleras en **kanariefågel per kedja** efter varje import: ett
+känt GTIN med ett känt prisintervall (`services/grocery/canary.py`). Den
+fäller aldrig en körning — den larmar. Kedjor utan en verifierad vara säger
+uttryckligen att de saknar kanariefågel i stället för att svara grönt.
+
 ## Kontroll varje månad
 
 - [ ] Senaste off-site-arkivet är från i dag/i går (`dir D:\MatjaktBackups`)
 - [ ] `python backend/scripts/pull_backup.py` avslutar med `OK`
-- [ ] Prova en återställning lokalt: packa upp ett set till `backend/data-restore/`, starta `MATJAKT_DATA_DIR=backend/data-restore python backend/api_server.py`, logga in
+- [ ] `GET /api/health` → `backup.newestAgeHours` är under 36
+
+Punkten "prova en återställning lokalt" står inte kvar som en manuell bock:
+den görs nu av `test_backup_aterstallning.py` vid varje PR. Det som INTE
+täcks av testet, och därför är värt att göra för hand då och då, är att
+återställa ett **off-site-arkiv** — alltså hela kedjan hämtning →
+dekryptering → uppackning → start:
+
+```bash
+python backend/scripts/pull_backup.py --dest /tmp/matjakt-restore --keep 1
+tar xzf /tmp/matjakt-restore/matjakt-backup-*.tar.gz -C /tmp/matjakt-restore
+MATJAKT_DATA_DIR=/tmp/matjakt-restore/backups/<stämpel> python backend/api_server.py
+```

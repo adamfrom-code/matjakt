@@ -78,6 +78,20 @@ class HouseholdError(Exception):
     """Fel som får visas för användaren (fel indata, fullt hushåll, ...)."""
 
 
+class HouseholdFullError(HouseholdError):
+    """Hushållet rymmer ingen till. Bär taket som gällde.
+
+    J3: taket är inte längre ett enda tal. Gratis delar två personer, Premium
+    tolv - men lagret här vet ingenting om planer och ska inte veta det. Det
+    får ett tal av anroparen, jämför mot det inuti låset, och säger i
+    undantaget vilket tal som gällde. Routern avgör sedan om det betyder
+    "köp Premium" eller "hushållet är faktiskt fullt"."""
+
+    def __init__(self, message, cap=MAX_MEMBERS):
+        super().__init__(message)
+        self.cap = int(cap)
+
+
 class NotAMemberError(HouseholdError):
     """Användaren är inte medlem i hushållet - eller hushållet finns inte.
 
@@ -430,16 +444,18 @@ class HouseholdStore:
 
     # ---- inbjudningar ---------------------------------------------------
 
-    def create_invite(self, household_id, user_id) -> dict:
+    def create_invite(self, household_id, user_id, member_cap=MAX_MEMBERS) -> dict:
         """En engångslänk som går ut efter 72 timmar.
 
         Token:en returneras EN gång, i det här svaret - därefter finns bara
         hashen. Det är samma regel som för sessionstokens, och den gör en
-        läcka ur databasen värdelös för den som vill smyga in i ett hushåll."""
+        läcka ur databasen värdelös för den som vill smyga in i ett hushåll.
+
+        `member_cap` kommer från planen (J3). Lagret jämför bara."""
         with self._lock:
             self._require_member(household_id, user_id, admin=True)
-            if len(self.member_user_ids(household_id)) >= MAX_MEMBERS:
-                raise HouseholdError("Hushållet är fullt")
+            if len(self.member_user_ids(household_id)) >= min(int(member_cap), MAX_MEMBERS):
+                raise HouseholdFullError("Hushållet är fullt", member_cap)
             token = secrets.token_urlsafe(24)
             expires = datetime.now(timezone.utc) + timedelta(hours=INVITE_TTL_HOURS)
             self._connection.execute(
@@ -492,7 +508,14 @@ class HouseholdStore:
             "expiresAt": row["expires_at"],
         }
 
-    def accept_invite(self, token: str, user_id: int) -> dict:
+    def accept_invite(self, token: str, user_id: int, cap_for=None) -> dict:
+        """`cap_for(household_id) -> int` (J3) frågas INUTI låset.
+
+        Taket beror på hushållets plan, och vilket hushåll inbjudan gäller
+        vet bara den som slagit upp token:en - alltså det här lagret. Att
+        skicka in en funktion i stället för ett tal är också det som gör
+        kontrollen atomär: två som löser in varsin länk samtidigt räknas
+        båda mot samma medlemslista, inuti samma lås."""
         with self._lock:
             row = self._live_invite(token)
             if not row:
@@ -504,8 +527,9 @@ class HouseholdStore:
                 return self.household_for(household_id, user_id)
             if existing:
                 raise HouseholdError("Du är redan med i ett hushåll. Lämna det först.")
-            if len(self.member_user_ids(household_id)) >= MAX_MEMBERS:
-                raise HouseholdError("Hushållet är fullt")
+            cap = min(int(cap_for(household_id)) if cap_for else MAX_MEMBERS, MAX_MEMBERS)
+            if len(self.member_user_ids(household_id)) >= cap:
+                raise HouseholdFullError("Hushållet är fullt", cap)
             self._connection.execute(
                 """INSERT INTO household_members
                    (household_id, user_id, role, joined_at, revision)

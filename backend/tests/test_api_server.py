@@ -1018,17 +1018,17 @@ class ApiServerHttpTest(unittest.TestCase):
         finally:
             conn.close()
 
-    # J1: "Laga med det jag har" säljs som full_pantry och kontrolleras numera
-    # på servern, så vägen måste frågas som Premium för att alls svara.
+    # J1 byggde grinden; J3 flyttade full_pantry ner till gratis igen, och
+    # grinden försvann med funktionen (den härleds ur FEATURES). Vägen svarar
+    # alltså utan konto - se test_serverside_paywall.
     def test_recipes_by_pantry_rejects_empty_items(self):
-        status, payload = self.get("/api/v1/recipes/by-pantry?items=", token=self._premium_token())
+        status, payload = self.get("/api/v1/recipes/by-pantry?items=")
         self.assertEqual(status, 400)
         self.assertIn("error", payload)
 
     def test_recipes_by_pantry_returns_matches_and_caches(self):
         original = api_server.RECIPE_SERVICE.search_by_pantry
         calls = []
-        token = self._premium_token()
 
         class FakeRecipe:
             def to_dict(self):
@@ -1036,10 +1036,10 @@ class ApiServerHttpTest(unittest.TestCase):
 
         api_server.RECIPE_SERVICE.search_by_pantry = lambda items: calls.append(items) or [(FakeRecipe(), ["Lök"])]
         try:
-            status, payload = self.get(f"/api/v1/recipes/by-pantry?items={urllib.parse.quote('Lök,Pasta')}", token=token)
+            status, payload = self.get(f"/api/v1/recipes/by-pantry?items={urllib.parse.quote('Lök,Pasta')}")
             self.assertEqual(status, 200)
             self.assertEqual(payload["recipes"][0]["matchedIngredients"], ["Lök"])
-            status2, payload2 = self.get(f"/api/v1/recipes/by-pantry?items={urllib.parse.quote('Pasta,Lök')}", token=token)
+            status2, payload2 = self.get(f"/api/v1/recipes/by-pantry?items={urllib.parse.quote('Pasta,Lök')}")
             self.assertEqual(status2, 200)
             self.assertEqual(payload2["recipes"], payload["recipes"])
             self.assertEqual(len(calls), 1, "second request with the same ingredient set (different order) should hit the cache")

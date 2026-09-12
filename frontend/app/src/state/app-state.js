@@ -254,9 +254,52 @@ export function buildSyncPayload() {
 
 // Kontots blob in i tillståndet. Går genom exakt samma normalizeState som
 // boot-raden: servern är inte mer betrodd än localStorage.
-export function applySyncBlob(blob) {
-  if (!blob) return;
+//
+// EN BLOB ÄR EN ÖGONBLICKSBILD, INTE ETT FACIT. Den begärdes vid ett visst
+// tillfälle och kan landa långt senare: boot-radens `refreshUser()` väntas
+// inte in, och på `?billing=success` startar premiumpollen en andra hämtning
+// i samma andetag - två kontosynkar i luften samtidigt, utan inbördes
+// ordning. På en lastad maskin hinner enheten skriva nyare saker under tiden,
+// och den blob som landar sist raderar dem tyst. Båda fallen nedan har sänkt
+// browser-E2E:n, omväxlande, och gått igenom vid omkörning:
+//
+//   * ONBOARDINGSVAREN. Blobben togs före onboardingen (budget 800, tomt
+//     postnummer); användaren har just skrivit 900 och sitt eget postnummer.
+//     Fältet skrivs över utan att rutan på skärmen ändras - den visar 900
+//     medan tillståndet säger 800.
+//   * PRISBILDEN. Blobben bär Free-vyns maskade bild med EN prissatt kedja;
+//     skärmen visar de tre kedjor Premium just betalats för. Efteråt hämtas
+//     ingen ny prissättning (nyckeln är redan den premiumnyckeln), så den
+//     som betalat blir kvar i Free-vyn tills veckan råkar ändras.
+//
+// Två frågor avgör saken, och båda har ett svar i datan:
+//
+//   1. SATT ANVÄNDAREN OCH SVARADE? `onboardingOpen` säger det, och
+//      anroparen läser av rutan BÅDE när hämtningen går ut och när svaret
+//      kommer (app.js): sista knappen stänger rutan, så en blob som landar
+//      efter den är precis lika gammal som en som landar före. Säger blobben
+//      då uttryckligen att onboardingen inte är gjord, är HELA den äldre än
+//      svaren - ingenting av den skrivs in.
+//
+//      Frågan ställs om RUTAN, inte om `state.onboardingComplete`: den
+//      flaggan överlever en utloggning med flit (den är av apparat-karaktär,
+//      se utloggningen i app.js), och att läsa den hade tystat blobben för
+//      nästa person som loggar in på telefonen - en gäst som aldrig gjort
+//      onboardingen men mycket väl kan ha en vecka på sitt konto.
+//   2. ÄR PRISBILDEN ÄLDRE? Den bär sin egen datumstämpel (`dbPricedAt`).
+//      Den äldre av två daterade bilder får aldrig lägga sig över den nyare.
+//
+// Vad som INTE görs: ingen sammanslagning fält för fält. Blobben är ETT
+// ögonblick och behandlas som ett - samma hållning som E8 tog för den andra
+// fliken (se src/state/tab-sync.js). Det lokala läget ligger kvar och den
+// debouncade synken skickar upp det, så servern kommer i kapp av sig själv.
+//
+// Returnerar om blobben skrevs in, så anroparen slipper rita om och spara
+// ned ett läge som inte ändrats.
+export function applySyncBlob(blob, { onboardingOpen = false } = {}) {
+  if (!blob) return false;
   const clean = normalizeState(blob);
+  if (onboardingOpen && clean.onboardingComplete === false) return false;
   const set = (key, apply) => { if (clean[key] !== undefined) apply(clean[key]); };
   set("budget", value => { state.budget = value; });
   set("personer", value => { state.personer = value; });
@@ -276,7 +319,11 @@ export function applySyncBlob(blob) {
   set("harHemma", value => { state.harHemma = new Set(value); });
   set("stapleItems", value => { state.stapleItems = value; });
   set("stapleAsked", value => { state.stapleAsked = value; });
-  if (clean.dbChainTotals) {
+  // Prisbilden hör ihop och byts i ett stycke - eller inte alls. Lika gamla
+  // (eller odaterade i båda ändar) räknas som blobbens: det är fallet där
+  // enheten inte har någon egen bild, och att måla den sparade i stället för
+  // "pris hämtas…" är hela skälet till att den ligger i blobben.
+  if (clean.dbChainTotals && (clean.dbPricedAt || 0) >= (state.dbPricedAt || 0)) {
     state.dbChainTotals = clean.dbChainTotals;
     state.dbComparison = clean.dbComparison || null;
     state.dbPricedAt = clean.dbPricedAt || null;
@@ -292,6 +339,7 @@ export function applySyncBlob(blob) {
   set("swapsThisWeek", value => { state.swapsThisWeek = value; });
   set("pinnedBranch", value => { state.pinnedBranch = value; });
   set("weekPlan", value => { state.weekPlan = value; });
+  return true;
 }
 
 // Skriv till enheten utan att röra kontot - efter en HÄMTNING från kontot är

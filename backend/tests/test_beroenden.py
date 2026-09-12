@@ -161,12 +161,18 @@ class GrindarnaFinnsICI(unittest.TestCase):
         self._krav("pip download",
                    "hjulkontrollen hämtar hjulen för imagens plattform utan att installera dem")
 
+    # K2b flyttade SJÄLVA KOMMANDONA till backend/scripts/audit_deps.py, som
+    # gör om frågan när den faller på nätet i stället för att fälla en av fyra
+    # obligatoriska statuscheckar på en blipp mot PyPI. Flaggorna hör ihop med
+    # tolken som läser utdatan, så de står numera på ett ställe. Att de är
+    # RÄTT hålls av test_sarbarhetsgrind.SkriptetKorRattKommandon; att de körs
+    # över huvud taget hålls här, där K2:s övriga grindar står.
     def test_pip_audit_kors_mot_lasfilen(self):
-        self._krav("pip-audit -r backend/requirements.txt",
+        self._krav("backend/scripts/audit_deps.py pip",
                    "sårbarhetsskanningen ska läsa exakt det träd som installeras")
 
     def test_npm_audit_blockerar_fran_hog_och_uppat(self):
-        self._krav("npm audit --audit-level=high",
+        self._krav("backend/scripts/audit_deps.py npm",
                    "en grind som failar på varje moderate blir avstängd inom en vecka")
 
     def test_e2e_installerar_inte_playwright_forbi_lasfilen(self):

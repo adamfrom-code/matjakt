@@ -28,6 +28,8 @@ import time
 
 from ..secret_scrub import scrub
 from . import api as grocery_api
+from . import canary
+from . import robots
 from .errors import ProviderBlockedError
 
 # Anropas efter en lyckad import: hook(chain, saved). Servern registrerar
@@ -103,8 +105,60 @@ def _set(**fields):
         _state.update(fields)
 
 
+# D9. DOKUMENTERAD RESERVVÄG FÖR DE SKRAPADE KEDJORNA.
+#
+# Willys, Hemköp och City Gross hämtas från kedjornas egna sidor. Axfood kan
+# lägga på samma WAF som ICA redan har, eller skriva ett Disallow i sin
+# robots.txt, vilken natt som helst - och då står två av tre släppta kedjor
+# still tills någon hinner skriva kod och deploya.
+#
+# Primat täcker samma kedjor (providers/primat.py: CHAIN_KEYS bär både willys
+# och hemkop, och Primat prissätter dem butiksvis). Reservvägen slås på med
+# en miljövariabel, utan kodändring och utan deploy:
+#
+#     MATJAKT_PRIMAT_CHAINS="Willys=2178,Hemköp=4409"
+#
+# BUTIKS-ID:T MÅSTE STÅ MED, och det är hela poängen med formen: Primats
+# butiksregister är en ANNAN nummerrymd än Axfoods. Willys Gävle Gestrike är
+# 2132 hos Axfood och något helt annat hos Primat, och ett id ur fel rymd
+# hade gett en körning som misslyckas med "butiken finns inte" - en
+# reservväg som inte fungerar den natt den behövs. Numret är det Primats
+# egen /stores svarar med för kedjan (PrimatProvider.get_stores listar dem,
+# med adress och ort, och markerar vilka som har full pristäckning).
+#
+# Kräver PRIMAT_API_KEY och kostar av dygnskvoten (D5) som varje annan
+# Primat-kedja. Avstängd som standard med flit: kedjornas egna sidor är
+# gratis och färska, och en reservväg som står påslagen i onödan är en
+# kostnad man glömmer att man betalar.
+def primat_fallback_stores() -> dict:
+    """{"Willys": "2178"} ur MATJAKT_PRIMAT_CHAINS. Tom när den inte är satt."""
+    import os
+    rå = os.environ.get("MATJAKT_PRIMAT_CHAINS") or ""
+    kedjor = {}
+    for post in rå.split(","):
+        post = post.strip()
+        if not post:
+            continue
+        kedja, _, butik = post.partition("=")
+        kedjor[kedja.strip()] = butik.strip()
+    return kedjor
+
+
 def _provider_for(chain: str):
     import os
+    reserv = primat_fallback_stores()
+    if chain in reserv:
+        from .providers.primat import PrimatProvider
+        if not os.environ.get("PRIMAT_API_KEY"):
+            raise ValueError(f"{chain} är satt till Primat-reservvägen "
+                             f"(MATJAKT_PRIMAT_CHAINS) men PRIMAT_API_KEY saknas")
+        if not reserv[chain]:
+            raise ValueError(f"Primat-reservvägen för {chain} saknar butiks-id. "
+                             f"Skriv MATJAKT_PRIMAT_CHAINS=\"{chain}=<primats butiks-id>\" - "
+                             f"Primats butiksnummer är inte samma som kedjans egna")
+        logger.warning("%s hämtas via Primat-reservvägen (butik %s) i stället för "
+                       "kedjans egna sidor - MATJAKT_PRIMAT_CHAINS", chain, reserv[chain])
+        return PrimatProvider(chain)
     if chain in ("Coop", "Lidl"):
         # Ingen direktväg finns (Coops portal stängd för externa, Lidl utan
         # publicerade ordinarie priser) - Primat är den utredda och tillåtna
@@ -160,7 +214,10 @@ def start(chain: str, store_id: str | None = None, limit_per_category: int | Non
 def _run(chain: str, store_id: str | None, limit_per_category: int | None):
     try:
         provider = _provider_for(chain)
-        store_id = store_id or ALL_STORES.get(chain)
+        # Reservvägens butiks-id vinner över kedjans eget: numren kommer ur
+        # olika register (se primat_fallback_stores). Ett uttryckligt
+        # store_id från anroparen vinner över båda.
+        store_id = store_id or primat_fallback_stores().get(chain) or ALL_STORES.get(chain)
         if not store_id:
             raise ValueError(f"Ingen butik angiven för {chain!r}")
 
@@ -169,6 +226,13 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
         blocked_message = None
         saved = 0
         try:
+            # D9. ROBOTS.TXT FÖRST, FÖRE ETT ENDA PRODUKTANROP.
+            # Kontrollen ligger här och inte i providern därför att det är
+            # HÄR körningen finns: ett förbud ska bli en körning med status
+            # och orsak, inte ett undantag som ingen ser. Hämtningen loggas
+            # varje gång, också när svaret är ja - det är den loggen som
+            # svarar på "vad sa deras robots.txt den natten?".
+            robots.ensure_allowed(provider)
             stores = provider.get_stores()
             store = next((s for s in stores if s.external_store_id == str(store_id)), None)
             if store is None:
@@ -256,6 +320,40 @@ def _run(chain: str, store_id: str | None, limit_per_category: int | None):
                                     error_message=gate_message)
             if not outcome["published_ok"]:
                 blocked_message = gate_message
+            elif saved:
+                # D10. KANARIEFÅGELN, DIREKT EFTER PUBLICERINGEN.
+                # Gaten har räknat rader och medianpris; ingen av dem har
+                # tittat på en vara någon känner igen. Kollen läser den
+                # publicerade prisbilden - alltså det kunderna får - och
+                # loggar. Den fäller ALDRIG körningen: vi vet att varan ser
+                # fel ut, inte vilken av de två siffrorna som är sann, och
+                # att kasta en hel natts katalog på en enda rad vore att
+                # göra mer skada än fyndet är värt. Larmet går via
+                # driftkollen (alerts.evaluate).
+                try:
+                    canary.log_result(canary.check(db, chain))
+                except Exception:
+                    logger.exception("Kanariekollen för %s kunde inte köras", chain)
+        except robots.RobotsDisallowedError as förbud:
+            # D9. ETT NEJ ÄR ETT SVAR, INTE EN KRASCH.
+            # Kedjan har sagt ifrån i sin robots.txt. Körningen avslutas som
+            # misslyckad med regeln som orsak - ingen traceback, inget
+            # publiceringsförsök, ingenting hämtat. Att det blir "failed" och
+            # inte "blocked" är avsiktligt: blocked är ett förväntat och
+            # hanterat utfall som med flit INTE larmar (se
+            # api.FAILED_ATTEMPT_STATUSES), och ett förbud måste nå en
+            # människa samma morgon.
+            logger.error("%s: %s", chain, förbud)
+            db.finish_collector_run(run_record.id, status="failed",
+                                    products_found=0, prices_updated=0, errors=1,
+                                    error_message=scrub(str(förbud))[:300])
+            try:
+                db.clear_staging(run_record.id)
+            except Exception:
+                logger.exception("Kunde inte städa staging för körning %s", run_record.id)
+            _set(running=False, finishedAt=time.time(), status="failed",
+                 message=str(förbud)[:300])
+            return
         except Exception as error:
             # Utan denna hoppade varje oväntad krasch (get_stores-fel, okänd
             # butik, providerbugg) över finish_collector_run och lämnade

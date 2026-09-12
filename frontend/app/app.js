@@ -24,9 +24,12 @@ import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, 
 // svenska, och en användare kan inte göra något åt ett "HTTP 500" (E7).
 import { errorText } from "./src/api/http.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
+import { closeModal, openModal } from "./src/utils/modal.js";
 import { kopplaSvepBort } from "./src/utils/swipe-remove.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.js";
+import { PACKAGE_INFO, PRODUCT_CATALOG, RECIPE_DETAILS, RECIPE_QUANTITIES } from "./src/data/legacy-catalog.js";
 import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
+import { weekPlanDays } from "./src/views/week.js";
 import { adjustInventory, fetchHousehold, fetchNotifications, joinHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, replaceWeekItems, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, pantryEntriesFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor } from "./src/services/categories.js";
@@ -213,12 +216,20 @@ watchOtherTabs({
   onOtherTab: text => showUndoToast(text, null, () => location.reload(),
                                     { actionLabel: "Ladda om", duration: 0 }),
 });
+const onboardingIsOpen = () => $("onboardingModal")?.hidden === false;
 async function pullAccountState() {
   if (!state.authToken) return;
+  // LÄST FÖRE HÄMTNINGEN OCKSÅ, inte bara efter. Att appen kan stå mitt i
+  // onboardingen när en blob landar är ingen slump: boot-raden startar
+  // refreshUser() utan att vänta in den och öppnar onboardingen i nästa
+  // andetag. Och "Skapa min vecka" stänger rutan långt innan ett sent svar
+  // kommer - läste vi bara av när blobben landar vore just det ögonblicket
+  // oskyddat, och det är det ögonblick veckan skapas i.
+  const svaradeVidStart = onboardingIsOpen();
   try {
     const { state: remote } = await fetchAccountState(state.authToken);
     if (remote) {
-      applySyncBlob(remote);
+      if (!applySyncBlob(remote, { onboardingOpen: svaradeVidStart || onboardingIsOpen() })) return;
       persistLocally();
       syncSettingsInputs(); render(); renderPantry(); restoreNutritionGoalsForm();
       // A returning account on a NEW device: the synced state already says
@@ -567,143 +578,6 @@ function pushWeekToHousehold({ onlyIfEmpty = false } = {}) {
 // the price actually is: Willys prices are verified national, so the total
 // is real - it is the BRANCH that is unknown, not the price.
 const FALLBACK_BRANCH = [{ kedja: "Willys", namn: "Willys (riksgemensamt pris)", lat: null, lon: null, avstandKm: 0, prisfaktor: 1 }];
-const PRODUCT_CATALOG = {
-  "Grädde": { namn: "Mat grädde 15%", marke: "Arla", storlek: "2 dl", pris: 15.95 },
-  "Majs": { namn: "Majs", marke: "ICA", storlek: "340 g", pris: 12.95 },
-  "Pasta": { namn: "Spaghetti", marke: "Kungsörnen", storlek: "500 g", pris: 16.95 },
-  "Purjolök": { namn: "Purjolök", marke: "ICA", storlek: "1 st", pris: 18.95 },
-  "Ris": { namn: "Jasminris", marke: "ICA", storlek: "1 kg", pris: 29.95 },
-  "Riven ost": { namn: "Riven hushållsost", marke: "ICA", storlek: "150 g", pris: 24.95 },
-  "Salsa": { namn: "Chunky Salsa Medium", marke: "Santa Maria", storlek: "230 g", pris: 22.95 },
-  "Svarta bönor": { namn: "Svarta bönor", marke: "ICA", storlek: "380 g", pris: 13.95 },
-  "Curry & grönsaker": { namn: "Curry & grönsaker", marke: "Santa Maria", storlek: "28 g", pris: 14.95 },
-  "Kokosmjölk": { namn: "Kokosmjölk", marke: "ICA", storlek: "400 ml", pris: 16.95 },
-  "Kycklinglårfilé": { namn: "Kycklinglårfilé", marke: "ICA", storlek: "ca 600 g", pris: 69.95 },
-  "Lök & vitlök": { namn: "Gul lök & vitlök", marke: "ICA", storlek: "500 g", pris: 19.95 },
-  "Morötter": { namn: "Morötter", marke: "ICA", storlek: "1 kg", pris: 14.95 },
-  "Röda linser": { namn: "Röda linser", marke: "ICA", storlek: "400 g", pris: 19.95 },
-  "Falukorv": { namn: "Falukorv", marke: "Scan", storlek: "800 g", pris: 39.95 },
-  "Tomatpuré": { namn: "Tomatpuré", marke: "Mutti", storlek: "140 g", pris: 14.95 },
-  "Fryst torsk": { namn: "Fryst torskfilé", marke: "Findus", storlek: "450 g", pris: 59.95 },
-  "Citron": { namn: "Citron", marke: "ICA", storlek: "1 st", pris: 6.95 },
-  "Laxfilé": { namn: "Laxfilé", marke: "ICA", storlek: "ca 600 g", pris: 89.95 },
-  "Dill": { namn: "Dill", marke: "ICA", storlek: "1 knippe", pris: 12.95 },
-  "Kidneybönor": { namn: "Kidneybönor", marke: "ICA", storlek: "400 g", pris: 13.95 },
-  "Paprika": { namn: "Paprika", marke: "ICA", storlek: "1 st", pris: 9.95 },
-  "Halloumi": { namn: "Halloumi", marke: "Arla", storlek: "225 g", pris: 44.95 },
-  "Matvete": { namn: "Matvete", marke: "Kungsörnen", storlek: "500 g", pris: 24.95 },
-  "Yoghurt": { namn: "Turkisk yoghurt", marke: "Arla", storlek: "500 g", pris: 24.95 },
-  "Kycklingfilé": { namn: "Kycklingfilé", marke: "ICA", storlek: "ca 500 g", pris: 79.95 },
-  "Äggnudlar": { namn: "Äggnudlar", marke: "Santa Maria", storlek: "250 g", pris: 19.95 },
-  "Wokgrönsaker": { namn: "Wokgrönsaker", marke: "Findus", storlek: "400 g", pris: 29.95 },
-  "Soja": { namn: "Sojasås", marke: "Kikkoman", storlek: "150 ml", pris: 29.95 },
-  "Lök": { namn: "Gul lök", marke: "ICA", storlek: "1 st", pris: 3.95 },
-  "Basilika": { namn: "Basilika", marke: "ICA", storlek: "1 kruka", pris: 24.95 },
-  "Ägg": { namn: "Ägg", marke: "ICA", storlek: "6-pack", pris: 34.95 },
-  "Bär": { namn: "Frysta bär", marke: "ICA", storlek: "300 g", pris: 29.95 },
-  "Mjölk": { namn: "Mjölk", marke: "Arla", storlek: "1 l", pris: 12.95 },
-  "Krossade tomater": { namn: "Krossade tomater", marke: "ICA", storlek: "400 g", pris: 11.95 },
-  "Vetemjöl": { namn: "Vetemjöl", marke: "Kungsörnen", storlek: "2 kg", pris: 24.95 },
-  "Crème fraiche": { namn: "Crème fraiche", marke: "Arla", storlek: "2 dl", pris: 15.95 },
-  "Potatis": { namn: "Potatis", marke: "ICA", storlek: "2 kg", pris: 24.95 },
-  "Köttfärs": { namn: "Blandfärs", marke: "ICA", storlek: "500 g", pris: 59.95 },
-  "Lingonsylt": { namn: "Lingonsylt", marke: "Felix", storlek: "400 g", pris: 24.95 },
-  "Lasagneplattor": { namn: "Lasagneplattor", marke: "Kungsörnen", storlek: "400 g", pris: 22.95 },
-  "Zucchini": { namn: "Zucchini", marke: "ICA", storlek: "1 st", pris: 12.95 },
-  "Räkor": { namn: "Skalade räkor", marke: "Findus", storlek: "300 g", pris: 49.95 },
-  "Vitlök": { namn: "Vitlök", marke: "ICA", storlek: "1 st", pris: 9.95 },
-  "Kikärtor": { namn: "Kikärtor", marke: "ICA", storlek: "380 g", pris: 13.95 },
-  "Fläskfilé": { namn: "Fläskfilé", marke: "ICA", storlek: "ca 600 g", pris: 79.95 },
-  "Timjan": { namn: "Färsk timjan", marke: "ICA", storlek: "1 knippe", pris: 12.95 },
-  "Biff": { namn: "Nöt ryggbiff", marke: "ICA", storlek: "ca 600 g", pris: 119.95 },
-  "Vegofärs": { namn: "Vegofärs", marke: "Anamma", storlek: "400 g", pris: 39.95 },
-  "Tofu": { namn: "Naturell tofu", marke: "Anamma", storlek: "300 g", pris: 29.95 },
-  "Sparris": { namn: "Grön sparris", marke: "ICA", storlek: "250 g", pris: 34.95 },
-  "Äppelmos": { namn: "Äppelmos", marke: "ICA", storlek: "350 g", pris: 19.95 },
-  "Rödkål": { namn: "Rödkål", marke: "ICA", storlek: "ca 800 g", pris: 16.95 },
-  "Feta": { namn: "Fetaost", marke: "Apetina", storlek: "200 g", pris: 34.95 },
-  "Kalvschnitzel": { namn: "Kalvschnitzel", marke: "ICA", storlek: "500 g", pris: 99.95 },
-  "Kapris": { namn: "Kapris", marke: "Santa Maria", storlek: "100 g", pris: 24.95 }
-};
-const PACKAGE_INFO = {
-  Pasta: { amount: 500, unit: "g" }, Ris: { amount: 1000, unit: "g" }, Grädde: { amount: 200, unit: "ml" },
-  "Riven ost": { amount: 150, unit: "g" }, Majs: { amount: 340, unit: "g" }, "Svarta bönor": { amount: 380, unit: "g" },
-  "Röda linser": { amount: 400, unit: "g" }, Kokosmjölk: { amount: 400, unit: "ml" }, "Krossade tomater": { amount: 400, unit: "g" },
-  Falukorv: { amount: 800, unit: "g" }, "Tomatpuré": { amount: 140, unit: "g" }, "Fryst torsk": { amount: 450, unit: "g" },
-  Citron: { amount: 1, unit: "st" }, "Laxfilé": { amount: 600, unit: "g" }, Dill: { amount: 1, unit: "st" },
-  "Kidneybönor": { amount: 400, unit: "g" }, Paprika: { amount: 1, unit: "st" }, Halloumi: { amount: 225, unit: "g" },
-  Matvete: { amount: 500, unit: "g" }, Yoghurt: { amount: 500, unit: "g" }, "Kycklingfilé": { amount: 500, unit: "g" },
-  "Äggnudlar": { amount: 250, unit: "g" }, Wokgrönsaker: { amount: 400, unit: "g" }, Soja: { amount: 150, unit: "ml" },
-  Lök: { amount: 1, unit: "st" }, Basilika: { amount: 1, unit: "st" }, Ägg: { amount: 6, unit: "st" }, Bär: { amount: 300, unit: "g" },
-  Mjölk: { amount: 1000, unit: "ml" }, Vetemjöl: { amount: 2000, unit: "g" }, "Kycklinglårfilé": { amount: 600, unit: "g" },
-  "Curry & grönsaker": { amount: 28, unit: "g" }, Salsa: { amount: 230, unit: "g" }, "Lök & vitlök": { amount: 500, unit: "g" },
-  Morötter: { amount: 1000, unit: "g" }, "Crème fraiche": { amount: 200, unit: "g" }, Potatis: { amount: 2000, unit: "g" },
-  "Köttfärs": { amount: 500, unit: "g" }, Lingonsylt: { amount: 400, unit: "g" }, Lasagneplattor: { amount: 400, unit: "g" },
-  Zucchini: { amount: 1, unit: "st" }, "Räkor": { amount: 300, unit: "g" }, Vitlök: { amount: 1, unit: "st" }, Kikärtor: { amount: 380, unit: "g" },
-  "Fläskfilé": { amount: 600, unit: "g" }, Timjan: { amount: 1, unit: "st" }, Biff: { amount: 600, unit: "g" }, "Vegofärs": { amount: 400, unit: "g" },
-  Tofu: { amount: 300, unit: "g" }, Sparris: { amount: 250, unit: "g" }, "Äppelmos": { amount: 350, unit: "g" }, Rödkål: { amount: 800, unit: "g" },
-  Feta: { amount: 200, unit: "g" }, Kalvschnitzel: { amount: 500, unit: "g" }, Kapris: { amount: 100, unit: "g" }
-};
-const RECIPE_QUANTITIES = {
-  pastagratang: { Pasta: [250, "g"], "Purjolök": [0.5, "st"], Grädde: [200, "ml"], "Riven ost": [100, "g"] },
-  fiskpasta: { "Fryst torsk": [450, "g"], Pasta: [250, "g"], "Crème fraiche": [200, "g"], Citron: [1, "st"] },
-  kycklinggryta: { "Kycklinglårfilé": [600, "g"], Ris: [250, "g"], Kokosmjölk: [400, "ml"], "Curry & grönsaker": [28, "g"] },
-  linssoppa: { "Röda linser": [250, "g"], Kokosmjölk: [400, "ml"], Morötter: [300, "g"], "Lök & vitlök": [150, "g"] },
-  korvstroganoff: { Falukorv: [400, "g"], Grädde: [200, "ml"], "Tomatpuré": [70, "g"], Ris: [250, "g"] },
-  tacobonor: { "Svarta bönor": [380, "g"], Ris: [250, "g"], Majs: [150, "g"], Salsa: [230, "g"] },
-  "ugnslax-citron": { "Laxfilé": [600, "g"], Potatis: [800, "g"], Citron: [1, "st"], Dill: [1, "st"] },
-  halloumibowl: { Halloumi: [225, "g"], Matvete: [250, "g"], Paprika: [1, "st"], Yoghurt: [200, "g"] },
-  "chili-sin-carne-budget": { "Kidneybönor": [400, "g"], "Krossade tomater": [400, "g"], Majs: [150, "g"], Paprika: [2, "st"] },
-  "kycklingwok-nudlar-protein": { "Kycklingfilé": [500, "g"], "Äggnudlar": [250, "g"], Wokgrönsaker: [400, "g"], Soja: [30, "ml"] },
-  tomatsoppa: { "Krossade tomater": [400, "g"], Grädde: [200, "ml"], Lök: [2, "st"], Basilika: [1, "st"] },
-  pannkakor: { "Vetemjöl": [250, "g"], Mjölk: [600, "ml"], Ägg: [4, "st"], Bär: [300, "g"] },
-  "kottbullar-potatismos": { "Köttfärs": [500, "g"], Potatis: [800, "g"], Grädde: [200, "ml"], Lingonsylt: [100, "g"] },
-  vegetarisklasagne: { Lasagneplattor: [300, "g"], "Krossade tomater": [400, "g"], "Riven ost": [150, "g"], Zucchini: [2, "st"] },
-  scampi: { "Räkor": [300, "g"], Pasta: [250, "g"], Vitlök: [1, "st"], Citron: [1, "st"] },
-  kikartscurry: { Kikärtor: [380, "g"], Kokosmjölk: [400, "ml"], Ris: [250, "g"], "Curry & grönsaker": [28, "g"] },
-  flaskfilerotmos: { "Fläskfilé": [600, "g"], Morötter: [400, "g"], Potatis: [600, "g"], Timjan: [1, "st"] },
-  biffmedlok: { Biff: [600, "g"], Potatis: [800, "g"], Lök: [2, "st"], Grädde: [200, "ml"] },
-  vegobolognese: { "Vegofärs": [400, "g"], Pasta: [250, "g"], "Krossade tomater": [400, "g"], Lök: [1, "st"] },
-  kycklingcouscous: { Kycklingfilé: [500, "g"], Matvete: [250, "g"], Paprika: [2, "st"], Citron: [1, "st"] },
-  rotfruktsgratang: { Falukorv: [400, "g"], Potatis: [800, "g"], Morötter: [400, "g"], "Riven ost": [100, "g"] },
-  butterchicken: { Kycklingfilé: [500, "g"], "Krossade tomater": [400, "g"], Grädde: [200, "ml"], "Curry & grönsaker": [28, "g"] },
-  "fiskgratang-dill": { "Fryst torsk": [500, "g"], Räkor: [200, "g"], Dill: [1, "st"], Grädde: [200, "g"] },
-  tofuwok: { Tofu: [400, "g"], Wokgrönsaker: [400, "g"], Soja: [30, "ml"], Ris: [250, "g"] },
-  ugnstorsk: { "Fryst torsk": [600, "g"], Citron: [1, "st"], Sparris: [300, "g"], Potatis: [600, "g"] },
-  flaskkarre: { "Fläskfilé": [600, "g"], "Äppelmos": [200, "g"], Rödkål: [300, "g"], Potatis: [600, "g"] },
-  fetapasta: { Pasta: [300, "g"], "Krossade tomater": [400, "g"], Vitlök: [1, "st"], Feta: [200, "g"] },
-  kalvschnitzel: { Kalvschnitzel: [600, "g"], Potatis: [600, "g"], Citron: [1, "st"], Kapris: [30, "g"] },
-  kycklingmatvete: { "Kycklinglårfilé": [500, "g"], Matvete: [250, "g"], Paprika: [2, "st"], Yoghurt: [200, "g"] },
-  citronkyckling: { "Kycklinglårfilé": [600, "g"], Potatis: [800, "g"], Timjan: [1, "st"], Citron: [1, "st"] },
-  biffmatvetesallad: { Biff: [500, "g"], Matvete: [250, "g"], Paprika: [1, "st"], Vitlök: [1, "st"] },
-  biffwok: { Biff: [500, "g"], Ris: [250, "g"], Wokgrönsaker: [400, "g"], Soja: [30, "ml"] },
-  flaskcurrygryta: { "Fläskfilé": [500, "g"], Ris: [250, "g"], "Curry & grönsaker": [28, "g"], Kokosmjölk: [400, "ml"] },
-  flasktomatpasta: { "Fläskfilé": [500, "g"], Pasta: [250, "g"], "Krossade tomater": [400, "g"], Basilika: [1, "st"] },
-  kalvschnitzelmatvete: { Kalvschnitzel: [500, "g"], Matvete: [250, "g"], Paprika: [1, "st"], Citron: [1, "st"] },
-  teriyakilax: { "Laxfilé": [500, "g"], Ris: [250, "g"], Wokgrönsaker: [400, "g"], Soja: [30, "ml"] },
-  laxsallad: { "Laxfilé": [500, "g"], Matvete: [250, "g"], Citron: [1, "st"], Dill: [1, "st"] },
-  torskitomatsas: { "Fryst torsk": [500, "g"], Potatis: [600, "g"], "Krossade tomater": [400, "g"], Vitlök: [1, "st"] },
-  rakcurry: { "Räkor": [300, "g"], Ris: [250, "g"], "Curry & grönsaker": [28, "g"], Kokosmjölk: [400, "ml"] },
-  raksallad: { "Räkor": [300, "g"], Matvete: [250, "g"], Citron: [1, "st"], Dill: [1, "st"] },
-  kikartssallad: { Kikärtor: [380, "g"], Matvete: [250, "g"], Paprika: [1, "st"], Citron: [1, "st"] },
-  bonbowlmatvete: { "Kidneybönor": [400, "g"], Matvete: [250, "g"], Paprika: [1, "st"], Salsa: [230, "g"] },
-  svartbonsbowl: { "Svarta bönor": [380, "g"], Matvete: [250, "g"], Salsa: [230, "g"], Majs: [150, "g"] },
-  tofucurry: { Tofu: [400, "g"], Ris: [250, "g"], "Curry & grönsaker": [28, "g"], Kokosmjölk: [400, "ml"] },
-  teriyakitofu: { Tofu: [400, "g"], Matvete: [250, "g"], Paprika: [1, "st"], Soja: [30, "ml"] },
-  halloumipasta: { Halloumi: [225, "g"], Pasta: [250, "g"], "Krossade tomater": [400, "g"], Basilika: [1, "st"] },
-  halloumicurry: { Halloumi: [225, "g"], Ris: [250, "g"], Paprika: [1, "st"], "Curry & grönsaker": [28, "g"] },
-  fetagryta: { Feta: [200, "g"], "Krossade tomater": [400, "g"], Kikärtor: [380, "g"], Basilika: [1, "st"] },
-  vegofarsgryta: { "Vegofärs": [400, "g"], Ris: [250, "g"], "Krossade tomater": [400, "g"], Paprika: [1, "st"] },
-  korvgratang: { Falukorv: [400, "g"], Pasta: [250, "g"], "Krossade tomater": [400, "g"], "Riven ost": [100, "g"] },
-  kottfarssas: { "Köttfärs": [500, "g"], Pasta: [250, "g"], "Krossade tomater": [400, "g"], Basilika: [1, "st"] },
-  currykottfarsgryta: { "Köttfärs": [500, "g"], Ris: [250, "g"], Paprika: [1, "st"], "Curry & grönsaker": [28, "g"] },
-  tandoorikyckling: { Kycklingfilé: [500, "g"], Ris: [250, "g"], "Curry & grönsaker": [28, "g"], Yoghurt: [200, "g"] },
-  citronflaskfile: { "Fläskfilé": [500, "g"], Matvete: [250, "g"], Citron: [1, "st"], Timjan: [1, "st"] },
-  biffgraddtimjan: { Biff: [500, "g"], Potatis: [800, "g"], Grädde: [200, "ml"], Timjan: [1, "st"] },
-  zucchinipastafeta: { Zucchini: [2, "st"], Pasta: [250, "g"], "Krossade tomater": [400, "g"], Feta: [200, "g"] },
-  sparrispastacitron: { Sparris: [300, "g"], Pasta: [250, "g"], Citron: [1, "st"], Vitlök: [1, "st"] },
-  morotscurry: { Morötter: [400, "g"], Kikärtor: [380, "g"], "Curry & grönsaker": [28, "g"], Ris: [250, "g"] }
-};
 
 // The recipe bank's OWN text always wins - description and steps written
 // for the recipe beat the legacy hand-typed map, which only still exists as
@@ -717,20 +591,6 @@ function detailsFor(recipe) {
   };
 }
 
-const RECIPE_DETAILS = {
-  kycklinggryta: { beskrivning: "Krämig kycklinggryta med kokos, curry och söta grönsaker.", steg: ["Bryn kycklingen i en het panna.", "Fräs curry och grönsaker tills de mjuknar.", "Häll i kokosmjölken och låt sjuda tills kycklingen är genomstekt."], tips: "Servera med lime och färsk koriander om du har hemma." },
-  pastagratang: { beskrivning: "Krämig pastagratäng med purjolök och ett gyllene osttäcke.", steg: ["Koka pastan två minuter kortare än anvisningen.", "Fräs purjolök och rör ner grädde.", "Blanda med pastan, toppa med ost och gratinera tills ytan fått färg."], tips: "Spara lite pastavatten för en extra krämig sås." },
-  linssoppa: { beskrivning: "Värmande och mättande linssoppa med kokosmjölk och rotfrukter.", steg: ["Fräs lök, vitlök och morot i olja.", "Tillsätt linser, buljong och kokosmjölk.", "Låt sjuda tills linserna är mjuka och smaka av."], tips: "Toppa med yoghurt eller citron för friskare smak." },
-  korvstroganoff: { beskrivning: "En svensk vardagsklassiker med tomat, grädde och mild paprika.", steg: ["Skär korven och bryn den lätt.", "Fräs tomatpuré och paprika innan du tillsätter grädde.", "Låt såsen sjuda några minuter och servera med ris."], tips: "En skvätt soja ger såsen mer djup." },
-  tacobonor: { beskrivning: "Fräsch tacobowl med svarta bönor, majs, ris och salsa.", steg: ["Koka riset och värm bönorna med kryddor.", "Skär grönsakerna och blanda majsen med salsan.", "Bygg skålar med ris, bönor, grönsaker och salsa."], tips: "Pressa över lime precis före servering." },
-  fiskpasta: { beskrivning: "Len fiskpasta med citron, crème fraiche och dill.", steg: ["Koka pastan och spara lite pastavatten.", "Tillaga fisken försiktigt i en krämig citronsås.", "Vänd ner pastan och späd med pastavatten till rätt konsistens."], tips: "Koka inte fisken för hårt, då blir den saftigare." },
-  "ugnslax-citron": { beskrivning: "Ugnsbakad lax med citron, dill och rostad potatis.", steg: ["Sätt ugnen på 200°C.", "Lägg lax och potatis i en form.", "Toppa med citron och dill och baka tills laxen är klar."], tips: "Laxen är klar när den precis börjar dela sig i lameller." },
-  halloumibowl: { beskrivning: "Krispig halloumi med rostade grönsaker och krämig yoghurt.", steg: ["Koka matvetet enligt förpackningen.", "Rosta grönsakerna i ugnen.", "Stek halloumin och servera med yoghurt."], tips: "Stek halloumin sist så håller den sig varm och krispig." },
-  "chili-sin-carne-budget": { beskrivning: "Mustig chili sin carne med bönor, tomat och paprika.", steg: ["Fräs paprika och lök.", "Tillsätt tomater, bönor och majs.", "Låt sjuda i 20 minuter och servera med ris."], tips: "Låt chilin vila tio minuter före servering för djupare smak." },
-  "kycklingwok-nudlar-protein": { beskrivning: "Snabb wok med kyckling, nudlar och krispiga grönsaker.", steg: ["Koka nudlarna.", "Stek kycklingen tills den är genomstekt.", "Woka grönsakerna och blanda allt med soja."], tips: "Ha alla ingredienser framme innan du börjar woka." },
-  tomatsoppa: { beskrivning: "Len tomatsoppa med basilika och en skvätt grädde.", steg: ["Fräs löken mjuk.", "Koka med tomater och buljong.", "Mixa soppan och rör ner grädden."], tips: "En liten nypa socker balanserar syrliga tomater." },
-  pannkakor: { beskrivning: "Klassiska tunna pannkakor med sötsyrliga bär.", steg: ["Vispa ihop smetens ingredienser.", "Stek tunna pannkakor i smör.", "Servera med bär."], tips: "Låt smeten vila en stund så blir pannkakorna jämnare." }
-};
 const $ = id => document.getElementById(id);
 const money = value => `${Math.round(value).toLocaleString("sv-SE")} kr`;
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -900,16 +760,22 @@ function distanceKm(lat1, lon1, lat2, lon2) {
 // broken business model.
 // Speglar Free-svaret i backend/services/accounts/features.py. Om
 // /api/entitlements inte kan nås gäller detta - inte "allt öppet".
+// SPEGEL av backend/services/accounts/features.py FEATURES. Reservvärdet
+// innan /api/entitlements svarat - aldrig en andra affärsmodell.
+// test_frontend_contract faller om de två listorna skiljer sig. Uppdaterad
+// av J3 (ny paketering): veckotyperna, skafferiet och näringsfiltret ner
+// till gratis, hushåll bortom två personer och sparhistoriken upp.
 const FREE_FEATURES = {
-  standard_week: true, family_week: false, budget_week: false, training_week: false,
-  bulk_week: false, quick_week: false, vegetarian_week: false, balanced_week: false,
+  standard_week: true, family_week: true, budget_week: true, training_week: true,
+  bulk_week: true, quick_week: true, vegetarian_week: true, balanced_week: true,
   seven_dinners: false, cheapest_store_price: true, cheapest_store_basket: true,
   all_store_prices: false, all_store_baskets: false, store_comparison: false,
   live_prices: false,
-  recipe_search: true, advanced_nutrition: false, meal_prep: false,
-  basic_pantry: true, full_pantry: false, favorites: true,
+  recipe_search: true, advanced_nutrition: true, meal_prep: true,
+  basic_pantry: true, full_pantry: true, favorites: true,
+  household_sharing: false, savings_history: false,
 };
-const FREE_ENTITLEMENTS = { plan: "free", isPremium: false, maxDinners: 4, features: FREE_FEATURES, pricing: null };
+const FREE_ENTITLEMENTS = { plan: "free", isPremium: false, maxDinners: 5, features: FREE_FEATURES, pricing: null };
 let entitlements = FREE_ENTITLEMENTS;
 // Starts as "free" (the boot assumption), so a premium user's first fetch
 // counts as a plan CHANGE and clears any persisted free-masked snapshot.
@@ -2127,8 +1993,10 @@ function firstPlannedDayFrom(selected, startIndex) {
   }
   return startIndex;
 }
-let weekPlanExpanded = false;
-const WEEK_PLAN_PREVIEW_COUNT = 4;
+// G3: veckolistan har ingen förhandsvisning längre. Den VAR fyra rader bakom
+// en "Visa hela veckan"-knapp, i en sektion som dessutom var `hidden` - två
+// lager mellan användaren och det enda hon öppnade appen för. Antalet rader
+// bestäms nu av weekPlanDays() i src/views/week.js: sju, alltid.
 const WEEK_SHOPPING_PREVIEW_COUNT = 4;
 // Small line icons reused everywhere a "time" or "portions" fact is shown
 // next to a recipe (Vecka's Dagens middag, the full recipe page) - one
@@ -2296,11 +2164,12 @@ function renderWeekOverview(selected, shoppingItems, total) {
   const todayRecipe = selected[weekOverviewDay];
   $("weekTodayCard").innerHTML = todayRecipe ? weekTodayCardMarkup(todayRecipe) : weekEmptyDayMarkup();
 
-  const planVisibleCount = weekPlanExpanded ? selected.length : Math.min(selected.length, WEEK_PLAN_PREVIEW_COUNT);
-  $("weekPlanList").innerHTML = selected.slice(0, planVisibleCount).map(weekPlanRowMarkup).join("");
-  $("weekPlanToggle").hidden = selected.length <= WEEK_PLAN_PREVIEW_COUNT;
-  $("weekPlanToggle").textContent = weekPlanExpanded ? "Visa färre" : "Visa hela veckan";
-  $("weekPlanToggle").onclick = () => { weekPlanExpanded = !weekPlanExpanded; renderWeekOverview(selected, shoppingItems, total); };
+  // G3: HELA veckan, i en lista som syns utan att någon klickar. Sju rader -
+  // weekPlan är bara så lång som antalet middagar, medan dagflikarna ovanför
+  // alltid ritar sju dagar, så en vecka med fyra middagar sa två olika saker
+  // om samma vecka. En dag utan rätt är en rad som säger just det, med en
+  // väg tillbaka till den ("+ Lägg till").
+  $("weekPlanList").innerHTML = weekPlanDays(selected).map(weekPlanRowMarkup).join("");
 
   const remainingItems = shoppingItems.filter(item => itemStatus(item.namn) === NEED_TO_BUY);
   $("weekShoppingSummary").textContent = shoppingItems.length ? `${plural(remainingItems.length, "vara kvar", "varor kvar")}${total == null ? "" : ` · ${money(total)}`}` : "";
@@ -2569,7 +2438,7 @@ function storeOptionsMarkup(selected, autoLabel) {
 // ett test (backend/tests/test_frontend_contract.py) låser att listorna är
 // lika. ICA, Coop och Lidl finns i butiksregistret men är gated tills
 // kvalitet och rättigheter räcker; de ska inte gå att välja i appen.
-const RELEASED_CHAINS = ["Willys", "Hemköp", "City Gross"];
+const RELEASED_CHAINS = ["Willys", "Hemköp", "City Gross", "ICA"];
 const VALID_CHAINS = RELEASED_CHAINS;
 
 // ---------------------------------------------------------------------------
@@ -3017,9 +2886,18 @@ function refreshAfterSettingsChange() {
   else chooseMenu(false);
 }
 
-$("feedbackBtn").addEventListener("click", () => { $("feedbackSheet").hidden = false; $("feedbackStatus").textContent = ""; $("feedbackText").focus(); });
-$("feedbackClose").addEventListener("click", () => { $("feedbackSheet").hidden = true; });
-$("feedbackSheet").addEventListener("click", event => { if (event.target === $("feedbackSheet")) $("feedbackSheet").hidden = true; });
+// G6: samma lager som alla andra ark. Här fokuseras textrutan i stället för
+// rubriken - skärmen har EN uppgift och den är att skriva - men fokusfällan,
+// Escape och återlämnandet av fokus är gemensamma.
+function openFeedbackSheet() {
+  $("feedbackStatus").textContent = "";
+  openModal($("feedbackSheet"), { onClose: closeFeedbackSheet, focus: false });
+  $("feedbackText").focus();
+}
+function closeFeedbackSheet() { closeModal($("feedbackSheet")); }
+$("feedbackBtn").addEventListener("click", openFeedbackSheet);
+$("feedbackClose").addEventListener("click", closeFeedbackSheet);
+$("feedbackSheet").addEventListener("click", event => { if (event.target === $("feedbackSheet")) closeFeedbackSheet(); });
 $("feedbackSend").addEventListener("click", async () => {
   const text = $("feedbackText").value.trim();
   if (!text) { $("feedbackStatus").textContent = "Skriv något först."; return; }
@@ -3032,7 +2910,7 @@ $("feedbackSend").addEventListener("click", async () => {
     if (!response.ok) throw new Error();
     $("feedbackText").value = "";
     $("feedbackStatus").textContent = "Tack! Din feedback är framme.";
-    setTimeout(() => { $("feedbackSheet").hidden = true; }, 1400);
+    setTimeout(closeFeedbackSheet, 1400);
   } catch {
     $("feedbackStatus").textContent = "Gick inte att skicka just nu - försök igen.";
   } finally {
@@ -3042,15 +2920,18 @@ $("feedbackSend").addEventListener("click", async () => {
 
 function openWeekSheet() {
   $("restoreWeekBtn").hidden = !(state.weekHistory || []).length;
-  $("weekSheet").hidden = false; document.body.style.overflow = "hidden";
+  openModal($("weekSheet"), { onClose: closeWeekSheet });
 }
-function closeWeekSheet() { $("weekSheet").hidden = true; document.body.style.overflow = ""; }
+function closeWeekSheet() { closeModal($("weekSheet")); }
 $("budgetCardBtn").addEventListener("click", openWeekSheet);
 $("weekSheetOpen").addEventListener("click", openWeekSheet);
 $("weekSheetClose").addEventListener("click", closeWeekSheet);
 $("weekSheetDone").addEventListener("click", closeWeekSheet);
 $("weekSheet").addEventListener("click", event => { if (event.target === $("weekSheet")) closeWeekSheet(); });
-document.addEventListener("keydown", event => { if (event.key === "Escape" && !$("weekSheet").hidden) closeWeekSheet(); });
+// G6: den gamla, ENDA Escape-lyssnaren i hela appen stod här och kunde bara
+// stänga veckoarket. Escape bor numera i openModal() och stänger det översta
+// lagret, vilket det än är - inklusive onboardingmodalen, som inte gick att
+// stänga med tangentbord alls.
 $("sheetPlanBtn").addEventListener("click", () => { closeWeekSheet(); openPlanComparison(); });
 $("restoreWeekBtn").addEventListener("click", () => { closeWeekSheet(); restorePreviousWeek(); });
 
@@ -3300,20 +3181,23 @@ async function handlePendingInvite() {
   try {
     preview = await previewInvite(pendingInviteToken);
   } catch (error) {
-    $("inviteLanding").hidden = false;
+    openModal($("inviteLanding"));
     $("inviteLandingTitle").textContent = "Inbjudan gäller inte längre";
     $("inviteLandingBody").textContent = "Be den som bjöd in dig att skicka en ny länk.";
     $("inviteJoinBtn").hidden = true;
     return;
   }
-  $("inviteLanding").hidden = false;
+  // G6: inbjudningslandningen är ett modalt lager som alla andra. Den öppnas
+  // av en LÄNK, inte av en knapp i appen, så det finns ingen öppnare att ge
+  // fokus tillbaka till - men fällan och Escape gäller ändå.
+  openModal($("inviteLanding"));
   $("inviteLandingTitle").textContent = `${preview.invitedBy || "Någon"} har bjudit in dig till ${preview.householdName}`;
   $("inviteLandingBody").textContent = state.authToken
     ? "Ni delar veckan, inköpslistan och skafferiet."
     : "Logga in eller skapa ett konto så är du med.";
   $("inviteJoinBtn").querySelector("span").textContent = state.authToken ? `Gå med i ${preview.householdName}` : "Logga in och gå med";
   $("inviteJoinBtn").onclick = async () => {
-    if (!state.authToken) { $("inviteLanding").hidden = true; openAccountModal(); return; }
+    if (!state.authToken) { closeModal($("inviteLanding")); openAccountModal(); return; }
     $("inviteLandingError").textContent = "";
     try {
       const { household } = await joinHousehold(state.authToken, pendingInviteToken);
@@ -3321,7 +3205,7 @@ async function handlePendingInvite() {
       await pullHousehold(true);
       startHouseholdSync();
       clearInviteFromUrl();
-      $("inviteLanding").hidden = true;
+      closeModal($("inviteLanding"));
       renderHousehold();
       loadNotifications();
       render();
@@ -3360,7 +3244,7 @@ function openSwapModal(currentId) {
     $("swapOptions").innerHTML = `<button type="button" class="store-compare-upsell" id="swapUpsell">Du har använt dina ${FREE_SWAP_LIMIT} gratis byten den här veckan. Med Premium byter du hur mycket du vill.</button>`;
     $("swapUpsell").addEventListener("click", () => { closeSwapModal(); openPremiumPitch(); });
     $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true;
-    $("swapModal").hidden = false;
+    openModal($("swapModal"), { onClose: closeSwapModal });
     return;
   }
   // Dagordnad, med tomma dagar kvar som null: dayIndex kommer ur den
@@ -3375,10 +3259,10 @@ function openSwapModal(currentId) {
   // "billigast först" blev slumpartad.
   const current = selected.find(recipe => recipe?.id === currentId);
   const allOptions = swapOptionsFor(current, candidates, "");
-  if (!allOptions.length) { $("swapModalHint").textContent = ""; $("swapOptions").innerHTML = `<p class="live-loading">Inga alternativ hittades som passar budget, butik och dina filter just nu.</p>`; $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true; $("swapModal").hidden = false; return; }
+  if (!allOptions.length) { $("swapModalHint").textContent = ""; $("swapOptions").innerHTML = `<p class="live-loading">Inga alternativ hittades som passar budget, butik och dina filter just nu.</p>`; $("swapConfirmBtn").hidden = true; $("swapShowMoreBtn").hidden = true; openModal($("swapModal"), { onClose: closeSwapModal }); return; }
   swapContext = { currentId, dayIndex, current, candidates, intent: "", allOptions, visibleCount: SWAP_OPTIONS_BATCH, selectedId: null };
   renderSwapModal();
-  $("swapModal").hidden = false;
+  openModal($("swapModal"), { onClose: closeSwapModal });
 }
 // Alternativen som faktiskt är bättre i den valda meningen. Rankningen och
 // ärlighetsreglerna bor i src/services/swap.js.
@@ -3432,7 +3316,7 @@ $("swapConfirmBtn").addEventListener("click", () => {
   clearPriceSnapshots();
   saveState(); render(); closeSwapModal();
 });
-function closeSwapModal() { $("swapModal").hidden = true; swapContext = null; }
+function closeSwapModal() { closeModal($("swapModal")); swapContext = null; }
 document.querySelectorAll("[data-swap-close]").forEach(button => button.addEventListener("click", closeSwapModal));
 
 // =============================================================================
@@ -3626,9 +3510,9 @@ function openPlanComparison() {
     clearPriceSnapshots();
     saveState(); render(); closePlanModal(); setView("week");
   }));
-  $("planModal").hidden = false;
+  openModal($("planModal"), { onClose: closePlanModal });
 }
-function closePlanModal() { $("planModal").hidden = true; }
+function closePlanModal() { closeModal($("planModal")); }
 document.querySelectorAll("[data-plan-close]").forEach(button => button.addEventListener("click", closePlanModal));
 
 function logEntriesSince(daysAgo) {
@@ -3689,8 +3573,8 @@ function renderStats() {
 $("openStatsBtn").addEventListener("click", () => { renderStats(); setView("stats"); });
 $("homeShoppingStat").addEventListener("click", () => setView("basket"));
 
-function openAccountModal() { $("accountModal").hidden = false; }
-function closeAccountModal() { $("accountModal").hidden = true; $("loginError").textContent = ""; $("registerError").textContent = ""; $("redeemError").textContent = ""; $("forgotError").textContent = ""; $("resetError").textContent = ""; $("deleteError").textContent = ""; }
+function openAccountModal() { openModal($("accountModal"), { onClose: closeAccountModal }); }
+function closeAccountModal() { closeModal($("accountModal")); $("loginError").textContent = ""; $("registerError").textContent = ""; $("redeemError").textContent = ""; $("forgotError").textContent = ""; $("resetError").textContent = ""; $("deleteError").textContent = ""; }
 $("profileBtn").addEventListener("click", openAccountModal);
 document.querySelectorAll("[data-account-close]").forEach(button => button.addEventListener("click", closeAccountModal));
 function showAccountForm(name) {
@@ -3879,7 +3763,7 @@ async function resumePendingInvite() {
     await pullHousehold(true);
     startHouseholdSync();
     clearInviteFromUrl();
-    $("inviteLanding").hidden = true;
+    closeModal($("inviteLanding"));
     renderAccount();
     render();
     showUndoToast(`Du är med i ${household.name}`, null);
@@ -4112,9 +3996,13 @@ function openPantryAddConfirm(key, product) {
 document.querySelectorAll("#pantryAddLocation button").forEach(button => button.addEventListener("click", () => { pantryPickLocation = button.dataset.location; document.querySelectorAll("#pantryAddLocation button").forEach(b => b.classList.toggle("active", b === button)); }));
 function openPantryModal() {
   $("pantrySearch").value = ""; $("pantrySearch").hidden = false; $("pantryPickerList").hidden = false; $("pantryLiveResults").hidden = false; $("pantryAddConfirm").hidden = true;
-  renderPantryPicker(""); $("pantryLiveResults").innerHTML = ""; $("pantryModal").hidden = false; $("pantrySearch").focus();
+  renderPantryPicker(""); $("pantryLiveResults").innerHTML = "";
+  // Sökrutan är skärmens enda uppgift, så fokus går dit i stället för till
+  // rubriken - men fällan, Escape och fokusåterlämningen är gemensamma.
+  openModal($("pantryModal"), { onClose: closePantryModal, focus: false });
+  $("pantrySearch").focus();
 }
-function closePantryModal() { $("pantryModal").hidden = true; }
+function closePantryModal() { closeModal($("pantryModal")); }
 $("addPantryBtn").addEventListener("click", openPantryModal);
 document.querySelectorAll("[data-pantry-close]").forEach(button => button.addEventListener("click", closePantryModal));
 document.querySelectorAll("#pantryTabs button").forEach(button => button.addEventListener("click", () => { state.pantryTab = button.dataset.pantryTab; renderPantry(); }));
@@ -4136,7 +4024,7 @@ function renderCookResults(localMatches, externalRecipes, hiddenByDiet = false) 
   document.querySelectorAll("[data-cook-open]").forEach(button => button.addEventListener("click", () => { closeCookModal(); openRecipeTab(button.dataset.cookOpen); }));
 }
 async function openCookModal() {
-  $("cookModal").hidden = false;
+  openModal($("cookModal"), { onClose: closeCookModal });
   const pantryNames = pantryNamesForCooking();
   const dietFilterActive = dietFilterIsActive();
   const localMatches = matchLocalRecipesToPantry(localRecipesForUser(), pantryNames);
@@ -4152,7 +4040,7 @@ async function openCookModal() {
     renderCookResults(localMatches, []);
   }
 }
-function closeCookModal() { $("cookModal").hidden = true; }
+function closeCookModal() { closeModal($("cookModal")); }
 $("cookFromPantryBtn").addEventListener("click", openCookModal);
 document.querySelectorAll("[data-cook-close]").forEach(button => button.addEventListener("click", closeCookModal));
 restoreNutritionGoalsForm();

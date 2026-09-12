@@ -71,6 +71,7 @@ import urllib.error
 import urllib.request
 from urllib.parse import quote
 
+from .. import robots
 from ..base import GroceryProvider
 from ..errors import ProviderBlockedError, ProviderRequestError
 from ..models import RawProduct, Store
@@ -78,7 +79,13 @@ from ...data_guard import guard_outbound_http
 
 logger = logging.getLogger("matjakt.grocery.axfood")
 
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Matjakt/1.0 (+grocery-collector)"
+# D9: ÄRLIG IDENTITET, INTE EN HALV MASKERING. UA:n utgav sig för att vara
+# Chrome 120 med ett "Matjakt/1.0 (+grocery-collector)" på slutet - utan
+# kontaktväg. Det var den sämsta av två världar: en kedja som vill säga nej
+# kunde inte hitta oss, och en som vill säga ja kunde inte skilja oss från
+# trafik den redan filtrerar. Samma sträng som robots-kontrollen använder,
+# så kedjans regler prövas mot den agent som faktiskt hämtar.
+USER_AGENT = robots.USER_AGENT
 REQUEST_TIMEOUT_SECONDS = 15
 REQUEST_DELAY_SECONDS = 1.0
 MAX_RETRIES = 3
@@ -282,6 +289,25 @@ class AxfoodProvider(GroceryProvider):
             if attempt + 1 >= MAX_RETRIES:
                 break
         raise AxfoodRequestError(f"{self.name} request failed after {MAX_RETRIES} attempts: {url}") from last_error
+
+    # ---- robots.txt ---------------------------------------------------
+
+    @property
+    def robots_urls(self) -> list[str]:
+        """De fyra adressformer insamlingen faktiskt hämtar.
+
+        D9: en riktig adress per endpoint, inte ett gissat prefix. Ett
+        `Disallow: /axfood/rest/v1/search` förbjuder termsökningen men inte
+        kategoribläddringen, och den skillnaden syns bara om varje form
+        prövas för sig. Slug och sökterm är representativa värden - robots
+        matchar på sökvägsprefix, så vilket giltigt värde som helst svarar
+        på samma fråga."""
+        return [
+            f"{self.base_url}/store",
+            f"{self.base_url}/leftMenu/categorytree",
+            f"{self.base_url}/c/mejeri-ost-och-agg?page=0&size={self.page_size}&sort=",
+            f"{self.base_url}/search?q=mj%C3%B6lk&page=0&size={self.page_size}",
+        ]
 
     # ---- GroceryProvider ---------------------------------------------
 
