@@ -25,10 +25,11 @@ import logging
 import os
 import threading
 import time
+from collections import OrderedDict
 from pathlib import Path
 
 from .pricing import RecipePricingEngine, comparability_reasons, pantry_entry
-from .store import GroceryStore
+from .store import GroceryStore, shared_store
 
 logger = logging.getLogger("matjakt.grocery.api")
 
@@ -60,45 +61,105 @@ MAX_AGE_SECONDS_FOR_COMPARISON = 14 * 24 * 3600
 
 # Results are cached briefly: the same week's list gets priced again on every
 # re-render, and the underlying data only changes when a collector runs.
-_CACHE: dict = {}
+_CACHE: "OrderedDict[str, tuple]" = OrderedDict()
 _CACHE_TTL_SECONDS = 300
 _CACHE_MAX_ENTRIES = 200
 _LOCK = threading.Lock()
 
 
+# D8. CACHEN MÅSTE KUNNA SJÄLVLÄKA NÄR EN ANNAN PROCESS ÄNDRAR DATA.
+# clear_cache() tömmer den HÄR processens dict. Med två instanser betyder
+# det att instans B fortsätter servera gamla priser i upp till fem minuter
+# efter att instans A importerat - ingen av dem har fel, de har bara aldrig
+# pratat med varandra.
+#
+# Varje post bär därför databasens data_version från när den lades in, och
+# en post vars stämpel inte längre stämmer är ingen träff. Motorns prisbild
+# och ordindex (pricing._PRICE_CACHE/_INDEX_CACHE) har nycklats på samma
+# version sedan de skrevs; det här är samma idé, äntligen också här.
+#
+# Versionen läses högst var TTL:e sekund. Den kostar ett par COUNT över
+# katalogen, och att läsa den per cacheuppslag vore att byta en inaktuell
+# cache mot en långsam.
+_VERSION_TTL_SECONDS = 2.0
+_version_state = {"value": None, "at": 0.0}
+
+
+def data_version(force: bool = False) -> str | None:
+    """Databasens datastämpel som cachen nycklas på, högst en läsning per TTL.
+
+    None när databasen inte går att läsa - då fungerar cachen som en ren
+    TTL-cache i stället för att sluta svara. En trasig databas ska inte bli
+    ett kastat anrop inne i en cachefunktion."""
+    now = time.time()
+    with _LOCK:
+        if (not force and _version_state["value"] is not None
+                and now - _version_state["at"] < _VERSION_TTL_SECONDS):
+            return _version_state["value"]
+    try:
+        # Utanför låset: databasen läses aldrig med cachelåset i handen.
+        version = open_store().data_version()
+    except Exception:
+        return _version_state["value"]
+    with _LOCK:
+        _version_state.update(value=version, at=now)
+    return version
+
+
 def _cache_get(key):
+    version = data_version()
     with _LOCK:
         entry = _CACHE.get(key)
         if not entry:
             return None
-        value, expires = entry
-        if expires < time.time():
+        value, expires, stamp = entry
+        if expires < time.time() or stamp != version:
             _CACHE.pop(key, None)
             return None
+        # Färskast sist - det är den ordningen utrensningen nedan läser.
+        _CACHE.move_to_end(key)
         return value
 
 
 def _cache_set(key, value):
+    version = data_version()
     with _LOCK:
-        if len(_CACHE) >= _CACHE_MAX_ENTRIES:
-            _CACHE.clear()
-        _CACHE[key] = (value, time.time() + _CACHE_TTL_SECONDS)
+        # D8: kasta ut den ÄLDSTA posten, inte alla.
+        # `_CACHE.clear()` vid 200 poster betydde att den 201:a veckan som
+        # prissattes slängde de 200 som just värmts upp, och nästa anrop
+        # fyllde dem igen. Trafikvariation blev cache-thrashing i stället
+        # för utslagning av det minst använda.
+        while len(_CACHE) >= _CACHE_MAX_ENTRIES:
+            _CACHE.popitem(last=False)
+        _CACHE[key] = (value, time.time() + _CACHE_TTL_SECONDS, version)
+        _CACHE.move_to_end(key)
 
 
 def clear_cache():
     """Called after an import, so newly collected prices are visible at once
     instead of after the TTL. Tömmer även motorns prisbild/ordindex: en
     partnerpaus som raderar priser eller en referensbackfill ändrar vad
-    kunden ska se utan att någon körning avslutats."""
+    kunden ska se utan att någon körning avslutats.
+
+    D8: nollställer dessutom den kända dataversionen, så nästa uppslag läser
+    den ur databasen i stället för ur en två sekunder gammal minnesbild."""
     with _LOCK:
         _CACHE.clear()
+        _version_state.update(value=None, at=0.0)
     from . import pricing
     pricing._PRICE_CACHE.clear()
     pricing._INDEX_CACHE.clear()
 
 
 def open_store() -> GroceryStore:
-    return GroceryStore(DB_PATH)
+    """Trådens delade anslutning till grocery-databasen.
+
+    D8: förut en ny anslutning OCH en hel schemamigrering per anrop - alltså
+    per HTTP-request som rörde grocery. shared_store() återanvänder trådens
+    anslutning och lägger upp schemat en gång per process och databasfil.
+    close() på det som kommer tillbaka är en no-op: anslutningen tillhör
+    tråden, inte anroparen."""
+    return shared_store(DB_PATH)
 
 
 # Kampanjer är veckovaror: data äldre än så här visas inte som "aktiv
