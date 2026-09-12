@@ -168,10 +168,18 @@ test("saknat pris signaleras i form, aldrig i rött (§6)", () => {
   }
 });
 
-test("typsnitten är bytta överallt, inte bara i länken", () => {
+test("typsnitten är bytta överallt, och de laddas faktiskt", () => {
+  // Testet hette förut "inte bara i länken" och letade efter <link>-taggen mot
+  // Googles fontvärd. Sedan N0b finns ingen länk: typsnitten ligger i appen och
+  // deklareras med @font-face i den här filen. Frågan testet ställer är
+  // densamma - laddas de snitt styles.css sätter, eller är hela §3 bara namn
+  // som faller igenom till systemfonten? Filerna, licensen och CSP:n prövas i
+  // tests/typsnitt.test.js.
   const html = läsFil("frontend/app/index.html");
-  assert.match(html, /fonts\.googleapis\.com[^"]*family=Archivo/, "Archivo laddas inte");
-  assert.match(html, /fonts\.googleapis\.com[^"]*family=Newsreader/, "Newsreader laddas inte");
+  for (const familj of ["Newsreader", "Archivo"]) {
+    assert.match(css, new RegExp(`@font-face\\s*\\{[^}]*font-family\\s*:\\s*"${familj}"`),
+      `${familj} laddas inte - ingen @font-face deklarerar familjen`);
+  }
   assert.doesNotMatch(html, /Bricolage|Manrope/, "gamla typsnitt laddas fortfarande");
   assert.doesNotMatch(css, /Manrope|Bricolage/,
     "styles.css hårdkodar ett typsnitt som inte längre laddas - då blir det systemfont");

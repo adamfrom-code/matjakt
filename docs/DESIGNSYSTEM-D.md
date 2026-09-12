@@ -219,11 +219,21 @@ summor och stortalet. Archivo används för allt annat: etiketter, metadata, br�
 knappar, navigering. Kursiv Newsreader är en egen röst — kickern under hjälterubriken och
 den tomma dagens "Ingen middag planerad" — aldrig betoning i löpande text.
 
-Laddning: `<link rel="preconnect">` mot `fonts.googleapis.com` och `fonts.gstatic.com`,
-sedan
-`family=Archivo:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&display=swap`.
-Fallbackstackarna ovan är obligatoriska — Georgia och Helvetica finns på de plattformar
-appen körs på, och `display=swap` gör att sidan är läsbar innan Newsreader kommit fram.
+Laddning (N0b): typsnitten **ligger i appen**, inte hos Google. Tre `@font-face` överst i
+`frontend/app/styles.css` pekar på woff2-filer i `frontend/app/assets/fonts/` — Newsreader
+variabel (`opsz 6–72`, `wght 400–700`), Archivo variabel (`wght 400–700`) och Archivo
+kursiv 400. Delmängden är Google Fonts latin-omfång; proveniens, version och
+delmängdskommandot står i `assets/fonts/README.md`, licensen (SIL OFL 1.1) i samma katalog.
+
+Ingen `<link>` mot `fonts.googleapis.com`, ingen `preconnect`, och appens CSP är
+`style-src 'self' 'unsafe-inline'; font-src 'self'`. Skälet är två: appens första start
+utan nät visade fel typsnitt, och CSP:n släppte in två tredjepartsvärdar enbart för att
+hämta bokstäver. `tests/typsnitt.test.js` failar om någon av värdarna kommer tillbaka.
+
+Fallbackstackarna ovan är obligatoriska ändå — Georgia och Helvetica finns på de
+plattformar appen körs på, `font-display:swap` gör att sidan är läsbar i väntan på
+typsnittet i stället för osynlig, och tecken utanför latin-omfånget (kyrilliska, `ł`, `ș`)
+sätts ur fallbacken.
 
 ### 3.2 Skalan
 
