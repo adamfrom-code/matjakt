@@ -47,7 +47,7 @@ from pathlib import Path
 # migrationer som fanns då ligger under 1; de är inte numrerade var för sig
 # och kan inte bli det i efterhand, eftersom produktionsdatabaserna redan
 # hade kört dem utan att lämna spår om vilka.
-KONTON = 2
+KONTON = 3
 BUTIKSDATA = 1
 RECEPT = 2
 HUSHALL = 1
