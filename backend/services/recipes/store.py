@@ -37,6 +37,7 @@ import unicodedata
 from pathlib import Path
 
 from ..data_guard import guard_database_path
+from .meal_types import protein_of, require_dinner_protein
 from .meal_types import require as require_meal_type
 from .pantry import is_pantry_staple
 
@@ -273,7 +274,13 @@ class RecipeStore:
         får inte råka nolla klassificeringen. Ett MEDSKICKAT värde prövas
         däremot mot det stängda värdeförrådet och avvisas om det inte hör dit
         - ett felstavat `meal_type` upptäcks annars först som en frukost i
-        någons middagsvecka."""
+        någons middagsvecka.
+
+        M5: en `middag` prövas dessutom mot proteingolvet. Klassificeringen
+        läses ur raden när skrivningen inte bär någon egen (`COALESCE` ovan),
+        så en delmängdsuppdatering som sänker proteinet på ett recept som
+        redan STÅR som middag fångas också - annars hade hålet bara flyttat
+        sig ett steg."""
         now = time.time()
         recipe_id = recipe["id"]
         meal_type = recipe.get("mealType", recipe.get("meal_type"))
@@ -281,7 +288,12 @@ class RecipeStore:
             meal_type = require_meal_type(meal_type, recipe_id=str(recipe_id))
         with self._connection:
             existing = self._connection.execute(
-                "SELECT created_at FROM recipes WHERE id = ?", (recipe_id,)).fetchone()
+                "SELECT created_at, meal_type FROM recipes WHERE id = ?", (recipe_id,)).fetchone()
+            require_dinner_protein(
+                meal_type if meal_type is not None
+                else (existing["meal_type"] if existing else None),
+                protein_of(recipe), recipe_id=str(recipe_id),
+                name=str(recipe.get("name") or ""))
             self._connection.execute(
                 """
                 INSERT INTO recipes (id, slug, name, description, servings, prep_time,

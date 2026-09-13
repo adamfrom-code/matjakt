@@ -34,20 +34,32 @@ Ordningen bär hela bedömningen och är därför den enda platsen där den stå
   3  receptet säger efterrätt→ efterratt
   4  receptet säger tillbehör→ tillbehor  "serveras till", "följeslagare till".
   5  receptet säger lunch    → lunch      "kall lunch", "äts till lunch".
-  6  middagsbevis            → middag     Egen utsago ("middag", "kvällsmat")
+  6  under proteingolvet     → lunch      M5. En rätt med mindre protein per
+                                          portion än `MIN_DINNER_PROTEIN_G`
+                                          är inte en middag, hur gärna den än
+                                          kallar sig vardagsmat. Regeln står
+                                          FÖRE middagsbeviset med flit: en
+                                          tagg är en åsikt, portionens
+                                          innehåll är ett faktum.
+  7  middagsbevis            → middag     Egen utsago ("middag", "kvällsmat")
                                           eller en tagg/kategori som bara
                                           sätts på middagar (helgmiddag,
                                           vardagsmat, familj, Familjefavorit,
                                           Helg, Helgmiddag).
-  7  lunchmärkt              → lunch      Taggen/kategorin `lunch` när inget
-                                          i regel 6 talade emot.
-  8  huvudrätt               → middag     Grundfallet. Banken är byggd som en
+  8  lunchmärkt              → lunch      Taggen/kategorin `lunch` när inget
+                                          i regel 7 talade emot.
+  9  huvudrätt               → middag     Grundfallet. Banken är byggd som en
                                           bank av huvudrätter; ett recept utan
                                           en enda motsatt signal är en middag.
 
 Regel 2–5 har alla samma spärr: de går inte om receptet SAMTIDIGT säger att
 det är en middag. "Mättande vardagsmiddag eller helgfrukost" är först och
 främst en middag — det är vad receptet själv sätter först.
+
+Regel 6 har INTE den spärren, och det är hela poängen med den. Ett recept som
+kallar sig middag och har sex gram protein har inte rätt om sig självt.
+Regeln kräver dock ett känt proteinvärde: saknas näringen vet vi ingenting och
+gissar inte — då faller receptet vidare till regel 7.
 
 OSÄKERHETEN RAPPORTERAS, DEN GÖMS INTE
 --------------------------------------------------------------------------
@@ -74,7 +86,8 @@ sys.path.insert(0, str(ROOT / "backend"))
 sys.stdout.reconfigure(encoding="utf-8")
 
 from services.recipes.meal_types import (  # noqa: E402
-    BREAKFAST, DESSERT, DINNER, LUNCH, MEAL_TYPES, SIDE)
+    BREAKFAST, DESSERT, DINNER, LUNCH, MEAL_TYPES, MIN_DINNER_PROTEIN_G, SIDE,
+    is_dinner_protein_ok, protein_of)
 
 SOURCE_DIR = ROOT / "backend" / "recipe_sources"
 # Den bundlade reservbanken appen faller tillbaka på när backenden inte svarar.
@@ -192,6 +205,13 @@ def classify(recipe: dict) -> Fynd:
     for mark in sorted((tags | categories) & LUNCHMARKE):
         note(LUNCH, f"märkt {mark}")
 
+    # M5: portionens innehåll, inte receptets självbild. Okänt protein är
+    # inget bevis åt något håll och noteras därför inte alls.
+    protein = protein_of(recipe)
+    too_lean = protein is not None and not is_dinner_protein_ok(protein)
+    if too_lean:
+        note(LUNCH, f"{protein:g} g protein - under golvet {MIN_DINNER_PROTEIN_G} g")
+
     borderline = [reason for pattern, reason in GRANSFALL if pattern.search(name)]
 
     def fynd(meal_type, rule):
@@ -212,13 +232,17 @@ def classify(recipe: dict) -> Fynd:
             return fynd(SIDE, "sager-tillbehor")
         if SAGER_LUNCH.search(said):
             return fynd(LUNCH, "sager-lunch")
-    # 6. Middagsbeviset.
+    # 6. Proteingolvet. Står FÖRE middagsbeviset: en tagg är en åsikt,
+    #    portionens innehåll är ett faktum. Utan känt protein gäller inget.
+    if too_lean:
+        return fynd(LUNCH, "under-proteingolvet")
+    # 7. Middagsbeviset.
     if says_dinner:
         return fynd(DINNER, "middagsbevis")
-    # 7. Lunchmärkt utan att något talade för middag.
+    # 8. Lunchmärkt utan att något talade för middag.
     if (tags | categories) & LUNCHMARKE:
         return fynd(LUNCH, "lunchmarkt")
-    # 8. Grundfallet. Banken är en bank av huvudrätter.
+    # 9. Grundfallet. Banken är en bank av huvudrätter.
     return fynd(DINNER, "huvudratt")
 
 
