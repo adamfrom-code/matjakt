@@ -33,8 +33,29 @@
       </array>
     </dict>
     <dict>
+      <!-- Namngivna händelser räknas per konto och dygn (api_server.py
+           _handle_analytics_event) för att skilja "23 personer" från "en
+           person, 23 klick". Aldrig finare tidsstämpel än dygnet, aldrig
+           IP, aldrig fritext - men kopplat till kontot, alltså Linked. -->
       <key>NSPrivacyCollectedDataType</key>
-      <string>NSPrivacyCollectedDataTypePreciseLocation</string>
+      <string>NSPrivacyCollectedDataTypeProductInteraction</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <true/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+      </array>
+    </dict>
+    <dict>
+      <!-- Allergier. De ligger i hushållsmedlemmens profil på servern
+           (household/store.py set_profile) och styr vilka recept som får
+           föreslås. Det är hälsouppgifter - artikel 9 i GDPR, och
+           Health i Apples taxonomi. Att de är frivilliga ändrar inte
+           vad de är. -->
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypeHealth</string>
       <key>NSPrivacyCollectedDataTypeLinked</key>
       <true/>
       <key>NSPrivacyCollectedDataTypeTracking</key>
