@@ -597,20 +597,22 @@
           <p class="prem-kap">Matjakt Premium</p>
           <h3>Alla butikers priser, sida vid sida</h3>
           <p class="prem-ingress">Gratisversionen är hel och fortsätter vara det: riktigt pris och hela inköpslistan hos den billigaste kvalificerade butiken. Premium visar dem alla, hämtar priserna per vara under dagen och låter hela hushållet dela samma vecka.</p>
-          <ul class="premium-feature-list">
-            <li>Upp till 7 middagar per vecka</li>
-            <li>Alla veckotyper: familj, budget, träning, bulk, snabb, vegetarisk, balanserad</li>
-            <li>Alla butikers priser och inköpslistor, inte bara den billigaste</li>
-            <li>Exakt jämförelse mellan butikerna</li>
-            <li>Automatiskt val av billigaste butik</li>
-            <li>Näringsmål: kalorier, protein, kolhydrater, fett och proteinkälla</li>
-            <!-- G10: byten är obegränsade OCH gratis. Raden lovade något
-                 som numera ingår i gratisversionen; det som faktiskt är
-                 Premium är byten med en avsikt. -->
-            <li>Byten med avsikt: billigare, snabbare, barnvänligare, mer protein</li>
-            <li>Aktuella erbjudanden och kampanjer</li>
-            <li>Laga med det du redan har hemma</li>
-          </ul>
+          <!-- J2: listan här var nio handskrivna rader bredvid en kodsanning
+               i accounts/features.py, och två av dem sålde funktioner som
+               redan var gratis. Tabellen ritas nu av
+               src/views/premiumtabellen.js ur en rad per funktionsnyckel och
+               prövas mot features.py i tests/premiumtabellen.test.js. Tom
+               här med flit - precis som ångerrättsrutan nedan.
+
+               G10:s rad "Byten med avsikt" följde med bort i samma svep, och
+               det är avsiktligt: avsikterna har ingen nyckel i FEATURES utan
+               låses av swapIntentLocked() i app.js. En rad utan sanningskälla
+               är exakt den sort som gick sönder här. Låset sitter dessutom
+               redan PÅ avsiktsknappen i bytesarket - ordet "Premium" står i
+               etiketten - så funktionen säljs där den används, inte i en
+               lista ingenting tvingar att stämma. Får avsikterna en nyckel i
+               features.py får de en rad, och testet kräver den då. -->
+          <div id="premiumJamforelse"></div>
           <!-- Behållaren bar role="tablist" med två barn som varken hade
                role="tab" eller någon tabpanel att styra: en skärmläsare fick
                veta att den stod i en flikrad och hittade sedan inga flikar.
