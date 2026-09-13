@@ -54,6 +54,7 @@ if test_mode_active():
     from services.recipes import prices as recipe_prices
     from tests.e2e import avbockning
     from tests.e2e import fixture
+    from tests.e2e import matt
     from tests.e2e import vantan
     from tests.e2e.diagnos import (rader_som_saenker_taeckningen, sammanfatta_begaran,
                                    sammanfatta_svar)
@@ -1082,31 +1083,29 @@ class BrowserJourney(unittest.TestCase):
                 # den synliga kanten fortfarande knappen? - och inte som ett
                 # mått i CSS.
                 träff = knapp.evaluate("""
-                    (el) => {
+                    (el, golv) => {
                       const r = el.getBoundingClientRect();
                       const mitt = r.top + r.height / 2;
                       const träffar = (x, y) => {
                         const t = document.elementFromPoint(x, y);
                         return !!(t && (t === el || el.contains(t)));
                       };
-                      const kant = (44 - r.width) / 2;
+                      const kant = (golv - r.width) / 2;
                       return {
                         hojd: r.height,
                         vanster: kant <= 0 || träffar(r.left - kant + 1, mitt),
                         hoger: kant <= 0 || träffar(r.right + kant - 1, mitt),
                       };
                     }
-                """)
-                # HALVPIXELN, inte hundratusendelen. `.screen` bär animationen
-                # screen-in (.35 s), och en rect som mäts medan en transform är
-                # igång räknas ut i float32: höjden 44 kom tillbaka som
-                # 43.999969482421875 i CI och fällde en knapp vars CSS säger
-                # `height:44px`. Kravet är oförändrat - 43,5 faller fortfarande,
-                # för det är inte en avrundning utan en halv pixel - men
-                # mätbruset under animationen är inte en för liten träffyta.
-                self.assertGreaterEqual(round(träff["hojd"], 2), 44, träff)
+                """, matt.golv())
+                # Mätt med matt.minst(): uppmätta pixlar är flyttal, och en
+                # ruta som CSS sätter till 44px läser tillbaka 44 - 2^-15 så
+                # fort raden ligger på en bruten pixel - eller mäts medan
+                # `.screen` kör screen-in. Se tests/e2e/matt.py.
+                self.assertTrue(matt.minst(träff["hojd"]),
+                                f"träffytan är lägre än {matt.TUMYTA_PX} px: {träff}")
                 self.assertTrue(träff["vanster"] and träff["hoger"],
-                                f"träffytan är smalare än 44 px: {träff}")
+                                f"träffytan är smalare än {matt.TUMYTA_PX} px: {träff}")
 
         with self.step("sju rader, rubrik och summering ryms på 844 px"):
             # Mätningen görs med varje rullbar förfader i toppläge: det som
@@ -1139,13 +1138,18 @@ class BrowserJourney(unittest.TestCase):
                 }
             """)
             self.assertEqual(mått["rader"], 7, mått)
-            self.assertGreaterEqual(mått["rubrik"], 0, f"rubriken låg ovanför vikten: {mått}")
+            # Kanterna mäts med matt: topp och botten är samma sorts flyttal
+            # som höjden ovan, och ett block vars underkant hamnar
+            # 0,00003 px under vikten ryms på skärmen. Det som INTE ryms
+            # ligger en halv pixel över, och det syns.
+            self.assertTrue(matt.minst(mått["rubrik"], 0),
+                            f"rubriken låg ovanför vikten: {mått}")
             gräns = min(mått["navTopp"], mått["hojd"])
-            self.assertLessEqual(
-                mått["sista"], gräns,
+            self.assertTrue(
+                matt.hogst(mått["sista"], gräns),
                 f"den sjunde raden ligger under vikten - veckan går inte att läsa: {mått}")
-            self.assertLessEqual(
-                mått["summering"], gräns,
+            self.assertTrue(
+                matt.hogst(mått["summering"], gräns),
                 f"summeringen ligger under vikten: {mått}")
 
         # Och summan säger VAD den är. Ett tal utan det beskedet är precis det
