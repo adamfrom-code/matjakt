@@ -9,7 +9,8 @@
 | `@capacitor/ios` installerad (8.5.1, matchar core 8.5.0) | ✅ | `package.json` |
 | iOS-sektion i Capacitor-konfigen (contentInset, bakgrund, scheme) | ✅ | `capacitor.config.json` |
 | Info.plist-nycklar (plats-behörighet, ej-exempt-kryptering, stående läge, sv) | ✅ förberett | `ios-prep/Info.plist.additions.xml` |
-| Privacy manifest | ✅ förberett | `ios-prep/PrivacyInfo.xcprivacy` |
+| Privacy manifest | ✅ förberett, rättat mot koden i N0k | `ios-prep/PrivacyInfo.xcprivacy` |
+| App Privacy-etikettens svar (fylls i för hand i ASC) | ✅ nedskrivna | `ios-prep/APP_PRIVACY_LABEL.md` |
 | Ikon-/splashkällor för `@capacitor/assets` (1024², 2732²) | ✅ genererade från 512-ikonen | `resources/` (se not om vektorkälla nedan) |
 | Android-paritet: plats-behörighet i manifestet | ✅ | `android/app/src/main/AndroidManifest.xml` |
 | CORS för native-webview (`capacitor://localhost`) | ✅ i `render.yaml`; **sätt även i Render-dashboarden** (env `MATJAKT_FRONTEND_ORIGIN`) | `render.yaml` |
@@ -20,7 +21,7 @@
 2. Lägg in `ios-prep/`-filerna: nycklarna i `ios/App/App/Info.plist`, `PrivacyInfo.xcprivacy` i `ios/App/App/` (lägg till i target i Xcode).
 3. `npx @capacitor/assets generate --ios` (källor i `resources/`).
 4. Xcode: Team + signering, `MARKETING_VERSION 1.0`, `CURRENT_PROJECT_VERSION 1`, Bundle ID `se.matjakt.app`.
-5. App Store Connect: skapa appen, fyll i sekretessetiketter (samma innehåll som PrivacyInfo.xcprivacy: e-post, plats, köphistorik – inga spårningsändamål).
+5. App Store Connect: skapa appen, fyll i App Privacy-etiketten. **Svaren står i `ios-prep/APP_PRIVACY_LABEL.md`** – skriv av dem, gissa inte. Fem uppgifter, alla kopplade till användaren, inga spårningsändamål: e-post, GROV plats (postnumret – inte exakt plats, koordinaterna lämnar aldrig enheten), hälsa (allergier och kosttyp), produktinteraktion (ändamål Analytics) och köphistorik.
 6. Archive → TestFlight → intern testning.
 
 ## Blockerare före App Store (inte TestFlight)
