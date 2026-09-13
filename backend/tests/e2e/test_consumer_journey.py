@@ -35,12 +35,10 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 try:
-    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
     from playwright.sync_api import expect, sync_playwright
     HAVE_PLAYWRIGHT = True
 except ImportError:  # pragma: no cover - miljö utan Playwright
     HAVE_PLAYWRIGHT = False
-    PlaywrightTimeoutError = Exception
 
 from services.data_guard import test_mode_active
 
@@ -54,6 +52,7 @@ if test_mode_active():
     from services.grocery import api as grocery_api
     from services.recipes import api as recipes_api
     from services.recipes import prices as recipe_prices
+    from tests.e2e import avbockning
     from tests.e2e import fixture
     from tests.e2e import vantan
     from tests.e2e.diagnos import (rader_som_saenker_taeckningen, sammanfatta_begaran,
@@ -757,7 +756,9 @@ class BrowserJourney(unittest.TestCase):
             # Kryssrutan är borta: "Har hemma" och "Köpt" är två olika saker
             # och har två knappar (hushållspasset, §6). Ett klick på Köpt är
             # det som förr var en avbockning - plus att varan hamnar hemma.
-            page.click("#shoppingList [data-bought] >> nth=0")
+            att_kopa = avbockning.forsta_obockade(page)
+            self.assertIsNotNone(att_kopa, "listan hade ingen obockad rad att köpa")
+            page.click(avbockning.raden(att_kopa))
             state = self.wait_for_state(lambda s: len(s.get("avklarade") or []) == 1 and len(s.get("removedItems") or []) == 1,
                                         what="borttagen + köpt")
             removed_name = state["removedItems"][0]
@@ -2238,11 +2239,15 @@ class BrowserJourney(unittest.TestCase):
         brus = {namn: i_vila[namn] for namn in self.RECEPTBEHALLARE if i_vila.get(namn)}
         self.assertEqual(brus, {}, f"receptbiblioteket ritades om utan att något hände: {i_vila}")
 
-        knappar = page.locator("#shoppingList [data-bought]")
-        self.assertGreater(knappar.count(), 0, "inköpslistan hade inga varor att bocka av")
-        vara = knappar.first.get_attribute("data-bought")
+        # T2b: namnet läses i ETT svep och klicket fästs vid namnet. Förut
+        # stod här count() följt av get_attribute() - samma tvåstegsläsning
+        # som fällde avbockningsloopen. Den har aldrig fallit HÄR, för listan
+        # är orörd och full när mätningen börjar, men det är samma form: två
+        # frågor om en lista som ritas om mellan dem.
+        vara = avbockning.forsta_obockade(page)
+        self.assertIsNotNone(vara, "inköpslistan hade inga varor att bocka av")
         page.evaluate(self.RAKNARE)
-        knappar.first.click()
+        page.click(avbockning.raden(vara))
 
         # Avbockningen ska synas: varan lämnar den aktiva listan och kassen
         # ritas om. Utan den här väntan mäter testet en bildruta som inte hänt.
@@ -2344,39 +2349,15 @@ class BrowserJourney(unittest.TestCase):
         expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
         expect(page.locator("#shoppingComplete")).to_be_hidden()
 
-        # Bocka av hela listan. Varje klick river listan och startar en ny
-        # prishämtning, så locatorn läses om varje varv i stället för att
-        # hållas fast vid en nod som just ritats bort.
-        #
-        # OCH KLICKET MÅSTE TÅLA ATT NODEN BYTS UT MITT I. Playwright väntar
-        # på att elementet ska stå stilla innan det klickar; ritas listan om
-        # under den väntan blir det "element was detached from the DOM,
-        # retrying" - och på en lastad CI-maskin hinner nästa omritning före
-        # nästa försök, om och om igen, tills locatorn tajmar ut. Testet
-        # klickar därför på VARANS NAMN (ett stabilt fäste, inte "den första
-        # noden just nu) och läser facit ur tillståndet appen skrivit, inte
-        # ur DOM:en. Ett klick som inte landade är inget fel - det är ett
-        # varv till.
-        for _ in range(80):
-            knappar = page.locator("#shoppingList [data-bought]")
-            if knappar.count() == 0:
-                break
-            vara = knappar.first.get_attribute("data-bought")
-            if not vara:
-                continue
-            for _ in range(8):
-                try:
-                    page.click(f'#shoppingList [data-bought="{vara}"]', timeout=4000)
-                except PlaywrightTimeoutError:
-                    pass          # omritad under klicket - läs tillståndet och försök igen
-                if vara in (self.local_state().get("avklarade") or []):
-                    break
-            else:
-                self.fail(f"{vara} gick inte att bocka av")
-            self.wait_for_state(lambda s, namn=vara: namn in (s.get("avklarade") or []),
-                                what=f"{vara} som avbockad")
-        else:
-            self.fail("listan tog aldrig slut")
+        # Bocka av hela listan. Loopen bor i e2e/avbockning.py, för den
+        # behöver veta en sak om appen som ingen call-site ska behöva
+        # upprepa: `setItemStatus` gör `saveState()` och sedan
+        # `invalidate("basket")`, alltså skrivningen först och omritningen en
+        # bildruta senare. Den som läser DOM:en däremellan får svar om ett
+        # läge appen redan lämnat, och det var där den gamla loopen läste.
+        avbockade = avbockning.bocka_av_listan(
+            *avbockning.sidans_lista(page, self.local_state))
+        self.assertGreater(len(avbockade), 0, "listan var tom redan från början")
 
         expect(page.locator("#shoppingComplete")).to_be_visible()
         kvitto = page.locator("#sparkvitto")
