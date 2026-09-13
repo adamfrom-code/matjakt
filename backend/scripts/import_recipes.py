@@ -25,6 +25,8 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 from services.recipes import RecipeStore, normalize_ingredient_id  # noqa: E402
 from services.recipes.images import find_image, placeholder  # noqa: E402
+from services.recipes.meal_types import (  # noqa: E402
+    DINNER, LUNCH, MIN_DINNER_PROTEIN_G, is_dinner_protein_ok, protein_of)
 from services.recipes.pantry import is_pantry_staple, reason  # noqa: E402
 
 RECIPE_DIR = ROOT / "backend" / "recipe_sources"
@@ -69,6 +71,16 @@ def validate(recipe: dict, seen_ids: set, seen_names: set) -> list[str]:
                + nutrition.get("fat", 0) * 9)
     if kcal and abs(derived - kcal) > kcal * 0.3:
         problems.append(f"näringen går inte ihop: {derived:.0f} kcal ur makros mot {kcal}")
+    # M5: proteingolvet för det som får föreslås som middag. Butiken avvisar
+    # det också vid skrivning - men den som skriver källfilen ska få veta det
+    # här, bredvid talet hon just skrev, och inte av ett stacktrace i en
+    # importkörning.
+    protein = protein_of(recipe)
+    if recipe.get("mealType") == DINNER and not is_dinner_protein_ok(protein):
+        problems.append(
+            f"middag under proteingolvet: {protein:g} g mot {MIN_DINNER_PROTEIN_G} g "
+            f"per portion - höj proteinet och räkna om näringen, eller klassa "
+            f"rätten som {LUNCH!r}")
 
     ingredients = recipe.get("ingredients") or []
     if len(ingredients) < 3:
