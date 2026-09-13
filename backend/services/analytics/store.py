@@ -39,6 +39,33 @@ ANALYTICS_EVENTS = frozenset({
     # gång någon öppnade sparstatistiken, butiksjämförelsen eller kedjelistan
     # svarade servern 400 och tappade siffran. Verifierat i produktionsloggen.
     "view_stats", "view_comparison", "view_chainlist",
+    # I7b: och en sjätte vy, samma glapp en gång till. Inställningar (G11) fick
+    # en egen flik under profilknappen; setView("settings") skickade
+    # view_settings från första dagen och listan avvisade det. Raden ovan
+    # beskriver felet, och det hände ändå igen - därför läses namnen numera ur
+    # frontenden av test_analytics_handelsenamn.py i stället för att listan ska
+    # hänga på att någon minns att fylla på den.
+    "view_settings",
+    # I7b: genvägarna, och vad var och en mäter. Alla fyra satt i appen och
+    # avvisades av listan, så ingen av raderna gick att utvärdera - man såg att
+    # den ritades ut, aldrig att någon tryckte på den.
+    # Låst bytesavsikt trycktes -> betalväggen. Vilken avsikt som säljer Premium.
+    "byte_avsikt_last",
+    # "Handlar ni ihop? Dela listan" på Handla -> kontoarkets hushållspanel.
+    "hushall_fran_handla",
+    # "Ange postnummer för priserna i din butik" på Handla -> veckoarket. Måttet
+    # på om G9:s fråga fungerar där svaret gör skillnad, i stället för som grind.
+    "postnummer_fran_handla",
+    # "Vill du ha en familjevecka i stället?" på Vecka -> planjämförelsen.
+    "veckotyp_fran_vecka",
+    # I7b: Inställningar skickar installning_<rad> för VARJE rad, precis som
+    # setView skickar view_<vy>, och ingen av de elva fanns här. Skärmen samlar
+    # inställningarna på ett ställe just för att det ska gå att se vilka som
+    # faktiskt används - utan namnen mätte den ingenting alls.
+    "installning_personer", "installning_hushall", "installning_kost",
+    "installning_budget", "installning_middagar", "installning_butik",
+    "installning_postnummer", "installning_konto", "installning_prenumeration",
+    "installning_notiser", "installning_integritet",
     # I7: kontot, hushållet och hela betalsteget. Utan dem slutade mätningen
     # vid "öppnade Premium-vyn" - trattens dyraste steg var osynligt.
     "konto_skapat", "inbjudan_skickad", "inbjudan_accepterad", "mail_klick",
