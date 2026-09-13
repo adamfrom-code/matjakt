@@ -25,6 +25,7 @@ import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, 
 import { errorText } from "./src/api/http.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { closeModal, openModal } from "./src/utils/modal.js";
+import { askConfirm } from "./src/views/dialog.js";
 import { kopplaSvepBort, kopplaTangentbordsBorttag } from "./src/utils/swipe-remove.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.js";
 import { PACKAGE_INFO, PRODUCT_CATALOG, RECIPE_DETAILS, RECIPE_QUANTITIES } from "./src/data/legacy-catalog.js";
@@ -3792,7 +3793,14 @@ $("resendVerificationBtn").addEventListener("click", async () => {
 });
 $("deleteAccountBtn").addEventListener("click", async () => {
   $("deleteError").textContent = "";
-  if (!confirm("Radera ditt konto permanent? Det går inte att ångra.")) return;
+  const bekräftat = await askConfirm({
+    title: "Radera ditt konto?",
+    body: "Kontot, veckan, listan och skafferiet försvinner. Det går inte att ångra.",
+    confirmLabel: "Radera kontot",
+    cancelLabel: "Behåll kontot",
+    danger: true,
+  });
+  if (!bekräftat) return;
   try {
     await deleteAccount(state.authToken);
     state.authToken = null; state.user = null; storeToken(null);
