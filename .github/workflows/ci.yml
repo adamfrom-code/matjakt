@@ -572,10 +572,17 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
+        with:
+          # K3c: grinden godtar att drift ligger EFTER vår commit, och det
+          # avgörs med `git merge-base --is-ancestor`. Standardcheckouten är
+          # grund (depth 1) och känner då inte igen den commit Render
+          # rapporterar - svaret blir nej, och grinden pollar ut i onödan.
+          # Hela historiken behövs alltså här, och bara här.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Polla /api/health tills commit == GITHUB_SHA (max 8 min)
+      - name: Polla /api/health tills drift är minst så ny (max 8 min)
         env:
           # Repo-variabel om drift någon gång byter adress; annars produktion.
           HALSO_URL: ${{ vars.MATJAKT_HEALTH_URL || 'https://matjakt.onrender.com/api/health' }}
