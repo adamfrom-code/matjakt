@@ -288,8 +288,11 @@ class PlatsenBeskrivsSomKodenFaktisktGor(unittest.TestCase):
     tar aldrig vägen till disk eller server.
 
     Det spelar roll åt båda håll: en policy som överdriver insamlingen är lika
-    oriktig som en som underdriver den, och appens iOS-manifest deklarerar
-    exakt plats som "linked to the user" - någon av de två har fel."""
+    oriktig som en som underdriver den. iOS-manifestet deklarerade länge exakt
+    plats som "linked to the user" och hade alltså samma fel åt andra hållet;
+    N0k tog bort den och satte grov plats (postnumret) i stället. Grinden som
+    håller manifestet mot koden är
+    backend/tests/test_ios_privacy_manifest.py."""
 
     def test_koordinaterna_lamnar_inte_enheten(self):
         state = (ROOT / "frontend/app/src/state/app-state.js").read_text(encoding="utf-8")
