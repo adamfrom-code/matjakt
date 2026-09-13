@@ -100,14 +100,17 @@ test("de två raderna som gjorde listan till en lögn finns inte kvar", () => {
   assert.equal(skafferi.gratis.har, MODELL.funktioner.get("full_pantry"),
     "skafferiraden svarar inte det features.py svarar om ”Laga med det jag har”");
 
-  // Byten har ingen nyckel i features.py. G10 tog bort FREE_SWAP_LIMIT helt -
-  // själva bytet är gratis och obegränsat - och det som är Premium sedan dess
-  // är AVSIKTEN ("Billigare", "Snabbare", ...), låst av swapIntentLocked() i
-  // app.js mot hasPremium(). Ingen nyckel i FEATURES, alltså ingen rad: en rad
-  // utan sanningskälla är precis den sort som gick sönder, och den kan inte
-  // läggas till utan att avvikelser() fäller den. Avsikterna säljs där de
-  // används i stället - ordet "Premium" står i etiketten på knappen.
-  assert.ok(!/byte/.test(etiketter), "byten säljs igen utan en rad i affärsmodellen");
+  // Byten hade ingen nyckel i features.py när den här raden skrevs, och kravet
+  // stod därför som "ingen rad alls": en rad utan sanningskälla är precis den
+  // sort som gick sönder. J6 gav avsikterna nyckeln `swap_intents` - och satte
+  // den till gratis - så nu finns källan, och kravet vänds i stället för att
+  // tas bort. Det som aldrig fick hända var att byten SÄLJS som Premium utan
+  // täckning i modellen; det hindras nu av att raden måste peka ut nyckeln och
+  // svara det features.py svarar. Samma form som skafferiraden ovan.
+  const byten = RADER.find(rad => rad.funktioner.includes("swap_intents"));
+  assert.ok(byten, "swap_intents har ingen rad - då säger tabellen ingenting om byten");
+  assert.equal(byten.gratis.har, MODELL.funktioner.get("swap_intents"),
+    "bytesraden svarar inte det features.py svarar om avsikterna bakom ett byte");
 
   const html = läsFil("frontend/app/index.html");
   for (const lögn of ["Aktuella erbjudanden och kampanjer", "Laga med det du redan har hemma",
