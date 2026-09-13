@@ -61,6 +61,10 @@ import { debounce } from "./src/services/debounce.js";
 import { createEntitlementRefresh } from "./src/services/entitlement-refresh.js";
 import { closeOnboarding, initAccountView, isAwaitingPremium, openOnboarding, openPaywall, openPremiumPitch, renderAccount, renderHousehold, renderNotificationPrefs, renderPostcodePrompt, renderWeekPlanUpsell, setAwaitingPremium, wireHouseholdUi } from "./src/views/account.js";
 import { delaMånaden, initSparatView, renderSparat, sparatModell } from "./src/views/sparat.js";
+// H3: de tolv veckorna i state.weekHistory har funnits i tillståndet hela
+// tiden och ritats ingenstans. Modulen äger formen; den här filen säger bara
+// var den ska rita och hur ett recept-id blir ett namn.
+import { initVeckohistorik, renderVeckohistorik, veckohistorikModell } from "./src/views/veckohistorik.js";
 // G8: första-värde-ögonblicket. Skärmen där veckan lämnas över får inte bära
 // ett hänglås - modulen håller reda på när ögonblicket pågår, app.js säger
 // bara till när veckan levereras och när hon navigerat vidare.
@@ -3685,6 +3689,7 @@ function veckansNyckeltal() {
 }
 function renderStats() {
   renderSparat(sparatModell(state.savingsLog, { vecka: veckansNyckeltal() }));
+  renderVeckohistorik(veckohistorikModell(state.weekHistory));
   // The hero savings card only ever shows REAL arithmetic: the server's own
   // verdict for the CURRENT week (cheapest vs priciest comparable chain).
   // The old estimate-based log said "Uppskattat sparat" - a number nobody
@@ -3713,6 +3718,13 @@ function renderStats() {
 $("openStatsBtn").addEventListener("click", () => { renderStats(); setView("stats"); });
 $("homeShoppingStat").addEventListener("click", () => setView("basket"));
 initSparatView({ $ });
+// H3: historiken bär recept-ID:n, inte namn - annars hade en rätt som byter
+// namn bytt namn också i veckor den aldrig hette så. Slagningen går mot BÅDA
+// bankerna, för en provider-rätt kan mycket väl vara den man åt.
+initVeckohistorik({
+  $,
+  namnFör: id => [...RECEPT, ...state.apiRecipes].find(recipe => recipe.id === id)?.namn || null,
+});
 // "Dela din månad" delar tills vidare meningen som ren text. H4 gör samma
 // mening till en 1080x1080-bild; knappen byter väg då, inte plats.
 $("sparatShareBtn").addEventListener("click", () => { delaMånaden(); });
