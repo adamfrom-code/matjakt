@@ -1148,8 +1148,9 @@ class BrowserJourney(unittest.TestCase):
         prislapp eller ett enda bevis på att appen kan något.
 
         Testet mäter vad hon ser i det ögonblicket: en färdig vecka, inte en
-        modal. Erbjudandet finns kvar, men ovanför veckan och efter den -
-        sälj efter leverans, inte före.
+        modal, och inte ETT ENDA hänglås - varken veckotypernas eller
+        butikskortens. Erbjudandet finns kvar, men ovanför veckan och efter
+        den - sälj efter leverans, inte före.
         """
         page = self.page
         page.goto(self.app())
@@ -1166,6 +1167,37 @@ class BrowserJourney(unittest.TestCase):
         self.assertTrue(1 <= len(state["weekPlan"]) <= 4, state["weekPlan"])
         expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
         expect(page.locator("#weekPlanList [data-week-details]").first).to_be_visible()
+
+        # INTE HELLER ETT HÄNGLÅS AV ANNAT SLAG. Veckotyperna flyttades ur
+        # vägen, men butikskorten stod kvar: "Var blir det billigast?" ritade
+        # "Se pris med Premium" på två av tre kort, OVANFÖR veckan.
+        # Väggen hade bytt plats, inte försvunnit - hon fick fortfarande se
+        # ett lås före sin första måltid.
+        #
+        # Spridningsraden är kvittot på att serverns jämförelse HAR landat:
+        # det är samma svar som bär de låsta kedjorna. Utan den väntan vore
+        # "noll hänglås" sant bara för att ingenting hunnit ritas.
+        expect(page.locator("#storeSpreadTeaser")).to_be_visible(timeout=30_000)
+        kort = page.locator("#storeCards .store-card")
+        self.assertEqual(page.locator("#storeCards .store-card.locked").count(), 0,
+                         kort.all_inner_texts())
+        self.assertEqual(page.locator("[data-store-card-paywall]").count(), 0,
+                         kort.all_inner_texts())
+        # ...och det som ÄR hennes står kvar: butiken, priset, spridningen.
+        expect(kort.first).to_be_visible()
+        self.assertRegex(kort.first.inner_text(), r"\d+ kr")
+        expect(page.locator("#storeSpreadTeaser")).to_contain_text("skiljer sig")
+
+        # ERBJUDANDET ÄR INTE BORTTAGET, det är flyttat bakom leveransen: så
+        # fort hon navigerat vidare står de låsta butikerna där igen, och de
+        # leder till betalväggen de lovar.
+        page.click('.bottom-nav-item[data-view="basket"]')
+        page.click('.bottom-nav-item[data-view="week"]')
+        expect(page.locator("#storeCards .store-card.locked")).to_have_count(2)
+        page.click("#storeCards .store-card.locked >> nth=0")
+        expect(page.locator("#paywallModal")).to_be_visible()
+        page.click("#paywallModal .paywall-continue")
+        expect(page.locator("#paywallModal")).to_be_hidden()
 
         # Raden ovanför veckan är erbjudandet - och den leder till exakt den
         # jämförelse som förut stod i vägen.

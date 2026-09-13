@@ -25,6 +25,7 @@ import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, 
 import { errorText } from "./src/api/http.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { closeModal, openModal } from "./src/utils/modal.js";
+import { askConfirm } from "./src/views/dialog.js";
 import { kopplaSvepBort, kopplaTangentbordsBorttag } from "./src/utils/swipe-remove.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.js";
 import { PACKAGE_INFO, PRODUCT_CATALOG, RECIPE_DETAILS, RECIPE_QUANTITIES } from "./src/data/legacy-catalog.js";
@@ -57,6 +58,10 @@ import { debounce } from "./src/services/debounce.js";
 import { createEntitlementRefresh } from "./src/services/entitlement-refresh.js";
 import { closeOnboarding, initAccountView, isAwaitingPremium, openOnboarding, openPaywall, openPremiumPitch, renderAccount, renderHousehold, renderNotificationPrefs, renderPostcodePrompt, renderWeekPlanUpsell, setAwaitingPremium, wireHouseholdUi } from "./src/views/account.js";
 import { delaMånaden, initSparatView, renderSparat, sparatModell } from "./src/views/sparat.js";
+// G8: första-värde-ögonblicket. Skärmen där veckan lämnas över får inte bära
+// ett hänglås - modulen håller reda på när ögonblicket pågår, app.js säger
+// bara till när veckan levereras och när hon navigerat vidare.
+import { utanHanglas, veckanLevereras, vyBytt } from "./src/views/forsta-vardet.js";
 
 // FÖRST AV ALLT, före en enda rad annan startkod: engångstoken ur
 // adressfältet. `?reset=` är ett fullständigt kontoövertagande i klartext
@@ -1105,6 +1110,10 @@ function chooseMenu(shouldScroll = true) {
   clearPriceSnapshots();
   trackEvent("vecka_skapad");
   saveState();
+  // G8: veckan lämnas över nu. Raden står FÖRE render() - efteråt hade
+  // butikskorten hunnit ritas med sina hänglås. shouldScroll skiljer
+  // leveransen från uppstartens tysta chooseMenu(false), som ingen ser.
+  veckanLevereras(shouldScroll);
   render();
   if (shouldScroll) {
     setView("week");
@@ -1300,7 +1309,10 @@ function renderStoreCards() {
   const comparableCount = entries.filter(entry => !entry.locked && !entry.unavailable).length;
   const compareButton = hasPremium() && comparableCount > 1
     ? `<button type="button" class="store-compare-open store-cards-compare" id="storeCardsCompareBtn">Jämför butiker →</button>` : "";
-  container.innerHTML = entries.map(storeCardMarkup).join("")
+  // G8: under första-värde-ögonblicket ritas bara de butiker hon faktiskt
+  // har. "Var blir det billigast?" står OVANFÖR veckan - ett hänglås
+  // här är ett lås före hennes första måltid.
+  container.innerHTML = utanHanglas(entries).map(storeCardMarkup).join("")
     + (basisLabel ? `<p class="store-basis">${escapeHtml(basisLabel)}</p>` : "")
     + compareButton;
   $("storeCardsCompareBtn")?.addEventListener("click", () => { renderStoreComparisonPage(plannedRecipes()); setView("comparison"); });
@@ -3079,7 +3091,16 @@ $("kcalFilter").addEventListener("change", e => { state.maxKcal = Number(e.targe
 $("favoriteFilter").addEventListener("change", e => { state.baraFavoriter = e.target.checked; renderRecipes(); });
 function setView(view) { $("top").className = `app view-${view}`;
   // Grov tratt för testrundorna: en räknare per flikbesök, inget mer.
-  trackEvent(`view_${view}`); document.querySelectorAll(".bottom-nav-item").forEach(item => item.classList.toggle("active", item.dataset.view === view)); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  trackEvent(`view_${view}`); document.querySelectorAll(".bottom-nav-item").forEach(item => item.classList.toggle("active", item.dataset.view === view)); window.scrollTo({ top: 0, behavior: "smooth" });
+  // G8: hon navigerade vidare - ögonblicket är slut och erbjudandet ska
+  // tillbaka. DIREKT, inte via invalidate(): render-bussen ritar på nästa
+  // bildruta, och då hinner vyn bytas med de låsta korten fortfarande
+  // bortfiltrerade. Ett kort som kommer tillbaka en bildruta senare är en
+  // kapplöpning, och den förlorades på riktigt (test_full_consumer_journey
+  // läste noll låsta butiker direkt efter fliktrycket). Korten är det enda
+  // ögonblicket rör, så det är bara de som behöver ritas om.
+  if (vyBytt(view)) renderStoreCards();
+}
 // Receptsidan är ett eget lager OVANPÅ appen: renderRecipePage() döljer hela
 // #top. Allt som byter flik måste därför lämna den först, annars byts vyn
 // under ett lager som ligger kvar över den. Bottennavigeringen gjorde det
@@ -3772,7 +3793,14 @@ $("resendVerificationBtn").addEventListener("click", async () => {
 });
 $("deleteAccountBtn").addEventListener("click", async () => {
   $("deleteError").textContent = "";
-  if (!confirm("Radera ditt konto permanent? Det går inte att ångra.")) return;
+  const bekräftat = await askConfirm({
+    title: "Radera ditt konto?",
+    body: "Kontot, veckan, listan och skafferiet försvinner. Det går inte att ångra.",
+    confirmLabel: "Radera kontot",
+    cancelLabel: "Behåll kontot",
+    danger: true,
+  });
+  if (!bekräftat) return;
   try {
     await deleteAccount(state.authToken);
     state.authToken = null; state.user = null; storeToken(null);

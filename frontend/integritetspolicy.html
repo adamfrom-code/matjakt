@@ -39,13 +39,18 @@
   a{color:var(--accent)}
   h1{font:400 34px/1.1 var(--f-disp);letter-spacing:-.02em;margin:0 0 6px;color:var(--ink)}
   h2{font:400 22px/1.15 var(--f-disp);margin:36px 0 10px;color:var(--ink)}
-  .updated{color:var(--ink-3);font-size:14px;margin:0 0 30px}
-  /* Platshållarna ska SYNAS att de är platshållare. Accenten får inte bära
-     status (DESIGNSYSTEM-D 2.3), så markeringen är en nedsänkt yta. */
-  .placeholder{background:var(--paper-2);padding:2px 6px;border-bottom:1px solid var(--ink-3)}
-  .notice{margin:0 0 30px;padding:16px 18px;background:var(--paper-2);border-top:1px solid var(--rule-2);font-size:14px}
+  h3{font:500 13px/1.3 var(--f-ui);letter-spacing:.06em;text-transform:uppercase;margin:26px 0 8px;color:var(--ink-2)}
+  .updated{color:var(--ink-3);font-size:14px;margin:0 0 22px}
+  .lead{font:400 18px/1.55 var(--f-disp);color:var(--ink-2);margin:0 0 26px}
+  .note{margin:0 0 30px;padding:14px 16px;background:var(--paper-2);border-top:1px solid var(--rule-2);font-size:14px;color:var(--ink-2)}
+  /* Tabellerna bär tal som ska gå att jämföra rad mot rad; på en telefon
+     scrollar de i sin egen ruta i stället för att knuffa sidan i sidled. */
+  .scroll{overflow-x:auto;margin:14px 0 4px}
+  table{width:100%;border-collapse:collapse;font-size:15px}
+  th,td{text-align:left;padding:9px 12px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font:500 12px/1.3 var(--f-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
   ul{padding-left:22px}
-  li{margin-bottom:6px}
+  li{margin-bottom:8px}
   .back{display:inline-flex;align-items:center;min-height:44px;margin-bottom:12px;font-size:13px;font-weight:500;text-decoration:none}
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
@@ -54,54 +59,133 @@
 <div class="wrap">
   <a class="back" href="index.html">← Tillbaka till Matjakt</a>
   <h1>Integritetspolicy</h1>
-  <p class="updated">Senast uppdaterad: 2026-08-31</p>
+  <p class="updated">Senast uppdaterad: 2026-09-12</p>
 
-  <h2>Vem är personuppgiftsansvarig?</h2>
+  <p class="lead">Den här policyn beskriver den kod som faktiskt körs. Varje uppgift, mottagare och lagringstid nedan går att peka ut i Matjakts källkod, och ändras koden ska texten ändras med den.</p>
+
+  <h2>Personuppgiftsansvarig</h2>
   <p>Adam From, enskild firma, org.nr 199511045651, är personuppgiftsansvarig för behandlingen av personuppgifter i Matjakt. Kontakta oss på <a href="mailto:adamfrom@icloud.com">adamfrom@icloud.com</a> vid frågor om denna policy eller dina uppgifter.</p>
 
-  <h2>Vilka uppgifter samlar vi in?</h2>
+  <h2>Vilka uppgifter behandlar vi?</h2>
+
+  <h3>Kontot</h3>
+  <p>E-postadress, lösenord och tidpunkten då kontot skapades. Lösenordet sparas aldrig i klartext utan som en nyckel härledd med PBKDF2-HMAC-SHA256, 200 000 iterationer och ett eget slumpat salt per konto. Sessionstoken lagras bara som SHA-256-hash, och detsamma gäller verifieringslänkens och lösenordsåterställningens token: den som kommer över databasen får inga levande inloggningar på köpet.</p>
+
+  <h3>Ditt synkade tillstånd</h3>
+  <p>Det appen behöver för att visa samma vecka på alla dina enheter: hushållets storlek, budget, postnummer, vald butik, veckans recept, inköpslista, skafferi, favoriter, kostpreferenser, allergier, ogillade råvaror och näringsmål.</p>
+
+  <h3>Plats</h3>
+  <p>Den platsuppgift Matjakt sparar är ditt <strong>postnummer</strong>, och bara det. Trycker du på <em>Hitta mig</em> läser appen din enhets position en gång för att välja postnummer och sortera butiker efter avstånd – men koordinaterna stannar i appens minne på din enhet. De skrivs varken till din webbläsares lagring eller till vår server, de följer inte med i synken, och de finns inte kvar när du stänger appen. Byter du postnummer släpps positionen direkt. Vi sparar ingen platshistorik. Själva avståndsräkningen sker i din enhet: servern skickar butikernas koordinater till dig, aldrig tvärtom.</p>
+
+  <h3>Hushållet</h3>
+  <p>Delar du hushåll sparas ditt medlemskap, din roll, ett visningsnamn och en liten profil: kosttyp, styrka, allergier och ogillade råvaror. Hushållets gemensamma vecka, inköpslista och skafferi syns för alla medlemmar. Händelseloggen som driver notiserna rymmer högst 500 rader per hushåll och innehåller vem som gjorde vad med vilken vara. En inbjudan sparas bara som hash och går att lösa in en gång.</p>
+
+  <h3>Notiser</h3>
+  <p>Slår du på veckonotisen sparas din webbläsares eller telefons push-prenumeration: adressen (endpointen) i klartext, eftersom det är den adressen servern skickar notisen till, tillsammans med de två nycklar som krypterar notisens innehåll. Vi loggar dessutom att en notis gick ut – konto, sort, dag och tidpunkt, aldrig innehållet – så att du får högst en söndagsnotis även om servern startas om.</p>
+
+  <h3>Prenumeration</h3>
+  <p>Premiumstatus, vald plan, periodens slut och referenserna till din kund och din prenumeration hos Stripe. Kortuppgifter når aldrig Matjakt: de skrivs in hos Stripe och stannar där.</p>
+
+  <h3>Missbruksspärr</h3>
+  <p>Din IP-adress, och vid inloggning även den e-postadress som anges, räknas i en missbruksspärr som skriver raderna till en egen databasfil på serverns disk – inte bara till processminnet. En rad består av vilken åtgärd det gällde, identifieraren – din IP-adress eller den e-postadress som skrevs in – och ett klockslag, och den behövs för att gissningar mot lösenord, engångskoder och återställningsmejl ska kosta något. Raderna slutar räknas efter det längsta tidsfönstret, som är en timme, och städas bort löpande när nya anrop kommer in; på en tyst server kan en rad därför ligga kvar en stund längre än så. Spärrens rader är de enda uppgifter om dig som inte försvinner i samma ögonblick som du raderar kontot – de rensas i stället bort av sig själva.</p>
+
+  <h3>Produktstatistik</h3>
+  <p>Matjakt räknar en fast, namngiven lista av händelser – till exempel <em>skapade en vecka</em>, <em>använde inköpslistan</em> och <em>öppnade Premium</em> – i två tabeller: antal per händelse och dag, och för inloggade dessutom antal per konto, dag och händelse. Aldrig klockslag, aldrig IP-adress, aldrig fritext och aldrig vad du sökte på. Klienten kan inte hitta på egna händelsenamn. Statistiken används för att förstå om appen fungerar. Raderna som är knutna till ditt konto raderas med kontot; de anonyma dagsräknarna bär ingen identitet och finns kvar.</p>
+
+  <h3>Feedback</h3>
+  <p>Skickar du in feedback sparas texten du skrev och vilken skärm du stod på, utan koppling till ditt konto.</p>
+
+  <h3>Serverloggar</h3>
+  <p>Vanlig driftloggning hos Render: anrop, tidsstämpel och fel. Loggen kan innehålla en e-postadress när ett utskick misslyckas, men aldrig lösenord, token eller nycklar.</p>
+
+  <h2>Känsliga uppgifter – allergier och kost</h2>
+  <p>Allergier och kosttyp säger något om din hälsa. Sådana uppgifter tillhör de särskilda kategorier av personuppgifter som regleras i artikel 9 i dataskyddsförordningen, och de får bara behandlas om du uttryckligen samtycker till det. Du lämnar dem frivilligt, och du kan när som helst ta bort dem i appen – under Inställningar för ditt eget konto, och i hushållsprofilen för det du delat med familjen. Tar du bort dem slutar Matjakt filtrera recept på dem, men ingenting annat påverkas.</p>
+
+  <h2>Varför behandlar vi uppgifterna?</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th scope="col">Ändamål</th><th scope="col">Rättslig grund</th></tr></thead>
+    <tbody>
+      <tr><td>Skapa och sköta ditt konto, hålla dig inloggad</td><td>Fullgörande av avtalet med dig</td></tr>
+      <tr><td>Planera veckan, prissätta listan och jämföra butiker</td><td>Fullgörande av avtalet med dig</td></tr>
+      <tr><td>Dela vecka, lista och skafferi i ett hushåll</td><td>Fullgörande av avtalet med dig</td></tr>
+      <tr><td>Filtrera recept på allergier och kosttyp</td><td>Ditt uttryckliga samtycke (artikel 9.2 a)</td></tr>
+      <tr><td>Hantera betald prenumeration via Stripe</td><td>Fullgörande av avtalet med dig</td></tr>
+      <tr><td>Skicka kontomejl: verifiering och lösenordsåterställning</td><td>Fullgörande av avtalet med dig</td></tr>
+      <tr><td>Skicka veckonotisen till din enhet</td><td>Ditt samtycke – du slår på den själv</td></tr>
+      <tr><td>Skicka veckans erbjudanden och tips per e-post</td><td>Ditt samtycke – varje mejl har en avregistreringslänk</td></tr>
+      <tr><td>Spärra missbruk: gissade lösenord, massanrop, skräputskick</td><td>Berättigat intresse av att hålla tjänsten uppe och konton säkra</td></tr>
+      <tr><td>Produktstatistik och driftloggning</td><td>Berättigat intresse av att veta om appen fungerar</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>Vem får se uppgifterna?</h2>
+  <p>Vi säljer aldrig dina uppgifter, och Matjakt har inga reklam-SDK:er, inga spårningskakor och ingen spårning över andra sajter.</p>
+
+  <h3>Det din webbläsare hämtar direkt</h3>
   <ul>
-    <li><strong>Kontouppgifter:</strong> e-postadress och ett lösenord (sparas aldrig i klartext, bara som en säker hash).</li>
-    <li><strong>Matinställningar:</strong> budget, antal personer, kosttyp, allergier, ogillade ingredienser, näringsmål, favoritbutik och postnummer.</li>
-    <li><strong>Användning i appen:</strong> ditt skafferi, valda veckomenyer, betyg och feedback (gillar/ogillar/lagat/hoppat över) – används för att förbättra dina förslag.</li>
-    <li><strong>Produktstatistik:</strong> vilken dag ditt konto senast användes och vilka av appens grundfunktioner (t.ex. "skapade en vecka", "använde inköpslistan") som användes vilken dag. Aldrig klockslag, aldrig IP-adress, aldrig vad du sökte på. Används bara för att förstå om appen fungerar och raderas med kontot.</li>
-    <li><strong>Platsinformation:</strong> postnummer eller, om du väljer att dela det, din enhets ungefärliga plats, för att hitta butiker nära dig.</li>
-    <li><strong>Betalningsuppgifter:</strong> vi lagrar aldrig kortuppgifter själva. Betalning hanteras av Stripe, som är egen personuppgiftsansvarig för de uppgifter du lämnar där.</li>
-    <li><strong>Teknisk information:</strong> vanlig serverloggning (IP-adress, tidsstämpel) för drift och felsökning.</li>
+    <li><strong>Google Fonts</strong> – de publika sidorna på matjakt.store hämtar typsnitten Archivo och Newsreader från <em>fonts.googleapis.com</em> och <em>fonts.gstatic.com</em>. Google ser då din IP-adress och vilken webbläsare du har. Inga kontouppgifter skickas med. Själva appen bär sina typsnitt som egna filer och kontaktar inte Google alls.</li>
+    <li><strong>Plausible</strong> – besöksstatistiken körs med Plausible, och bara på startsidan matjakt.store. Den är kakfri och får en sidvisning med adress, hänvisande sida och grov geografi – aldrig ditt konto, din e-post eller din inköpslista. <strong>Inne i appen mäts ingenting med Plausible</strong>, och de här juridiska sidorna laddar inte skriptet alls.</li>
+    <li><strong>GitHub Pages</strong> – de publika sidorna och själva appen ligger som statiska filer hos GitHub, som ser besökarnas IP-adresser i sina egna loggar. Bara <em>/api</em> går till vår egen server.</li>
+    <li><strong>Bildvärdar</strong> – recept- och produktbilder ligger kvar hos sin källa och hämtas direkt av din webbläsare: <em>images.pexels.com</em> (receptfoton), <em>images.openfoodfacts.org</em>, <em>assets.axfood.se</em> och ICA:s bildvärd (produktbilder). Värden ser din IP-adress och vilken webbläsare du har; inga kontouppgifter följer med, och värden får inte veta vem du är eller vad som står på resten av din lista.</li>
   </ul>
 
-  <h2>Varför behandlar vi dina uppgifter?</h2>
+  <h3>Det servern kontaktar för din räkning</h3>
   <ul>
-    <li>För att skapa och sköta ditt konto och driva appens grundfunktioner (avtal – fullgörande av avtalet med dig).</li>
-    <li>För att beräkna prisförslag och matcha recept mot dina preferenser (avtal / berättigat intresse).</li>
-    <li>För att hantera betald prenumeration via Stripe (avtal).</li>
-    <li>För att skicka kontorelaterade e-postmeddelanden, t.ex. verifiering och lösenordsåterställning (berättigat intresse).</li>
-    <li>För att skicka veckans erbjudanden och tips per e-post – bara om du själv tackat ja (samtycke). Varje sådant mejl har en länk för att avsluta, och du kan ändra valet när som helst under Konto i appen.</li>
+    <li><strong>Stripe</strong> – betalning och prenumeration. Stripe får din e-postadress och ett kund-id, och är själv personuppgiftsansvarig för det du lämnar i deras betalformulär.</li>
+    <li><strong>Resend</strong> – vår e-postleverantör, i dag <em>smtp.resend.com</em>. Transaktionsmejlen (verifiering, lösenordsåterställning) och de utskick du tackat ja till lämnar servern via dem, som därmed får mottagaradressen och mejlets innehåll. Byter vi leverantör uppdaterar vi den här raden.</li>
+    <li><strong>Render</strong> – Matjakts server och den disk som bär alla tabeller ovan driftas hos Render.</li>
+    <li><strong>Apple, Google och Mozilla</strong> – veckonotisen skickas till den push-tjänst som hör till din enhet och webbläsare. Tjänsten får adressen till din enhet och ett krypterat meddelande som bara din enhet kan låsa upp.</li>
   </ul>
 
-  <h2>Vem delar vi uppgifter med?</h2>
-  <ul>
-    <li><strong>Stripe</strong> – betalningshantering.</li>
-    <li><strong>Render</strong> – driftplattform för Matjakts server.</li>
-    <li><strong>Livsmedelsverket</strong> – öppen näringsdata (inga personuppgifter skickas dit).</li>
-    <li>De butikswebbplatser vars priser visas i appen kontaktas inte med dina personuppgifter – prisinsamlingen sker anonymt och på servern, aldrig från din enhet.</li>
-    <li><strong>Pexels</strong> – receptbilder och film laddas från Pexels bildtjänst; din webbläsare hämtar då bilderna direkt därifrån, utan att vi skickar några kontouppgifter.</li>
-  </ul>
-  <p>Vi säljer aldrig dina uppgifter till tredje part.</p>
+  <h3>Det ditt postnummer – och bara det – skickas till</h3>
+  <p>För att hitta butikerna nära dig frågar servern tre källor med ditt postnummer som enda uppgift: <strong>Zippopotam</strong> (slår upp ort och koordinater), <strong>Primat</strong> (vilka butiker som har fullt sortiment i området) och <strong>ICA:s butikssökning</strong>. Inget konto, ingen e-postadress, ingen IP-adress och ingen inköpslista följer med – och frågan ställs alltid från vår server, aldrig från din telefon. Svaret sparas per postnummer i en gemensam cache, så samma uppslag betjänar alla som bor i samma område: det går inte att utläsa ur den vem som frågade.</p>
 
-  <h2>Hur länge sparar vi uppgifterna?</h2>
-  <p>Så länge du har ett konto. Raderar du ditt konto i appen (Konto → Radera konto) tas dina kontouppgifter och sparade data bort permanent, och en eventuell aktiv prenumeration avslutas samtidigt.</p>
+  <h3>Källor som aldrig får något om dig</h3>
+  <p>Priser och produktdata hämtas på servern, på hela sortimentet och aldrig per användare: <strong>Dabas</strong> (produktdata, innehåll och allergener), <strong>Open Food Facts</strong> (produktuppgifter och bild-länkar), Primats prislistor och butikskedjornas egna publika webbutiker – Willys och Hemköp (Axfood), ICA, Coop och City Gross. Näringsvärden och volymvikter bygger på Livsmedelsverkets publicerade öppna data, hämtade i förväg; servern kontaktar dem inte när du använder appen. Ingen av de här källorna får veta något om dig, din lista eller din enhet.</p>
+
+  <h2>Var behandlas uppgifterna?</h2>
+  <p>Servern med all kontodata står hos Render, sidorna och appen levereras av GitHub, betalningarna hanteras av Stripe, mejlen skickas via Resend, typsnitten hämtas från Google och notiserna levereras av Apple, Google eller Mozilla. Flera av dem är amerikanska bolag, och dina uppgifter kan därför komma att behandlas utanför EU och EES. Vill du veta exakt vilken leverantör som behandlar vad, eller vilket skydd som gäller för en viss överföring, skriv till <a href="mailto:adamfrom@icloud.com">adamfrom@icloud.com</a> så får du svar.</p>
+
+  <h2>Hur länge sparas uppgifterna?</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th scope="col">Uppgift</th><th scope="col">Sparas</th></tr></thead>
+    <tbody>
+      <tr><td>Konto, synkat tillstånd, hushållsprofil</td><td>Tills du raderar kontot</td></tr>
+      <tr><td>Sessionstoken</td><td>30 dygn från inloggning</td></tr>
+      <tr><td>Verifieringslänk</td><td>7 dygn</td></tr>
+      <tr><td>Återställningslänk för lösenord</td><td>1 timme</td></tr>
+      <tr><td>Inbjudan till hushåll</td><td>72 timmar</td></tr>
+      <tr><td>Hushållets händelselogg</td><td>De 500 senaste händelserna per hushåll</td></tr>
+      <tr><td>Push-prenumeration</td><td>Tills du loggar ut, stänger av notisen eller raderar kontot</td></tr>
+      <tr><td>Missbruksspärrens rader</td><td>Räknas i högst en timme, städas bort löpande</td></tr>
+      <tr><td>Säkerhetskopior</td><td>De 7 senaste kopiorna – en per dygn, alltså ungefär en vecka</td></tr>
+      <tr><td>Serverlogg hos Render</td><td>Renders egen logglagring</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Raderar du ditt konto i appen försvinner det ur databasen direkt. En säkerhetskopia tas ett dygn i taget och de sju senaste sparas, så uppgifterna kan finnas kvar i en kopia tills den kopian faller ur listan – normalt ungefär en vecka, men har servern stått stilla kan de sju kopiorna sträcka sig längre bak än så. En återställning från backup skulle återskapa raderade konton; sker det körs raderingarna från perioden efter kopians stämpel om.</p>
 
   <h2>Dina rättigheter</h2>
   <ul>
-    <li><strong>Radera konto</strong> – gör det själv när som helst i appen under Konto.</li>
-    <li><strong>Rätta uppgifter</strong> – dina matinställningar kan du ändra direkt i appen.</li>
-    <li><strong>Begära utdrag</strong> – kontakta oss på <a href="mailto:adamfrom@icloud.com">adamfrom@icloud.com</a> för en kopia av dina uppgifter.</li>
-    <li><strong>Klaga</strong> – du har rätt att vända dig till Integritetsskyddsmyndigheten (IMY) om du anser att vi hanterar dina uppgifter fel.</li>
+    <li><strong>Radera kontot</strong> – Konto → Radera konto i appen, när du vill och utan att fråga oss. Då försvinner kontot och det synkade tillståndet, ditt hushållsmedlemskap, din hushållsprofil, dina notisinställningar, din sparhistorik och dina push-prenumerationer. En eventuell prenumeration sägs upp hos Stripe <em>innan</em> kontot tas bort, och Stripe-kunden raderas efteråt. Gemensam hushållsdata stannar hos de andra medlemmarna.</li>
+    <li><strong>Få ut dina uppgifter</strong> – en maskinläsbar JSON-export finns och innehåller sju delar: kontot, det synkade tillståndet, hushållet, skafferiet, inköpslistan, produktstatistiken och prenumerationen. Lösenordshash, salt, sessioner och återställningstoken ingår inte – de är inte dina uppgifter i någon användbar mening och är just det som gör en läckt fil farlig. Knappen i appen är inte byggd ännu; skriv till <a href="mailto:adamfrom@icloud.com">adamfrom@icloud.com</a> så skickar vi filen.</li>
+    <li><strong>Rätta uppgifter</strong> – budget, hushåll, postnummer, kost och allergier ändrar du själv i appen, och lösenordet byter du under Konto. E-postadressen går ännu inte att byta i appen; mejla oss så gör vi det åt dig.</li>
+    <li><strong>Återkalla samtycke</strong> – slå av veckonotisen eller utskicken under Konto i appen, eller använd avregistreringslänken längst ned i varje utskick. Tar du bort dina allergi- och kostuppgifter återkallar du samtycket till dem.</li>
+    <li><strong>Invända och begära begränsning</strong> – hör av dig till <a href="mailto:adamfrom@icloud.com">adamfrom@icloud.com</a>, så prövar vi begäran och svarar inom en månad.</li>
+    <li><strong>Klaga</strong> – du har alltid rätt att vända dig till Integritetsskyddsmyndigheten, <a href="https://www.imy.se">imy.se</a>, om du anser att vi hanterar dina uppgifter fel.</li>
   </ul>
 
   <h2>Cookies och lokal lagring</h2>
-  <p>Matjakt sparar inställningar i din webbläsares lokala lagring (localStorage), inte via spårningscookies. Är du inloggad synkas samma data till ditt konto på servern så att den följer med mellan enheter.</p>
+  <p>Matjakt sätter inga spårningskakor. Appen sparar din sessionstoken och ditt lokala tillstånd i webbläsarens <em>localStorage</em>, vilket krävs för att du ska kunna vara inloggad och se din vecka. Är du inloggad synkas samma tillstånd till ditt konto på servern så att det följer med mellan enheter. Besöksstatistiken är kakfri och kräver därför ingen samtyckesruta.</p>
+
+  <h2>Barn</h2>
+  <p>Matjakt vänder sig till den som handlar mat till ett hushåll. Den enda uppgift vi behandlar om ett barn är att en hushållsmedlem kan markeras som barn, så att portioner och kryddstyrka blir rätt. Vi ber aldrig om barnets namn, ålder eller något annat om barnet.</p>
+
+  <h2>Ändringar i policyn</h2>
+  <p>Vi kan uppdatera policyn. Datumet högst upp visar när den senast ändrades, och väsentliga ändringar meddelas i appen eller via e-post innan de börjar gälla.</p>
 
   <h2>Kontakt</h2>
   <address style="font-style:normal">
@@ -111,6 +195,7 @@
     805 52 Gävle<br>
     <a href="mailto:adamfrom@icloud.com">adamfrom@icloud.com</a>
   </address>
+  <p class="note">Se även <a href="anvandarvillkor.html">användarvillkoren</a>, som beskriver avtalet mellan dig och Matjakt.</p>
 </div>
 </body>
 </html>

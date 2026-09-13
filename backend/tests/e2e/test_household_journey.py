@@ -282,8 +282,13 @@ class HouseholdJourney(unittest.TestCase):
 
         # --- Sara lämnar, access försvinner -------------------------------------
         self._open_household(sara)
-        sara.evaluate("() => { window.confirm = () => true; }")
+        # G12: frågan ställs i appens egen dialog, inte i webbläsarens. Den
+        # gick inte att stubba bort - och behöver det inte heller, för nu går
+        # den att klicka på. Fästet är data-dialog och inte etiketten:
+        # "Lämna hushållet" står på BÅDA knapparna, den man tryckte på och den
+        # i dialogen.
         sara.click("#householdLeaveBtn")
+        sara.click('.app-dialog [data-dialog="confirm"]')
         sara.wait_for_timeout(1500)
         self.assertEqual(self._api(sara, "/api/household/sync")["status"], 404,
                          "Sara har kvar åtkomst efter att ha lämnat")
