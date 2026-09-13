@@ -62,17 +62,6 @@
       "Dela broccolin i buketter och ånga eller koka den 4 minuter så den fortfarande har tuggmotstånd.",
       "Servera kyckling och broccoli över riset."
     ],
-    "categories": [
-      "Kyckling",
-      "Ris"
-    ],
-    "tags": [
-      "proteinrikt",
-      "kyckling",
-      "mealprep",
-      "familj",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "soja"
@@ -86,7 +75,15 @@
     "imageCredit": "Tim Douglas",
     "imageLicense": "Pexels License",
     "imageAlt": "Kyckling med ris och broccoli upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "ris",
+      "familj",
+      "mealprep",
+      "proteinrikt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "laxfile-quinoa",
@@ -152,15 +149,6 @@
       "Vänd ner spenaten i den varma quinoan så den faller ihop.",
       "Servera laxen på quinoan med dillcrèmen vid sidan."
     ],
-    "categories": [
-      "Fisk"
-    ],
-    "tags": [
-      "proteinrikt",
-      "fisk",
-      "snabbt",
-      "mealprep"
-    ],
     "allergens": [
       "fisk",
       "laktos"
@@ -174,7 +162,13 @@
     "imageCredit": "Patrick",
     "imageLicense": "Pexels License",
     "imageAlt": "Ugnsbakad laxfilé med quinoa upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "mealprep",
+      "proteinrikt",
+      "snabbt"
+    ]
   },
   {
     "id": "biff-sotpotatis",
@@ -238,15 +232,6 @@
       "Stek biffen i het panna 2-3 minuter per sida för rosa mitt. Låt vila 5 minuter under folie.",
       "Skiva biffen och servera med klyftorna och en klick örtsmör ovanpå."
     ],
-    "categories": [
-      "Kött",
-      "Helgmiddag"
-    ],
-    "tags": [
-      "proteinrikt",
-      "kott",
-      "helgmiddag"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -259,7 +244,12 @@
     "imageCredit": "Dextar Studio ™",
     "imageLicense": "Pexels License",
     "imageAlt": "Stekt biff med sötpotatis upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "helgmiddag",
+      "kott",
+      "proteinrikt"
+    ]
   },
   {
     "id": "kvargbowl-kyckling",
@@ -324,17 +314,6 @@
       "Tärna gurka och tomat.",
       "Lägg upp matvete, kyckling och grönsaker i skålar och ringla över kvargdressingen."
     ],
-    "categories": [
-      "Kyckling",
-      "Lunch"
-    ],
-    "tags": [
-      "proteinrikt",
-      "kyckling",
-      "mealprep",
-      "snabbt",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -348,7 +327,15 @@
     "imageCredit": "MART  PRODUCTION",
     "imageLicense": "Pexels License",
     "imageAlt": "Kycklingbowl med kvarg och matvete upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "lunch",
+      "mealprep",
+      "proteinrikt",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "aggrora-bacon-bonor",
@@ -412,14 +399,6 @@
       "Sänk värmen, tillsätt smöret och häll i äggen. Rör försiktigt tills röran precis stannat men fortfarande är krämig.",
       "Toppa med bacon och hackad gräslök."
     ],
-    "categories": [
-      "Lunch"
-    ],
-    "tags": [
-      "proteinrikt",
-      "snabbt",
-      "billigt"
-    ],
     "allergens": [
       "ägg",
       "laktos"
@@ -433,7 +412,13 @@
     "imageCredit": "Markus Spiske",
     "imageLicense": "Pexels License",
     "imageAlt": "Äggröra med bacon och vita bönor upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "lunch",
+      "billigt",
+      "proteinrikt",
+      "snabbt"
+    ]
   },
   {
     "id": "tonfisksallad-bonor",
@@ -498,17 +483,6 @@
       "Vispa ihop olivolja med pressad citron och salt.",
       "Blanda allt försiktigt så tonfisken inte faller sönder helt, och låt stå tio minuter före servering."
     ],
-    "categories": [
-      "Fisk",
-      "Lunch"
-    ],
-    "tags": [
-      "proteinrikt",
-      "fisk",
-      "snabbt",
-      "billigt",
-      "mealprep"
-    ],
     "allergens": [
       "fisk"
     ],
@@ -521,7 +495,15 @@
     "imageCredit": "Nadin Sh",
     "imageLicense": "Pexels License",
     "imageAlt": "Tonfisksallad med vita bönor upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "lunch",
+      "billigt",
+      "mealprep",
+      "proteinrikt",
+      "snabbt"
+    ]
   },
   {
     "id": "linsbolognese-proteinrik",
@@ -597,18 +579,6 @@
       "Låt puttra 20 minuter tills linserna är mjuka och såsen tjocknat. Rör om då och då.",
       "Koka pastan under tiden och servera såsen över den."
     ],
-    "categories": [
-      "Pasta",
-      "Vegetariskt"
-    ],
-    "tags": [
-      "proteinrikt",
-      "vegetariskt",
-      "veganskt",
-      "billigt",
-      "mealprep",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten"
     ],
@@ -621,7 +591,16 @@
     "imageCredit": "Ketut Subiyanto",
     "imageLicense": "Pexels License",
     "imageAlt": "Linsbolognese med fullkornspasta upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "pasta",
+      "vegetariskt",
+      "billigt",
+      "mealprep",
+      "proteinrikt",
+      "vardagsmat",
+      "veganskt"
+    ]
   },
   {
     "id": "flaskfile-rotfrukter",
@@ -686,16 +665,6 @@
       "Lägg in filén till rotfrukterna de sista 12-15 minuterna, tills innertemperaturen är 65 grader.",
       "Låt köttet vila 10 minuter innan du skivar det."
     ],
-    "categories": [
-      "Kött",
-      "Husmanskost"
-    ],
-    "tags": [
-      "proteinrikt",
-      "kott",
-      "helgmiddag",
-      "familj"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost"
@@ -706,7 +675,14 @@
     "imageCredit": "Sylwester Ficek",
     "imageLicense": "Pexels License",
     "imageAlt": "Fläskfilé med rostade rotfrukter upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "kott",
+      "familj",
+      "helgmiddag",
+      "proteinrikt"
+    ]
   },
   {
     "id": "kikartscurry-protein",
@@ -777,17 +753,6 @@
       "Låt puttra 12 minuter så såsen tjocknar.",
       "Vänd ner spenaten och låt den falla ihop. Smaka av med salt och servera med riset."
     ],
-    "categories": [
-      "Vegetariskt",
-      "Ris"
-    ],
-    "tags": [
-      "vegetariskt",
-      "veganskt",
-      "billigt",
-      "proteinrikt",
-      "mealprep"
-    ],
     "allergens": [],
     "dietFlags": [
       "veganskt"
@@ -798,7 +763,15 @@
     "imageCredit": "Pranjall Kumar",
     "imageLicense": "Pexels License",
     "imageAlt": "Kikärtscurry med spenat upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "ris",
+      "vegetariskt",
+      "billigt",
+      "mealprep",
+      "proteinrikt",
+      "veganskt"
+    ]
   },
   {
     "id": "kycklingwok-nudlar-protein",
@@ -863,16 +836,6 @@
       "Tillsätt vitlök, ingefära och grönsakerna och woka 3-4 minuter så de behåller sitt tuggmotstånd.",
       "Vänd ner nudlarna och sojan och blanda allt varmt igenom."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "proteinrikt",
-      "kyckling",
-      "snabbt",
-      "mealprep",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "soja"
@@ -886,6 +849,13 @@
     "imageCredit": "I Own My Food Art",
     "imageLicense": "Pexels License",
     "imageAlt": "Kycklingwok med nudlar upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "mealprep",
+      "proteinrikt",
+      "snabbt",
+      "vardagsmat"
+    ]
   }
 ]

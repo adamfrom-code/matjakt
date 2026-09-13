@@ -67,15 +67,6 @@
       "Häll grädden i pannan runt biffarna och låt puttra en minut till en enkel sky.",
       "Servera biffarna med potatis, stekt lök och skyn över."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "barn",
-      "billigt",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -89,7 +80,13 @@
     "imageCredit": "Dextar Studio ™",
     "imageLicense": "Pexels License",
     "imageAlt": "Pannbiff med stekt lök och kokt potatis upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "barn",
+      "billigt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "flygande-jakob",
@@ -157,15 +154,6 @@
       "Klipp och stek baconet knaprigt under tiden.",
       "Toppa gratängen med bacon och jordnötter och servera med riset."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "barn",
-      "husmanskost",
-      "helgmiddag",
-      "Familjefavorit"
-    ],
     "allergens": [
       "laktos",
       "jordnötter"
@@ -179,7 +167,13 @@
     "imageCredit": "Kr-val",
     "imageLicense": "CC BY-SA 3.0",
     "imageAlt": "Flygande Jacob i ugnsform, serverad med ris och sallad",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "familjefavorit",
+      "barn",
+      "helgmiddag"
+    ]
   },
   {
     "id": "dillkott",
@@ -255,20 +249,17 @@
       "Rör ner grädden och köttet, värm igenom och smaka av sting och sälta.",
       "Servera med den kokta potatisen och extra dill över."
     ],
-    "categories": [
-      "Husmanskost",
-      "Grytor"
-    ],
-    "tags": [
-      "husmanskost",
-      "mealprep"
-    ],
     "allergens": [
       "gluten",
       "laktos"
     ],
     "dietFlags": [
       "blandkost"
+    ],
+    "labels": [
+      "grytor",
+      "husmanskost",
+      "mealprep"
     ]
   },
   {
@@ -344,15 +335,6 @@
       "Koka potatisen mot slutet av tiden.",
       "Smaka av grytan och servera med potatis och inlagda rödbetor."
     ],
-    "categories": [
-      "Husmanskost",
-      "Grytor"
-    ],
-    "tags": [
-      "husmanskost",
-      "mealprep",
-      "billigt"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -366,7 +348,13 @@
     "imageCredit": "Novkov Visuals",
     "imageLicense": "Pexels License",
     "imageAlt": "Kalops med rödbetor upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "grytor",
+      "husmanskost",
+      "billigt",
+      "mealprep"
+    ]
   },
   {
     "id": "korv-stroganoff-klassisk",
@@ -436,17 +424,6 @@
       "Häll på grädden, sänk värmen och sjud 5 minuter tills såsen tjocknat.",
       "Smaka av med salt och peppar och servera med riset."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "barn",
-      "billigt",
-      "snabbt",
-      "husmanskost",
-      "Familjefavorit",
-      "vardagsmat"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -459,7 +436,15 @@
     "imageCredit": "Blockhaj",
     "imageLicense": "CC BY 4.0",
     "imageAlt": "Korvstroganoff med strimlad korv i tomatsås på ris",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "familjefavorit",
+      "barn",
+      "billigt",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "raggmunk",
@@ -525,13 +510,6 @@
       "Håll raggmunkarna varma i låg ugn medan du steker resten.",
       "Servera direkt med fläsket och lingonsylt."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "billigt",
-      "husmanskost"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -546,7 +524,11 @@
     "imageCredit": "Nadin Sh",
     "imageLicense": "Pexels License",
     "imageAlt": "Raggmunk med fläsk och lingon upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "billigt"
+    ]
   },
   {
     "id": "fiskgratang-dill",
@@ -617,15 +599,6 @@
       "Strö över räkorna de sista fem minuterna så de bara blir varma.",
       "Servera med potatis och en citronklyfta."
     ],
-    "categories": [
-      "Fisk",
-      "Husmanskost"
-    ],
-    "tags": [
-      "fisk",
-      "husmanskost",
-      "helgmiddag"
-    ],
     "allergens": [
       "laktos",
       "skaldjur",
@@ -641,7 +614,12 @@
     "imageCredit": "Vidal Balielo Jr.",
     "imageLicense": "Pexels License",
     "imageAlt": "Fiskgratäng med dill och räkor upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "husmanskost",
+      "helgmiddag"
+    ]
   },
   {
     "id": "stekt-sej-remoulad",
@@ -717,16 +695,6 @@
       "Stek filéerna gyllene i smör, 3-4 minuter per sida beroende på tjocklek.",
       "Servera fisken direkt med potatis, kall sås och en klyfta citron."
     ],
-    "categories": [
-      "Fisk",
-      "Husmanskost"
-    ],
-    "tags": [
-      "fisk",
-      "husmanskost",
-      "barn",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -743,7 +711,13 @@
     "imageCredit": "Nadin Sh",
     "imageLicense": "Pexels License",
     "imageAlt": "Stekt sej med kall sås och potatis upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "husmanskost",
+      "barn",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kycklinggryta-paprika",
@@ -819,16 +793,6 @@
       "Rör ner crème fraiche, låt grytan puttra ihop fem minuter och smaka av.",
       "Servera grytan över riset."
     ],
-    "categories": [
-      "Kyckling",
-      "Grytor"
-    ],
-    "tags": [
-      "kyckling",
-      "mealprep",
-      "Familjefavorit",
-      "vardagsmat"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -841,7 +805,14 @@
     "imageCredit": "Harry Tucker",
     "imageLicense": "Pexels License",
     "imageAlt": "Kycklinggryta med paprika och crème fraiche upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "grytor",
+      "kyckling",
+      "familjefavorit",
+      "mealprep",
+      "vardagsmat"
+    ]
   },
   {
     "id": "gulaschgryta",
@@ -916,14 +887,6 @@
       "Smaka av med spiskummin, salt och gärna en nypa socker.",
       "Servera i djupa tallrikar med bröd till."
     ],
-    "categories": [
-      "Grytor"
-    ],
-    "tags": [
-      "mealprep",
-      "husmanskost",
-      "billigt"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost",
@@ -936,7 +899,13 @@
     "imageCredit": "Rachel Claire",
     "imageLicense": "Pexels License",
     "imageAlt": "Gulaschgryta med potatis upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "grytor",
+      "billigt",
+      "husmanskost",
+      "mealprep"
+    ]
   },
   {
     "id": "chili-con-carne",
@@ -1020,14 +989,6 @@
       "Skölj bönorna och rör ner dem. Sjud tio minuter till och smaka av.",
       "Koka riset och servera grytan över, gärna med en klick syrad grädde."
     ],
-    "categories": [
-      "Grytor"
-    ],
-    "tags": [
-      "mealprep",
-      "billigt",
-      "proteinrikt"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost",
@@ -1040,7 +1001,13 @@
     "imageCredit": "Vanessa Loring",
     "imageLicense": "Pexels License",
     "imageAlt": "Chili con carne upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "grytor",
+      "billigt",
+      "mealprep",
+      "proteinrikt"
+    ]
   },
   {
     "id": "kottfarssoppa",
@@ -1111,16 +1078,6 @@
       "Smaka av med timjan, salt och peppar.",
       "Servera med en bit bröd till."
     ],
-    "categories": [
-      "Soppor"
-    ],
-    "tags": [
-      "billigt",
-      "barn",
-      "snabbt",
-      "mealprep",
-      "vardagsmat"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost",
@@ -1133,7 +1090,15 @@
     "imageCredit": "Gundula Vogel",
     "imageLicense": "Pexels License",
     "imageAlt": "Köttfärssoppa med rotfrukter upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "soppor",
+      "barn",
+      "billigt",
+      "mealprep",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "fisksoppa-saffran",
@@ -1209,15 +1174,6 @@
       "Rör ner räkor och hackad dill, dra av från värmen och smaka av.",
       "Servera med bröd eller aioli."
     ],
-    "categories": [
-      "Fisk",
-      "Soppor"
-    ],
-    "tags": [
-      "fisk",
-      "snabbt",
-      "helgmiddag"
-    ],
     "allergens": [
       "laktos",
       "skaldjur",
@@ -1234,7 +1190,13 @@
     "imageCredit": "Gundula Vogel",
     "imageLicense": "Pexels License",
     "imageAlt": "Fisksoppa med lax och räkor upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "soppor",
+      "helgmiddag",
+      "snabbt"
+    ]
   },
   {
     "id": "broccolisoppa",
@@ -1300,16 +1262,6 @@
       "Rosta fröna gyllene i en torr panna.",
       "Servera soppan med fröna över och bröd till."
     ],
-    "categories": [
-      "Vegetariskt",
-      "Soppor"
-    ],
-    "tags": [
-      "vegetariskt",
-      "billigt",
-      "snabbt",
-      "vardagsmat"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -1323,7 +1275,14 @@
     "imageCredit": "Polina Tankilevitch",
     "imageLicense": "Pexels License",
     "imageAlt": "Broccolisoppa med frön upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "soppor",
+      "vegetariskt",
+      "billigt",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "artsoppa-vegetarisk",
@@ -1384,18 +1343,6 @@
       "Sjud under lock i 75-90 minuter tills ärtorna kokat sönder till en tjock soppa.",
       "Smaka av med salt och servera med senap vid sidan."
     ],
-    "categories": [
-      "Vegetariskt",
-      "Soppor",
-      "Husmanskost"
-    ],
-    "tags": [
-      "vegetariskt",
-      "billigt",
-      "husmanskost",
-      "proteinrikt",
-      "mealprep"
-    ],
     "allergens": [],
     "dietFlags": [
       "vegetariskt",
@@ -1409,7 +1356,15 @@
     "imageCredit": "JIP",
     "imageLicense": "CC BY-SA 4.0",
     "imageAlt": "Tallrik med gul ärtsoppa och knäckebröd bredvid",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "soppor",
+      "vegetariskt",
+      "billigt",
+      "mealprep",
+      "proteinrikt"
+    ]
   },
   {
     "id": "falukorv-ugn",
@@ -1475,16 +1430,6 @@
       "Mosa potatisen med mjölk och smör och smaka av med salt.",
       "Servera korven skivad med moset."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "barn",
-      "billigt",
-      "husmanskost",
-      "Familjefavorit",
-      "vardagsmat"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -1498,7 +1443,14 @@
     "imageCredit": "Nadin Sh",
     "imageLicense": "Pexels License",
     "imageAlt": "Ugnsbakad falukorv med potatismos upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "familjefavorit",
+      "barn",
+      "billigt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "stekt-strommingsflundra",
@@ -1558,15 +1510,6 @@
       "Smält resten av smöret i en liten kastrull tills det tystnar och doftar nötigt.",
       "Servera fisken med potatis, det skirade smöret, hackad persilja och citron."
     ],
-    "categories": [
-      "Fisk",
-      "Husmanskost"
-    ],
-    "tags": [
-      "fisk",
-      "husmanskost",
-      "snabbt"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -1582,7 +1525,12 @@
     "imageCredit": "Nadin Sh",
     "imageLicense": "Pexels License",
     "imageAlt": "Stekt fisk med skirat smör och potatis upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "husmanskost",
+      "snabbt"
+    ]
   },
   {
     "id": "kycklingsoppa-nudlar",
@@ -1652,16 +1600,6 @@
       "Lägg i nudlarna och koka dem enligt paketets tid direkt i soppan.",
       "Smaka av med salt och servera rykande het."
     ],
-    "categories": [
-      "Kyckling",
-      "Soppor"
-    ],
-    "tags": [
-      "kyckling",
-      "snabbt",
-      "barn",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "ägg"
@@ -1676,7 +1614,14 @@
     "imageCredit": "Farhad Ibrahimzade",
     "imageLicense": "Pexels License",
     "imageAlt": "Kycklingsoppa med nudlar upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "soppor",
+      "barn",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "lammfarsbiffar-tzatziki",
@@ -1751,13 +1696,6 @@
       "Stek biffarna 4-5 minuter per sida tills de är genomstekta.",
       "Servera med klyftpotatisen, tzatzikin och en klyfta citron."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "helgmiddag",
-      "Familjefavorit"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -1771,7 +1709,12 @@
     "imageCredit": "Caio Niceas",
     "imageLicense": "Pexels License",
     "imageAlt": "Färsbiffar med tzatziki och klyftpotatis upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "familjefavorit",
+      "helgmiddag"
+    ]
   },
   {
     "id": "sotpotatissoppa",
@@ -1847,16 +1790,6 @@
       "Smaka av med limesaft och salt.",
       "Toppa med hackade jordnötter och servera."
     ],
-    "categories": [
-      "Vegetariskt",
-      "Soppor"
-    ],
-    "tags": [
-      "vegetariskt",
-      "billigt",
-      "snabbt",
-      "vardagsmat"
-    ],
     "allergens": [
       "jordnötter"
     ],
@@ -1872,7 +1805,14 @@
     "imageCredit": "cottonbro studio",
     "imageLicense": "Pexels License",
     "imageAlt": "Sötpotatissoppa med kokos och lime upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "soppor",
+      "vegetariskt",
+      "billigt",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "biff-a-la-lindstrom",
@@ -1943,12 +1883,6 @@
       "Mosa potatisen med mjölk och smör.",
       "Servera biffarna med mos, stekt lök och gärna en klick senap."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost"
-    ],
     "allergens": [
       "laktos",
       "ägg"
@@ -1963,7 +1897,10 @@
     "imageCredit": "Muhammad  Khawar Nazir",
     "imageLicense": "Pexels License",
     "imageAlt": "Biff à la Lindström med potatismos upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost"
+    ]
   },
   {
     "id": "morotssoppa-ingefara",
@@ -2033,15 +1970,6 @@
       "Pressa i apelsinsaften och smaka av med salt.",
       "Rosta pumpafröna i torr panna och strö över vid servering."
     ],
-    "categories": [
-      "Vegetariskt",
-      "Soppor"
-    ],
-    "tags": [
-      "vegetariskt",
-      "billigt",
-      "vardagsmat"
-    ],
     "allergens": [],
     "dietFlags": [
       "vegetariskt",
@@ -2055,6 +1983,12 @@
     "imageCredit": "cottonbro studio",
     "imageLicense": "Pexels License",
     "imageAlt": "Morotssoppa med ingefära upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "soppor",
+      "vegetariskt",
+      "billigt",
+      "vardagsmat"
+    ]
   }
 ]

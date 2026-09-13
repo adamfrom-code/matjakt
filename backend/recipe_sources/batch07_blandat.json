@@ -77,16 +77,6 @@
       "Gratinera i 10-12 minuter tills osten smält och fått färg.",
       "Servera med crème fraiche och gärna en grönsallad."
     ],
-    "categories": [
-      "Kött"
-    ],
-    "tags": [
-      "kott",
-      "barn",
-      "Familjefavorit",
-      "helgmiddag",
-      "vardagsmat"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -100,7 +90,14 @@
     "imageCredit": "Sylwester Ficek",
     "imageLicense": "Pexels License",
     "imageAlt": "Tacogratäng med tortillachips upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kott",
+      "familjefavorit",
+      "barn",
+      "helgmiddag",
+      "vardagsmat"
+    ]
   },
   {
     "id": "pastasallad-kyckling-lunch",
@@ -170,17 +167,6 @@
       "Vänd ner kyckling, halverade tomater, riven mozzarella, tunt skivad rödlök och spenat.",
       "Smaka av med salt. Håller sig två dagar i kylen."
     ],
-    "categories": [
-      "Kyckling",
-      "Pasta"
-    ],
-    "tags": [
-      "kyckling",
-      "lunch",
-      "mealprep",
-      "snabbt",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -194,7 +180,15 @@
     "imageCredit": "Ocko Geserick",
     "imageLicense": "Pexels License",
     "imageAlt": "Pastasallad med kyckling och pesto upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "pasta",
+      "lunch",
+      "mealprep",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "krämig-svampasta",
@@ -270,15 +264,6 @@
       "Vänd ner pastan med parmesan och en skvätt pastavatten.",
       "Smaka av med citronsaft och salt."
     ],
-    "categories": [
-      "Vegetariskt",
-      "Pasta"
-    ],
-    "tags": [
-      "vegetariskt",
-      "snabbt",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -292,7 +277,13 @@
     "imageCredit": "İNZİLE DAL",
     "imageLicense": "Pexels License",
     "imageAlt": "Krämig svamppasta med timjan upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "pasta",
+      "vegetariskt",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "flaskfile-svampsas",
@@ -363,14 +354,6 @@
       "Koka haricots verts i 3 minuter.",
       "Servera filén med sås, potatis och bönor."
     ],
-    "categories": [
-      "Kött"
-    ],
-    "tags": [
-      "kott",
-      "helgmiddag",
-      "Familjefavorit"
-    ],
     "allergens": [
       "laktos",
       "soja"
@@ -385,7 +368,12 @@
     "imageCredit": "Sylwester Ficek",
     "imageLicense": "Pexels License",
     "imageAlt": "Fläskfilé med svampsås och råstekt potatis upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kott",
+      "familjefavorit",
+      "helgmiddag"
+    ]
   },
   {
     "id": "linsdaal",
@@ -470,15 +458,6 @@
       "Smaka av med salt.",
       "Värm naanbrödet och servera daalen toppad med koriander."
     ],
-    "categories": [
-      "Vegetariskt",
-      "Grytor"
-    ],
-    "tags": [
-      "vegetariskt",
-      "billigt",
-      "mealprep"
-    ],
     "allergens": [
       "gluten"
     ],
@@ -493,7 +472,13 @@
     "imageCredit": "dhiraj jain",
     "imageLicense": "Pexels License",
     "imageAlt": "Daal på röda linser med naanbröd upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "grytor",
+      "vegetariskt",
+      "billigt",
+      "mealprep"
+    ]
   },
   {
     "id": "biffgryta-rotter",
@@ -573,17 +558,6 @@
       "Lägg i rotfrukter och potatis i grova bitar och sjud 30 minuter till.",
       "Smaka av med salt och servera i djupa tallrikar."
     ],
-    "categories": [
-      "Kött",
-      "Grytor",
-      "Husmanskost"
-    ],
-    "tags": [
-      "kott",
-      "husmanskost",
-      "mealprep",
-      "helgmiddag"
-    ],
     "allergens": [
       "gluten"
     ],
@@ -597,7 +571,14 @@
     "imageCredit": "Rachel Claire",
     "imageLicense": "Pexels License",
     "imageAlt": "Mustig köttgryta med rotfrukter och timjan upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "grytor",
+      "husmanskost",
+      "kott",
+      "helgmiddag",
+      "mealprep"
+    ]
   },
   {
     "id": "gronsakssoppa-med-pasta",
@@ -682,15 +663,6 @@
       "Rör ner de sköljda bönorna och oregano och värm igenom.",
       "Smaka av med salt och servera med riven parmesan och en skvätt olivolja."
     ],
-    "categories": [
-      "Vegetariskt",
-      "Soppor"
-    ],
-    "tags": [
-      "vegetariskt",
-      "billigt",
-      "mealprep"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -704,7 +676,13 @@
     "imageCredit": "jules",
     "imageLicense": "CC BY 2.0",
     "imageAlt": "Två skålar minestrone med vita bönor och zucchini",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "soppor",
+      "vegetariskt",
+      "billigt",
+      "mealprep"
+    ]
   },
   {
     "id": "lax-i-ugn-fetaost",
@@ -775,14 +753,6 @@
       "Vänd ner spenaten i den varma formen.",
       "Servera med ris och citron."
     ],
-    "categories": [
-      "Fisk"
-    ],
-    "tags": [
-      "fisk",
-      "snabbt",
-      "helgmiddag"
-    ],
     "allergens": [
       "fisk",
       "laktos"
@@ -791,6 +761,11 @@
       "blandkost",
       "glutenfritt",
       "pescetariskt"
+    ],
+    "labels": [
+      "fisk",
+      "helgmiddag",
+      "snabbt"
     ]
   },
   {
@@ -860,14 +835,6 @@
       "Skär sallad och tomat till en enkel sallad.",
       "Servera biffarna direkt med en klick vitlökssmör som smälter över, potatis och sallad."
     ],
-    "categories": [
-      "Kött"
-    ],
-    "tags": [
-      "kott",
-      "snabbt",
-      "proteinrikt"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -881,7 +848,12 @@
     "imageCredit": "pedro furtado",
     "imageLicense": "Pexels License",
     "imageAlt": "Lövbiff med vitlökssmör och klyftpotatis upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kott",
+      "proteinrikt",
+      "snabbt"
+    ]
   },
   {
     "id": "pulled-chicken-tacos",
@@ -960,15 +932,6 @@
       "Dra isär kycklingen i såsen och koka ihop utan lock om den är för lös.",
       "Värm tortillabröden och fyll med kyckling, majs och picklad lök."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "kyckling",
-      "barn",
-      "helgmiddag",
-      "mealprep"
-    ],
     "allergens": [
       "gluten"
     ],
@@ -982,7 +945,13 @@
     "imageCredit": "Cristhian  David Duarte",
     "imageLicense": "Pexels License",
     "imageAlt": "Pulled chicken-tacos med majs upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "barn",
+      "helgmiddag",
+      "mealprep"
+    ]
   },
   {
     "id": "spenatsoppa-agg",
@@ -1052,18 +1021,6 @@
       "Mixa soppan slät om du vill, rör ner grädden och värm.",
       "Smaka av med salt och servera med ägghalvor och knäckebröd."
     ],
-    "categories": [
-      "Vegetariskt",
-      "Soppor",
-      "Husmanskost"
-    ],
-    "tags": [
-      "vegetariskt",
-      "snabbt",
-      "billigt",
-      "husmanskost",
-      "vardagsmat"
-    ],
     "allergens": [
       "ägg",
       "laktos",
@@ -1078,7 +1035,15 @@
     "imageCredit": "Novkov Visuals",
     "imageLicense": "Pexels License",
     "imageAlt": "Spenatsoppa med ägghalvor upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "soppor",
+      "vegetariskt",
+      "billigt",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "chevrasallad-ronnbar",
@@ -1149,14 +1114,6 @@
       "Blanda sallad och tomater med olivolja, citronsaft och salt.",
       "Toppa salladen med chèvrebröden, valnötterna och resten av honungen."
     ],
-    "categories": [
-      "Vegetariskt"
-    ],
-    "tags": [
-      "vegetariskt",
-      "lunch",
-      "helgmiddag"
-    ],
     "allergens": [
       "laktos",
       "gluten",
@@ -1171,7 +1128,12 @@
     "imageCredit": "Valeria Boltneva",
     "imageLicense": "Pexels License",
     "imageAlt": "Varm chèvresallad med honung och valnötter upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "vegetariskt",
+      "helgmiddag",
+      "lunch"
+    ]
   },
   {
     "id": "gnocchi-tomat-mozzarella",
@@ -1242,17 +1204,6 @@
       "Gratinera i 10 minuter tills osten smält och fått färg.",
       "Toppa med basilika och servera direkt."
     ],
-    "categories": [
-      "Vegetariskt",
-      "Pasta"
-    ],
-    "tags": [
-      "vegetariskt",
-      "barn",
-      "snabbt",
-      "Familjefavorit",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -1266,7 +1217,15 @@
     "imageCredit": "Mayumi Maciel",
     "imageLicense": "Pexels License",
     "imageAlt": "Gnocchi med tomatsås och mozzarella upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "pasta",
+      "vegetariskt",
+      "familjefavorit",
+      "barn",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "strimlad-flaskkarre-ris",
@@ -1333,14 +1292,6 @@
       "Woka grönsakerna hastigt och blanda med köttet.",
       "Servera över riset."
     ],
-    "categories": [
-      "Kött"
-    ],
-    "tags": [
-      "kott",
-      "snabbt",
-      "bulk"
-    ],
     "allergens": [
       "soja"
     ],
@@ -1354,7 +1305,12 @@
     "imageCredit": "Ruth Hartnup from Vancouver, Canada",
     "imageLicense": "CC BY 2.0",
     "imageAlt": "Strimlad fläskkarré med paprika i sojasås bredvid kokt ris",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kott",
+      "bulk",
+      "snabbt"
+    ]
   },
   {
     "id": "vegansk-bolognese-vegofars",
@@ -1434,16 +1390,6 @@
       "Sjud i 15-20 minuter tills såsen är tjock och blank.",
       "Koka spaghettin och servera med såsen."
     ],
-    "categories": [
-      "Vegetariskt",
-      "Pasta"
-    ],
-    "tags": [
-      "vegetariskt",
-      "barn",
-      "billigt",
-      "mealprep"
-    ],
     "allergens": [
       "gluten",
       "soja"
@@ -1459,7 +1405,14 @@
     "imageCredit": "sascha Mayer",
     "imageLicense": "Pexels License",
     "imageAlt": "Vegansk bolognese på vegofärs upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "pasta",
+      "vegetariskt",
+      "barn",
+      "billigt",
+      "mealprep"
+    ]
   },
   {
     "id": "torskrygg-ortstekt",
@@ -1529,14 +1482,6 @@
       "Koka ihop grädde och senap till en krämig sås, rör ner hackad dill och gräslök.",
       "Servera fisken med potatis och såsen."
     ],
-    "categories": [
-      "Fisk"
-    ],
-    "tags": [
-      "fisk",
-      "helgmiddag",
-      "proteinrikt"
-    ],
     "allergens": [
       "fisk",
       "laktos"
@@ -1545,6 +1490,11 @@
       "blandkost",
       "glutenfritt",
       "pescetariskt"
+    ],
+    "labels": [
+      "fisk",
+      "helgmiddag",
+      "proteinrikt"
     ]
   },
   {
@@ -1621,14 +1571,6 @@
       "Bygg burgarna med chilimajonnäs, sallad, halloumi, tomat och tunn rödlök.",
       "Servera med klyftpotatisen."
     ],
-    "categories": [
-      "Vegetariskt"
-    ],
-    "tags": [
-      "vegetariskt",
-      "helgmiddag",
-      "barn"
-    ],
     "allergens": [
       "laktos",
       "gluten",
@@ -1643,7 +1585,12 @@
     "imageCredit": "Markus Spiske",
     "imageLicense": "Pexels License",
     "imageAlt": "Halloumiburgare med chilimajonnäs upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "vegetariskt",
+      "barn",
+      "helgmiddag"
+    ]
   },
   {
     "id": "krispiga-kikartor-bowl",
@@ -1718,14 +1665,6 @@
       "Vispa tahini med citronsaft, pressad vitlök, salt och vatten till en rinnig dressing.",
       "Bygg skålar med matvete, grönsaker och kikärtor. Ringla över dressingen."
     ],
-    "categories": [
-      "Vegetariskt"
-    ],
-    "tags": [
-      "vegetariskt",
-      "lunch",
-      "mealprep"
-    ],
     "allergens": [
       "gluten",
       "sesam"
@@ -1734,6 +1673,11 @@
       "vegetariskt",
       "veganskt",
       "laktosfritt"
+    ],
+    "labels": [
+      "vegetariskt",
+      "lunch",
+      "mealprep"
     ]
   },
   {
@@ -1804,17 +1748,6 @@
       "Blanda sköljda bönor med hackad persilja, citronsaft, olivolja och salt.",
       "Servera direkt ur långpannan med bönsalladen."
     ],
-    "categories": [
-      "Kött"
-    ],
-    "tags": [
-      "kott",
-      "billigt",
-      "snabbt",
-      "barn",
-      "husmanskost",
-      "vardagsmat"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost",
@@ -1827,7 +1760,15 @@
     "imageCredit": "AMANDA LIM",
     "imageLicense": "Pexels License",
     "imageAlt": "Ugnskorv med rostad potatis och bönsallad upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kott",
+      "barn",
+      "billigt",
+      "husmanskost",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "risgrynsgrot-lordag",
@@ -1885,16 +1826,6 @@
       "Tärna äpplena och stek dem gyllene i smör med lite socker och kanel.",
       "Smaka av gröten och servera med det stekta äpplet och mer kanel."
     ],
-    "categories": [
-      "Vegetariskt",
-      "Husmanskost"
-    ],
-    "tags": [
-      "vegetariskt",
-      "barn",
-      "billigt",
-      "husmanskost"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -1908,7 +1839,13 @@
     "imageCredit": "Gundula Vogel",
     "imageLicense": "Pexels License",
     "imageAlt": "Risgrynsgröt med kanel och äpple upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "vegetariskt",
+      "barn",
+      "billigt"
+    ]
   },
   {
     "id": "wallenbergare",
@@ -1984,15 +1921,6 @@
       "Stek biffarna varsamt i rikligt med smör, 3-4 minuter per sida.",
       "Koka ärtorna och servera biffarna med mos, ärtor och lingon."
     ],
-    "categories": [
-      "Kött",
-      "Husmanskost"
-    ],
-    "tags": [
-      "kott",
-      "husmanskost",
-      "helgmiddag"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -2007,7 +1935,12 @@
     "imageCredit": "https://kaboompics.com/",
     "imageLicense": "Pexels License",
     "imageAlt": "Wallenbergare med potatismos och ärtor upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "kott",
+      "helgmiddag"
+    ]
   },
   {
     "id": "aggwok-ris",
@@ -2073,15 +2006,6 @@
       "Lägg i riset och stek tills det får lite färg.",
       "Vänd ner ägg och soja och toppa med gräslök."
     ],
-    "categories": [
-      "Vegetariskt",
-      "Ris"
-    ],
-    "tags": [
-      "vegetariskt",
-      "snabbt",
-      "billigt"
-    ],
     "allergens": [
       "ägg",
       "soja"
@@ -2096,7 +2020,13 @@
     "imageCredit": "Thượng Hy",
     "imageLicense": "Pexels License",
     "imageAlt": "Äggfriststekt ris med grönsaker upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "ris",
+      "vegetariskt",
+      "billigt",
+      "snabbt"
+    ]
   },
   {
     "id": "bulk-kyckling-jattebowl",
@@ -2171,16 +2101,6 @@
       "Ånga broccolin i 3-4 minuter.",
       "Bygg skålar med ris, kyckling och broccoli och ringla över såsen."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "kyckling",
-      "bulk",
-      "proteinrikt",
-      "mealprep",
-      "vardagsmat"
-    ],
     "allergens": [
       "jordnötter",
       "soja"
@@ -2195,6 +2115,13 @@
     "imageCredit": "MART  PRODUCTION",
     "imageLicense": "Pexels License",
     "imageAlt": "Bulkbowl med kyckling, ris och jordnötssås upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "bulk",
+      "mealprep",
+      "proteinrikt",
+      "vardagsmat"
+    ]
   }
 ]
