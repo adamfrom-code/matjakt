@@ -863,13 +863,13 @@ function can(feature) {
 }
 function maxDinners() { return hasPremium() ? 7 : (entitlements.maxDinners || 4); }
 function premiumPricing() {
-  // Reservvärdet gäller bara innan /api/entitlements svarat. Det bär samma
-  // siffror som backend (features.PRICING) så flikarna aldrig visar tomt.
-  return entitlements.pricing || {
-    monthly: { priceText: "59 kr/mån", pricePerMonth: 59 },
-    yearly: { priceText: "399 kr/år", pricePerYear: 399, perMonthText: "≈ 33 kr/mån",
-              savingsText: "Spara 309 kr jämfört med månadsbetalning", badge: "Bäst värde" },
-  };
+  // Inget reservpris, med flit. Reservobjektet bar 59/399 och fyra fält som
+  // ingen läste efter L7, och så länge det låg mellan svaret och vyn fick
+  // premiumskarmen.js aldrig se ett saknat pris - modulens "pris saknas" var
+  // onåbar i appen. Priset bor i backend (features.PRICING) och når hit via
+  // /api/entitlements; har svaret inte kommit säger skärmen det i stället för
+  // att rita ett tal som kan ha slutat gälla.
+  return entitlements.pricing || {};
 }
 // Ångerrätten (distansavtalslagen). Texten kommer från backend precis som
 // priserna - reservvärdet gäller bara innan /api/entitlements svarat, och
