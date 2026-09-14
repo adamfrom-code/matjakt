@@ -266,7 +266,9 @@ class ImportgrindenTest(unittest.TestCase):
 
     def _problem(self, *ingredients):
         recept = {"id": "prov", "name": "Provrätt", "description": "Prov.",
-                  "servings": 4, "tags": ["vardag"],
+                  # `labels`, inte `tags`: M4 slog ihop `categories` och
+                  # `tags` till ett fält, och importgrinden avvisar de gamla.
+                  "servings": 4, "labels": ["vardag"],
                   "nutrition": {"kcal": 600, "protein": 30, "carbs": 60, "fat": 25},
                   "instructions": ["Koka.", "Rör.", "Servera."],
                   "ingredients": list(ingredients)}

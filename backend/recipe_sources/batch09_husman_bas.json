@@ -53,15 +53,6 @@
       "Häll smeten över det varma fläsket och grädda 25 minuter tills pannkakan är gyllene och stannat i mitten.",
       "Servera direkt ur formen med lingonsylt."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "barn",
-      "billigt"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -76,7 +67,13 @@
     "imageCredit": "Håkan Dahlström from Malmö, Sweden",
     "imageLicense": "CC BY 2.0",
     "imageAlt": "Gyllenbrun fläskpannkaka med bitar av rimmat sidfläsk",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "barn",
+      "billigt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kaldolmar",
@@ -161,14 +158,6 @@
       "Ringla över sirap, klicka på smör och stek i ugnen cirka 40 minuter tills dolmarna fått fin färg.",
       "Koka potatisen. Koka ihop grädden med skyn från formen till en enkel sås. Servera med lingon."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "helgmiddag"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -182,7 +171,12 @@
     "imageCredit": "Boryslav Shoot",
     "imageLicense": "Pexels License",
     "imageAlt": "Kåldolmar med gräddsås och potatis upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "helgmiddag",
+      "vardagsmat"
+    ]
   },
   {
     "id": "sjomansbiff",
@@ -247,15 +241,6 @@
       "Låt sjuda i ugnen eller på svag värme cirka 1 timme tills potatisen är mjuk och köttet mört.",
       "Strö över hackad persilja och servera direkt ur grytan."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "billigt",
-      "helgmiddag"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost",
@@ -268,7 +253,13 @@
     "imageCredit": "pedro furtado",
     "imageLicense": "Pexels License",
     "imageAlt": "Sjömansbiff upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "billigt",
+      "helgmiddag",
+      "vardagsmat"
+    ]
   },
   {
     "id": "sondagsstek",
@@ -343,14 +334,6 @@
       "Sila skyn, koka upp med grädde och soja och låt såsen tjockna några minuter.",
       "Koka potatisen och servera med tunt skivad stek, sås och gärna gelé."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "helgmiddag",
-      "Familjefavorit"
-    ],
     "allergens": [
       "laktos",
       "soja"
@@ -365,7 +348,12 @@
     "imageCredit": "Acabashi",
     "imageLicense": "CC BY-SA 4.0",
     "imageAlt": "Skivad stek med sås, rostad potatis och rotfrukter på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "familjefavorit",
+      "helgmiddag"
+    ]
   },
   {
     "id": "isterband-dillstuvad",
@@ -429,14 +417,6 @@
       "Stek isterbanden i en torr panna på medelvärme tills de är knapriga runt om, cirka 12 minuter.",
       "Servera isterbanden med den dillstuvade potatisen."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "billigt"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -450,7 +430,12 @@
     "imageCredit": "Jgu",
     "imageLicense": "CC BY 3.0",
     "imageAlt": "Stekt isterband med potatismos och ärtor på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "billigt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kroppkakor",
@@ -520,14 +505,6 @@
       "Sjud kroppkakorna i saltat vatten cirka 5 minuter efter att de flutit upp.",
       "Servera med smält smör och lingonsylt."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "helgmiddag",
-      "billigt"
-    ],
     "allergens": [
       "gluten",
       "ägg"
@@ -541,7 +518,12 @@
     "imageCredit": "Sendelbach (talk)",
     "imageLicense": "CC BY-SA 3.0",
     "imageAlt": "Två kroppkakor med smält smör och lingonsylt på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "billigt",
+      "helgmiddag"
+    ]
   },
   {
     "id": "panerad-torsk-potatismos",
@@ -620,16 +602,6 @@
       "Koka upp ärtorna i lättsaltat vatten.",
       "Servera den panerade torsken med mos, ärtor och en citronklyfta."
     ],
-    "categories": [
-      "Husmanskost",
-      "Fisk"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "barn",
-      "Familjefavorit"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -646,7 +618,14 @@
     "imageCredit": "Bingqian Li",
     "imageLicense": "Pexels License",
     "imageAlt": "Panerad torsk med potatismos och ärtor upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "husmanskost",
+      "familjefavorit",
+      "barn",
+      "vardagsmat"
+    ]
   },
   {
     "id": "torsk-aggsas",
@@ -715,14 +694,6 @@
       "Rör ner de hackade äggen i såsen och smaka av med salt och vitpeppar.",
       "Servera torsken med potatis, äggsås och rikligt med dill."
     ],
-    "categories": [
-      "Husmanskost",
-      "Fisk"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -739,7 +710,12 @@
     "imageCredit": "Bingqian Li",
     "imageLicense": "Pexels License",
     "imageAlt": "Torsk med äggsås och kokt potatis upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "husmanskost",
+      "vardagsmat"
+    ]
   },
   {
     "id": "korvsoppa",
@@ -804,17 +780,6 @@
       "Tärna falukorven och låt den sjuda med de sista 5 minuterna.",
       "Smaka av med salt och peppar. Servera med bröd."
     ],
-    "categories": [
-      "Husmanskost",
-      "Soppa"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "barn",
-      "billigt",
-      "snabbt"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost",
@@ -827,7 +792,15 @@
     "imageCredit": "Gundula Vogel",
     "imageLicense": "Pexels License",
     "imageAlt": "Korvsoppa med rotfrukter upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "soppa",
+      "barn",
+      "billigt",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "hamburgare-klyftpotatis",
@@ -911,16 +884,6 @@
       "Rosta bröden snabbt i pannan.",
       "Montera burgarna med sallad, tomat, rödlök, ketchup och majonnäs. Servera med klyftpotatisen."
     ],
-    "categories": [
-      "Husmanskost",
-      "Helg"
-    ],
-    "tags": [
-      "vardagsmat",
-      "barn",
-      "helgmiddag",
-      "Familjefavorit"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -935,7 +898,15 @@
     "imageCredit": "Shawkat Galib",
     "imageLicense": "Pexels License",
     "imageAlt": "Hamburgare med klyftpotatis upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "helg",
+      "husmanskost",
+      "familjefavorit",
+      "barn",
+      "helgmiddag",
+      "vardagsmat"
+    ]
   },
   {
     "id": "hemmagjord-pizza",
@@ -1000,16 +971,6 @@
       "Kavla ut degen tunt till två pizzor. Bred på sås, strö över ost och fördela skinkan.",
       "Grädda en pizza i taget på den heta plåten 8-10 minuter tills kanterna fått färg och osten bubblar."
     ],
-    "categories": [
-      "Helg"
-    ],
-    "tags": [
-      "vardagsmat",
-      "barn",
-      "helgmiddag",
-      "billigt",
-      "Familjefavorit"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -1023,6 +984,14 @@
     "imageCredit": "Cup of  Couple",
     "imageLicense": "Pexels License",
     "imageAlt": "Hemmagjord pizza med skinka och ost upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "helg",
+      "familjefavorit",
+      "barn",
+      "billigt",
+      "helgmiddag",
+      "vardagsmat"
+    ]
   }
 ]

@@ -1421,20 +1421,31 @@ class BrowserJourney(unittest.TestCase):
                 plan = self.wait_for_state(lambda s, p=plan: s.get("weekPlan") != p,
                                            what=f"byte {varv + 1}")["weekPlan"]
 
-        with self.step("avsikten är det som säljs"):
+        with self.step("avsikten är en handling, inte en betalvägg"):
+            # J6: G10 ritade "Premium" på de fem avsiktsknapparna och lät
+            # låset fråga hasPremium() rakt av - men avsikterna fick aldrig en
+            # rad i FEATURES, så affärsmodellen visste inte att funktionen
+            # fanns. Nyckeln heter swap_intents nu, och J3:s princip satte den
+            # till gratis: rankningen sker i rankSwapOptions() i klienten, ur
+            # samma lokala receptregister som veckorna, och kostar oss
+            # ingenting per byte. Ingen av knapparna är alltså låst - för
+            # någon.
             page.click("#weekPlanList [data-week-swap] >> nth=0")
             expect(page.locator("#swapModal")).to_be_visible()
-            # "Något annat" är gratis och byter som vanligt...
-            fritt = page.locator('[data-swap-intent=""]')
-            expect(fritt).to_be_visible()
-            self.assertIsNone(fritt.get_attribute("data-swap-intent-locked"))
-            # ...men "Billigare" är Premium, och låset SYNS på knappen.
+            for avsikt in ("", "cheaper", "protein"):
+                knapp = page.locator(f'[data-swap-intent="{avsikt}"]')
+                expect(knapp).to_be_visible()
+                self.assertIsNone(
+                    knapp.get_attribute("data-swap-intent-locked"),
+                    f'avsikten "{avsikt}" är märkt som låst fast modellen ger den gratis')
+            # Och trycket GÖR något: avsikten blir vald och listan rankas om.
+            # Att den kan bli tom är ett ärligt svar (det finns inte alltid
+            # något billigare) - det som inte får hända är en betalvägg.
             billigare = page.locator('[data-swap-intent="cheaper"]')
-            expect(billigare).to_be_visible()
-            self.assertIsNotNone(billigare.get_attribute("data-swap-intent-locked"),
-                                 "den låsta avsikten är inte märkt som låst")
             billigare.click()
-            expect(page.locator("#paywallModal")).to_be_visible()
+            expect(page.locator('[data-swap-intent="cheaper"].active')).to_be_visible()
+            self.assertFalse(page.locator("#paywallModal").is_visible(),
+                             "en avsikt som modellen ger gratis öppnade betalväggen")
 
     def test_skapa_min_vecka_skapar_en_vecka_inte_ett_formular(self):
         """G7: en knapp som lovar ett resultat ska leverera resultatet.
