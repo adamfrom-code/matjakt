@@ -82,3 +82,117 @@ def for_sma(matningar: dict, krav: float = TUMYTA_PX) -> dict:
     """
     return {namn: varde for namn, varde in matningar.items()
             if not minst(varde, krav)}
+
+
+# ---------------------------------------------------------------------------
+# L2c: EN RECT SOM ÄR IDEL NOLLOR ÄR INGEN MÄTNING.
+#
+# Allt ovan handlar om att en uppmätt pixel är ett flyttal. Det här är ett
+# annat fel med samma offer. CI läste
+#
+#     {'hojd': 0, 'vanster': False, 'hoger': False}
+#
+# alltså noll rakt igenom, och `minst(0)` är falskt hur vid toleransen än är.
+# En halv pixel räddar inte en nolla, och ska inte göra det.
+#
+# Veckolistan ritas av `renderBasket` med `$("weekPlanList").innerHTML = ...`
+# (app.js). Varje omritning byter alltså ut VARJE `.vecka-dag`-nod. Playwright
+# slår upp elementet i en CDP-vända och kör sedan sin `evaluate()` i nästa;
+# landar omritningen mellan de två mäter man en nod som inte sitter i
+# dokumentet längre, och `getBoundingClientRect()` på en avhängd nod är idel
+# nollor. Inget kast, ingen varning - bara en knapp som ser 0 px hög ut.
+#
+# Mätt, inte gissat. Tjugo mätningar av samma knapp i en riktig browser:
+#
+#     omritning var 2:a ms   gamla mätningen   nya mätningen
+#     ingen (som lokalt)     0/20 nollor       -
+#     var 2:a ms             20/20 nollor      0/20 nollor
+#
+# Lokalt hinner bildrutan alltid först och felet finns inte. Det är därför
+# det är CI:s fel och inte utvecklarens - samma sak T2b fann för avbockningen.
+#
+# Regeln är densamma som T2b:s, uttryckt om mätning:
+#
+# **ETT SVEP, INTE TVÅ.** Noden söks upp OCH mäts i samma `evaluate()`. Inom
+# en JS-vända kan DOM:en inte bytas ut, så det finns inget glapp att dela
+# mätningen i. Under stormen ovan kostade den nya mätningen ett enda svep -
+# min och max - för den behövde aldrig göra om något.
+#
+# **ETT SVEP UTAN RITAD NOD ÄR INGET MÄTVÄRDE.** Det är omtaget, och det
+# gäller det andra fallet: vyn har inte ritats ännu när testet tittar. Då
+# finns ingen nod att mäta, och svaret är "kom tillbaka nästa bildruta" -
+# inte "noll pixlar".
+#
+# Grinden blir INTE slappare. En knapp som verkligen är 0 px - display:none,
+# en kollapsad förälder - ger samma svar varje svep och fälls när taket är
+# slut. Det som ändras är beskedet: "appen ritade den aldrig" är ett besked
+# om appen, till skillnad från "0 >= 43.5 är falskt", som bara var ett
+# besked om när Playwright råkade titta.
+# ---------------------------------------------------------------------------
+
+# Hur många svep en mätning som mest tar innan den ger upp. Ett tak, inte en
+# tidsgräns - samma skäl som TAK i vantan.py: en app som aldrig ritar knappen
+# ska fällas, en långsam maskin ska inte fällas för att den är långsam.
+SVEPTAK = 60
+
+
+class Oritad(AssertionError):
+    """Ingen ritad nod att mäta, efter varje svep taket tillät."""
+
+
+def mat(svep, tak: int = SVEPTAK) -> dict:
+    """Mät genom att svepa tills ett svep träffar en ritad nod.
+
+    `svep()` gör EN mätning och returnerar antingen måtten eller None när
+    det inte fanns någon ritad nod att mäta. None är inte ett mätvärde och
+    räknas aldrig som ett.
+
+    Loopen ligger utanför browsertestet för att kunna prövas UTAN Playwright
+    - samma skäl som `vantan.py` och `avbockning.py`: en mätning som tyst
+    mäter fel upptäcks annars först den gång den fäller någon annans PR.
+    """
+    if tak < 1:
+        raise ValueError("taket måste vara minst ett svep")
+    for _ in range(tak):
+        matning = svep()
+        if matning is not None:
+            return matning
+    raise Oritad(
+        f"ingen ritad nod att mäta efter {tak} svep - appen ritade den aldrig, "
+        "eller ritar om den i en evig loop")
+
+
+# Ett svep: sök upp noden OCH mät den i samma vända. Att slå upp elementet i
+# Python och mäta det i en andra vända är just det glappet en omritning ryms i.
+SVEP_JS = """
+    ([valjare, index, golv]) => {
+      const el = document.querySelectorAll(valjare)[index];
+      // Ingen nod, eller en som just bytts ut av en omritning: `isConnected`
+      // är falskt för den avhängda. Nollrect:en fångar resten - en förälder
+      // med display:none ritar heller ingenting att mäta.
+      if (!el || !el.isConnected) return null;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return null;
+      const mitt = r.top + r.height / 2;
+      const träffar = (x, y) => {
+        const t = document.elementFromPoint(x, y);
+        return !!(t && (t === el || el.contains(t)));
+      };
+      const kant = (golv - r.width) / 2;
+      return {
+        hojd: r.height,
+        vanster: kant <= 0 || träffar(r.left - kant + 1, mitt),
+        hoger: kant <= 0 || träffar(r.right + kant - 1, mitt),
+      };
+    }
+"""
+
+
+def sidans_traffyta(page, valjare: str, index: int = 0,
+                    krav: float = TUMYTA_PX, tak: int = SVEPTAK) -> dict:
+    """Träffytan för den `index`:e noden som matchar `valjare`, mätt med tumme.
+
+    Playwright-kopplingen till `mat()`. All logik som kan mäta fel bor i
+    `mat()` och prövas utan browser; det här är sladden mellan den och sidan.
+    """
+    return mat(lambda: page.evaluate(SVEP_JS, [valjare, index, golv(krav)]), tak=tak)
