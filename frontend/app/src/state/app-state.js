@@ -11,7 +11,7 @@
 // gör det här testbart utan webbläsare.
 // ---------------------------------------------------------------------------
 
-import { readStoredState, writeStoredState } from "./storage.js";
+import { quarantineStoredState, readStoredStateResult, writeStoredState } from "./storage.js";
 import { normalizePantry } from "../services/pantry.js";
 import { emptyHouseholdState } from "../services/household-state.js";
 
@@ -119,9 +119,20 @@ export const state = {};
 
 export function initAppState({ storage = null, authToken = null, recipeBank = [],
                                onSyncStatus = () => {}, saveRemote = null,
-                               weekTotal = () => null } = {}) {
+                               weekTotal = () => null,
+                               onUnreadableState = () => {} } = {}) {
   runtime = { storage, recipeBank, onSyncStatus, saveRemote, weekTotal };
-  const saved = normalizeState(storage ? readStoredState(storage) : {});
+  // "Det fanns ingenting sparat" och "det sparade gick inte att läsa" gav
+  // samma tomma objekt förut, och därmed samma tysta nollställning: appen
+  // startade om från standardvärdena och skrev över den trasiga texten vid
+  // nästa sparning. Två skilda svar nu - det andra flyttas undan och sägs.
+  const stored = storage ? readStoredStateResult(storage) : { state: {}, status: "tom" };
+  const unreadable = stored.status === "trasig";
+  // Undan FÖRE första sparningen, inte efteråt: mellan den här raden och
+  // nästa saveState() ligger hela uppstarten, och en enda sparning hade
+  // räckt för att texten skulle vara borta för gott.
+  const quarantined = unreadable && quarantineStoredState(storage, stored.raw);
+  const saved = normalizeState(stored.state);
   Object.assign(state, {
     budget: saved.budget || 800,
     personer: saved.personer || 2,
@@ -188,6 +199,10 @@ export function initAppState({ storage = null, authToken = null, recipeBank = []
     // valdas egen iterationsordning (ett Set har ingen knuten till dagar).
     weekPlan: saved.weekPlan || [...(saved.valda || [])],
   });
+  // Sist, med tillståndet på plats: anroparen ritar en remsa och får läsa av
+  // om någon är inloggad (då hämtas veckan från kontot) eller inte (då är den
+  // borta här, och inloggning är det som gör att det inte upprepas).
+  if (unreadable) onUnreadableState({ quarantined });
   return state;
 }
 

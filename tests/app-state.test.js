@@ -5,6 +5,8 @@
 // enhetens). Modulen känner varken till DOM eller nät, så de körs i Node.
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { QUARANTINE_KEY, STORAGE_KEY } from "../frontend/app/src/state/storage.js";
 import {
   SCHEMA_VERSION, STORAGE_FULL_TEXT, addToWeekPlan, applySyncBlob, buildSyncPayload,
   initAppState, normalizeState, removeFromWeekPlan, saveState, selectedRecipes,
@@ -19,6 +21,15 @@ function memoryStorage(initial = null) {
 // En lagring som är full: setItem kastar, precis som iOS Safari vid 5 MB.
 function fullStorage() {
   return { getItem: () => null, setItem: () => { throw new Error("QuotaExceededError"); } };
+}
+
+// En lagring med riktiga nycklar - karantänen bor i en EGEN nyckel (E3).
+function keyedStorage(initial = {}) {
+  const data = { ...initial };
+  return { data,
+           getItem: key => (key in data ? data[key] : null),
+           setItem: (key, value) => { data[key] = String(value); },
+           removeItem: key => { delete data[key]; } };
 }
 
 const RECEPT = [
@@ -112,6 +123,65 @@ test("E3: trasigt lagrat tillstånd nollställer inte appen till något ogiltigt
   assert.equal(state.personer, 2);
   assert.deepEqual(state.weekPlan, []);
   assert.ok(state.valda instanceof Set);
+});
+
+// Att appen inte KRASCHAR på en trasig blob var aldrig hela frågan. Den
+// nollställdes tyst till standardvärdena och lade sedan sin egen tomma vecka
+// rakt över texten vid nästa sparning - och på en enhet utan konto var den
+// texten allt som fanns kvar av veckan, listan och skafferiet.
+
+test("E3: den oläsbara texten överlever uppstarten - och nästa sparning", () => {
+  const storage = keyedStorage({ [STORAGE_KEY]: '{"weekPlan":["linssoppa","fiskpasta"' });
+  initAppState({ storage, recipeBank: RECEPT });
+  // Hela uppstarten ligger mellan inläsningen och den här sparningen - i
+  // appen är det chooseMenu() på boot-raden som gör den.
+  setWeekPlan(["korvgryta"]);
+  saveState();
+  assert.equal(storage.data[QUARANTINE_KEY], '{"weekPlan":["linssoppa","fiskpasta"',
+               "den trasiga texten ska ligga kvar, tecken för tecken");
+  assert.deepEqual(JSON.parse(storage.data[STORAGE_KEY]).weekPlan, ["korvgryta"],
+                   "den nya veckan sparas som vanligt");
+});
+
+test("E3: appen får veta att det sparade läget inte gick att läsa", () => {
+  const besked = [];
+  initAppState({ storage: keyedStorage({ [STORAGE_KEY]: "{trasigt" }), recipeBank: RECEPT,
+                 onUnreadableState: info => besked.push(info) });
+  assert.deepEqual(besked, [{ quarantined: true }], "tystnaden var halva felet");
+});
+
+test("E3: giltig JSON som inte är ett tillstånd är lika oläsbar", () => {
+  const besked = [];
+  initAppState({ storage: keyedStorage({ [STORAGE_KEY]: "[1,2,3]" }), recipeBank: RECEPT,
+                 onUnreadableState: info => besked.push(info) });
+  assert.equal(besked.length, 1);
+});
+
+test("E3: en tom lagring är inget fel, och en läsbar blob rör inte karantänen", () => {
+  let besked = 0;
+  initAppState({ storage: keyedStorage(), recipeBank: RECEPT,
+                 onUnreadableState: () => { besked += 1; } });
+  const läsbar = keyedStorage({ [STORAGE_KEY]: JSON.stringify({ budget: 725 }) });
+  initAppState({ storage: läsbar, recipeBank: RECEPT,
+                 onUnreadableState: () => { besked += 1; } });
+  assert.equal(besked, 0, "ett första besök är inte ett dataförlustbesked");
+  assert.equal(state.budget, 725);
+  assert.equal(QUARANTINE_KEY in läsbar.data, false);
+});
+
+test("E3: en full enhet kan inte rädda texten - men appen säger det ändå", () => {
+  const full = { getItem: () => "{trasigt", setItem: () => { throw new Error("QuotaExceededError"); } };
+  const besked = [];
+  initAppState({ storage: full, recipeBank: RECEPT, onUnreadableState: info => besked.push(info) });
+  assert.deepEqual(besked, [{ quarantined: false }]);
+});
+
+test("E3: app.js kopplar in beskedet - modulen kan inte visa något själv", () => {
+  const source = readFileSync(new URL("../frontend/app/app.js", import.meta.url), "utf8");
+  const call = source.slice(source.indexOf("initAppState({"));
+  const body = call.slice(0, call.indexOf("\n});") + 4);
+  assert.match(body, /onUnreadableState:/, "callbacken är oanvänd - ingen får veta något");
+  assert.match(body, /showUndoToast\(/, "beskedet ritas aldrig ut");
 });
 
 test("E3: en lagrad blob med fel typer faller tillbaka på standardvärdena", () => {
