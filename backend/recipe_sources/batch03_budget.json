@@ -59,16 +59,6 @@
       "Lyft upp fläsket, skär det i bitar och lägg tillbaka. Smaka av med salt.",
       "Servera soppan med senap vid sidan."
     ],
-    "categories": [
-      "Soppor",
-      "Husmanskost"
-    ],
-    "tags": [
-      "billigt",
-      "husmanskost",
-      "mealprep",
-      "proteinrikt"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost"
@@ -79,7 +69,14 @@
     "imageCredit": "DΛVΞ GΛRCIΛ",
     "imageLicense": "Pexels License",
     "imageAlt": "Ärtsoppa med fläsk upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "soppor",
+      "billigt",
+      "mealprep",
+      "proteinrikt"
+    ]
   },
   {
     "id": "korvgryta-potatis",
@@ -146,18 +143,6 @@
       "Låt koka under lock i 20 minuter tills potatisen är mjuk.",
       "Lägg tillbaka korven och låt allt bli varmt igen."
     ],
-    "categories": [
-      "Grytor",
-      "Husmanskost"
-    ],
-    "tags": [
-      "billigt",
-      "barn",
-      "familj",
-      "mealprep",
-      "husmanskost",
-      "vardagsmat"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost"
@@ -168,7 +153,16 @@
     "imageCredit": "Rachel Claire",
     "imageLicense": "Pexels License",
     "imageAlt": "Korvgryta med potatis och paprika upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "grytor",
+      "husmanskost",
+      "barn",
+      "billigt",
+      "familj",
+      "mealprep",
+      "vardagsmat"
+    ]
   },
   {
     "id": "linssoppa-rod",
@@ -234,18 +228,6 @@
       "Häll i kokosmjölken och mixa soppan slät med stavmixer.",
       "Smaka av med salt och servera."
     ],
-    "categories": [
-      "Soppor",
-      "Vegetariskt"
-    ],
-    "tags": [
-      "billigt",
-      "vegetariskt",
-      "veganskt",
-      "snabbt",
-      "mealprep",
-      "vardagsmat"
-    ],
     "allergens": [],
     "dietFlags": [
       "veganskt"
@@ -256,7 +238,16 @@
     "imageCredit": "Teja J",
     "imageLicense": "Pexels License",
     "imageAlt": "Röd linssoppa med kokosmjölk upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "soppor",
+      "vegetariskt",
+      "billigt",
+      "mealprep",
+      "snabbt",
+      "vardagsmat",
+      "veganskt"
+    ]
   },
   {
     "id": "pyttipanna",
@@ -321,16 +312,6 @@
       "Stek äggen i en separat panna.",
       "Servera pyttipannan med ett ägg på varje portion och rödbetor vid sidan."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "billigt",
-      "husmanskost",
-      "snabbt",
-      "familj",
-      "vardagsmat"
-    ],
     "allergens": [
       "ägg",
       "laktos"
@@ -344,7 +325,14 @@
     "imageSource": "Pexels",
     "imageSourceUrl": "https://www.pexels.com/photo/egg-with-vegetable-dish-22420/",
     "imageCredit": "Olia Gozha",
-    "imageLicense": "Pexels License"
+    "imageLicense": "Pexels License",
+    "labels": [
+      "husmanskost",
+      "billigt",
+      "familj",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "pasta-tomatsas-vitlok",
@@ -409,18 +397,6 @@
       "Koka pastan under tiden och spara en skvätt kokvatten.",
       "Blanda pastan med såsen och lite kokvatten. Toppa med basilika."
     ],
-    "categories": [
-      "Pasta",
-      "Vegetariskt"
-    ],
-    "tags": [
-      "billigt",
-      "vegetariskt",
-      "veganskt",
-      "snabbt",
-      "barn",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten"
     ],
@@ -433,7 +409,16 @@
     "imageCredit": "Engin Akyurt",
     "imageLicense": "Pexels License",
     "imageAlt": "Pasta med tomatsås och vitlök upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "pasta",
+      "vegetariskt",
+      "barn",
+      "billigt",
+      "snabbt",
+      "vardagsmat",
+      "veganskt"
+    ]
   },
   {
     "id": "kalpudding",
@@ -499,15 +484,6 @@
       "Baka mitt i ugnen i 40-45 minuter tills ytan fått färg.",
       "Servera med lingonsylt."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "billigt",
-      "husmanskost",
-      "familj",
-      "mealprep"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -520,7 +496,13 @@
     "imageSource": "Wikimedia Commons",
     "imageSourceUrl": "https://commons.wikimedia.org/wiki/File:K%C3%A5lpudding_i_l%C3%A5ngpanna.jpg",
     "imageCredit": "AgnesEklunds",
-    "imageLicense": "CC0"
+    "imageLicense": "CC0",
+    "labels": [
+      "husmanskost",
+      "billigt",
+      "familj",
+      "mealprep"
+    ]
   },
   {
     "id": "bonsoppa-tomat",
@@ -586,18 +568,6 @@
       "Mixa cirka hälften av soppan slät och rör tillbaka den, så den blir krämig men behåller tuggmotstånd.",
       "Smaka av med salt och ringla över lite olivolja vid servering."
     ],
-    "categories": [
-      "Soppor",
-      "Vegetariskt"
-    ],
-    "tags": [
-      "billigt",
-      "vegetariskt",
-      "veganskt",
-      "mealprep",
-      "proteinrikt",
-      "vardagsmat"
-    ],
     "allergens": [],
     "dietFlags": [
       "veganskt"
@@ -608,7 +578,16 @@
     "imageCredit": "Gundula Vogel",
     "imageLicense": "Pexels License",
     "imageAlt": "Bönsoppa med tomat och vitlök upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "soppor",
+      "vegetariskt",
+      "billigt",
+      "mealprep",
+      "proteinrikt",
+      "vardagsmat",
+      "veganskt"
+    ]
   },
   {
     "id": "potatisgratang-skinka",
@@ -673,16 +652,6 @@
       "Blanda grädden med vitlöken och häll den över. Strö osten överst.",
       "Baka 45-50 minuter tills potatisen är mjuk och ytan gyllene. Låt vila 10 minuter."
     ],
-    "categories": [
-      "Husmanskost",
-      "Familj"
-    ],
-    "tags": [
-      "billigt",
-      "barn",
-      "familj",
-      "mealprep"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -695,7 +664,14 @@
     "imageCredit": "Vidal Balielo Jr.",
     "imageLicense": "Pexels License",
     "imageAlt": "Potatisgratäng med skinka upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "familj",
+      "husmanskost",
+      "barn",
+      "billigt",
+      "mealprep"
+    ]
   },
   {
     "id": "tomatsoppa-grillost",
@@ -760,18 +736,6 @@
       "Lägg ost mellan brödskivorna och stek mackorna gyllene i smör på båda sidor.",
       "Skär mackorna i halvor och servera till soppan."
     ],
-    "categories": [
-      "Soppor",
-      "Familj"
-    ],
-    "tags": [
-      "billigt",
-      "barn",
-      "familj",
-      "snabbt",
-      "vegetariskt",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -785,7 +749,16 @@
     "imageCredit": "Danijela Pantic Conic",
     "imageLicense": "Pexels License",
     "imageAlt": "Tomatsoppa med grillad ostmacka upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "familj",
+      "soppor",
+      "barn",
+      "billigt",
+      "snabbt",
+      "vardagsmat",
+      "vegetariskt"
+    ]
   },
   {
     "id": "chili-sin-carne-budget",
@@ -860,17 +833,6 @@
       "Låt puttra 20 minuter så smakerna går ihop. Smaka av.",
       "Servera chilin över riset."
     ],
-    "categories": [
-      "Grytor",
-      "Vegetariskt"
-    ],
-    "tags": [
-      "billigt",
-      "vegetariskt",
-      "veganskt",
-      "mealprep",
-      "proteinrikt"
-    ],
     "allergens": [],
     "dietFlags": [
       "veganskt"
@@ -881,6 +843,14 @@
     "imageCredit": "Vanessa Loring",
     "imageLicense": "Pexels License",
     "imageAlt": "Chili sin carne upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "grytor",
+      "vegetariskt",
+      "billigt",
+      "mealprep",
+      "proteinrikt",
+      "veganskt"
+    ]
   }
 ]

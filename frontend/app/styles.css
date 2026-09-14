@@ -224,8 +224,11 @@ button.campaign-deal{cursor:pointer;font:inherit}
 .basket-line-actions{flex-wrap:wrap}.basket-feedback-btn{flex:none!important;width:42px;padding:0!important;font-size:16px;background:var(--surface)!important;color:var(--muted)!important}.basket-feedback-btn.marked{background:var(--primary-soft)!important;color:var(--primary)!important}.basket-feedback-btn[data-skipped].marked{background:#fbe4e1!important;color:var(--danger)!important}
 .back-link{display:inline-block;margin-bottom:10px;border:0;background:transparent;color:var(--primary);font-size:14px;font-weight:700}
 .store-compare-upsell{width:100%;margin-top:12px;padding:12px;border-radius:12px;font-size:12px;font-weight:700;line-height:1.5;text-align:left}
-.premium-pitch{margin-top:6px}.premium-pitch h3{margin:0 0 12px;font:700 20px var(--font-display)}.premium-feature-list{margin:0 0 18px;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}.premium-feature-list li{position:relative;padding-left:24px;color:var(--text);font-size:14px}.premium-feature-list li:before{content:"✓";position:absolute;left:0;color:var(--gold-2);font-weight:700}
-.premium-pricing{display:flex;gap:8px;margin-bottom:16px}.premium-price-tab{flex:1;padding:12px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);text-align:left}.premium-price-tab span{display:block;color:var(--muted);font-size:12px;font-weight:600}.premium-price-tab strong{display:block;margin-top:3px;font:700 19px var(--font-display);color:var(--text)}.premium-price-tab small{display:block;margin-top:2px;color:var(--muted);font-size:11px}.premium-price-tab.active{border-color:var(--gold);background:var(--gold-soft)}.premium-price-tab.active strong,.premium-price-tab.active span{color:var(--gold-2)}
+.premium-pitch{margin-top:6px}.premium-pitch h3{margin:0 0 12px;font:700 20px var(--font-display)}
+/* L7: de gamla prisflikarna är borta. De ritade vald plan som en GULDPLATTA
+   (--gold/--gold-soft/--gold-2) - exakt den form R56 rev ut ur .premium-badge,
+   och exakt vad §2.3 förbjuder: Premium får inte bära en egen färg. Formen
+   står nu sist i filen, under "PREMIUM (L7)". */
 .premium-pitch-note{margin:14px 0 8px;color:var(--muted);font-size:12px;text-align:center}
 /* Ångerrätten (B3). Rutan är ett villkor för att köpet ska få starta och
    ska se ut som ett val, inte som finstilt: 20px träffyta, brödtext i
@@ -438,8 +441,6 @@ button.campaign-deal{cursor:pointer;font:inherit}
 .paywall-card{background:var(--surface);border-radius:24px 24px 0 0;padding:26px 22px 30px;max-width:440px;width:100%;position:relative;max-height:88vh;overflow-y:auto}
 .paywall-card h2{margin:4px 0 8px}
 .paywall-lead{color:var(--muted);font-size:14px;margin:0 0 12px}
-.paywall-points{margin:0 0 16px;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:14px}
-.paywall-points li::before{content:"✓ ";color:var(--primary-2);font-weight:700}
 .paywall-yearly{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;margin-bottom:10px;position:relative}
 .paywall-yearly small{font-weight:400;opacity:.85}
 .paywall-plan-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em}
@@ -868,10 +869,10 @@ button.store-compare-row:active{background:var(--surface-2)}
 .onboarding-dots i{background:#dfe4df}
 .onboarding-dots i.active{background:var(--primary)}
 .onboarding-card .eyebrow{color:var(--primary)}
-.premium-price-tab{border:1px solid var(--border);border-radius:16px;background:var(--surface)}
-.premium-price-tab.active{border-color:var(--text);background:var(--text);color:#fff}
-.premium-price-tab.active strong,.premium-price-tab.active span,.premium-price-tab.active small{color:#fff}
-.premium-pitch{border:1px solid var(--border);border-radius:20px;background:var(--surface)}
+/* L7: V2-blocket gjorde vald plan till en INK-platta med vit text och la ett
+   kort runt hela pitchen. Båda ersätts av blocket sist i filen: hårlinjer,
+   ingen platta, och markeringen buren av en linje som FINNS - inte av en
+   färg som byts. */
 .paywall-yearly{border-radius:16px}
 .nutrition-goals{border:1px solid var(--border);border-radius:16px;background:var(--surface)}
 .nutrition-locked{color:var(--muted)}
@@ -1121,20 +1122,30 @@ button{color:inherit}
    står kvar där det stod.
 
    Krysset försvinner aldrig ur DOM:en: det kommer fram vid fokus, så
-   tangentbord och skärmläsare har kvar samma väg till samma handling. */
+   tangentbord och skärmläsare har kvar samma väg till samma handling.
+
+   L3 bygger vidare: raden har numera TVÅ sekundära handlingar ("har hemma"
+   och "ta bort"), och de reser tillsammans i .vara-sido. Regeln är densamma
+   som G5 satte - ute på pekskärm, framme vid fokus - bara utsträckt till
+   gruppen, så att inte den ena kontrollen ligger kvar i tumzonen medan den
+   andra flyttar ut. Krysset behåller sin egen regel: den är G5:s löfte, och
+   ett löfte som bara gäller så länge ingen lägger en knapp bredvid är inget
+   löfte. */
 .shopping-item{position:relative;overflow:hidden}
-.shopping-item-main{transition:transform var(--t-normal) var(--ease)}
+.shopping-item-main,.vara-sido{transition:transform var(--t-normal) var(--ease)}
 @media (hover:none) and (pointer:coarse){
   .shopping-item{touch-action:pan-y}
+  .shopping-item .vara-sido{transform:translateX(100%)}
   .shopping-item .shopping-remove{
     transform:translateX(100%);
     transition:transform var(--t-normal) var(--ease);
   }
+  .shopping-item:focus-within .vara-sido{transform:translateX(0)}
   .shopping-item:focus-within .shopping-remove,
   .shopping-item .shopping-remove:focus-visible{transform:translateX(0)}
 }
 @media (prefers-reduced-motion:reduce){
-  .shopping-item .shopping-remove,.shopping-item-main{transition:none}
+  .shopping-item .shopping-remove,.shopping-item-main,.vara-sido{transition:none}
 }
 
 /* ---- SPARAT (L5) -------------------------------------------------------
@@ -1450,6 +1461,138 @@ button{color:inherit}
   font:600 9.5px/1.5 var(--f-ui);letter-spacing:.16em;text-transform:uppercase;
 }
 
+/* ---- PREMIUM (L7) ------------------------------------------------------
+   Facit: docs/matjakt-design-D.html, telefon 8.
+
+   INGEN HÄNGLÅSVÄGG. Skärmen är ett uppslag: kapitäl, en rubrik i Newsreader
+   som säger vad produkten ÄR, en ingress som säger att gratisversionen
+   fortsätter vara hel, jämförelsen, och under den priset och ett val.
+   Jämförelsetabellen ritas av J2 (src/views/premiumtabellen.js) ur
+   accounts/features.py; L7 bygger ingen andra tabell.
+
+   ACCENTEN RÖR INTE PREMIUM. §2.3 räknar upp accentens förbjudna betydelser
+   och "kvalitet, betyg, favorit, Premium" står med: systemets enda färg
+   betyder "här är du, här går vägen vidare". Premium märks i stället med
+   ORDET i spärrade kapitäler (§2.4, R56). Undantaget är betalväggens
+   årsknapp, som är skärmens PRIMÄRA HANDLING - och primärknappen är exakt
+   vad §2.3 tillåter accenten för.
+
+   OCH VALET MELLAN MÅNAD OCH ÅR BÄRS AV FORM, INTE AV FÄRG. En vald flik som
+   bara byter ton försvinner i gråskala. Markeringen är därför en LINJE SOM
+   FINNS eller inte finns (border-bottom-width 2px mot 0) plus halvfet stil på
+   beloppet; färgskiftet i etiketten ligger ovanpå det och bär ingenting
+   ensamt. tests/premiumskarmen.test.js river färgen ur båda lägena och kräver
+   att de fortfarande går att skilja åt - samma prov som L0:s tre prisregler.
+
+   Reglerna ligger sist och fristående i stället för i de gamla
+   .premium-*-raderna högre upp: J2 skriver i just de raderna samtidigt, och
+   en fil som två paket rör ska få så få gemensamma redigeringspunkter som
+   möjligt. Två rader är ändå borttagna, för de RITADE det paketet handlar om:
+   den gamla guldplattan på vald plan (--gold/--gold-soft/--gold-2, samma form
+   R56 rev ut ur .premium-badge) och V2-blockets omtagning av den som en
+   INK-platta med vit text. Att låta dem stå och överrösta dem härifrån hade
+   gjort markeringen till en fråga om kaskadordning.
+
+   Selektorerna är ändå .premium-pitch .premium-price-tab och inte bara
+   .premium-price-tab: betalväggen har samma roll i en modal med andra mått,
+   och prefixet säger vilken av de två skärmarna regeln gäller. */
+
+/* Premium märks med ordet. Skrivs som vanlig text i källan och versaliseras
+   här (§8): versaler i markupen får skärmläsaren att stava P-R-E-M-I-U-M. */
+.prem-kap{
+  margin:0;color:var(--ink-2);
+  font:600 10px/1.5 var(--f-ui);letter-spacing:.22em;text-transform:uppercase;
+}
+
+/* Rubriken och ingressen (.premtopp). 29 px Newsreader i vikt 400 - en
+   rubrik blir inte viktigare av att vara fet, den blir bullrig (§3.2). */
+.premium-pitch{margin-top:var(--sp-6)}
+.premium-pitch h3{
+  margin:var(--sp-3) 0 0;max-width:15ch;color:var(--ink);
+  font:400 29px/1.04 var(--f-disp);letter-spacing:-.02em;
+}
+.prem-ingress{
+  margin:var(--sp-4) 0 0;max-width:33ch;color:var(--ink-2);
+  font:400 13px/1.5 var(--f-ui);
+}
+
+/* Prisraden (.premprisrad). Två jämbördiga val under en hårlinje, inte två
+   kort. Beloppet står överst på SKÄRMEN via order; i DOM:en står namnet
+   först, för det är den ordning en skärmläsare ger en begriplig mening. */
+.premium-pitch .premium-pricing{
+  display:flex;gap:var(--sp-8);margin:var(--sp-6) 0 0;
+  padding-top:var(--sp-5);border-top:1px solid var(--rule-2);background:none;
+}
+/* background och color sätts uttryckligen till papperets, inte till `none`.
+   En tom background maskerar ingenting: kontrastsvepet i tests/kontrast.test.js
+   läser bakgrunden ur den NÄRMASTE regel som faktiskt sätter en, precis som
+   kaskaden gör, och hoppar över den som säger `none`. Ett uttryckligt värde är
+   det enda som säger vad texten ligger på. */
+.premium-pitch .premium-price-tab{
+  flex:0 1 auto;display:flex;flex-direction:column;gap:var(--sp-1);
+  min-height:44px;padding:0 0 calc(var(--sp-3) + 2px);
+  border:0;border-bottom:0 solid var(--ink);border-radius:0;
+  background:var(--paper);color:var(--ink);text-align:left;
+}
+.premium-pitch .premium-price-tab .prem-plan-tal{
+  order:1;color:var(--ink);font:400 23px/1.1 var(--f-disp);
+}
+.premium-pitch .premium-price-tab .prem-plan-namn{
+  order:2;color:var(--ink-3);
+  font:600 10px/1.5 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;
+}
+.premium-pitch .premium-price-tab .prem-plan-villkor{
+  order:3;color:var(--ink-2);font:400 11.5px/1.4 var(--f-ui);
+}
+/* Valt läge: linjen FINNS. Bredden bär markeringen, inte färgen - en linje
+   som bara byter från transparent till --ink är osynlig utan färg. */
+.premium-pitch .premium-price-tab.active{
+  border-bottom-width:2px;padding-bottom:var(--sp-3);
+  background:var(--paper);color:var(--ink);
+}
+.premium-pitch .premium-price-tab.active .prem-plan-tal{font-weight:600}
+.premium-pitch .premium-price-tab.active .prem-plan-namn{color:var(--ink)}
+
+/* Prisinformationslagen (2004:347) och "avsluta när du vill" - två meningar
+   som hör till priset och inte till det finstilta. */
+.prem-moms{margin:var(--sp-4) 0 0;color:var(--ink-2);font:400 11.5px/1.5 var(--f-ui)}
+.prem-avsluta{
+  display:block;margin:var(--sp-4) 0 0;color:var(--ink-2);
+  font:400 11.5px/1.5 var(--f-ui);text-align:center;
+}
+
+/* Betalväggen: samma uppslag, samma typografi, i en modal. Radien är 0 -
+   systemet har inga rundade hörn (--radius:0), och arket hade 24 px
+   hårdkodade i kanten sedan före designsystemet. */
+.paywall-card{border-radius:0}
+.paywall-card h2{
+  margin:var(--sp-3) 0 0;max-width:15ch;color:var(--ink);
+  font:400 29px/1.04 var(--f-disp);letter-spacing:-.02em;
+}
+.paywall-lead{
+  margin:var(--sp-4) 0 var(--sp-6);max-width:33ch;color:var(--ink-2);
+  font:400 13px/1.5 var(--f-ui);
+}
+/* Båda knapparna staplar namn, belopp och villkor. .paywall-yearly gjorde det
+   redan; .paywall-monthly hade bara ett <strong> och la därför de tre delarna
+   på en rad, mitt i knappen. */
+.paywall-yearly,.paywall-monthly{
+  display:flex;flex-direction:column;align-items:flex-start;
+  gap:var(--sp-1);min-height:44px;text-align:left;
+}
+.paywall-yearly .prem-plan-namn,.paywall-monthly .prem-plan-namn{
+  order:2;font:600 10px/1.5 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;
+}
+/* Beloppet ritas av L0:s komponent, som sätter --ink. Inne i en primärknapp
+   ligger det på accenten, och då är --ink fel färg - knappen bestämmer sin
+   egen textfärg och siffran ska ärva den. */
+.paywall-yearly .prem-plan-tal,.paywall-monthly .prem-plan-tal{
+  order:1;color:inherit;font:400 23px/1.1 var(--f-disp);
+}
+.paywall-yearly .prem-plan-villkor,.paywall-monthly .prem-plan-villkor{
+  order:3;font:400 11.5px/1.4 var(--f-ui);
+}
+
 /* ====================================================================
    L2 · VECKAN, SOM I DESIGN D (telefon 2)
 
@@ -1631,3 +1774,174 @@ button{color:inherit}
 /* G8:s erbjudanderad står kvar ovanför veckan - men luften omkring den är
    sju rader dyr, så den hålls stram. */
 .week-overview .week-plan-upsell{margin:6px 0}
+
+/* ====================================================================
+   L3 · HANDLA, SOM I DESIGN D (telefon 3)
+
+   Skärmen var en stapel av kort: varje vara i en egen ruta med ram, radie,
+   skugga och ett foto på 56 px, och avdelningsrubriken satt som en
+   pillerformad etikett ovanför. Design D har inga kort inne i appen -
+   innehållet skiljs åt av linjer och luft, precis som på ett tryckt uppslag.
+   Avdelningen märks med en hårlinje längs gruppens vänsterkant, raden med en
+   hårlinje under sig, och ingenting med en skugga.
+
+   Reglerna ligger sist i filen med avsikt: de vinner över det äldre
+   .shopping-item-skiktet (som fortfarande gäller extravaror och skafferiet)
+   utan att någon annan vy rörs. -------------------------------------------- */
+
+.shopping-list{margin:0 0 4px}
+
+/* AVDELNINGEN. Hårlinjen till vänster binder ihop gruppens rader utan att
+   rita en ruta runt dem. Rubriken i spärrade kapitäler, antalet till höger. */
+.avdelningsgrupp{margin:0 0 2px;padding-left:13px;border-left:1px solid var(--rule)}
+.shopping-list .avdelning{
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  margin:16px 0 3px;padding:0;
+  font:600 10px/1.5 var(--font-body);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)
+}
+.shopping-list .avdelning .kap{font:inherit;letter-spacing:inherit;color:var(--ink-3)}
+.shopping-list .avdelning .kap-ink{color:var(--ink-2)}
+
+/* RADEN. Ingen ram, ingen radie, ingen bakgrund - bara hårlinjen under.
+   Raden ÄR kryssrutan (§5.5): träffytan är hela radens 44 px, och rutan
+   själv får därför vara 21. Högerkanten hålls fri för radens sekundära
+   handlingar, så priset aldrig hamnar under dem. */
+.shopping-list .shopping-item{
+  display:block;position:relative;overflow:hidden;
+  margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none
+}
+.shopping-list .vara{
+  display:flex;align-items:center;gap:13px;width:100%;
+  min-height:44px;padding:8px 92px 8px 0;
+  border:0;border-bottom:1px solid var(--rule);background:none;
+  font:400 14px/1.4 var(--font-body);color:var(--ink);text-align:left
+}
+.shopping-list .vara:active{background:var(--paper-2)}
+.ruta{
+  flex:0 0 21px;width:21px;height:21px;
+  border:1.5px solid var(--ink-3);background:none;
+  display:flex;align-items:center;justify-content:center
+}
+.ruta svg{display:none}
+.ruta svg path{stroke:var(--paper)}
+.vara--klar .ruta{background:var(--ink);border-color:var(--ink)}
+.vara--klar .ruta svg{display:block}
+.vara .txt{flex:1;min-width:0}
+.vara .txt strong{
+  display:block;padding:0;font:400 14px/1.35 var(--font-body);color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+/* Mängden som EGEN underrad, inte inklämd efter namnet: "Behöver 250 g ·
+   1 × 400 g" är två upplysningar, och de får plats bara på en egen rad. */
+.vara .mangd{
+  display:block;margin-top:2px;
+  font:400 11.5px/1.35 var(--font-body);color:var(--ink-3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.shopping-list .vara .pris{flex:0 0 auto}
+.pris-hamtas{flex:0 0 auto;font:400 11.5px/1.4 var(--font-body);color:var(--ink-3);white-space:nowrap}
+
+/* AVBOCKAD RAD: genomstruken och tonad, kvar i sin avdelning. Den som bockar
+   av i butiken ska se raden ligga kvar vid hyllan den hörde till - inte
+   hoppa ner i ett eget block längst ner på skärmen. */
+.vara--klar .txt strong,.vara--klar .mangd,.vara--klar .pris{color:var(--ink-3)}
+.vara--klar .txt strong,.vara--klar .pris{text-decoration:line-through}
+/* Den tomma ramen stryks aldrig över: ett saknat pris förblir ett tomt fack. */
+.vara--klar .saknas{text-decoration:none}
+
+/* SEKUNDÄRA HANDLINGAR. "Har hemma" och krysset bor i .vara-sido vid radens
+   högerkant. På pekskärm åker gruppen ut ur raden (G5-blocket ovan) och
+   kommer fram vid fokus; med mus står den kvar. Båda är 44x44. */
+.vara-sido{
+  position:absolute;top:0;right:0;height:100%;
+  display:flex;align-items:center
+}
+.shopping-list .vara-hemma{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  width:44px;height:44px;padding:0;border:0;border-radius:0;background:var(--paper);
+  font:600 10px/1 var(--font-body);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-2)
+}
+.shopping-list .vara-hemma svg{
+  width:17px;height:17px;flex:none;fill:none;stroke:currentColor;
+  stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round
+}
+.shopping-list .vara-hemma span{
+  position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap
+}
+.shopping-list .shopping-remove{
+  position:static;width:44px;height:44px;padding:0;border:0;border-radius:0;
+  background:var(--paper);color:var(--ink-2);font-size:17px;line-height:1
+}
+/* Finns det bredd - surfplatta, delad vy - får huset sin text tillbaka. En
+   ikon med bara ett aria-namn är läsbar för skärmläsaren och gåtfull för
+   ögat; där plats finns ska ordet stå. */
+@media (min-width:560px){
+  .shopping-list .vara{padding-right:152px}
+  .shopping-list .vara-hemma{width:auto;padding:0 12px}
+  .shopping-list .vara-hemma span{position:static;width:auto;height:auto;clip:auto}
+}
+
+/* KASSAN. Den enda nedsänkta ytan på skärmen. --ink-3 är förbjudet på
+   --paper-2 (RÄTTELSE 1, 4,31:1) - all text här är --ink eller --ink-2. */
+.shopping-progress.kassa{
+  position:static;margin:18px 0 16px;padding:12px 16px 14px;
+  border:0;border-top:1px solid var(--rule-2);border-radius:0;
+  background:var(--paper-2);box-shadow:none
+}
+.kassa .kassa-toppen{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.kassa .kap{font:600 10px/1.5 var(--font-body);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2)}
+.kassa-summa{display:inline-flex;align-items:baseline;gap:7px}
+.kassa-summa .pris{font-family:var(--font-display);font-size:26px;color:var(--ink)}
+.kassa-summa .pris .cirka,.kassa-summa .pris .minst{font-family:var(--font-body);color:var(--ink-2)}
+.kassa-summa .saknas{font-family:var(--font-body)}
+.kassa-budget{font:400 13px/1.4 var(--font-body);color:var(--ink-2)}
+.kassa .kassa-rader{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;margin:6px 0 0}
+.kassa .kassa-rader strong{font:400 12.5px/1.5 var(--font-body);color:var(--ink-2)}
+.kassa-osaker{font:400 12.5px/1.5 var(--font-body);color:var(--ink-2)}
+.kassa-osaker::before{content:"+ "}
+.kassa .progress-track{height:3px;margin-top:9px;border-radius:0;background:var(--rule)}
+.kassa .progress-track i{border-radius:0;background:var(--ink)}
+.kassa .prisnyckel{margin:12px 0 0;border-top:1px solid var(--rule)}
+/* ==========================================================================
+   J2 · JÄMFÖRELSETABELLEN GRATIS / PREMIUM
+
+   Premiumlistan var nio handskrivna <li> bredvid en kodsanning i
+   accounts/features.py, och två av dem sålde funktioner som var gratis.
+   Markupen byggs numera av src/views/premiumtabellen.js ur en rad per
+   funktionsnyckel; det här är bara formen på den.
+
+   FORMEN BÄR SVARET (§2.4, samma princip som de tre prisreglerna i §6):
+   ett ja är en FYLLD ruta, ett nej ett TANKSTRECK. Skillnaden överlever
+   därför gråskala, rödgrön färgblindhet och en svartvit utskrift - en tabell
+   där ja och nej bara skiljer sig i ton är oläsbar för var tolfte man.
+
+   OCH PREMIUM MÄRKS MED ORDET, INTE MED ACCENTEN. §2.3 förbjuder
+   uttryckligen accenten för "kvalitet, betyg, favorit, Premium": systemets
+   enda färg betyder "här är du, här går vägen vidare". Nivån sätts i
+   spärrade kapitäler (§2.4, R56) - ingen guldplatta, ingen andra accent.
+
+   Tankstrecket ritas i --ink-3 (4,68:1 mot --paper) och rutan i --ink: båda
+   bär betydelse och är alltså grafiska objekt med 3:1-krav (§2.4).
+   ========================================================================== */
+.jamfor{width:100%;border-collapse:collapse;margin:0 0 var(--sp-5);font-variant-numeric:tabular-nums}
+.jamfor-rubrik{width:74px;padding:0 0 var(--sp-3);border-bottom:1px solid var(--rule-2);text-align:center;vertical-align:bottom}
+.jamfor-tom{border-bottom:1px solid var(--rule-2)}
+.jamfor-niva{display:inline-block;font:400 12px/1.3 var(--f-ui);color:var(--ink-3)}
+.jamfor-premium{font:600 10px/1.3 var(--f-ui);letter-spacing:.2em;text-transform:uppercase;color:var(--ink)}
+.jamfor-etikett{padding:var(--sp-4) var(--sp-4) var(--sp-4) 0;border-top:1px solid var(--rule);font:400 14px/1.35 var(--f-ui);color:var(--ink);text-align:left}
+.jamfor-cell{padding:var(--sp-4) 0;border-top:1px solid var(--rule);text-align:center;vertical-align:middle}
+.jamfor-varde{font:400 13px/1.35 var(--f-ui);color:var(--ink)}
+.jamfor-ja{display:inline-block;width:11px;height:11px;vertical-align:middle;background:var(--ink)}
+.jamfor-nej{display:inline-block;width:11px;height:11px;vertical-align:middle;font:400 15px/11px var(--f-ui);color:var(--ink-3)}
+.jamfor-nej::before{content:"–"}
+/* Prisraden ligger överst och är inte en funktionsrad - hårlinjen hör till
+   listan under den, inte mellan rubriken och priset. */
+.jamfor-rad--pris .jamfor-etikett,.jamfor-rad--pris .jamfor-cell{border-top:0;padding-top:var(--sp-5)}
+.jamfor-per{display:block;font:400 11px/1.5 var(--f-ui);color:var(--ink-3)}
+/* Teckenförklaringen, av samma skäl som prisnyckeln i §5.7: en form som man
+   måste ha memorerat för att kunna läsa är en tystare version av att inte
+   säga något. Momsraden står här för att prisinformationslagen kräver att
+   priset som visas en konsument är det hon betalar. */
+.jamfor-not{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-6);margin:0 0 var(--sp-6);color:var(--ink-2);font:400 11px/1.5 var(--f-ui)}
+.jamfor-not-rad{display:flex;align-items:center;gap:var(--sp-3)}

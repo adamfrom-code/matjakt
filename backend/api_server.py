@@ -57,6 +57,8 @@ from services.billing import withdrawal
 from services.billing import gate as paywall
 from services.billing import activation as billing_activation
 from services.billing import dunning as billing_dunning
+from services.billing import referral as billing_referral
+from services.billing.codes import CodeError, PremiumCodeStore, expiry_in
 from services.billing import fetch_subscription as fetch_stripe_subscription, update_customer_email as stripe_update_customer_email
 from services.billing.savings import SavingsStore
 from services.email import MailError, MailNotConfigured, check_transport as check_mail_transport, is_configured as mail_is_configured, send_email
@@ -131,6 +133,13 @@ CAMPAIGN_CAPABLE_CHAINS = ("Coop", "Hemköp")
 CAMPAIGN_SCAN_INGREDIENTS = ["Kycklingfilé", "Kycklinglårfilé", "Köttfärs", "Biff", "Fläskfilé", "Laxfilé", "Fryst torsk", "Räkor", "Kalvschnitzel", "Falukorv", "Halloumi"]
 GEOCODE_CACHE_TTL_SECONDS = 86400
 PREMIUM_CODE = os.environ.get("MATJAKT_PREMIUM_CODE", "")
+# H5: den gamla env-koden var en EVIG sträng utan förbrukning, utgång eller
+# räknare. Den fungerar fortfarande - men som en RAD med gränser, och
+# gränserna är satta säkert från början. Adam höjer dem i Renders dashboard
+# om han behöver; en osäker standard hade varit ett hål som ingen upptäcker
+# förrän koden ligger på ett forum.
+PREMIUM_CODE_DAYS = int(os.environ.get("MATJAKT_PREMIUM_CODE_DAYS") or 365)
+PREMIUM_CODE_MAX_USES = int(os.environ.get("MATJAKT_PREMIUM_CODE_MAX_USES") or 50)
 
 # UTVECKLINGSLÅSET ÄR AVVECKLAT (2026-09-06). Matjakt är öppet för
 # allmänheten: konsumentvägarna (recept, butiker, prissättning) kräver ingen
@@ -649,6 +658,28 @@ ANALYTICS = AnalyticsStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
 # om siffran försvinner med en rensad cache.
 SAVINGS = SavingsStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
 ANALYTICS.import_legacy_counters(lambda event, day: KV_CACHE.get("analytics", f"{event}:{day}")[0])
+# H5: premium-koder som rader med gränser. Samma anslutning och lås som
+# kontona - koderna hänger ihop med users och ska säkerhetskopieras med dem.
+PREMIUM_CODES = PremiumCodeStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
+
+
+def seed_env_premium_code() -> None:
+    """Lyfter in MATJAKT_PREMIUM_CODE i koddatabasen, med tak och utgång.
+
+    Körs vid varje uppstart och är ofarlig att köra om: raden skrivs över med
+    aktuella gränser, men RÄKNAREN behålls (se PremiumCodeStore.create). Byter
+    Adam env-variabeln slutar den gamla koden fungera vid nästa inlösen - och
+    det var precis det som inte gick förut."""
+    if not PREMIUM_CODE:
+        return
+    try:
+        PREMIUM_CODES.create(label="env", grant_days=PREMIUM_CODE_DAYS,
+                             max_uses=PREMIUM_CODE_MAX_USES, code=PREMIUM_CODE)
+    except Exception:
+        logger.exception("Kunde inte lägga in MATJAKT_PREMIUM_CODE i koddatabasen")
+
+
+seed_env_premium_code()
 MAIL_LOG = mailings.MailingStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
 # J5: livscykeln efter köpet. Lagret, mejlvägen och uppsägningen skickas in
 # som funktioner, så hela dunning-logiken går att pröva mot en lista i minnet
@@ -727,6 +758,9 @@ def insights_payload() -> dict:
         # GET /api/admin/subscription-audit.
         "fakturering": dict(BILLING_WATCH),
         "veckonotis": WEEKLY_PUSH.status(),
+        # H5: koderna och hänvisningarna - hur många som delats ut, hur många
+        # som lösts in och hur många belöningar som faktiskt betalats.
+        "koder": PREMIUM_CODES.summary(),
     }
 
 # ---------------------------------------------------------------------------
@@ -2521,6 +2555,31 @@ class ApiHandler(SimpleHTTPRequestHandler):
             except StripeError as error:
                 self.send_json(502, {"error": str(error)})
             return
+        if parsed.path == "/api/admin/premium-code":
+            # H5: en kod med gränser, mintad på begäran. Query: dagar, antal,
+            # giltig, etikett. Den råa koden står i svaret EN gång.
+            if not self._admin_ok():
+                return
+            params = parse_qs(parsed.query)
+
+            def number(name, default):
+                try:
+                    return int(params.get(name, [""])[0])
+                except (TypeError, ValueError):
+                    return default
+
+            days = max(1, min(number("dagar", 30), 3650))
+            max_uses = number("antal", 1)
+            valid_days = number("giltig", 30)
+            code = PREMIUM_CODES.create(
+                label=clean_text(params.get("etikett", ["kampanj"])[0])[:80] or "kampanj",
+                grant_days=days,
+                max_uses=(max_uses if max_uses > 0 else None),
+                expires_at=(expiry_in(valid_days) if valid_days > 0 else None))
+            self.send_json(200, {"code": code, "grantDays": days,
+                                 "maxUses": max_uses if max_uses > 0 else None,
+                                 "expiresInDays": valid_days if valid_days > 0 else None})
+            return
         if parsed.path == "/api/admin/subscription-audit":
             # J5, andra halvan av B1:s avstämning. B1 frågar "vem betalar
             # utan att ha fått något?". Den här frågar tvärtom: vilka konton
@@ -2631,6 +2690,24 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # B3: ångerrättstexten kommer härifrån, precis som priserna - så
             # rutan i köpflödet aldrig kan säga en annan sak än den som sparas.
             self.send_json(200, {**plan_features.entitlements(plan), "withdrawal": withdrawal.terms()})
+            return
+        if parsed.path == "/api/referral":
+            # LÄSVÄGEN: statistiken, aldrig koden. Den råa strängen lämnades
+            # ut en enda gång (POST /api/referral) och finns sedan bara som
+            # hash - samma regel som för sessionstoken och inbjudningslänkar.
+            if self._rate_limit("public"):
+                return
+            user_id = ACCOUNT_STORE.user_id_for_token(self._bearer_token())
+            if not user_id:
+                self.send_json(401, {"error": "Du måste vara inloggad"})
+                return
+            owned = PREMIUM_CODES.owned_by(user_id)
+            uses = PREMIUM_CODES.uses_of(owned["code_hash"]) if owned else []
+            self.send_json(200, {
+                "hasCode": bool(owned),
+                "rewardDays": billing_referral.REFERRAL_REWARD_DAYS,
+                "invited": len(uses),
+                "rewarded": sum(1 for use in uses if use.get("rewarded_at"))})
             return
         if parsed.path == "/api/savings":
             # J3: sparhistoriken. Free ser sin senaste vecka, Premium hela
@@ -3070,11 +3147,49 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # guess it.
             if self._rate_limit("redeem", self._session_bucket()):
                 return
+            user_id = ACCOUNT_STORE.user_id_for_token(self._bearer_token())
+            if not user_id:
+                self.send_json(400, {"error": "Du måste vara inloggad"})
+                return
             try:
-                user = ACCOUNT_STORE.redeem_premium(self._bearer_token(), payload.get("code"), PREMIUM_CODE)
-                self.send_json(200, {"user": user})
-            except AccountError as error:
+                # H5: koden är en RAD med gränser - tak, utgång, räknare och
+                # en ägare - och belöningen är DAGAR, inte evighet. Hela
+                # kontrollen och räknaren ligger i samma transaktion, så en
+                # kod som läggs ut på ett forum tar slut i stället för att
+                # dela ut permanent Premium till alla som hinner klicka.
+                granted = PREMIUM_CODES.redeem(payload.get("code"), user_id)
+            except CodeError as error:
                 self.send_json(400, {"error": str(error)})
+                return
+            ACCOUNT_STORE.extend_premium(user_id, granted["grantDays"])
+            self.send_json(200, {"user": ACCOUNT_STORE.user_for_token(self._bearer_token()),
+                                 "grantedDays": granted["grantDays"]})
+            return
+        if parsed.path == "/api/referral":
+            # Kontots egen hänvisningskod. Skapas vid FÖRSTA förfrågan, inte
+            # vid registrering - ett konto som aldrig delar behöver ingen rad.
+            if self._rate_limit("state"):
+                return
+            user_id = ACCOUNT_STORE.user_id_for_token(self._bearer_token())
+            if not user_id:
+                self.send_json(401, {"error": "Du måste vara inloggad"})
+                return
+            raw = billing_referral.code_for(PREMIUM_CODES, user_id)
+            if raw:
+                # Koden lagras bara som hash. Den råa strängen finns en enda
+                # gång - i det här svaret - och sparas därför på kontots
+                # synkade tillstånd av klienten, precis som inbjudningslänken.
+                self.send_json(200, {**billing_referral.share_text(raw, APP_URL),
+                                     "new": True, "invited": 0, "rewarded": 0})
+                return
+            owned = PREMIUM_CODES.owned_by(user_id) or {}
+            uses = PREMIUM_CODES.uses_of(owned.get("code_hash") or "")
+            self.send_json(200, {
+                # Koden går inte att läsa ut igen - bara statistiken.
+                "code": None, "new": False,
+                "rewardDays": billing_referral.REFERRAL_REWARD_DAYS,
+                "invited": len(uses),
+                "rewarded": sum(1 for use in uses if use.get("rewarded_at"))})
             return
         if parsed.path == "/api/auth/start-trial":
             # The automatic/self-serve trial is OUT of the business model
@@ -3234,6 +3349,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                         NOTIFICATION_STORE.forget_user(identity[0])
                         SAVINGS.forget_user(identity[0])
                         PUSH_STORE.forget_user(identity[0])
+                        PREMIUM_CODES.forget_user(identity[0])
                     except Exception:
                         logger.exception("Kunde inte städa hushållsdata för raderat konto")
                 if customer_id and STRIPE_SECRET_KEY:
@@ -3797,10 +3913,16 @@ class ApiHandler(SimpleHTTPRequestHandler):
             logger.exception("Prissättning av veckan misslyckades")
             self.send_json(503, {"error": "Prisdatabasen är inte tillgänglig just nu"})
 
-    # J3: krokar som körs när ett konto skapar sin FÖRSTA vecka. Listan är
-    # tom här; H5 hänger hänvisningsbelöningen på samma signal, så villkoret
-    # blir "vecka_skapad" och inte "registrerad" för allt som belönar.
-    ACTIVATION_HOOKS = ()
+    # J3: krokar som körs när ett konto skapar sin FÖRSTA vecka.
+    # H5 hänger hänvisningsbelöningen här: den som bjöd in får sin månad när
+    # den INBJUDNA skapat sin första vecka - inte när hon registrerade sig.
+    # Villkoret är arbete, inte en e-postadress.
+    #
+    # Lagret slås upp VID ANROPET (lambdan), inte vid import. Annars pekar
+    # kroken på den anslutning som råkade finnas när modulen lästes in, och
+    # ett test som byter ut lagret måste bygga om kroken - varpå den här
+    # raden aldrig prövas av något test.
+    ACTIVATION_HOOKS = (billing_referral.activation_hook(lambda: PREMIUM_CODES),)
 
     def _record_first_week(self):
         """Aktiveringssignalen. Får ALDRIG kasta: det här är en belöningsväg,

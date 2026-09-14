@@ -73,16 +73,6 @@
       "Värm tortillabröden enligt paketet.",
       "Ställ fram allt i skålar och låt var och en bygga sina egna tacos med crème fraiche och majs."
     ],
-    "categories": [
-      "Helg"
-    ],
-    "tags": [
-      "vardagsmat",
-      "barn",
-      "helgmiddag",
-      "snabbt",
-      "Familjefavorit"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -96,7 +86,15 @@
     "imageCredit": "Nano Erdozain",
     "imageLicense": "Pexels License",
     "imageAlt": "Tacos med köttfärs upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "helg",
+      "familjefavorit",
+      "barn",
+      "helgmiddag",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kottfarslasagne",
@@ -180,16 +178,6 @@
       "Varva köttfärssås, lasagneplattor och ostsås i en form. Avsluta med ostsås och resten av osten.",
       "Grädda cirka 35 minuter tills ytan är gyllene och plattorna mjuka. Låt vila 10 minuter före servering."
     ],
-    "categories": [
-      "Husmanskost",
-      "Pasta"
-    ],
-    "tags": [
-      "vardagsmat",
-      "barn",
-      "mealprep",
-      "Familjefavorit"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -203,7 +191,15 @@
     "imageCredit": "Mateusz Feliksik",
     "imageLicense": "Pexels License",
     "imageAlt": "Klassisk köttfärslasagne upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "pasta",
+      "familjefavorit",
+      "barn",
+      "mealprep",
+      "vardagsmat"
+    ]
   },
   {
     "id": "korv-med-mos",
@@ -267,16 +263,6 @@
       "Stek korvarna runt om i lite smör tills de fått fin färg.",
       "Servera korven på moset med rostad lök, senap och ketchup."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "barn",
-      "billigt",
-      "snabbt"
-    ],
     "allergens": [
       "laktos",
       "senap"
@@ -291,7 +277,14 @@
     "imageCredit": "Acabashi",
     "imageLicense": "CC BY-SA 4.0",
     "imageAlt": "Korv med potatismos, brun sås och grönkål på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "barn",
+      "billigt",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "bruna-bonor-flask",
@@ -345,19 +338,16 @@
       "Skiva fläsket och stek det knaprigt i en torr panna.",
       "Servera bönorna med fläsket och potatisen."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "billigt"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost",
       "glutenfritt",
       "laktosfritt"
+    ],
+    "labels": [
+      "husmanskost",
+      "billigt",
+      "vardagsmat"
     ]
   },
   {
@@ -422,15 +412,6 @@
       "Vispa ur pannan med grädden och sojan till en snabb sky.",
       "Servera kotletterna med potatis, ärtor och skyn."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "snabbt",
-      "billigt"
-    ],
     "allergens": [
       "laktos",
       "soja"
@@ -438,6 +419,12 @@
     "dietFlags": [
       "blandkost",
       "glutenfritt"
+    ],
+    "labels": [
+      "husmanskost",
+      "billigt",
+      "snabbt",
+      "vardagsmat"
     ]
   },
   {
@@ -507,21 +494,19 @@
       "Rör ihop crème fraiche med hackad gräslök och en nypa salt till en snabb dipp.",
       "Servera direkt från plåten med dippen."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "vardagsmat",
-      "barn",
-      "billigt",
-      "Familjefavorit"
-    ],
     "allergens": [
       "laktos"
     ],
     "dietFlags": [
       "blandkost",
       "glutenfritt"
+    ],
+    "labels": [
+      "kyckling",
+      "familjefavorit",
+      "barn",
+      "billigt",
+      "vardagsmat"
     ]
   },
   {
@@ -587,15 +572,6 @@
       "Ta pannan från värmen. Vänd ner pastan, äggulorna och riven parmesan och rör snabbt till en krämig sås.",
       "Toppa med rikligt av svartpeppar och mer parmesan."
     ],
-    "categories": [
-      "Pasta"
-    ],
-    "tags": [
-      "vardagsmat",
-      "snabbt",
-      "barn",
-      "Familjefavorit"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -610,7 +586,14 @@
     "imageCredit": "Shameel mukkath",
     "imageLicense": "Pexels License",
     "imageAlt": "Pasta carbonara på svenskt vis upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "pasta",
+      "familjefavorit",
+      "barn",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "pasta-skinksas",
@@ -678,15 +661,6 @@
       "Häll i grädden, tillsätt ärtorna och låt såsen sjuda några minuter.",
       "Rör i osten, smaka av med salt och peppar och vänd ner pastan."
     ],
-    "categories": [
-      "Pasta"
-    ],
-    "tags": [
-      "vardagsmat",
-      "snabbt",
-      "barn",
-      "billigt"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -700,7 +674,14 @@
     "imageCredit": "Engin Akyurt",
     "imageLicense": "Pexels License",
     "imageAlt": "Pasta med krämig skinksås upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "pasta",
+      "barn",
+      "billigt",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "tonfiskpasta",
@@ -768,15 +749,6 @@
       "Rör i crème fraiche, avrunnen tonfisk och rivet citronskal. Värm försiktigt.",
       "Vänd ner pasta och ärtor, smaka av med citronsaft, salt och peppar."
     ],
-    "categories": [
-      "Pasta",
-      "Fisk"
-    ],
-    "tags": [
-      "vardagsmat",
-      "snabbt",
-      "billigt"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -792,7 +764,14 @@
     "imageCredit": "Rachel Claire",
     "imageLicense": "Pexels License",
     "imageAlt": "Tonfiskpasta med citron upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "pasta",
+      "billigt",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "fiskbullar-dillsas",
@@ -855,17 +834,6 @@
       "Koka upp ärtorna.",
       "Smaka av såsen med hackad dill, salt och vitpeppar och servera med potatis och ärtor."
     ],
-    "categories": [
-      "Husmanskost",
-      "Fisk"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "barn",
-      "billigt",
-      "snabbt"
-    ],
     "allergens": [
       "fisk",
       "laktos",
@@ -874,6 +842,14 @@
     "dietFlags": [
       "blandkost",
       "pescetariskt"
+    ],
+    "labels": [
+      "fisk",
+      "husmanskost",
+      "barn",
+      "billigt",
+      "snabbt",
+      "vardagsmat"
     ]
   },
   {
@@ -943,15 +919,6 @@
       "Lägg i kycklingen och sjud ytterligare 8-10 minuter tills allt är klart.",
       "Smaka av med salt och peppar och toppa med hackad persilja."
     ],
-    "categories": [
-      "Kyckling",
-      "Soppa"
-    ],
-    "tags": [
-      "vardagsmat",
-      "barn",
-      "billigt"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost",
@@ -964,6 +931,13 @@
     "imageCredit": "Farhad Ibrahimzade",
     "imageLicense": "Pexels License",
     "imageAlt": "Kycklingsoppa med ris och grönsaker upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "soppa",
+      "barn",
+      "billigt",
+      "vardagsmat"
+    ]
   }
 ]

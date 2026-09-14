@@ -26,7 +26,9 @@ Acceptansen är därför två påståenden, och båda prövas här:
 import http.server
 import importlib.util
 import threading
+import types
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -259,3 +261,73 @@ class KedjanIWorkflowfilerna(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DriftFarLiggaEfter(unittest.TestCase):
+    """K3c: grinden godtar att drift hunnit FÖRBI vår commit.
+
+    Den frågade först "kör drift exakt den här committen?". Render slår ihop
+    snabba pushar och deployar den senaste, så en natt med tjugo merger ger
+    grindkörningar som ALDRIG kan bli gröna - produktionen kommer aldrig att
+    köra mellanläggen. Det hände på riktigt: K6c:s e4e55836 pollades i 466 s
+    medan drift stod på 9968f6d, och drift gick sedan vidare till e836a3d.
+
+    Invarianten är att frontenden aldrig får vara nyare än backenden. En
+    backend som ligger före är i sin ordning.
+    """
+
+    def _kor(self, returkod, *, fanga=None):
+        """En attrapp för `git merge-base --is-ancestor`."""
+        def kor(arg):
+            if fanga is not None:
+                fanga.append(arg)
+            return types.SimpleNamespace(returncode=returkod, stdout="", stderr="")
+        return kor
+
+    def test_drift_som_gatt_forbi_godtas(self):
+        arg = []
+        self.assertTrue(grind.ar_minst_sa_ny(
+            "e836a3d8ba99", "e4e558365a83", kor=self._kor(0, fanga=arg)))
+        # Riktningen spelar roll: VÅR commit ska vara förfader till DRIFTENS.
+        # Kastas de om godtar grinden en backend som ligger EFTER frontenden,
+        # vilket är precis det fönster K3 stängde.
+        self.assertEqual(
+            arg[0],
+            ["git", "merge-base", "--is-ancestor", "e4e558365a83", "e836a3d8ba99"],
+        )
+
+    def test_drift_som_ligger_kvar_bakom_godtas_inte(self):
+        self.assertFalse(grind.ar_minst_sa_ny(
+            "9968f6d535e2", "e4e558365a83", kor=self._kor(1)))
+
+    def test_okand_commit_godtas_inte(self):
+        """Grund klon, force-push, annan gren: nej, inte 'nog nyare'."""
+        self.assertFalse(grind.ar_minst_sa_ny(
+            "deadbeef1234", "e4e558365a83", kor=self._kor(128)))
+
+    def test_git_som_inte_gar_att_kora_godtas_inte(self):
+        def kastar(arg):
+            raise OSError("git saknas")
+        self.assertFalse(grind.ar_minst_sa_ny(
+            "e836a3d8ba99", "e4e558365a83", kor=kastar))
+
+    def test_tomt_svar_godtas_aldrig(self):
+        """RENDER_GIT_COMMIT osatt får inte öppna grinden."""
+        for rapporterad in (None, "", 0):
+            with self.subTest(rapporterad=rapporterad):
+                self.assertFalse(grind.ar_minst_sa_ny(
+                    rapporterad, "e4e558365a83", kor=self._kor(0)))
+
+    def test_vantan_slutar_nar_drift_gatt_forbi(self):
+        """Hela vakten, inte bara predikatet: en ättling avslutar pollningen."""
+        svar = {"commit": "e836a3d8ba99"}
+        rader = []
+        with mock.patch.object(grind, "_hamta", return_value=svar), \
+             mock.patch.object(grind, "ar_minst_sa_ny", return_value=True):
+            kod = grind.vanta(
+                "https://exempel.invalid/api/health", "e4e558365a83",
+                timeout=480, interval=15,
+                sova=lambda _s: None, klocka=iter([0, 1]).__next__,
+                skriv=rader.append)
+        self.assertEqual(kod, 0)
+        self.assertTrue(any("EFTER" in r for r in rader), rader)
