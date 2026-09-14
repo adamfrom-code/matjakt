@@ -41,6 +41,7 @@ from .labels import LABELS, LEGACY_KINDS, display as label_display
 from .labels import merge as merge_labels
 from .labels import normalize_label_id
 from .meal_types import protein_of, require_dinner_protein
+from ..schema_version import RECEPT, stämpla
 from .meal_types import require as require_meal_type
 from .pantry import is_pantry_staple
 
@@ -138,6 +139,10 @@ class RecipeStore:
                 self._connection.execute(
                     "ALTER TABLE recipe_labels ADD COLUMN position INTEGER")
         self._merge_legacy_labels()
+        # Schemat är nu det version RECEPT beskriver - stämpla filen, så att en
+        # människa efter ett rollback kan LÄSA vilken version den bär i
+        # stället för att gissa. Se services/schema_version.py.
+        stämpla(self._connection, RECEPT)
 
     def _merge_legacy_labels(self) -> int:
         """M4: slår ihop `categories` och `tags` till ETT fält, i befintlig db.

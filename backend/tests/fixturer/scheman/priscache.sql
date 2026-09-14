@@ -6,3 +6,4 @@ CREATE TABLE product_cache (
                 updated_at REAL NOT NULL, parser_version TEXT NOT NULL DEFAULT '',
                 PRIMARY KEY (chain, query, zip)
             );
+PRAGMA user_version = 1;

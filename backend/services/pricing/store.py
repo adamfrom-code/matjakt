@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 from ..data_guard import guard_database_path
+from ..schema_version import PRISCACHE, stämpla
 
 PRUNE_PROBABILITY = 0.02
 PRUNE_MAX_AGE_SECONDS = 7 * 86400
@@ -77,6 +78,10 @@ class PriceCacheStore:
             with self.lock, self._connection:
                 self._connection.execute(
                     "ALTER TABLE product_cache ADD COLUMN parser_version TEXT NOT NULL DEFAULT ''")
+        # Schemat är nu det version PRISCACHE beskriver - stämpla filen, så att en
+        # människa efter ett rollback kan LÄSA vilken version den bär i
+        # stället för att gissa. Se services/schema_version.py.
+        stämpla(self._connection, PRISCACHE)
 
     def get(self, chain: str, query: str, zip_code: str):
         """Returns (products, updated_at) - a real time.time() timestamp, not

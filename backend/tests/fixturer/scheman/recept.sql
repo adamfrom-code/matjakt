@@ -67,3 +67,4 @@ CREATE INDEX idx_recipe_labels_lookup
 CREATE INDEX idx_recipes_meal_type ON recipes(meal_type);
 CREATE INDEX idx_recipes_protein ON recipes(protein);
 CREATE INDEX idx_recipes_time ON recipes(total_time);
+PRAGMA user_version = 2;
