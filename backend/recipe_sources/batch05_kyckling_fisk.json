@@ -72,16 +72,6 @@
       "Blanda tillbaka kycklingen och pressa över limesaft.",
       "Värm tortillabröden och servera med fyllningen och crème fraiche."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "kyckling",
-      "snabbt",
-      "barn",
-      "Familjefavorit",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -95,7 +85,14 @@
     "imageCredit": "DΛVΞ GΛRCIΛ",
     "imageLicense": "Pexels License",
     "imageAlt": "Kycklingfajitas med paprika upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "familjefavorit",
+      "barn",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kyckling-pesto-pasta",
@@ -160,16 +157,6 @@
       "Vänd ner pastan och de halverade tomaterna. Späd med pastavatten till krämig konsistens.",
       "Servera med riven parmesan över."
     ],
-    "categories": [
-      "Kyckling",
-      "Pasta"
-    ],
-    "tags": [
-      "kyckling",
-      "snabbt",
-      "barn",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -183,7 +170,14 @@
     "imageCredit": "Daniele Sgura",
     "imageLicense": "Pexels License",
     "imageAlt": "Pestopasta med kyckling upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "pasta",
+      "barn",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kyckling-rod-curry",
@@ -254,14 +248,6 @@
       "Lägg i paprikastrimlor och wokgrönsaker och sjud 3-4 minuter till.",
       "Smaka av med fisksås och limesaft. Servera med riset."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "kyckling",
-      "snabbt",
-      "vardagsmat"
-    ],
     "allergens": [
       "fisk"
     ],
@@ -276,7 +262,12 @@
     "imageCredit": "Augustinus Martinus Noppé",
     "imageLicense": "Pexels License",
     "imageAlt": "Röd kycklingcurry med jasminris upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "helstekt-kyckling-rotfrukter",
@@ -352,14 +343,6 @@
       "Låt vila tio minuter under folie innan du delar den.",
       "Servera med rotfrukterna och skyn från långpannan."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "kyckling",
-      "helgmiddag",
-      "Familjefavorit"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost",
@@ -372,7 +355,12 @@
     "imageCredit": "Tim Douglas",
     "imageLicense": "Pexels License",
     "imageAlt": "Hel kyckling i ugn med rotfrukter upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "familjefavorit",
+      "helgmiddag"
+    ]
   },
   {
     "id": "kycklingklubbor-bbq",
@@ -443,15 +431,6 @@
       "Koka eller ugnsrosta majsen de sista tio minuterna.",
       "Skär sallad och gurka och servera till klubborna."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "kyckling",
-      "barn",
-      "billigt",
-      "helgmiddag"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost",
@@ -464,7 +443,13 @@
     "imageCredit": "Helena Jankovičová Kováčová",
     "imageLicense": "Pexels License",
     "imageAlt": "Ugnsbakade kycklingklubbor med majs och sallad upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "barn",
+      "billigt",
+      "helgmiddag"
+    ]
   },
   {
     "id": "lax-teriyaki",
@@ -536,14 +521,6 @@
       "Ånga eller koka broccolin i 3 minuter - den ska vara klargrön.",
       "Servera lax och broccoli på riset, med sesamfrön över."
     ],
-    "categories": [
-      "Fisk"
-    ],
-    "tags": [
-      "fisk",
-      "snabbt",
-      "proteinrikt"
-    ],
     "allergens": [
       "fisk",
       "soja",
@@ -559,7 +536,12 @@
     "imageCredit": "Vitaliy Haiduk",
     "imageLicense": "Pexels License",
     "imageAlt": "Teriyakilax med ris och broccoli upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "proteinrikt",
+      "snabbt"
+    ]
   },
   {
     "id": "ugnslax-citron",
@@ -624,13 +606,6 @@
       "Rör ihop crème fraiche, hackad dill, gräslök och lite citronsaft. Smaka av med salt.",
       "Servera laxen med potatis och örtsåsen."
     ],
-    "categories": [
-      "Fisk"
-    ],
-    "tags": [
-      "fisk",
-      "helgmiddag"
-    ],
     "allergens": [
       "fisk",
       "laktos"
@@ -646,7 +621,11 @@
     "imageCredit": "Valeria Boltneva",
     "imageLicense": "Pexels License",
     "imageAlt": "Ugnsbakad lax med citron och örtsås upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "helgmiddag"
+    ]
   },
   {
     "id": "fishtacos",
@@ -731,14 +710,6 @@
       "Värm tortillabröden.",
       "Bygg tacos med sås, kål, fisk, picklad lök och koriander. Servera med limeklyftor."
     ],
-    "categories": [
-      "Fisk"
-    ],
-    "tags": [
-      "fisk",
-      "snabbt",
-      "helgmiddag"
-    ],
     "allergens": [
       "fisk",
       "gluten",
@@ -755,7 +726,12 @@
     "imageCredit": "Shameel mukkath",
     "imageLicense": "Pexels License",
     "imageAlt": "Fisktacos med picklad rödlök upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "helgmiddag",
+      "snabbt"
+    ]
   },
   {
     "id": "raksallad-avokado",
@@ -827,14 +803,6 @@
       "Toppa med räkor och äggklyftor.",
       "Servera med såsen och en citronklyfta, gärna med bröd till."
     ],
-    "categories": [
-      "Fisk"
-    ],
-    "tags": [
-      "fisk",
-      "snabbt",
-      "lunch"
-    ],
     "allergens": [
       "skaldjur",
       "ägg"
@@ -850,7 +818,12 @@
     "imageCredit": "Gundula Vogel",
     "imageLicense": "Pexels License",
     "imageAlt": "Räksallad med avokado och ägg upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "lunch",
+      "snabbt"
+    ]
   },
   {
     "id": "kyckling-shawarma-bowl",
@@ -930,15 +903,6 @@
       "Tärna tomat och gurka.",
       "Bygg skålar med ris, kyckling, grönsaker och vitlökssås."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "kyckling",
-      "proteinrikt",
-      "mealprep",
-      "vardagsmat"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -952,7 +916,13 @@
     "imageCredit": "MART  PRODUCTION",
     "imageLicense": "Pexels License",
     "imageAlt": "Kycklingbowl med ris och vitlökssås upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "mealprep",
+      "proteinrikt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "krispig-kyckling-nudelwok",
@@ -1024,15 +994,6 @@
       "Vänd ner nudlarna med soja och ostronsås och låt allt bli genomvarmt.",
       "Toppa med sesamfrön och servera direkt."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "kyckling",
-      "snabbt",
-      "barn",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "ägg",
@@ -1050,7 +1011,13 @@
     "imageCredit": "Jonathan Borba",
     "imageLicense": "Pexels License",
     "imageAlt": "Nudelwok med kyckling och grönsaker upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "barn",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kycklingschnitzel",
@@ -1126,14 +1093,6 @@
       "Koka ärtorna och rör ihop crème fraiche med citronsaft och salt.",
       "Servera schnitzeln med potatis, ärtor, sås och en citronklyfta."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "kyckling",
-      "barn",
-      "Familjefavorit"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -1148,7 +1107,12 @@
     "imageCredit": "Zhang Thomas",
     "imageLicense": "Pexels License",
     "imageAlt": "Kycklingschnitzel med kall sås och ärtor upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "familjefavorit",
+      "barn"
+    ]
   },
   {
     "id": "tonfiskpasta-citron",
@@ -1217,17 +1181,6 @@
       "Vänd ner pastan med en skvätt pastavatten så det blir en blank sås.",
       "Smaka av med salt och peppar och toppa med hackad persilja."
     ],
-    "categories": [
-      "Fisk",
-      "Pasta"
-    ],
-    "tags": [
-      "fisk",
-      "snabbt",
-      "billigt",
-      "lunch",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "fisk"
@@ -1243,7 +1196,15 @@
     "imageCredit": "Rachel Claire",
     "imageLicense": "Pexels License",
     "imageAlt": "Tonfiskpasta med citron och kapris upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "pasta",
+      "billigt",
+      "lunch",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kycklinglada-sotpotatis",
@@ -1313,14 +1274,6 @@
       "Rosta i 30-35 minuter tills sötpotatisen är mjuk och kycklingen genomstekt.",
       "Smula över fetaosten direkt ur ugnen och servera i formen."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "kyckling",
-      "mealprep",
-      "Familjefavorit"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -1334,7 +1287,12 @@
     "imageCredit": "Novkov Visuals",
     "imageLicense": "Pexels License",
     "imageAlt": "Kycklinglåda med sötpotatis och fetaost upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "familjefavorit",
+      "mealprep"
+    ]
   },
   {
     "id": "torsk-brynt-smor-agg",
@@ -1394,15 +1352,6 @@
       "Lägg upp fisken med potatis, strö över hackat ägg och persilja.",
       "Häll det brynta smöret över och servera med citron."
     ],
-    "categories": [
-      "Fisk",
-      "Husmanskost"
-    ],
-    "tags": [
-      "fisk",
-      "husmanskost",
-      "snabbt"
-    ],
     "allergens": [
       "fisk",
       "laktos",
@@ -1419,7 +1368,12 @@
     "imageCredit": "Bingqian Li",
     "imageLicense": "Pexels License",
     "imageAlt": "Torsk med brynt smör och hackat ägg upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "husmanskost",
+      "snabbt"
+    ]
   },
   {
     "id": "kyckling-tikka",
@@ -1506,15 +1460,6 @@
       "Rör ner grädden och kycklingen och sjud tills kycklingen är genomstekt.",
       "Toppa med koriander och servera med riset."
     ],
-    "categories": [
-      "Kyckling",
-      "Grytor"
-    ],
-    "tags": [
-      "kyckling",
-      "helgmiddag",
-      "Familjefavorit"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -1528,7 +1473,13 @@
     "imageCredit": "Kunal Lakhotia",
     "imageLicense": "Pexels License",
     "imageAlt": "Kyckling tikka masala upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "grytor",
+      "kyckling",
+      "familjefavorit",
+      "helgmiddag"
+    ]
   },
   {
     "id": "fiskpinnar-potatismos",
@@ -1588,18 +1539,6 @@
       "Mosa potatisen med mjölk och smör, smaka av med salt.",
       "Servera fiskpinnarna med mos, ärtor och en citronklyfta."
     ],
-    "categories": [
-      "Fisk"
-    ],
-    "tags": [
-      "fisk",
-      "barn",
-      "billigt",
-      "snabbt",
-      "Familjefavorit",
-      "husmanskost",
-      "vardagsmat"
-    ],
     "allergens": [
       "fisk",
       "gluten",
@@ -1614,7 +1553,16 @@
     "imageCredit": "lee c",
     "imageLicense": "Pexels License",
     "imageAlt": "Fiskpinnar med potatismos och ärtor upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "familjefavorit",
+      "barn",
+      "billigt",
+      "husmanskost",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kycklingwraps-lunch",
@@ -1689,17 +1637,6 @@
       "Värm tortillabröden.",
       "Fyll bröden med sallad, kyckling, majs och tomat. Toppa med dressingen och rulla ihop."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "kyckling",
-      "lunch",
-      "snabbt",
-      "barn",
-      "mealprep",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -1713,7 +1650,15 @@
     "imageCredit": "Miansari66",
     "imageLicense": "CC0",
     "imageAlt": "Två kycklingwraps med paprika och lök på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "barn",
+      "lunch",
+      "mealprep",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "sillunch-potatis",
@@ -1775,16 +1720,6 @@
       "Lägg upp sill, potatis, ägg och gräddfil.",
       "Toppa med gräslök och rödlök och servera med knäckebröd."
     ],
-    "categories": [
-      "Fisk",
-      "Husmanskost"
-    ],
-    "tags": [
-      "fisk",
-      "husmanskost",
-      "lunch",
-      "snabbt"
-    ],
     "allergens": [
       "fisk",
       "laktos",
@@ -1801,7 +1736,13 @@
     "imageCredit": "Fluff",
     "imageLicense": "CC BY-SA 3.0",
     "imageAlt": "Sill med färskpotatis, gräddfil, gräslök och ägg på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "husmanskost",
+      "lunch",
+      "snabbt"
+    ]
   },
   {
     "id": "kyckling-caesarsallad",
@@ -1876,14 +1817,6 @@
       "Skär salladen grovt och vänd den i dressingen.",
       "Toppa med kyckling, krutonger och resten av parmesanen."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "kyckling",
-      "lunch",
-      "proteinrikt"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -1899,7 +1832,12 @@
     "imageCredit": "Gundula Vogel",
     "imageLicense": "Pexels License",
     "imageAlt": "Caesarsallad med kyckling och krutonger upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "lunch",
+      "proteinrikt"
+    ]
   },
   {
     "id": "panerad-flundra-ugn",
@@ -1969,14 +1907,6 @@
       "Lägg tomaterna runt om och baka i 15-18 minuter tills täcket är gyllene.",
       "Toppa med persilja och servera med potatis och citron."
     ],
-    "categories": [
-      "Fisk"
-    ],
-    "tags": [
-      "fisk",
-      "snabbt",
-      "barn"
-    ],
     "allergens": [
       "fisk",
       "gluten",
@@ -1991,7 +1921,12 @@
     "imageCredit": "Antigoni Pavlaki",
     "imageLicense": "Pexels License",
     "imageAlt": "Ugnsstekt fisk med parmesantäcke upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "barn",
+      "snabbt"
+    ]
   },
   {
     "id": "kycklinggryta-honung-senap",
@@ -2062,17 +1997,6 @@
       "Smaka av med timjan och salt.",
       "Servera med potatisen och gärna en grönsallad."
     ],
-    "categories": [
-      "Kyckling",
-      "Grytor"
-    ],
-    "tags": [
-      "kyckling",
-      "barn",
-      "helgmiddag",
-      "Familjefavorit",
-      "vardagsmat"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -2086,7 +2010,15 @@
     "imageCredit": "Harry Tucker",
     "imageLicense": "Pexels License",
     "imageAlt": "Kycklinggryta med honung och senap upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "grytor",
+      "kyckling",
+      "familjefavorit",
+      "barn",
+      "helgmiddag",
+      "vardagsmat"
+    ]
   },
   {
     "id": "gravlax-hovmastarsas",
@@ -2165,13 +2097,6 @@
       "Lägg upp laxen med den dillstuvade potatisen.",
       "Servera med såsen och en citronklyfta."
     ],
-    "categories": [
-      "Fisk"
-    ],
-    "tags": [
-      "fisk",
-      "helgmiddag"
-    ],
     "allergens": [
       "fisk",
       "laktos",
@@ -2187,7 +2112,11 @@
     "imageCredit": "Nadin Sh",
     "imageLicense": "Pexels License",
     "imageAlt": "Gravad lax med hovmästarsås och dillstuvad potatis upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "helgmiddag"
+    ]
   },
   {
     "id": "kyckling-quesadillas",
@@ -2262,16 +2191,6 @@
       "Stek quesadillorna i torr eller lätt oljad panna, ett par minuter per sida, tills osten smält.",
       "Skär i trekanter och servera med crème fraiche och salsa."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "kyckling",
-      "barn",
-      "snabbt",
-      "Familjefavorit",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -2285,7 +2204,14 @@
     "imageCredit": "ROMAN ODINTSOV",
     "imageLicense": "Pexels License",
     "imageAlt": "Quesadillas med kyckling och majs upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "familjefavorit",
+      "barn",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "rakpasta-vitlok",
@@ -2350,15 +2276,6 @@
       "Vänd ner pastan med citronskal, citronsaft och en skvätt pastavatten.",
       "Toppa med persilja och servera direkt."
     ],
-    "categories": [
-      "Fisk",
-      "Pasta"
-    ],
-    "tags": [
-      "fisk",
-      "snabbt",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "skaldjur"
@@ -2374,6 +2291,12 @@
     "imageCredit": "Daniela Elena Tentis",
     "imageLicense": "Pexels License",
     "imageAlt": "Räkpasta med vitlök och citron upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "pasta",
+      "snabbt",
+      "vardagsmat"
+    ]
   }
 ]

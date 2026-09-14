@@ -1,6 +1,6 @@
 ---
 paket: N0e
-titel: Appens egna bilder
+titel: Appens egna bilder, i rätt palett
 ---
 
 Appikonen var **Capacitors blå logotyp**. `npx cap add ios` lägger in den, och

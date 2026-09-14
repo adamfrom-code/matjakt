@@ -198,6 +198,12 @@ class AccountStore:
             # J5: vilken periodslutdag årspåminnelsen redan gått ut för. Ett
             # datum, inte en boolean - nästa år ska påminnelsen komma igen.
             ("renewal_reminder_for", "TEXT"),
+            # H5: Premium MED SLUTDATUM. `premium` var en evig boolean, så en
+            # inlöst kod gav Premium för alltid och gick inte att ta tillbaka
+            # ens genom att byta env-variabeln. Nya inlösningar skriver den
+            # här i stället; den gamla flaggan finns kvar för de konton som
+            # redan har den - ingen ska vakna degraderad av en refaktorering.
+            ("premium_until", "TEXT"),
         ):
             try:
                 self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
@@ -248,7 +254,13 @@ class AccountStore:
         in_grace, grace_until = (_past_due_grace(row["past_due_since"] if "past_due_since" in keys else None)
                                  if sub_status == "past_due" else (False, None))
         grace_active = bool(in_grace) and not _period_expired(period_end)
-        premium_active = bool(row["premium"]) or trial_active or subscription_active or grace_active
+        # H5: Premium med slutdatum. En inlöst kod ger DAGAR, inte evighet -
+        # och när dagarna är slut faller kontot till Free av sig självt, utan
+        # att någon behöver städa.
+        premium_until = row["premium_until"] if "premium_until" in keys else None
+        code_active = bool(premium_until) and premium_until > datetime.now(timezone.utc).isoformat()
+        premium_active = (bool(row["premium"]) or trial_active or subscription_active
+                          or grace_active or code_active)
         plan_raw = row["subscription_plan"] if "subscription_plan" in keys else None
         # A01: VARFÖR kontot är Premium, inte bara ATT det är det.
         #
@@ -263,6 +275,7 @@ class AccountStore:
         premium_source = ("subscription" if subscription_active
                           else "grace" if grace_active
                           else "trial" if trial_active
+                          else "code" if code_active
                           else "comped" if bool(row["premium"])
                           else None)
         return {
@@ -283,6 +296,9 @@ class AccountStore:
             # inte igenom - Premium ligger kvar till 24 september". Null när
             # inget är fel, så en banderoll aldrig kan ritas av misstag.
             "subscriptionGraceUntil": grace_until if grace_active else None,
+            # H5: när den inlösta tiden tar slut. Null när kontot inte har
+            # någon - en nedräkning ska inte kunna ritas av misstag.
+            "premiumUntil": premium_until if code_active else None,
             "pendingEmail": (row["pending_email"] if "pending_email" in keys else None),
             "emailVerified": bool(row["email_verified"]) if "email_verified" in keys else False,
             "marketingConsent": bool(row["marketing_consent"]) if "marketing_consent" in keys else False,
@@ -424,17 +440,44 @@ class AccountStore:
         self.set_marketing_consent(row["id"], consent)
         return self._to_public(self._session_user_row(token))
 
-    def redeem_premium(self, token: str, code: str, expected_code: str) -> dict:
-        if not expected_code:
-            raise AccountError("Premium-inlösen är inte konfigurerad på servern")
-        if not code or not secrets.compare_digest(code, expected_code):
-            raise AccountError("Fel kod")
-        row = self._session_user_row(token)
-        if not row:
-            raise AccountError("Du måste vara inloggad")
-        self._connection.execute("UPDATE users SET premium = 1 WHERE id = ?", (row["id"],))
-        self._connection.commit()
-        return self._to_public(self._session_user_row(token))
+    def extend_premium(self, user_id, days: int) -> str | None:
+        """Lägger `days` dagar Premium på ett konto och returnerar det nya
+        slutdatumet. (H5)
+
+        STAPLAR i stället för att skriva över: räknas det från nu skulle en
+        andra kod förkorta den första när det finns tid kvar. Utgångspunkten
+        är därför det senare av "nu" och den tid kontot redan har.
+
+        Rör inte den eviga `premium`-flaggan. Ett konto som redan har den är
+        grandfathrat och behåller den; ett nytt konto ska ha ett datum."""
+        if not days:
+            return None
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT premium_until FROM users WHERE id = ?", (int(user_id),)).fetchone()
+            if row is None:
+                return None
+            now = datetime.now(timezone.utc)
+            current = row["premium_until"]
+            start = now
+            if current:
+                try:
+                    parsed = datetime.fromisoformat(str(current))
+                    if parsed.tzinfo is None:
+                        parsed = parsed.replace(tzinfo=timezone.utc)
+                    start = max(now, parsed)
+                except ValueError:
+                    start = now
+            until = (start + timedelta(days=int(days))).isoformat()
+            self._connection.execute(
+                "UPDATE users SET premium_until = ? WHERE id = ?", (until, int(user_id)))
+            self._connection.commit()
+            return until
+
+    def premium_until(self, user_id) -> str | None:
+        row = self._connection.execute(
+            "SELECT premium_until FROM users WHERE id = ?", (int(user_id),)).fetchone()
+        return row["premium_until"] if row else None
 
     # start_trial vid REGISTRERING är och förblir borttagen. J3 lade
     # tillbaka provperioden på ett annat ställe i tratten - efter den första
