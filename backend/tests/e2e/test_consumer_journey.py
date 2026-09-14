@@ -1082,22 +1082,12 @@ class BrowserJourney(unittest.TestCase):
                 # som en tumme möter den - träffar ett tryck strax utanför
                 # den synliga kanten fortfarande knappen? - och inte som ett
                 # mått i CSS.
-                träff = knapp.evaluate("""
-                    (el, golv) => {
-                      const r = el.getBoundingClientRect();
-                      const mitt = r.top + r.height / 2;
-                      const träffar = (x, y) => {
-                        const t = document.elementFromPoint(x, y);
-                        return !!(t && (t === el || el.contains(t)));
-                      };
-                      const kant = (golv - r.width) / 2;
-                      return {
-                        hojd: r.height,
-                        vanster: kant <= 0 || träffar(r.left - kant + 1, mitt),
-                        hoger: kant <= 0 || träffar(r.right + kant - 1, mitt),
-                      };
-                    }
-                """, matt.golv())
+                # ETT SVEP (L2c). Knappen slogs förut upp här och mättes i
+                # en andra CDP-vända, och veckolistan ritas om med
+                # `innerHTML =` - landade omritningen mellan de två mättes en
+                # avhängd nod, vars rect är idel nollor. Se tests/e2e/matt.py.
+                träff = matt.sidans_traffyta(
+                    page, "#weekPlanList .vecka-dag--tom [data-week-add-meal]", index=i)
                 # Mätt med matt.minst(): uppmätta pixlar är flyttal, och en
                 # ruta som CSS sätter till 44px läser tillbaka 44 - 2^-15 så
                 # fort raden ligger på en bruten pixel - eller mäts medan
