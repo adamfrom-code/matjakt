@@ -292,6 +292,14 @@
         <div class="sparat-manader" id="sparatManader" role="img" aria-label="Sparat per månad."></div>
         <div class="sparat-manvarden" id="sparatManvarden" aria-hidden="true"></div>
         <ul class="sparat-tal" id="sparatTal"></ul>
+        <!-- H3 · VECKOHISTORIKEN. state.weekHistory har sparat tolv veckor med
+             plan och total sedan app-state.js skrevs, och syntes bara som
+             knappen "Återställ förra veckan". Blocket fylls av
+             renderVeckohistorik() i src/views/veckohistorik.js - tomt här med
+             flit, som varje annan yta vars innehåll kommer ur tillståndet.
+             Den står UNDER nyckeltalen: siffrorna om nu först, bakåtblicken
+             sedan. -->
+        <section class="veckohistorik" id="veckohistorik"></section>
         <p class="stats-note">Middagar och kampanjvaror gäller veckan du har planerad nu. Beloppen är uppskattade mot den dyraste jämförbara kedjan, tills du bekräftar i kassan.</p>
         <button class="btn-sekundar sparat-dela" id="sparatShareBtn" type="button" hidden>Dela din månad</button>
         <p class="sparat-dela-status" id="sparatShareStatus" role="status"></p>
