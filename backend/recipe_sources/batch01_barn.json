@@ -73,18 +73,6 @@
       "Häll av potatisvattnet, mosa potatisen och rör ner resten av mjölken och smöret. Smaka av med salt.",
       "Servera köttbullarna med moset och lingonsylt."
     ],
-    "categories": [
-      "Husmanskost",
-      "Familj"
-    ],
-    "tags": [
-      "barn",
-      "familj",
-      "husmanskost",
-      "kott",
-      "proteinrikt",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -99,7 +87,15 @@
     "imageSource": "Pexels",
     "imageSourceUrl": "https://www.pexels.com/photo/fried-meat-cutlet-served-with-boiled-potatoes-and-salad-4210847/",
     "imageCredit": "https://kaboompics.com/",
-    "imageLicense": "Pexels License"
+    "imageLicense": "Pexels License",
+    "labels": [
+      "familj",
+      "husmanskost",
+      "barn",
+      "kott",
+      "proteinrikt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "spaghetti-kottfarssas",
@@ -176,20 +172,6 @@
       "Koka spaghettin enligt anvisningen på paketet under tiden.",
       "Smaka av såsen och servera över pastan."
     ],
-    "categories": [
-      "Pasta",
-      "Familj"
-    ],
-    "tags": [
-      "barn",
-      "familj",
-      "billigt",
-      "kott",
-      "proteinrikt",
-      "mealprep",
-      "husmanskost",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten"
     ],
@@ -202,7 +184,18 @@
     "imageCredit": "Maurijn Pach",
     "imageLicense": "Pexels License",
     "imageAlt": "Spaghetti med köttfärssås upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "familj",
+      "pasta",
+      "barn",
+      "billigt",
+      "husmanskost",
+      "kott",
+      "mealprep",
+      "proteinrikt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "tacos-kottfars",
@@ -278,17 +271,6 @@
       "Värm tortillabröden hastigt i torr panna eller i ugnen.",
       "Ställ fram allt på bordet och låt var och en fylla sina egna bröd."
     ],
-    "categories": [
-      "Familj",
-      "Helgmiddag"
-    ],
-    "tags": [
-      "barn",
-      "familj",
-      "kott",
-      "proteinrikt",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -302,7 +284,15 @@
     "imageCredit": "Nano Erdozain",
     "imageLicense": "Pexels License",
     "imageAlt": "Tacos med köttfärs och krispiga grönsaker upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "familj",
+      "helgmiddag",
+      "barn",
+      "kott",
+      "proteinrikt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "pannkakor",
@@ -358,18 +348,6 @@
       "Vänd och stek ytterligare en halv minut. Fortsätt tills smeten är slut.",
       "Servera pannkakorna med lingonsylt."
     ],
-    "categories": [
-      "Familj",
-      "Husmanskost"
-    ],
-    "tags": [
-      "barn",
-      "familj",
-      "billigt",
-      "vegetariskt",
-      "husmanskost",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -384,7 +362,15 @@
     "imageCredit": "Elina Fairytale",
     "imageLicense": "Pexels License",
     "imageAlt": "Pannkakor upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "familj",
+      "husmanskost",
+      "barn",
+      "billigt",
+      "vardagsmat",
+      "vegetariskt"
+    ]
   },
   {
     "id": "ugnspannkaka-bacon",
@@ -441,18 +427,6 @@
       "Grädda mitt i ugnen 30-35 minuter tills pannkakan svällt och fått gyllene yta.",
       "Skär i bitar och servera med lingonsylt."
     ],
-    "categories": [
-      "Familj",
-      "Husmanskost"
-    ],
-    "tags": [
-      "barn",
-      "familj",
-      "billigt",
-      "mealprep",
-      "husmanskost",
-      "vardagsmat"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -467,7 +441,15 @@
     "imageSource": "Pexels",
     "imageSourceUrl": "https://www.pexels.com/photo/breakfast-on-plate-22882256/",
     "imageCredit": "Hebert  Santos",
-    "imageLicense": "Pexels License"
+    "imageLicense": "Pexels License",
+    "labels": [
+      "familj",
+      "husmanskost",
+      "barn",
+      "billigt",
+      "mealprep",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kottfarslimpa-graddsas",
@@ -539,17 +521,6 @@
       "Lyft upp limpan och låt vila. Häll grädden i formen, rör ut skyn och låt koka ihop några minuter på spisen.",
       "Skiva limpan och servera med potatis och gräddsås."
     ],
-    "categories": [
-      "Husmanskost",
-      "Familj"
-    ],
-    "tags": [
-      "barn",
-      "familj",
-      "husmanskost",
-      "kott",
-      "proteinrikt"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -564,7 +535,14 @@
     "imageCredit": "Zoltan Istella",
     "imageLicense": "Pexels License",
     "imageAlt": "Köttfärslimpa med gräddsås upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "familj",
+      "husmanskost",
+      "barn",
+      "kott",
+      "proteinrikt"
+    ]
   },
   {
     "id": "lasagne-klassisk",
@@ -641,19 +619,6 @@
       "Varva köttfärssås, lasagneplattor och bechamel i en ugnsform, avsluta med bechamel och osten.",
       "Grädda 35-40 minuter tills ytan är gyllene. Låt vila 10 minuter före servering."
     ],
-    "categories": [
-      "Pasta",
-      "Familj",
-      "Helgmiddag"
-    ],
-    "tags": [
-      "barn",
-      "familj",
-      "kott",
-      "proteinrikt",
-      "mealprep",
-      "helgmiddag"
-    ],
     "allergens": [
       "gluten",
       "laktos"
@@ -667,7 +632,16 @@
     "imageCredit": "Büşra Yurt",
     "imageLicense": "Pexels License",
     "imageAlt": "Lasagne upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "familj",
+      "helgmiddag",
+      "pasta",
+      "barn",
+      "kott",
+      "mealprep",
+      "proteinrikt"
+    ]
   },
   {
     "id": "kyckling-ris-mild",
@@ -733,18 +707,6 @@
       "Koka riset enligt anvisningen på paketet under tiden.",
       "Smaka av grytan med salt och servera med riset."
     ],
-    "categories": [
-      "Familj",
-      "Ris"
-    ],
-    "tags": [
-      "barn",
-      "familj",
-      "kyckling",
-      "proteinrikt",
-      "mealprep",
-      "vardagsmat"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -757,7 +719,16 @@
     "imageCredit": "Istvan Szabo",
     "imageLicense": "Pexels License",
     "imageAlt": "Mild kycklinggryta med ris upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "familj",
+      "ris",
+      "barn",
+      "kyckling",
+      "mealprep",
+      "proteinrikt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "torsk-potatismos",
@@ -822,16 +793,6 @@
       "Hacka dillen och strö den över fisken.",
       "Servera med moset och resten av citronen i klyftor."
     ],
-    "categories": [
-      "Fisk",
-      "Familj"
-    ],
-    "tags": [
-      "barn",
-      "familj",
-      "fisk",
-      "proteinrikt"
-    ],
     "allergens": [
       "fisk",
       "laktos"
@@ -845,6 +806,12 @@
     "imageCredit": "Sylwester Ficek",
     "imageLicense": "Pexels License",
     "imageAlt": "Ugnsbakad torsk med potatismos upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "familj",
+      "fisk",
+      "barn",
+      "proteinrikt"
+    ]
   }
 ]

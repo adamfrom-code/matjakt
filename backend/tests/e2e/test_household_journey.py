@@ -207,8 +207,18 @@ class HouseholdJourney(unittest.TestCase):
                                 {"key": milk["key"], "addToInventory": True, "location": "kyl"})
         self.assertEqual(sara_bought["body"]["item"]["status"], "PURCHASED")
         self._sync(adam)
-        self.assertNotIn("Mjölk", self._shopping_rows(adam), "Adam ser inte Saras köp")
-        expect(adam.locator(".shopping-handled-row")).to_contain_text("Mjölk")
+        # L3: en avbockad vara lyfts inte längre UR listan till ett eget
+        # "Klart"-block under den. Den ligger kvar i sin avdelning,
+        # genomstruken och tonad - i butik ska raden man just bockade av
+        # stanna vid hyllan man står vid, inte hoppa till skärmens fot.
+        # Saras köp syns alltså hos Adam PÅ RADEN, och testet mäter det i
+        # stället för att mäta var raden råkade flytta.
+        self.assertIn("Mjölk", self._shopping_rows(adam), "Adam ser inte Saras köp")
+        milk = adam.locator("#shoppingList .shopping-item", has_text="Mjölk").first
+        expect(milk).to_have_class(re.compile(r"vara--klar"))
+        expect(milk.locator("button.vara")).to_have_attribute("aria-pressed", "true")
+        self.assertEqual(adam.locator(".shopping-handled-row").count(), 0,
+                         "det gamla Klart-blocket ritas fortfarande")
         self._screenshot(adam, "kopt")
 
         # --- Har hemma i Adams UI --------------------------------------------
@@ -272,8 +282,13 @@ class HouseholdJourney(unittest.TestCase):
 
         # --- Sara lämnar, access försvinner -------------------------------------
         self._open_household(sara)
-        sara.evaluate("() => { window.confirm = () => true; }")
+        # G12: frågan ställs i appens egen dialog, inte i webbläsarens. Den
+        # gick inte att stubba bort - och behöver det inte heller, för nu går
+        # den att klicka på. Fästet är data-dialog och inte etiketten:
+        # "Lämna hushållet" står på BÅDA knapparna, den man tryckte på och den
+        # i dialogen.
         sara.click("#householdLeaveBtn")
+        sara.click('.app-dialog [data-dialog="confirm"]')
         sara.wait_for_timeout(1500)
         self.assertEqual(self._api(sara, "/api/household/sync")["status"], 404,
                          "Sara har kvar åtkomst efter att ha lämnat")

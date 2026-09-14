@@ -75,6 +75,25 @@ FEATURES = {
     "balanced_week": {"free": True},
     # Middagar per vecka: Free planerar upp till gränsen, Premium 1-7.
     "seven_dinners": {"free": False},
+    # Byten: obegränsat många sedan G10, och avsikten bakom bytet ingår.
+    #
+    # G10 sålde de fem avsikterna - "Billigare", "Snabbare", "Barnvänligare",
+    # "Mer protein", "Använd det vi har hemma" - som Premium utan att ge dem
+    # en rad här. En funktion utan nyckel FINNS inte i modellen: den kunde
+    # varken få en serverkontroll (J1 härleder sin mängd ur FEATURES), en rad
+    # i premiumtabellerna (J2 och I8 kräver en nyckel per rad) eller ett svar
+    # i /api/entitlements. Kvar blev ett lås som bara klienten kände till,
+    # och en funktion som inte gick att sälja någonstans.
+    #
+    # J3:s princip avgör åt vilket håll nyckeln ska sättas, och den pekar hit:
+    # rankningen sker i rankSwapOptions() i KLIENTEN, ur samma lokala
+    # receptregister som veckorna, och kostar oss ingenting per byte. Fyra av
+    # de fem avsikterna är dessutom omskrivningar av det J3 nyss flyttade ner
+    # - "Använd det vi har hemma" ÄR full_pantry, "Mer protein" ÄR
+    # advanced_nutrition, "Billigare" är portionspriset som redan är gratis.
+    # Att låtsas sälja dem hade kostat oss vanan och gett ingen intäkt, precis
+    # det J3 skrev. Byte är handlingen som gör veckan till din.
+    "swap_intents": {"free": True},
     # Butiker och priser
     "cheapest_store_price": {"free": True},   # riktigt totalpris, billigaste kvalificerade butiken
     "cheapest_store_basket": {"free": True},  # dess riktiga inköpslista

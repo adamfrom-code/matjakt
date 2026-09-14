@@ -25,6 +25,11 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 from services.recipes import RecipeStore, normalize_ingredient_id  # noqa: E402
 from services.recipes.images import find_image, placeholder  # noqa: E402
+from services.recipes.labels import LABELS, LEGACY_KINDS  # noqa: E402
+from services.recipes.labels import merge as merge_labels  # noqa: E402
+from services.recipes.labels import normalize_label_id  # noqa: E402
+from services.recipes.meal_types import (  # noqa: E402
+    DINNER, LUNCH, MIN_DINNER_PROTEIN_G, is_dinner_protein_ok, protein_of)
 from services.recipes.pantry import is_pantry_staple, reason  # noqa: E402
 
 RECIPE_DIR = ROOT / "backend" / "recipe_sources"
@@ -69,6 +74,16 @@ def validate(recipe: dict, seen_ids: set, seen_names: set) -> list[str]:
                + nutrition.get("fat", 0) * 9)
     if kcal and abs(derived - kcal) > kcal * 0.3:
         problems.append(f"näringen går inte ihop: {derived:.0f} kcal ur makros mot {kcal}")
+    # M5: proteingolvet för det som får föreslås som middag. Butiken avvisar
+    # det också vid skrivning - men den som skriver källfilen ska få veta det
+    # här, bredvid talet hon just skrev, och inte av ett stacktrace i en
+    # importkörning.
+    protein = protein_of(recipe)
+    if recipe.get("mealType") == DINNER and not is_dinner_protein_ok(protein):
+        problems.append(
+            f"middag under proteingolvet: {protein:g} g mot {MIN_DINNER_PROTEIN_G} g "
+            f"per portion - höj proteinet och räkna om näringen, eller klassa "
+            f"rätten som {LUNCH!r}")
 
     ingredients = recipe.get("ingredients") or []
     if len(ingredients) < 3:
@@ -98,11 +113,24 @@ def validate(recipe: dict, seen_ids: set, seen_names: set) -> list[str]:
         if unit and unit not in KNOWN_UNITS:
             problems.append(f"okänd enhet '{unit}' för {ingredient['name']}")
 
-    if not recipe.get("tags"):
-        problems.append("saknar tags")
+    # M4: ETT etikettfält, och etiketterna i nyckelform. Butiken normaliserar
+    # ändå på väg in, men en källfil är något en människa just har skrivit -
+    # och `Kött` bredvid `kott` var precis det som halverade varje filter.
+    etiketter = merge_labels(recipe.get(LABELS), recipe.get("categories"),
+                             recipe.get("tags"))
+    if not etiketter:
+        problems.append("saknar labels")
+    for gammalt in LEGACY_KINDS:
+        if recipe.get(gammalt):
+            problems.append(f"fältet `{gammalt}` är ersatt av `labels` - "
+                            f"kör backend/scripts/normalize_recipe_labels.py --skriv")
+    for value in recipe.get(LABELS) or []:
+        if not isinstance(value, str) or normalize_label_id(value) != value:
+            problems.append(f"etiketten {value!r} är inte i nyckelform "
+                            f"(gemen, utan diakriter)")
     # A vegetarian recipe with meat in it is the kind of error that matters
     # to a person, not just to a schema.
-    flags = set(recipe.get("dietFlags") or []) | set(recipe.get("tags") or [])
+    flags = set(recipe.get("dietFlags") or []) | set(etiketter)
     if {"vegetarisk", "vegetariskt", "vegansk", "veganskt"} & flags:
         meat = [i["name"] for i in ingredients
                 if normalize_ingredient_id(i["name"]) in MEAT_IDS]

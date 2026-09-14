@@ -30,58 +30,16 @@
 // ---------------------------------------------------------------------------
 
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
+// Läsaren bor i tests/fixtures/affarsmodell.mjs sedan J2, så den här
+// granskningen, premiumtabellens och granskningen av låsen i appen läser
+// modellen likadant. `läsPython` heter så där; `läs` är namnet den här filen
+// alltid har använt, och aliaset låter resten av filen stå orörd.
+import { FEATURES_PY, läsPython as läs, läsFeatures, läsKonstant }
+  from "./fixtures/affarsmodell.mjs";
 
-const ROT = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
-const läs = (relativ) => readFileSync(ROT + relativ, "utf8");
-
-const FEATURES_PY = "backend/services/accounts/features.py";
 const INDEX = "frontend/index.html";
 const VILLKOR = "frontend/anvandarvillkor.html";
-
-// --- Modellen, läst som data ------------------------------------------------
-
-/** Tar bort #-kommentarer men behåller radbrytningarna, så radnummer står kvar. */
-function utanKommentarer(källa) {
-  return källa.split("\n").map((rad) => rad.replace(/(^|\s)#.*$/, "$1")).join("\n");
-}
-
-/** Blocket mellan `NAMN = {` och den avslutande `}` i kolumn noll. */
-function dictBlock(källa, namn) {
-  const start = källa.indexOf(`\n${namn} = {`);
-  if (start < 0) throw new Error(`${namn} finns inte i ${FEATURES_PY} - har modellen döpts om?`);
-  const från = källa.indexOf("{", start) + 1;
-  const till = källa.indexOf("\n}", från);
-  if (till < 0) throw new Error(`${namn} har ingen avslutande } i kolumn noll`);
-  return källa.slice(från, till);
-}
-
-/**
- * FEATURES som Map<nyckel, fri>. `fri` är exakt det `allowed(FREE, nyckel)`
- * svarar: True i modellen betyder att gratisplanen har funktionen.
- */
-export function läsFeatures(källa = läs(FEATURES_PY)) {
-  const block = utanKommentarer(dictBlock(källa, "FEATURES"));
-  const funktioner = new Map();
-  for (const m of block.matchAll(/"([a-z_0-9]+)"\s*:\s*\{\s*"free"\s*:\s*(True|False)\s*\}/g)) {
-    funktioner.set(m[1], m[2] === "True");
-  }
-  const rader = block.split("\n").filter((rad) => /^\s*"[a-z_0-9]+"\s*:/.test(rad));
-  if (rader.length !== funktioner.size) {
-    throw new Error(`FEATURES har ${rader.length} rader men bara ${funktioner.size} gick att läsa `
-      + "- en rad står i en form parsern inte känner igen och skulle granskas bort tyst");
-  }
-  if (!funktioner.size) throw new Error("FEATURES lästes som tom - då granskar testet ingenting");
-  return funktioner;
-}
-
-/** Ett `NAMN = <heltal>` på modulnivå. Saknas det är det ett fel, inte en nolla. */
-export function läsKonstant(namn, källa = läs(FEATURES_PY)) {
-  const m = new RegExp(`^${namn}\\s*=\\s*(-?\\d+)\\s*$`, "m").exec(utanKommentarer(källa));
-  if (!m) throw new Error(`${namn} finns inte som heltal på modulnivå i ${FEATURES_PY}`);
-  return Number(m[1]);
-}
 
 const FUNKTIONER = läsFeatures();
 const TAL = Object.fromEntries(
@@ -120,6 +78,13 @@ const SÄLJFRASER = new Map([
   ["vegetarian_week", [...VECKOTYP, /vegetarisk/i]],
   ["balanced_week", [...VECKOTYP, /balanserad vecka/i]],
   ["seven_dinners", [new RegExp(`${ord(TAL.PREMIUM_MAX_DINNERS)} middagar`, "i")]],
+  // J6: avsikterna bakom ett byte. Fraserna är breda med flit - de granskas
+  // bara mot premiumrutan, villkorens "Premium kostar"-rad och FAQ-svaret,
+  // och i de tre rutorna finns ingen oskyldig anledning att skriva "avsikt".
+  // Sajten nämner i dag inte byten alls; den här raden finns för att den
+  // aldrig ska börja sälja dem, nu när modellen säger att de är gratis.
+  ["swap_intents", [/byten? med avsikt/i, /avsikt/i, /barnvänligare/i,
+    /byt.{0,20}(billigare|snabbare|mer protein)/i]],
   ["cheapest_store_price", [/billigaste butiken/i, /billigaste kvalificerade butiken/i]],
   ["cheapest_store_basket", [/billigaste butikens (inköpslista|lista)/i]],
   ["all_store_prices", [/alla butiker/i, /alla kvalificerade butikers priser/i, /samtliga butiker/i]],
