@@ -22,6 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from tests.e2e import matt  # noqa: E402
 from tests.e2e.test_consumer_journey import ARTIFACTS, _Server, _skip_reason  # noqa: E402
 
 try:
@@ -168,9 +169,18 @@ class AdminPanel(unittest.TestCase):
         expect(page.locator("#opsSystems")).to_contain_text("Prisrevision")
         expect(page.locator("#primatStatus")).to_contain_text("NEJ")
         # 8. Tryckytor.
-        små = page.evaluate("""() => [...document.querySelectorAll('button')]
-            .filter(b => b.offsetHeight > 0 && b.getBoundingClientRect().height < 44).map(b => b.innerText.slice(0,20))""")
-        self.assertEqual(små, [], f"{width}px: knappar under 44 px: {små}")
+        # Mäts i webbläsaren, DÖMS i Python: tröskeln är samma matt.minst()
+        # som veckans plusknapp mäts med, och en knapp som CSS sätter till
+        # 44px läser tillbaka 44 - 2^-15 så fort den ligger på en bruten
+        # pixel. Höjderna följer med ut, inte bara namnen - "knappen är
+        # 24 px" går att åtgärda, "knappen är för liten" går att gissa om.
+        knappar = page.evaluate("""() => Object.fromEntries(
+            [...document.querySelectorAll('button')]
+              .filter(b => b.offsetHeight > 0)
+              .map((b, i) => [`${b.innerText.slice(0, 20).trim() || b.ariaLabel || 'knapp'} #${i}`,
+                              b.getBoundingClientRect().height]))""")
+        små = matt.for_sma(knappar)
+        self.assertEqual(små, {}, f"{width}px: knappar under {matt.TUMYTA_PX} px: {små}")
 
     # ---- testerna ----
     def test_mobil_320_375_390_och_forstorad_text(self):
