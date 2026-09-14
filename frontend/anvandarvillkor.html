@@ -40,12 +40,10 @@
   h1{font:400 34px/1.1 var(--f-disp);letter-spacing:-.02em;margin:0 0 6px;color:var(--ink)}
   h2{font:400 22px/1.15 var(--f-disp);margin:36px 0 10px;color:var(--ink)}
   .updated{color:var(--ink-3);font-size:14px;margin:0 0 30px}
-  /* Platshållarna ska SYNAS att de är platshållare. Accenten får inte bära
-     status (DESIGNSYSTEM-D 2.3), så markeringen är en nedsänkt yta. */
-  .placeholder{background:var(--paper-2);padding:2px 6px;border-bottom:1px solid var(--ink-3)}
-  .notice{margin:0 0 30px;padding:16px 18px;background:var(--paper-2);border-top:1px solid var(--rule-2);font-size:14px}
+  .lead{font:400 18px/1.55 var(--f-disp);color:var(--ink-2);margin:0 0 26px}
+  .note{margin:0 0 30px;padding:14px 16px;background:var(--paper-2);border-top:1px solid var(--rule-2);font-size:14px;color:var(--ink-2)}
   ul{padding-left:22px}
-  li{margin-bottom:6px}
+  li{margin-bottom:8px}
   .back{display:inline-flex;align-items:center;min-height:44px;margin-bottom:12px;font-size:13px;font-weight:500;text-decoration:none}
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
@@ -54,7 +52,9 @@
 <div class="wrap">
   <a class="back" href="index.html">← Tillbaka till Matjakt</a>
   <h1>Användarvillkor</h1>
-  <p class="updated">Senast uppdaterad: 2026-08-31</p>
+  <p class="updated">Senast uppdaterad: 2026-09-12</p>
+
+  <p class="lead">Villkoren gäller mellan dig och Adam From, enskild firma, och beskriver vad Matjakt lovar och vad du går med på när du skapar ett konto. Hur dina personuppgifter behandlas står i <a href="integritetspolicy.html">integritetspolicyn</a>, som är en del av det här avtalet.</p>
 
   <h2>Om tjänsten</h2>
   <p>Matjakt (”tjänsten”) tillhandahålls av Adam From, enskild firma, org.nr 199511045651 (”vi”). Tjänsten hjälper dig planera veckans middagar utifrån budget, hushåll och kostpreferenser, och beräknar inköpskostnader utifrån priser som Matjakt löpande samlar in från butikskedjornas publika webbutiker.</p>
@@ -68,7 +68,7 @@
 
   <h2>Gratisversion och Premium</h2>
   <ul>
-    <li>Matjakt är gratis att använda: veckoplanering med alla veckotyper, recept, inköpslista, skafferi, näringsmål och det riktiga totalpriset hos den billigaste kvalificerade butiken ingår utan kostnad.</li>
+    <li>Matjakt är gratis att använda: veckoplanering med alla veckotyper, recept, inköpslista, skafferi, näringsmål och det riktiga totalpriset hos den billigaste kvalificerade butiken ingår utan kostnad. Ett gratiskonto kan dela hushåll med en person till, alltså två i hushållet.</li>
     <li>Premium kostar 59 kr/månad eller 399 kr/år (motsvarande cirka 33 kr/månad) och låser upp sju middagar i veckan, alla kvalificerade butikers priser och butikskorgar, full butiksjämförelse, färska priser per vara, hushåll för upp till tolv personer och hela sparhistoriken.</li>
     <li>Betalda prenumerationer hanteras och debiteras via Stripe och förnyas automatiskt tills du säger upp dem via Hantera prenumeration i appen. Ingen kostnadsfri provperiod ingår för närvarande.</li>
     <li><strong>Ångerrätt.</strong> Enligt lag (2005:59) om distansavtal och avtal utanför affärslokaler har du som konsument fjorton dagars ångerrätt. Premium är en digital tjänst som levereras direkt, och därför ber vi dig vid köpet uttryckligen samtycka till att leveransen påbörjas omedelbart och godkänna att ångerrätten upphör när tjänsten har levererats (2 kap. 11 § första stycket 11). Utan det samtycket går köpet inte att genomföra — samtycket sparas med tidsstämpel på ditt konto och kontrolleras innan betalningen startar. Ändrar vi ordalydelsen ber vi om ett nytt samtycke vid nästa köp; ett tidigare ja gäller inte för en ny text. Du kan när som helst säga upp prenumerationen under Hantera prenumeration i appen, och den löper då ut vid periodens slut utan att förnyas.</li>
@@ -83,8 +83,14 @@
   <h2>Ansvarsbegränsning</h2>
   <p>Tjänsten tillhandahålls i befintligt skick. Vi ansvarar inte för felaktiga priser, receptfel eller allergiuppgifter – kontrollera alltid ingredienser och innehållsförteckningar själv om du har allergi eller intolerans. Vi ansvarar inte för indirekta skador som uppstår av att använda tjänsten.</p>
 
+  <h2>Personuppgifter</h2>
+  <p>Vilka uppgifter Matjakt behandlar, varför, vilka mottagare de når och hur länge de sparas står i <a href="integritetspolicy.html">integritetspolicyn</a>. Där beskrivs också hur du raderar kontot, får ut dina uppgifter och återkallar ett samtycke.</p>
+
+  <h2>Om vi inte kommer överens</h2>
+  <p>Hör alltid av dig till oss först – kontaktuppgifterna står längst ned. Är du missnöjd med hur vi hanterat ditt ärende kan du som konsument vända dig till Allmänna reklamationsnämnden, <a href="https://www.arn.se">arn.se</a>, som prövar tvisten kostnadsfritt.</p>
+
   <h2>Ändringar</h2>
-  <p>Vi kan uppdatera dessa villkor. Väsentliga ändringar meddelas i appen eller via e-post.</p>
+  <p>Vi kan uppdatera dessa villkor. Datumet högst upp visar när de senast ändrades, och väsentliga ändringar meddelas i appen eller via e-post.</p>
 
   <h2>Kontakt</h2>
   <address style="font-style:normal">

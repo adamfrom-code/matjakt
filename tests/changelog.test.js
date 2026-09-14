@@ -6,7 +6,7 @@
 // ingenting om det inte också visas att det gamla faktiskt gick sönder.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -119,8 +119,79 @@ test("front matter som saknas eller är ofullständig avvisas", () => {
   } finally { rmSync(kat, { recursive: true, force: true }); }
 });
 
+// A4b: de fem testerna ovan prövar vävningen mot temporära kataloger. Ingen
+// av dem läser den riktiga docs/changelog.d/ - och därför kunde tre fragment
+// utan front matter mergas gröna och blockera varje release. Grinden som
+// saknades är den enklaste: väv det som faktiskt ligger i repot.
+const FRAGMENTKATALOG = join(root, "docs", "changelog.d");
+const CHECKPOINT_MD = join(root, "CHECKPOINT.md");
+
+test("varje fragment i docs/changelog.d/ går faktiskt att väva", () => {
+  const filer = readdirSync(FRAGMENTKATALOG)
+    .filter(namn => namn.endsWith(".md") && namn !== "README.md")
+    .sort();
+  assert.ok(filer.length > 0, "inga fragment att pröva - då bevisar testet inget");
+
+  // läsFragment kastar på första trasiga filen. Felmeddelandet namnger den,
+  // och det är den enda uppgift den som ska laga det behöver.
+  const fragment = läsFragment(FRAGMENTKATALOG);
+
+  assert.deepEqual(fragment.map(f => f.fil).sort(), filer,
+    "vävningen tappade eller hittade på fragment");
+
+  // Och resultatet måste innehålla varenda ett. En väv som "lyckas" med
+  // halva katalogen är ett tystare fel än ett kast.
+  const ut = väv(fragment, "PROV");
+  for (const f of fragment) {
+    assert.ok(ut.includes(`### ${f.paket} · ${f.titel}`),
+      `${f.fil} kom inte med i det vävda avsnittet`);
+  }
+});
+
+test("ett fragment upprepar inte sin egen titel som rubrik i kroppen", () => {
+  // väv() skriver redan "### <paket> · <titel>". Ett fragment som dessutom
+  // öppnar med sin titel som rubrik får den två gånger i CHECKPOINT.md.
+  // Underrubriker längre ned är däremot husets sätt att skriva - K6 och N0b
+  // är båda avsiktligt indelade.
+  for (const f of läsFragment(FRAGMENTKATALOG)) {
+    const rubrik = /^#{1,6}\s+(.+?)\s*$/m.exec(f.text.split(/\r?\n/)[0]);
+    if (!rubrik) continue;
+    assert.notEqual(rubrik[1].toLocaleLowerCase("sv"), f.titel.toLocaleLowerCase("sv"),
+      `${f.fil} öppnar med sin egen titel som rubrik - den står redan i front matter`);
+  }
+});
+
+// A6: testerna ovan anropar läsFragment() och väv() som funktioner. Det
+// bevisar att logiken håller - men det var inte logiken som var trasig, det
+// var kommandot. `node scripts/weave_checkpoint.mjs` kastade på main medan
+// CI stod grön, för ingenting körde någonsin skriptet som skript.
+test("weave_checkpoint.mjs går att köra som kommando", () => {
+  const före = readFileSync(CHECKPOINT_MD, "utf8");
+  let ut;
+  try {
+    ut = execFileSync(process.execPath, [join(root, "scripts", "weave_checkpoint.mjs")],
+      { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
+  } catch (fel) {
+    assert.fail("`node scripts/weave_checkpoint.mjs` gick inte att köra - ingen release kan vävas:\n" +
+      (fel.stderr || fel.message).trim().split(/\r?\n/).slice(0, 3).map(r => `  ${r}`).join("\n"));
+  }
+
+  // Varje fragment ska synas i utskriften. "Den kraschade inte" är ett
+  // svagare påstående än "den skrev ut allt som skulle med".
+  for (const f of läsFragment(FRAGMENTKATALOG)) {
+    assert.ok(ut.includes(`### ${f.paket} · ${f.titel}`),
+      `${f.fil} saknas i torrkörningens utskrift`);
+  }
+
+  // Skriptets egen utfästelse, ur dess huvudkommentar: utan --apply skrivs
+  // bara resultatet till stdout. Ett släppverktyg som ändrar filer när man
+  // bara ville titta blir ett verktyg ingen vågar köra.
+  assert.equal(readFileSync(CHECKPOINT_MD, "utf8"), före,
+    "torrkörningen skrev i CHECKPOINT.md - utan --apply ska den bara skriva till stdout");
+});
+
 test("CHECKPOINT.md säger att den inte ska redigeras direkt", () => {
-  const text = readFileSync(join(root, "CHECKPOINT.md"), "utf8");
+  const text = readFileSync(CHECKPOINT_MD, "utf8");
   assert.match(text, /changelog\.d/,
     "CHECKPOINT.md pekar inte på docs/changelog.d - då kommer nästa agent att redigera den direkt");
 });
