@@ -189,3 +189,4 @@ CREATE INDEX idx_grocery_products_normalized_key
                 ON grocery_products(normalized_key);
 CREATE INDEX idx_grocery_reference_prices_chain
                 ON grocery_reference_prices(chain);
+PRAGMA user_version = 1;
