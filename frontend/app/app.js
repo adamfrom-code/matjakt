@@ -784,11 +784,13 @@ function distanceKm(lat1, lon1, lat2, lon2) {
 // innan /api/entitlements svarat - aldrig en andra affärsmodell.
 // test_frontend_contract faller om de två listorna skiljer sig. Uppdaterad
 // av J3 (ny paketering): veckotyperna, skafferiet och näringsfiltret ner
-// till gratis, hushåll bortom två personer och sparhistoriken upp.
+// till gratis, hushåll bortom två personer och sparhistoriken upp. J6 la
+// till swap_intents - avsikterna i bytesarket, som G10 sålde utan nyckel.
 const FREE_FEATURES = {
   standard_week: true, family_week: true, budget_week: true, training_week: true,
   bulk_week: true, quick_week: true, vegetarian_week: true, balanced_week: true,
-  seven_dinners: false, cheapest_store_price: true, cheapest_store_basket: true,
+  seven_dinners: false, swap_intents: true,
+  cheapest_store_price: true, cheapest_store_basket: true,
   all_store_prices: false, all_store_baskets: false, store_comparison: false,
   live_prices: false,
   recipe_search: true, advanced_nutrition: true, meal_prep: true,
@@ -861,13 +863,13 @@ function can(feature) {
 }
 function maxDinners() { return hasPremium() ? 7 : (entitlements.maxDinners || 4); }
 function premiumPricing() {
-  // Reservvärdet gäller bara innan /api/entitlements svarat. Det bär samma
-  // siffror som backend (features.PRICING) så flikarna aldrig visar tomt.
-  return entitlements.pricing || {
-    monthly: { priceText: "59 kr/mån", pricePerMonth: 59 },
-    yearly: { priceText: "399 kr/år", pricePerYear: 399, perMonthText: "≈ 33 kr/mån",
-              savingsText: "Spara 309 kr jämfört med månadsbetalning", badge: "Bäst värde" },
-  };
+  // Inget reservpris, med flit. Reservobjektet bar 59/399 och fyra fält som
+  // ingen läste efter L7, och så länge det låg mellan svaret och vyn fick
+  // premiumskarmen.js aldrig se ett saknat pris - modulens "pris saknas" var
+  // onåbar i appen. Priset bor i backend (features.PRICING) och når hit via
+  // /api/entitlements; har svaret inte kommit säger skärmen det i stället för
+  // att rita ett tal som kan ha slutat gälla.
+  return entitlements.pricing || {};
 }
 // Ångerrätten (distansavtalslagen). Texten kommer från backend precis som
 // priserna - reservvärdet gäller bara innan /api/entitlements svarat, och
@@ -3397,12 +3399,25 @@ function swapOptionsFor(current, candidates, intent) {
                       cost: swapCostText(option, current) }));
 }
 
-// G10: AVSIKTEN ÄR DET SOM SÄLJS, INTE ANTALET.
+// J6: LÅSET FRÅGAR AFFÄRSMODELLEN, DET BÄR DEN INTE.
 //
-// "Något annat" är och förblir gratis - det är det byte som gör veckan till
-// din. De fem avsikterna är ett annat slags handling: ett mål i stället för
-// ett kast, och det som kostar oss arbete att svara på.
-const swapIntentLocked = intentId => Boolean(intentId) && !hasPremium();
+// G10 skrev "det som säljs är avsikten" och lät den här raden fråga
+// hasPremium() rakt av - men avsikterna fick aldrig en rad i FEATURES. Ett
+// lås utan nyckel kan varken få en serverkontroll (J1 härleder sin mängd ur
+// FEATURES) eller en rad i premiumtabellerna (J2/I8 kräver en nyckel per
+// rad), och /api/entitlements nämner det inte. Kvar blev ett lås som bara
+// klienten kände till - och som därför bara klienten upprätthöll.
+//
+// Nyckeln finns nu, och J3:s princip satte den till gratis: rankningen sker
+// i rankSwapOptions() här i klienten, ur ett lokalt receptregister, och
+// kostar oss ingenting per byte. Låset ritas alltså inte längre.
+//
+// Raden står ändå kvar, och det är avsiktligt. Den bär ingen åsikt om
+// priset: flyttas swap_intents upp till Premium i features.py kommer låset
+// tillbaka av sig självt - och J1:s acceptanstest kräver då en riktig
+// serverkontroll innan det får göra det. Samma mönster som _optional() i
+// billing/gate.py: modellen bestämmer, koden frågar.
+const swapIntentLocked = intentId => Boolean(intentId) && !can("swap_intents");
 
 function renderSwapModal() {
   if (!swapContext) return;
@@ -3410,7 +3425,9 @@ function renderSwapModal() {
   const currentRecipe = selectedRecipes().find(recipe => recipe?.id === currentId);
   const dayLabel = DAYS[dayIndex] || `Dag ${dayIndex + 1}`;
   // Avsikten först, alternativen sedan. Fem knappar räcker - det här ska
-  // vara ett val, inte ett formulär. Låset står PÅ knappen, inte bakom den:
+  // vara ett val, inte ett formulär. Reglerna nedan gäller den dag modellen
+  // säger att avsikten ska låsas; med swap_intents gratis (J6) är `locked`
+  // alltid false och ingen av dem ritas. Låset står PÅ knappen, inte bakom den:
   // en gratisanvändare ska se vad Premium är innan hon trycker, inte mötas
   // av en vägg efteråt. Och det bärs av ett ORD, inte av en ikon eller en
   // färg - "Premium" överlever gråskala och når skärmläsaren, precis som
@@ -3424,7 +3441,7 @@ function renderSwapModal() {
   $("swapModalHint").innerHTML = `${dayLabel}s middag${currentRecipe ? ` · nuvarande: ${escapeHtml(currentRecipe.namn)}` : ""}` + intents;
   $("swapModalHint").querySelectorAll("[data-swap-intent]").forEach(button => button.addEventListener("click", () => {
     const id = button.dataset.swapIntent;
-    if (swapIntentLocked(id)) { trackEvent("byte_avsikt_last"); openPaywall("swap_intent"); return; }
+    if (swapIntentLocked(id)) { trackEvent("byte_avsikt_last"); openPaywall("swap_intents"); return; }
     swapContext.intent = id;
     swapContext.allOptions = swapOptionsFor(swapContext.current, swapContext.candidates, id);
     swapContext.visibleCount = SWAP_OPTIONS_BATCH;

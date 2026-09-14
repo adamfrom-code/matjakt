@@ -47,16 +47,6 @@
       "Riv morötterna grovt.",
       "Servera blodpuddingen med bacon, riven morot och lingonsylt."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "barn",
-      "billigt",
-      "snabbt"
-    ],
     "allergens": [
       "gluten"
     ],
@@ -69,7 +59,14 @@
     "imageCredit": "Milan",
     "imageLicense": "Pexels License",
     "imageAlt": "Blodpudding med bacon och lingon upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "barn",
+      "billigt",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "korvgryta-curry",
@@ -137,16 +134,6 @@
       "Rör i curry och tomatpuré och låt fräsa en minut.",
       "Häll på grädden och sjud grytan 5-10 minuter. Smaka av och servera med riset."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "barn",
-      "billigt",
-      "snabbt"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -160,7 +147,14 @@
     "imageCredit": "Rachel Claire",
     "imageLicense": "Pexels License",
     "imageAlt": "Korvgryta med curry upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "barn",
+      "billigt",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "skink-ostpaj",
@@ -234,14 +228,6 @@
       "Vispa ihop ägg, mjölk, salt och peppar och häll över.",
       "Grädda cirka 25 minuter tills stanningen stannat och ytan är gyllene. Servera med sallad och tomat."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "vardagsmat",
-      "mealprep",
-      "billigt"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -256,7 +242,13 @@
     "imageCredit": "Bruno Kraler",
     "imageLicense": "Pexels License",
     "imageAlt": "Skink- och ostpaj upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "billigt",
+      "mealprep",
+      "vardagsmat"
+    ]
   },
   {
     "id": "laxpudding",
@@ -325,14 +317,6 @@
       "Vispa ihop ägg och mjölk och häll över.",
       "Grädda cirka 40 minuter tills stanningen stannat. Servera med smält smör och mer dill."
     ],
-    "categories": [
-      "Husmanskost",
-      "Fisk"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat"
-    ],
     "allergens": [
       "fisk",
       "laktos",
@@ -349,7 +333,12 @@
     "imageCredit": "Ömer Kayan",
     "imageLicense": "Pexels License",
     "imageAlt": "Laxpudding med dill upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "fisk",
+      "husmanskost",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kycklingcaesar",
@@ -423,14 +412,6 @@
       "Blanda grovt skuren romansallad med dressingen.",
       "Toppa med kyckling, krutonger och resten av parmesanen."
     ],
-    "categories": [
-      "Kyckling"
-    ],
-    "tags": [
-      "vardagsmat",
-      "snabbt",
-      "helgmiddag"
-    ],
     "allergens": [
       "gluten",
       "laktos",
@@ -446,7 +427,13 @@
     "imageCredit": "Anil  Sharma",
     "imageLicense": "Pexels License",
     "imageAlt": "Kycklingcaesarsallad upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "kyckling",
+      "helgmiddag",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "flaskgryta-paprika",
@@ -520,14 +507,6 @@
       "Koka riset under tiden.",
       "Rör i grädden, låt koka ihop och smaka av. Servera med riset."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "mealprep"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -541,7 +520,12 @@
     "imageCredit": "Rachel Claire",
     "imageLicense": "Pexels License",
     "imageAlt": "Fläskgryta med paprika upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "mealprep",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kottfarsgratang-mos",
@@ -615,15 +599,6 @@
       "Lägg färssåsen i en form, bred moset över och strö på osten.",
       "Gratinera cirka 20 minuter tills ytan är gyllene."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "barn",
-      "Familjefavorit"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -637,7 +612,13 @@
     "imageCredit": "Sylwester Ficek",
     "imageLicense": "Pexels License",
     "imageAlt": "Köttfärsgratäng med potatismos upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "familjefavorit",
+      "barn",
+      "vardagsmat"
+    ]
   },
   {
     "id": "pitepalt",
@@ -697,19 +678,16 @@
       "Sjud paltarna i saltat vatten cirka 40 minuter - de är klara när de flutit upp och fått sjuda en stund till.",
       "Servera rykande varma med smör och lingonsylt."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "helgmiddag",
-      "billigt"
-    ],
     "allergens": [
       "gluten"
     ],
     "dietFlags": [
       "blandkost"
+    ],
+    "labels": [
+      "husmanskost",
+      "billigt",
+      "helgmiddag"
     ]
   },
   {
@@ -775,14 +753,6 @@
       "Rör ihop crème fraiche och mjölk, häll över och toppa med osten.",
       "Gratinera cirka 20 minuter tills osten är gyllene. Servera med potatisen."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "vardagsmat",
-      "barn",
-      "snabbt"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -796,7 +766,13 @@
     "imageCredit": "Vidal Balielo Jr.",
     "imageLicense": "Pexels License",
     "imageAlt": "Broccoligratäng med skinka upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "barn",
+      "snabbt",
+      "vardagsmat"
+    ]
   },
   {
     "id": "kottsoppa",
@@ -865,15 +841,6 @@
       "Tärna rotfrukterna och löken, lägg i dem och sjud ytterligare 20-30 minuter tills allt är mjukt.",
       "Smaka av med salt och toppa med hackad persilja. Servera med bröd."
     ],
-    "categories": [
-      "Husmanskost",
-      "Soppa"
-    ],
-    "tags": [
-      "husmanskost",
-      "mealprep",
-      "billigt"
-    ],
     "allergens": [],
     "dietFlags": [
       "blandkost",
@@ -886,7 +853,13 @@
     "imageCredit": "DΛVΞ GΛRCIΛ",
     "imageLicense": "Pexels License",
     "imageAlt": "Köttsoppa med rotfrukter upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "soppa",
+      "billigt",
+      "mealprep"
+    ]
   },
   {
     "id": "kassler-ananas-gratang",
@@ -951,15 +924,6 @@
       "Strö på osten och gratinera cirka 20 minuter tills ytan fått fin färg.",
       "Servera med riset."
     ],
-    "categories": [
-      "Husmanskost"
-    ],
-    "tags": [
-      "husmanskost",
-      "vardagsmat",
-      "barn",
-      "Familjefavorit"
-    ],
     "allergens": [
       "laktos"
     ],
@@ -973,6 +937,12 @@
     "imageCredit": "Sylwester Ficek",
     "imageLicense": "Pexels License",
     "imageAlt": "Kasslergratäng med ananas och ris upplagd på tallrik",
-    "imageStatus": "ok"
+    "imageStatus": "ok",
+    "labels": [
+      "husmanskost",
+      "familjefavorit",
+      "barn",
+      "vardagsmat"
+    ]
   }
 ]

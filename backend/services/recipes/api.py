@@ -164,6 +164,11 @@ def card(recipe: dict) -> dict:
         "totalTime": recipe["totalTime"], "servings": recipe["servings"],
         "nutrition": recipe["nutrition"],
         "image": recipe["image"], "imageAlt": recipe["imageAlt"],
+        # ETT etikettfält (M4), plus två vyer av det. `labels` bär nyckel och
+        # namn; `tags` är nycklarna och `categories` namnen ur samma lista, i
+        # samma ordning. De två gamla namnen finns kvar därför att appen läser
+        # dem - men de är inte längre två fält som kan säga emot varandra.
+        "labels": recipe.get("labels", []),
         "tags": recipe["tags"], "categories": recipe["categories"],
         "dietFlags": recipe["dietFlags"], "allergens": recipe["allergens"],
         # Följer med VARJE kort, inte bara detaljsidan: veckoplaneraren i
@@ -197,7 +202,11 @@ SHELVES = [
     # som var billigt när taggen sattes.
     {"key": "billigt", "title": "Billigt just nu", "order": "cheapest"},
     {"key": "proteinrikt", "title": "Proteinrikt", "minProtein": 30},
-    {"key": "familj", "title": "Familjemiddag", "tags": ["Familjefavorit"]},
+    # Stod som "Familjefavorit" med versal ända fram till M4, för det var den
+    # enda strängen som gav träff: etiketten stavades så i BÅDA de gamla
+    # fälten, och filtret jämförde med likhet. Den normaliserade formen gav
+    # noll recept och en tom hylla - som ser ut som "vi har inga sådana".
+    {"key": "familj", "title": "Familjemiddag", "tags": ["familjefavorit"]},
     {"key": "vegetariskt", "title": "Vegetariskt", "tags": ["vegetariskt"]},
     {"key": "mealprep", "title": "Meal prep", "tags": ["mealprep"]},
     {"key": "helg", "title": "Helgmiddag", "tags": ["helgmiddag"]},
