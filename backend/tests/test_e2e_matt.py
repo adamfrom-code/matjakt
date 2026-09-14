@@ -125,5 +125,105 @@ class IngenE2EFilMaterMedLinjal(unittest.TestCase):
                                   + "\n".join(fel))
 
 
+class OmritadKnapp:
+    """En knapp som omritningen byter ut de `oritade` första svepen.
+
+    Inte hittepå: det är vad `renderBasket` gör med veckolistan::
+
+        $("weekPlanList").innerHTML = veckoDagarMarkup(...)   // alla noder byts
+
+    Svepet svarar None när noden var avhängd - det är vad `matt.SVEP_JS` gör
+    med `isConnected` och nollrect:en. Den GAMLA mätningen hade ingen sådan
+    vakt: den mätte noden som den låg, och fick nollor.
+    """
+
+    def __init__(self, hojd=44.0, oritade=0, alltid_oritad=False):
+        self.hojd = hojd
+        self.oritade = oritade
+        self.alltid_oritad = alltid_oritad
+        self.svep = 0
+
+    def _oritad_nu(self):
+        self.svep += 1
+        return self.alltid_oritad or self.svep <= self.oritade
+
+    def __call__(self):
+        return None if self._oritad_nu() else {
+            "hojd": self.hojd, "vanster": True, "hoger": True}
+
+    def gamla_matningen(self):
+        """Ett enda svep, utan vakt - nollor när omritningen hann emellan."""
+        return {"hojd": 0, "vanster": False, "hoger": False} if self._oritad_nu() else {
+            "hojd": self.hojd, "vanster": True, "hoger": True}
+
+
+class MatningenLaserEfterOmritningen(unittest.TestCase):
+    """L2c: en rect som är idel nollor är ingen mätning.
+
+    Båda riktningarna prövas. Att den nya mätningen fungerar säger ingenting
+    om det inte också visas att den gamla faktiskt gick sönder.
+    """
+
+    def test_den_gamla_matningen_laser_nollor_nar_omritningen_hann_emellan(self):
+        """Fel-riktningen: utan vakt är CI-felet tillbaka, ordagrant."""
+        sjalva_felet = OmritadKnapp(oritade=1).gamla_matningen()
+        self.assertEqual(sjalva_felet, {"hojd": 0, "vanster": False, "hoger": False})
+        # Och så här fällde det L2:s acceptanstest - toleransen hjälper inte.
+        self.assertFalse(matt.minst(sjalva_felet["hojd"]))
+
+    def test_matningen_sveper_forbi_de_oritade_och_mater_den_ritade_noden(self):
+        knapp = OmritadKnapp(oritade=5)
+        matning = matt.mat(knapp)
+        self.assertTrue(matt.minst(matning["hojd"]))
+        self.assertEqual(knapp.svep, 6, "svepte inte precis tills noden fanns")
+
+    def test_en_ritad_nod_kostar_ett_enda_svep(self):
+        """Det vanliga fallet mäter direkt - omtaget är ett skyddsnät, inte en väntan."""
+        knapp = OmritadKnapp()
+        matt.mat(knapp)
+        self.assertEqual(knapp.svep, 1)
+
+    def test_en_knapp_som_verkligen_ar_for_liten_falls_fortfarande(self):
+        """Grinden blev inte slappare. Vakten skiljer 'inte ritad' från
+        'ritad, och för liten' - den andra ska fortfarande fälla."""
+        matning = matt.mat(OmritadKnapp(hojd=30.0, oritade=2))
+        self.assertFalse(matt.minst(matning["hojd"]), f"30 px ska fällas: {matning}")
+
+    def test_en_knapp_som_aldrig_ritas_falls_med_ett_besked_om_appen(self):
+        knapp = OmritadKnapp(alltid_oritad=True)
+        with self.assertRaises(matt.Oritad) as fel:
+            matt.mat(knapp, tak=12)
+        self.assertEqual(knapp.svep, 12, "taket hölls inte")
+        self.assertIn("aldrig", str(fel.exception))
+
+    def test_taket_maste_vara_minst_ett_svep(self):
+        with self.assertRaises(ValueError):
+            matt.mat(OmritadKnapp(), tak=0)
+
+
+class IngenE2EFilMaterPaEnUppslagenNod(unittest.TestCase):
+    """Mönstret, inte raden - samma skäl som klassen ovanför.
+
+    Att slå upp ett element i Python och mäta det i en andra CDP-vända är
+    glappet en omritning ryms i. Mätningen ska gå genom `matt.sidans_traffyta`,
+    som söker upp noden och mäter den i samma svep.
+    """
+
+    def test_ingen_matning_gors_pa_en_nod_som_slagits_upp_i_python(self):
+        mottagare = re.compile(r"(\w+(?:\.\w+)*)\.evaluate\(")
+        fel = []
+        for fil in sorted(p for p in E2E.glob("*.py") if p.name != "matt.py"):
+            kalla = fil.read_text(encoding="utf-8")
+            for m in mottagare.finditer(kalla):
+                namn = m.group(1)
+                if namn.split(".")[-1] == "page":
+                    continue  # page.evaluate söker upp noden inne i JS - ett svep
+                kropp = kalla[m.end():m.end() + 1200]
+                if "getBoundingClientRect" in kropp:
+                    rad = kalla[:m.start()].count("\n") + 1
+                    fel.append(f"{fil.name}:{rad}: {namn}.evaluate(...) mäter en uppslagen nod")
+        self.assertEqual(fel, [], "mät med matt.sidans_traffyta() i stället:\n" + "\n".join(fel))
+
+
 if __name__ == "__main__":
     unittest.main()
