@@ -347,7 +347,7 @@ jobs:
           npm ci
           npm run build
           MATJAKT_E2E_FRONTEND_DIR=dist/frontend python backend/tests/run.py --pattern "test_*journey*"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: e2e-skarmdumpar
@@ -383,7 +383,7 @@ jobs:
             exit 0
           fi
           exit $kod
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: prisaudit
