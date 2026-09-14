@@ -1268,6 +1268,58 @@ button{color:inherit}
 .sparat-dela-status{min-height:18px;margin:8px 0 0;font-size:13px;color:var(--ink-2)}
 
 /* ==========================================================================
+   H3: VECKOHISTORIKEN (src/views/veckohistorik.js)
+
+   Tolv veckor som redan låg i state.weekHistory. Raden är byggd som
+   nyckeltalsraden ovanför - hårlinje mellan, inget kort - för det är samma
+   skärm och samma sorts innehåll. Skillnaden är att den här raden har tre
+   kolumner: när, vad, och vad det kostade.
+
+   Ingen accent någonstans i blocket. Accenten betyder "här är du, här går
+   vägen vidare" (§2.3), och en vecka som redan är äten är varken.
+   ========================================================================== */
+.veckohistorik{display:block;margin:26px 0 0}
+.vh-rubrik{
+  margin:0 0 2px;
+  font:400 21px/1.15 var(--f-disp);letter-spacing:-.01em;color:var(--ink);
+}
+.vh-lista{list-style:none;margin:10px 0 0;padding:0;border-top:1px solid var(--rule-2)}
+/* Datumet får en egen kolumn med fast bredd: tolv rader vars andra kolumn
+   börjar på samma x går att skumma, tolv vars inte gör det är en textmassa. */
+.vh-vecka{
+  display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:baseline;
+  gap:0 12px;min-height:52px;padding:10px 0;border-bottom:1px solid var(--rule);
+}
+.vh-datum{
+  font:600 10px/1.5 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);font-variant-numeric:tabular-nums;
+}
+.vh-text{min-width:0}
+/* Rätterna är innehållet. Två rader räcker för sju middagar i den här
+   graden; en tredje börjar konkurrera med nästa vecka om uppmärksamheten. */
+.vh-ratter{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  font:400 15px/1.25 var(--f-disp);color:var(--ink);
+}
+.vh-utan-ratter{font-style:italic;color:var(--ink-2)}
+.vh-antal{display:block;margin-top:3px;font:400 11px/1.3 var(--f-ui);color:var(--ink-3)}
+.vh-pris{white-space:nowrap;text-align:right}
+.vh-pris .pris{font-size:15px}
+.vh-snitt{margin:12px 0 0;font:400 13px/1.5 var(--f-ui);color:var(--ink-2)}
+/* §5.10: en mening i kursiv Newsreader, ingen ruta och ingen ikon. Spec:en
+   döper klassen till `.tomt` och menar den som delad - men den finns inte i
+   filen, och att döpa den här vore att påstå att sju andra tomma tillstånd
+   redan ärver den. Reglerna är §5.10:s, namnet är den här vyns tills någon
+   verkligen delar den. */
+.vh-tomt{
+  margin-top:10px;padding:16px 0 18px;border-top:1px solid var(--rule-2);
+}
+.vh-tomt p{
+  margin:0;max-width:28ch;
+  font:italic 400 16px/1.4 var(--f-disp);color:var(--ink-2);
+}
+
+/* ==========================================================================
    M2: RESERVKORTET - bildytan när receptet inte har något foto
    (src/views/receptbild.js)
 
