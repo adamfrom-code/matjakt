@@ -497,10 +497,16 @@ jobs:
       group: render-deploy
       cancel-in-progress: false
     outputs:
-      # Säger VEM som startade deployen, inte OM någon gjorde det. Render har
-      # "Auto-Deploy: After CI Checks Pass" påslaget i dashboarden och
-      # deployar av sig självt; hooken är en andra väg som gör att vi kan
-      # peka ut exakt SHA. Hälsogrinden körs oavsett - se motiveringen där.
+      # K3d: den här kommentaren påstod att Render har "Auto-Deploy: After
+      # CI Checks Pass" påslaget och deployar av sig självt, och att hooken
+      # bara var en andra väg. Det är FEL, och render.yaml säger tvärtom:
+      # `autoDeploy: false` på båda tjänsterna, med motiveringen att deploy
+      # sker BARA via hooken och att det måste vara Off i dashboarden också.
+      #
+      # Följden av den felaktiga kommentaren: när RENDER_DEPLOY_HOOK saknades
+      # skrev jobbet en notis och exit 0. Grönt. Ingenting deployades, av
+      # ingen, och backenden stod stilla i fjorton timmar med nio commits
+      # bakom sig innan hälsogrinden avslöjade det.
       triggad: ${{ steps.hook.outputs.triggad }}
     steps:
       - name: Trigga Renders deploy-hook för exakt den gröna committen
@@ -510,10 +516,20 @@ jobs:
         run: |
           if [ -z "$RENDER_DEPLOY_HOOK" ]; then
             echo "triggad=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::RENDER_DEPLOY_HOOK saknas i repo-secrets. Renders egen"
-            echo "::notice::Auto-Deploy (After CI Checks Pass) gör jobbet i stället."
-            echo "::notice::Hälsogrinden väntar ändå på att driften kör den här committen."
-            exit 0
+            echo "::error::RENDER_DEPLOY_HOOK saknas i repo-secrets, och render.yaml"
+            echo "::error::har autoDeploy: false på båda tjänsterna. Ingenting kommer"
+            echo "::error::att deploya den här committen - varken CI eller Render."
+            echo "::error::"
+            echo "::error::Backenden står kvar på den senast manuellt deployade"
+            echo "::error::committen tills någon trycker Manual Deploy i dashboarden."
+            echo "::error::"
+            echo "::error::Åtgärd: Render -> tjänsten -> Settings -> Deploy Hook,"
+            echo "::error::kopiera URL:en och lägg in den som repo-secret"
+            echo "::error::RENDER_DEPLOY_HOOK. Slå INTE på Auto-Deploy i stället -"
+            echo "::error::render.yaml stänger av det med flit, för att hooken ska"
+            echo "::error::kunna peka ut exakt SHA (?ref=), vilket hälsogrinden och"
+            echo "::error::rökprovet bygger på."
+            exit 1
           fi
           # ref= gör att Render bygger DEN HÄR committen, inte grenspetsen
           # när hooken råkar tas emot. /api/health -> commit ska sedan
