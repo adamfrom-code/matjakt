@@ -37,6 +37,9 @@ import unicodedata
 from pathlib import Path
 
 from ..data_guard import guard_database_path
+from .labels import LABELS, LEGACY_KINDS, display as label_display
+from .labels import merge as merge_labels
+from .labels import normalize_label_id
 from .meal_types import protein_of, require_dinner_protein
 from .meal_types import require as require_meal_type
 from .pantry import is_pantry_staple
@@ -129,6 +132,58 @@ class RecipeStore:
             # middagarna - och gör det vid varje veckobygge.
             self._connection.execute(
                 "CREATE INDEX IF NOT EXISTS idx_recipes_meal_type ON recipes(meal_type)")
+            etiketter = {row[1] for row in
+                         self._connection.execute("PRAGMA table_info(recipe_labels)")}
+            if "position" not in etiketter:
+                self._connection.execute(
+                    "ALTER TABLE recipe_labels ADD COLUMN position INTEGER")
+        self._merge_legacy_labels()
+
+    def _merge_legacy_labels(self) -> int:
+        """M4: slår ihop `categories` och `tags` till ETT fält, i befintlig db.
+
+        Källorna är sanningen och skrivs om av sitt eget skript, men en redan
+        driftsatt bank ska bli konsekvent av att ÖPPNAS - annars lever felet
+        kvar tills nästa import, och importen körs bara när källornas
+        fingeravtryck ändras.
+
+        Ordningen är det känsliga. Före M4 lästes etiketterna med `ORDER BY
+        kind, value`, och eftersom 'categories' < 'tags' alfabetiskt kom
+        kategorierna först - vilket är den ordning appen har visat sin badge
+        ur. Sammanslagningen läser därför i exakt den ordningen och fryser den
+        som `position`, så att det första namnet är oförändrat efter
+        migreringen. En datastädning får inte byta text på ett recept.
+
+        Idempotent och återupptagbar: redan migrerade rader läses in först och
+        behåller sin plats, gamla rader vävs in efter dem, och en bank utan
+        gamla rader rörs inte alls."""
+        legacy = ",".join("?" * len(LEGACY_KINDS))
+        berorda = [row["recipe_id"] for row in self._connection.execute(
+            f"SELECT DISTINCT recipe_id FROM recipe_labels WHERE kind IN ({legacy})",
+            LEGACY_KINDS)]
+        if not berorda:
+            return 0
+        with self._connection:
+            for recipe_id in berorda:
+                redan = [row["value"] for row in self._connection.execute(
+                    "SELECT value FROM recipe_labels WHERE recipe_id = ? AND kind = ? "
+                    "ORDER BY position IS NULL, position, value", (recipe_id, LABELS))]
+                gamla = [row["value"] for row in self._connection.execute(
+                    f"SELECT value FROM recipe_labels WHERE recipe_id = ? "
+                    f"AND kind IN ({legacy}) ORDER BY kind, value",
+                    (recipe_id, *LEGACY_KINDS))]
+                self._connection.execute(
+                    f"DELETE FROM recipe_labels WHERE recipe_id = ? "
+                    f"AND kind IN ({legacy},?)", (recipe_id, *LEGACY_KINDS, LABELS))
+                self._write_labels(recipe_id, merge_labels(redan, gamla))
+        return len(berorda)
+
+    def _write_labels(self, recipe_id: str, keys) -> None:
+        """Skriver det sammanslagna etikettfältet. Nycklar in, ordning bevarad."""
+        for position, key in enumerate(keys):
+            self._connection.execute(
+                "INSERT OR IGNORE INTO recipe_labels (recipe_id, kind, value, position) "
+                "VALUES (?, ?, ?, ?)", (recipe_id, LABELS, key, position))
 
     def get_meta(self, key: str):
         try:
@@ -222,10 +277,21 @@ class RecipeStore:
                 PRIMARY KEY (recipe_id, position)
             );
 
-            -- Tags, categories, allergens and diet flags share one table:
-            -- they are all "a label of some kind on a recipe", and separate
-            -- tables would mean four near-identical queries for every filter
-            -- the recipe page offers.
+            -- Labels, allergens and diet flags share one table: they are all
+            -- "a label of some kind on a recipe", and separate tables would
+            -- mean three near-identical queries for every filter the recipe
+            -- page offers.
+            --
+            -- `value` är ALLTID en nyckel (gemen, utan diakriter - se
+            -- labels.normalize_label_id), aldrig ett visningsnamn. Fram till
+            -- M4 fanns `kind` 'categories' och 'tags' med överlappande
+            -- innehåll i var sin versalisering, och filtret jämförde med
+            -- likhet: den som sökte `kott` missade `Kött`. De två är numera
+            -- ETT fält, kind 'labels', och namnet räknas fram ur nyckeln vid
+            -- läsning i stället för att lagras en gång per rad.
+            --
+            -- `position` bär receptets egen etikettordning. Den är data, inte
+            -- kosmetik: appen visar den första etiketten som badge på kortet.
             CREATE TABLE IF NOT EXISTS recipe_meta (
                 key TEXT PRIMARY KEY,
                 value TEXT
@@ -235,6 +301,7 @@ class RecipeStore:
                 recipe_id TEXT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
                 kind TEXT NOT NULL,
                 value TEXT NOT NULL,
+                position INTEGER,
                 PRIMARY KEY (recipe_id, kind, value)
             );
 
@@ -371,7 +438,15 @@ class RecipeStore:
                 self._connection.execute(
                     "INSERT INTO recipe_steps (recipe_id, position, instruction) VALUES (?, ?, ?)",
                     (recipe_id, position, step))
-            for kind in ("categories", "tags", "allergens", "dietFlags"):
+            # ETT etikettfält (M4). `categories` och `tags` tas fortfarande
+            # EMOT - källfiler, fixturer och äldre anropare skriver dem än -
+            # men de vävs ihop till samma fält på väg in i stället för att
+            # lagras var för sig. Kategorierna först: den ordningen är den
+            # appen har visat sin badge ur, och en etikettstädning ska inte
+            # byta text på ett receptkort.
+            self._write_labels(recipe_id, merge_labels(
+                recipe.get(LABELS), recipe.get("categories"), recipe.get("tags")))
+            for kind in ("allergens", "dietFlags"):
                 for value in recipe.get(kind) or []:
                     self._connection.execute(
                         "INSERT OR IGNORE INTO recipe_labels (recipe_id, kind, value) VALUES (?, ?, ?)",
@@ -381,11 +456,31 @@ class RecipeStore:
     # ---- reading ---------------------------------------------------------
 
     def _labels(self, recipe_id: str) -> dict:
-        labels = {"categories": [], "tags": [], "allergens": [], "dietFlags": []}
+        """Receptets etiketter: ETT fält plus två vyer av samma fält.
+
+        `labels` är fältet - nyckel och namn för varje etikett, i receptets
+        egen ordning. `tags` och `categories` är PROJEKTIONER av exakt samma
+        lista: nycklarna respektive namnen. De bär de gamla fältnamnen därför
+        att appen läser dem (`tags` filtrerar, `categories[0]` blir badgen på
+        kortet) - men det finns bara ett fält under dem, och det går inte
+        längre att lägga en etikett i det ena utan att den syns i det andra.
+        Det var just den möjligheten som lät `Kött` och `kott` leva sida vid
+        sida och halvera varje filter.
+
+        `allergens` och `dietFlags` är egna vokabulärer som svarar på andra
+        frågor, och de rörs inte."""
+        labels = {"allergens": [], "dietFlags": []}
+        egna = []
         for row in self._connection.execute(
-                "SELECT kind, value FROM recipe_labels WHERE recipe_id = ? ORDER BY kind, value",
-                (recipe_id,)):
-            labels.setdefault(row["kind"], []).append(row["value"])
+                "SELECT kind, value FROM recipe_labels WHERE recipe_id = ? "
+                "ORDER BY kind, position IS NULL, position, value", (recipe_id,)):
+            if row["kind"] == LABELS:
+                egna.append(row["value"])
+            else:
+                labels.setdefault(row["kind"], []).append(row["value"])
+        labels[LABELS] = [{"key": key, "name": label_display(key)} for key in egna]
+        labels["tags"] = egna
+        labels["categories"] = [label_display(key) for key in egna]
         return labels
 
     def _to_dict(self, row) -> dict:
@@ -459,10 +554,16 @@ class RecipeStore:
         if meal_type is not None:
             where.append("meal_type = ?")
             params.append(require_meal_type(meal_type))
+        # Etiketten normaliseras på väg IN i frågan (M4), inte bara på väg in
+        # i databasen. Det är den halvan som gör felet omöjligt att göra om:
+        # `Kött`, `kott` och `KÖTT` blir samma nyckel och hittar samma recept.
+        # Förut var det en ren likhetsjämförelse, och `kott` gav 39 recept
+        # medan `Kött` gav 18 - utan att något sa ifrån, för en kortare lista
+        # ser ut som ett ärligt svar.
         for tag in tags or []:
-            where.append("""id IN (SELECT recipe_id FROM recipe_labels
-                            WHERE kind IN ('tags','categories','dietFlags') AND value = ?)""")
-            params.append(tag)
+            where.append(f"""id IN (SELECT recipe_id FROM recipe_labels
+                            WHERE kind IN ('{LABELS}','dietFlags') AND value = ?)""")
+            params.append(normalize_label_id(tag))
         if max_time is not None:
             where.append("total_time IS NOT NULL AND total_time <= ?")
             params.append(max_time)
@@ -502,10 +603,13 @@ class RecipeStore:
         admin panel, so a claim about the catalogue can be checked."""
         total = self.count()
         by_label = {}
+        # Räknat per NYCKEL, redovisat under namnet. Före M4 räknades `Kött`
+        # och `kott` som två etiketter i adminpanelen, vilket gjorde varje
+        # siffra om katalogen till en halv siffra.
         for row in self._connection.execute(
-                """SELECT value, COUNT(*) n FROM recipe_labels
-                   WHERE kind IN ('tags','categories') GROUP BY value ORDER BY n DESC"""):
-            by_label[row["value"]] = row["n"]
+                f"""SELECT value, COUNT(*) n FROM recipe_labels
+                    WHERE kind = '{LABELS}' GROUP BY value ORDER BY n DESC"""):
+            by_label[label_display(row["value"])] = row["n"]
         complete_nutrition = self._connection.execute(
             """SELECT COUNT(*) FROM recipes WHERE kcal IS NOT NULL AND protein IS NOT NULL
                AND carbs IS NOT NULL AND fat IS NOT NULL""").fetchone()[0]

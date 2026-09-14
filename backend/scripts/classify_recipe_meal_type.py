@@ -171,8 +171,15 @@ def classify(recipe: dict) -> Fynd:
     name = _fold(recipe.get("name") or recipe.get("namn") or "")
     description = _fold(recipe.get("description") or "")
     said = f"{name} {description}"
-    tags = {_fold(t) for t in (recipe.get("tags") or recipe.get("taggar") or [])}
-    categories = {_fold(c) for c in (recipe.get("categories") or [])}
+    # M4 slog ihop `categories` och `tags` till ett fält. Reglerna nedan läser
+    # fortfarande två mängder - middagsbeviset skiljer på MIDDAGSTAGGAR och
+    # MIDDAGSKATEGORIER - men båda fylls nu ur samma lista. Det är rätt håll:
+    # ett recept som bar `Kött` bara som kategori räknades förut inte som
+    # bevis av taggregeln, och tvärtom. De gamla fälten läses kvar för
+    # reservbankens skull, som har `typ` och `taggar` i stället.
+    etiketter = {_fold(v) for v in (recipe.get("labels") or [])}
+    tags = etiketter | {_fold(t) for t in (recipe.get("tags") or recipe.get("taggar") or [])}
+    categories = etiketter | {_fold(c) for c in (recipe.get("categories") or [])}
     if recipe.get("typ"):
         categories.add(_fold(recipe["typ"]))
 

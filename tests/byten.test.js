@@ -8,7 +8,13 @@
 //
 // Byte är den handling som gör veckan TILL DIN. Att strypa den straffar
 // precis det engagemang som bygger vana, och det som såldes var "fler av
-// samma sak". Det som säljs nu är byten MED AVSIKT.
+// samma sak".
+//
+// G10 sålde i stället byten MED AVSIKT - men gav aldrig avsikterna en rad i
+// FEATURES, så affärsmodellen visste inte att funktionen fanns. J6 gav dem
+// nyckeln `swap_intents` och satte den till gratis av J3:s skäl: rankningen
+// sker i klienten, ur ett lokalt receptregister, och kostar oss ingenting
+// per byte. Låset ligger kvar på avsikten men ritas inte längre.
 //
 // Att trycket verkligen byter och att Ångra verkligen tar tillbaka prövas i
 // webbläsaren: test_ett_tryck_byter_ratten_och_angra_tar_tillbaka_den.
@@ -79,14 +85,25 @@ test("bytet har Ångra i toasten, inte en bekräftelse före", () => {
 // DET SOM SÄLJS I STÄLLET
 // ---------------------------------------------------------------------------
 
-test('"Något annat" är gratis, avsikterna är Premium', () => {
-  assert.match(app, /const swapIntentLocked = intentId => Boolean\(intentId\) && !hasPremium\(\)/,
+test('"Något annat" är gratis, och avsikterna följer nyckeln i modellen', () => {
+  // Låset sitter fortfarande PÅ avsikten och inte på bytet - det är G10:s
+  // beslut och det står kvar. Det som ändrats är vem som bestämmer om det
+  // ritas: `can("swap_intents")` frågar /api/entitlements i stället för att
+  // klienten bär en egen kopia av affärsmodellen i `hasPremium()`. Åt vilket
+  // håll nyckeln står prövas i tests/lasen-har-en-nyckel.test.js.
+  assert.match(app,
+    /const swapIntentLocked = intentId => Boolean\(intentId\) && !can\("swap_intents"\)/,
     "låset sitter inte på avsikten - antingen låses allt eller inget");
-  assert.match(app, /if \(swapIntentLocked\(id\)\) \{[^}]*openPaywall\("swap_intent"\)/,
+  assert.match(app, /if \(swapIntentLocked\(id\)\) \{[^}]*openPaywall\("swap_intents"\)/,
     "en låst avsikt öppnar inte betalväggen");
 });
 
 test("låset syns på knappen, inte först efter trycket", () => {
+  // Formen på låset, för den dag modellen säger att det ska ritas. Med
+  // swap_intents gratis är `locked` alltid false och ordet "Premium" når
+  // aldrig skärmen - men flyttas nyckeln upp igen ska låset komma tillbaka
+  // i RÄTT form, inte byggas om från minnet.
+  //
   // En vägg man går in i är något annat än ett erbjudande man ser. Låset
   // bärs dessutom av ett ORD och inte bara av en klass, så det överlever
   // gråskala och når skärmläsaren - samma regel som prisreglerna i L0, och
