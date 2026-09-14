@@ -1,6 +1,7 @@
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -27,6 +28,7 @@ class AccountStoreTest(unittest.TestCase):
             # bekräftelse. Null när inget är på gång - en banderoll ska inte
             # kunna ritas av misstag.
             "subscriptionGraceUntil": None, "pendingEmail": None,
+            "premiumUntil": None,
             "emailVerified": False, "marketingConsent": False,
         })
         login_token, login_user = self.store.login("ada@example.com", "hemligt123")
@@ -67,25 +69,41 @@ class AccountStoreTest(unittest.TestCase):
         self.store.logout(token)
         self.assertIsNone(self.store.user_for_token(token))
 
-    def test_redeem_premium_upgrades_user(self):
+    # H5: `redeem_premium` är borta. Den jämförde mot en EVIG env-sträng och
+    # satte en evig boolean. Inlösen är numera en rad i premium_codes - med
+    # tak, utgång och räknare, prövad i test_referral_h5 - och kontolagrets
+    # halva är den här: att lägga på TID.
+    def test_extend_premium_grants_days_not_eternity(self):
         token, _ = self.store.register("ada@example.com", "hemligt123")
-        user = self.store.redeem_premium(token, "hemlig-kod", expected_code="hemlig-kod")
+        user_id = self.store.user_id_for_token(token)
+        until = self.store.extend_premium(user_id, 30)
+        self.assertTrue(until)
+        user = self.store.user_for_token(token)
         self.assertTrue(user["premium"])
-        self.assertTrue(self.store.user_for_token(token)["premium"])
+        self.assertEqual(user["premiumSource"], "code")
+        self.assertEqual(user["premiumUntil"], until)
 
-    def test_redeem_premium_rejects_wrong_code(self):
+    def test_extend_premium_stacks_instead_of_overwriting(self):
+        """Räknas det från nu skulle en andra kod FÖRKORTA den första."""
         token, _ = self.store.register("ada@example.com", "hemligt123")
-        with self.assertRaises(AccountError):
-            self.store.redeem_premium(token, "fel-kod", expected_code="hemlig-kod")
+        user_id = self.store.user_id_for_token(token)
+        first = self.store.extend_premium(user_id, 30)
+        second = self.store.extend_premium(user_id, 30)
+        self.assertGreater(second, first)
 
-    def test_redeem_premium_rejects_when_not_configured(self):
+    def test_expired_days_stop_counting_by_themselves(self):
+        """Hela skillnaden mot den eviga flaggan: ingen behöver städa."""
         token, _ = self.store.register("ada@example.com", "hemligt123")
-        with self.assertRaises(AccountError):
-            self.store.redeem_premium(token, "hemlig-kod", expected_code="")
+        user_id = self.store.user_id_for_token(token)
+        self.store.extend_premium(user_id, 30)
+        self.store.connection.execute(
+            "UPDATE users SET premium_until = ? WHERE id = ?",
+            ((datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat(), user_id))
+        self.store.connection.commit()
+        self.assertFalse(self.store.user_for_token(token)["premium"])
 
-    def test_redeem_premium_requires_login(self):
-        with self.assertRaises(AccountError):
-            self.store.redeem_premium("okant-token", "hemlig-kod", expected_code="hemlig-kod")
+    def test_extend_premium_on_a_missing_account_does_nothing(self):
+        self.assertIsNone(self.store.extend_premium(99999, 30))
 
     def test_verify_email_marks_account_verified(self):
         self.store.register("ada@example.com", "hemligt123")

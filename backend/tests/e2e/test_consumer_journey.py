@@ -35,12 +35,10 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 try:
-    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
     from playwright.sync_api import expect, sync_playwright
     HAVE_PLAYWRIGHT = True
 except ImportError:  # pragma: no cover - miljö utan Playwright
     HAVE_PLAYWRIGHT = False
-    PlaywrightTimeoutError = Exception
 
 from services.data_guard import test_mode_active
 
@@ -54,6 +52,7 @@ if test_mode_active():
     from services.grocery import api as grocery_api
     from services.recipes import api as recipes_api
     from services.recipes import prices as recipe_prices
+    from tests.e2e import avbockning
     from tests.e2e import fixture
     from tests.e2e import vantan
     from tests.e2e.diagnos import (rader_som_saenker_taeckningen, sammanfatta_begaran,
@@ -715,7 +714,19 @@ class BrowserJourney(unittest.TestCase):
             # G13: butikskorten ligger INTE kvar i Handla-skärmen.
             self.assertEqual(page.locator(".shopping-screen #storeCards").count(), 0)
             expect(page.locator("#priceSourceNote")).to_contain_text("Priser från")
-            self.assertRegex(page.locator("#shoppingCost").inner_text(), r"\d+ kr / 900 kr")
+            # L3: kassan är ett block med rubrik, tal och budget - inte en
+            # sammanskriven rad. Talet och budgeten står på var sin rad, så
+            # mellanrummet mellan dem är radbrytning och inte ett blanksteg.
+            self.assertRegex(page.locator("#shoppingCost").inner_text(), r"\d+ kr\s*/ 900 kr")
+            # Och rubriken säger vad talet ÄR. Båda lydelserna är sanna svar:
+            # "Minst att betala" så fort någon rad saknar en radtotal (C7),
+            # annars "Summa i kassan". Det som inte får stå är ett tal utan
+            # besked om vilket av de två det är.
+            # inner_text() ger den RENDERADE texten, alltså kapitälerna som
+            # CSS sätter - källan står i gemener (§8, så skärmläsaren inte
+            # stavar rubriken bokstav för bokstav).
+            self.assertIn(page.locator("#shoppingTotalLabel").inner_text().strip().casefold(),
+                          ("summa i kassan", "minst att betala"))
 
         with self.step("finns hemma (ur listan) och handlad"):
             # EN VARA KAN STÅ SOM FLERA RADER. Aggregatet nycklar på namn OCH
@@ -745,7 +756,9 @@ class BrowserJourney(unittest.TestCase):
             # Kryssrutan är borta: "Har hemma" och "Köpt" är två olika saker
             # och har två knappar (hushållspasset, §6). Ett klick på Köpt är
             # det som förr var en avbockning - plus att varan hamnar hemma.
-            page.click("#shoppingList [data-bought] >> nth=0")
+            att_kopa = avbockning.forsta_obockade(page)
+            self.assertIsNotNone(att_kopa, "listan hade ingen obockad rad att köpa")
+            page.click(avbockning.raden(att_kopa))
             state = self.wait_for_state(lambda s: len(s.get("avklarade") or []) == 1 and len(s.get("removedItems") or []) == 1,
                                         what="borttagen + köpt")
             removed_name = state["removedItems"][0]
@@ -791,8 +804,24 @@ class BrowserJourney(unittest.TestCase):
             page.click("#storeCards .store-card.locked >> nth=0")
             paywall = page.locator("#paywallModal")
             expect(paywall).to_be_visible()
-            expect(paywall.locator('[data-paywall-plan="yearly"]')).to_contain_text("399 kr/år")
-            expect(paywall.locator('[data-paywall-plan="monthly"]')).to_contain_text("59 kr/mån")
+            # L7: beloppet och villkoret står inte längre hopskrivna i en
+            # sträng ("399 kr/år"). Beloppet ritas av L0:s priskomponent och
+            # villkoret är en egen rad, så kravet är skärpt i stället för
+            # sänkt: TALET ska komma ur komponenten, och perioden ska stå
+            # utskriven i ord i samma knapp.
+            årsknapp = paywall.locator('[data-paywall-plan="yearly"]')
+            månadsknapp = paywall.locator('[data-paywall-plan="monthly"]')
+            expect(årsknapp.locator("span.pris")).to_have_text("399 kr")
+            expect(årsknapp).to_contain_text("per år")
+            expect(månadsknapp.locator("span.pris")).to_have_text("59 kr")
+            expect(månadsknapp).to_contain_text("per månad")
+            # Prisinformationslagen: det pris konsumenten visas ska vara det
+            # hon betalar, och att det är inklusive moms ska stå där priset står.
+            expect(paywall).to_contain_text("inklusive moms")
+            # §2.3/§2.4: Premium märks med ORDET i spärrade kapitäler. Ordet
+            # står som vanlig text i källan och versaliseras i CSS, så
+            # skärmläsaren läser "Premium" och inte "P-R-E-M-I-U-M".
+            expect(paywall.locator(".prem-kap")).to_have_text("Matjakt Premium")
             page.click("#paywallModal .paywall-continue")
             expect(paywall).to_be_hidden()
 
@@ -1068,7 +1097,14 @@ class BrowserJourney(unittest.TestCase):
                       };
                     }
                 """)
-                self.assertGreaterEqual(träff["hojd"], 44, träff)
+                # HALVPIXELN, inte hundratusendelen. `.screen` bär animationen
+                # screen-in (.35 s), och en rect som mäts medan en transform är
+                # igång räknas ut i float32: höjden 44 kom tillbaka som
+                # 43.999969482421875 i CI och fällde en knapp vars CSS säger
+                # `height:44px`. Kravet är oförändrat - 43,5 faller fortfarande,
+                # för det är inte en avrundning utan en halv pixel - men
+                # mätbruset under animationen är inte en för liten träffyta.
+                self.assertGreaterEqual(round(träff["hojd"], 2), 44, träff)
                 self.assertTrue(träff["vanster"] and träff["hoger"],
                                 f"träffytan är smalare än 44 px: {träff}")
 
@@ -1129,8 +1165,9 @@ class BrowserJourney(unittest.TestCase):
         prislapp eller ett enda bevis på att appen kan något.
 
         Testet mäter vad hon ser i det ögonblicket: en färdig vecka, inte en
-        modal. Erbjudandet finns kvar, men ovanför veckan och efter den -
-        sälj efter leverans, inte före.
+        modal, och inte ETT ENDA hänglås - varken veckotypernas eller
+        butikskortens. Erbjudandet finns kvar, men ovanför veckan och efter
+        den - sälj efter leverans, inte före.
         """
         page = self.page
         page.goto(self.app())
@@ -1147,6 +1184,37 @@ class BrowserJourney(unittest.TestCase):
         self.assertTrue(1 <= len(state["weekPlan"]) <= 4, state["weekPlan"])
         expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
         expect(page.locator("#weekPlanList [data-week-details]").first).to_be_visible()
+
+        # INTE HELLER ETT HÄNGLÅS AV ANNAT SLAG. Veckotyperna flyttades ur
+        # vägen, men butikskorten stod kvar: "Var blir det billigast?" ritade
+        # "Se pris med Premium" på två av tre kort, OVANFÖR veckan.
+        # Väggen hade bytt plats, inte försvunnit - hon fick fortfarande se
+        # ett lås före sin första måltid.
+        #
+        # Spridningsraden är kvittot på att serverns jämförelse HAR landat:
+        # det är samma svar som bär de låsta kedjorna. Utan den väntan vore
+        # "noll hänglås" sant bara för att ingenting hunnit ritas.
+        expect(page.locator("#storeSpreadTeaser")).to_be_visible(timeout=30_000)
+        kort = page.locator("#storeCards .store-card")
+        self.assertEqual(page.locator("#storeCards .store-card.locked").count(), 0,
+                         kort.all_inner_texts())
+        self.assertEqual(page.locator("[data-store-card-paywall]").count(), 0,
+                         kort.all_inner_texts())
+        # ...och det som ÄR hennes står kvar: butiken, priset, spridningen.
+        expect(kort.first).to_be_visible()
+        self.assertRegex(kort.first.inner_text(), r"\d+ kr")
+        expect(page.locator("#storeSpreadTeaser")).to_contain_text("skiljer sig")
+
+        # ERBJUDANDET ÄR INTE BORTTAGET, det är flyttat bakom leveransen: så
+        # fort hon navigerat vidare står de låsta butikerna där igen, och de
+        # leder till betalväggen de lovar.
+        page.click('.bottom-nav-item[data-view="basket"]')
+        page.click('.bottom-nav-item[data-view="week"]')
+        expect(page.locator("#storeCards .store-card.locked")).to_have_count(2)
+        page.click("#storeCards .store-card.locked >> nth=0")
+        expect(page.locator("#paywallModal")).to_be_visible()
+        page.click("#paywallModal .paywall-continue")
+        expect(page.locator("#paywallModal")).to_be_hidden()
 
         # Raden ovanför veckan är erbjudandet - och den leder till exakt den
         # jämförelse som förut stod i vägen.
@@ -1353,20 +1421,31 @@ class BrowserJourney(unittest.TestCase):
                 plan = self.wait_for_state(lambda s, p=plan: s.get("weekPlan") != p,
                                            what=f"byte {varv + 1}")["weekPlan"]
 
-        with self.step("avsikten är det som säljs"):
+        with self.step("avsikten är en handling, inte en betalvägg"):
+            # J6: G10 ritade "Premium" på de fem avsiktsknapparna och lät
+            # låset fråga hasPremium() rakt av - men avsikterna fick aldrig en
+            # rad i FEATURES, så affärsmodellen visste inte att funktionen
+            # fanns. Nyckeln heter swap_intents nu, och J3:s princip satte den
+            # till gratis: rankningen sker i rankSwapOptions() i klienten, ur
+            # samma lokala receptregister som veckorna, och kostar oss
+            # ingenting per byte. Ingen av knapparna är alltså låst - för
+            # någon.
             page.click("#weekPlanList [data-week-swap] >> nth=0")
             expect(page.locator("#swapModal")).to_be_visible()
-            # "Något annat" är gratis och byter som vanligt...
-            fritt = page.locator('[data-swap-intent=""]')
-            expect(fritt).to_be_visible()
-            self.assertIsNone(fritt.get_attribute("data-swap-intent-locked"))
-            # ...men "Billigare" är Premium, och låset SYNS på knappen.
+            for avsikt in ("", "cheaper", "protein"):
+                knapp = page.locator(f'[data-swap-intent="{avsikt}"]')
+                expect(knapp).to_be_visible()
+                self.assertIsNone(
+                    knapp.get_attribute("data-swap-intent-locked"),
+                    f'avsikten "{avsikt}" är märkt som låst fast modellen ger den gratis')
+            # Och trycket GÖR något: avsikten blir vald och listan rankas om.
+            # Att den kan bli tom är ett ärligt svar (det finns inte alltid
+            # något billigare) - det som inte får hända är en betalvägg.
             billigare = page.locator('[data-swap-intent="cheaper"]')
-            expect(billigare).to_be_visible()
-            self.assertIsNotNone(billigare.get_attribute("data-swap-intent-locked"),
-                                 "den låsta avsikten är inte märkt som låst")
             billigare.click()
-            expect(page.locator("#paywallModal")).to_be_visible()
+            expect(page.locator('[data-swap-intent="cheaper"].active')).to_be_visible()
+            self.assertFalse(page.locator("#paywallModal").is_visible(),
+                             "en avsikt som modellen ger gratis öppnade betalväggen")
 
     def test_skapa_min_vecka_skapar_en_vecka_inte_ett_formular(self):
         """G7: en knapp som lovar ett resultat ska leverera resultatet.
@@ -1769,7 +1848,12 @@ class BrowserJourney(unittest.TestCase):
         # Beskedet ska komma. 45 s är gott om tid även med några omförsök
         # och backoff - poängen är att det finns en ände, inte hur snabb den är.
         try:
-            expect(page.locator("#shoppingCost")).to_contain_text("pris saknas just nu", timeout=45_000)
+            # L3/L0: beskedet är numera prislappens tomma fack - "pris saknas",
+            # samma form och samma ord som varje annan rad utan pris. Den gamla
+            # lydelsen "pris saknas just nu" var Handlas egen sträng; att skriva
+            # den en gång till här hade bevarat exakt det som L0 finns för att
+            # ta bort. Kravet är oförändrat: beskedet ska KOMMA.
+            expect(page.locator("#shoppingCost")).to_contain_text("pris saknas", timeout=45_000)
         except AssertionError as error:
             raise AssertionError(
                 f"{error} | rubriken visade {page.locator('#shoppingCost').inner_text()!r}"
@@ -1779,6 +1863,9 @@ class BrowserJourney(unittest.TestCase):
         text = page.locator("#shoppingCost").inner_text()
         for teknik in ("HTTP", "Error", "undefined", "NaN", "500", "Failed"):
             self.assertNotIn(teknik, text, f"tekniskt läckage i väntestatusen: {text!r}")
+        # Och spinnern är BORTA, inte bara överröstad. Står "hämtas" kvar
+        # bredvid beskedet lovar skärmen fortfarande ett tal som aldrig kommer.
+        self.assertNotIn("hämtas", text, f"spinnern står kvar bredvid beskedet: {text!r}")
 
         # Listan finns kvar - ett prisfel får inte ta med sig veckan i fallet.
         self.assertGreater(page.locator("#shoppingList .shopping-item").count(), 0)
@@ -2045,7 +2132,12 @@ class BrowserJourney(unittest.TestCase):
             }, "whsec_test")
             self.assertEqual(status, 200)
             expect(page.locator("#accountPremiumStatus")).to_have_text("✓ Premium aktiverat", timeout=30_000)
-            expect(page.locator("#subscriptionPanelLine")).to_contain_text("399 kr/år")
+            # L7: raden skrev förut "399 kr/år" med samma sträng som reserv när
+            # /api/entitlements inte svarat. Reservsiffran är borta - vet vi
+            # inte beloppet står det "din plan" - och etiketten stavas ut, så
+            # meningen går att läsa upp: "Din prenumeration (399 kr per år)
+            # förnyas automatiskt ...".
+            expect(page.locator("#subscriptionPanelLine")).to_contain_text("399 kr per år")
             expect(page.locator("#premiumPitch")).to_be_hidden()
             # Veckan och onboardingen gjordes sekunderna före checkout: den
             # väntande synken måste ha nått servern innan sidan lämnades,
@@ -2158,11 +2250,15 @@ class BrowserJourney(unittest.TestCase):
         brus = {namn: i_vila[namn] for namn in self.RECEPTBEHALLARE if i_vila.get(namn)}
         self.assertEqual(brus, {}, f"receptbiblioteket ritades om utan att något hände: {i_vila}")
 
-        knappar = page.locator("#shoppingList [data-bought]")
-        self.assertGreater(knappar.count(), 0, "inköpslistan hade inga varor att bocka av")
-        vara = knappar.first.get_attribute("data-bought")
+        # T2b: namnet läses i ETT svep och klicket fästs vid namnet. Förut
+        # stod här count() följt av get_attribute() - samma tvåstegsläsning
+        # som fällde avbockningsloopen. Den har aldrig fallit HÄR, för listan
+        # är orörd och full när mätningen börjar, men det är samma form: två
+        # frågor om en lista som ritas om mellan dem.
+        vara = avbockning.forsta_obockade(page)
+        self.assertIsNotNone(vara, "inköpslistan hade inga varor att bocka av")
         page.evaluate(self.RAKNARE)
-        knappar.first.click()
+        page.click(avbockning.raden(vara))
 
         # Avbockningen ska synas: varan lämnar den aktiva listan och kassen
         # ritas om. Utan den här väntan mäter testet en bildruta som inte hänt.
@@ -2264,39 +2360,15 @@ class BrowserJourney(unittest.TestCase):
         expect(page.locator("#shoppingList .shopping-item").first).to_be_visible()
         expect(page.locator("#shoppingComplete")).to_be_hidden()
 
-        # Bocka av hela listan. Varje klick river listan och startar en ny
-        # prishämtning, så locatorn läses om varje varv i stället för att
-        # hållas fast vid en nod som just ritats bort.
-        #
-        # OCH KLICKET MÅSTE TÅLA ATT NODEN BYTS UT MITT I. Playwright väntar
-        # på att elementet ska stå stilla innan det klickar; ritas listan om
-        # under den väntan blir det "element was detached from the DOM,
-        # retrying" - och på en lastad CI-maskin hinner nästa omritning före
-        # nästa försök, om och om igen, tills locatorn tajmar ut. Testet
-        # klickar därför på VARANS NAMN (ett stabilt fäste, inte "den första
-        # noden just nu) och läser facit ur tillståndet appen skrivit, inte
-        # ur DOM:en. Ett klick som inte landade är inget fel - det är ett
-        # varv till.
-        for _ in range(80):
-            knappar = page.locator("#shoppingList [data-bought]")
-            if knappar.count() == 0:
-                break
-            vara = knappar.first.get_attribute("data-bought")
-            if not vara:
-                continue
-            for _ in range(8):
-                try:
-                    page.click(f'#shoppingList [data-bought="{vara}"]', timeout=4000)
-                except PlaywrightTimeoutError:
-                    pass          # omritad under klicket - läs tillståndet och försök igen
-                if vara in (self.local_state().get("avklarade") or []):
-                    break
-            else:
-                self.fail(f"{vara} gick inte att bocka av")
-            self.wait_for_state(lambda s, namn=vara: namn in (s.get("avklarade") or []),
-                                what=f"{vara} som avbockad")
-        else:
-            self.fail("listan tog aldrig slut")
+        # Bocka av hela listan. Loopen bor i e2e/avbockning.py, för den
+        # behöver veta en sak om appen som ingen call-site ska behöva
+        # upprepa: `setItemStatus` gör `saveState()` och sedan
+        # `invalidate("basket")`, alltså skrivningen först och omritningen en
+        # bildruta senare. Den som läser DOM:en däremellan får svar om ett
+        # läge appen redan lämnat, och det var där den gamla loopen läste.
+        avbockade = avbockning.bocka_av_listan(
+            *avbockning.sidans_lista(page, self.local_state))
+        self.assertGreater(len(avbockade), 0, "listan var tom redan från början")
 
         expect(page.locator("#shoppingComplete")).to_be_visible()
         kvitto = page.locator("#sparkvitto")

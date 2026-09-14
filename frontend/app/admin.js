@@ -10,6 +10,11 @@ const $ = id => document.getElementById(id);
 const esc = value => String(value ?? "").replace(/[&<>"']/g, c =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+// G12: kontrollrummets besked skrivs i sidan, inte i en systemdialog.
+// alert() låser sidan tills någon klickar bort den, och det den sa gick inte
+// att läsa igen efteråt. Raden står kvar tills nästa handling tömmer den.
+const visaFel = text => { const rad = $("adminError"); if (rad) rad.textContent = text || ""; };
+
 function ago(seconds) {
   if (seconds == null) return "—";
   const minutes = Math.round(seconds / 60);
@@ -451,18 +456,19 @@ function renderChains(providers, scheduler) {
   document.querySelectorAll("[data-import]").forEach(button =>
     button.addEventListener("click", async () => {
       button.disabled = true;
+      visaFel("");
       try {
         const result = await call("/admin/grocery-import", {
           method: "POST", body: JSON.stringify({ chain: button.dataset.import }),
         });
         // "already_running" is not an error - one import at a time is the
         // design, so say so plainly instead of showing a failure.
-        if (!result.started) alert(result.reason === "already_running"
+        if (!result.started) visaFel(result.reason === "already_running"
           ? "En import kör redan. Bara en åt gången."
           : `Kunde inte starta: ${result.reason}`);
         await refresh();
       } catch (error) {
-        alert(error.message);
+        visaFel(error.message);
         button.disabled = false;
       }
     }));
@@ -512,5 +518,5 @@ $("runMailings").addEventListener("click", async () => {
   } catch (error) { $("mailingResult").textContent = error.message; }
 });
 $("token").addEventListener("keydown", event => { if (event.key === "Enter") $("connect").click(); });
-$("refresh").addEventListener("click", () => refresh().catch(error => alert(error.message)));
+$("refresh").addEventListener("click", () => { visaFel(""); refresh().catch(error => visaFel(error.message)); });
 window.addEventListener("beforeunload", () => clearInterval(timer));

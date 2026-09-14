@@ -19,7 +19,16 @@ import { getStoredToken, startCheckout } from "../api/auth.js";
 import { clampBudget } from "../services/calculations.js";
 import { ALLERGENS } from "../services/diet.js";
 import { escapeHtml } from "../utils/html.js";
+// L7: betalväggens belopp ritas av samma modul som kontoarkets, och varje
+// siffra går genom L0:s prisMarkup(). Betalväggen hade egna strängar med
+// `priceText` som reserv - två skärmar som formaterar samma pris var för sig
+// är två skärmar som kan börja säga olika saker om det.
+import { paywallPlanMarkup, planetikett } from "./premiumskarmen.js";
+// J2: och jämförelsetabellen är premiumtabellen.js. L7 gör skärmen, J2 gör
+// listan sann - de möts här, i betalväggen, och ingen av dem bygger den andra.
+import { jamforelseMarkup } from "./premiumtabellen.js";
 import { closeModal, openModal } from "../utils/modal.js";
+import { askConfirm, showNotice } from "./dialog.js";
 // errorText: inget rått fetch-fel når skärmen. "Failed to fetch" är inte
 // svenska, och en användare kan inte göra något åt ett "HTTP 500" (E7).
 import { errorText } from "../api/http.js";
@@ -278,7 +287,14 @@ export function wireHouseholdUi() {
   });
 
   $("householdLeaveBtn")?.addEventListener("click", async () => {
-    if (!confirm(`Lämna ${state.household.name}? Den gemensamma veckan, listan och skafferiet stannar hos de andra.`)) return;
+    const bekräftat = await askConfirm({
+      title: `Lämna ${state.household.name}?`,
+      body: "Den gemensamma veckan, listan och skafferiet stannar hos de andra. Du får din egen igen.",
+      confirmLabel: "Lämna hushållet",
+      cancelLabel: "Stanna kvar",
+      danger: true,
+    });
+    if (!bekräftat) return;
     try {
       await leaveHousehold(state.authToken);
     } catch { /* redan ute, eller offline - lokalt läge gäller ändå */ }
@@ -310,6 +326,7 @@ export function renderAccount() {
   $("profileBtn").classList.toggle("is-premium", app.hasPremium());
   app.syncSettingsInputs();
   app.renderPriceTabs();
+  renderPremiumJamforelse();
   renderHousehold();
   if (loggedIn) {
     $("accountEmail").textContent = state.user.email;
@@ -340,9 +357,7 @@ export function renderAccount() {
       // Planetiketten kommer från samma källa som paywallen (backend), och
       // en okänd plan påstår ingenting om priset.
       const pricing = app.premiumPricing();
-      const planLabel = state.user.subscriptionPlan === "yearly" ? (pricing.yearly?.priceText || "399 kr/år")
-        : state.user.subscriptionPlan === "monthly" ? (pricing.monthly?.priceText || "59 kr/mån")
-        : "din plan";
+      const planLabel = planetikett(pricing, state.user.subscriptionPlan);
       let line;
       if (state.user.subscriptionStatus === "active" && state.user.subscriptionCancelAtPeriodEnd) line = `Din prenumeration (${planLabel}) är uppsagd och gäller till ${periodEnd}, sedan återgår kontot till gratisversionen.`;
       else if (state.user.subscriptionStatus === "active") line = `Din prenumeration (${planLabel}) förnyas automatiskt ${periodEnd}.`;
@@ -355,6 +370,15 @@ export function renderAccount() {
   const premium = app.hasPremium();
   $("nutritionLocked").hidden = premium;
   $("nutritionFields").hidden = !premium;
+}
+
+// J2: samma tabell i kontoarket som i betalväggen. Två listor som säger olika
+// saker om samma produkt är exakt det fel paketet finns för att ta bort, så
+// markupen har EN källa - src/views/premiumtabellen.js - och beloppen kommer
+// ur /api/entitlements via app.premiumPricing(), aldrig ur en sträng här.
+function renderPremiumJamforelse() {
+  const box = $("premiumJamforelse");
+  if (box) box.innerHTML = jamforelseMarkup(app.premiumPricing());
 }
 
 // ---------------------------------------------------------------------------
@@ -554,8 +578,6 @@ function wireWeekPlanUpsell() {
 // /api/entitlements, so 59/399 exist in exactly one place (the backend).
 export function openPaywall(triggerFeature = "") {
   const pricing = app.premiumPricing();
-  const yearly = pricing.yearly || {};
-  const monthly = pricing.monthly || {};
   let modal = document.getElementById("paywallModal");
   if (!modal) {
     modal = document.createElement("div");
@@ -568,25 +590,15 @@ export function openPaywall(triggerFeature = "") {
   // i, mitt i ett betalflöde.
   modal.innerHTML = `<div class="modal-card paywall-card" role="dialog" aria-modal="true" aria-labelledby="paywallTitle">
     <button type="button" class="modal-close" data-paywall-close aria-label="Stäng">×</button>
-    <p class="eyebrow">Matjakt Premium</p>
-    <h2 id="paywallTitle">Lås upp hela matveckan</h2>
-    <p class="paywall-lead">Planera veckan efter familj, budget eller träning. Jämför riktiga matpriser hos alla kvalificerade butiker och få exakt inköpslista för varje butik.</p>
-    <ul class="paywall-points">
-      <li>Alla 7 veckotyper och 1–7 middagar</li>
-      <li>Alla butikers riktiga priser och butikskorgar</li>
-      <li>Näringsmål, kcal- och proteinfilter</li>
-      <li>Fullt skafferi och "Laga med det jag har"</li>
-    </ul>
-    <button type="button" class="btn btn-primary paywall-yearly" data-paywall-plan="yearly">
-      <span class="paywall-plan-label">${escapeHtml(yearly.badge || "Bäst värde")}</span>
-      <strong>${escapeHtml(yearly.priceText || "399 kr/år")}</strong>
-      <small>${escapeHtml(yearly.perMonthText || "≈ 33 kr/mån")} · ${escapeHtml(yearly.savingsText || "Spara 309 kr jämfört med månadsbetalning")}</small>
-    </button>
-    <button type="button" class="btn btn-ghost paywall-monthly" data-paywall-plan="monthly">
-      <strong>${escapeHtml(monthly.priceText || "59 kr/mån")}</strong>
-    </button>
+    <p class="prem-kap">Matjakt Premium</p>
+    <h2 id="paywallTitle">Alla butikers priser, sida vid sida</h2>
+    <p class="paywall-lead">Du planerar redan veckan och ser vad den kostar hos den billigaste butiken. Premium öppnar alla butikers priser, den exakta jämförelsen, hela hushållet och sparhistoriken.</p>
+    ${jamforelseMarkup(pricing)}
+    ${paywallPlanMarkup(pricing)}
+    <p class="prem-moms">Alla priser är totalpris inklusive moms.</p>
     ${app.withdrawalConsentMarkup("paywallWithdrawalConsent")}
     <p class="account-error" id="paywallError"></p>
+    <p class="prem-avsluta">Avsluta när du vill, direkt i appen.</p>
     <button type="button" class="paywall-continue" data-paywall-close>Fortsätt gratis</button>
   </div>`;
   openModal(modal, { onClose: () => closeModal(modal) });
@@ -611,7 +623,7 @@ export async function beginCheckout(plan, root = document.getElementById("paywal
   const consent = app.withdrawalConsentGiven(root);
   if (!consent) {
     const text = "Kryssa i rutan om ångerrätten för att kunna gå vidare till betalningen.";
-    if (errorLine) errorLine.textContent = text; else alert(text);
+    if (errorLine) errorLine.textContent = text; else showNotice({ title: "Ett steg kvar", body: text });
     root?.querySelector("[data-withdrawal-consent]")?.focus();
     return;
   }
@@ -621,7 +633,7 @@ export async function beginCheckout(plan, root = document.getElementById("paywal
     if (url) { if (app.isNativeApp()) awaitingPremiumActivation = true; app.openExternal(url); }
   } catch (error) {
     const text = error ? errorText(error) : "Kunde inte starta betalningen just nu.";
-    if (errorLine) errorLine.textContent = text; else alert(text);
+    if (errorLine) errorLine.textContent = text; else showNotice({ title: "Betalningen kom inte igång", body: text });
   }
 }
 

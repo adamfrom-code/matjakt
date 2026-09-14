@@ -25,7 +25,8 @@ import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, 
 import { errorText } from "./src/api/http.js";
 import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { closeModal, openModal } from "./src/utils/modal.js";
-import { kopplaSvepBort } from "./src/utils/swipe-remove.js";
+import { askConfirm } from "./src/views/dialog.js";
+import { kopplaSvepBort, kopplaTangentbordsBorttag } from "./src/utils/swipe-remove.js";
 import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.js";
 import { PACKAGE_INFO, PRODUCT_CATALOG, RECIPE_DETAILS, RECIPE_QUANTITIES } from "./src/data/legacy-catalog.js";
 import { dinnerCandidates } from "./src/data/meal-type.js";
@@ -41,6 +42,9 @@ import { initSettingsView, renderSettings } from "./src/views/settings.js";
 // dagen och pengarna; vyn bestämmer formen - och priset skrivs av
 // prisMarkup() i src/views/pris.js, aldrig av en vy.
 import { budgetremsaText, fyndradMarkup, ikvallMarkup, ikvallTomMarkup } from "./src/views/ikvall.js";
+// L7: beloppen och planvalet ritas av premiumskarmen.js, som lämnar varje
+// siffra till L0:s prisMarkup(). Ingen vy formaterar sitt eget pris.
+import { ritaPlanval, synkaValet } from "./src/views/premiumskarmen.js";
 import { adjustInventory, fetchHousehold, fetchNotifications, forgetPushSubscription, joinHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, replaceWeekItems, savePushSubscription, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, pantryEntriesFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor } from "./src/services/categories.js";
@@ -57,6 +61,10 @@ import { debounce } from "./src/services/debounce.js";
 import { createEntitlementRefresh } from "./src/services/entitlement-refresh.js";
 import { closeOnboarding, initAccountView, isAwaitingPremium, openOnboarding, openPaywall, openPremiumPitch, renderAccount, renderHousehold, renderNotificationPrefs, renderPostcodePrompt, renderWeekPlanUpsell, setAwaitingPremium, wireHouseholdUi } from "./src/views/account.js";
 import { delaMånaden, initSparatView, renderSparat, sparatModell } from "./src/views/sparat.js";
+// G8: första-värde-ögonblicket. Skärmen där veckan lämnas över får inte bära
+// ett hänglås - modulen håller reda på när ögonblicket pågår, app.js säger
+// bara till när veckan levereras och när hon navigerat vidare.
+import { utanHanglas, veckanLevereras, vyBytt } from "./src/views/forsta-vardet.js";
 
 // FÖRST AV ALLT, före en enda rad annan startkod: engångstoken ur
 // adressfältet. `?reset=` är ett fullständigt kontoövertagande i klartext
@@ -776,11 +784,13 @@ function distanceKm(lat1, lon1, lat2, lon2) {
 // innan /api/entitlements svarat - aldrig en andra affärsmodell.
 // test_frontend_contract faller om de två listorna skiljer sig. Uppdaterad
 // av J3 (ny paketering): veckotyperna, skafferiet och näringsfiltret ner
-// till gratis, hushåll bortom två personer och sparhistoriken upp.
+// till gratis, hushåll bortom två personer och sparhistoriken upp. J6 la
+// till swap_intents - avsikterna i bytesarket, som G10 sålde utan nyckel.
 const FREE_FEATURES = {
   standard_week: true, family_week: true, budget_week: true, training_week: true,
   bulk_week: true, quick_week: true, vegetarian_week: true, balanced_week: true,
-  seven_dinners: false, cheapest_store_price: true, cheapest_store_basket: true,
+  seven_dinners: false, swap_intents: true,
+  cheapest_store_price: true, cheapest_store_basket: true,
   all_store_prices: false, all_store_baskets: false, store_comparison: false,
   live_prices: false,
   recipe_search: true, advanced_nutrition: true, meal_prep: true,
@@ -853,13 +863,13 @@ function can(feature) {
 }
 function maxDinners() { return hasPremium() ? 7 : (entitlements.maxDinners || 4); }
 function premiumPricing() {
-  // Reservvärdet gäller bara innan /api/entitlements svarat. Det bär samma
-  // siffror som backend (features.PRICING) så flikarna aldrig visar tomt.
-  return entitlements.pricing || {
-    monthly: { priceText: "59 kr/mån", pricePerMonth: 59 },
-    yearly: { priceText: "399 kr/år", pricePerYear: 399, perMonthText: "≈ 33 kr/mån",
-              savingsText: "Spara 309 kr jämfört med månadsbetalning", badge: "Bäst värde" },
-  };
+  // Inget reservpris, med flit. Reservobjektet bar 59/399 och fyra fält som
+  // ingen läste efter L7, och så länge det låg mellan svaret och vyn fick
+  // premiumskarmen.js aldrig se ett saknat pris - modulens "pris saknas" var
+  // onåbar i appen. Priset bor i backend (features.PRICING) och når hit via
+  // /api/entitlements; har svaret inte kommit säger skärmen det i stället för
+  // att rita ett tal som kan ha slutat gälla.
+  return entitlements.pricing || {};
 }
 // Ångerrätten (distansavtalslagen). Texten kommer från backend precis som
 // priserna - reservvärdet gäller bara innan /api/entitlements svarat, och
@@ -1105,6 +1115,10 @@ function chooseMenu(shouldScroll = true) {
   clearPriceSnapshots();
   trackEvent("vecka_skapad");
   saveState();
+  // G8: veckan lämnas över nu. Raden står FÖRE render() - efteråt hade
+  // butikskorten hunnit ritas med sina hänglås. shouldScroll skiljer
+  // leveransen från uppstartens tysta chooseMenu(false), som ingen ser.
+  veckanLevereras(shouldScroll);
   render();
   if (shouldScroll) {
     setView("week");
@@ -1300,7 +1314,10 @@ function renderStoreCards() {
   const comparableCount = entries.filter(entry => !entry.locked && !entry.unavailable).length;
   const compareButton = hasPremium() && comparableCount > 1
     ? `<button type="button" class="store-compare-open store-cards-compare" id="storeCardsCompareBtn">Jämför butiker →</button>` : "";
-  container.innerHTML = entries.map(storeCardMarkup).join("")
+  // G8: under första-värde-ögonblicket ritas bara de butiker hon faktiskt
+  // har. "Var blir det billigast?" står OVANFÖR veckan - ett hänglås
+  // här är ett lås före hennes första måltid.
+  container.innerHTML = utanHanglas(entries).map(storeCardMarkup).join("")
     + (basisLabel ? `<p class="store-basis">${escapeHtml(basisLabel)}</p>` : "")
     + compareButton;
   $("storeCardsCompareBtn")?.addEventListener("click", () => { renderStoreComparisonPage(plannedRecipes()); setView("comparison"); });
@@ -2489,15 +2506,21 @@ initShoppingView({
 // G5: krysset satt i tumzonen, intill "Köpt" - ett feltryck tog bort varan.
 // Svep vänster tar bort raden i stället, med Ångra i toasten. Lyssnaren sitter på
 // behållaren, inte på raderna, så den överlever varje omritning av listan.
-kopplaSvepBort($("shoppingList"), {
-  väljRad: mål => mål?.closest?.("[data-remove-item]")
-    ? null                                   // krysset är sin egen väg, inte ett svep
-    : mål?.closest?.(".shopping-item"),
-  taBort: rad => {
-    const namn = rad.querySelector("[data-remove-item]")?.dataset.removeItem;
-    if (namn) removeShoppingItem(namn);
-  },
-});
+//
+// L3: och samma handling utan finger. Ett svep är otillgängligt i samma sekund
+// som det är enda vägen, så Delete/Backspace på den fokuserade raden gör exakt
+// det svepet gör. EN funktion, två vägar in - skulle de kalla var sin kopia
+// vore tangentbordsvägen en sämre variant, och den skillnaden syns inte förrän
+// någon står utan mus.
+const taBortSvepradEllerFokusrad = rad => {
+  const namn = rad.querySelector("[data-remove-item]")?.dataset.removeItem;
+  if (namn) removeShoppingItem(namn);
+};
+const varuradUnder = mål => mål?.closest?.("[data-remove-item]")
+  ? null                                   // krysset är sin egen väg, inte ett svep
+  : mål?.closest?.(".shopping-item");
+kopplaSvepBort($("shoppingList"), { väljRad: varuradUnder, taBort: taBortSvepradEllerFokusrad });
+kopplaTangentbordsBorttag($("shoppingList"), { väljRad: varuradUnder, taBort: taBortSvepradEllerFokusrad });
 
 function renderWeekStoreTabs() {
   const tabs = document.querySelector('[aria-label="Byt butik för veckan"]');
@@ -3073,7 +3096,16 @@ $("kcalFilter").addEventListener("change", e => { state.maxKcal = Number(e.targe
 $("favoriteFilter").addEventListener("change", e => { state.baraFavoriter = e.target.checked; renderRecipes(); });
 function setView(view) { $("top").className = `app view-${view}`;
   // Grov tratt för testrundorna: en räknare per flikbesök, inget mer.
-  trackEvent(`view_${view}`); document.querySelectorAll(".bottom-nav-item").forEach(item => item.classList.toggle("active", item.dataset.view === view)); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  trackEvent(`view_${view}`); document.querySelectorAll(".bottom-nav-item").forEach(item => item.classList.toggle("active", item.dataset.view === view)); window.scrollTo({ top: 0, behavior: "smooth" });
+  // G8: hon navigerade vidare - ögonblicket är slut och erbjudandet ska
+  // tillbaka. DIREKT, inte via invalidate(): render-bussen ritar på nästa
+  // bildruta, och då hinner vyn bytas med de låsta korten fortfarande
+  // bortfiltrerade. Ett kort som kommer tillbaka en bildruta senare är en
+  // kapplöpning, och den förlorades på riktigt (test_full_consumer_journey
+  // läste noll låsta butiker direkt efter fliktrycket). Korten är det enda
+  // ögonblicket rör, så det är bara de som behöver ritas om.
+  if (vyBytt(view)) renderStoreCards();
+}
 // Receptsidan är ett eget lager OVANPÅ appen: renderRecipePage() döljer hela
 // #top. Allt som byter flik måste därför lämna den först, annars byts vyn
 // under ett lager som ligger kvar över den. Bottennavigeringen gjorde det
@@ -3100,18 +3132,10 @@ document.querySelector(".wordmark").addEventListener("click", event => {
 // Flikarna i kontoarket var hårdkodad HTML och kunde tyst börja ljuga.
 function renderPriceTabs() {
   const pricing = premiumPricing();
-  const month = document.querySelector('[data-price-tab="month"]');
-  const year = document.querySelector('[data-price-tab="year"]');
-  // Beloppet i <strong>, villkoret i <small> - priceText bär redan "/mån"
-  // och skulle annars läsas som "59 kr/mån /mån".
-  const perMonth = pricing.monthly?.pricePerMonth;
-  const perYear = pricing.yearly?.pricePerYear;
-  if (month) month.innerHTML = `<span>Månad</span><strong>${escapeHtml(perMonth ? `${perMonth} kr` : (pricing.monthly?.priceText || ""))}</strong><small>/mån</small>`;
-  if (year) {
-    const savings = perMonth && perYear ? `spara ${perMonth * 12 - perYear} kr` : "";
-    const extra = ["/år", pricing.yearly?.perMonthText, savings].filter(Boolean).join(" · ");
-    year.innerHTML = `<span>År · Bäst värde</span><strong>${escapeHtml(perYear ? `${perYear} kr` : (pricing.yearly?.priceText || ""))}</strong><small>${escapeHtml(extra)}</small>`;
-  }
+  // L7: markupen bor i src/views/premiumskarmen.js och beloppen går genom
+  // L0:s prisMarkup(). Den här filen skrev dem förut som `${perMonth} kr` i en
+  // egen mall - alltså en andra prisformatering vid sidan av appens.
+  ritaPlanval(pricing);
   // Ångerrättsrutan i kontoarket ritas härifrån av samma skäl som priserna:
   // texten bor i backend, och hårdkodad HTML kan tyst börja ljuga om vad
   // kunden godkände. Bocken nollställs inte vid omritning - det är ett
@@ -3375,12 +3399,25 @@ function swapOptionsFor(current, candidates, intent) {
                       cost: swapCostText(option, current) }));
 }
 
-// G10: AVSIKTEN ÄR DET SOM SÄLJS, INTE ANTALET.
+// J6: LÅSET FRÅGAR AFFÄRSMODELLEN, DET BÄR DEN INTE.
 //
-// "Något annat" är och förblir gratis - det är det byte som gör veckan till
-// din. De fem avsikterna är ett annat slags handling: ett mål i stället för
-// ett kast, och det som kostar oss arbete att svara på.
-const swapIntentLocked = intentId => Boolean(intentId) && !hasPremium();
+// G10 skrev "det som säljs är avsikten" och lät den här raden fråga
+// hasPremium() rakt av - men avsikterna fick aldrig en rad i FEATURES. Ett
+// lås utan nyckel kan varken få en serverkontroll (J1 härleder sin mängd ur
+// FEATURES) eller en rad i premiumtabellerna (J2/I8 kräver en nyckel per
+// rad), och /api/entitlements nämner det inte. Kvar blev ett lås som bara
+// klienten kände till - och som därför bara klienten upprätthöll.
+//
+// Nyckeln finns nu, och J3:s princip satte den till gratis: rankningen sker
+// i rankSwapOptions() här i klienten, ur ett lokalt receptregister, och
+// kostar oss ingenting per byte. Låset ritas alltså inte längre.
+//
+// Raden står ändå kvar, och det är avsiktligt. Den bär ingen åsikt om
+// priset: flyttas swap_intents upp till Premium i features.py kommer låset
+// tillbaka av sig självt - och J1:s acceptanstest kräver då en riktig
+// serverkontroll innan det får göra det. Samma mönster som _optional() i
+// billing/gate.py: modellen bestämmer, koden frågar.
+const swapIntentLocked = intentId => Boolean(intentId) && !can("swap_intents");
 
 function renderSwapModal() {
   if (!swapContext) return;
@@ -3388,7 +3425,9 @@ function renderSwapModal() {
   const currentRecipe = selectedRecipes().find(recipe => recipe?.id === currentId);
   const dayLabel = DAYS[dayIndex] || `Dag ${dayIndex + 1}`;
   // Avsikten först, alternativen sedan. Fem knappar räcker - det här ska
-  // vara ett val, inte ett formulär. Låset står PÅ knappen, inte bakom den:
+  // vara ett val, inte ett formulär. Reglerna nedan gäller den dag modellen
+  // säger att avsikten ska låsas; med swap_intents gratis (J6) är `locked`
+  // alltid false och ingen av dem ritas. Låset står PÅ knappen, inte bakom den:
   // en gratisanvändare ska se vad Premium är innan hon trycker, inte mötas
   // av en vägg efteråt. Och det bärs av ett ORD, inte av en ikon eller en
   // färg - "Premium" överlever gråskala och når skärmläsaren, precis som
@@ -3402,7 +3441,7 @@ function renderSwapModal() {
   $("swapModalHint").innerHTML = `${dayLabel}s middag${currentRecipe ? ` · nuvarande: ${escapeHtml(currentRecipe.namn)}` : ""}` + intents;
   $("swapModalHint").querySelectorAll("[data-swap-intent]").forEach(button => button.addEventListener("click", () => {
     const id = button.dataset.swapIntent;
-    if (swapIntentLocked(id)) { trackEvent("byte_avsikt_last"); openPaywall("swap_intent"); return; }
+    if (swapIntentLocked(id)) { trackEvent("byte_avsikt_last"); openPaywall("swap_intents"); return; }
     swapContext.intent = id;
     swapContext.allOptions = swapOptionsFor(swapContext.current, swapContext.candidates, id);
     swapContext.visibleCount = SWAP_OPTIONS_BATCH;
@@ -3766,7 +3805,14 @@ $("resendVerificationBtn").addEventListener("click", async () => {
 });
 $("deleteAccountBtn").addEventListener("click", async () => {
   $("deleteError").textContent = "";
-  if (!confirm("Radera ditt konto permanent? Det går inte att ångra.")) return;
+  const bekräftat = await askConfirm({
+    title: "Radera ditt konto?",
+    body: "Kontot, veckan, listan och skafferiet försvinner. Det går inte att ångra.",
+    confirmLabel: "Radera kontot",
+    cancelLabel: "Behåll kontot",
+    danger: true,
+  });
+  if (!bekräftat) return;
   try {
     await deleteAccount(state.authToken);
     state.authToken = null; state.user = null; storeToken(null);
@@ -4008,7 +4054,7 @@ function openExternal(rawUrl) {
   location.href = url;
 }
 let selectedPlan = "monthly";
-document.querySelectorAll("[data-price-tab]").forEach(tab => tab.addEventListener("click", () => { selectedPlan = tab.dataset.plan; document.querySelectorAll("[data-price-tab]").forEach(t => t.classList.toggle("active", t === tab)); }));
+document.querySelectorAll("[data-price-tab]").forEach(tab => tab.addEventListener("click", () => { selectedPlan = tab.dataset.plan; document.querySelectorAll("[data-price-tab]").forEach(t => t.classList.toggle("active", t === tab)); synkaValet(); }));
 $("subscribeBtn").addEventListener("click", async () => {
   $("checkoutError").textContent = "";
   if (!state.authToken) { $("checkoutError").textContent = "Skapa ett konto eller logga in först."; return; }

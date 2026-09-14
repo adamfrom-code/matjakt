@@ -14,3 +14,5 @@ from . import gate  # noqa: E402,F401
 from .oss import foreign_customers as oss_foreign_customers  # noqa: E402,F401
 from . import oss  # noqa: E402,F401
 from . import dunning  # noqa: E402,F401
+from . import codes  # noqa: E402,F401
+from . import referral  # noqa: E402,F401

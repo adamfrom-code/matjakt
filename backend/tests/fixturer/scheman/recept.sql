@@ -19,6 +19,7 @@ CREATE TABLE recipe_labels (
                 recipe_id TEXT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
                 kind TEXT NOT NULL,
                 value TEXT NOT NULL,
+                position INTEGER,
                 PRIMARY KEY (recipe_id, kind, value)
             );
 CREATE TABLE recipe_meta (
@@ -58,10 +59,11 @@ CREATE TABLE recipes (
                 image_status TEXT,
                 created_at REAL NOT NULL,
                 updated_at REAL NOT NULL
-            , price_per_portion REAL, price_chain TEXT, price_covered INTEGER, price_total INTEGER, priced_at REAL);
+            , price_per_portion REAL, price_chain TEXT, price_covered INTEGER, price_total INTEGER, priced_at REAL, meal_type TEXT);
 CREATE INDEX idx_recipe_ingredients_normalized
                 ON recipe_ingredients(normalized_id);
 CREATE INDEX idx_recipe_labels_lookup
                 ON recipe_labels(kind, value);
+CREATE INDEX idx_recipes_meal_type ON recipes(meal_type);
 CREATE INDEX idx_recipes_protein ON recipes(protein);
 CREATE INDEX idx_recipes_time ON recipes(total_time);
