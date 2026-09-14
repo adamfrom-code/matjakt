@@ -196,6 +196,21 @@ initAppState({
   onSyncStatus: (status, message) => setSyncStatus(status, message),
   saveRemote: saveAccountState,
   weekTotal: () => lastRealWeekTotal,
+  // E3: det som stod i localStorage gick inte att läsa. Texten är undanflyttad
+  // (matjakt-state-trasig) i stället för överskriven, och det SÄGS - förut var
+  // det enda användaren märkte att veckan, listan och skafferiet var borta.
+  // Remsan, inte synkraden: boot-radens chooseMenu() sparar, och den
+  // sparningens "idle" hade torkat bort beskedet innan någon hann läsa det.
+  onUnreadableState: () => {
+    const inloggad = Boolean(state.authToken);
+    showUndoToast(
+      inloggad
+        ? "Det som sparats på den här enheten gick inte att läsa - veckan hämtas från ditt konto."
+        : "Det som sparats på den här enheten gick inte att läsa, så veckan börjar om. Logga in så sparas den på kontot.",
+      inloggad ? () => {} : () => openAccountModal(),
+      null,
+      { actionLabel: inloggad ? "OK" : "Logga in", duration: 0 });
+  },
 });
 // Prishämtningen (prisdatabasen, livepriserna, filialjämförelsen,
 // extravarorna och butikslistan) bor i src/pricing/sync.js. Den känner inte
