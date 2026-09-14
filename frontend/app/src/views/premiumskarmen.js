@@ -20,9 +20,10 @@
 // påhittat tal är det inte.
 //
 // 59 OCH 399 STÅR INTE I DEN HÄR FILEN. De bor i backend (features.PRICING)
-// och når klienten via /api/entitlements. app.js premiumPricing() har ett
-// reservvärde för de första hundra millisekunderna; modulen tar emot talen och
-// har ingen egen åsikt om dem.
+// och når klienten via /api/entitlements. app.js premiumPricing() lägger
+// ingenting emellan: utan svar får modulen ett tomt objekt och renderar "pris
+// saknas". L7b tog bort reservpriset som låg där och gjorde den vägen onåbar i
+// appen. Modulen tar emot talen och har ingen egen åsikt om dem.
 //
 // VALET MÄRKS MED VIKT OCH EN LINJE, ALDRIG MED ACCENTEN. DESIGNSYSTEM-D.md
 // §2.3 räknar upp accentens förbjudna betydelser, och "Premium" står med:
