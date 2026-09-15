@@ -47,12 +47,25 @@ RESERVERADE = re.compile(r"^http://[^/\s]*\.(?:example|test|invalid|localhost)(?
 
 GRANSKADE = (".py", ".js", ".mjs", ".html", ".json", ".yml", ".yaml")
 
+# Den här filen. En spärr som letar efter ett mönster måste skriva ut
+# mönstret, och docstringen måste få namnge adressen som var fel - annars
+# går felet inte att förstå för den som läser testet om ett år.
+#
+# Upptäckt först i CI: lokalt passerade testet, för `git ls-files` listar
+# bara SPÅRADE filer och filen var ocommittad när den skrevs. Så fort den
+# committades började den fälla sig själv.
+#
+# Undantaget gäller EN fil vid namn, inte "tester" som kategori. Ett bredare
+# undantag hade gjort hålet större än problemet: en riktig http-adress i ett
+# test är fortfarande en riktig http-adress.
+EGEN_FIL = "backend/tests/test_utgaende_i_klartext.py"
+
 
 def spårade_filer():
     ut = subprocess.run(
         ["git", "ls-files"], cwd=ROT, capture_output=True, text=True, check=True
     ).stdout.splitlines()
-    return [f for f in ut if f.endswith(GRANSKADE)]
+    return [f for f in ut if f.endswith(GRANSKADE) and f != EGEN_FIL]
 
 
 class UtgåendeIKlartext(unittest.TestCase):
