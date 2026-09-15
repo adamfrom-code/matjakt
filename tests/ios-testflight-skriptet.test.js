@@ -71,7 +71,15 @@ test("en nyckel inuti repot stoppar körningen", () => {
   }
 });
 
-test("en nyckel utanför repot släpps igenom", () => {
+// Kräver Xcode: skriptets förhandskontroll frågar efter xcodebuild, och utan
+// den blir utfallet "kontrollerna föll" oavsett var nyckeln ligger. Testet
+// SKIPPAS med en angiven orsak i stället för att falla - ett rött test som
+// egentligen säger "det här är inte en Mac" lär folk att ignorera rött.
+// Den andra riktningen (en nyckel INUTI repot ska stoppa körningen) prövas
+// ändå överallt, för den faller före Xcode-kontrollen.
+test("en nyckel utanför repot släpps igenom", {
+  skip: process.platform !== "darwin" ? "kräver Xcode (macOS)" : false,
+}, () => {
   const utanför = join(process.env.TMPDIR || "/tmp", `matjakt-testfall-${process.pid}.p8`);
   try {
     writeFileSync(utanför, ATTRAPP);
@@ -137,6 +145,12 @@ test("exportkonfigurationen laddar upp, och signerar automatiskt", () => {
     "maskinen har inget certifikat i nyckelringen; automatic låter " +
       "-allowProvisioningUpdates skapa det via API-nyckeln",
   );
-  // plutil avgör om filen är en giltig plist - inte vår regex.
-  execFileSync("plutil", ["-lint", join(rot, "ios", "ExportOptions.plist")], { stdio: "pipe" });
+  // plutil avgör om filen är en giltig plist - inte vår regex. Men plutil
+  // finns bara på macOS, och CI kör Linux: där faller anropet med ENOENT och
+  // testet såg ut att handla om exportkonfigurationen när det handlade om
+  // plattformen. Påståendena ovan är plattformsoberoende och gäller överallt;
+  // bara syntaxkontrollen behöver en Mac.
+  if (process.platform === "darwin") {
+    execFileSync("plutil", ["-lint", join(rot, "ios", "ExportOptions.plist")], { stdio: "pipe" });
+  }
 });
