@@ -82,8 +82,50 @@ def _commit_matchar(rapporterad, förväntad: str) -> bool:
     return n >= 7 and str(rapporterad)[:n].lower() == förväntad[:n].lower()
 
 
+# K4b: TVÅ SORTERS PROV. Ett rött rökprov mot produktion utlöser en
+# automatisk återställning, och en återställning kan bara laga det som
+# föregående kod gjorde rätt. Därför skiljs proven åt:
+#
+#   DRIFT      - backend nere, fel commit, recipes trasig, authgräns bruten,
+#                adminväg exponerad, prisplattform helt av. En rollback kan
+#                rimligen laga det. exit 1.
+#   LANSERING  - Stripe i testläge, prisauditen röd/utan data/havererad.
+#                Orsaken är data eller konfiguration, inte koden som just
+#                deployades; att rulla tillbaka ger samma data under annan
+#                kod. Syns HÖGT, men exit 0.
+#
+# Stripe i testläge fällde produktionsrökprovet på en frisk release och
+# utlöste rollbacken - som föll på saknade nycklar. Hade nycklarna funnits
+# hade en fungerande backend kastats tillbaka för att betalningarna ännu
+# inte var live. Det är exakt fel signal för exakt fel åtgärd.
+DRIFT = "DRIFT"
+LANSERING = "LANSERING"
+
+# Prisauditens RIKTIGA gate-värden, ur api_server._pricing_audit_gate och
+# felvägen vid raden "gate": "FEL". Provet jämförde mot "red" - ett värde
+# ingen kod producerar - och testet använde samma "red", så de var överens
+# om något som aldrig händer. Produktionen stod på RÖD och provet sa OK.
+AUDIT_GRÖN = "GRÖN"
+AUDIT_HINDER = {
+    "RÖD": "ALERT",             # datakvalitet eller täckning under golvet
+    "INGEN DATA": "HÖG ALERT",  # tomt prisregister får aldrig grönt kvitto
+    "FEL": "HÖG ALERT",         # auditen kraschade - resultatet är okänt
+}
+
+
+def audit_bedomning(audit) -> tuple[bool, str]:
+    """(ok, detalj) för prisauditen. Okänt värde är inte grönt."""
+    if not isinstance(audit, dict):
+        return True, "pricingAudit saknas - auditen har inte körts här än"
+    gate = audit.get("gate")
+    if gate == AUDIT_GRÖN:
+        return True, f"gate={gate}"
+    allvar = AUDIT_HINDER.get(gate, "HÖG ALERT")
+    return False, f"{allvar}: gate={gate!r}"
+
+
 def prov(bas: str, commit: str | None, hämtare=hämta, stripe_läge: str | None = None):
-    """Kör alla prov. Returnerar [(namn, ok, detalj)] i körd ordning.
+    """Kör alla prov. Returnerar [(namn, ok, detalj, klass)] i körd ordning.
 
     `hämtare` är injicerad så testerna kan köra hela provet mot en riktig
     men påhittad server, utan nät och utan en deploy.
@@ -94,31 +136,28 @@ def prov(bas: str, commit: str | None, hämtare=hämta, stripe_läge: str | None
     status, hälsa = hämtare(f"{bas}/health")
     hälsa = hälsa if isinstance(hälsa, dict) else {}
     resultat.append(("health svarar 200 och ok", status == 200 and hälsa.get("ok") is True,
-                     f"status={status} ok={hälsa.get('ok')!r}"))
+                     f"status={status} ok={hälsa.get('ok')!r}", DRIFT))
 
     if commit:
         rapporterad = hälsa.get("commit")
         resultat.append((f"drift kör {commit[:12]}", _commit_matchar(rapporterad, commit),
-                         f"health.commit={rapporterad!r}"))
+                         f"health.commit={rapporterad!r}", DRIFT))
 
     plattform = hälsa.get("platform")
     aktiv = plattform.get("active") if isinstance(plattform, dict) else None
-    resultat.append(("prisplattformen är aktiv", aktiv is True, f"platform.active={aktiv!r}"))
+    resultat.append(("prisplattformen är aktiv", aktiv is True, f"platform.active={aktiv!r}", DRIFT))
 
-    audit = hälsa.get("pricingAudit")
-    # Auditen är grön när den inte rapporterar en RÖD gate. Saknas den helt
-    # har den aldrig körts i den här miljön - det är inte ett fel i deployen.
-    audit_ok = True if not isinstance(audit, dict) else audit.get("gate") != "red"
-    resultat.append(("prisauditen är inte röd", audit_ok, f"pricingAudit={audit!r}"))
+    audit_ok, audit_detalj = audit_bedomning(hälsa.get("pricingAudit"))
+    resultat.append(("prisauditen är grön", audit_ok, audit_detalj, LANSERING))
 
     status, _ = hämtare(f"{bas}/recipes?limit=1")
-    resultat.append(("recipes svarar 200", status == 200, f"status={status}"))
+    resultat.append(("recipes svarar 200", status == 200, f"status={status}", DRIFT))
 
     status, _ = hämtare(f"{bas}/account/state")
-    resultat.append(("account/state utan token svarar 401", status == 401, f"status={status}"))
+    resultat.append(("account/state utan token svarar 401", status == 401, f"status={status}", DRIFT))
 
     status, _ = hämtare(f"{bas}{ADMINVÄG}")
-    resultat.append(("adminvägen svarar 404 utan token", status == 404, f"status={status}"))
+    resultat.append(("adminvägen svarar 404 utan token", status == 404, f"status={status}", DRIFT))
 
     if stripe_läge:
         stripe = hälsa.get("stripe")
@@ -131,23 +170,41 @@ def prov(bas: str, commit: str | None, hämtare=hämta, stripe_läge: str | None
         # missmatch.
         ok = läge is None or läge == stripe_läge
         detalj = f"stripe.mode={läge!r}" + ("  (Stripe är inte uppsatt här)" if läge is None else "")
-        resultat.append((f"stripe kör i {stripe_läge}-läge", ok, detalj))
+        resultat.append((f"stripe kör i {stripe_läge}-läge", ok, detalj, LANSERING))
 
     return resultat
 
 
 def rapportera(resultat, skriv=print) -> int:
-    fallna = [(namn, detalj) for namn, ok, detalj in resultat if not ok]
-    for namn, ok, detalj in resultat:
-        skriv(f"  {'OK  ' if ok else 'FEL '} {namn}   ({detalj})")
-    if not fallna:
-        skriv(f"Rökprov: {len(resultat)}/{len(resultat)} gröna.")
+    """Tre utfall, inte två.
+
+    0  allt grönt
+    0  driften grön men lanseringen inte redo - syns som ::warning::, och
+       rullbackjobbet (som lyssnar på exitkoden) rör inte en frisk release
+    1  ett driftprov föll - rollback
+    """
+    drift_fall = [(n, d) for n, ok, d, k in resultat if not ok and k == DRIFT]
+    lans_fall = [(n, d) for n, ok, d, k in resultat if not ok and k == LANSERING]
+    for namn, ok, detalj, klass in resultat:
+        markering = "OK  " if ok else ("FEL " if klass == DRIFT else "VARN")
+        skriv(f"  {markering} {namn}   ({detalj})")
+    if drift_fall:
+        skriv("")
+        skriv(f"::error::DEPLOY HEALTH: {len(drift_fall)} driftprov föll - rollback:")
+        for namn, detalj in drift_fall:
+            skriv(f"    {namn} - {detalj}")
+        for namn, detalj in lans_fall:
+            skriv(f"    (lansering, rapporteras ändå) {namn} - {detalj}")
+        return 1
+    if lans_fall:
+        skriv("")
+        skriv(f"::warning::NOT LAUNCH READY: driften är frisk, {len(lans_fall)} lanseringshinder:")
+        for namn, detalj in lans_fall:
+            skriv(f"    {namn} - {detalj}")
+        skriv("Ingen rollback: orsaken är data eller konfiguration, inte koden som deployades.")
         return 0
-    skriv("")
-    skriv(f"::error::{len(fallna)} av {len(resultat)} rökprov föll:")
-    for namn, detalj in fallna:
-        skriv(f"    {namn} - {detalj}")
-    return 1
+    skriv(f"Rökprov: {len(resultat)}/{len(resultat)} gröna. LAUNCH READY.")
+    return 0
 
 
 def main(argv=None) -> int:

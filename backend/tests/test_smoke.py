@@ -45,7 +45,7 @@ FRISK_HÄLSA = {
     "ok": True,
     "commit": SHA[:12],
     "platform": {"active": True, "chains": {}},
-    "pricingAudit": {"gate": "green", "flagged": 0},
+    "pricingAudit": {"gate": "GRÖN", "flagged": 0},  # produktionens riktiga värde
     "stripe": {"configured": True, "mode": "live"},
 }
 
@@ -74,7 +74,15 @@ def kör(stripe_läge=None, **kwargs):
 
 
 def föll(resultat):
-    return [namn for namn, ok, _ in resultat if not ok]
+    return [namn for namn, ok, *_ in resultat if not ok]
+
+
+def klass(resultat, namn):
+    """Vilken klass ett prov har - DRIFT eller LANSERING."""
+    for n, _ok, _d, k in resultat:
+        if n == namn:
+            return k
+    raise AssertionError(f"provet {namn!r} kördes inte")
 
 
 class EnFriskDeployPasserar(unittest.TestCase):
@@ -126,8 +134,13 @@ class RokprovetUpptackerVarjeFel(unittest.TestCase):
         self.assertIn("prisplattformen är aktiv", föll(kör(hälsa=borta)))
 
     def test_rod_prisaudit(self):
-        röd = dict(FRISK_HÄLSA, pricingAudit={"gate": "red", "flagged": 42})
-        self.assertIn("prisauditen är inte röd", föll(kör(hälsa=röd)))
+        # "RÖD" - inte "red". Provet jämförde mot "red" och testet skickade
+        # "red", så de var överens om ett värde ingen kod producerar.
+        # Produktionen stod på RÖD och provet sa OK.
+        röd = dict(FRISK_HÄLSA, pricingAudit={"gate": "RÖD", "flagged": 42})
+        r = kör(hälsa=röd)
+        self.assertIn("prisauditen är grön", föll(r))
+        self.assertEqual(klass(r, "prisauditen är grön"), smoke.LANSERING)
 
     def test_receptbanken_borta(self):
         # Receptbanken byggs ur committad JSON vid start; en deploy på tom
@@ -295,3 +308,158 @@ class BlueprintenBeskriverStaging(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DriftSkiljsFranLansering(unittest.TestCase):
+    """K4b. Ett rött rökprov mot produktion utlöser rollback, och rollback
+    kan bara laga det föregående kod gjorde rätt. Proven är därför två
+    sorter: DRIFT ger exit 1, LANSERING ger exit 0 med en varning.
+
+    Bakgrunden är verklig: Stripe i testläge fällde produktionsrökprovet på
+    en frisk release, rollbacken utlöstes och föll på saknade nycklar. Med
+    nycklarna på plats hade en fungerande backend kastats tillbaka för att
+    betalningarna ännu inte var live.
+    """
+
+    def _exit(self, resultat):
+        rader = []
+        kod = smoke.rapportera(resultat, skriv=rader.append)
+        return kod, "\n".join(rader)
+
+    # --- friska releaser ---
+
+    def test_frisk_med_stripe_test_ger_exit_0_och_not_launch_ready(self):
+        hälsa = dict(FRISK_HÄLSA, stripe={"configured": True, "mode": "test"})
+        kod, ut = self._exit(kör(hälsa=hälsa, stripe_läge="live"))
+        self.assertEqual(kod, 0, ut)
+        self.assertIn("NOT LAUNCH READY", ut)
+        self.assertIn("Ingen rollback", ut)
+
+    def test_frisk_med_stripe_live_ger_exit_0_utan_varning(self):
+        kod, ut = self._exit(kör(stripe_läge="live"))
+        self.assertEqual(kod, 0, ut)
+        self.assertNotIn("NOT LAUNCH READY", ut)
+        self.assertNotIn("::warning::", ut)
+        self.assertIn("LAUNCH READY", ut)
+
+    # --- prisauditens riktiga värden, ur api_server ---
+
+    def test_audit_rod_ger_alert_men_ingen_rollback(self):
+        hälsa = dict(FRISK_HÄLSA, pricingAudit={"gate": "RÖD", "flaggor": {"estimat": 48}})
+        kod, ut = self._exit(kör(hälsa=hälsa, stripe_läge="live"))
+        self.assertEqual(kod, 0, ut)
+        self.assertIn("ALERT: gate='RÖD'", ut)
+        self.assertIn("NOT LAUNCH READY", ut)
+
+    def test_audit_ingen_data_ger_hog_alert_men_ingen_rollback(self):
+        hälsa = dict(FRISK_HÄLSA, pricingAudit={"gate": "INGEN DATA", "kontroller": 0})
+        kod, ut = self._exit(kör(hälsa=hälsa, stripe_läge="live"))
+        self.assertEqual(kod, 0, ut)
+        self.assertIn("HÖG ALERT: gate='INGEN DATA'", ut)
+
+    def test_audit_fel_ger_hog_alert_men_inte_blind_rollback(self):
+        # Auditen kraschade. Orsaken kan vara kod ELLER en trasig datarad -
+        # tvetydigt, och en tvetydig signal får inte kasta tillbaka en
+        # fungerande backend. Men den läses inte längre som grön, vilket
+        # den gjorde med jämförelsen mot "red".
+        hälsa = dict(FRISK_HÄLSA, pricingAudit={"gate": "FEL", "error": "audit_failed"})
+        kod, ut = self._exit(kör(hälsa=hälsa, stripe_läge="live"))
+        self.assertEqual(kod, 0, ut)
+        self.assertIn("HÖG ALERT: gate='FEL'", ut)
+
+    def test_okant_auditvarde_ar_inte_gront(self):
+        """Fail closed: ett värde vi inte känner igen får aldrig läsas som OK."""
+        hälsa = dict(FRISK_HÄLSA, pricingAudit={"gate": "green"})
+        self.assertIn("prisauditen är grön", föll(kör(hälsa=hälsa)))
+
+    def test_audit_gron_ar_tyst(self):
+        kod, ut = self._exit(kör(stripe_läge="live"))
+        self.assertEqual(kod, 0)
+        self.assertNotIn("gate=", ut.split("LAUNCH READY")[-1])
+
+    # --- driftfel: rollback ---
+
+    def test_health_false_ger_exit_1(self):
+        kod, ut = self._exit(kör(hälsa=dict(FRISK_HÄLSA, ok=False)))
+        self.assertEqual(kod, 1)
+        self.assertIn("DEPLOY HEALTH", ut)
+
+    def test_fel_commit_ger_exit_1(self):
+        kod, _ = self._exit(kör(hälsa=dict(FRISK_HÄLSA, commit="0000000000ab")))
+        self.assertEqual(kod, 1)
+
+    def test_recipes_trasig_ger_exit_1(self):
+        kod, _ = self._exit(kör(recipes=500))
+        self.assertEqual(kod, 1)
+
+    def test_authgrans_trasig_ger_exit_1(self):
+        kod, _ = self._exit(kör(account=200))
+        self.assertEqual(kod, 1)
+
+    def test_adminvag_exponerad_ger_exit_1(self):
+        kod, _ = self._exit(kör(admin=200))
+        self.assertEqual(kod, 1)
+
+    def test_prisplattform_inaktiv_ger_exit_1(self):
+        hälsa = dict(FRISK_HÄLSA, platform={"active": False})
+        kod, _ = self._exit(kör(hälsa=hälsa))
+        self.assertEqual(kod, 1)
+
+    def test_driftfel_och_lanseringshinder_samtidigt_ger_exit_1(self):
+        """Driften vinner. Lanseringshindret rapporteras ändå, i samma utdata."""
+        hälsa = dict(FRISK_HÄLSA, ok=False, stripe={"configured": True, "mode": "test"})
+        kod, ut = self._exit(kör(hälsa=hälsa, stripe_läge="live"))
+        self.assertEqual(kod, 1)
+        self.assertIn("stripe kör i live-läge", ut)
+
+    # --- varje prov har rätt klass ---
+
+    def test_klasserna(self):
+        r = kör(stripe_läge="live")
+        for namn in ("health svarar 200 och ok", "prisplattformen är aktiv",
+                     "recipes svarar 200", "account/state utan token svarar 401",
+                     "adminvägen svarar 404 utan token"):
+            self.assertEqual(klass(r, namn), smoke.DRIFT, namn)
+        self.assertEqual(klass(r, "prisauditen är grön"), smoke.LANSERING)
+        self.assertEqual(klass(r, "stripe kör i live-läge"), smoke.LANSERING)
+
+
+class EngelskaGateVardenFarAldrigTillbaka(unittest.TestCase):
+    """Spärren. Buggen var att smoke.py jämförde gate mot "red" och testet
+    skickade "red"/"green" - värden ingen kod producerar. Produktionen stod på
+    RÖD, provet sa OK, och auditen kunde aldrig fälla någonting.
+
+    Kontrollen är på JÄMFÖRELSER ("gate" tillsammans med ett engelskt ord),
+    inte på ordet i sig - kommentarer får förklara vad som var fel.
+    """
+
+    ENGELSKA = ("red", "green", "yellow", "amber")
+
+    def _jamforelser(self, text):
+        import re
+        träffar = []
+        for i, rad in enumerate(text.splitlines(), 1):
+            if rad.lstrip().startswith("#"):
+                continue
+            for ord_ in self.ENGELSKA:
+                if re.search(rf'gate[^\n#]*[=!]=\s*"{ord_}"|"gate":\s*"{ord_}"', rad):
+                    träffar.append(f"{i}: {rad.strip()}")
+        return träffar
+
+    def test_smoke_jamfor_inte_mot_engelska(self):
+        text = (ROOT / "backend" / "scripts" / "smoke.py").read_text(encoding="utf-8")
+        self.assertEqual(self._jamforelser(text), [])
+
+    def test_testerna_skickar_inte_engelska(self):
+        text = Path(__file__).read_text(encoding="utf-8")
+        # Ett enda undantag: fallet som bevisar att ett OKÄNT värde inte är
+        # grönt använder "green" med flit, och står i test_okant_auditvarde.
+        träffar = [t for t in self._jamforelser(text) if "okant" not in t and "test_okant" not in text.splitlines()[int(t.split(":")[0]) - 3]]
+        self.assertEqual(träffar, [], träffar)
+
+    def test_de_riktiga_vardena_ar_de_api_server_producerar(self):
+        api = (ROOT / "backend" / "api_server.py").read_text(encoding="utf-8")
+        for värde in ("GRÖN", "RÖD", "INGEN DATA", "FEL"):
+            self.assertIn(f'"{värde}"', api, f"api_server producerar inte längre {värde!r}")
+        self.assertEqual(smoke.AUDIT_GRÖN, "GRÖN")
+        self.assertEqual(set(smoke.AUDIT_HINDER), {"RÖD", "INGEN DATA", "FEL"})
