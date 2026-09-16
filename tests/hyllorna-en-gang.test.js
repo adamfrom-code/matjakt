@@ -66,11 +66,22 @@ test("AM2: ett tomt svar öppnar för ett nytt försök senare - men inte medan 
   assert.equal(anrop.length, 2, "efter ett tomt svar får nästa omritning försöka igen");
 });
 
-test("AM2: ett nätfel river inte omritningen", async () => {
+test("AM2: ett nätfel river inte omritningen - och läcker inte som ohanterad avvisning", async () => {
+  // En ohanterad avvisning kastar inte in i anroparen, så doesNotThrow räcker
+  // inte: den loggas som fel i webbläsaren. Vakten nedan gör att sabotaget
+  // "ta bort .catch" faktiskt fäller testet.
   initAppState({ storage: null }); state.hyllor = [];
   initRecipesView({ loadShelves: () => Promise.reject(new Error("nätet nere")),
     invalidate() {}, localRecipesForUser: () => [], dietFilterIsActive: () => false });
-  assert.doesNotThrow(() => renderRecipeShelves());
-  await new Promise(r => setTimeout(r, 0));
-  assert.equal(state.hyllor.length, 0);
+  const ohanterade = [];
+  const lyssnare = fel => ohanterade.push(fel);
+  process.on("unhandledRejection", lyssnare);
+  try {
+    assert.doesNotThrow(() => renderRecipeShelves());
+    await new Promise(r => setTimeout(r, 10));
+    assert.equal(state.hyllor.length, 0);
+    assert.deepEqual(ohanterade.map(String), [], "nätfelet läckte som ohanterad avvisning");
+  } finally {
+    process.off("unhandledRejection", lyssnare);
+  }
 });
