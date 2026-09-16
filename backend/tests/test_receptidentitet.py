@@ -154,17 +154,23 @@ class LikhetstalenStammer(Dokumentet):
     ingredienslista ändras talet - och då ska dokumentet säga till."""
 
     def _prova(self, par):
-        for a, b, jac, namn, _ in par:
-            if a in self.recept and b in self.recept:
-                with self.subTest(par=f"{a} <-> {b}"):
+        for a, b, jac, namn, klass in par:
+            with self.subTest(par=f"{a} <-> {b}"):
+                if a in self.recept and b in self.recept:
                     self.assertAlmostEqual(jaccard(self.recept[a], self.recept[b]), jac, places=3)
                     self.assertAlmostEqual(namnlikhet(self.recept[a], self.recept[b]), namn, places=3)
-            else:
-                # Paket 2 har slagit ihop dem: då ska det ena vara alias för
-                # det andra, inte bara borta.
-                with self.subTest(par=f"{a} <-> {b}"):
+                    continue
+                # Paket 2 har tagit ett av recepten ur källorna. Det får bara
+                # ske genom att det blivit alias - för det andra receptet i
+                # paret om paret är samma rätt, annars för sin egen grupp
+                # (`ugnspannkaka-bacon` försvinner ur paret med `pannkakor`
+                # därför att det är alias för `flaskpannkaka`).
+                borta = [x for x in (a, b) if x not in self.recept]
+                for x in borta:
+                    self.assertIn(x, self.alias, f"{x} är borta ur källorna utan att vara alias")
+                if klass.startswith(SLAS_IHOP):
                     self.assertTrue(self.alias.get(a) == b or self.alias.get(b) == a,
-                                    f"{a}/{b}: ett av recepten är borta utan att vara alias")
+                                    f"{a}/{b} är samma rätt men aliaset pekar inte på det andra")
 
     def test_de_29_paren(self):
         self._prova(self.par29)
