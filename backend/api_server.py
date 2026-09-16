@@ -3571,7 +3571,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
             grocery_api.clear_cache()
             if (payload or {}).get("startImports"):
                 started = []
-                for chain in ("Willys", "Hemköp", "City Gross"):
+                # D11b: de SLÄPPTA kedjorna, inte en lista skriven när det var
+                # tre. ICA släpptes i D11 och den här raden hoppade tyst över
+                # den - "aktivera allt" startade import för tre kedjor av fyra.
+                for chain in grocery_api.RELEASED_CHAINS:
                     started.append({chain: grocery_importer.start(chain)})
                 result["imports"] = started
             self.send_json(200, result)
