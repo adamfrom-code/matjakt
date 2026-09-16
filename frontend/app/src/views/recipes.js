@@ -21,7 +21,7 @@ import { addToWeekPlan, removeFromWeekPlan, saveState, state } from "../state/ap
 import { escapeHtml, safeHttpUrl } from "../utils/html.js";
 import { filterRecipes } from "../services/recipe-search.js";
 import { receptbildMarkup, reservkortMarkup } from "./receptbild.js";
-import { loadRecipe, loadShelves, matchesAllTags } from "../data/recipes.js";
+import { loadRecipe, loadShelves as loadShelvesFromApi, matchesAllTags } from "../data/recipes.js";
 import { recipeDetailApiUrl } from "../api/config.js";
 import { SAKNAS, UPPSKATTAT, prisMarkup } from "./pris.js";
 
@@ -32,6 +32,7 @@ const $ = id => document.getElementById(id);
 // inte kan, och ett test får skicka in precis de bitar det prövar.
 const noop = () => {};
 let host = {
+  loadShelves: loadShelvesFromApi,    // AM2: injicerbar så spärren nedan går att pröva
   recipeBank: [],                     // RECEPT - samma array, fylld på plats vid start
   recipeDetailFetches: new Set(),     // delas med app.js ensureWeekRecipeDetails
   invalidate: noop,                   // render-bussen (E0)
@@ -104,10 +105,26 @@ function recipeBrowsingMode() {
     && state.kategori === "alla";
 }
 
-async function syncRecipeShelves() {
-  if (state.hyllor.length) return;
-  state.hyllor = await loadShelves(12);
-  if (state.hyllor.length) host.invalidate("recipes");
+// AM2: hyllorna hämtades TVÅ gånger vid varje start. renderRecipeShelves()
+// körs vid varje omritning, och vakten `state.hyllor.length` är tom tills
+// första svaret kommit - så varje omritning före svaret startade ett nytt
+// anrop (mätt i webbläsaren: /recipes/shelves x2, 130 kB, vid boot). Ett
+// anrop i luften delas nu av alla som frågar, precis som entitlementen.
+let shelvesInFlight = null;
+function syncRecipeShelves() {
+  if (state.hyllor.length || shelvesInFlight) return shelvesInFlight;
+  // Anropet går ut DIREKT (som förut) - det är delningen som är ett löfte.
+  // En mikrotask emellan hade fördröjt hämtningen utan skäl.
+  let begaran;
+  try { begaran = Promise.resolve(host.loadShelves(12)); } catch (fel) { begaran = Promise.reject(fel); }
+  shelvesInFlight = begaran
+    .then(hyllor => {
+      state.hyllor = hyllor || [];
+      if (state.hyllor.length) host.invalidate("recipes");
+    })
+    .catch(() => {})
+    .finally(() => { shelvesInFlight = null; });
+  return shelvesInFlight;
 }
 
 export function renderRecipeShelves() {
