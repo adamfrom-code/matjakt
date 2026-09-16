@@ -1,0 +1,1868 @@
+[
+ {
+  "id": "agg",
+  "namn": "Ägg",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "aggnudlar",
+  "namn": "Äggnudlar",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "ananas",
+  "namn": "Ananas",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "apelsin",
+  "namn": "Apelsin",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "appelmos",
+  "namn": "Äppelmos",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "apple",
+  "namn": "Äpple",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "attika",
+  "namn": "Ättika",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "avokado",
+  "namn": "Avokado",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "babyspenat",
+  "namn": "Babyspenat",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "bacon",
+  "namn": "Bacon",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "banan",
+  "namn": "Banan",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "basilika",
+  "namn": "Basilika",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "basmatiris",
+  "namn": "Basmatiris",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "biff",
+  "namn": "Biff",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "blandfars",
+  "namn": "Blandfärs",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "blodpudding",
+  "namn": "Blodpudding",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "blomkal",
+  "namn": "Blomkål",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "broccoli",
+  "namn": "Broccoli",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "brod",
+  "namn": "Bröd",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "bruna-bonor",
+  "namn": "Bruna bönor",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "bulgur",
+  "namn": "Bulgur",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "buljong",
+  "namn": "Buljong",
+  "alias": [],
+  "standardenhet": "ml",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "buljongtarning",
+  "namn": "Buljongtärning",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "cashewnotter",
+  "namn": "Cashewnötter",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "champinjoner",
+  "namn": "Champinjoner",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "chevre",
+  "namn": "Chèvre",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "chili",
+  "namn": "Chili",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "chiliflakes",
+  "namn": "Chiliflakes",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "chilipulver",
+  "namn": "Chilipulver",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "chilisas",
+  "namn": "Chilisås",
+  "alias": [],
+  "standardenhet": "dl",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "chorizo",
+  "namn": "Chorizo",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "citron",
+  "namn": "Citron",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "creme-fraiche",
+  "namn": "Crème fraiche",
+  "alias": [],
+  "standardenhet": "dl",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "curry",
+  "namn": "Curry",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "currypasta",
+  "namn": "Currypasta",
+  "alias": [],
+  "standardenhet": "msk",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "dill",
+  "namn": "Dill",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "dragon",
+  "namn": "Dragon",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "edamamebonor",
+  "namn": "Edamamebönor",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "falukorv",
+  "namn": "Falukorv",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "fetaost",
+  "namn": "Fetaost",
+  "alias": [
+   "feta"
+  ],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "fiskbullar",
+  "namn": "Fiskbullar",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "fiskpinnar",
+  "namn": "Fiskpinnar",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "fisksas",
+  "namn": "Fisksås",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "flaskfile",
+  "namn": "Fläskfilé",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "flaskkarre",
+  "namn": "Fläskkarré",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "flaskkotlett",
+  "namn": "Fläskkotlett",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "fransyska",
+  "namn": "Fransyska",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "fryst-spenat",
+  "namn": "Fryst spenat",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "fryst-torsk",
+  "namn": "Fryst torsk",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "frysta-artor",
+  "namn": "Frysta ärtor",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "frysta-bar",
+  "namn": "Frysta bär",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "garam-masala",
+  "namn": "Garam masala",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "gnocchi",
+  "namn": "Gnocchi",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "gradde",
+  "namn": "Grädde",
+  "alias": [],
+  "standardenhet": "dl",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "graddfil",
+  "namn": "Gräddfil",
+  "alias": [],
+  "standardenhet": "dl",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "graslok",
+  "namn": "Gräslök",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "gravad-lax",
+  "namn": "Gravad lax",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "grekisk-yoghurt",
+  "namn": "Grekisk yoghurt",
+  "alias": [],
+  "standardenhet": "dl",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "grillkorv",
+  "namn": "Grillkorv",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "grotris",
+  "namn": "Grötris",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "gul-lok",
+  "namn": "Gul lök",
+  "alias": [
+   "lok"
+  ],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "gula-artor",
+  "namn": "Gula ärtor",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "gurka",
+  "namn": "Gurka",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "gurkmeja",
+  "namn": "Gurkmeja",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "halloumi",
+  "namn": "Halloumi",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "hamburgerbrod",
+  "namn": "Hamburgerbröd",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "haricots-verts",
+  "namn": "Haricots verts",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "havregryn",
+  "namn": "Havregryn",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "hogrev",
+  "namn": "Högrev",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "honung",
+  "namn": "Honung",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "ingefara",
+  "namn": "Ingefära",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "isbergssallad",
+  "namn": "Isbergssallad",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "isterband",
+  "namn": "Isterband",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "jasminris",
+  "namn": "Jasminris",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "jast",
+  "namn": "Jäst",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "jordgubbssylt",
+  "namn": "Jordgubbssylt",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "jordnotssmor",
+  "namn": "Jordnötssmör",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "jordnotter",
+  "namn": "Jordnötter",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kalrot",
+  "namn": "Kålrot",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kalvfars",
+  "namn": "Kalvfärs",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kalvschnitzel",
+  "namn": "Kalvschnitzel",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kanel",
+  "namn": "Kanel",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kapris",
+  "namn": "Kapris",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kassler",
+  "namn": "Kassler",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kebabkott",
+  "namn": "Kebabkött",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "keso",
+  "namn": "Keso",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "ketchup",
+  "namn": "Ketchup",
+  "alias": [],
+  "standardenhet": "dl",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kidneybonor",
+  "namn": "Kidneybönor",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kikartor",
+  "namn": "Kikärtor",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "knackebrod",
+  "namn": "Knäckebröd",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kokosmjolk",
+  "namn": "Kokosmjölk",
+  "alias": [],
+  "standardenhet": "ml",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "koriander",
+  "namn": "Koriander",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kornmjol",
+  "namn": "Kornmjöl",
+  "alias": [],
+  "standardenhet": "dl",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "korsbarstomater",
+  "namn": "Körsbärstomater",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "korvbrod",
+  "namn": "Korvbröd",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kottbullar",
+  "namn": "Köttbullar",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kottfars",
+  "namn": "Köttfärs",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "krossade-tomater",
+  "namn": "Krossade tomater",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kryddor",
+  "namn": "Kryddor",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "kryddpeppar",
+  "namn": "Kryddpeppar",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "kvarg",
+  "namn": "Kvarg",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kyckling-hel",
+  "namn": "Kyckling hel",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kycklingfars",
+  "namn": "Kycklingfärs",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kycklingfile",
+  "namn": "Kycklingfilé",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kycklingklubbor",
+  "namn": "Kycklingklubbor",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "kycklinglarfile",
+  "namn": "Kycklinglårfilé",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "lagerblad",
+  "namn": "Lagerblad",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "lasagneplattor",
+  "namn": "Lasagneplattor",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "laxfile",
+  "namn": "Laxfilé",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "lime",
+  "namn": "Lime",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "lingonsylt",
+  "namn": "Lingonsylt",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "lok-vitlok",
+  "namn": "Lök & vitlök",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "lovbiff",
+  "namn": "Lövbiff",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "maizena",
+  "namn": "Maizena",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "majonnas",
+  "namn": "Majonnäs",
+  "alias": [],
+  "standardenhet": "dl",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "majs",
+  "namn": "Majs",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "makaroner",
+  "namn": "Makaroner",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "matvete",
+  "namn": "Matvete",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "mjolk",
+  "namn": "Mjölk",
+  "alias": [],
+  "standardenhet": "dl",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "morotter",
+  "namn": "Morötter",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "mozzarella",
+  "namn": "Mozzarella",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "muskot",
+  "namn": "Muskot",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "naanbrod",
+  "namn": "Naanbröd",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "notfars",
+  "namn": "Nötfärs",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "nudlar",
+  "namn": "Nudlar",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "olivolja",
+  "namn": "Olivolja",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "olja",
+  "namn": "Olja",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "oregano",
+  "namn": "Oregano",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "ost",
+  "namn": "Ost",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "ostronsas",
+  "namn": "Ostronsås",
+  "alias": [],
+  "standardenhet": "dl",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "palsternacka",
+  "namn": "Palsternacka",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "panko",
+  "namn": "Panko",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "paprika",
+  "namn": "Paprika",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "paprikapulver",
+  "namn": "Paprikapulver",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "parmesan",
+  "namn": "Parmesan",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "pasta",
+  "namn": "Pasta",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "persilja",
+  "namn": "Persilja",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "pesto",
+  "namn": "Pesto",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "pitabrod",
+  "namn": "Pitabröd",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "pommes-frites",
+  "namn": "Pommes frites",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "potatis",
+  "namn": "Potatis",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "pumpafron",
+  "namn": "Pumpafrön",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "purjolok",
+  "namn": "Purjolök",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "quinoa",
+  "namn": "Quinoa",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "rakor",
+  "namn": "Räkor",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "rimmat-sidflask",
+  "namn": "Rimmat sidfläsk",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "ris",
+  "namn": "Ris",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "riven-ost",
+  "namn": "Riven ost",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "rod-currypasta",
+  "namn": "Röd currypasta",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "roda-linser",
+  "namn": "Röda linser",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "rodbetor",
+  "namn": "Rödbetor",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "rodkal",
+  "namn": "Rödkål",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "rodlok",
+  "namn": "Rödlök",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "romansallad",
+  "namn": "Romansallad",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "rostad-lok",
+  "namn": "Rostad lök",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "rostbiff",
+  "namn": "Rostbiff",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "ryggbiff",
+  "namn": "Ryggbiff",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "salsa",
+  "namn": "Salsa",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "salt",
+  "namn": "Salt",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "saltgurka",
+  "namn": "Saltgurka",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "sambal-oelek",
+  "namn": "Sambal oelek",
+  "alias": [],
+  "standardenhet": "tsk",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "sardellfile",
+  "namn": "Sardellfilé",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "sejfile",
+  "namn": "Sejfilé",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "senap",
+  "namn": "Senap",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "sesamfron",
+  "namn": "Sesamfrön",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "sidflask",
+  "namn": "Sidfläsk",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "sill",
+  "namn": "Sill",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "sirap",
+  "namn": "Sirap",
+  "alias": [],
+  "standardenhet": "msk",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "skinka",
+  "namn": "Skinka",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "smor",
+  "namn": "Smör",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "socker",
+  "namn": "Socker",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "sojasas",
+  "namn": "Sojasås",
+  "alias": [
+   "soja"
+  ],
+  "standardenhet": "dl",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "solrosfron",
+  "namn": "Solrosfrön",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "soltorkade-tomater",
+  "namn": "Soltorkade tomater",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "sotpotatis",
+  "namn": "Sötpotatis",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "spaghetti",
+  "namn": "Spaghetti",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "sparris",
+  "namn": "Sparris",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "spenat",
+  "namn": "Spenat",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "spiskummin",
+  "namn": "Spiskummin",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "sriracha",
+  "namn": "Sriracha",
+  "alias": [],
+  "standardenhet": "ml",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "strobrod",
+  "namn": "Ströbröd",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "surdegsbrod",
+  "namn": "Surdegsbröd",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "svarta-bonor",
+  "namn": "Svarta bönor",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "svartpeppar",
+  "namn": "Svartpeppar",
+  "alias": [
+   "peppar"
+  ],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "tacokrydda",
+  "namn": "Tacokrydda",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "tahini",
+  "namn": "Tahini",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "timjan",
+  "namn": "Timjan",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "tofu",
+  "namn": "Tofu",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "tomater",
+  "namn": "Tomater",
+  "alias": [
+   "tomat"
+  ],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "tomatpure",
+  "namn": "Tomatpuré",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "tonfisk",
+  "namn": "Tonfisk",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "torskfile",
+  "namn": "Torskfilé",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "tortillabrod",
+  "namn": "Tortillabröd",
+  "alias": [
+   "tortilla"
+  ],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "tortillachips",
+  "namn": "Tortillachips",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "valnotter",
+  "namn": "Valnötter",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "vegofars",
+  "namn": "Vegofärs",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "vetemjol",
+  "namn": "Vetemjöl",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "vispgradde",
+  "namn": "Vispgrädde",
+  "alias": [],
+  "standardenhet": "dl",
+  "enhetsfamilj": "volym",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "vita-bonor",
+  "namn": "Vita bönor",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "vitkal",
+  "namn": "Vitkål",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "vitlok",
+  "namn": "Vitlök",
+  "alias": [],
+  "standardenhet": "klyfta",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "vitpeppar",
+  "namn": "Vitpeppar",
+  "alias": [],
+  "standardenhet": null,
+  "enhetsfamilj": null,
+  "skafferi": true,
+  "omvandling": {}
+ },
+ {
+  "id": "wienerkorv",
+  "namn": "Wienerkorv",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "wokgronsaker",
+  "namn": "Wokgrönsaker",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "yoghurt",
+  "namn": "Yoghurt",
+  "alias": [],
+  "standardenhet": "g",
+  "enhetsfamilj": "massa",
+  "skafferi": false,
+  "omvandling": {}
+ },
+ {
+  "id": "zucchini",
+  "namn": "Zucchini",
+  "alias": [],
+  "standardenhet": "st",
+  "enhetsfamilj": "antal",
+  "skafferi": false,
+  "omvandling": {}
+ }
+]
