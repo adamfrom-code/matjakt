@@ -64,7 +64,12 @@ export async function loadRecipes() {
     const response = await fetch(FALLBACK_URL, { cache: "no-cache" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const recipes = await response.json();
-    return Array.isArray(recipes) ? recipes : [];
+    // P03a: reservbanken är API-FORMEN, genererad ur samma källor och samma
+    // kod som backenden (backend/scripts/generate_recipe_fallback.py). Den
+    // går därför genom SAMMA fromApi() som ett serversvar. Tidigare var den
+    // en handredigerad fil i appens egen form som hoppade över översättningen
+    // - och bar 58 recept som alla skilde sig från källan.
+    return Array.isArray(recipes) ? recipes.map(fromApi) : [];
   } catch {
     return [];
   }
