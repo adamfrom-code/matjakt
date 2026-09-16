@@ -1,6 +1,9 @@
 [
   {
     "id": "flaskpannkaka",
+    "aliases": [
+      "ugnspannkaka-bacon"
+    ],
     "name": "Fläskpannkaka i ugn",
     "description": "Ugnspannkaka med rimmat fläsk som får bli knaprigt i formen innan smeten hälls på. Serveras med lingon.",
     "servings": 4,

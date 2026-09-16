@@ -679,15 +679,6 @@
   "omvandling": {}
  },
  {
-  "id": "jordgubbssylt",
-  "namn": "Jordgubbssylt",
-  "alias": [],
-  "standardenhet": "g",
-  "enhetsfamilj": "massa",
-  "skafferi": false,
-  "omvandling": {}
- },
- {
   "id": "jordnotssmor",
   "namn": "Jordnötssmör",
   "alias": [],
@@ -996,15 +987,6 @@
  {
   "id": "lingonsylt",
   "namn": "Lingonsylt",
-  "alias": [],
-  "standardenhet": "g",
-  "enhetsfamilj": "massa",
-  "skafferi": false,
-  "omvandling": {}
- },
- {
-  "id": "lok-vitlok",
-  "namn": "Lök & vitlök",
   "alias": [],
   "standardenhet": "g",
   "enhetsfamilj": "massa",
@@ -1661,15 +1643,6 @@
   "standardenhet": null,
   "enhetsfamilj": null,
   "skafferi": true,
-  "omvandling": {}
- },
- {
-  "id": "tacokrydda",
-  "namn": "Tacokrydda",
-  "alias": [],
-  "standardenhet": "st",
-  "enhetsfamilj": "antal",
-  "skafferi": false,
   "omvandling": {}
  },
  {

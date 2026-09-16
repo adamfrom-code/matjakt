@@ -198,6 +198,13 @@ def card(recipe: dict) -> dict:
         "pricePerPortion": recipe.get("pricePerPortion"),
         "priceChain": recipe.get("priceChain"),
         "pricedAt": recipe.get("pricedAt"),
+        # P04b: följer med VARJE kort. Appen bygger sin karta gammalt id ->
+        # kanoniskt ur just den här listan (och ur reservbanken, som är
+        # samma projektion) och pekar om favoriter, vecka och historik
+        # innan den ritar. Utan fältet här hade en favorit sparad under ett
+        # gammalt id sett ut som ett recept som försvunnit.
+        "canonicalId": recipe.get("canonicalId", recipe["id"]),
+        "aliases": recipe.get("aliases", []),
     }
 
 

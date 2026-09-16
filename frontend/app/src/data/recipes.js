@@ -150,6 +150,10 @@ function fromApi(recipe) {
     // - men det tas heller inte bort av en `...recipe`-spridning som råkar
     // sakna det, eftersom ett saknat värde betyder "aldrig middag".
     mealType: recipe.mealType ?? null,
+    // P04b: de gamla id som betyder samma rätt. Följer med listprojektionen
+    // och reservbanken; appen pekar om sitt tillstånd ur dem (recipe-aliases.js).
+    canonicalId: recipe.canonicalId ?? recipe.id,
+    aliases: Array.isArray(recipe.aliases) ? recipe.aliases : [],
     typ: recipe.categories?.[0] ?? recipe.typ,
     kosttyp: recipe.dietFlags?.[0] ?? recipe.kosttyp,
     tags: recipe.tags ?? [],

@@ -1,9 +1,11 @@
 [
  {
+  "aliases": [],
   "allergens": [
    "laktos",
    "ägg"
   ],
+  "canonicalId": "aggrora-bacon-bonor",
   "categories": [
    "Lunch",
    "Billigt",
@@ -144,10 +146,12 @@
   "totalTime": 17
  },
  {
+  "aliases": [],
   "allergens": [
    "soja",
    "ägg"
   ],
+  "canonicalId": "aggwok-ris",
   "categories": [
    "Ris",
    "Vegetariskt",
@@ -289,7 +293,9 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "artsoppa-klassisk",
   "categories": [
    "Husmanskost",
    "Soppor",
@@ -428,7 +434,9 @@
   "totalTime": 100
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "artsoppa-vegetarisk",
   "categories": [
    "Husmanskost",
    "Soppor",
@@ -575,9 +583,11 @@
   "totalTime": 100
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "bankebiff",
   "categories": [
    "Kött",
    "Proteinrikt",
@@ -722,10 +732,12 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos",
    "ägg"
   ],
+  "canonicalId": "biff-a-la-lindstrom",
   "categories": [
    "Husmanskost"
   ],
@@ -859,10 +871,12 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos",
    "ägg"
   ],
+  "canonicalId": "biff-bearnaise-vardag",
   "categories": [
    "Kött",
    "Barn",
@@ -1028,9 +1042,11 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "biff-rodvinssas",
   "categories": [
    "Kött",
    "Helgmiddag",
@@ -1185,9 +1201,11 @@
   "totalTime": 55
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "biff-sotpotatis",
   "categories": [
    "Helgmiddag",
    "Kött",
@@ -1323,10 +1341,12 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "sesam",
    "soja"
   ],
+  "canonicalId": "biffbowl-teriyaki",
   "categories": [
    "Kött",
    "Proteinrikt",
@@ -1472,9 +1492,11 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "biffgraddtimjan",
   "categories": [
    "Familjefavorit",
    "Kött",
@@ -1600,9 +1622,11 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "biffgryta-rotter",
   "categories": [
    "Grytor",
    "Husmanskost",
@@ -1777,9 +1801,11 @@
   "totalTime": 140
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "biffmatvetesallad",
   "categories": [
    "Snabbt & enkelt",
    "Kött",
@@ -1905,9 +1931,11 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "biffmedlok",
   "categories": [
    "Snabbt & enkelt",
    "Kött",
@@ -2034,9 +2062,11 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "soja"
   ],
+  "canonicalId": "biffwok",
   "categories": [
    "Snabbt & enkelt",
    "Kött",
@@ -2168,9 +2198,11 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "blodpudding-lingon",
   "categories": [
    "Husmanskost",
    "Barn",
@@ -2289,7 +2321,9 @@
   "totalTime": 20
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "blomkalscurry",
   "categories": [
    "Grytor",
    "Vegetariskt",
@@ -2470,9 +2504,11 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "bonbowlmatvete",
   "categories": [
    "Vegetariskt",
    "Billigt",
@@ -2610,10 +2646,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "ägg"
   ],
+  "canonicalId": "bonburgare",
   "categories": [
    "Vegetariskt",
    "Barn",
@@ -2790,7 +2828,9 @@
   "totalTime": 55
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "bonsoppa-tomat",
   "categories": [
    "Soppor",
    "Vegetariskt",
@@ -2950,9 +2990,11 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "broccoligratang-skinka",
   "categories": [
    "Husmanskost",
    "Barn",
@@ -3094,9 +3136,11 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "broccolisoppa",
   "categories": [
    "Soppor",
    "Vegetariskt",
@@ -3245,7 +3289,9 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "bruna-bonor-flask",
   "categories": [
    "Husmanskost",
    "Billigt",
@@ -3363,10 +3409,12 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "bulgur-halloumi-bulk",
   "categories": [
    "Vegetariskt",
    "Bulk",
@@ -3526,10 +3574,12 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "jordnötter",
    "soja"
   ],
+  "canonicalId": "bulk-kyckling-jattebowl",
   "categories": [
    "Kyckling",
    "Bulk",
@@ -3695,9 +3745,11 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "butterchicken",
   "categories": [
    "Familjefavorit",
    "Kyckling",
@@ -3848,11 +3900,13 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "carbonara",
   "categories": [
    "Pasta",
    "Bulk",
@@ -3976,11 +4030,13 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "nötter"
   ],
+  "canonicalId": "chevrasallad-ronnbar",
   "categories": [
    "Vegetariskt",
    "Helgmiddag",
@@ -4125,7 +4181,9 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "chili-con-carne",
   "categories": [
    "Grytor",
    "Billigt",
@@ -4305,7 +4363,9 @@
   "totalTime": 60
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "chili-sin-carne-budget",
   "categories": [
    "Grytor",
    "Vegetariskt",
@@ -4477,9 +4537,11 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "citronflaskfile",
   "categories": [
    "Familjefavorit",
    "Kött",
@@ -4605,7 +4667,9 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "citronkyckling",
   "categories": [
    "Familjefavorit",
    "Kyckling",
@@ -4731,7 +4795,9 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "currykottfarsgryta",
   "categories": [
    "Familjefavorit",
    "Kött",
@@ -4867,10 +4933,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "dillkott",
   "categories": [
    "Grytor",
    "Husmanskost",
@@ -5025,10 +5093,12 @@
   "totalTime": 105
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "falafel-pitabrod",
   "categories": [
    "Vegetariskt",
    "Billigt",
@@ -5199,9 +5269,11 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "falukorv-ugn",
   "categories": [
    "Husmanskost",
    "Familjefavorit",
@@ -5350,9 +5422,11 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "fetagryta",
   "categories": [
    "Vegetariskt",
    "Billigt",
@@ -5487,10 +5561,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "fetapasta",
   "categories": [
    "Vegetariskt",
    "Billigt"
@@ -5611,12 +5687,14 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "fishtacos",
   "categories": [
    "Fisk",
    "Helgmiddag",
@@ -5789,11 +5867,13 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos"
   ],
+  "canonicalId": "fiskbullar-dillsas",
   "categories": [
    "Fisk",
    "Husmanskost",
@@ -5946,11 +6026,13 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "laktos",
    "skaldjur"
   ],
+  "canonicalId": "fiskgratang-dill",
   "categories": [
    "Fisk",
    "Husmanskost",
@@ -6096,11 +6178,13 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos"
   ],
+  "canonicalId": "fiskpasta",
   "categories": [
    "Fisk",
    "Barn"
@@ -6211,11 +6295,13 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos"
   ],
+  "canonicalId": "fiskpinnar-potatismos",
   "categories": [
    "Fisk",
    "Familjefavorit",
@@ -6365,11 +6451,13 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "laktos",
    "skaldjur"
   ],
+  "canonicalId": "fisksoppa-saffran",
   "categories": [
    "Fisk",
    "Soppor",
@@ -6531,7 +6619,9 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "flaskcurrygryta",
   "categories": [
    "Familjefavorit",
    "Kött",
@@ -6664,7 +6754,11 @@
   "totalTime": 25
  },
  {
+  "aliases": [
+   "flaskfilerotmos"
+  ],
   "allergens": [],
+  "canonicalId": "flaskfile-rotfrukter",
   "categories": [
    "Husmanskost",
    "Kött",
@@ -6812,10 +6906,12 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos",
    "soja"
   ],
+  "canonicalId": "flaskfile-svampsas",
   "categories": [
    "Kött",
    "Familjefavorit",
@@ -6961,135 +7057,11 @@
   "totalTime": 50
  },
  {
-  "allergens": [],
-  "categories": [
-   "Familjefavorit",
-   "Kött",
-   "Proteinrikt"
-  ],
-  "cookTime": 35,
-  "description": "Baconlindad fläskfilé i ugn med rostade morötter och potatis. Söndagskänsla med vardagens råvaror.",
-  "dietFlags": [
-   "blandkost"
-  ],
-  "difficulty": null,
-  "id": "flaskfilerotmos",
-  "image": "https://images.pexels.com/photos/11001292/pexels-photo-11001292.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageAlt": "Baconlindad fläskfilé med rotsaker upplagd på tallrik",
-  "imageCredit": "Sylwester Ficek",
-  "imageLicense": "Pexels License",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/food-menu-restaurant-dinner-11001292/",
-  "imageStatus": "ok",
-  "ingredients": [
-   {
-    "amount": 600.0,
-    "name": "Fläskfilé",
-    "normalizedId": "flaskfile",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 400.0,
-    "name": "Morötter",
-    "normalizedId": "morotter",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 600.0,
-    "name": "Potatis",
-    "normalizedId": "potatis",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 1.0,
-    "name": "Timjan",
-    "normalizedId": "timjan",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": null,
-    "name": "Olja",
-    "normalizedId": "olja",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   },
-   {
-    "amount": null,
-    "name": "Salt",
-    "normalizedId": "salt",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   },
-   {
-    "amount": null,
-    "name": "Peppar",
-    "normalizedId": "peppar",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   }
-  ],
-  "instructions": [
-   "Sätt ugnen på 200 grader.",
-   "Skär potatis och morötter i bitar, vänd med olja, timjan och salt i en långpanna.",
-   "Salta filén, linda den i baconskivor och lägg den ovanpå grönsakerna.",
-   "Stek i 30-35 minuter tills filéns innertemperatur är 65 grader.",
-   "Låt köttet vila fem minuter under folie, skiva och servera med rotsakerna och skyn."
-  ],
-  "labels": [
-   {
-    "key": "familjefavorit",
-    "name": "Familjefavorit"
-   },
-   {
-    "key": "kott",
-    "name": "Kött"
-   },
-   {
-    "key": "proteinrikt",
-    "name": "Proteinrikt"
-   }
-  ],
-  "mealType": "middag",
-  "name": "Baconlindad fläskfilé med rotsaker",
-  "nutrition": {
-   "carbs": 34.0,
-   "fat": 28.0,
-   "fiber": 6.0,
-   "kcal": 540.0,
-   "protein": 38.0
-  },
-  "prepTime": 10,
-  "servings": 4,
-  "slug": "baconlindad-flaskfile-med-rotsaker",
-  "tags": [
-   "familjefavorit",
-   "kott",
-   "proteinrikt"
-  ],
-  "totalTime": 45
- },
- {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "flaskgryta-paprika",
   "categories": [
    "Husmanskost",
    "Mealprep",
@@ -7243,9 +7215,11 @@
   "totalTime": 55
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "flaskkarre",
   "categories": [
    "Familjefavorit",
    "Helgmiddag",
@@ -7385,10 +7359,12 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos",
    "soja"
   ],
+  "canonicalId": "flaskkotlett-artor",
   "categories": [
    "Husmanskost",
    "Billigt",
@@ -7530,11 +7506,15 @@
   "totalTime": 35
  },
  {
+  "aliases": [
+   "ugnspannkaka-bacon"
+  ],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "flaskpannkaka",
   "categories": [
    "Husmanskost",
    "Barn",
@@ -7657,9 +7637,11 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "flasktomatpasta",
   "categories": [
    "Familjefavorit",
    "Barn",
@@ -7800,7 +7782,9 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "flaskytterfile-appelmos",
   "categories": [
    "Husmanskost",
    "Kött",
@@ -7952,10 +7936,12 @@
   "totalTime": 75
  },
  {
+  "aliases": [],
   "allergens": [
    "jordnötter",
    "laktos"
   ],
+  "canonicalId": "flygande-jakob",
   "categories": [
    "Husmanskost",
    "Familjefavorit",
@@ -8098,10 +8084,12 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "gnocchi-tomat-mozzarella",
   "categories": [
    "Pasta",
    "Vegetariskt",
@@ -8264,11 +8252,13 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos"
   ],
+  "canonicalId": "gravlax-hovmastarsas",
   "categories": [
    "Fisk",
    "Helgmiddag"
@@ -8425,10 +8415,12 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "gronsakslasagne",
   "categories": [
    "Pasta",
    "Vegetariskt",
@@ -8597,11 +8589,13 @@
   "totalTime": 65
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "gronsakspaj",
   "categories": [
    "Vegetariskt",
    "Helgmiddag",
@@ -8752,10 +8746,12 @@
   "totalTime": 70
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "gronsakssoppa-med-pasta",
   "categories": [
    "Soppor",
    "Vegetariskt",
@@ -8932,7 +8928,9 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "gulaschgryta",
   "categories": [
    "Grytor",
    "Billigt",
@@ -9094,10 +9092,12 @@
   "totalTime": 140
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "halloumibowl",
   "categories": [
    "Vegetariskt",
    "Billigt"
@@ -9208,11 +9208,13 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "halloumiburgare",
   "categories": [
    "Vegetariskt",
    "Barn",
@@ -9366,9 +9368,11 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "halloumicurry",
   "categories": [
    "Vegetariskt",
    "Billigt",
@@ -9494,9 +9498,11 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "halloumigryta-tomat",
   "categories": [
    "Grytor",
    "Vegetariskt",
@@ -9657,10 +9663,12 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "halloumipasta",
   "categories": [
    "Vegetariskt",
    "Billigt"
@@ -9789,9 +9797,11 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "halloumisallad-quinoa",
   "categories": [
    "Vegetariskt",
    "Lunch",
@@ -9945,11 +9955,13 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "hamburgare-klyftpotatis",
   "categories": [
    "Helg",
    "Husmanskost",
@@ -10138,7 +10150,9 @@
   "totalTime": 55
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "helstekt-kyckling-rotfrukter",
   "categories": [
    "Kyckling",
    "Familjefavorit",
@@ -10295,10 +10309,12 @@
   "totalTime": 90
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "hemmagjord-pizza",
   "categories": [
    "Helg",
    "Familjefavorit",
@@ -10451,10 +10467,12 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "sesam",
    "soja"
   ],
+  "canonicalId": "hoisin-flask-ris",
   "categories": [
    "Kött",
    "Bulk",
@@ -10617,10 +10635,12 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "isterband-dillstuvad",
   "categories": [
    "Husmanskost",
    "Billigt",
@@ -10755,9 +10775,11 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kaldolmar",
   "categories": [
    "Husmanskost",
    "Helgmiddag",
@@ -10930,10 +10952,12 @@
   "totalTime": 80
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "kalops",
   "categories": [
    "Grytor",
    "Husmanskost",
@@ -11094,9 +11118,11 @@
   "totalTime": 140
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kalpudding",
   "categories": [
    "Husmanskost",
    "Billigt",
@@ -11238,11 +11264,13 @@
   "totalTime": 65
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "kalvschnitzel",
   "categories": [
    "Snabbt & enkelt",
    "Kött",
@@ -11377,11 +11405,13 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "kalvschnitzelmatvete",
   "categories": [
    "Snabbt & enkelt",
    "Kött",
@@ -11515,9 +11545,11 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kassler-ananas-gratang",
   "categories": [
    "Husmanskost",
    "Familjefavorit",
@@ -11659,9 +11691,11 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kassler-potatisgratang",
   "categories": [
    "Kött",
    "Familjefavorit",
@@ -11819,9 +11853,11 @@
   "totalTime": 80
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kebabgryta",
   "categories": [
    "Helg",
    "Helgmiddag",
@@ -11981,7 +12017,9 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "kikartscurry",
   "categories": [
    "Vegetariskt",
    "Billigt",
@@ -12113,7 +12151,9 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "kikartscurry-protein",
   "categories": [
    "Ris",
    "Vegetariskt",
@@ -12276,7 +12316,9 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "kikartscurry-snabb",
   "categories": [
    "Grytor",
    "Vegetariskt",
@@ -12444,9 +12486,11 @@
   "totalTime": 20
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "kikartssallad",
   "categories": [
    "Vegetariskt",
    "Billigt",
@@ -12586,10 +12630,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos",
    "senap"
   ],
+  "canonicalId": "korv-med-mos",
   "categories": [
    "Husmanskost",
    "Barn",
@@ -12736,7 +12782,9 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "korv-med-rostad-potatis",
   "categories": [
    "Kött",
    "Barn",
@@ -12900,9 +12948,11 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "korv-stroganoff-klassisk",
   "categories": [
    "Husmanskost",
    "Familjefavorit",
@@ -13065,10 +13115,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "korvgratang",
   "categories": [
    "Familjefavorit",
    "Barn",
@@ -13211,9 +13263,11 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "korvgryta-curry",
   "categories": [
    "Husmanskost",
    "Barn",
@@ -13369,9 +13423,11 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "korvgryta-krossade-tomater",
   "categories": [
    "Husmanskost",
    "Pasta",
@@ -13534,7 +13590,9 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "korvgryta-potatis",
   "categories": [
    "Grytor",
    "Husmanskost",
@@ -13694,7 +13752,9 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "korvsoppa",
   "categories": [
    "Husmanskost",
    "Soppa",
@@ -13849,9 +13909,11 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "korvstroganoff",
   "categories": [
    "Snabbt & enkelt",
    "Barn",
@@ -13980,11 +14042,13 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "kottbullar-potatismos",
   "categories": [
    "Familj",
    "Husmanskost",
@@ -14157,183 +14221,11 @@
   "totalTime": 45
  },
  {
-  "allergens": [
-   "gluten",
-   "laktos"
-  ],
-  "categories": [
-   "Helg",
-   "Familjefavorit",
-   "Barn",
-   "Helgmiddag",
-   "Snabbt",
-   "Vardagsmat"
-  ],
-  "cookTime": 15,
-  "description": "Fredagsklassikern: kryddig köttfärs, mjuka tortillabröd och skålar med grönsaker som alla fyller själva.",
-  "dietFlags": [
-   "blandkost"
-  ],
-  "difficulty": "lätt",
-  "id": "kottfars-tacos",
-  "image": "https://images.pexels.com/photos/28895976/pexels-photo-28895976.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageAlt": "Tacos med köttfärs upplagd på tallrik",
-  "imageCredit": "Nano Erdozain",
-  "imageLicense": "Pexels License",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-tacos-with-assorted-fillings-and-sauce-28895976/",
-  "imageStatus": "ok",
-  "ingredients": [
-   {
-    "amount": 500.0,
-    "name": "Nötfärs",
-    "normalizedId": "notfars",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 1.0,
-    "name": "Tacokrydda",
-    "normalizedId": "tacokrydda",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": 8.0,
-    "name": "Tortillabröd",
-    "normalizedId": "tortillabrod",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": 3.0,
-    "name": "Tomater",
-    "normalizedId": "tomater",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": 0.5,
-    "name": "Gurka",
-    "normalizedId": "gurka",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": 0.5,
-    "name": "Isbergssallad",
-    "normalizedId": "isbergssallad",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": 200.0,
-    "name": "Majs",
-    "normalizedId": "majs",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 150.0,
-    "name": "Riven ost",
-    "normalizedId": "riven-ost",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 2.0,
-    "name": "Crème fraiche",
-    "normalizedId": "creme-fraiche",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "dl"
-   },
-   {
-    "amount": null,
-    "name": "Olivolja",
-    "normalizedId": "olivolja",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   }
-  ],
-  "instructions": [
-   "Bryn färsen i olja tills den fått fin färg.",
-   "Rör i tacokryddan och en skvätt vatten och låt sjuda några minuter.",
-   "Tärna tomater och gurka, strimla salladen och riv osten om den inte redan är riven.",
-   "Värm tortillabröden enligt paketet.",
-   "Ställ fram allt i skålar och låt var och en bygga sina egna tacos med crème fraiche och majs."
-  ],
-  "labels": [
-   {
-    "key": "helg",
-    "name": "Helg"
-   },
-   {
-    "key": "familjefavorit",
-    "name": "Familjefavorit"
-   },
-   {
-    "key": "barn",
-    "name": "Barn"
-   },
-   {
-    "key": "helgmiddag",
-    "name": "Helgmiddag"
-   },
-   {
-    "key": "snabbt",
-    "name": "Snabbt"
-   },
-   {
-    "key": "vardagsmat",
-    "name": "Vardagsmat"
-   }
-  ],
-  "mealType": "middag",
-  "name": "Tacos med köttfärs",
-  "nutrition": {
-   "carbs": 52.0,
-   "fat": 31.0,
-   "fiber": 6.0,
-   "kcal": 620.0,
-   "protein": 32.0
-  },
-  "prepTime": 15,
-  "servings": 4,
-  "slug": "tacos-med-kottfars",
-  "tags": [
-   "helg",
-   "familjefavorit",
-   "barn",
-   "helgmiddag",
-   "snabbt",
-   "vardagsmat"
-  ],
-  "totalTime": 30
- },
- {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kottfarsgratang-mos",
   "categories": [
    "Husmanskost",
    "Familjefavorit",
@@ -14493,7 +14385,9 @@
   "totalTime": 50
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "kottfarsgryta-bulk",
   "categories": [
    "Grytor",
    "Kött",
@@ -14667,10 +14561,12 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "kottfarslasagne",
   "categories": [
    "Husmanskost",
    "Pasta",
@@ -14859,11 +14755,13 @@
   "totalTime": 65
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "kottfarslimpa-graddsas",
   "categories": [
    "Familj",
    "Husmanskost",
@@ -15021,9 +14919,11 @@
   "totalTime": 60
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "kottfarssas",
   "categories": [
    "Familjefavorit",
    "Barn",
@@ -15184,7 +15084,9 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "kottfarssoppa",
   "categories": [
    "Soppor",
    "Barn",
@@ -15349,7 +15251,9 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "kottsoppa",
   "categories": [
    "Husmanskost",
    "Soppa",
@@ -15500,10 +15404,12 @@
   "totalTime": 110
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos",
    "ägg"
   ],
+  "canonicalId": "kraftig-omelett-lunch",
   "categories": [
    "Vegetariskt",
    "Barn",
@@ -15661,9 +15567,11 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kramig-kycklinggryta",
   "categories": [
    "Husmanskost",
    "Kyckling",
@@ -15829,10 +15737,12 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "kramig-kycklingpasta",
   "categories": [
    "Kyckling",
    "Pasta",
@@ -15994,6 +15904,7 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "sesam",
@@ -16001,6 +15912,7 @@
    "soja",
    "ägg"
   ],
+  "canonicalId": "krispig-kyckling-nudelwok",
   "categories": [
    "Kyckling",
    "Barn",
@@ -16151,10 +16063,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "nötter",
    "soja"
   ],
+  "canonicalId": "krispig-tofu-ris-bulk",
   "categories": [
    "Ris",
    "Vegetariskt",
@@ -16315,10 +16229,12 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "sesam"
   ],
+  "canonicalId": "krispiga-kikartor-bowl",
   "categories": [
    "Vegetariskt",
    "Lunch",
@@ -16473,10 +16389,12 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "krogarens-makaroner",
   "categories": [
    "Husmanskost",
    "Pasta",
@@ -16616,10 +16534,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "ägg"
   ],
+  "canonicalId": "kroppkakor",
   "categories": [
    "Husmanskost",
    "Billigt",
@@ -16764,10 +16684,12 @@
   "totalTime": 65
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "krämig-svampasta",
   "categories": [
    "Pasta",
    "Vegetariskt",
@@ -16927,10 +16849,12 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "kvargbowl-kyckling",
   "categories": [
    "Kyckling",
    "Lunch",
@@ -17083,12 +17007,14 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "kyckling-caesarsallad",
   "categories": [
    "Kyckling",
    "Lunch",
@@ -17241,9 +17167,11 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kyckling-currysas-ris",
   "categories": [
    "Husmanskost",
    "Kyckling",
@@ -17415,10 +17343,12 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "kyckling-fajitas",
   "categories": [
    "Kyckling",
    "Familjefavorit",
@@ -17584,10 +17514,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "kyckling-gnocchipanna",
   "categories": [
    "Kyckling",
    "Pasta",
@@ -17749,10 +17681,12 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "kyckling-parmesan-pasta-bulk",
   "categories": [
    "Kyckling",
    "Pasta",
@@ -17914,10 +17848,12 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "kyckling-pesto-pasta",
   "categories": [
    "Kyckling",
    "Pasta",
@@ -18064,10 +18000,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "kyckling-quesadillas",
   "categories": [
    "Kyckling",
    "Familjefavorit",
@@ -18232,10 +18170,12 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "soja"
   ],
+  "canonicalId": "kyckling-ris-broccoli",
   "categories": [
    "Kyckling",
    "Ris",
@@ -18389,9 +18329,11 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kyckling-ris-mild",
   "categories": [
    "Familj",
    "Ris",
@@ -18551,9 +18493,11 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk"
   ],
+  "canonicalId": "kyckling-rod-curry",
   "categories": [
    "Kyckling",
    "Snabbt",
@@ -18700,9 +18644,11 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kyckling-shawarma-bowl",
   "categories": [
    "Kyckling",
    "Mealprep",
@@ -18872,9 +18818,11 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kyckling-tikka",
   "categories": [
    "Grytor",
    "Kyckling",
@@ -19054,12 +19002,14 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "kycklingcaesar",
   "categories": [
    "Kyckling",
    "Helgmiddag",
@@ -19218,9 +19168,11 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "kycklingcouscous",
   "categories": [
    "Familjefavorit",
    "Barn",
@@ -19352,10 +19304,12 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "ägg"
   ],
+  "canonicalId": "kycklingfarsbiffar-ris",
   "categories": [
    "Kyckling",
    "Bulk",
@@ -19521,9 +19475,11 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kycklinggratang-broccoli",
   "categories": [
    "Kyckling",
    "Familjefavorit",
@@ -19689,7 +19645,9 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "kycklinggryta",
   "categories": [
    "Familjefavorit",
    "Barn",
@@ -19834,9 +19792,11 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kycklinggryta-honung-senap",
   "categories": [
    "Grytor",
    "Kyckling",
@@ -20000,9 +19960,11 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kycklinggryta-paprika",
   "categories": [
    "Grytor",
    "Kyckling",
@@ -20168,7 +20130,9 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "kycklingklubbor-bbq",
   "categories": [
    "Kyckling",
    "Barn",
@@ -20321,9 +20285,11 @@
   "totalTime": 55
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kycklingklubbor-klyftpotatis",
   "categories": [
    "Kyckling",
    "Familjefavorit",
@@ -20480,9 +20446,11 @@
   "totalTime": 55
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "kycklinglada-sotpotatis",
   "categories": [
    "Kyckling",
    "Familjefavorit",
@@ -20627,10 +20595,12 @@
   "totalTime": 50
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "kycklingmatvete",
   "categories": [
    "Familjefavorit",
    "Kyckling",
@@ -20762,11 +20732,13 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "kycklingschnitzel",
   "categories": [
    "Kyckling",
    "Familjefavorit",
@@ -20920,10 +20892,12 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "ägg"
   ],
+  "canonicalId": "kycklingsoppa-nudlar",
   "categories": [
    "Kyckling",
    "Soppor",
@@ -21080,7 +21054,9 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "kycklingsoppa-ris",
   "categories": [
    "Kyckling",
    "Soppa",
@@ -21238,10 +21214,12 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "jordnötter",
    "soja"
   ],
+  "canonicalId": "kycklingspett-jordnot",
   "categories": [
    "Kyckling",
    "Helgmiddag",
@@ -21415,10 +21393,12 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "soja"
   ],
+  "canonicalId": "kycklingwok-nudlar-protein",
   "categories": [
    "Kyckling",
    "Mealprep",
@@ -21565,10 +21545,12 @@
   "totalTime": 22
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "kycklingwraps-lunch",
   "categories": [
    "Kyckling",
    "Barn",
@@ -21739,9 +21721,11 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "lammfarsbiffar-tzatziki",
   "categories": [
    "Husmanskost",
    "Familjefavorit",
@@ -21895,9 +21879,11 @@
   "totalTime": 55
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "lantlig-potatissoppa-purjolok",
   "categories": [
    "Husmanskost",
    "Soppor",
@@ -22045,10 +22031,12 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "lasagne-klassisk",
   "categories": [
    "Familj",
    "Helgmiddag",
@@ -22227,10 +22215,12 @@
   "totalTime": 65
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "laktos"
   ],
+  "canonicalId": "lax-i-ugn-fetaost",
   "categories": [
    "Fisk",
    "Helgmiddag",
@@ -22377,147 +22367,13 @@
   "totalTime": 35
  },
  {
-  "allergens": [
-   "fisk",
-   "laktos"
-  ],
-  "categories": [
-   "Fisk",
-   "Familjefavorit",
-   "Snabbt",
-   "Vardagsmat"
-  ],
-  "cookTime": 20,
-  "description": "Ugnsbakad laxfilé med kokt färskpotatis och en kall sås på crème fraiche och dill. Enklare blir det inte.",
-  "dietFlags": [
-   "blandkost",
-   "glutenfritt",
-   "pescetariskt"
-  ],
-  "difficulty": "lätt",
-  "id": "lax-kall-dillsas",
-  "image": "https://images.pexels.com/photos/20182311/pexels-photo-20182311.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageAlt": "Ugnslax med kokt potatis och kall dillsås upplagd på tallrik",
-  "imageCredit": "Valeria Boltneva",
-  "imageLicense": "Pexels License",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/close-up-of-salmon-in-sauce-with-broccoli-20182311/",
-  "imageStatus": "ok",
-  "ingredients": [
-   {
-    "amount": 600.0,
-    "name": "Laxfilé",
-    "normalizedId": "laxfile",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 800.0,
-    "name": "Potatis",
-    "normalizedId": "potatis",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 2.0,
-    "name": "Crème fraiche",
-    "normalizedId": "creme-fraiche",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "dl"
-   },
-   {
-    "amount": 1.0,
-    "name": "Dill",
-    "normalizedId": "dill",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": 1.0,
-    "name": "Citron",
-    "normalizedId": "citron",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": null,
-    "name": "Salt",
-    "normalizedId": "salt",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   },
-   {
-    "amount": null,
-    "name": "Svartpeppar",
-    "normalizedId": "svartpeppar",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   }
-  ],
-  "instructions": [
-   "Sätt ugnen på 175 grader. Koka potatisen.",
-   "Lägg laxen i en form, salta, peppra och pressa över lite citron. Baka 15-20 minuter tills laxen precis går isär.",
-   "Rör ihop crème fraiche med rikligt hackad dill, citronsaft, salt och peppar.",
-   "Servera laxen med potatis, kall dillsås och citronklyftor."
-  ],
-  "labels": [
-   {
-    "key": "fisk",
-    "name": "Fisk"
-   },
-   {
-    "key": "familjefavorit",
-    "name": "Familjefavorit"
-   },
-   {
-    "key": "snabbt",
-    "name": "Snabbt"
-   },
-   {
-    "key": "vardagsmat",
-    "name": "Vardagsmat"
-   }
-  ],
-  "mealType": "middag",
-  "name": "Ugnslax med kokt potatis och kall dillsås",
-  "nutrition": {
-   "carbs": 40.0,
-   "fat": 29.0,
-   "fiber": 4.0,
-   "kcal": 560.0,
-   "protein": 34.0
-  },
-  "prepTime": 10,
-  "servings": 4,
-  "slug": "ugnslax-med-kokt-potatis-och-kall-dillsas",
-  "tags": [
-   "fisk",
-   "familjefavorit",
-   "snabbt",
-   "vardagsmat"
-  ],
-  "totalTime": 30
- },
- {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos"
   ],
+  "canonicalId": "lax-pasta-bulk",
   "categories": [
    "Fisk",
    "Pasta",
@@ -22679,11 +22535,15 @@
   "totalTime": 30
  },
  {
+  "aliases": [
+   "teriyakilax"
+  ],
   "allergens": [
    "fisk",
    "sesam",
    "soja"
   ],
+  "canonicalId": "lax-teriyaki",
   "categories": [
    "Fisk",
    "Proteinrikt",
@@ -22829,10 +22689,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "laktos"
   ],
+  "canonicalId": "laxfile-quinoa",
   "categories": [
    "Fisk",
    "Mealprep",
@@ -22974,12 +22836,14 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "sesam",
    "soja",
    "ägg"
   ],
+  "canonicalId": "laxpoke",
   "categories": [
    "Fisk",
    "Helgmiddag",
@@ -23145,11 +23009,13 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "laxpudding",
   "categories": [
    "Fisk",
    "Husmanskost",
@@ -23295,10 +23161,12 @@
   "totalTime": 65
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten"
   ],
+  "canonicalId": "laxsallad",
   "categories": [
    "Fisk",
    "Proteinrikt"
@@ -23418,9 +23286,13 @@
   "totalTime": 25
  },
  {
+  "aliases": [
+   "linsbolognese-proteinrik"
+  ],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "linsbolognese",
   "categories": [
    "Pasta",
    "Vegetariskt",
@@ -23597,189 +23469,11 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
-  "categories": [
-   "Pasta",
-   "Vegetariskt",
-   "Billigt",
-   "Mealprep",
-   "Proteinrikt",
-   "Vardagsmat",
-   "Veganskt"
-  ],
-  "cookTime": 25,
-  "description": "Vegetarisk bolognese där röda linser ger både protein och fyllighet. Mättande utan att kännas tung.",
-  "dietFlags": [
-   "veganskt"
-  ],
-  "difficulty": "lätt",
-  "id": "linsbolognese-proteinrik",
-  "image": "https://images.pexels.com/photos/4350120/pexels-photo-4350120.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageAlt": "Linsbolognese med fullkornspasta upplagd på tallrik",
-  "imageCredit": "Ketut Subiyanto",
-  "imageLicense": "Pexels License",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/crop-young-lady-holding-plate-of-pasta-bolognese-4350120/",
-  "imageStatus": "ok",
-  "ingredients": [
-   {
-    "amount": 300.0,
-    "name": "Röda linser",
-    "normalizedId": "roda-linser",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 400.0,
-    "name": "Pasta",
-    "normalizedId": "pasta",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 400.0,
-    "name": "Krossade tomater",
-    "normalizedId": "krossade-tomater",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 2.0,
-    "name": "Morötter",
-    "normalizedId": "morotter",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": 1.0,
-    "name": "Gul lök",
-    "normalizedId": "gul-lok",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": 2.0,
-    "name": "Vitlök",
-    "normalizedId": "vitlok",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "klyfta"
-   },
-   {
-    "amount": 2.0,
-    "name": "Tomatpuré",
-    "normalizedId": "tomatpure",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "msk"
-   },
-   {
-    "amount": null,
-    "name": "Olja",
-    "normalizedId": "olja",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   },
-   {
-    "amount": null,
-    "name": "Salt",
-    "normalizedId": "salt",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   },
-   {
-    "amount": 5.0,
-    "name": "Oregano",
-    "normalizedId": "oregano",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   }
-  ],
-  "instructions": [
-   "Hacka lök och vitlök, riv morötterna.",
-   "Fräs lök och morot mjuka i olja, cirka 5 minuter.",
-   "Rör ner tomatpurén och låt den steka en minut.",
-   "Tillsätt linser, krossade tomater och 3 dl vatten. Krydda med oregano och salt.",
-   "Låt puttra 20 minuter tills linserna är mjuka och såsen tjocknat. Rör om då och då.",
-   "Koka pastan under tiden och servera såsen över den."
-  ],
-  "labels": [
-   {
-    "key": "pasta",
-    "name": "Pasta"
-   },
-   {
-    "key": "vegetariskt",
-    "name": "Vegetariskt"
-   },
-   {
-    "key": "billigt",
-    "name": "Billigt"
-   },
-   {
-    "key": "mealprep",
-    "name": "Mealprep"
-   },
-   {
-    "key": "proteinrikt",
-    "name": "Proteinrikt"
-   },
-   {
-    "key": "vardagsmat",
-    "name": "Vardagsmat"
-   },
-   {
-    "key": "veganskt",
-    "name": "Veganskt"
-   }
-  ],
-  "mealType": "middag",
-  "name": "Linsbolognese med fullkornspasta",
-  "nutrition": {
-   "carbs": 84.0,
-   "fat": 10.0,
-   "fiber": 18.0,
-   "kcal": 540.0,
-   "protein": 30.0
-  },
-  "prepTime": 10,
-  "servings": 4,
-  "slug": "linsbolognese-med-fullkornspasta",
-  "tags": [
-   "pasta",
-   "vegetariskt",
-   "billigt",
-   "mealprep",
-   "proteinrikt",
-   "vardagsmat",
-   "veganskt"
-  ],
-  "totalTime": 35
- },
- {
-  "allergens": [
-   "gluten"
-  ],
+  "canonicalId": "linsdaal",
   "categories": [
    "Grytor",
    "Vegetariskt",
@@ -23959,130 +23653,11 @@
   "totalTime": 35
  },
  {
+  "aliases": [
+   "linssoppa"
+  ],
   "allergens": [],
-  "categories": [
-   "Vegetariskt",
-   "Billigt",
-   "Mealprep",
-   "Veganskt"
-  ],
-  "cookTime": 15,
-  "description": "Värmande röd linssoppa med kokosmjölk och morot. Vegansk, billig och mättande.",
-  "dietFlags": [
-   "veganskt"
-  ],
-  "difficulty": null,
-  "id": "linssoppa",
-  "image": "https://images.pexels.com/photos/7160694/pexels-photo-7160694.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageAlt": "Röd linssoppa upplagd på tallrik",
-  "imageCredit": "Teja J",
-  "imageLicense": "Pexels License",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/a-flatlay-shot-of-a-bowl-of-soup-on-a-rustic-background-7160694/",
-  "imageStatus": "ok",
-  "ingredients": [
-   {
-    "amount": 250.0,
-    "name": "Röda linser",
-    "normalizedId": "roda-linser",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 400.0,
-    "name": "Kokosmjölk",
-    "normalizedId": "kokosmjolk",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "ml"
-   },
-   {
-    "amount": 300.0,
-    "name": "Morötter",
-    "normalizedId": "morotter",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 150.0,
-    "name": "Lök & vitlök",
-    "normalizedId": "lok-vitlok",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 700.0,
-    "name": "Buljong",
-    "normalizedId": "buljong",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "ml"
-   },
-   {
-    "amount": null,
-    "name": "Olja",
-    "normalizedId": "olja",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   }
-  ],
-  "instructions": [
-   "Fräs hackad lök och vitlök i olja.",
-   "Lägg i sköljda linser, tärnad morot och 8 dl vatten. Sjud i 15 minuter.",
-   "Rör ner kokosmjölken och sjud fem minuter till.",
-   "Mixa slät om du vill och smaka av med salt.",
-   "Servera med bröd eller en klick yoghurt."
-  ],
-  "labels": [
-   {
-    "key": "vegetariskt",
-    "name": "Vegetariskt"
-   },
-   {
-    "key": "billigt",
-    "name": "Billigt"
-   },
-   {
-    "key": "mealprep",
-    "name": "Mealprep"
-   },
-   {
-    "key": "veganskt",
-    "name": "Veganskt"
-   }
-  ],
-  "mealType": "middag",
-  "name": "Röd linssoppa",
-  "nutrition": {
-   "carbs": 30.0,
-   "fat": 19.0,
-   "fiber": null,
-   "kcal": 405.0,
-   "protein": 19.0
-  },
-  "prepTime": 10,
-  "servings": 4,
-  "slug": "rod-linssoppa",
-  "tags": [
-   "vegetariskt",
-   "billigt",
-   "mealprep",
-   "veganskt"
-  ],
-  "totalTime": 25
- },
- {
-  "allergens": [],
+  "canonicalId": "linssoppa-rod",
   "categories": [
    "Soppor",
    "Vegetariskt",
@@ -24242,10 +23817,12 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "makaroner-kottbullar",
   "categories": [
    "Husmanskost",
    "Barn",
@@ -24373,11 +23950,13 @@
   "totalTime": 20
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "makaronipudding",
   "categories": [
    "Husmanskost",
    "Familjefavorit",
@@ -24524,11 +24103,13 @@
   "totalTime": 50
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "morotsbiffar-tzatziki",
   "categories": [
    "Vegetariskt",
    "Barn",
@@ -24681,7 +24262,9 @@
   "totalTime": 55
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "morotscurry",
   "categories": [
    "Vegetariskt",
    "Billigt",
@@ -24807,7 +24390,9 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "morotssoppa-ingefara",
   "categories": [
    "Soppor",
    "Vegetariskt",
@@ -24960,10 +24545,12 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "overnight-bulgursallad-kyckling",
   "categories": [
    "Kyckling",
    "Lunch",
@@ -25128,11 +24715,13 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos"
   ],
+  "canonicalId": "panerad-flundra-ugn",
   "categories": [
    "Fisk",
    "Barn",
@@ -25276,12 +24865,14 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "panerad-torsk-potatismos",
   "categories": [
    "Fisk",
    "Husmanskost",
@@ -25456,10 +25047,12 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "pannbiff-lok",
   "categories": [
    "Husmanskost",
    "Barn",
@@ -25610,11 +25203,15 @@
   "totalTime": 40
  },
  {
+  "aliases": [
+   "pannkakor-klassiska"
+  ],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "pannkakor",
   "categories": [
    "Familj",
    "Husmanskost",
@@ -25750,159 +25347,13 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
-  "categories": [
-   "Husmanskost",
-   "Vegetariskt",
-   "Familjefavorit",
-   "Barn",
-   "Billigt",
-   "Vardagsmat"
-  ],
-  "cookTime": 25,
-  "description": "Tunna klassiska pannkakor - torsdagens givna följeslagare till soppan, eller en hel middag för barnfamiljen.",
-  "dietFlags": [
-   "vegetariskt"
-  ],
-  "difficulty": "lätt",
-  "id": "pannkakor-klassiska",
-  "image": "https://images.pexels.com/photos/3807390/pexels-photo-3807390.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageAlt": "Pannkakor med sylt och grädde upplagd på tallrik",
-  "imageCredit": "Elina Fairytale",
-  "imageLicense": "Pexels License",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/person-filling-crepe-with-custard-3807390/",
-  "imageStatus": "ok",
-  "ingredients": [
-   {
-    "amount": 210.0,
-    "name": "Vetemjöl",
-    "normalizedId": "vetemjol",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 6.0,
-    "name": "Mjölk",
-    "normalizedId": "mjolk",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "dl"
-   },
-   {
-    "amount": 3.0,
-    "name": "Ägg",
-    "normalizedId": "agg",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": 200.0,
-    "name": "Jordgubbssylt",
-    "normalizedId": "jordgubbssylt",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 2.0,
-    "name": "Grädde",
-    "normalizedId": "gradde",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "dl"
-   },
-   {
-    "amount": null,
-    "name": "Salt",
-    "normalizedId": "salt",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   },
-   {
-    "amount": null,
-    "name": "Smör",
-    "normalizedId": "smor",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   }
-  ],
-  "instructions": [
-   "Vispa mjöl, salt och hälften av mjölken till en slät smet.",
-   "Vispa i resten av mjölken och äggen. Låt gärna svälla tio minuter.",
-   "Stek tunna pannkakor i smör på medelhög värme, en dryg minut per sida.",
-   "Vispa grädden.",
-   "Servera pannkakorna med sylt och grädde."
-  ],
-  "labels": [
-   {
-    "key": "husmanskost",
-    "name": "Husmanskost"
-   },
-   {
-    "key": "vegetariskt",
-    "name": "Vegetariskt"
-   },
-   {
-    "key": "familjefavorit",
-    "name": "Familjefavorit"
-   },
-   {
-    "key": "barn",
-    "name": "Barn"
-   },
-   {
-    "key": "billigt",
-    "name": "Billigt"
-   },
-   {
-    "key": "vardagsmat",
-    "name": "Vardagsmat"
-   }
-  ],
-  "mealType": "middag",
-  "name": "Pannkakor med sylt och grädde",
-  "nutrition": {
-   "carbs": 62.0,
-   "fat": 19.0,
-   "fiber": 2.0,
-   "kcal": 480.0,
-   "protein": 16.0
-  },
-  "prepTime": 10,
-  "servings": 4,
-  "slug": "pannkakor-med-sylt-och-gradde",
-  "tags": [
-   "husmanskost",
-   "vegetariskt",
-   "familjefavorit",
-   "barn",
-   "billigt",
-   "vardagsmat"
-  ],
-  "totalTime": 35
- },
- {
-  "allergens": [
-   "gluten",
-   "laktos",
-   "ägg"
-  ],
+  "canonicalId": "pasta-carbonara",
   "categories": [
    "Pasta",
    "Familjefavorit",
@@ -26049,10 +25500,12 @@
   "totalTime": 20
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "pasta-skinksas",
   "categories": [
    "Pasta",
    "Barn",
@@ -26207,9 +25660,11 @@
   "totalTime": 20
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "pasta-tomatsas-vitlok",
   "categories": [
    "Pasta",
    "Vegetariskt",
@@ -26369,10 +25824,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "pastagratang",
   "categories": [
    "Vegetariskt",
    "Barn",
@@ -26494,10 +25951,12 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "pastasallad-kyckling-lunch",
   "categories": [
    "Kyckling",
    "Pasta",
@@ -26659,9 +26118,11 @@
   "totalTime": 27
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "pitepalt",
   "categories": [
    "Husmanskost",
    "Billigt",
@@ -26787,9 +26248,11 @@
   "totalTime": 85
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "potatisgratang-skinka",
   "categories": [
    "Familj",
    "Husmanskost",
@@ -26937,11 +26400,13 @@
   "totalTime": 65
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "proteinpannkakor",
   "categories": [
    "Vegetariskt",
    "Barn",
@@ -27093,9 +26558,11 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "pulled-chicken-tacos",
   "categories": [
    "Kyckling",
    "Barn",
@@ -27264,10 +26731,12 @@
   "totalTime": 55
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos",
    "ägg"
   ],
+  "canonicalId": "pyttipanna",
   "categories": [
    "Husmanskost",
    "Billigt",
@@ -27415,11 +26884,13 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "raggmunk",
   "categories": [
    "Husmanskost",
    "Billigt"
@@ -27549,9 +27020,11 @@
   "totalTime": 50
  },
  {
+  "aliases": [],
   "allergens": [
    "skaldjur"
   ],
+  "canonicalId": "rakcurry",
   "categories": [
    "Fisk",
    "Snabbt"
@@ -27671,10 +27144,14 @@
   "totalTime": 25
  },
  {
+  "aliases": [
+   "scampi"
+  ],
   "allergens": [
    "gluten",
    "skaldjur"
   ],
+  "canonicalId": "rakpasta-vitlok",
   "categories": [
    "Fisk",
    "Pasta",
@@ -27817,10 +27294,12 @@
   "totalTime": 22
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "skaldjur"
   ],
+  "canonicalId": "raksallad",
   "categories": [
    "Fisk",
    "Billigt",
@@ -27945,10 +27424,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "skaldjur",
    "ägg"
   ],
+  "canonicalId": "raksallad-avokado",
   "categories": [
    "Fisk",
    "Lunch",
@@ -28094,9 +27575,11 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "risgrynsgrot-lordag",
   "categories": [
    "Husmanskost",
    "Vegetariskt",
@@ -28228,10 +27711,12 @@
   "totalTime": 50
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos",
    "ägg"
   ],
+  "canonicalId": "rostbiff-potatissallad",
   "categories": [
    "Kött",
    "Helgmiddag",
@@ -28381,9 +27866,11 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "rotfruktsgratang",
   "categories": [
    "Familjefavorit",
    "Billigt",
@@ -28530,135 +28017,13 @@
   "totalTime": 55
  },
  {
-  "allergens": [
-   "gluten",
-   "laktos",
-   "skaldjur"
-  ],
-  "categories": [
-   "Fisk",
-   "Snabbt"
-  ],
-  "cookTime": 15,
-  "description": "Pasta med räkor, vitlök och citron - enkel lyx på tolv minuter.",
-  "dietFlags": [
-   "blandkost"
-  ],
-  "difficulty": null,
-  "id": "scampi",
-  "image": "https://images.pexels.com/photos/1438672/pexels-photo-1438672.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageAlt": "Scampi pasta med vitlök och citron upplagd på tallrik",
-  "imageCredit": "Engin Akyurt",
-  "imageLicense": "Pexels License",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/food-photography-of-pasta-1438672/",
-  "imageStatus": "ok",
-  "ingredients": [
-   {
-    "amount": 300.0,
-    "name": "Räkor",
-    "normalizedId": "rakor",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 250.0,
-    "name": "Pasta",
-    "normalizedId": "pasta",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 1.0,
-    "name": "Vitlök",
-    "normalizedId": "vitlok",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "klyfta"
-   },
-   {
-    "amount": 1.0,
-    "name": "Citron",
-    "normalizedId": "citron",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": null,
-    "name": "Olja",
-    "normalizedId": "olja",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   },
-   {
-    "amount": null,
-    "name": "Smör",
-    "normalizedId": "smor",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   },
-   {
-    "amount": 20.0,
-    "name": "Persilja",
-    "normalizedId": "persilja",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   }
-  ],
-  "instructions": [
-   "Koka pastan al dente och spara en kopp pastavatten.",
-   "Fräs skivad vitlök försiktigt i rikligt med olivolja.",
-   "Lägg i räkorna och värm dem en minut.",
-   "Vänd ner pastan med citronskal, citronsaft och en skvätt pastavatten.",
-   "Smaka av med salt och servera direkt."
-  ],
-  "labels": [
-   {
-    "key": "fisk",
-    "name": "Fisk"
-   },
-   {
-    "key": "snabbt",
-    "name": "Snabbt"
-   }
-  ],
-  "mealType": "middag",
-  "name": "Scampi pasta med vitlök och citron",
-  "nutrition": {
-   "carbs": 49.0,
-   "fat": 1.0,
-   "fiber": null,
-   "kcal": 307.0,
-   "protein": 22.0
-  },
-  "prepTime": 10,
-  "servings": 4,
-  "slug": "scampi-pasta-med-vitlok-och-citron",
-  "tags": [
-   "fisk",
-   "snabbt"
-  ],
-  "totalTime": 25
- },
- {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "shakshuka",
   "categories": [
    "Vegetariskt",
    "Lunch",
@@ -28821,12 +28186,14 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "sillunch-potatis",
   "categories": [
    "Fisk",
    "Husmanskost",
@@ -28959,7 +28326,9 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "sjomansbiff",
   "categories": [
    "Husmanskost",
    "Billigt",
@@ -29103,11 +28472,13 @@
   "totalTime": 80
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "skink-ostpaj",
   "categories": [
    "Husmanskost",
    "Billigt",
@@ -29266,10 +28637,12 @@
   "totalTime": 55
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos",
    "soja"
   ],
+  "canonicalId": "sondagsstek",
   "categories": [
    "Husmanskost",
    "Familjefavorit",
@@ -29424,9 +28797,11 @@
   "totalTime": 110
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "sotpotatis-bulk-bowl",
   "categories": [
    "Kött",
    "Bulk",
@@ -29586,9 +28961,11 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "jordnötter"
   ],
+  "canonicalId": "sotpotatissoppa",
   "categories": [
    "Soppor",
    "Vegetariskt",
@@ -29757,9 +29134,11 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "spaghetti-kottfarssas",
   "categories": [
    "Familj",
    "Pasta",
@@ -29950,10 +29329,12 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "sparrispastacitron",
   "categories": [
    "Vegetariskt",
    "Billigt",
@@ -30096,11 +29477,13 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "spenatsoppa-agg",
   "categories": [
    "Husmanskost",
    "Soppor",
@@ -30262,10 +29645,12 @@
   "totalTime": 20
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "stekt-flask-loksas",
   "categories": [
    "Husmanskost",
    "Billigt",
@@ -30400,12 +29785,14 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "stekt-sej-remoulad",
   "categories": [
    "Fisk",
    "Husmanskost",
@@ -30565,11 +29952,13 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos"
   ],
+  "canonicalId": "stekt-strommingsflundra",
   "categories": [
    "Fisk",
    "Husmanskost",
@@ -30696,9 +30085,11 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "soja"
   ],
+  "canonicalId": "strimlad-flaskkarre-ris",
   "categories": [
    "Kött",
    "Bulk",
@@ -30835,9 +30226,11 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "svamprisotto",
   "categories": [
    "Ris",
    "Vegetariskt",
@@ -31001,9 +30394,11 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "svarta-bonor-tacos",
   "categories": [
    "Vegetariskt",
    "Barn",
@@ -31179,9 +30574,11 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten"
   ],
+  "canonicalId": "svartbonsbowl",
   "categories": [
    "Vegetariskt",
    "Billigt",
@@ -31312,7 +30709,9 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "tacobonor",
   "categories": [
    "Vegetariskt",
    "Barn",
@@ -31425,9 +30824,11 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "tacogratang",
   "categories": [
    "Kött",
    "Familjefavorit",
@@ -31603,10 +31004,14 @@
   "totalTime": 40
  },
  {
+  "aliases": [
+   "kottfars-tacos"
+  ],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "tacos-kottfars",
   "categories": [
    "Familj",
    "Helgmiddag",
@@ -31777,9 +31182,11 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "tandoorikyckling",
   "categories": [
    "Familjefavorit",
    "Kyckling",
@@ -31914,133 +31321,12 @@
   "totalTime": 25
  },
  {
-  "allergens": [
-   "fisk",
-   "soja"
-  ],
-  "categories": [
-   "Fisk",
-   "Proteinrikt"
-  ],
-  "cookTime": 15,
-  "description": "Sojaglaserad lax med wokgrönsaker och ris.",
-  "dietFlags": [
-   "pescetariskt"
-  ],
-  "difficulty": null,
-  "id": "teriyakilax",
-  "image": "https://images.pexels.com/photos/17308546/pexels-photo-17308546.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageAlt": "Teriyakilax med wokgrönsaker och ris upplagd på tallrik",
-  "imageCredit": "Vitaliy Haiduk",
-  "imageLicense": "Pexels License",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/a-bowl-of-rice-with-meat-and-green-onions-17308546/",
-  "imageStatus": "ok",
-  "ingredients": [
-   {
-    "amount": 500.0,
-    "name": "Laxfilé",
-    "normalizedId": "laxfile",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 250.0,
-    "name": "Ris",
-    "normalizedId": "ris",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 400.0,
-    "name": "Wokgrönsaker",
-    "normalizedId": "wokgronsaker",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 30.0,
-    "name": "Soja",
-    "normalizedId": "soja",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "ml"
-   },
-   {
-    "amount": null,
-    "name": "Olja",
-    "normalizedId": "olja",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   },
-   {
-    "amount": 1.0,
-    "name": "Honung",
-    "normalizedId": "honung",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "tsk"
-   },
-   {
-    "amount": 20.0,
-    "name": "Ingefära",
-    "normalizedId": "ingefara",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   }
-  ],
-  "instructions": [
-   "Koka riset enligt anvisningen.",
-   "Stek laxbitarna 2-3 minuter per sida.",
-   "Häll i sojan med en tesked honung om du har, och låt laxen glaseras.",
-   "Woka grönsakerna hastigt.",
-   "Servera laxen över ris och grönsaker med skyn från pannan."
-  ],
-  "labels": [
-   {
-    "key": "fisk",
-    "name": "Fisk"
-   },
-   {
-    "key": "proteinrikt",
-    "name": "Proteinrikt"
-   }
-  ],
-  "mealType": "middag",
-  "name": "Teriyakilax med wokgrönsaker och ris",
-  "nutrition": {
-   "carbs": 56.0,
-   "fat": 19.0,
-   "fiber": null,
-   "kcal": 537.0,
-   "protein": 32.0
-  },
-  "prepTime": 10,
-  "servings": 4,
-  "slug": "teriyakilax-med-wokgronsaker-och-ris",
-  "tags": [
-   "fisk",
-   "proteinrikt"
-  ],
-  "totalTime": 25
- },
- {
+  "aliases": [],
   "allergens": [
    "gluten",
    "soja"
   ],
+  "canonicalId": "teriyakitofu",
   "categories": [
    "Vegetariskt",
    "Billigt"
@@ -32160,12 +31446,14 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "skaldjur",
    "ägg"
   ],
+  "canonicalId": "toast-skagen",
   "categories": [
    "Fisk",
    "Helgmiddag",
@@ -32315,9 +31603,11 @@
   "totalTime": 20
  },
  {
+  "aliases": [],
   "allergens": [
    "soja"
   ],
+  "canonicalId": "tofucurry",
   "categories": [
    "Vegetariskt",
    "Billigt",
@@ -32443,9 +31733,11 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "soja"
   ],
+  "canonicalId": "tofuwok",
   "categories": [
    "Vegetariskt",
    "Veganskt"
@@ -32565,10 +31857,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "jordnötter",
    "soja"
   ],
+  "canonicalId": "tofuwok-jordnot",
   "categories": [
    "Vegetariskt",
    "Proteinrikt",
@@ -32724,9 +32018,11 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "tomatsoppa",
   "categories": [
    "Vegetariskt",
    "Barn",
@@ -32849,10 +32145,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "tomatsoppa-grillost",
   "categories": [
    "Familj",
    "Soppor",
@@ -33011,11 +32309,13 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos"
   ],
+  "canonicalId": "tonfiskpasta",
   "categories": [
    "Fisk",
    "Pasta",
@@ -33171,10 +32471,12 @@
   "totalTime": 20
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten"
   ],
+  "canonicalId": "tonfiskpasta-citron",
   "categories": [
    "Fisk",
    "Pasta",
@@ -33338,9 +32640,11 @@
   "totalTime": 17
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk"
   ],
+  "canonicalId": "tonfisksallad-bonor",
   "categories": [
    "Fisk",
    "Lunch",
@@ -33493,12 +32797,14 @@
   "totalTime": 10
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "torsk-aggsas",
   "categories": [
    "Fisk",
    "Husmanskost",
@@ -33643,11 +32949,13 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "torsk-brynt-smor-agg",
   "categories": [
    "Fisk",
    "Husmanskost",
@@ -33775,10 +33083,12 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "laktos"
   ],
+  "canonicalId": "torsk-potatismos",
   "categories": [
    "Familj",
    "Fisk",
@@ -33920,11 +33230,13 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "gluten",
    "laktos"
   ],
+  "canonicalId": "torskgratang-vasterbotten",
   "categories": [
    "Fisk",
    "Husmanskost",
@@ -34069,9 +33381,11 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk"
   ],
+  "canonicalId": "torskitomatsas",
   "categories": [
    "Fisk"
   ],
@@ -34194,10 +33508,12 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [
    "fisk",
    "laktos"
   ],
+  "canonicalId": "torskrygg-ortstekt",
   "categories": [
    "Fisk",
    "Helgmiddag",
@@ -34343,9 +33659,11 @@
   "totalTime": 35
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos"
   ],
+  "canonicalId": "ugnskorv-potatismos-appel",
   "categories": [
    "Husmanskost",
    "Barn",
@@ -34487,10 +33805,14 @@
   "totalTime": 35
  },
  {
+  "aliases": [
+   "lax-kall-dillsas"
+  ],
   "allergens": [
    "fisk",
    "laktos"
   ],
+  "canonicalId": "ugnslax-citron",
   "categories": [
    "Fisk",
    "Helgmiddag"
@@ -34621,150 +33943,12 @@
   "totalTime": 35
  },
  {
-  "allergens": [
-   "gluten",
-   "laktos",
-   "ägg"
-  ],
-  "categories": [
-   "Familj",
-   "Husmanskost",
-   "Barn",
-   "Billigt",
-   "Mealprep",
-   "Vardagsmat"
-  ],
-  "cookTime": 35,
-  "description": "Fluffig pannkaka som får svälla i ugnen med salt bacon i botten. Ett bleck räcker till hela familjen.",
-  "dietFlags": [
-   "blandkost"
-  ],
-  "difficulty": "lätt",
-  "id": "ugnspannkaka-bacon",
-  "image": "https://images.pexels.com/photos/22882256/pexels-photo-22882256.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageAlt": "Ugnspannkaka med bacon upplagd på tallrik",
-  "imageCredit": "Hebert  Santos",
-  "imageLicense": "Pexels License",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/breakfast-on-plate-22882256/",
-  "imageStatus": "ok",
-  "ingredients": [
-   {
-    "amount": 300.0,
-    "name": "Vetemjöl",
-    "normalizedId": "vetemjol",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 800.0,
-    "name": "Mjölk",
-    "normalizedId": "mjolk",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "ml"
-   },
-   {
-    "amount": 4.0,
-    "name": "Ägg",
-    "normalizedId": "agg",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": 140.0,
-    "name": "Bacon",
-    "normalizedId": "bacon",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 150.0,
-    "name": "Lingonsylt",
-    "normalizedId": "lingonsylt",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": null,
-    "name": "Salt",
-    "normalizedId": "salt",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   }
-  ],
-  "instructions": [
-   "Sätt ugnen på 225 grader.",
-   "Vispa ihop mjöl, salt och hälften av mjölken slät. Vispa ner resten av mjölken och äggen.",
-   "Stek baconet knaprigt och fördela det i en smord långpanna.",
-   "Häll smeten över baconet.",
-   "Grädda mitt i ugnen 30-35 minuter tills pannkakan svällt och fått gyllene yta.",
-   "Skär i bitar och servera med lingonsylt."
-  ],
-  "labels": [
-   {
-    "key": "familj",
-    "name": "Familj"
-   },
-   {
-    "key": "husmanskost",
-    "name": "Husmanskost"
-   },
-   {
-    "key": "barn",
-    "name": "Barn"
-   },
-   {
-    "key": "billigt",
-    "name": "Billigt"
-   },
-   {
-    "key": "mealprep",
-    "name": "Mealprep"
-   },
-   {
-    "key": "vardagsmat",
-    "name": "Vardagsmat"
-   }
-  ],
-  "mealType": "middag",
-  "name": "Ugnspannkaka med bacon",
-  "nutrition": {
-   "carbs": 52.0,
-   "fat": 28.0,
-   "fiber": 2.0,
-   "kcal": 560.0,
-   "protein": 22.0
-  },
-  "prepTime": 10,
-  "servings": 4,
-  "slug": "ugnspannkaka-med-bacon",
-  "tags": [
-   "familj",
-   "husmanskost",
-   "barn",
-   "billigt",
-   "mealprep",
-   "vardagsmat"
-  ],
-  "totalTime": 45
- },
- {
+  "aliases": [],
   "allergens": [
    "fisk",
    "laktos"
   ],
+  "canonicalId": "ugnstorsk",
   "categories": [
    "Fisk",
    "Proteinrikt"
@@ -34884,10 +34068,12 @@
   "totalTime": 30
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "varmkorv-gourmet",
   "categories": [
    "Husmanskost",
    "Barn",
@@ -35034,10 +34220,14 @@
   "totalTime": 25
  },
  {
+  "aliases": [
+   "vegobolognese"
+  ],
   "allergens": [
    "gluten",
    "soja"
   ],
+  "canonicalId": "vegansk-bolognese-vegofars",
   "categories": [
    "Pasta",
    "Vegetariskt",
@@ -35213,7 +34403,9 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "vegansk-chili-sin-carne",
   "categories": [
    "Grytor",
    "Vegetariskt",
@@ -35418,10 +34610,12 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "vegetarisklasagne",
   "categories": [
    "Vegetariskt",
    "Billigt",
@@ -35539,10 +34733,12 @@
   "totalTime": 55
  },
  {
+  "aliases": [],
   "allergens": [
    "laktos",
    "ägg"
   ],
+  "canonicalId": "vego-pytt",
   "categories": [
    "Husmanskost",
    "Vegetariskt",
@@ -35693,131 +34889,13 @@
   "totalTime": 40
  },
  {
-  "allergens": [
-   "gluten",
-   "soja"
-  ],
-  "categories": [
-   "Vegetariskt",
-   "Billigt",
-   "Veganskt"
-  ],
-  "cookTime": 15,
-  "description": "Vegobolognese på växtfärs med tomat och lök över spaghetti.",
-  "dietFlags": [
-   "veganskt"
-  ],
-  "difficulty": null,
-  "id": "vegobolognese",
-  "image": "https://images.pexels.com/photos/5807018/pexels-photo-5807018.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-  "imageAlt": "Vegobolognese med spaghetti upplagd på tallrik",
-  "imageCredit": "sascha Mayer",
-  "imageLicense": "Pexels License",
-  "imageSource": "Pexels",
-  "imageSourceUrl": "https://www.pexels.com/photo/spaghetti-bolognese-on-plate-5807018/",
-  "imageStatus": "ok",
-  "ingredients": [
-   {
-    "amount": 400.0,
-    "name": "Vegofärs",
-    "normalizedId": "vegofars",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 250.0,
-    "name": "Pasta",
-    "normalizedId": "pasta",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 400.0,
-    "name": "Krossade tomater",
-    "normalizedId": "krossade-tomater",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "g"
-   },
-   {
-    "amount": 1.0,
-    "name": "Lök",
-    "normalizedId": "lok",
-    "note": null,
-    "optional": false,
-    "pantryStaple": false,
-    "unit": "st"
-   },
-   {
-    "amount": null,
-    "name": "Olja",
-    "normalizedId": "olja",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   },
-   {
-    "amount": null,
-    "name": "Kryddor",
-    "normalizedId": "kryddor",
-    "note": null,
-    "optional": false,
-    "pantryStaple": true,
-    "unit": null
-   }
-  ],
-  "instructions": [
-   "Fräs hackad lök mjuk i olja.",
-   "Lägg i vegofärsen och stek några minuter.",
-   "Häll i krossade tomater och sjud i 15 minuter.",
-   "Smaka av med salt, peppar och gärna basilika.",
-   "Koka pastan och servera med såsen."
-  ],
-  "labels": [
-   {
-    "key": "vegetariskt",
-    "name": "Vegetariskt"
-   },
-   {
-    "key": "billigt",
-    "name": "Billigt"
-   },
-   {
-    "key": "veganskt",
-    "name": "Veganskt"
-   }
-  ],
-  "mealType": "middag",
-  "name": "Vegobolognese med spaghetti",
-  "nutrition": {
-   "carbs": 55.0,
-   "fat": 10.0,
-   "fiber": null,
-   "kcal": 423.0,
-   "protein": 24.0
-  },
-  "prepTime": 10,
-  "servings": 4,
-  "slug": "vegobolognese-med-spaghetti",
-  "tags": [
-   "vegetariskt",
-   "billigt",
-   "veganskt"
-  ],
-  "totalTime": 25
- },
- {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "soja"
   ],
+  "canonicalId": "vegofars-pastagratang",
   "categories": [
    "Pasta",
    "Vegetariskt",
@@ -35982,9 +35060,11 @@
   "totalTime": 50
  },
  {
+  "aliases": [],
   "allergens": [
    "soja"
   ],
+  "canonicalId": "vegofarsgryta",
   "categories": [
    "Vegetariskt",
    "Billigt",
@@ -36110,7 +35190,9 @@
   "totalTime": 25
  },
  {
+  "aliases": [],
   "allergens": [],
+  "canonicalId": "vitkalssoppa-fars",
   "categories": [
    "Husmanskost",
    "Soppor",
@@ -36277,11 +35359,13 @@
   "totalTime": 40
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos",
    "ägg"
   ],
+  "canonicalId": "wallenbergare",
   "categories": [
    "Husmanskost",
    "Kött",
@@ -36435,10 +35519,12 @@
   "totalTime": 45
  },
  {
+  "aliases": [],
   "allergens": [
    "gluten",
    "laktos"
   ],
+  "canonicalId": "zucchinipastafeta",
   "categories": [
    "Vegetariskt",
    "Billigt"
