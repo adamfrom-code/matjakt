@@ -41,7 +41,12 @@ DB_PATH = ROOT / "backend" / "data" / "recipes.db"
 # "klyfta" är vitlökens egen enhet. Banken skrev "Vitlök 3 st" och menade
 # tre KLYFTOR; motorn läste tre knoppar (3 × 70 g). Se KLYFT_VIKT_G i
 # services/grocery/pricing.py och scripts/migrate_vitloksklyftor.py.
-KNOWN_UNITS = {"g", "kg", "ml", "l", "dl", "msk", "tsk", "st", "krm", "knippe", "klyfta"}
+# P06a: varje enhet här MÅSTE prissättningen känna igen - annars importeras
+# ett recept med en enhet som aldrig kan bli ett exakt pris. "knippe" låg
+# här utan att pricing kände till det. test_mangder_och_enheter håller de
+# två listorna ihop.
+KNOWN_UNITS = {"g", "kg", "ml", "l", "dl", "msk", "tsk", "st", "krm", "knippe", "klyfta",
+               "burk", "påse", "paket", "förpackning"}
 
 
 def validate(recipe: dict, seen_ids: set, seen_names: set) -> list[str]:
