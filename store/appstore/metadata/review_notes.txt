@@ -9,13 +9,42 @@ Testkonto för granskning: skapa ett i appen, eller ange här:
 Inget förhandsvisningslås: appen och servern är öppna (utvecklingslåset
 avvecklades 2026-09-06). Granskaren kan använda appen direkt.
 
-Betalning: Premium säljs inte i iOS-appen i v1. Appen visar Free och låser
-upp Premium för konton som redan har det (köpt på webben). Inga köpknappar
-visas i iOS-bygget (se docs/IOS_RELEASE.md, väg A). Om köp i appen läggs
-till senare sker det via In-App Purchase.
+Betalning: Premium säljs i appen via In-App Purchase (StoreKit 2) som
+auto-förnyande prenumeration. Två produkter i samma subscription group:
+se.matjakt.premium.monthly (1 månad) och se.matjakt.premium.yearly (1 år);
+byte mellan dem sköts av App Store. Priset i planvalet och på köpknappen
+är StoreKits lokaliserade pris för produkten. Köpknappen "Prenumerera"
+finns under Konto > Matjakt Premium och öppnar Apples köpark; samma köp
+går att göra från betalväggen som visas när en Premium-funktion öppnas.
+Bredvid köpknappen finns "Återställ köp". Prenumerationen sägs upp under
+"Hantera prenumeration" på kontosidan, som öppnar App Stores
+prenumerationssida. iOS-bygget har inga andra betalvägar: ingen
+kortbetalning, ingen länk till köp utanför appen, ingen kodinlösen.
+
+Premium säljs också på webben (matjakt.store). Ett konto som köpt Premium
+där har Premium i appen så snart det loggar in, enligt riktlinje 3.1.3(b):
+samma prenumeration finns som In-App Purchase i appen. Den som redan har
+Premium ser ingen köpknapp, och appen hänvisar aldrig till köp någon
+annanstans.
+
+Så testar ni köpet: logga in med testkontot ovan (eller skapa ett nytt
+konto), öppna Konto > Matjakt Premium, välj Månad eller År och tryck
+Prenumerera. Köpet går genom Apples köpark och kan göras med ett
+Sandbox-konto, utan debitering. Efter köpet visar kontosidan
+prenumerationen (plan och förnyelsedatum via App Store), och
+Premium-funktionerna - alla butikers priser, exakt jämförelse, hela
+hushållet - är upplåsta direkt. "Återställ köp" hämtar en befintlig
+prenumeration för samma Apple-konto, t.ex. efter ominstallation; den
+kräver inloggning på det Matjakt-konto som gjorde köpet.
+
+Gratis period: efter kontots första skapade vecka ingår Premium i 7 dagar
+(i appen: "Provperiod aktiv - 7 dagar kvar (ingen betalning krävs)").
+Perioden är en gåva från servern: ingen betalmetod, ingen debitering och
+ingen övergång till prenumerationen. Den är inte en introductory offer, och
+ingen sådan är konfigurerad i App Store Connect.
 
 Plats: används bara för att hitta butiker nära användaren (valfritt -
-postnummer räcker). Ingen spårning, inga tredjeparts-SDK:er.
+postnummer räcker). Ingen spårning, inga analys- eller annons-SDK:er.
 
 Kontoradering: Konto > Radera konto, direkt i appen.
 
