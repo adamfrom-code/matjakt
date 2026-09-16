@@ -157,7 +157,9 @@ class KallornaTest(unittest.TestCase):
         gånger."""
         rader = sum(len(r[LABELS]) for r in self.recept)
         self.assertLess(rader, sum(FORE_M4.values()))
-        self.assertGreater(rader, 1000)
+        # 240 recept gav drygt 1 000 rader; 230 (P04b) ger 972. Golvet säger
+        # bara att banken inte är tom - inte hur många rätter den har.
+        self.assertGreater(rader, 900)
 
     def test_skriptet_ar_gront(self):
         """Samma fråga en gång till, genom skriptet som rättar."""
@@ -239,8 +241,9 @@ class BankenTest(unittest.TestCase):
 
     def test_familjefavorit_hittas_nu_pa_sin_nyckel(self):
         """Den skarpaste av dem: etiketten satt på 54 recept och den
-        normaliserade formen gav noll."""
-        self.assertEqual(len(self.store.search(tags=["familjefavorit"], limit=500)), 54)
+        normaliserade formen gav noll. 50 sedan P04b - fyra av de tio
+        sammanslagna recepten bar den."""
+        self.assertEqual(len(self.store.search(tags=["familjefavorit"], limit=500)), 50)
 
     def test_de_tre_faltnamnen_ar_vyer_av_en_enda_lista(self):
         """`labels` är fältet; `tags` är nycklarna och `categories` namnen ur
@@ -256,9 +259,11 @@ class BankenTest(unittest.TestCase):
         """Adminpanelen räknade `Kött` och `kott` som två olika etiketter,
         vilket gjorde varje siffra om katalogen till en halv siffra."""
         by_label = self.store.stats()["byLabel"]
-        self.assertEqual(by_label["Husmanskost"], 81)
+        # 81 respektive 39 före P04b; två husmanskost- och ett kötträtt-id
+        # blev alias för recept som redan bar samma etikett.
+        self.assertEqual(by_label["Husmanskost"], 79)
         self.assertNotIn("husmanskost", by_label)
-        self.assertEqual(by_label["Kött"], 39)
+        self.assertEqual(by_label["Kött"], 38)
 
     def test_allergener_och_kosttyper_ror_ingen(self):
         """De är egna vokabulärer som svarar på andra frågor, och de var

@@ -315,7 +315,9 @@ testerna bär sina egna namntabeller, och `kottfarssas`/`ugnslax-citron`/
 ## 9. Vad paket 2 måste göra
 
 Det som klassificeringen kräver av `P04b`, med de vägval som är avgjorda
-här så att koden inte behöver avgöra dem.
+här så att koden inte behöver avgöra dem. **Genomfört i P04b** — de tio
+grupperna i avsnitt 7 är deklarerade som `aliases` i källfilerna, och
+`backend/tests/test_receptalias.py` är acceptansen.
 
 1. **Modellen.** Det kanoniska receptet bär `"aliases": ["…"]` i sin källfil;
    aliasreceptet tas bort ur källorna. Banken får en tabell
