@@ -13,6 +13,13 @@ reader-appar) gäller inte oss. Vägen framåt är StoreKit 2 i appen, Stripe
 på webben, och **en** entitlement-sanning på servern som vet varifrån
 Premium kommer och hur länge det gäller.
 
+Ett fynd på vägen som är ett **produktbeslut**, inte ett tekniskt: koden
+ger sju dagars Premium efter kontots första skapade vecka (J3,
+`backend/services/billing/activation.py`), medan affärsbeslutet lyder
+"59/399, ingen automatisk trial". Se A6 och BLOCKED – ADAM 10.
+Entitlement-modellen (P02b) bär provperioden som en egen källa med
+slutdatum, så beslutet kan tas åt vilket håll som helst utan omskrivning.
+
 ---
 
 ## (a) Vad Apples regler säger i dag
@@ -152,6 +159,71 @@ användarvillkor och integritetspolicy finns både i appen och i
 metadatan. Länkarna finns redan i kontoarket
 (`frontend/app/index.html`, `#accountLegal`).
 
+### A6. Aktiveringstrialen (J3): vad koden gör, mot affärsbeslutet, mot Apple
+
+**Vad koden gör, med fil och rad** (verifierat på `main` 2026-09-16):
+
+| Var | Vad |
+|---|---|
+| `backend/services/billing/activation.py:41` | `ACTIVATION_TRIAL_DAYS = 7` – "Ett tal, ett ställe." |
+| `activation.py:44` `on_first_week()` → `:65` | Ropar `accounts.grant_activation_trial(user_id, ACTIVATION_TRIAL_DAYS)` första gången kontot skapar en vecka, och kör sedan hänvisningskroken (H5). |
+| `backend/services/accounts/store.py:490` `mark_first_week()` | Atomär övergång, sann exakt en gång per konto (`WHERE first_week_at IS NULL`). |
+| `store.py:506` `grant_activation_trial()` | Skriver `trial_ends_at` = nu + 7 dagar och `trial_used = 1`. Delas **inte** ut till den som redan är Premium, och aldrig två gånger. |
+| `backend/api_server.py:3937` och `:4108` | De två utlösarna: en prissatt vecka (`/api/pricing/week`, `_record_first_week`) och klientens händelse `vecka_skapad` (`/api/analytics/event`). |
+| `store.py:244`, `:282` | `_to_public`: `trial_ends_at` i framtiden ⇒ `premium: true`, `premiumSource: "trial"`. Samma Premium som betalande, i appen och på webben. |
+| `frontend/app/src/views/account.js:344` | Det kunden ser: "✓ Provperiod aktiv – N dagar kvar (ingen betalning krävs)". |
+| `frontend/app/src/views/premiumtabellen.js:55` | Provperioden står med flit **inte** i jämförelsetabellen. |
+
+Historiken: commit `0eca3da` (2026-08-31, "Affärsmodellen: Free för
+alltid, Premium 59 kr/mån eller 399 kr/år") tog bort **registrerings**-
+trialen på fjorton dagar och det gamla årspriset, och `features.py:4`
+säger sedan dess "No automatic trial". J3 (PR #114) lade in en **aktiverings**-trial i
+stället – `docs/changelog.d/J3.md`: "Trialen togs bort 2026-08-31. Det
+var rätt beslut på fel provperiod: en trial vid registrering testar
+nyfikenhet. Nu ges sju dagar efter den första skapade veckan". Repot säger
+alltså två saker samtidigt, och kunden får sju dagar automatiskt.
+
+**Mot affärsbeslutet.** Den *är* automatisk – ingen kod, inget val, bara
+användning – och den *är* en trial. Att den ges efter aktivering i stället
+för vid registrering ändrar inte det. Koden och beslutet "59/399, ingen
+automatisk trial" är alltså oense, och det avgörs inte här: BLOCKED – ADAM
+10 ställer frågan. Ingenting i P02 ändrar beteendet.
+
+**Mot Apple.** Apples egen mekanism för en gratisperiod är introductory
+offer, konfigurerad i App Store Connect (3.1.2(a)):
+
+> "Auto-renewable subscription apps may offer a free trial period to
+> customers by providing the relevant information set forth in App Store
+> Connect."
+
+och för appar utan prenumeration kräver 3.1.1 till och med att en gratis
+provperiod modelleras som IAP: "Non-subscription apps may offer a free
+time-based trial period … by setting up a Non-Consumable IAP item at Price
+Tier 0". Apples free trial är dessutom något annat än vår: "At the end of
+the offer period, the subscription auto-renews at the standard price unless
+a subscriber cancels it" (developer.apple.com/app-store/subscriptions/).
+Kunden måste alltså **starta prenumerationen** för att få dagarna.
+
+Vår aktiveringstrial är inget köp: inga pengar, ingen kod, ingen
+betalmetod, ingen konvertering – en tidsbegränsad gåva som servern ger
+för att kontot använt produkten. 3.1.1 reglerar *köp- och
+upplåsningsmekanismer* ("license keys, augmented reality markers, QR
+codes …"); en gåva utan motprestation är ingen sådan. Bedömningen är
+därför: **inte ett klart brott, men en granskningsrisk** på två punkter.
+(1) Ordet "Provperiod" i appen signalerar en free trial som inte är
+Apples, och en granskare som ser Premium tändas av något annat än IAP
+frågar. (2) Den gör "ingen automatisk trial" i metadatan osann. Behålls
+den ska texten i native säga *ingår* ("Premium ingår i sju dagar efter din
+första vecka"), och reviewnoterna säga att perioden är gratis, utan
+betalmetod och utan konvertering. Görs den om till Apples introductory
+offer gäller Apples villkor: en per subscription group och kund, och
+prenumerationen måste startas. Tas den bort försvinner frågan.
+
+Entitlement-modellen i P02b bär `trial` som en egen källa med
+`entitlementUntil = trial_ends_at`, i sanningsordningen efter de
+betalande källorna. Vilket av de tre svaren Adam ger kräver ingen
+schemaändring.
+
 ---
 
 ## (b) Vad dagens iOS-flöde gör – och att det strider
@@ -166,7 +238,8 @@ Verifierat i kod på `main` 2026-09-16:
 | `frontend/app/app.js`, `onAppResumed()` | Pollar `/api/auth/me` när appen vaknar tills `premium` är sant (`activatePremiumAfterCheckout`). |
 | `backend/services/accounts/features.py` `plan_for_user()` | Läser `user["premium"]` (boolean) + `subscriptionPlan`. |
 | `backend/services/accounts/store.py` `_to_public()` | `premium` = evig flagga **eller** trial **eller** Stripe-prenumeration (levande status, period ej passerad) **eller** respit vid nekat kort **eller** inlöst kod (`premium_until`). `premiumSource` ∈ `subscription · grace · trial · code · comped`. |
-| StoreKit / IAP | **Finns inte.** Inte i `ios/`, inte i `frontend/`, inte i `backend/`. `features.PRICING` bär redan `storekitProductId`-strängarna, men ingenting läser dem. |
+| StoreKit / IAP | **Finns inte.** Inte i `ios/`, inte i `frontend/`, inte i `backend/`. `features.PRICING` bär redan `storekitProductId`-strängarna, men ingenting läser dem (se C5). |
+| `backend/services/billing/activation.py` | Sju dagars Premium efter första skapade veckan, automatiskt, i appen som på webben (A6). |
 
 Mot A1–A2 ovan är slutsatsen entydig:
 
@@ -206,7 +279,7 @@ briefens vokabulär, plus provperioden som redan finns:
 | `apple` | `apple_original_transaction_id`, `apple_product_id`, `apple_expires_at`, `apple_status`, `apple_auto_renew`, `apple_environment`, `apple_signed_date` | `apple_expires_at` (+ samma respit så länge status är levande; **noll** respit efter EXPIRED/REVOKE/REFUND) | **nytt** |
 | `code` | `premium_until` (H5) | `premium_until` | ja |
 | `comp` | flaggan `premium = 1` | för evigt (grandfathrad) | ja |
-| `trial` | `trial_ends_at` (J3, efter första veckan) | `trial_ends_at` | ja |
+| `trial` | `trial_ends_at` (J3:s aktiveringstrial, A6 – ett öppet produktbeslut, BLOCKED – ADAM 10) | `trial_ends_at` | ja |
 
 Kolumnerna läggs till additivt (nullbara, `ALTER TABLE ADD COLUMN` i
 `AccountStore._init_schema`, samma mönster som H5 och J5), `KONTON` i
@@ -380,6 +453,27 @@ lämnar ut JWS:en oförändrad. Installeras med `npm install
 hand). RevenueCat och andra leverantörer som kräver konto är uteslutna av
 briefen och behövs inte: verifieringen sker på vår server.
 
+### C5. Produkt-id:na i `features.py`
+
+`backend/services/accounts/features.py`, `PRICING`:
+`"storekitProductId": "se.matjakt.premium.monthly"` respektive
+`"se.matjakt.premium.yearly"`, med kommentaren "Fylls i när riktiga
+betalplattformar kopplas på." De kom in med commit `0eca3da` (2026-08-31,
+samma commit som satte 59/399), och **ingenting läser dem i dag**: inte
+appen (`grep storekitProductId frontend/app` är tomt), inte servern
+utöver att `/api/entitlements` skickar hela `PRICING` vidare.
+
+Om de matchar något i App Store Connect går inte att läsa härifrån:
+Monetization → Subscriptions kräver Adams inloggning, och repot har ingen
+App Store Connect API-nyckel (och ska inte ha någon i en spårad fil).
+Rekommendationen är att de **blir** de riktiga StoreKit-id:na: formen är
+rätt (omvänd domän, en produkt per plan), de hör ihop med planerna i samma
+tabell som priserna, och `test_iap_compliance.py` binder redan det här
+dokumentet till exakt de strängarna – P02c och P02d binder koden till
+`PRICING[*]["storekitProductId"]` på samma sätt. Det som återstår är att
+Adam kontrollerar att inget annat redan ligger i App Store Connect innan
+produkterna skapas (BLOCKED – ADAM 3, första punkten).
+
 ---
 
 ## (d) Köp på iOS ger Premium på webben – och tvärtom
@@ -454,6 +548,12 @@ this action cannot be undone."
 
 ### BLOCKED – ADAM 3 · Subscription group och två produkter
 
+- Först, läs bara: **Apps** → Matjakt → sidopanelen **Monetization** →
+  **Subscriptions**. Är listan tom skapas allt nedan. Finns det redan
+  produkter med **andra** id:n än `se.matjakt.premium.monthly` /
+  `se.matjakt.premium.yearly`: säg till innan P02c/P02d – koden binder sig
+  till strängarna i `features.py` (C5), och ett produkt-id går inte att
+  byta i efterhand.
 - Klickväg: **Apps** → Matjakt → sidopanelen **Monetization** →
   **Subscriptions** → **(+)** → Reference Name `Matjakt Premium` → **Create**.
 - I gruppen: **Create** → Reference Name `Premium månad`, **Product ID**
@@ -549,6 +649,36 @@ Statuses") och för testnotisen.
   skrivs om till det som gäller efter P02d: Premium säljs via IAP i appen,
   och konton som köpt på webben låses upp enligt 3.1.3(b). (Z-SITE, eget
   paket.)
+
+### BLOCKED – ADAM 10 · Aktiveringstrialen – produktbeslutet
+
+Koden ger sju dagars Premium efter kontots första skapade vecka (A6);
+affärsbeslutet lyder "59/399, ingen automatisk trial". Frågan, exakt:
+
+**Ska sju dagars Premium efter första skapade veckan finnas kvar – och i
+så fall i vilken form?** Tre svar, och vad vart och ett betyder:
+
+- **(A) Behåll den som gåva.** Ingen kodändring i servern. I native byts
+  ordet "Provperiod" mot "ingår" (P02d), och reviewnoterna säger att
+  perioden är gratis, utan betalmetod och utan konvertering. Kvar står
+  granskningsrisken i A6 och att "ingen automatisk trial" inte stämmer.
+- **(B) Gör om den till Apples introductory offer** (free trial, 1 vecka)
+  på båda produkterna, och stäng serverns. Kunden måste då *starta*
+  prenumerationen för att få dagarna, och de dras automatiskt efteråt –
+  en annan tratt än J3:s. Klickväg: **Apps** → Matjakt → sidopanelen
+  **Subscriptions** → gruppen → produkten → **Subscription Prices** →
+  **View all Subscription pricing** → **Set up Introductory Offer** →
+  typ **Free Trial** → längd **1 Week** → länder. Apples regel: en
+  introductory offer per subscription group och kund. (Gäller bara iOS;
+  webben har då ingen trial alls, om inte Stripe-Checkout får
+  `trial_period_days` i ett eget paket.)
+- **(C) Ta bort den**, enligt beslutet som det står. `ACTIVATION_TRIAL_DAYS`
+  och `grant_activation_trial` slutar användas; hänvisningskroken (H5)
+  hänger på samma `on_first_week` och påverkas inte.
+
+Inget av svaren kräver en schemaändring: `trial` är sedan P02b en egen
+källa med slutdatum i entitlement-modellen. Tills svaret finns ändrar P02
+ingenting i beteendet.
 
 ---
 

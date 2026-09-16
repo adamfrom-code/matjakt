@@ -79,6 +79,30 @@ class DokumentetFinnsOchArKomplett(unittest.TestCase):
         # ett beslutsunderlag. Meningen ska stå där, rakt ut.
         self.assertIn("får inte skickas till App Review", _platt())
 
+    def test_aktiveringstrialen_ar_auditerad_mot_koden_och_mot_apple(self):
+        # J3 gav sju dagars Premium efter första skapade veckan medan
+        # affärsbeslutet säger "ingen automatisk trial". Dokumentet ska
+        # peka på koden som gör det, citera Apples regel om free trials, och
+        # lämna beslutet till Adam - inte ändra beteendet på eget bevåg.
+        text = _platt()
+        for spår in ("activation.py", "ACTIVATION_TRIAL_DAYS", "grant_activation_trial",
+                     "mark_first_week", "Provperiod aktiv"):
+            self.assertIn(spår, text, f"trial-auditen saknar spåret {spår!r}")
+        self.assertIn("may offer a free trial period", text,
+                      "Apples regel om free trials (3.1.2(a)) citeras inte")
+        self.assertIn("auto-renews at the standard price", text,
+                      "skillnaden mot Apples free trial - automatisk debitering - saknas")
+        self.assertIn("Aktiveringstrialen", text)
+        källa = (ROT / "backend" / "services" / "billing" / "activation.py").read_text(encoding="utf-8")
+        self.assertIn("ACTIVATION_TRIAL_DAYS = 7", källa,
+                      "trialen i koden har ändrats - A6 i dokumentet beskriver något annat")
+
+    def test_produkt_idna_har_ursprung_och_ett_beslut(self):
+        text = _platt()
+        self.assertIn("storekitProductId", text)
+        self.assertIn("0eca3da", text, "ursprungscommiten för produkt-id:na saknas")
+        self.assertIn("blir", text)
+
 
 class DokumentetFoljerKoden(unittest.TestCase):
     def test_varje_storekit_produkt_id_ur_pricing_star_i_dokumentet(self):
@@ -161,6 +185,16 @@ class BlockeratForAdamHarKlickvagar(unittest.TestCase):
         self.assertIn("Paid Apps", text)
         self.assertIn("/api/billing/apple/notifications", text)
         self.assertIn("Version 2", text)
+
+    def test_trialbeslutet_ar_en_egen_punkt_med_en_exakt_fraga(self):
+        punkter = [p for p in self._punkter() if p.startswith("Aktiveringstrialen")]
+        self.assertEqual(len(punkter), 1, "affärsbeslutet om aktiveringstrialen saknar en egen punkt")
+        punkt = punkter[0]
+        self.assertIn("?**", punkt, "punkten ställer ingen fråga")
+        for svar in ("(A)", "(B)", "(C)"):
+            self.assertIn(svar, punkt, f"svarsalternativ {svar} saknas")
+        self.assertIn("Set up Introductory Offer", punkt,
+                      "klickvägen till Apples introductory offer saknas")
 
 
 if __name__ == "__main__":
