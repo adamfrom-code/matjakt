@@ -38,12 +38,18 @@ LEGACY_CATALOG = ROOT / "frontend" / "app" / "src" / "data" / "legacy-catalog.js
 
 def _canonical_ids() -> set:
     """Varje id backend kan svara på, läst ur samma källor servern bygger
-    receptbanken av (services/recipes/api.RECIPE_SOURCE_DIR)."""
+    receptbanken av (services/recipes/api.RECIPE_SOURCE_DIR).
+
+    Sedan P04b är det receptens id OCH deras `aliases`: ett gammalt id som
+    blivit alias öppnar fortfarande sitt recept (`/api/recipes/<alias>` ger
+    200 med det kanoniska), så en tabellnyckel eller ett reservbanks-id som
+    bär det är inte död vikt."""
     ids = set()
     for path in sorted(recipes_api.RECIPE_SOURCE_DIR.glob("*.json")):
         for recipe in json.loads(path.read_text(encoding="utf-8")):
             if isinstance(recipe, dict) and recipe.get("id"):
                 ids.add(recipe["id"])
+                ids.update(a for a in (recipe.get("aliases") or []) if isinstance(a, str))
     return ids
 
 

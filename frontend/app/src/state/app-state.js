@@ -14,6 +14,7 @@
 import { quarantineStoredState, readStoredStateResult, writeStoredState } from "./storage.js";
 import { normalizePantry } from "../services/pantry.js";
 import { emptyHouseholdState } from "../services/household-state.js";
+import { aliasMap, findRecipe, migrateRecipeIds } from "../services/recipe-aliases.js";
 
 // Versionen skrivs in i varje sparad blob. Den finns för att en FRAMTIDA
 // ändring av vad ett fält betyder ska gå att hantera här, på ett ställe, i
@@ -218,7 +219,20 @@ export function initAppState({ storage = null, authToken = null, recipeBank = []
 // bytesrutan kunde säga "Ons middag · nuvarande: <tisdagens rätt>".
 export function selectedRecipes() {
   const all = [...runtime.recipeBank, ...state.apiRecipes];
-  return state.weekPlan.map(id => all.find(recipe => recipe.id === id) ?? null);
+  // Alias-medvetet (P04b): en vecka sparad med ett gammalt id ritar rätt
+  // rätt även innan tillståndet hunnit pekas om.
+  return state.weekPlan.map(id => findRecipe(all, id));
+}
+
+// P04b: pekar om gamla recept-id i tillståndet - favoriter, vecka, historik,
+// betyg, omdömen - till sina kanoniska, enligt den bank som är laddad. Kallas
+// när banken laddat (app.js) och efter varje hämtad kontoblob: servern tolkar
+// inte blobben, så det här är enda stället strängarna kan skrivas om.
+// Idempotent, och en tom bank pekar om ingenting. Returnerar om något ändrades.
+export function reconcileRecipeAliases() {
+  const map = aliasMap([...runtime.recipeBank, ...state.apiRecipes]);
+  if (!map.size) return false;
+  return migrateRecipeIds(state, map);
 }
 
 export function setWeekPlan(ids) {
@@ -358,6 +372,8 @@ export function applySyncBlob(blob, { onboardingOpen = false } = {}) {
   set("swapsThisWeek", value => { state.swapsThisWeek = value; });
   set("pinnedBranch", value => { state.pinnedBranch = value; });
   set("weekPlan", value => { state.weekPlan = value; });
+  // Blobben kan vara skriven av en klient från före sammanslagningen (P04b).
+  reconcileRecipeAliases();
   return true;
 }
 

@@ -28,6 +28,16 @@ have, so a recipe with no licensed image gets no image rather than a
 plausible-looking one - a photo of the wrong dish is worse than an honest
 placeholder. Nothing here fetches or searches for an image; the reference is
 data, and swapping in a different picture never touches recipe logic.
+
+ETT ID ÄR FÖR ALLTID (P04b). Tio rätter låg i banken under två id var -
+`scampi` och `rakpasta-vitlok` var samma pasta - och favoriter, veckor och
+historik bar de gamla id:na. Det receptet som blev kvar bär de andra id:na
+som `aliases`, lagrade i `recipe_aliases`, och `get()` svarar med det
+kanoniska receptet för vilket av dem som helst. Ett alias är en pekare, inte
+ett recept: det finns inte i `search()`, i hyllorna eller bland
+veckokandidaterna, så planeraren kan inte föreslå samma rätt två gånger
+under två namn. Vilka id som är alias avgörs i docs/RECEPTIDENTITET.md, inte
+av en likhetssiffra.
 """
 
 import re
@@ -310,6 +320,20 @@ class RecipeStore:
                 PRIMARY KEY (recipe_id, kind, value)
             );
 
+            -- P04b: ett gammalt id som fortsätter öppna rätt recept. Raden är
+            -- en pekare, inte ett recept. `get()` prövar `recipes` FÖRST och
+            -- den här tabellen sedan, så ett id som är både rad och alias -
+            -- en källfil som återställts efter en sammanslagning - svarar
+            -- med raden. Rent additiv (K6): gammal kod ser den inte, och en
+            -- INSERT som bara känner de gamla tabellerna går fortfarande
+            -- igenom. Kaskaden tar aliasen med sig när receptet tas bort.
+            CREATE TABLE IF NOT EXISTS recipe_aliases (
+                alias_id TEXT PRIMARY KEY,
+                recipe_id TEXT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_recipe_aliases_recipe
+                ON recipe_aliases(recipe_id);
+
             -- The recipe page filters on labels and sorts on time, price and
             -- protein. Without these, every filter is a full scan - fine at
             -- 58 recipes, not at 5 000.
@@ -456,7 +480,37 @@ class RecipeStore:
                     self._connection.execute(
                         "INSERT OR IGNORE INTO recipe_labels (recipe_id, kind, value) VALUES (?, ?, ?)",
                         (recipe_id, kind, value))
+            # Aliasen ersätts bara när skrivningen BÄR fältet - som mealType.
+            # Bildbakfyllningen och äldre anropare skriver recept utan det,
+            # och en delmängdsuppdatering får inte tyst koppla loss tio
+            # gamla id från sina rätter.
+            if "aliases" in recipe:
+                self._write_aliases(recipe_id, recipe.get("aliases") or [])
         return recipe_id
+
+    def _write_aliases(self, recipe_id: str, aliases) -> None:
+        """Pekarna från gamla id till det här receptet, ersatta i sin helhet.
+
+        Ett alias som redan pekar på ett ANNAT recept flyttas hit (`INSERT OR
+        REPLACE`): källorna är sanningen, och den senaste importen vinner.
+        Att aliaset råkar finnas som egen rad i `recipes` är däremot inget
+        fel här - under en import ligger det gamla receptet kvar tills
+        beskärningen i `bootstrap_if_empty` tagit det, och efter en
+        återställd källfil ska raden vinna i `get()`. Så det avvisas inte;
+        det får bara inte peka på sig självt."""
+        self._connection.execute("DELETE FROM recipe_aliases WHERE recipe_id = ?", (recipe_id,))
+        for alias in aliases:
+            alias = str(alias or "").strip()
+            if not alias or alias == recipe_id:
+                raise ValueError(f"{recipe_id}: ett alias måste vara ett annat, icke-tomt id")
+            self._connection.execute(
+                "INSERT OR REPLACE INTO recipe_aliases (alias_id, recipe_id) VALUES (?, ?)",
+                (alias, recipe_id))
+
+    def _aliases(self, recipe_id: str) -> list[str]:
+        return [row["alias_id"] for row in self._connection.execute(
+            "SELECT alias_id FROM recipe_aliases WHERE recipe_id = ? ORDER BY alias_id",
+            (recipe_id,))]
 
     # ---- reading ---------------------------------------------------------
 
@@ -523,6 +577,12 @@ class RecipeStore:
             "priceTotal": _row_get(row, "price_total"),
             "pricedAt": _row_get(row, "priced_at"),
             "createdAt": row["created_at"], "updatedAt": row["updated_at"],
+            # P04b: `id` ÄR det kanoniska. `canonicalId` står bredvid så att en
+            # klient som bad om ett alias kan se att svaret är ett annat id
+            # utan att jämföra strängar den inte vet är alias; `aliases` är
+            # de gamla id:na, så samma klient kan peka om sitt tillstånd.
+            "canonicalId": recipe_id,
+            "aliases": self._aliases(recipe_id),
             **self._labels(recipe_id),
         }
 
@@ -530,7 +590,7 @@ class RecipeStore:
         """Removes a recipe and everything hanging off it."""
         with self._connection:
             cursor = self._connection.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
-            for table in ("recipe_ingredients", "recipe_steps", "recipe_labels"):
+            for table in ("recipe_ingredients", "recipe_steps", "recipe_labels", "recipe_aliases"):
                 self._connection.execute(f"DELETE FROM {table} WHERE recipe_id = ?", (recipe_id,))
         return cursor.rowcount > 0
 
@@ -538,10 +598,35 @@ class RecipeStore:
         row = self._connection.execute("SELECT id FROM recipes WHERE slug = ?", (slug,)).fetchone()
         return row["id"] if row else None
 
-    def get(self, recipe_id: str) -> dict | None:
+    def _row(self, recipe_id: str):
+        """Raden för ett id, en slug - eller ett alias, i den ordningen.
+
+        Ordningen är återställningsplanen: finns id:t som rad vinner raden,
+        även om något alias råkar peka någon annanstans. Så kan en källfil
+        som återställts efter en sammanslagning aldrig skuggas av en
+        aliasrad som ligger kvar i databasen."""
         row = self._connection.execute("SELECT * FROM recipes WHERE id = ? OR slug = ?",
                                        (recipe_id, recipe_id)).fetchone()
+        if row is None:
+            row = self._connection.execute(
+                """SELECT r.* FROM recipes r
+                   JOIN recipe_aliases a ON a.recipe_id = r.id
+                   WHERE a.alias_id = ?""", (recipe_id,)).fetchone()
+        return row
+
+    def get(self, recipe_id: str) -> dict | None:
+        """Receptet - för sitt id, sin slug eller något av sina alias (P04b).
+
+        Transparent, inte en omdirigering: svaret bär det kanoniska `id`,
+        och den som frågade med ett gammalt id ser i `canonicalId`/`aliases`
+        vad som hänt."""
+        row = self._row(recipe_id)
         return self._to_dict(row) if row else None
+
+    def canonical_id(self, recipe_id: str) -> str | None:
+        """Det id ett recept HETER, för ett id/slug/alias. None om okänt."""
+        row = self._row(recipe_id)
+        return row["id"] if row else None
 
     def count(self) -> int:
         return self._connection.execute("SELECT COUNT(*) FROM recipes").fetchone()[0]
@@ -633,7 +718,11 @@ class RecipeStore:
                WHERE meal_type IS NOT NULL GROUP BY meal_type ORDER BY n DESC""")}
         without_meal_type = self._connection.execute(
             "SELECT COUNT(*) FROM recipes WHERE meal_type IS NULL OR meal_type = ''").fetchone()[0]
+        aliases = self._connection.execute("SELECT COUNT(*) FROM recipe_aliases").fetchone()[0]
         return {"total": total, "byLabel": by_label, "needsImage": needs_image,
                 "completeNutrition": complete_nutrition,
                 "byMealType": by_meal_type, "withoutMealType": without_meal_type,
-                "withImage": with_image, "withLicensedImage": licensed}
+                "withImage": with_image, "withLicensedImage": licensed,
+                # Gamla id som fortfarande öppnar en rätt (P04b). `total`
+                # räknar recept; ett alias är inget recept.
+                "aliases": aliases}

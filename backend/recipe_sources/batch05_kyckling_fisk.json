@@ -453,6 +453,9 @@
   },
   {
     "id": "lax-teriyaki",
+    "aliases": [
+      "teriyakilax"
+    ],
     "name": "Teriyakilax med ris och broccoli",
     "description": "Laxfilé glaserad i söt sojasås med ångad broccoli och ris. Vardagslyx som tar 20 minuter.",
     "servings": 4,
@@ -545,6 +548,9 @@
   },
   {
     "id": "ugnslax-citron",
+    "aliases": [
+      "lax-kall-dillsas"
+    ],
     "name": "Ugnsbakad lax med citron och örtsås",
     "description": "Lax i ugn på låg värme tills den precis går isär, med kall örtsås och kokt potatis.",
     "servings": 4,
@@ -2215,6 +2221,9 @@
   },
   {
     "id": "rakpasta-vitlok",
+    "aliases": [
+      "scampi"
+    ],
     "name": "Räkpasta med vitlök och citron",
     "description": "Spaghetti med räkor, vitlök, chili och citron - vardagens tio-i-tolva som känns som restaurang.",
     "servings": 4,

@@ -166,6 +166,9 @@
   },
   {
     "id": "linssoppa-rod",
+    "aliases": [
+      "linssoppa"
+    ],
     "name": "Röd linssoppa med kokosmjölk",
     "description": "Sammetslen soppa på röda linser och kokos. Kokar ihop på tjugo minuter och kostar nästan ingenting.",
     "servings": 4,
