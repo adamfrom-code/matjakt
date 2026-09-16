@@ -29,6 +29,9 @@ class AccountStoreTest(unittest.TestCase):
             # kunna ritas av misstag.
             "subscriptionGraceUntil": None, "pendingEmail": None,
             "premiumUntil": None,
+            # P02b: en entitlement-sanning - källan i briefens vokabulär, när
+            # den tar slut, och Apples egen rad. Null på ett nytt konto.
+            "entitlementSource": None, "entitlementUntil": None, "appleSubscription": None,
             "emailVerified": False, "marketingConsent": False,
         })
         login_token, login_user = self.store.login("ada@example.com", "hemligt123")

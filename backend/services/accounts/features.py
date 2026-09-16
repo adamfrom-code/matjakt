@@ -154,9 +154,19 @@ def plan_for_user(user: dict | None) -> str:
 
     Grandfathering: the boolean premium flag (redeem codes, legacy trials,
     an active subscription without a recorded plan) counts as monthly - a
-    paying or comped user must never wake up demoted by a refactor."""
+    paying or comped user must never wake up demoted by a refactor.
+
+    P02b: `_to_public` already derives `plan` from the WINNING source -
+    Stripe's subscription_plan or Apple's product id - so when the payload
+    carries a premium plan we trust it. An Apple-only subscriber has no
+    subscriptionPlan at all; the fallback below would have called her
+    monthly whatever she bought. Payloads without `plan` (tests, older
+    callers) take the old path unchanged."""
     if not user:
         return FREE
+    plan = str(user.get("plan") or "").lower()
+    if user.get("premium") and plan in PREMIUM_PLANS:
+        return plan
     subscription_plan = (user.get("subscriptionPlan") or "").lower()
     if user.get("premium"):
         if "year" in subscription_plan or subscription_plan == PREMIUM_YEARLY:

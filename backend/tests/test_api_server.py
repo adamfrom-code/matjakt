@@ -1387,6 +1387,9 @@ class AuthHttpTest(unittest.TestCase):
             # H5: Premium med slutdatum. Null när kontot inte har någon
             # inlöst tid - en nedräkning ska inte kunna ritas av misstag.
             "premiumUntil": None,
+            # P02b: källan (apple/stripe/code/comp/trial), när den tar slut,
+            # och Apples egen rad. Null på ett nytt konto.
+            "entitlementSource": None, "entitlementUntil": None, "appleSubscription": None,
             "emailVerified": False, "marketingConsent": False,
         })
         status, payload = self.get("/api/auth/me", token=token)
