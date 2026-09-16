@@ -686,10 +686,14 @@ ingenting i beteendet.
 
 | Paket | Zon | Innehåll | Status |
 |---|---|---|---|
-| P02a | docs | det här dokumentet + testet som binder det till `features.PRICING` | den här PR:en |
-| P02b | Z-AUTH | kolumnerna, `_to_public`, `plan_for_user`, KONTON-bump, fixtur, tester | nästa |
-| P02c | Z-BILLING | JWS-verifierare (ren Python), notismottagare, appens anmälan, `apple`-blocket i `/api/entitlements`, flaggan | efter P02b |
-| P02d | Z-NATIVE + köpknappen | `@capgo/native-purchases`, köp/återställ/hantera, StoreKit-priser, dölj kod-formuläret och ångerrättsrutan i IAP-läge | efter P02c |
+| P02a | docs | det här dokumentet + testet som binder det till `features.PRICING` | #198 |
+| P02b | Z-AUTH | kolumnerna, `_to_public`, `plan_for_user`, KONTON-bump, fixtur, tester | #200 |
+| P02c | Z-BILLING | JWS-verifierare (ren Python), notismottagare, appens anmälan, `apple`-blocket i `/api/entitlements`, flaggan | #206 |
+| P02d | Z-NATIVE + köpknappen | `@capgo/native-purchases`, köp/återställ/hantera, StoreKit-priser, dölj kod-formuläret och ångerrättsrutan i IAP-läge | PR efter #206 |
+
+Flaggan är av i produktion tills Adam gjort punkterna 1–6 ovan och P02d ligger
+i ett TestFlight-bygge som prövats mot staging med en sandbox-testare
+(punkt 8). Först då: `MATJAKT_APPLE_IAP=1` på Render, nytt bygge, inlämning.
 
 Uppföljningar som **inte** ingår i P02: avstämning mot App Store Server
 API (kräver nyckeln i punkt 7); Apple Offer Codes som ersättning för

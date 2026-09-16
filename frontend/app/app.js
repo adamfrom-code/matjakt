@@ -20,7 +20,7 @@ import { extrasTotal, newExtraItem } from "./src/services/extras.js";
 import { filterByDiet, mergeDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
 import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl } from "./src/api/config.js";
-import { setMarketingConsent, changePassword, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
+import { setMarketingConsent, changePassword, claimAppleTransaction, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
 // errorText: inget rått fetch-fel når skärmen. "Failed to fetch" är inte
 // svenska, och en användare kan inte göra något åt ett "HTTP 500" (E7).
 import { errorText } from "./src/api/http.js";
@@ -46,6 +46,10 @@ import { budgetremsaText, fyndradMarkup, ikvallMarkup, ikvallTomMarkup } from ".
 // L7: beloppen och planvalet ritas av premiumskarmen.js, som lämnar varje
 // siffra till L0:s prisMarkup(). Ingen vy formaterar sitt eget pris.
 import { ritaPlanval, synkaValet } from "./src/views/premiumskarmen.js";
+// P02d: StoreKit i iOS-appen. Logiken (när vägen gäller, vilka produkter,
+// hur StoreKits pris läggs ovanpå serverns) bor i modulen och prövas i node;
+// här nedanför finns bara tillstånd och anropen mot pluginet.
+import { MANAGE_SUBSCRIPTIONS_URL, PLUGIN_NAME as STOREKIT_PLUGIN, isUserCancelled, overlayStoreKitPrices, productIdentifiers, purchaseOptions, restorableTransactions, storeKitActive as storeKitActiveFor } from "./src/services/apple-iap.js";
 import { adjustInventory, fetchHousehold, fetchNotifications, forgetPushSubscription, joinHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, replaceWeekItems, savePushSubscription, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, pantryEntriesFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor } from "./src/services/categories.js";
@@ -891,6 +895,29 @@ function premiumPricing() {
   // att rita ett tal som kan ha slutat gälla.
   return entitlements.pricing || {};
 }
+// P02d: priserna som KÖPYTORNA ritar - prisflikarna i kontoarket och
+// betalväggens knappar. I StoreKit-läget ligger Apples lokaliserade pris
+// (priceString) ovanpå serverns tal som `displayPrice`: prispunkten väljs i
+// App Store Connect och kan skilja sig från webbens, och det pris som visas
+// ska vara det som dras. Serverns tal finns kvar under, och premiumPricing()
+// ovan är orörd - jämförelsetabellen och webben läser den som förut.
+function storeKitPricing() {
+  const pricing = premiumPricing();
+  return storeKitActive() ? overlayStoreKitPrices(pricing, storeKitProducts) : pricing;
+}
+// P02d: gäller StoreKit-vägen just nu? Servern säger på/av (MATJAKT_APPLE_IAP
+// -> entitlements.apple.enabled), och vägen finns bara i iOS-appen. Av - som
+// i produktion - är allt nedanför dött och Stripe-knappen står kvar.
+function storeKitActive() {
+  return storeKitActiveFor(entitlements, { native: isNativeApp(), platform: nativePlatform() });
+}
+function nativePlatform() {
+  return String(window.Capacitor?.getPlatform?.() || (isNativeApp() ? "ios" : "web"));
+}
+// StoreKits produkter (pris i kundens valuta och språk), hämtade en gång per
+// körning när StoreKit-läget är på. null = inte hämtade än.
+let storeKitProducts = null;
+let storeKitProductsLoading = null;
 // Ångerrätten (distansavtalslagen). Texten kommer från backend precis som
 // priserna - reservvärdet gäller bara innan /api/entitlements svarat, och
 // bär samma sträng som services/billing/withdrawal.py. Kryssar användaren i
@@ -902,6 +929,10 @@ function withdrawalTerms() {
   };
 }
 function withdrawalConsentMarkup(id) {
+  // P02d: i StoreKit-läget är Apple säljare och hanterar ångerrätten i sina
+  // villkor. Rutan hör till Stripe-köpet; här skulle den påstå att kunden
+  // avstår en rätt hon har hos Apple.
+  if (storeKitActive()) return "";
   const terms = withdrawalTerms();
   return `<label class="withdrawal-consent" for="${id}">
     <input type="checkbox" id="${id}" data-withdrawal-consent>
@@ -3151,7 +3182,8 @@ document.querySelector(".wordmark").addEventListener("click", event => {
 // 59/399 bor på exakt ett ställe: backend (features.py -> /api/entitlements).
 // Flikarna i kontoarket var hårdkodad HTML och kunde tyst börja ljuga.
 function renderPriceTabs() {
-  const pricing = premiumPricing();
+  // P02d: StoreKits pris ovanpå serverns i StoreKit-läget, annars serverns.
+  const pricing = storeKitPricing();
   // L7: markupen bor i src/views/premiumskarmen.js och beloppen går genom
   // L0:s prisMarkup(). Den här filen skrev dem förut som `${perMonth} kr` i en
   // egen mall - alltså en andra prisformatering vid sidan av appens.
@@ -3164,8 +3196,84 @@ function renderPriceTabs() {
   if (box) {
     const wasChecked = withdrawalConsentGiven(box);
     box.innerHTML = withdrawalConsentMarkup("premiumWithdrawalConsent");
-    if (wasChecked) box.querySelector("[data-withdrawal-consent]").checked = true;
+    const ruta = box.querySelector("[data-withdrawal-consent]");
+    if (wasChecked && ruta) ruta.checked = true;
   }
+  // P02d: StoreKit-läget byter ut tre saker runt köpknappen. Kodinlösen döljs
+  // (3.1.1 räknar "license keys" som en egen upplåsningsmekanism - koder
+  // löses in på webben och slår igenom i appen), "Återställ köp" visas (3.1.1
+  // kräver en återställningsväg), och StoreKits priser hämtas så flikarna
+  // visar det som dras. Av = ingenting av det här händer.
+  const storeKit = storeKitActive();
+  for (const id of ["premiumCodeNote", "accountRedeemForm"]) {
+    const el = document.getElementById(id);
+    if (el) el.hidden = storeKit;
+  }
+  const restore = document.getElementById("restorePurchasesBtn");
+  if (restore) restore.hidden = !storeKit;
+  if (storeKit) ensureStoreKitProducts();
+}
+// P02d: hämtar StoreKits produkter en gång och ritar om flikarna när de
+// kommit. Misslyckas hämtningen står serverns tal kvar och köpet kan ändå
+// göras - Apple visar sitt eget pris i köparket innan något dras.
+function ensureStoreKitProducts() {
+  if (storeKitProducts || storeKitProductsLoading) return storeKitProductsLoading;
+  const ids = productIdentifiers(entitlements);
+  if (!ids.length) return null;
+  storeKitProductsLoading = loadNativePlugins()
+    .then(plugins => plugins?.NativePurchases?.getProducts?.({ productIdentifiers: ids, productType: "subs" }))
+    .then(result => { storeKitProducts = result?.products || []; renderPriceTabs(); })
+    .catch(() => { storeKitProducts = null; })
+    .finally(() => { storeKitProductsLoading = null; });
+  return storeKitProductsLoading;
+}
+// Servern är den enda som avgör vad kontot har: transaktionens JWS anmäls,
+// och kontot ritas om ur serverns svar - aldrig ur pluginets.
+async function claimStoreKitTransaction(jws) {
+  const { user } = await claimAppleTransaction(state.authToken, jws);
+  state.user = user;
+  await fetchEntitlements();
+  if (hasPremium()) renderBasket();
+  return user;
+}
+async function purchaseWithStoreKit(plan, errorLine = $("checkoutError")) {
+  if (errorLine) errorLine.textContent = "";
+  if (!state.authToken) {
+    if (errorLine) errorLine.textContent = "Skapa ett konto eller logga in först.";
+    return false;
+  }
+  const options = purchaseOptions(entitlements, plan);
+  if (!options) {
+    if (errorLine) errorLine.textContent = "Köp i appen är inte tillgängligt just nu.";
+    return false;
+  }
+  try {
+    await flushServerSync();
+    const plugins = await loadNativePlugins();
+    if (!plugins?.NativePurchases?.purchaseProduct) throw new Error("StoreKit är inte tillgängligt i den här appen");
+    const transaction = await plugins.NativePurchases.purchaseProduct(options);
+    if (!transaction?.jwsRepresentation) throw new Error("Köpet gav ingen verifierbar transaktion");
+    await claimStoreKitTransaction(transaction.jwsRepresentation);
+    return true;
+  } catch (error) {
+    // Att kunden stänger Apples köpark är inget fel att visa.
+    if (errorLine && !isUserCancelled(error)) errorLine.textContent = errorText(error);
+    return false;
+  }
+}
+async function restoreWithStoreKit() {
+  const errorLine = $("checkoutError");
+  errorLine.textContent = "";
+  if (!state.authToken) { errorLine.textContent = "Logga in först, så kopplas köpet till ditt konto."; return; }
+  try {
+    const plugins = await loadNativePlugins();
+    if (!plugins?.NativePurchases?.getPurchases) throw new Error("StoreKit är inte tillgängligt i den här appen");
+    if (plugins.NativePurchases.restorePurchases) await plugins.NativePurchases.restorePurchases();
+    const result = await plugins.NativePurchases.getPurchases({ productType: "subs", onlyCurrentEntitlements: true });
+    const jwsList = restorableTransactions(result?.purchases, entitlements);
+    if (!jwsList.length) { errorLine.textContent = "Inga köp att återställa för det här Apple-kontot."; return; }
+    for (const jws of jwsList) await claimStoreKitTransaction(jws);
+  } catch (error) { errorLine.textContent = errorText(error); }
 }
 let premiumPollInFlight = false;
 async function activatePremiumAfterCheckout() {
@@ -4059,7 +4167,10 @@ function loadNativePlugins() {
   if (!isNativeApp()) return Promise.resolve(null);
   if (!nativePluginsReady) {
     nativePluginsReady = import("@capacitor/core")
-      .then(({ registerPlugin }) => ({ App: registerPlugin("App"), Browser: registerPlugin("Browser") }))
+      // P02d: NativePurchases (@capgo/native-purchases) på samma sätt -
+      // proxyn talar med Swift-paketet cap sync lade i CapApp-SPM.
+      .then(({ registerPlugin }) => ({ App: registerPlugin("App"), Browser: registerPlugin("Browser"),
+                                        NativePurchases: registerPlugin(STOREKIT_PLUGIN) }))
       .catch(() => null);
   }
   return nativePluginsReady;
@@ -4086,6 +4197,9 @@ document.querySelectorAll("[data-price-tab]").forEach(tab => tab.addEventListene
 $("subscribeBtn").addEventListener("click", async () => {
   $("checkoutError").textContent = "";
   if (!state.authToken) { $("checkoutError").textContent = "Skapa ett konto eller logga in först."; return; }
+  // P02d: i iOS-appen med StoreKit-vägen på går köpet genom Apple. Ingen
+  // Stripe-URL, ingen ångerrättsruta - Apple är säljare (3.1.1).
+  if (storeKitActive()) { await purchaseWithStoreKit(selectedPlan); return; }
   const consent = withdrawalConsentGiven($("premiumPitch"));
   if (!consent) {
     $("checkoutError").textContent = "Kryssa i rutan om ångerrätten för att kunna gå vidare till betalningen.";
@@ -4099,8 +4213,22 @@ $("subscribeBtn").addEventListener("click", async () => {
     openExternal(url);
   } catch (error) { $("checkoutError").textContent = errorText(error); }
 });
+$("restorePurchasesBtn").addEventListener("click", restoreWithStoreKit);
 $("manageBillingBtn").addEventListener("click", async () => {
   $("portalError").textContent = "";
+  // P02d: en App Store-prenumeration hanteras hos Apple - i appen genom
+  // StoreKits eget ark, på webben genom Apples prenumerationssida. Källan
+  // kommer ur serverns entitlementSource (P02b), aldrig ur en gissning.
+  if (state.user?.entitlementSource === "apple") {
+    entitlementRefresh.markBillingVisit();
+    const plugins = isNativeApp() ? await loadNativePlugins() : null;
+    if (plugins?.NativePurchases?.manageSubscriptions) {
+      try { await plugins.NativePurchases.manageSubscriptions(); } catch (error) { $("portalError").textContent = errorText(error); }
+    } else {
+      openExternal(MANAGE_SUBSCRIPTIONS_URL);
+    }
+    return;
+  }
   try {
     await flushServerSync();
     const { url } = await openBillingPortal(state.authToken);
@@ -4297,6 +4425,9 @@ restoreNutritionGoalsForm();
 initAccountView({
   $,
   hasPremium, premiumPricing, withdrawalConsentMarkup, withdrawalConsentGiven,
+  // P02d: betalväggens planknappar går samma väg som kontoarkets köpknapp,
+  // och visar samma pris (StoreKits i StoreKit-läget).
+  storeKitActive, purchaseWithStoreKit, storeKitPricing,
   syncSettingsInputs, renderPriceTabs,
   householdActive, pullHousehold, pushWeekToHousehold, pushPantryToHousehold,
   startHouseholdSync, loadNotifications, clearInviteFromUrl,
