@@ -296,34 +296,40 @@ class ImportgrindenTest(unittest.TestCase):
 
 
 class ReservbankenTest(unittest.TestCase):
-    """Reservbanken är samma recept i appens egna fältnamn, med `hemma` i
-    stället för `pantryStaple`. Utan den halvan ger ett backendavbrott en
-    inköpslista utan ägg för precis de recept M3 rättade."""
+    """Reservbanken är sedan P03a API-FORMEN, genererad ur källorna av
+    backend/scripts/generate_recipe_fallback.py - inte appens fältnamn.
+    Skafferiklassningen bärs därför av `ingredients[].pantryStaple`, samma
+    fält som /api/recipes svarar med; appens `hemma`/`ingredienser` är
+    projektioner som fromApi() räknar fram vid läsning.
+
+    Utan den här halvan ger ett backendavbrott en inköpslista utan ägg för
+    precis de recept M3 rättade."""
 
     @classmethod
     def setUpClass(cls):
         cls.recept = json.loads(FALLBACK_JSON.read_text(encoding="utf-8"))
 
     def test_reservbanken_ar_last(self):
-        self.assertGreater(len(self.recept), 50)
+        self.assertGreater(len(self.recept), 200)
 
-    def test_hemma_innehaller_bara_skafferivaror(self):
-        fel = [(r["id"], namn) for r in self.recept
-               for namn in r.get("hemma") or [] if not is_pantry_staple(namn)]
-        self.assertEqual(fel, [], f"varor man köper som ligger i hemma: {fel}")
+    def test_skafferiraderna_ar_skafferivaror(self):
+        fel = [(r["id"], i["name"]) for r in self.recept
+               for i in r.get("ingredients") or []
+               if i.get("pantryStaple") and not is_pantry_staple(i["name"])]
+        self.assertEqual(fel, [], f"varor man köper som är märkta skafferi: {fel}")
 
-    def test_ingredienserna_innehaller_ingen_skafferivara(self):
-        fel = [(r["id"], namn) for r in self.recept
-               for namn in r.get("ingredienser") or [] if is_pantry_staple(namn)]
+    def test_kopraderna_ar_inte_skafferivaror(self):
+        fel = [(r["id"], i["name"]) for r in self.recept
+               for i in r.get("ingredients") or []
+               if not i.get("pantryStaple") and is_pantry_staple(i["name"])]
         self.assertEqual(fel, [])
 
     def test_samma_ingrediens_ligger_pa_samma_sida_i_bada_bankerna(self):
         """Samma rätt ska ge samma inköpslista oavsett om backenden svarade.
 
-        Bara ingredienser som finns i BÅDA bankerna jämförs: de två bankerna
-        har på sina håll olika råvaror för samma id (offline har
-        `chili-sin-carne-budget` kidneybönor, online svarta bönor), och den
-        skillnaden är inte M3:s fråga. Sidan de hamnar på är det."""
+        Reservbanken byggs ur källorna, så det här är inte längre en
+        jämförelse mellan två redigerade filer utan en vakt: generatorn får
+        inte tappa eller vända skafferiflaggan på vägen genom RecipeStore."""
         online = {}
         for _, recipe in las_kallor():
             online[recipe["id"]] = {
@@ -332,19 +338,15 @@ class ReservbankenTest(unittest.TestCase):
         jamforda = 0
         for recipe in self.recept:
             rader = online.get(recipe["id"])
-            if rader is None:
-                continue
-            for namn, offline_hemma in ([(n, False) for n in recipe.get("ingredienser") or []]
-                                        + [(n, True) for n in recipe.get("hemma") or []]):
-                nyckel = normalize_ingredient_id(namn)
-                if nyckel not in rader:
-                    continue
+            self.assertIsNotNone(rader, f"{recipe['id']} finns i reservbanken men inte i källorna")
+            for i in recipe.get("ingredients") or []:
+                nyckel = normalize_ingredient_id(i["name"])
+                self.assertIn(nyckel, rader, f"{recipe['id']}: {i['name']} saknas i källan")
                 jamforda += 1
                 self.assertEqual(
-                    rader[nyckel], offline_hemma,
-                    f"{recipe['id']}: {namn} ligger på olika sidor i de två bankerna")
-        self.assertGreater(jamforda, 150)
-
+                    rader[nyckel], bool(i.get("pantryStaple")),
+                    f"{recipe['id']}: {i['name']} ligger på olika sidor i de två bankerna")
+        self.assertGreater(jamforda, 1500)
 
 if __name__ == "__main__":
     unittest.main()

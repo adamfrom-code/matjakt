@@ -120,15 +120,18 @@ class RecipeIdentityTest(unittest.TestCase):
         ett id till en annan rätt. Namnen jämförs, inte bara att id:t finns."""
         expected = {
             "chili-sin-carne-budget": "Chili sin carne",
-            "fiskgratang-dill": "Fiskgratäng med räkor och dill",
+            "fiskgratang-dill": "Fiskgratäng med dill och räkor",
             "kottbullar-potatismos": "Köttbullar med potatismos och lingon",
             "kycklingwok-nudlar-protein": "Kycklingwok med nudlar",
-            "ugnslax-citron": "Ugnsbakad lax med potatis",
+            "ugnslax-citron": "Ugnsbakad lax med citron och örtsås",
         }
         by_id = {r["id"]: r for r in self.bank}
         for recipe_id, name in expected.items():
             self.assertIn(recipe_id, by_id, f"{recipe_id} försvann ur den medföljande banken")
-            self.assertEqual(by_id[recipe_id].get("namn"), name)
+            # P03a: reservbanken är API-formen (name), genererad ur källorna.
+            # Namnen här är därför KÄLLANS - tidigare låste testet frontendens
+            # avvikande formuleringar, och gjorde felet omöjligt att rätta.
+            self.assertEqual(by_id[recipe_id].get("name"), name)
             self.assertIn(recipe_id, self.canonical)
 
     def test_no_bundled_recipe_keeps_one_of_the_old_broken_ids(self):
