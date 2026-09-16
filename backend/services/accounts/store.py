@@ -29,6 +29,24 @@ EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # Statusar där Stripe anser prenumerationen levande nog att äga kontot.
 BILLING_LIVE_STATUSES = ("active", "trialing")
 BILLING_OWNING_STATUSES = ("active", "trialing", "past_due")
+# P02b: Apple som Premium-källa. Statusarna är VÅR vokabulär, satt av
+# notismottagaren (P02c) ur Apples notificationType:
+#   active        SUBSCRIBED / DID_RENEW / REFUND_REVERSED - betald period
+#   grace         DID_FAIL_TO_RENEW med GRACE_PERIOD - Apple säger "continue
+#                 to provide service through the grace period"
+#   billing_retry DID_FAIL_TO_RENEW utan respit, GRACE_PERIOD_EXPIRED - Apple
+#                 säger "you can stop providing the subscription service"
+#   expired       EXPIRED, oavsett subtype
+#   revoked       REFUND / REVOKE - pengarna tillbaka, inget Premium kvar
+# Bara de två första bär Premium, och bara till apple_expires_at (plus
+# samma respit som Stripe får för ett tappat event). Efter expired/revoked
+# finns ingen respit alls - det är en notis vi HAR fått, inte en vi saknar.
+APPLE_LIVE_STATUSES = ("active", "grace")
+APPLE_STATUSES = ("active", "grace", "billing_retry", "expired", "revoked")
+# premiumSource (A01:s vokabulär, oförändrad + "apple") -> briefens fyra
+# källor plus provperioden. Stripes respit är fortfarande Stripe.
+ENTITLEMENT_SOURCE_OF = {"subscription": "stripe", "grace": "stripe", "apple": "apple",
+                         "code": "code", "comped": "comp", "trial": "trial", None: None}
 # Premium hänger inte kvar för evigt om ett deleted-event tappas bort: efter
 # periodens slut plus den här respiten faller kontot till Free av sig självt.
 # Respiten täcker Stripes förnyelseförsök (en lyckad förnyelse skickar alltid
@@ -205,6 +223,19 @@ class AccountStore:
             # här i stället; den gamla flaggan finns kvar för de konton som
             # redan har den - ingen ska vakna degraderad av en refaktorering.
             ("premium_until", "TEXT"),
+            # P02b: Apple som Premium-källa, bredvid Stripe - inte i stället
+            # för. Samma form som stripe_*-kolumnerna: en stabil identitet
+            # (originalTransactionId är Apples motsvarighet till
+            # prenumerations-id:t), planen som produkt-id, ett slutdatum, en
+            # status i vår vokabulär (APPLE_STATUSES), om kunden låter den
+            # förnyas, vilken miljö (Production/Sandbox) och Apples
+            # signeringstid som ordningsvakt - en äldre notis får aldrig
+            # skriva över en nyare. Alla nullbara: en återställd release läser
+            # dem inte och skriver dem inte, och det är hela rollbackplanen.
+            ("apple_original_transaction_id", "TEXT"), ("apple_product_id", "TEXT"),
+            ("apple_expires_at", "TEXT"), ("apple_status", "TEXT"),
+            ("apple_auto_renew", "INTEGER"), ("apple_environment", "TEXT"),
+            ("apple_signed_date", "INTEGER"),
         ):
             try:
                 self._connection.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
@@ -264,8 +295,18 @@ class AccountStore:
         # att någon behöver städa.
         premium_until = row["premium_until"] if "premium_until" in keys else None
         code_active = bool(premium_until) and premium_until > datetime.now(timezone.utc).isoformat()
+        # P02b: Apple som källa. Samma regel som för Stripe, fail closed: en
+        # levande status räcker inte i sig, slutdatumet måste finnas OCH
+        # ligga framför oss (plus respiten för ett tappat DID_RENEW). Utan
+        # slutdatum är svaret nej - en rad utan datum är en rad vi inte
+        # förstår, inte ett evigt Premium.
+        apple_status = row["apple_status"] if "apple_status" in keys else None
+        apple_expires_at = row["apple_expires_at"] if "apple_expires_at" in keys else None
+        apple_product_id = row["apple_product_id"] if "apple_product_id" in keys else None
+        apple_active = (apple_status in APPLE_LIVE_STATUSES and bool(apple_expires_at)
+                        and not _period_expired(apple_expires_at))
         premium_active = (bool(row["premium"]) or trial_active or subscription_active
-                          or grace_active or code_active)
+                          or grace_active or code_active or apple_active)
         plan_raw = row["subscription_plan"] if "subscription_plan" in keys else None
         # A01: VARFÖR kontot är Premium, inte bara ATT det är det.
         #
@@ -277,19 +318,55 @@ class AccountStore:
         # Ordningen är sanningsordning, inte prioritetsordning: den som HAR
         # en aktiv prenumeration betalar, oavsett vilka andra flaggor som
         # råkar vara satta på kontot.
+        #
+        # P02b lägger Apple direkt efter Stripe: båda är betalande. En kund
+        # med levande prenumeration hos båda betalar dubbelt, och det
+        # förhindras av köpvägarna (409 på webben, dold knapp i appen) - men
+        # skulle det ändå hända ska EN källa vinna, och det är den som redan
+        # stod först. Stripes respit kommer efter Apple: en betald period hos
+        # Apple är mer sann än en nekad dragning hos Stripe.
         premium_source = ("subscription" if subscription_active
+                          else "apple" if apple_active
                           else "grace" if grace_active
                           else "trial" if trial_active
                           else "code" if code_active
                           else "comped" if bool(row["premium"])
                           else None)
+        # Planen är den VINNANDE källans plan. Apples plan är produkt-id:t
+        # (se.matjakt.premium.yearly), Stripes är subscription_plan. För kod,
+        # comp och prov gäller samma regel som före P02b: subscription_plan
+        # om den finns kvar från en gammal prenumeration, annars månad.
+        plan_hint = apple_product_id if premium_source == "apple" else plan_raw
+        # Den vinnande källans slutdatum - null för comp, som är evig.
+        entitlement_until = {
+            "subscription": period_end, "apple": apple_expires_at, "grace": grace_until,
+            "trial": trial_ends_at, "code": premium_until,
+        }.get(premium_source)
         return {
             "email": row["email"],
             "premium": premium_active,
             "premiumSource": premium_source,
+            # P02b: EN entitlement-sanning. Källan i briefens vokabulär
+            # (apple/stripe/code/comp/trial) och när den tar slut. Den som
+            # ritar "Hantera prenumeration" läser källan: apple -> App Store,
+            # stripe -> kundportalen. Aldrig en gissning ur andra fält.
+            "entitlementSource": ENTITLEMENT_SOURCE_OF.get(premium_source),
+            "entitlementUntil": entitlement_until if premium_active else None,
+            # Apples egen rad, även när den inte längre bär Premium - kontosidan
+            # ska kunna säga "din App Store-prenumeration gick ut" i stället
+            # för att låtsas att den aldrig fanns. Null när kontot aldrig köpt
+            # via Apple.
+            "appleSubscription": ({
+                "status": apple_status,
+                "productId": apple_product_id,
+                "expiresAt": apple_expires_at,
+                "autoRenew": (None if row["apple_auto_renew"] is None else bool(row["apple_auto_renew"]))
+                if "apple_auto_renew" in keys else None,
+                "environment": row["apple_environment"] if "apple_environment" in keys else None,
+            } if apple_status else None),
             # The plan name the feature system keys on. Derived here so every
             # consumer (auth/me, entitlements, tests) agrees on one answer.
-            "plan": ("premium_yearly" if premium_active and plan_raw and "year" in str(plan_raw).lower()
+            "plan": ("premium_yearly" if premium_active and plan_hint and "year" in str(plan_hint).lower()
                      else "premium_monthly" if premium_active else "free"),
             "trialEndsAt": trial_ends_at if trial_active else None,
             "trialUsed": bool(row["trial_used"]) if "trial_used" in keys else False,
@@ -483,6 +560,73 @@ class AccountStore:
         row = self._connection.execute(
             "SELECT premium_until FROM users WHERE id = ?", (int(user_id),)).fetchone()
         return row["premium_until"] if row else None
+
+    # ---- P02b: Apple som Premium-källa ----------------------------------
+
+    def apply_apple_subscription(self, user_id, *, original_transaction_id, product_id,
+                                 expires_at_iso, status, auto_renew=None, environment=None,
+                                 signed_date=None) -> str:
+        """Skriver Apple-källan på ett konto. Returnerar "applied", "ignored"
+        eller "unknown_user".
+
+        Det här är skrivvägen notismottagaren (P02c) och appens egen anmälan
+        använder; idempotensen på notificationUUID ligger där, inte här.
+        Här ligger ORDNINGEN: Apple garanterar ingen leveransordning, så en
+        notis vars signedDate är äldre än den senast applicerade ignoreras -
+        samma regel som stripe_event_created. Samma signedDate släpps
+        igenom (appens anmälan och notisen kan bära samma transaktion).
+
+        `status` är vår vokabulär (APPLE_STATUSES). "revoked" - pengarna
+        tillbaka - släcker dessutom den manuella flaggan och provperioden,
+        exakt som revoke_after_refund gör för Stripe: en återbetalning ska
+        inte lämna en gammal kod-inlösning kvar som en osynlig bakdörr."""
+        if status not in APPLE_STATUSES:
+            raise ValueError(f"okänd Apple-status: {status!r}")
+        signed = int(signed_date) if signed_date is not None else None
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT id, apple_signed_date FROM users WHERE id = ?", (int(user_id),)).fetchone()
+            if row is None:
+                return "unknown_user"
+            stored = row["apple_signed_date"]
+            if signed is not None and stored is not None and signed < stored:
+                return "ignored"
+            self._connection.execute(
+                """UPDATE users SET apple_original_transaction_id = ?, apple_product_id = ?,
+                       apple_expires_at = ?, apple_status = ?, apple_auto_renew = ?,
+                       apple_environment = ?,
+                       apple_signed_date = COALESCE(?, apple_signed_date)
+                   WHERE id = ?""",
+                (str(original_transaction_id) if original_transaction_id else None,
+                 product_id, expires_at_iso, status,
+                 (None if auto_renew is None else int(bool(auto_renew))),
+                 environment, signed, row["id"]))
+            if status == "revoked":
+                self._connection.execute(
+                    "UPDATE users SET premium = 0, trial_ends_at = NULL WHERE id = ?", (row["id"],))
+            self._connection.commit()
+            return "applied"
+
+    def apple_subscription(self, user_id) -> dict | None:
+        """Apple-kolumnerna råa, eller None när kontot aldrig köpt via Apple."""
+        row = self._connection.execute(
+            """SELECT apple_original_transaction_id, apple_product_id, apple_expires_at,
+                      apple_status, apple_auto_renew, apple_environment, apple_signed_date
+               FROM users WHERE id = ?""", (int(user_id),)).fetchone()
+        if row is None or row["apple_status"] is None:
+            return None
+        return dict(row)
+
+    def user_id_for_apple_transaction(self, original_transaction_id) -> int | None:
+        """Kontot bakom ett originalTransactionId, eller None. Det är
+        Apples stabila nyckel för en prenumeration genom alla förnyelser -
+        notismottagarens första spår tillbaka till ett konto."""
+        if not original_transaction_id:
+            return None
+        row = self._connection.execute(
+            "SELECT id FROM users WHERE apple_original_transaction_id = ?",
+            (str(original_transaction_id),)).fetchone()
+        return int(row["id"]) if row else None
 
     # start_trial vid REGISTRERING är och förblir borttagen. J3 lade
     # tillbaka provperioden på ett annat ställe i tratten - efter den första
@@ -1152,6 +1296,17 @@ class AccountStore:
                 "kompenseradPremium": bool(value("premium", 0)),
                 "stripeKundId": value("stripe_customer_id"),
                 "stripePrenumerationId": value("stripe_subscription_id"),
+                # P02b: köp via App Store är lika mycket hennes data som köp
+                # via Stripe. Samma vitlista, samma export.
+                "apple": {
+                    "status": value("apple_status"),
+                    "produkt": value("apple_product_id"),
+                    "gallerTill": value("apple_expires_at"),
+                    "fornyas": (None if value("apple_auto_renew") is None
+                                else bool(value("apple_auto_renew"))),
+                    "miljo": value("apple_environment"),
+                    "originalTransactionId": value("apple_original_transaction_id"),
+                },
             },
             "syncedState": value("synced_state"),
         }
