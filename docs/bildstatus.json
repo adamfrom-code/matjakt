@@ -1,0 +1,3324 @@
+[
+ {
+  "id": "flaskfilerotmos",
+  "namn": "Baconlindad fläskfilé med rotsaker",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/food-menu-restaurant-dinner-11001292/",
+   "fotografens_titel": "food menu restaurant dinner"
+  },
+  "delas_med": [
+   "citronflaskfile",
+   "flaskfile-rotfrukter",
+   "flaskfile-svampsas"
+  ]
+ },
+ {
+  "id": "biffmedlok",
+  "namn": "Biff med lökröra och potatismos",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner biff (\"Beef medallion topped with fried onions\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Beef_medallion_topped_with_fried_onions.jpg",
+   "fil": "File:Beef_medallion_topped_with_fried_onions.jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "biffmatvetesallad",
+  "namn": "Biffsallad med matvete och vitlök",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"mixed salad on a tray\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/mixed-salad-on-a-tray-15832878/",
+   "fotografens_titel": "mixed salad on a tray"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "biffwok",
+  "namn": "Biffwok med wokgrönsaker",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"a black dish with meat and vegetables on top\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-black-dish-with-meat-and-vegetables-on-top-27588091/",
+   "fotografens_titel": "a black dish with meat and vegetables on top"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "butterchicken",
+  "namn": "Butter chicken med jasminris",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"cooked food on white ceramic plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/cooked-food-on-white-ceramic-plate-10615283/",
+   "fotografens_titel": "cooked food on white ceramic plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "bonbowlmatvete",
+  "namn": "Bönbowl med matvete och salsa",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"close up of variety of rice in bowls\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+   "fotografens_titel": "close up of variety of rice in bowls"
+  },
+  "delas_med": [
+   "halloumibowl",
+   "kycklingmatvete",
+   "svartbonsbowl",
+   "tacobonor",
+   "kvargbowl-kyckling",
+   "kyckling-shawarma-bowl",
+   "biffbowl-teriyaki",
+   "laxpoke"
+  ]
+ },
+ {
+  "id": "citronkyckling",
+  "namn": "Citronkyckling med rostad potatis",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"soup with lemon\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/soup-with-lemon-10692533/",
+   "fotografens_titel": "soup with lemon"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "citronflaskfile",
+  "namn": "Citronmarinerad fläskfilé med matvete",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/food-menu-restaurant-dinner-11001292/",
+   "fotografens_titel": "food menu restaurant dinner"
+  },
+  "delas_med": [
+   "flaskfilerotmos",
+   "flaskfile-rotfrukter",
+   "flaskfile-svampsas"
+  ]
+ },
+ {
+  "id": "currykottfarsgryta",
+  "namn": "Currykryddad köttfärsgryta",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (färs, kyckling)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/rustic-vegetable-stew-in-ceramic-bowl-29075345/",
+   "fotografens_titel": "rustic vegetable stew in ceramic bowl"
+  },
+  "delas_med": [
+   "kycklinggryta",
+   "kycklinggryta-paprika",
+   "kycklinggryta-honung-senap",
+   "kramig-kycklinggryta"
+  ]
+ },
+ {
+  "id": "fetagryta",
+  "namn": "Fetagryta med kikärtor",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-vegetable-stew-in-black-skillet-33755318/",
+   "fotografens_titel": "delicious vegetable stew in black skillet"
+  },
+  "delas_med": [
+   "halloumigryta-tomat"
+  ]
+ },
+ {
+  "id": "flaskcurrygryta",
+  "namn": "Fläskcurrygryta med kokos",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner gryta (\"a stew dish in macro shot photography\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-stew-dish-in-macro-shot-photography-8024112/",
+   "fotografens_titel": "a stew dish in macro shot photography"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "flasktomatpasta",
+  "namn": "Fläskfilé i tomatsås med pasta",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner fläsk (\"04666 Polish spaghetti pasta with sauce made of pork meat, tomatoes, garlic and olive\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:04666_Polish_spaghetti_pasta_with_sauce_made_of_pork_meat,_tomatoes,_garlic_and_olive.JPG",
+   "fil": "File:04666_Polish_spaghetti_pasta_with_sauce_made_of_pork_meat,_tomatoes,_garlic_and_olive.JPG",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "flaskkarre",
+  "namn": "Fläskfilé med äppelmos och rödkål",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/roasted-meat-over-a-wooden-tray-7333166/",
+   "fotografens_titel": "roasted meat over a wooden tray"
+  },
+  "delas_med": [
+   "flaskytterfile-appelmos"
+  ]
+ },
+ {
+  "id": "halloumibowl",
+  "namn": "Halloumibowl med rostade grönsaker",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"close up of variety of rice in bowls\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+   "fotografens_titel": "close up of variety of rice in bowls"
+  },
+  "delas_med": [
+   "bonbowlmatvete",
+   "kycklingmatvete",
+   "svartbonsbowl",
+   "tacobonor",
+   "kvargbowl-kyckling",
+   "kyckling-shawarma-bowl",
+   "biffbowl-teriyaki",
+   "laxpoke"
+  ]
+ },
+ {
+  "id": "halloumicurry",
+  "namn": "Halloumicurry med ris",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner curry (\"curry rice dish in a plate\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/curry-rice-dish-in-a-plate-10464100/",
+   "fotografens_titel": "curry rice dish in a plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "halloumipasta",
+  "namn": "Halloumipasta med tomat och basilika",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/pasta-with-herbs-on-a-white-plate-15289961/",
+   "fotografens_titel": "pasta with herbs on a white plate"
+  },
+  "delas_med": [
+   "sparrispastacitron"
+  ]
+ },
+ {
+  "id": "biffgraddtimjan",
+  "namn": "Helstekt biff med gräddsås och timjanpotatis",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"a person holding a plated dish\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-person-holding-a-plated-dish-15307371/",
+   "fotografens_titel": "a person holding a plated dish"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kalvschnitzel",
+  "namn": "Kalvschnitzel med citron och kapris",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/crispy-schnitzel-with-caramelized-onions-33865567/",
+   "fotografens_titel": "crispy schnitzel with caramelized onions"
+  },
+  "delas_med": [
+   "kalvschnitzelmatvete"
+  ]
+ },
+ {
+  "id": "kalvschnitzelmatvete",
+  "namn": "Kalvschnitzel med matvetesallad",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/crispy-schnitzel-with-caramelized-onions-33865567/",
+   "fotografens_titel": "crispy schnitzel with caramelized onions"
+  },
+  "delas_med": [
+   "kalvschnitzel"
+  ]
+ },
+ {
+  "id": "kikartscurry",
+  "namn": "Kikärtscurry med ris",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/cooked-food-on-the-table-7364662/",
+   "fotografens_titel": "cooked food on the table"
+  },
+  "delas_med": [
+   "kikartscurry-protein"
+  ]
+ },
+ {
+  "id": "kikartssallad",
+  "namn": "Kikärtssallad med matvete",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner kikärt (\"mediterranean chickpea and hummus salad dish\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/mediterranean-chickpea-and-hummus-salad-dish-30488354/",
+   "fotografens_titel": "mediterranean chickpea and hummus salad dish"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "korvgratang",
+  "namn": "Korvgratäng med pasta",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (fläsk, färs, korv, kyckling)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/cheesy-vegetable-baked-casserole-in-white-dish-32039641/",
+   "fotografens_titel": "cheesy vegetable baked casserole in white dish"
+  },
+  "delas_med": [
+   "tacogratang",
+   "kycklinggratang-broccoli",
+   "kottfarsgratang-mos",
+   "kassler-ananas-gratang"
+  ]
+ },
+ {
+  "id": "korvstroganoff",
+  "namn": "Korvstroganoff",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner stroganoff (\"Korvstroganoff with rice 4\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Korvstroganoff_with_rice_4.jpg",
+   "fil": "File:Korvstroganoff_with_rice_4.jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "tofuwok",
+  "namn": "Krispig tofuwok med sesam och soja",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner tofu (\"close up photo of a tofu dish\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-photo-of-a-tofu-dish-5848480/",
+   "fotografens_titel": "close up photo of a tofu dish"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kycklingmatvete",
+  "namn": "Kryddig kycklingbowl med matvete",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"close up of variety of rice in bowls\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+   "fotografens_titel": "close up of variety of rice in bowls"
+  },
+  "delas_med": [
+   "bonbowlmatvete",
+   "halloumibowl",
+   "svartbonsbowl",
+   "tacobonor",
+   "kvargbowl-kyckling",
+   "kyckling-shawarma-bowl",
+   "biffbowl-teriyaki",
+   "laxpoke"
+  ]
+ },
+ {
+  "id": "fiskpasta",
+  "namn": "Krämig fiskpasta",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner proteinet (fisk) (\"delicious dinner with fish\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-dinner-with-fish-19287916/",
+   "fotografens_titel": "delicious dinner with fish"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "tomatsoppa",
+  "namn": "Krämig tomatsoppa",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/white-ceramic-mug-with-soup-beside-spoon-2421593/",
+   "fotografens_titel": "white ceramic mug with soup beside spoon"
+  },
+  "delas_med": [
+   "tomatsoppa-grillost"
+  ]
+ },
+ {
+  "id": "kycklinggryta",
+  "namn": "Kycklinggryta med ris",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (färs, kyckling)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/rustic-vegetable-stew-in-ceramic-bowl-29075345/",
+   "fotografens_titel": "rustic vegetable stew in ceramic bowl"
+  },
+  "delas_med": [
+   "currykottfarsgryta",
+   "kycklinggryta-paprika",
+   "kycklinggryta-honung-senap",
+   "kramig-kycklinggryta"
+  ]
+ },
+ {
+  "id": "kottfarssas",
+  "namn": "Köttfärssås med pasta",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner köttfärs (\"delicious pasta with bolognese and bell peppers\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-pasta-with-bolognese-and-bell-peppers-34822477/",
+   "fotografens_titel": "delicious pasta with bolognese and bell peppers"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "laxsallad",
+  "namn": "Laxsallad med matvete och dill",
+  "status": "REJECTED",
+  "skal": "delas av 2 recept med olika huvudprotein (fisk, kyckling)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-shot-of-a-bowl-of-vegetable-salad-5633332/",
+   "fotografens_titel": "close up shot of a bowl of vegetable salad"
+  },
+  "delas_med": [
+   "pastasallad-kyckling-lunch"
+  ]
+ },
+ {
+  "id": "morotscurry",
+  "namn": "Morotscurry med kikärtor",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"yellow and green vegetables on white ceramic plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/yellow-and-green-vegetables-on-white-ceramic-plate-7111393/",
+   "fotografens_titel": "yellow and green vegetables on white ceramic plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "pastagratang",
+  "namn": "Pastagratäng med purjolök",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-baked-penne-pasta-with-cheese-and-vegetables-31846718/",
+   "fotografens_titel": "delicious baked penne pasta with cheese and vegetables"
+  },
+  "delas_med": [
+   "vegofars-pastagratang"
+  ]
+ },
+ {
+  "id": "rotfruktsgratang",
+  "namn": "Rotfruktsgratäng med rökt falukorv",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (fisk, fläsk, korv)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/baked-lasagna-2337842/",
+   "fotografens_titel": "baked lasagna"
+  },
+  "delas_med": [
+   "potatisgratang-skinka",
+   "fiskgratang-dill",
+   "torskgratang-vasterbotten",
+   "broccoligratang-skinka"
+  ]
+ },
+ {
+  "id": "rakcurry",
+  "namn": "Räkcurry med kokos och ris",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner räk, curry (\"close up photo of shrimp curry with green rice\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-photo-of-shrimp-curry-with-green-rice-15059057/",
+   "fotografens_titel": "close up photo of shrimp curry with green rice"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "raksallad",
+  "namn": "Räksallad med matvete",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"healthy salads in white bowls\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/healthy-salads-in-white-bowls-16313570/",
+   "fotografens_titel": "healthy salads in white bowls"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "linssoppa",
+  "namn": "Röd linssoppa",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-flatlay-shot-of-a-bowl-of-soup-on-a-rustic-background-7160694/",
+   "fotografens_titel": "a flatlay shot of a bowl of soup on a rustic background"
+  },
+  "delas_med": [
+   "linssoppa-rod"
+  ]
+ },
+ {
+  "id": "scampi",
+  "namn": "Scampi pasta med vitlök och citron",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/food-photography-of-pasta-1438672/",
+   "fotografens_titel": "food photography of pasta"
+  },
+  "delas_med": [
+   "fetapasta",
+   "pasta-tomatsas-vitlok",
+   "pasta-skinksas"
+  ]
+ },
+ {
+  "id": "sparrispastacitron",
+  "namn": "Sparrispasta med citron och vitlök",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/pasta-with-herbs-on-a-white-plate-15289961/",
+   "fotografens_titel": "pasta with herbs on a white plate"
+  },
+  "delas_med": [
+   "halloumipasta"
+  ]
+ },
+ {
+  "id": "svartbonsbowl",
+  "namn": "Svartbönsbowl med matvete",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"close up of variety of rice in bowls\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+   "fotografens_titel": "close up of variety of rice in bowls"
+  },
+  "delas_med": [
+   "bonbowlmatvete",
+   "halloumibowl",
+   "kycklingmatvete",
+   "tacobonor",
+   "kvargbowl-kyckling",
+   "kyckling-shawarma-bowl",
+   "biffbowl-teriyaki",
+   "laxpoke"
+  ]
+ },
+ {
+  "id": "tacobonor",
+  "namn": "Tacobowl med svarta bönor",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"close up of variety of rice in bowls\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+   "fotografens_titel": "close up of variety of rice in bowls"
+  },
+  "delas_med": [
+   "bonbowlmatvete",
+   "halloumibowl",
+   "kycklingmatvete",
+   "svartbonsbowl",
+   "kvargbowl-kyckling",
+   "kyckling-shawarma-bowl",
+   "biffbowl-teriyaki",
+   "laxpoke"
+  ]
+ },
+ {
+  "id": "tandoorikyckling",
+  "namn": "Tandoorikyckling med ris",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner kyckling (\"delicious indian meal with chicken tikka and rice\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-indian-meal-with-chicken-tikka-and-rice-30021858/",
+   "fotografens_titel": "delicious indian meal with chicken tikka and rice"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "teriyakilax",
+  "namn": "Teriyakilax med wokgrönsaker och ris",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-bowl-of-rice-with-meat-and-green-onions-17308546/",
+   "fotografens_titel": "a bowl of rice with meat and green onions"
+  },
+  "delas_med": [
+   "lax-teriyaki"
+  ]
+ },
+ {
+  "id": "teriyakitofu",
+  "namn": "Teriyakitofu med matvetesallad",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner tofu (\"stir fried tofu and vegetables on plate\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/stir-fried-tofu-and-vegetables-on-plate-37297770/",
+   "fotografens_titel": "stir fried tofu and vegetables on plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "tofucurry",
+  "namn": "Tofucurry med kokos och ris",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"close up photo of food on plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-photo-of-food-on-plate-9218748/",
+   "fotografens_titel": "close up photo of food on plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "torskitomatsas",
+  "namn": "Torsk i tomatsås",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner torsk (\"Cod in tomato sauce (Oslo)\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Cod_in_tomato_sauce_(Oslo).jpg",
+   "fil": "File:Cod_in_tomato_sauce_(Oslo).jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "fetapasta",
+  "namn": "Ugnsbakad fetaost-pasta",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/food-photography-of-pasta-1438672/",
+   "fotografens_titel": "food photography of pasta"
+  },
+  "delas_med": [
+   "scampi",
+   "pasta-tomatsas-vitlok",
+   "pasta-skinksas"
+  ]
+ },
+ {
+  "id": "ugnstorsk",
+  "namn": "Ugnsbakad torsk med sparris och citronsmör",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/food-restaurant-fish-cooking-11044248/",
+   "fotografens_titel": "food restaurant fish cooking"
+  },
+  "delas_med": [
+   "torsk-potatismos"
+  ]
+ },
+ {
+  "id": "kycklingcouscous",
+  "namn": "Ugnskyckling med couscous och paprika",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/appetizing-roasted-chicken-with-vegetables-in-baking-dish-6210955/",
+   "fotografens_titel": "appetizing roasted chicken with vegetables in baking dish"
+  },
+  "delas_med": [
+   "kyckling-ris-broccoli",
+   "helstekt-kyckling-rotfrukter"
+  ]
+ },
+ {
+  "id": "vegetarisklasagne",
+  "namn": "Vegetarisk lasagne",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-homemade-lasagna-with-tomato-sauce-33312938/",
+   "fotografens_titel": "delicious homemade lasagna with tomato sauce"
+  },
+  "delas_med": [
+   "lasagne-klassisk"
+  ]
+ },
+ {
+  "id": "vegobolognese",
+  "namn": "Vegobolognese med spaghetti",
+  "status": "REJECTED",
+  "skal": "delas av 2 recept med olika huvudprotein (färs, vego)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/spaghetti-bolognese-on-plate-5807018/",
+   "fotografens_titel": "spaghetti bolognese on plate"
+  },
+  "delas_med": [
+   "vegansk-bolognese-vegofars"
+  ]
+ },
+ {
+  "id": "vegofarsgryta",
+  "namn": "Vegofärsgryta med ris",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"top view of cooking ingredients\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+   "fotografens_titel": "top view of cooking ingredients"
+  },
+  "delas_med": [
+   "korvgryta-potatis",
+   "gulaschgryta",
+   "kottfarsgryta-bulk",
+   "korvgryta-krossade-tomater",
+   "biffgryta-rotter",
+   "kebabgryta",
+   "korvgryta-curry",
+   "flaskgryta-paprika"
+  ]
+ },
+ {
+  "id": "zucchinipastafeta",
+  "namn": "Zucchinipasta med feta",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"pesto pasta on ceramic bowl\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/pesto-pasta-on-ceramic-bowl-6327594/",
+   "fotografens_titel": "pesto pasta on ceramic bowl"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kottbullar-potatismos",
+  "namn": "Köttbullar med potatismos och lingon",
+  "status": "REJECTED",
+  "skal": "fotot visar en köttbit (\"fried meat cutlet served with boiled potatoes and salad\"), rätten är färs",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/fried-meat-cutlet-served-with-boiled-potatoes-and-salad-4210847/",
+   "fotografens_titel": "fried meat cutlet served with boiled potatoes and salad"
+  },
+  "delas_med": [
+   "wallenbergare"
+  ]
+ },
+ {
+  "id": "spaghetti-kottfarssas",
+  "namn": "Spaghetti med köttfärssås",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"shallow focus photo of pasta\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/shallow-focus-photo-of-pasta-546945/",
+   "fotografens_titel": "shallow focus photo of pasta"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "tacos-kottfars",
+  "namn": "Tacos med köttfärs och krispiga grönsaker",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"close up of tacos with assorted fillings and sauce\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-tacos-with-assorted-fillings-and-sauce-28895976/",
+   "fotografens_titel": "close up of tacos with assorted fillings and sauce"
+  },
+  "delas_med": [
+   "svarta-bonor-tacos",
+   "kottfars-tacos"
+  ]
+ },
+ {
+  "id": "pannkakor",
+  "namn": "Pannkakor",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/person-filling-crepe-with-custard-3807390/",
+   "fotografens_titel": "person filling crepe with custard"
+  },
+  "delas_med": [
+   "pannkakor-klassiska"
+  ]
+ },
+ {
+  "id": "ugnspannkaka-bacon",
+  "namn": "Ugnspannkaka med bacon",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"breakfast on plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/breakfast-on-plate-22882256/",
+   "fotografens_titel": "breakfast on plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kottfarslimpa-graddsas",
+  "namn": "Köttfärslimpa med gräddsås",
+  "status": "REJECTED",
+  "skal": "fotot visar ägg (\"delicious meatloaf with egg and zesty potatoes\"), rätten är färs",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-meatloaf-with-egg-and-zesty-potatoes-31673752/",
+   "fotografens_titel": "delicious meatloaf with egg and zesty potatoes"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "lasagne-klassisk",
+  "namn": "Lasagne",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-homemade-lasagna-with-tomato-sauce-33312938/",
+   "fotografens_titel": "delicious homemade lasagna with tomato sauce"
+  },
+  "delas_med": [
+   "vegetarisklasagne"
+  ]
+ },
+ {
+  "id": "kyckling-ris-mild",
+  "namn": "Mild kycklinggryta med ris",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner kyckling (\"a close up shot of a delicious chicken soup\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-close-up-shot-of-a-delicious-chicken-soup-10338450/",
+   "fotografens_titel": "a close up shot of a delicious chicken soup"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "torsk-potatismos",
+  "namn": "Ugnsbakad torsk med potatismos",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/food-restaurant-fish-cooking-11044248/",
+   "fotografens_titel": "food restaurant fish cooking"
+  },
+  "delas_med": [
+   "ugnstorsk"
+  ]
+ },
+ {
+  "id": "kyckling-ris-broccoli",
+  "namn": "Kyckling med ris och broccoli",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/appetizing-roasted-chicken-with-vegetables-in-baking-dish-6210955/",
+   "fotografens_titel": "appetizing roasted chicken with vegetables in baking dish"
+  },
+  "delas_med": [
+   "kycklingcouscous",
+   "helstekt-kyckling-rotfrukter"
+  ]
+ },
+ {
+  "id": "laxfile-quinoa",
+  "namn": "Ugnsbakad laxfilé med quinoa",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner lax (\"grilled salmon fillet with seasoned rice close up\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/grilled-salmon-fillet-with-seasoned-rice-close-up-31146494/",
+   "fotografens_titel": "grilled salmon fillet with seasoned rice close up"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "biff-sotpotatis",
+  "namn": "Stekt biff med sötpotatis",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/meal-with-beef-on-plate-16444386/",
+   "fotografens_titel": "meal with beef on plate"
+  },
+  "delas_med": [
+   "pannbiff-lok",
+   "biff-bearnaise-vardag",
+   "rostbiff-potatissallad"
+  ]
+ },
+ {
+  "id": "kvargbowl-kyckling",
+  "namn": "Kycklingbowl med kvarg och matvete",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"close up of variety of rice in bowls\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+   "fotografens_titel": "close up of variety of rice in bowls"
+  },
+  "delas_med": [
+   "bonbowlmatvete",
+   "halloumibowl",
+   "kycklingmatvete",
+   "svartbonsbowl",
+   "tacobonor",
+   "kyckling-shawarma-bowl",
+   "biffbowl-teriyaki",
+   "laxpoke"
+  ]
+ },
+ {
+  "id": "aggrora-bacon-bonor",
+  "namn": "Äggröra med bacon och vita bönor",
+  "status": "REJECTED",
+  "skal": "fotot visar ägg (\"egg omelet on blue and white ceramic plate\"), rätten är fläsk",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/egg-omelet-on-blue-and-white-ceramic-plate-192319/",
+   "fotografens_titel": "egg omelet on blue and white ceramic plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "tonfisksallad-bonor",
+  "namn": "Tonfisksallad med vita bönor",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner tonfisk (\"a bowl of tuna salad with eggs\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-bowl-of-tuna-salad-with-eggs-19051901/",
+   "fotografens_titel": "a bowl of tuna salad with eggs"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "linsbolognese-proteinrik",
+  "namn": "Linsbolognese med fullkornspasta",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/crop-young-lady-holding-plate-of-pasta-bolognese-4350120/",
+   "fotografens_titel": "crop young lady holding plate of pasta bolognese"
+  },
+  "delas_med": [
+   "linsbolognese"
+  ]
+ },
+ {
+  "id": "flaskfile-rotfrukter",
+  "namn": "Fläskfilé med rostade rotfrukter",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/food-menu-restaurant-dinner-11001292/",
+   "fotografens_titel": "food menu restaurant dinner"
+  },
+  "delas_med": [
+   "flaskfilerotmos",
+   "citronflaskfile",
+   "flaskfile-svampsas"
+  ]
+ },
+ {
+  "id": "kikartscurry-protein",
+  "namn": "Kikärtscurry med spenat",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/cooked-food-on-the-table-7364662/",
+   "fotografens_titel": "cooked food on the table"
+  },
+  "delas_med": [
+   "kikartscurry"
+  ]
+ },
+ {
+  "id": "kycklingwok-nudlar-protein",
+  "namn": "Kycklingwok med nudlar",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"top view of delicious food with broccoli in a white plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/top-view-of-delicious-food-with-broccoli-in-a-white-plate-8995196/",
+   "fotografens_titel": "top view of delicious food with broccoli in a white plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "artsoppa-klassisk",
+  "namn": "Ärtsoppa med fläsk",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-homemade-vegetable-soup-in-bowl-39019921/",
+   "fotografens_titel": "close up of homemade vegetable soup in bowl"
+  },
+  "delas_med": [
+   "kottsoppa"
+  ]
+ },
+ {
+  "id": "korvgryta-potatis",
+  "namn": "Korvgryta med potatis och paprika",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"top view of cooking ingredients\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+   "fotografens_titel": "top view of cooking ingredients"
+  },
+  "delas_med": [
+   "vegofarsgryta",
+   "gulaschgryta",
+   "kottfarsgryta-bulk",
+   "korvgryta-krossade-tomater",
+   "biffgryta-rotter",
+   "kebabgryta",
+   "korvgryta-curry",
+   "flaskgryta-paprika"
+  ]
+ },
+ {
+  "id": "linssoppa-rod",
+  "namn": "Röd linssoppa med kokosmjölk",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-flatlay-shot-of-a-bowl-of-soup-on-a-rustic-background-7160694/",
+   "fotografens_titel": "a flatlay shot of a bowl of soup on a rustic background"
+  },
+  "delas_med": [
+   "linssoppa"
+  ]
+ },
+ {
+  "id": "pyttipanna",
+  "namn": "Pyttipanna med stekt ägg",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner proteinet (ägg) (\"egg with vegetable dish\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/egg-with-vegetable-dish-22420/",
+   "fotografens_titel": "egg with vegetable dish"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "pasta-tomatsas-vitlok",
+  "namn": "Pasta med tomatsås och vitlök",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/food-photography-of-pasta-1438672/",
+   "fotografens_titel": "food photography of pasta"
+  },
+  "delas_med": [
+   "scampi",
+   "fetapasta",
+   "pasta-skinksas"
+  ]
+ },
+ {
+  "id": "kalpudding",
+  "namn": "Kålpudding med lingon",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner pudding (\"Kålpudding i långpanna\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:K%C3%A5lpudding_i_l%C3%A5ngpanna.jpg",
+   "fil": "File:Kålpudding_i_långpanna.jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "bonsoppa-tomat",
+  "namn": "Bönsoppa med tomat och vitlök",
+  "status": "REJECTED",
+  "skal": "delas av 2 recept med olika huvudprotein (korv, vego)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/traditional-solyanka-soup-with-sliced-bread-and-garnish-30852890/",
+   "fotografens_titel": "traditional solyanka soup with sliced bread and garnish"
+  },
+  "delas_med": [
+   "korvsoppa"
+  ]
+ },
+ {
+  "id": "potatisgratang-skinka",
+  "namn": "Potatisgratäng med skinka",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (fisk, fläsk, korv)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/baked-lasagna-2337842/",
+   "fotografens_titel": "baked lasagna"
+  },
+  "delas_med": [
+   "rotfruktsgratang",
+   "fiskgratang-dill",
+   "torskgratang-vasterbotten",
+   "broccoligratang-skinka"
+  ]
+ },
+ {
+  "id": "tomatsoppa-grillost",
+  "namn": "Tomatsoppa med grillad ostmacka",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/white-ceramic-mug-with-soup-beside-spoon-2421593/",
+   "fotografens_titel": "white ceramic mug with soup beside spoon"
+  },
+  "delas_med": [
+   "tomatsoppa"
+  ]
+ },
+ {
+  "id": "chili-sin-carne-budget",
+  "namn": "Chili sin carne",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/tomatoes-and-peppers-on-green-background-5966140/",
+   "fotografens_titel": "tomatoes and peppers on green background"
+  },
+  "delas_med": [
+   "chili-con-carne",
+   "vegansk-chili-sin-carne"
+  ]
+ },
+ {
+  "id": "pannbiff-lok",
+  "namn": "Pannbiff med stekt lök och kokt potatis",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/meal-with-beef-on-plate-16444386/",
+   "fotografens_titel": "meal with beef on plate"
+  },
+  "delas_med": [
+   "biff-sotpotatis",
+   "biff-bearnaise-vardag",
+   "rostbiff-potatissallad"
+  ]
+ },
+ {
+  "id": "flygande-jakob",
+  "namn": "Flygande Jacob",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"Flygande jakob fardig\")",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Flygande_jakob_fardig.jpg",
+   "fil": "File:Flygande_jakob_fardig.jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "dillkott",
+  "namn": "Dillkött med kokt potatis",
+  "status": "MISSING",
+  "skal": "ingen bild i källan",
+  "bevis": {
+   "kalla": null,
+   "kallankning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kalops",
+  "namn": "Kalops med rödbetor",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"delicious beef stew with vegetables on plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-beef-stew-with-vegetables-on-plate-34636462/",
+   "fotografens_titel": "delicious beef stew with vegetables on plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "korv-stroganoff-klassisk",
+  "namn": "Korv stroganoff med ris",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner stroganoff (\"Korvstroganoff with rice 1\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Korvstroganoff_with_rice_1.jpg",
+   "fil": "File:Korvstroganoff_with_rice_1.jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "raggmunk",
+  "namn": "Raggmunk med fläsk och lingon",
+  "status": "REJECTED",
+  "skal": "fotot visar fisk (\"fresh salmon on white ceramic plate\"), rätten är fläsk",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/fresh-salmon-on-white-ceramic-plate-10895779/",
+   "fotografens_titel": "fresh salmon on white ceramic plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "fiskgratang-dill",
+  "namn": "Fiskgratäng med dill och räkor",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (fisk, fläsk, korv)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/baked-lasagna-2337842/",
+   "fotografens_titel": "baked lasagna"
+  },
+  "delas_med": [
+   "rotfruktsgratang",
+   "potatisgratang-skinka",
+   "torskgratang-vasterbotten",
+   "broccoligratang-skinka"
+  ]
+ },
+ {
+  "id": "stekt-sej-remoulad",
+  "namn": "Stekt sej med kall sås och potatis",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/fish-and-potatoes-on-a-plate-16273766/",
+   "fotografens_titel": "fish and potatoes on a plate"
+  },
+  "delas_med": [
+   "stekt-strommingsflundra"
+  ]
+ },
+ {
+  "id": "kycklinggryta-paprika",
+  "namn": "Kycklinggryta med paprika och crème fraiche",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (färs, kyckling)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/rustic-vegetable-stew-in-ceramic-bowl-29075345/",
+   "fotografens_titel": "rustic vegetable stew in ceramic bowl"
+  },
+  "delas_med": [
+   "currykottfarsgryta",
+   "kycklinggryta",
+   "kycklinggryta-honung-senap",
+   "kramig-kycklinggryta"
+  ]
+ },
+ {
+  "id": "gulaschgryta",
+  "namn": "Gulaschgryta med potatis",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"top view of cooking ingredients\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+   "fotografens_titel": "top view of cooking ingredients"
+  },
+  "delas_med": [
+   "vegofarsgryta",
+   "korvgryta-potatis",
+   "kottfarsgryta-bulk",
+   "korvgryta-krossade-tomater",
+   "biffgryta-rotter",
+   "kebabgryta",
+   "korvgryta-curry",
+   "flaskgryta-paprika"
+  ]
+ },
+ {
+  "id": "chili-con-carne",
+  "namn": "Chili con carne",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/tomatoes-and-peppers-on-green-background-5966140/",
+   "fotografens_titel": "tomatoes and peppers on green background"
+  },
+  "delas_med": [
+   "chili-sin-carne-budget",
+   "vegansk-chili-sin-carne"
+  ]
+ },
+ {
+  "id": "kottfarssoppa",
+  "namn": "Köttfärssoppa med rotfrukter",
+  "status": "REJECTED",
+  "skal": "delas av 2 recept med olika huvudprotein (fisk, färs)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/traditional-solyanka-soup-with-rustic-bread-30852889/",
+   "fotografens_titel": "traditional solyanka soup with rustic bread"
+  },
+  "delas_med": [
+   "fisksoppa-saffran"
+  ]
+ },
+ {
+  "id": "fisksoppa-saffran",
+  "namn": "Fisksoppa med lax och räkor",
+  "status": "REJECTED",
+  "skal": "delas av 2 recept med olika huvudprotein (fisk, färs)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/traditional-solyanka-soup-with-rustic-bread-30852889/",
+   "fotografens_titel": "traditional solyanka soup with rustic bread"
+  },
+  "delas_med": [
+   "kottfarssoppa"
+  ]
+ },
+ {
+  "id": "broccolisoppa",
+  "namn": "Broccolisoppa med frön",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"close up photo of green smoothie on bowl\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-photo-of-green-smoothie-on-bowl-3872252/",
+   "fotografens_titel": "close up photo of green smoothie on bowl"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "artsoppa-vegetarisk",
+  "namn": "Gul ärtsoppa på grönsaksbuljong",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner soppa, ärtsoppa (\"Pea soup in Loviisa\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Pea_soup_in_Loviisa.jpg",
+   "fil": "File:Pea_soup_in_Loviisa.jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "falukorv-ugn",
+  "namn": "Ugnsbakad falukorv med potatismos",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/red-sausage-on-white-ceramic-plate-10183540/",
+   "fotografens_titel": "red sausage on white ceramic plate"
+  },
+  "delas_med": [
+   "ugnskorv-potatismos-appel"
+  ]
+ },
+ {
+  "id": "stekt-strommingsflundra",
+  "namn": "Stekt fisk med skirat smör och potatis",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/fish-and-potatoes-on-a-plate-16273766/",
+   "fotografens_titel": "fish and potatoes on a plate"
+  },
+  "delas_med": [
+   "stekt-sej-remoulad"
+  ]
+ },
+ {
+  "id": "kycklingsoppa-nudlar",
+  "namn": "Kycklingsoppa med nudlar",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/soup-in-white-ceramic-bowl-8696571/",
+   "fotografens_titel": "soup in white ceramic bowl"
+  },
+  "delas_med": [
+   "kycklingsoppa-ris"
+  ]
+ },
+ {
+  "id": "lammfarsbiffar-tzatziki",
+  "namn": "Färsbiffar med tzatziki och klyftpotatis",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"sizzling burger patties grilling on bbq\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/sizzling-burger-patties-grilling-on-bbq-37245456/",
+   "fotografens_titel": "sizzling burger patties grilling on bbq"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "sotpotatissoppa",
+  "namn": "Sötpotatissoppa med kokos och lime",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-bowl-of-pumpkin-soup-6853454/",
+   "fotografens_titel": "a bowl of pumpkin soup"
+  },
+  "delas_med": [
+   "morotssoppa-ingefara"
+  ]
+ },
+ {
+  "id": "biff-a-la-lindstrom",
+  "namn": "Biff à la Lindström med potatismos",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"delicious dinner plate with gourmet meal\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-dinner-plate-with-gourmet-meal-37529064/",
+   "fotografens_titel": "delicious dinner plate with gourmet meal"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "morotssoppa-ingefara",
+  "namn": "Morotssoppa med ingefära",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-bowl-of-pumpkin-soup-6853454/",
+   "fotografens_titel": "a bowl of pumpkin soup"
+  },
+  "delas_med": [
+   "sotpotatissoppa"
+  ]
+ },
+ {
+  "id": "kyckling-fajitas",
+  "namn": "Kycklingfajitas med paprika",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner kyckling (\"delicious grilled chicken fajitas in mexico city\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-grilled-chicken-fajitas-in-mexico-city-32371279/",
+   "fotografens_titel": "delicious grilled chicken fajitas in mexico city"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kyckling-pesto-pasta",
+  "namn": "Pestopasta med kyckling",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"delicious pesto pasta on a plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-pesto-pasta-on-a-plate-4162492/",
+   "fotografens_titel": "delicious pesto pasta on a plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kyckling-rod-curry",
+  "namn": "Röd kycklingcurry med jasminris",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner curry (\"curry meat with rice and salad\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/curry-meat-with-rice-and-salad-17748116/",
+   "fotografens_titel": "curry meat with rice and salad"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "helstekt-kyckling-rotfrukter",
+  "namn": "Hel kyckling i ugn med rotfrukter",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/appetizing-roasted-chicken-with-vegetables-in-baking-dish-6210955/",
+   "fotografens_titel": "appetizing roasted chicken with vegetables in baking dish"
+  },
+  "delas_med": [
+   "kycklingcouscous",
+   "kyckling-ris-broccoli"
+  ]
+ },
+ {
+  "id": "kycklingklubbor-bbq",
+  "namn": "Ugnsbakade kycklingklubbor med majs och sallad",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner kyckling (\"close up of grilled chicken legs on a plate\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-grilled-chicken-legs-on-a-plate-24549214/",
+   "fotografens_titel": "close up of grilled chicken legs on a plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "lax-teriyaki",
+  "namn": "Teriyakilax med ris och broccoli",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-bowl-of-rice-with-meat-and-green-onions-17308546/",
+   "fotografens_titel": "a bowl of rice with meat and green onions"
+  },
+  "delas_med": [
+   "teriyakilax"
+  ]
+ },
+ {
+  "id": "ugnslax-citron",
+  "namn": "Ugnsbakad lax med citron och örtsås",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"meal on plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/meal-on-plate-20182293/",
+   "fotografens_titel": "meal on plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "fishtacos",
+  "namn": "Fisktacos med picklad rödlök",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner taco (\"top view of a plate with tacos and red cabbage salad\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/top-view-of-a-plate-with-tacos-and-red-cabbage-salad-10296421/",
+   "fotografens_titel": "top view of a plate with tacos and red cabbage salad"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "raksallad-avokado",
+  "namn": "Räksallad med avokado och ägg",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"classic caesar salad with creamy dressing\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/classic-caesar-salad-with-creamy-dressing-28933153/",
+   "fotografens_titel": "classic caesar salad with creamy dressing"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kyckling-shawarma-bowl",
+  "namn": "Kycklingbowl med ris och vitlökssås",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"close up of variety of rice in bowls\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+   "fotografens_titel": "close up of variety of rice in bowls"
+  },
+  "delas_med": [
+   "bonbowlmatvete",
+   "halloumibowl",
+   "kycklingmatvete",
+   "svartbonsbowl",
+   "tacobonor",
+   "kvargbowl-kyckling",
+   "biffbowl-teriyaki",
+   "laxpoke"
+  ]
+ },
+ {
+  "id": "krispig-kyckling-nudelwok",
+  "namn": "Nudelwok med kyckling och grönsaker",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner wok (\"colorful asian stir fry with vegetables and noodles\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/colorful-asian-stir-fry-with-vegetables-and-noodles-29145757/",
+   "fotografens_titel": "colorful asian stir fry with vegetables and noodles"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kycklingschnitzel",
+  "namn": "Kycklingschnitzel med kall sås och ärtor",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner schnitzel (\"delicious homemade schnitzel with fries\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-homemade-schnitzel-with-fries-33865568/",
+   "fotografens_titel": "delicious homemade schnitzel with fries"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "tonfiskpasta-citron",
+  "namn": "Tonfiskpasta med citron och kapris",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/spaghetti-on-blue-ceramic-plate-5864362/",
+   "fotografens_titel": "spaghetti on blue ceramic plate"
+  },
+  "delas_med": [
+   "tonfiskpasta"
+  ]
+ },
+ {
+  "id": "kycklinglada-sotpotatis",
+  "namn": "Kycklinglåda med sötpotatis och fetaost",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner kyckling (\"gourmet fried chicken with salad on elegant plate\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/gourmet-fried-chicken-with-salad-on-elegant-plate-34636426/",
+   "fotografens_titel": "gourmet fried chicken with salad on elegant plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "torsk-brynt-smor-agg",
+  "namn": "Torsk med brynt smör och hackat ägg",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-white-plate-with-fish-and-vegetables-on-it-28191271/",
+   "fotografens_titel": "a white plate with fish and vegetables on it"
+  },
+  "delas_med": [
+   "panerad-torsk-potatismos",
+   "torsk-aggsas"
+  ]
+ },
+ {
+  "id": "kyckling-tikka",
+  "namn": "Kyckling tikka masala",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner kyckling (\"delicious chicken tikka platter with chutney\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-chicken-tikka-platter-with-chutney-29173114/",
+   "fotografens_titel": "delicious chicken tikka platter with chutney"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "fiskpinnar-potatismos",
+  "namn": "Fiskpinnar med potatismos och ärtor",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner proteinet (fisk) (\"crispy breaded fish sticks in tray\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/crispy-breaded-fish-sticks-in-tray-32916221/",
+   "fotografens_titel": "crispy breaded fish sticks in tray"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kycklingwraps-lunch",
+  "namn": "Kycklingwraps med majs och yoghurtdressing",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner wrap (\"Fajitas Wraps\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Fajitas_Wraps.JPG",
+   "fil": "File:Fajitas_Wraps.JPG",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "sillunch-potatis",
+  "namn": "Sill med färskpotatis och gräddfil",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner sill (\"Midsummer pickled herring\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Midsummer_pickled_herring.jpg",
+   "fil": "File:Midsummer_pickled_herring.jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kyckling-caesarsallad",
+  "namn": "Caesarsallad med kyckling och krutonger",
+  "status": "REJECTED",
+  "skal": "fotot visar ägg (\"classic caesar salad with egg and parmesan\"), rätten är kyckling",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/classic-caesar-salad-with-egg-and-parmesan-28933152/",
+   "fotografens_titel": "classic caesar salad with egg and parmesan"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "panerad-flundra-ugn",
+  "namn": "Ugnsstekt fisk med parmesantäcke",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner proteinet (fisk) (\"fish with lemon slices\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/fish-with-lemon-slices-16024082/",
+   "fotografens_titel": "fish with lemon slices"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kycklinggryta-honung-senap",
+  "namn": "Kycklinggryta med honung och senap",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (färs, kyckling)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/rustic-vegetable-stew-in-ceramic-bowl-29075345/",
+   "fotografens_titel": "rustic vegetable stew in ceramic bowl"
+  },
+  "delas_med": [
+   "currykottfarsgryta",
+   "kycklinggryta",
+   "kycklinggryta-paprika",
+   "kramig-kycklinggryta"
+  ]
+ },
+ {
+  "id": "gravlax-hovmastarsas",
+  "namn": "Gravad lax med hovmästarsås och dillstuvad potatis",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner lax (\"smoked salmon with mozzarella cheese dill and olive oil\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/smoked-salmon-with-mozzarella-cheese-dill-and-olive-oil-19062799/",
+   "fotografens_titel": "smoked salmon with mozzarella cheese dill and olive oil"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kyckling-quesadillas",
+  "namn": "Quesadillas med kyckling och majs",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"bread and sauces on plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/bread-and-sauces-on-plate-5836439/",
+   "fotografens_titel": "bread and sauces on plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "rakpasta-vitlok",
+  "namn": "Räkpasta med vitlök och citron",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner räk (\"pasta prawn\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/pasta-prawn-1150447/",
+   "fotografens_titel": "pasta prawn"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "halloumigryta-tomat",
+  "namn": "Halloumigryta med tomat och kikärtor",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-vegetable-stew-in-black-skillet-33755318/",
+   "fotografens_titel": "delicious vegetable stew in black skillet"
+  },
+  "delas_med": [
+   "fetagryta"
+  ]
+ },
+ {
+  "id": "linsbolognese",
+  "namn": "Linsbolognese med spaghetti",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/crop-young-lady-holding-plate-of-pasta-bolognese-4350120/",
+   "fotografens_titel": "crop young lady holding plate of pasta bolognese"
+  },
+  "delas_med": [
+   "linsbolognese-proteinrik"
+  ]
+ },
+ {
+  "id": "svamprisotto",
+  "namn": "Svamprisotto med parmesan",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner risotto (\"risotto dish on black round plate\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/risotto-dish-on-black-round-plate-11190138/",
+   "fotografens_titel": "risotto dish on black round plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "tofuwok-jordnot",
+  "namn": "Tofuwok med jordnötssås",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner tofu, wok (\"tofu stir fry on white bowl with chopsticks\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/tofu-stir-fry-on-white-bowl-with-chopsticks-9213853/",
+   "fotografens_titel": "tofu stir fry on white bowl with chopsticks"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "svarta-bonor-tacos",
+  "namn": "Tacos med svarta bönor och majssalsa",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"close up of tacos with assorted fillings and sauce\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-tacos-with-assorted-fillings-and-sauce-28895976/",
+   "fotografens_titel": "close up of tacos with assorted fillings and sauce"
+  },
+  "delas_med": [
+   "tacos-kottfars",
+   "kottfars-tacos"
+  ]
+ },
+ {
+  "id": "blomkalscurry",
+  "namn": "Blomkålscurry med kikärtor",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"plate of cooked food on wooden surface\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/plate-of-cooked-food-on-wooden-surface-13823417/",
+   "fotografens_titel": "plate of cooked food on wooden surface"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "vegofars-pastagratang",
+  "namn": "Pastagratäng med vegofärs",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-baked-penne-pasta-with-cheese-and-vegetables-31846718/",
+   "fotografens_titel": "delicious baked penne pasta with cheese and vegetables"
+  },
+  "delas_med": [
+   "pastagratang"
+  ]
+ },
+ {
+  "id": "shakshuka",
+  "namn": "Shakshuka med fetaost",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"a shakshuka with eggs\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-shakshuka-with-eggs-6419606/",
+   "fotografens_titel": "a shakshuka with eggs"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "morotsbiffar-tzatziki",
+  "namn": "Morots- och halloumibiffar med tzatziki",
+  "status": "MISSING",
+  "skal": "ingen bild i källan",
+  "bevis": {
+   "kalla": null,
+   "kallankning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "gronsakslasagne",
+  "namn": "Grönsakslasagne med spenat och keso",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner lasagne (\"delicious homemade lasagna dinner setting\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-homemade-lasagna-dinner-setting-32989330/",
+   "fotografens_titel": "delicious homemade lasagna dinner setting"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "biffbowl-teriyaki",
+  "namn": "Teriyakibowl med strimlad biff",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"close up of variety of rice in bowls\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+   "fotografens_titel": "close up of variety of rice in bowls"
+  },
+  "delas_med": [
+   "bonbowlmatvete",
+   "halloumibowl",
+   "kycklingmatvete",
+   "svartbonsbowl",
+   "tacobonor",
+   "kvargbowl-kyckling",
+   "kyckling-shawarma-bowl",
+   "laxpoke"
+  ]
+ },
+ {
+  "id": "kycklingfarsbiffar-ris",
+  "namn": "Kycklingfärsbiffar med ris och rostade grönsaker",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner kyckling (\"homemade fried chicken cakes\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/homemade-fried-chicken-cakes-19993435/",
+   "fotografens_titel": "homemade fried chicken cakes"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "lax-pasta-bulk",
+  "namn": "Krämig laxpasta med spenat",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"pasta with vegetables and meat on a white plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/pasta-with-vegetables-and-meat-on-a-white-plate-4518833/",
+   "fotografens_titel": "pasta with vegetables and meat on a white plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kottfarsgryta-bulk",
+  "namn": "Köttfärsgryta med ris och svarta bönor",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"top view of cooking ingredients\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+   "fotografens_titel": "top view of cooking ingredients"
+  },
+  "delas_med": [
+   "vegofarsgryta",
+   "korvgryta-potatis",
+   "gulaschgryta",
+   "korvgryta-krossade-tomater",
+   "biffgryta-rotter",
+   "kebabgryta",
+   "korvgryta-curry",
+   "flaskgryta-paprika"
+  ]
+ },
+ {
+  "id": "kyckling-gnocchipanna",
+  "namn": "Krämig gnocchipanna med kyckling",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner gnocchi (\"a person grating a cheese on a gnocchi\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-person-grating-a-cheese-on-a-gnocchi-6659621/",
+   "fotografens_titel": "a person grating a cheese on a gnocchi"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "carbonara",
+  "namn": "Pasta carbonara",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"white sauce pasta on the aluminum container\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/white-sauce-pasta-on-the-aluminum-container-5724556/",
+   "fotografens_titel": "white sauce pasta on the aluminum container"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kassler-potatisgratang",
+  "namn": "Kassler med potatisgratäng",
+  "status": "REJECTED",
+  "skal": "fotot visar nöt (\"steak and potato puree on a plate\"), rätten är fläsk",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/steak-and-potato-puree-on-a-plate-14537709/",
+   "fotografens_titel": "steak and potato puree on a plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "proteinpannkakor",
+  "namn": "Proteinpannkakor med keso och bär",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner pannkak (\"delicious pancakes with cream and berries\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-pancakes-with-cream-and-berries-34452939/",
+   "fotografens_titel": "delicious pancakes with cream and berries"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "falafel-pitabrod",
+  "namn": "Falafel i pitabröd med vitlökssås",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"pitas on black surface\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/pitas-on-black-surface-6275215/",
+   "fotografens_titel": "pitas on black surface"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "biff-rodvinssas",
+  "namn": "Biff med rostad potatis och pepparsås",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner biff (\"Steak au poivre at La Famiglia, Flamingo, Vantaa\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Steak_au_poivre_at_La_Famiglia,_Flamingo,_Vantaa.jpg",
+   "fil": "File:Steak_au_poivre_at_La_Famiglia,_Flamingo,_Vantaa.jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "overnight-bulgursallad-kyckling",
+  "namn": "Bulgursallad med kyckling och fetaost",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"rustic autumn still life with pomegranate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/rustic-autumn-still-life-with-pomegranate-36361404/",
+   "fotografens_titel": "rustic autumn still life with pomegranate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "bonburgare",
+  "namn": "Bönburgare med klyftpotatis",
+  "status": "REJECTED",
+  "skal": "fotot visar fläsk (\"hamburger on tray\"), rätten är vego",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/hamburger-on-tray-2796841/",
+   "fotografens_titel": "hamburger on tray"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "flaskytterfile-appelmos",
+  "namn": "Fläskkarré med rostade rotfrukter och äppelmos",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/roasted-meat-over-a-wooden-tray-7333166/",
+   "fotografens_titel": "roasted meat over a wooden tray"
+  },
+  "delas_med": [
+   "flaskkarre"
+  ]
+ },
+ {
+  "id": "halloumisallad-quinoa",
+  "namn": "Halloumisallad med quinoa och granatäpple",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"vegetable salad on white ceramic plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/vegetable-salad-on-white-ceramic-plate-5191828/",
+   "fotografens_titel": "vegetable salad on white ceramic plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "korvgryta-krossade-tomater",
+  "namn": "Korvgryta med paprika och pasta",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"top view of cooking ingredients\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+   "fotografens_titel": "top view of cooking ingredients"
+  },
+  "delas_med": [
+   "vegofarsgryta",
+   "korvgryta-potatis",
+   "gulaschgryta",
+   "kottfarsgryta-bulk",
+   "biffgryta-rotter",
+   "kebabgryta",
+   "korvgryta-curry",
+   "flaskgryta-paprika"
+  ]
+ },
+ {
+  "id": "tacogratang",
+  "namn": "Tacogratäng med tortillachips",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (fläsk, färs, korv, kyckling)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/cheesy-vegetable-baked-casserole-in-white-dish-32039641/",
+   "fotografens_titel": "cheesy vegetable baked casserole in white dish"
+  },
+  "delas_med": [
+   "korvgratang",
+   "kycklinggratang-broccoli",
+   "kottfarsgratang-mos",
+   "kassler-ananas-gratang"
+  ]
+ },
+ {
+  "id": "pastasallad-kyckling-lunch",
+  "namn": "Pastasallad med kyckling och pesto",
+  "status": "REJECTED",
+  "skal": "delas av 2 recept med olika huvudprotein (fisk, kyckling)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-shot-of-a-bowl-of-vegetable-salad-5633332/",
+   "fotografens_titel": "close up shot of a bowl of vegetable salad"
+  },
+  "delas_med": [
+   "laxsallad"
+  ]
+ },
+ {
+  "id": "krämig-svampasta",
+  "namn": "Krämig svamppasta med timjan",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"delicious tagliatelle pasta with parmesan cheese\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-tagliatelle-pasta-with-parmesan-cheese-32623054/",
+   "fotografens_titel": "delicious tagliatelle pasta with parmesan cheese"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "flaskfile-svampsas",
+  "namn": "Fläskfilé med svampsås och råstekt potatis",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/food-menu-restaurant-dinner-11001292/",
+   "fotografens_titel": "food menu restaurant dinner"
+  },
+  "delas_med": [
+   "flaskfilerotmos",
+   "citronflaskfile",
+   "flaskfile-rotfrukter"
+  ]
+ },
+ {
+  "id": "linsdaal",
+  "namn": "Daal på röda linser med naanbröd",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"top view of an indian dish with rice\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/top-view-of-an-indian-dish-with-rice-12737914/",
+   "fotografens_titel": "top view of an indian dish with rice"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "biffgryta-rotter",
+  "namn": "Mustig köttgryta med rotfrukter och timjan",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"top view of cooking ingredients\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+   "fotografens_titel": "top view of cooking ingredients"
+  },
+  "delas_med": [
+   "vegofarsgryta",
+   "korvgryta-potatis",
+   "gulaschgryta",
+   "kottfarsgryta-bulk",
+   "korvgryta-krossade-tomater",
+   "kebabgryta",
+   "korvgryta-curry",
+   "flaskgryta-paprika"
+  ]
+ },
+ {
+  "id": "gronsakssoppa-med-pasta",
+  "namn": "Minestrone med vita bönor",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"Simple minestrone (1)\")",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Simple_minestrone_(1).jpg",
+   "fil": "File:Simple_minestrone_(1).jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "lax-i-ugn-fetaost",
+  "namn": "Laxform med fetaost och körsbärstomater",
+  "status": "MISSING",
+  "skal": "ingen bild i källan",
+  "bevis": {
+   "kalla": null,
+   "kallankning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "bankebiff",
+  "namn": "Lövbiff med vitlökssmör och klyftpotatis",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/creamy-fettuccine-with-beef-and-mushroom-sauce-33673991/",
+   "fotografens_titel": "creamy fettuccine with beef and mushroom sauce"
+  },
+  "delas_med": [
+   "sjomansbiff"
+  ]
+ },
+ {
+  "id": "pulled-chicken-tacos",
+  "namn": "Pulled chicken-tacos med majs",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner taco (\"delicious tacos with guacamole and lime garnish\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-tacos-with-guacamole-and-lime-garnish-32538757/",
+   "fotografens_titel": "delicious tacos with guacamole and lime garnish"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "spenatsoppa-agg",
+  "namn": "Spenatsoppa med ägghalvor",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner soppa (\"gourmet pumpkin soup with herb garnish\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/gourmet-pumpkin-soup-with-herb-garnish-34227753/",
+   "fotografens_titel": "gourmet pumpkin soup with herb garnish"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "chevrasallad-ronnbar",
+  "namn": "Varm chèvresallad med honung och valnötter",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"dessert in plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/dessert-in-plate-1833332/",
+   "fotografens_titel": "dessert in plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "gnocchi-tomat-mozzarella",
+  "namn": "Gnocchi med tomatsås och mozzarella",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"flour on food\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/flour-on-food-17942175/",
+   "fotografens_titel": "flour on food"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "strimlad-flaskkarre-ris",
+  "namn": "Strimlad karré i sojasås med ris och grönsaker",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner karré (\"Stir-fried ginger pork (8486598866)\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Stir-fried_ginger_pork_(8486598866).jpg",
+   "fil": "File:Stir-fried_ginger_pork_(8486598866).jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "vegansk-bolognese-vegofars",
+  "namn": "Vegansk bolognese på vegofärs",
+  "status": "REJECTED",
+  "skal": "delas av 2 recept med olika huvudprotein (färs, vego)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/spaghetti-bolognese-on-plate-5807018/",
+   "fotografens_titel": "spaghetti bolognese on plate"
+  },
+  "delas_med": [
+   "vegobolognese"
+  ]
+ },
+ {
+  "id": "torskrygg-ortstekt",
+  "namn": "Örtbakad torskrygg",
+  "status": "MISSING",
+  "skal": "ingen bild i källan",
+  "bevis": {
+   "kalla": null,
+   "kallankning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "halloumiburgare",
+  "namn": "Halloumiburgare med chilimajonnäs",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner burgare (\"burger with tomato and lettuce\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/burger-with-tomato-and-lettuce-109400/",
+   "fotografens_titel": "burger with tomato and lettuce"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "krispiga-kikartor-bowl",
+  "namn": "Bowl med krispiga kikärtor och tahinidressing",
+  "status": "MISSING",
+  "skal": "ingen bild i källan",
+  "bevis": {
+   "kalla": null,
+   "kallankning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "korv-med-rostad-potatis",
+  "namn": "Ugnskorv med rostad potatis och bönsallad",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner korv (\"sausages on a metal tray\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/sausages-on-a-metal-tray-8508108/",
+   "fotografens_titel": "sausages on a metal tray"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "risgrynsgrot-lordag",
+  "namn": "Risgrynsgröt med kanel och äpple",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"creamy rice porridge with berries and cherry sauce\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/creamy-rice-porridge-with-berries-and-cherry-sauce-33088378/",
+   "fotografens_titel": "creamy rice porridge with berries and cherry sauce"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "wallenbergare",
+  "namn": "Wallenbergare med potatismos och ärtor",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/fried-meat-cutlet-served-with-boiled-potatoes-and-salad-4210847/",
+   "fotografens_titel": "fried meat cutlet served with boiled potatoes and salad"
+  },
+  "delas_med": [
+   "kottbullar-potatismos"
+  ]
+ },
+ {
+  "id": "aggwok-ris",
+  "namn": "Äggstekt ris med grönsaker",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner proteinet (ägg) (\"fried rice with eggs in bowls\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/fried-rice-with-eggs-in-bowls-15060360/",
+   "fotografens_titel": "fried rice with eggs in bowls"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "bulk-kyckling-jattebowl",
+  "namn": "Bulkbowl med kyckling, ris och jordnötssås",
+  "status": "REJECTED",
+  "skal": "fotot visar vego (\"grains and beans on bowls\"), rätten är kyckling",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/grains-and-beans-on-bowls-8108102/",
+   "fotografens_titel": "grains and beans on bowls"
+  },
+  "delas_med": [
+   "sotpotatis-bulk-bowl"
+  ]
+ },
+ {
+  "id": "pannkakor-klassiska",
+  "namn": "Pannkakor med sylt och grädde",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/person-filling-crepe-with-custard-3807390/",
+   "fotografens_titel": "person filling crepe with custard"
+  },
+  "delas_med": [
+   "pannkakor"
+  ]
+ },
+ {
+  "id": "varmkorv-gourmet",
+  "namn": "Korv med bröd - uppgraderad",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner korv (\"Hot dog on a plate - Evan Swigart\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Hot_dog_on_a_plate_-_Evan_Swigart.jpg",
+   "fil": "File:Hot_dog_on_a_plate_-_Evan_Swigart.jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "laxpoke",
+  "namn": "Pokébowl med lax och ris",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"close up of variety of rice in bowls\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-variety-of-rice-in-bowls-8108069/",
+   "fotografens_titel": "close up of variety of rice in bowls"
+  },
+  "delas_med": [
+   "bonbowlmatvete",
+   "halloumibowl",
+   "kycklingmatvete",
+   "svartbonsbowl",
+   "tacobonor",
+   "kvargbowl-kyckling",
+   "kyckling-shawarma-bowl",
+   "biffbowl-teriyaki"
+  ]
+ },
+ {
+  "id": "kikartscurry-snabb",
+  "namn": "Snabb kikärtscurry med spenat",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner curry (\"curry and rice served on blue plate\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/curry-and-rice-served-on-blue-plate-9213999/",
+   "fotografens_titel": "curry and rice served on blue plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kraftig-omelett-lunch",
+  "namn": "Ugnsomelett med potatis och ost",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner omelett (\"golden omelette on red plate against black background\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/golden-omelette-on-red-plate-against-black-background-39022508/",
+   "fotografens_titel": "golden omelette on red plate against black background"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "biff-bearnaise-vardag",
+  "namn": "Pannbiff med snabb bearnaise och pommes",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/meal-with-beef-on-plate-16444386/",
+   "fotografens_titel": "meal with beef on plate"
+  },
+  "delas_med": [
+   "biff-sotpotatis",
+   "pannbiff-lok",
+   "rostbiff-potatissallad"
+  ]
+ },
+ {
+  "id": "krogarens-makaroner",
+  "namn": "Stuvade makaroner med falukorv",
+  "status": "REJECTED",
+  "skal": "fotot visar nöt (\"delicious macaroni and ground beef dish\"), rätten är korv",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-macaroni-and-ground-beef-dish-36627079/",
+   "fotografens_titel": "delicious macaroni and ground beef dish"
+  },
+  "delas_med": [
+   "makaroner-kottbullar"
+  ]
+ },
+ {
+  "id": "vegansk-chili-sin-carne",
+  "namn": "Chili sin carne med tre sorters bönor",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/tomatoes-and-peppers-on-green-background-5966140/",
+   "fotografens_titel": "tomatoes and peppers on green background"
+  },
+  "delas_med": [
+   "chili-sin-carne-budget",
+   "chili-con-carne"
+  ]
+ },
+ {
+  "id": "lantlig-potatissoppa-purjolok",
+  "namn": "Potatis- och purjolökssoppa",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner soppa (\"Leek Soup\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Leek_Soup.jpg",
+   "fil": "File:Leek_Soup.jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kyckling-parmesan-pasta-bulk",
+  "namn": "Kycklingpasta med parmesan och spenat",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/pasta-with-chicken-stew-20051317/",
+   "fotografens_titel": "pasta with chicken stew"
+  },
+  "delas_med": [
+   "kramig-kycklingpasta"
+  ]
+ },
+ {
+  "id": "rostbiff-potatissallad",
+  "namn": "Rostbiff med kall potatissallad",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/meal-with-beef-on-plate-16444386/",
+   "fotografens_titel": "meal with beef on plate"
+  },
+  "delas_med": [
+   "biff-sotpotatis",
+   "pannbiff-lok",
+   "biff-bearnaise-vardag"
+  ]
+ },
+ {
+  "id": "bulgur-halloumi-bulk",
+  "namn": "Bulgurpanna med halloumi och kikärtor",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner kikärt (\"healthy quinoa salad with chickpeas on wooden table\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/healthy-quinoa-salad-with-chickpeas-on-wooden-table-38499046/",
+   "fotografens_titel": "healthy quinoa salad with chickpeas on wooden table"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "torskgratang-vasterbotten",
+  "namn": "Torskgratäng med ostsås och purjolök",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (fisk, fläsk, korv)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/baked-lasagna-2337842/",
+   "fotografens_titel": "baked lasagna"
+  },
+  "delas_med": [
+   "rotfruktsgratang",
+   "potatisgratang-skinka",
+   "fiskgratang-dill",
+   "broccoligratang-skinka"
+  ]
+ },
+ {
+  "id": "vego-pytt",
+  "namn": "Vegopytt med halloumi och stekt ägg",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"food served on printed ceramic plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/food-served-on-printed-ceramic-plate-5836624/",
+   "fotografens_titel": "food served on printed ceramic plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "hoisin-flask-ris",
+  "namn": "Sticky fläsk med ris och gurksallad",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner fläsk (\"authentic thai grilled pork with sticky rice dish\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/authentic-thai-grilled-pork-with-sticky-rice-dish-32123676/",
+   "fotografens_titel": "authentic thai grilled pork with sticky rice dish"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kycklingspett-jordnot",
+  "namn": "Kycklingspett med jordnötssås och ris",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"meat skewers\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/meat-skewers-8973186/",
+   "fotografens_titel": "meat skewers"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "vitkalssoppa-fars",
+  "namn": "Vitkålssoppa med köttfärs",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner soppa (\"woman holding a plate with creamy soup\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/woman-holding-a-plate-with-creamy-soup-19193024/",
+   "fotografens_titel": "woman holding a plate with creamy soup"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "gronsakspaj",
+  "namn": "Grönsakspaj med lagrad ost",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"close up of baked quiche dish\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-baked-quiche-dish-5419294/",
+   "fotografens_titel": "close up of baked quiche dish"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "sotpotatis-bulk-bowl",
+  "namn": "Bulkbowl med färsbiffar och sötpotatis",
+  "status": "REJECTED",
+  "skal": "fotot visar vego (\"grains and beans on bowls\"), rätten är nöt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/grains-and-beans-on-bowls-8108102/",
+   "fotografens_titel": "grains and beans on bowls"
+  },
+  "delas_med": [
+   "bulk-kyckling-jattebowl"
+  ]
+ },
+ {
+  "id": "krispig-tofu-ris-bulk",
+  "namn": "Krispig tofu med stekt ris och cashewnötter",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"traditional indonesian meal with rice and side dishes\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/traditional-indonesian-meal-with-rice-and-side-dishes-36853606/",
+   "fotografens_titel": "traditional indonesian meal with rice and side dishes"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "toast-skagen",
+  "namn": "Toast Skagen",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"toasted bread on a plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/toasted-bread-on-a-plate-11454620/",
+   "fotografens_titel": "toasted bread on a plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "ugnskorv-potatismos-appel",
+  "namn": "Ugnsbakad korv med äppelmos och potatismos",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/red-sausage-on-white-ceramic-plate-10183540/",
+   "fotografens_titel": "red sausage on white ceramic plate"
+  },
+  "delas_med": [
+   "falukorv-ugn"
+  ]
+ },
+ {
+  "id": "flaskpannkaka",
+  "namn": "Fläskpannkaka i ugn",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"Fläskpannkaka (15593125202)\")",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Fl%C3%A4skpannkaka_(15593125202).jpg",
+   "fil": "File:Fläskpannkaka_(15593125202).jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kaldolmar",
+  "namn": "Kåldolmar med gräddsås och potatis",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"close up shot of vegetables\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-shot-of-vegetables-12072441/",
+   "fotografens_titel": "close up shot of vegetables"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "sjomansbiff",
+  "namn": "Sjömansbiff",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/creamy-fettuccine-with-beef-and-mushroom-sauce-33673991/",
+   "fotografens_titel": "creamy fettuccine with beef and mushroom sauce"
+  },
+  "delas_med": [
+   "bankebiff"
+  ]
+ },
+ {
+  "id": "sondagsstek",
+  "namn": "Söndagsstek med gräddsås",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"Roast beef Sunday roast at The Stag, Little Easton, Essex, England\")",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Roast_beef_Sunday_roast_at_The_Stag,_Little_Easton,_Essex,_England.jpg",
+   "fil": "File:Roast_beef_Sunday_roast_at_The_Stag,_Little_Easton,_Essex,_England.jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "isterband-dillstuvad",
+  "namn": "Isterband med dillstuvad potatis",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner isterband (\"IsterbandMedMos A Swedish lard-skin sausage served with mashed potatoes with green peas.\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:IsterbandMedMos.jpg",
+   "fil": "File:IsterbandMedMos.jpg",
+   "beskrivning": "A Swedish lard-skin sausage served with mashed potatoes with green peas."
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kroppkakor",
+  "namn": "Kroppkakor med smör och lingon",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner kroppkak (\"Kroppkaka \"Kroppkaka\" (Sort of potato dumpling with baconcubes and onion inside) from Blekinge, Sweden. Served with lingonberries and melted butter.\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Kroppkaka.jpg",
+   "fil": "File:Kroppkaka.jpg",
+   "beskrivning": "\"Kroppkaka\" (Sort of potato dumpling with baconcubes and onion inside) from Blekinge, Sweden. Served with lingonberries and melted butter."
+  },
+  "delas_med": []
+ },
+ {
+  "id": "panerad-torsk-potatismos",
+  "namn": "Panerad torsk med potatismos och ärtor",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-white-plate-with-fish-and-vegetables-on-it-28191271/",
+   "fotografens_titel": "a white plate with fish and vegetables on it"
+  },
+  "delas_med": [
+   "torsk-brynt-smor-agg",
+   "torsk-aggsas"
+  ]
+ },
+ {
+  "id": "torsk-aggsas",
+  "namn": "Torsk med äggsås och kokt potatis",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/a-white-plate-with-fish-and-vegetables-on-it-28191271/",
+   "fotografens_titel": "a white plate with fish and vegetables on it"
+  },
+  "delas_med": [
+   "torsk-brynt-smor-agg",
+   "panerad-torsk-potatismos"
+  ]
+ },
+ {
+  "id": "korvsoppa",
+  "namn": "Korvsoppa med rotfrukter",
+  "status": "REJECTED",
+  "skal": "delas av 2 recept med olika huvudprotein (korv, vego)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/traditional-solyanka-soup-with-sliced-bread-and-garnish-30852890/",
+   "fotografens_titel": "traditional solyanka soup with sliced bread and garnish"
+  },
+  "delas_med": [
+   "bonsoppa-tomat"
+  ]
+ },
+ {
+  "id": "hamburgare-klyftpotatis",
+  "namn": "Hamburgare med klyftpotatis",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner burgare (\"close up shot of a burger beside the french fries\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-shot-of-a-burger-beside-the-french-fries-12362923/",
+   "fotografens_titel": "close up shot of a burger beside the french fries"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "hemmagjord-pizza",
+  "namn": "Hemmagjord pizza med skinka och ost",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner pizza (\"plates of pizzas on a wooden table\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/plates-of-pizzas-on-a-wooden-table-8471699/",
+   "fotografens_titel": "plates of pizzas on a wooden table"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kebabgryta",
+  "namn": "Kebabgryta med ris",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"top view of cooking ingredients\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+   "fotografens_titel": "top view of cooking ingredients"
+  },
+  "delas_med": [
+   "vegofarsgryta",
+   "korvgryta-potatis",
+   "gulaschgryta",
+   "kottfarsgryta-bulk",
+   "korvgryta-krossade-tomater",
+   "biffgryta-rotter",
+   "korvgryta-curry",
+   "flaskgryta-paprika"
+  ]
+ },
+ {
+  "id": "stekt-flask-loksas",
+  "namn": "Stekt fläsk med löksås och potatis",
+  "status": "MISSING",
+  "skal": "ingen bild i källan",
+  "bevis": {
+   "kalla": null,
+   "kallankning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "makaronipudding",
+  "namn": "Makaronipudding",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"close up photography of baked mac\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-photography-of-baked-mac-806357/",
+   "fotografens_titel": "close up photography of baked mac"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "makaroner-kottbullar",
+  "namn": "Makaroner och köttbullar",
+  "status": "REJECTED",
+  "skal": "fotot visar nöt (\"delicious macaroni and ground beef dish\"), rätten är färs",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-macaroni-and-ground-beef-dish-36627079/",
+   "fotografens_titel": "delicious macaroni and ground beef dish"
+  },
+  "delas_med": [
+   "krogarens-makaroner"
+  ]
+ },
+ {
+  "id": "kramig-kycklinggryta",
+  "namn": "Krämig kycklinggryta med grönsaker",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (färs, kyckling)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/rustic-vegetable-stew-in-ceramic-bowl-29075345/",
+   "fotografens_titel": "rustic vegetable stew in ceramic bowl"
+  },
+  "delas_med": [
+   "currykottfarsgryta",
+   "kycklinggryta",
+   "kycklinggryta-paprika",
+   "kycklinggryta-honung-senap"
+  ]
+ },
+ {
+  "id": "kyckling-currysas-ris",
+  "namn": "Kyckling i currysås med ris",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"cooked food on black ceramic plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/cooked-food-on-black-ceramic-plate-7111537/",
+   "fotografens_titel": "cooked food on black ceramic plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kramig-kycklingpasta",
+  "namn": "Krämig kycklingpasta",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/pasta-with-chicken-stew-20051317/",
+   "fotografens_titel": "pasta with chicken stew"
+  },
+  "delas_med": [
+   "kyckling-parmesan-pasta-bulk"
+  ]
+ },
+ {
+  "id": "kycklinggratang-broccoli",
+  "namn": "Kycklinggratäng med broccoli",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (fläsk, färs, korv, kyckling)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/cheesy-vegetable-baked-casserole-in-white-dish-32039641/",
+   "fotografens_titel": "cheesy vegetable baked casserole in white dish"
+  },
+  "delas_med": [
+   "korvgratang",
+   "tacogratang",
+   "kottfarsgratang-mos",
+   "kassler-ananas-gratang"
+  ]
+ },
+ {
+  "id": "lax-kall-dillsas",
+  "namn": "Ugnslax med kokt potatis och kall dillsås",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner lax (\"close up of salmon in sauce with broccoli\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-salmon-in-sauce-with-broccoli-20182311/",
+   "fotografens_titel": "close up of salmon in sauce with broccoli"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kottfars-tacos",
+  "namn": "Tacos med köttfärs",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"close up of tacos with assorted fillings and sauce\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-tacos-with-assorted-fillings-and-sauce-28895976/",
+   "fotografens_titel": "close up of tacos with assorted fillings and sauce"
+  },
+  "delas_med": [
+   "tacos-kottfars",
+   "svarta-bonor-tacos"
+  ]
+ },
+ {
+  "id": "kottfarslasagne",
+  "namn": "Klassisk köttfärslasagne",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner lasagne (\"delicious lasagna slice on a ceramic plate\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/delicious-lasagna-slice-on-a-ceramic-plate-8023752/",
+   "fotografens_titel": "delicious lasagna slice on a ceramic plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "korv-med-mos",
+  "namn": "Korv med hemlagat potatismos",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner korv (\"Charlecote Park Sausage and Mash Warwickshire England 01 lighter\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Wikimedia Commons",
+   "kallankning": "https://commons.wikimedia.org/wiki/File:Charlecote_Park_Sausage_and_Mash_Warwickshire_England_01_lighter.jpg",
+   "fil": "File:Charlecote_Park_Sausage_and_Mash_Warwickshire_England_01_lighter.jpg",
+   "beskrivning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "bruna-bonor-flask",
+  "namn": "Bruna bönor med stekt fläsk",
+  "status": "MISSING",
+  "skal": "ingen bild i källan",
+  "bevis": {
+   "kalla": null,
+   "kallankning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "flaskkotlett-artor",
+  "namn": "Stekt fläskkotlett med potatis och ärtor",
+  "status": "MISSING",
+  "skal": "ingen bild i källan",
+  "bevis": {
+   "kalla": null,
+   "kallankning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kycklingklubbor-klyftpotatis",
+  "namn": "Kycklingklubbor i ugn med klyftpotatis",
+  "status": "MISSING",
+  "skal": "ingen bild i källan",
+  "bevis": {
+   "kalla": null,
+   "kallankning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "pasta-carbonara",
+  "namn": "Pasta carbonara på svenskt vis",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"pasta with green leaf and brown bread on white ceramic plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/pasta-with-green-leaf-and-brown-bread-on-white-ceramic-plate-5640045/",
+   "fotografens_titel": "pasta with green leaf and brown bread on white ceramic plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "pasta-skinksas",
+  "namn": "Pasta med krämig skinksås",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/food-photography-of-pasta-1438672/",
+   "fotografens_titel": "food photography of pasta"
+  },
+  "delas_med": [
+   "scampi",
+   "fetapasta",
+   "pasta-tomatsas-vitlok"
+  ]
+ },
+ {
+  "id": "tonfiskpasta",
+  "namn": "Tonfiskpasta med citron",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/spaghetti-on-blue-ceramic-plate-5864362/",
+   "fotografens_titel": "spaghetti on blue ceramic plate"
+  },
+  "delas_med": [
+   "tonfiskpasta-citron"
+  ]
+ },
+ {
+  "id": "fiskbullar-dillsas",
+  "namn": "Fiskbullar i dillsås med potatis",
+  "status": "MISSING",
+  "skal": "ingen bild i källan",
+  "bevis": {
+   "kalla": null,
+   "kallankning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kycklingsoppa-ris",
+  "namn": "Kycklingsoppa med ris och grönsaker",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/soup-in-white-ceramic-bowl-8696571/",
+   "fotografens_titel": "soup in white ceramic bowl"
+  },
+  "delas_med": [
+   "kycklingsoppa-nudlar"
+  ]
+ },
+ {
+  "id": "blodpudding-lingon",
+  "namn": "Blodpudding med bacon och lingon",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner bacon (\"raw smoked sausage with grapes and bacon on plate\") - bekräfta med ögat",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/raw-smoked-sausage-with-grapes-and-bacon-on-plate-4637532/",
+   "fotografens_titel": "raw smoked sausage with grapes and bacon on plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "korvgryta-curry",
+  "namn": "Korvgryta med curry",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"top view of cooking ingredients\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+   "fotografens_titel": "top view of cooking ingredients"
+  },
+  "delas_med": [
+   "vegofarsgryta",
+   "korvgryta-potatis",
+   "gulaschgryta",
+   "kottfarsgryta-bulk",
+   "korvgryta-krossade-tomater",
+   "biffgryta-rotter",
+   "kebabgryta",
+   "flaskgryta-paprika"
+  ]
+ },
+ {
+  "id": "skink-ostpaj",
+  "namn": "Skink- och ostpaj",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"blue tongued skink lizard\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/blue-tongued-skink-lizard-18889312/",
+   "fotografens_titel": "blue tongued skink lizard"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "laxpudding",
+  "namn": "Laxpudding med dill",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"food on plate\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/food-on-plate-14909203/",
+   "fotografens_titel": "food on plate"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "kycklingcaesar",
+  "namn": "Kycklingcaesarsallad",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"colorful tropical fruit salad in blue bowl\")",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/colorful-tropical-fruit-salad-in-blue-bowl-36701454/",
+   "fotografens_titel": "colorful tropical fruit salad in blue bowl"
+  },
+  "delas_med": []
+ },
+ {
+  "id": "flaskgryta-paprika",
+  "namn": "Fläskgryta med paprika",
+  "status": "REJECTED",
+  "skal": "generiskt matfoto (\"top view of cooking ingredients\") - visar ingen bestämd rätt",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/top-view-of-cooking-ingredients-5863612/",
+   "fotografens_titel": "top view of cooking ingredients"
+  },
+  "delas_med": [
+   "vegofarsgryta",
+   "korvgryta-potatis",
+   "gulaschgryta",
+   "kottfarsgryta-bulk",
+   "korvgryta-krossade-tomater",
+   "biffgryta-rotter",
+   "kebabgryta",
+   "korvgryta-curry"
+  ]
+ },
+ {
+  "id": "kottfarsgratang-mos",
+  "namn": "Köttfärsgratäng med potatismos",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (fläsk, färs, korv, kyckling)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/cheesy-vegetable-baked-casserole-in-white-dish-32039641/",
+   "fotografens_titel": "cheesy vegetable baked casserole in white dish"
+  },
+  "delas_med": [
+   "korvgratang",
+   "tacogratang",
+   "kycklinggratang-broccoli",
+   "kassler-ananas-gratang"
+  ]
+ },
+ {
+  "id": "pitepalt",
+  "namn": "Pitepalt med fläsk",
+  "status": "MISSING",
+  "skal": "ingen bild i källan",
+  "bevis": {
+   "kalla": null,
+   "kallankning": null
+  },
+  "delas_med": []
+ },
+ {
+  "id": "broccoligratang-skinka",
+  "namn": "Broccoligratäng med skinka",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (fisk, fläsk, korv)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/baked-lasagna-2337842/",
+   "fotografens_titel": "baked lasagna"
+  },
+  "delas_med": [
+   "rotfruktsgratang",
+   "potatisgratang-skinka",
+   "fiskgratang-dill",
+   "torskgratang-vasterbotten"
+  ]
+ },
+ {
+  "id": "kottsoppa",
+  "namn": "Köttsoppa med rotfrukter",
+  "status": "GOOD_VARIANT-KANDIDAT",
+  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/close-up-of-homemade-vegetable-soup-in-bowl-39019921/",
+   "fotografens_titel": "close up of homemade vegetable soup in bowl"
+  },
+  "delas_med": [
+   "artsoppa-klassisk"
+  ]
+ },
+ {
+  "id": "kassler-ananas-gratang",
+  "namn": "Kasslergratäng med ananas och ris",
+  "status": "REJECTED",
+  "skal": "delas av 5 recept med olika huvudprotein (fläsk, färs, korv, kyckling)",
+  "bevis": {
+   "kalla": "Pexels",
+   "kallankning": "https://www.pexels.com/photo/cheesy-vegetable-baked-casserole-in-white-dish-32039641/",
+   "fotografens_titel": "cheesy vegetable baked casserole in white dish"
+  },
+  "delas_med": [
+   "korvgratang",
+   "tacogratang",
+   "kycklinggratang-broccoli",
+   "kottfarsgratang-mos"
+  ]
+ }
+]
