@@ -467,6 +467,19 @@ INGREDIENT_ALIASES = {
 _FOLDED_ALIASES = None  # built after _fold, below
 
 
+def _explain_chosen(product, ingredient: str) -> "MatchVerdict":
+    """Förklaringen för en produkt som redan valts: ingrediensen själv,
+    annars första alias som matchar - märkt med aliaset."""
+    v = explain_match(product.name, ingredient, product.brand, product.category)
+    if v.ok:
+        return v
+    for alias in aliases_for(ingredient):
+        va = explain_match(product.name, alias, product.brand, product.category)
+        if va.ok:
+            return MatchVerdict(True, f"alias:{alias}/{va.rule}", va.detail, va.confidence)
+    return v
+
+
 def aliases_for(ingredient: str) -> list:
     """Alternative shelf names for an ingredient, primary name first."""
     return _FOLDED_ALIASES.get(_fold(ingredient), [])
@@ -1329,8 +1342,39 @@ def _violates_own_rules(product, ingredient: str) -> bool:
     return any(_exclusion_hit(folded, words, bad) for bad in rules.get("exclude", []))
 
 
+class MatchVerdict:
+    """P07a: VARFÖR en produkt matchade en ingrediens - eller inte.
+
+    `rule` är namnet på det steg som avgjorde, i den ordning matcharen
+    prövar dem. `ok` är exakt vad product_matches_ingredient() svarade
+    förut; den funktionen delegerar hit, så de kan inte glida isär.
+    `confidence` är kategorisk ("hög"/"medel"), aldrig ett påhittat tal:
+    hög när kedjans egen kategori intygar rätten OCH ordet leder namnet,
+    medel när bara namnet gör det."""
+    __slots__ = ("ok", "rule", "detail", "confidence")
+
+    def __init__(self, ok: bool, rule: str, detail: str = "", confidence: str | None = None):
+        self.ok, self.rule, self.detail, self.confidence = ok, rule, detail, confidence
+
+    def __bool__(self):
+        return self.ok
+
+    def __repr__(self):
+        return f"MatchVerdict(ok={self.ok}, rule={self.rule!r}, detail={self.detail!r}, confidence={self.confidence!r})"
+
+    def as_dict(self) -> dict:
+        return {"ok": self.ok, "rule": self.rule, "detail": self.detail, "confidence": self.confidence}
+
+
 def product_matches_ingredient(product_name: str, ingredient: str, brand: str | None = None,
                                category: str | None = None) -> bool:
+    """Conservative check - see this module's docstring for why. Delegates
+    to explain_match(); this is the same verdict without the reason."""
+    return explain_match(product_name, ingredient, brand, category).ok
+
+
+def explain_match(product_name: str, ingredient: str, brand: str | None = None,
+                  category: str | None = None) -> MatchVerdict:
     """Conservative check - see this module's docstring for why. Requires the
     ingredient's head word as a WHOLE word in the product name, then applies
     that ingredient's require/exclude rules.
@@ -1340,7 +1384,7 @@ def product_matches_ingredient(product_name: str, ingredient: str, brand: str | 
     When a category IS present it is checked FIRST, because it is the one
     piece of evidence the chain asserts rather than something we infer."""
     if not category_allows_ingredient(category, ingredient):
-        return False
+        return MatchVerdict(False, "kategori", f"kedjans kategori {category!r} tillåter inte {ingredient!r}")
 
     haystack = f"{product_name or ''} {brand or ''}"
     product_words = _words(haystack)
@@ -1351,8 +1395,9 @@ def product_matches_ingredient(product_name: str, ingredient: str, brand: str | 
     # "sås"/"gräs"/"färs"/"månader" against accent-stripped product text meant
     # every rule containing å/ä/ö silently never fired - found when baby-food
     # exclusions had no effect on a real Willys run.
-    if any(_exclusion_hit(folded_product, product_words, bad) for bad in UNIVERSAL_EXCLUDE):
-        return False
+    for bad in UNIVERSAL_EXCLUDE:
+        if _exclusion_hit(folded_product, product_words, bad):
+            return MatchVerdict(False, "universell-uteslutning", f"produktnamnet träffar {bad!r}")
 
     # The ingredient's own words must appear - all of them for a multi-word
     # ingredient ("fryst torsk").
@@ -1365,7 +1410,7 @@ def product_matches_ingredient(product_name: str, ingredient: str, brand: str | 
     # actually mirrors the grammar.
     ingredient_words = {w for w in _words(ingredient) if len(w) > 2}
     if not ingredient_words:
-        return False
+        return MatchVerdict(False, "inga-ingrediensord", "ingrediensen har inget ord längre än två tecken")
 
     def word_hit(candidate: str, word: str) -> bool:
         """Compound matching is only safe for reasonably long ingredient
@@ -1391,7 +1436,7 @@ def product_matches_ingredient(product_name: str, ingredient: str, brand: str | 
 
     for word in ingredient_words:
         if not any(word_hit(candidate, word) for candidate in product_words):
-            return False
+            return MatchVerdict(False, "ord-saknas", f"{word!r} finns inte som helord eller sammansättningshuvud i produktnamnet")
 
     # HEAD-POSITION RULE - the single biggest precision win, added after a
     # real run against 800 live Willys products produced confidently wrong
@@ -1415,7 +1460,7 @@ def product_matches_ingredient(product_name: str, ingredient: str, brand: str | 
         # through when short names were trusted. If the ingredient isn't what
         # the product leads with, we don't claim to know what it is.
         if not leads:
-            return False
+            return MatchVerdict(False, "leder-inte-namnet", f"produktnamnet leder med {name_words[0]!r}, inte ingrediensen")
 
     # Look up by FOLDED key. The rule dict is written with natural Swedish
     # spelling ("ägg", "smör", "köttfärs") while folded_ingredient has its
@@ -1424,21 +1469,29 @@ def product_matches_ingredient(product_name: str, ingredient: str, brand: str | 
     # smörkniv were still being matched despite having exclusions.
     # A whole cut of meat or fish is not a patty, a sausage or a slice of
     # cold cut, however similar the names look.
-    if is_whole_cut(ingredient) and any(
-            _exclusion_hit(folded_product, product_words, bad) for bad in PROCESSED_MEAT_FORMS):
-        return False
+    if is_whole_cut(ingredient):
+        for bad in PROCESSED_MEAT_FORMS:
+            if _exclusion_hit(folded_product, product_words, bad):
+                return MatchVerdict(False, "charkform", f"hel styckdetalj mot {bad!r}")
 
     rules = _FOLDED_RULES.get(folded_ingredient, {})
-    if any(_exclusion_hit(folded_product, product_words, bad) for bad in rules.get("exclude", [])):
-        return False
+    for bad in rules.get("exclude", []):
+        if _exclusion_hit(folded_product, product_words, bad):
+            return MatchVerdict(False, "regel-uteslutning", f"INGREDIENT_RULES[{ingredient!r}] utesluter {bad!r}")
     required = rules.get("require")
     # Same compound-head rule as above, so "jasminris" satisfies require:["ris"].
     if required and not any(
         candidate == _fold(word) or candidate.endswith(_fold(word))
         for word in required for candidate in product_words
     ):
-        return False
-    return True
+        return MatchVerdict(False, "regel-krav", f"INGREDIENT_RULES[{ingredient!r}] kräver {required!r}")
+    # Varför den matchade: helord eller sammansättningshuvud i ledande position,
+    # och om kedjans egen kategori intygar det.
+    ledande = name_words[0] if name_words else ""
+    exakt = any(ledande == w for w in ingredient_words)
+    rule = "helord" if exakt else "sammansattningshuvud"
+    confidence = "hög" if (category and exakt) else "medel"
+    return MatchVerdict(True, rule, f"produktnamnet leder med {ledande!r}", confidence)
 
 
 # Hur gammalt ett VERIFIERAT butikspris får vara innan kedjans referenspris
@@ -1959,6 +2012,9 @@ class RecipePricingEngine:
                     # Carried through so a caller can see WHY this product was
                     # accepted for this ingredient - the aisle is the evidence.
                     "category": product.category,
+                    # P07a: varför den här produkten. Direkt mot ingrediensen,
+                    # annars via det alias som släppte in den (_candidates).
+                    "matchRule": _explain_chosen(product, ingredient).as_dict(),
                     "imageUrl": product.image_url,
                     "packageSize": product.size,
                     # Varifrån förpackningsuppgiften kommer (DABAS_VERIFIED /
