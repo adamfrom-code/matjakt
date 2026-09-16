@@ -55,6 +55,39 @@ def source_fingerprint() -> str:
     return digest.hexdigest()
 
 
+def import_sources(store: RecipeStore) -> int:
+    """Läser källfilerna in i `store`, exakt som servern gör vid start.
+
+    P03a: slingan låg inuti bootstrap_if_empty(). Den är utbruten för att
+    reservbanken (frontend/app/data/recipes.json) ska byggas av SAMMA kod -
+    inte av en kopia av den. Två kopior av en importslinga är två
+    receptsanningar med en fördröjning.
+    """
+    # Imported lazily: the importer pulls in the image pipeline, which is not
+    # something an ordinary request path should ever load.
+    import json as _json
+    from .images import placeholder
+
+    imported = 0
+    for path in sorted(RECIPE_SOURCE_DIR.glob("*.json")):
+        try:
+            recipes = _json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for recipe in recipes:
+            nutrition = recipe.pop("nutrition", {}) or {}
+            recipe.update({k: nutrition.get(k) for k in ("kcal", "protein", "carbs", "fat", "fiber")})
+            recipe["totalTime"] = (recipe.get("prepTime") or 0) + (recipe.get("cookTime") or 0)
+            # No image lookup here. Startup must not depend on a network
+            # call to Wikimedia or Pexels, and images are attached by the
+            # backfill script, which is where that belongs.
+            if not recipe.get("image"):
+                recipe.update(placeholder(recipe))
+            store.upsert_recipe(recipe)
+            imported += 1
+    return imported
+
+
 def bootstrap_if_empty() -> int:
     """Syncs the recipe bank from the committed JSON when the sources changed.
 
@@ -79,30 +112,9 @@ def bootstrap_if_empty() -> int:
     finally:
         store.close()
 
-    # Imported lazily: the importer pulls in the image pipeline, which is not
-    # something an ordinary request path should ever load.
-    import json as _json
-    from .images import placeholder
-
     store = open_store()
-    imported = 0
     try:
-        for path in sorted(RECIPE_SOURCE_DIR.glob("*.json")):
-            try:
-                recipes = _json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                continue
-            for recipe in recipes:
-                nutrition = recipe.pop("nutrition", {}) or {}
-                recipe.update({k: nutrition.get(k) for k in ("kcal", "protein", "carbs", "fat", "fiber")})
-                recipe["totalTime"] = (recipe.get("prepTime") or 0) + (recipe.get("cookTime") or 0)
-                # No image lookup here. Startup must not depend on a network
-                # call to Wikimedia or Pexels, and images are attached by the
-                # backfill script, which is where that belongs.
-                if not recipe.get("image"):
-                    recipe.update(placeholder(recipe))
-                store.upsert_recipe(recipe)
-                imported += 1
+        imported = import_sources(store)
         store.set_meta("source_fingerprint", fingerprint)
     finally:
         store.close()
@@ -110,6 +122,7 @@ def bootstrap_if_empty() -> int:
     # recept som tagits bort ur källorna (t.ex. en upptäckt dublett) ska
     # lämna banken - annars ligger det kvar i produktionens databas för
     # alltid, eftersom synken bara upsertar.
+    import json as _json  # P03a: importen flyttade in i import_sources(); svansen behöver den också
     source_ids = set()
     for path in sorted(RECIPE_SOURCE_DIR.glob("*.json")):
         try:
