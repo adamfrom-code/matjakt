@@ -137,6 +137,20 @@ def _manadsvarde(plan, priser: dict) -> float:
     return priser.get(nyckel, 0.0)
 
 
+def _apple_plan(product_id) -> str | None:
+    """Apples produkt-id (se.matjakt.premium.yearly) -> samma plannyckel som
+    Stripe skriver, så att MRR räknas med samma prislista. Ett okänt id ger
+    None och därmed noll kronor plus en flagga - inte en gissning."""
+    text = str(product_id or "").lower()
+    if not text:
+        return None
+    return "yearly" if "year" in text else "monthly"
+
+# P02b: två betalleverantörer, ETT betalande. Tratten frågar aldrig "är det
+# Stripe?" - den frågar "betalar kontot?", och svaret är samma för båda.
+BETALANDE_KALLOR = ("subscription", "apple")
+
+
 def _ore(belopp: float) -> float:
     """Kronor med två decimaler. Flyttal som visas som pengar ska avrundas
     en gång, vid kanten, inte ackumulera decimalskräp genom hela kedjan."""
@@ -277,13 +291,15 @@ class AnalyticsStore:
         has_plan = "subscription_plan" in columns
         has_sub_id = "stripe_subscription_id" in columns
         has_cancel_flag = "subscription_cancel_at_period_end" in columns
+        has_apple = "apple_product_id" in columns and "apple_auto_renew" in columns
+        has_apple_id = "apple_original_transaction_id" in columns
         users = self._connection.execute("SELECT * FROM users").fetchall()
         activity = self._user_days()
         priser = manadsvarden()
 
         cohorts: dict[str, dict] = {}
         active_7, active_28, premium_total, registered_7 = set(), set(), 0, 0
-        per_kalla = {"subscription": 0, "trial": 0, "comped": 0}
+        per_kalla = {"subscription": 0, "apple": 0, "trial": 0, "comped": 0}
         # I7: tratten räknade konton, aldrig kronor. Utan MRR går det inte att
         # svara på om affären bär, och det är den enda frågan siffrorna finns
         # för.
@@ -329,12 +345,24 @@ class AnalyticsStore:
             värde = 0.0
             if källa == "subscription":
                 värde = _manadsvarde(row["subscription_plan"] if has_plan else None, priser)
+                if has_cancel_flag and row["subscription_cancel_at_period_end"]:
+                    sager_upp_vid_periodslut += 1
+            elif källa == "apple":
+                # P02b: Apples pris är inte vårt - prispunkten väljs i App
+                # Store Connect och Apple drar sin provision. MRR:en här är
+                # ändå LISTPRISET, för det är vad kunden betalar (samma
+                # bruttodefinition som för Stripe); nettot per leverantör är
+                # bokföringens fråga, inte trattens.
+                värde = _manadsvarde(_apple_plan(row["apple_product_id"] if has_apple else None), priser)
+                if has_apple and row["apple_auto_renew"] == 0:
+                    sager_upp_vid_periodslut += 1
+            if källa in BETALANDE_KALLOR:
                 mrr += värde
                 if not värde:
                     utan_kand_plan += 1
-                if has_cancel_flag and row["subscription_cancel_at_period_end"]:
-                    sager_upp_vid_periodslut += 1
-            if has_sub_id and row["stripe_subscription_id"]:
+            har_haft = bool(has_sub_id and row["stripe_subscription_id"]) or bool(
+                has_apple_id and row["apple_original_transaction_id"])
+            if har_haft:
                 har_haft_prenumeration += 1
             if created < week_cutoff:
                 continue
@@ -353,9 +381,9 @@ class AnalyticsStore:
             cohort["mognaForSnabbfragan"] += 1 if snabbfragan_mogen else 0
             cohort["tillbakaEfter7Dagar"] += 1 if returned else 0
             cohort["premium"] += 1 if is_premium else 0
-            cohort["premiumBetalande"] += 1 if källa == "subscription" else 0
+            cohort["premiumBetalande"] += 1 if källa in BETALANDE_KALLOR else 0
             cohort["mrrKronor"] += värde
-            if has_sub_id and row["stripe_subscription_id"]:
+            if har_haft:
                 cohort["harHaftPrenumeration"] += 1
             cohort["mogen"] = cohort["mogen"] and return_from <= today
 
@@ -372,7 +400,7 @@ class AnalyticsStore:
                                            - kohort["premiumBetalande"])
             ordered.append(kohort)
 
-        betalande = per_kalla["subscription"]
+        betalande = per_kalla["subscription"] + per_kalla["apple"]
         return {
             "totalt": {
                 "registrerade": len(users),
@@ -384,6 +412,9 @@ class AnalyticsStore:
                 # Summan kan vara mindre än "premium" om källan är okänd -
                 # det är ärligare än att tvinga in resten någonstans.
                 "premiumBetalande": betalande,
+                # P02b: och var de betalar. Summan av de två är premiumBetalande.
+                "premiumStripe": per_kalla["subscription"],
+                "premiumApple": per_kalla["apple"],
                 "premiumProv": per_kalla["trial"],
                 "premiumKompenserad": per_kalla["comped"],
                 "skapadeVeckaInomTvaDygn": aktiverade_snabbt,
@@ -413,7 +444,10 @@ class AnalyticsStore:
                 "mognaForSnabbfragan": "konton som hunnit få sina två dygn - andelens nämnare",
                 "tillbakaEfter7Dagar": f"aktiv någon dag minst {RETURN_AFTER_DAYS} dagar efter registreringen",
                 "mogen": "alla i kohorten har haft sju dagar på sig - först då är återkomstsiffran fullständig",
-                "premiumBetalande": "aktiv prenumeration hos betalleverantören - inte inlöst kod, inte prov",
+                "premiumBetalande": ("aktiv prenumeration hos en betalleverantör, Stripe eller App Store "
+                                     "- inte inlöst kod, inte prov"),
+                "premiumStripe": "betalande via Stripe (webben)",
+                "premiumApple": "betalande via App Store (iOS-appen)",
                 "premiumKompenserad": "Premium given utan betalning, t.ex. inlöst kod",
                 "aktivaHushallMedFlerAnEn": (
                     "hushåll med minst två medlemmar där någon varit aktiv de senaste 28 dagarna"),
