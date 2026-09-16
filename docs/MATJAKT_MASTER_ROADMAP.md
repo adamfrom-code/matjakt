@@ -355,9 +355,9 @@ Varje rad: status · filer · PR/commit · tester · nuvarande beteende · exakt
 
 | | |
 |---|---|
-| Finns | `pricing.py`: `_MASS`, `_VOLUME` (ml/cl/dl/l/msk/tsk/krm), `COUNT_UNITS` (st/förp/pack …), `KLYFTA_UNITS` (C3), `convert_amount()`, `VERIFIED_DENSITY_G_PER_ML` (uppmätta Livsmedelsverket-värden, PR #32/#34), multipack ur produktsträng (C2), buljongfamilj; `import_recipes.py` `KNOWN_UNITS = {g kg ml l dl msk tsk st krm knippe klyfta}`; frontendens aggregat nycklar på namn + enhetsfamilj och vägrar summera msk med g |
-| Tester | `test_units.py`, `test_verified_density.py`, `test_vitloksklyftor.py`, `test_skafferi_enheter.py`, `tests/calculations.test.js` |
-| Saknas | `paket`, `burk`, `påse`, `förpackning` som **receptenheter** (finns bara som produktförpackning); "1 st" för en förpackad vara är olöst (`KRAVTABELL`: 13 av 35 hemmavaror får inget pris); tomatpuré/sirap/currypasta/sambal saknar densitet (O10b, kräver källa); enhetsfamiljen delas inte som modul mellan frontend och backend (dubbelrader för samma vara) |
+| Finns | `pricing.py`: `_MASS`, `_VOLUME` (ml/cl/dl/l/msk/tsk/krm), `COUNT_UNITS` (st/förp/pack … + burk/påse/paket/förpackning/knippe sedan P06a), `KLYFTA_UNITS` (C3), `convert_amount()`, `VERIFIED_DENSITY_G_PER_ML` (uppmätta Livsmedelsverket-värden, PR #32/#34), multipack ur produktsträng (C2), buljongfamilj; `import_recipes.py` `KNOWN_UNITS = {g kg ml l dl msk tsk st krm knippe klyfta}`; frontendens aggregat nycklar på namn + enhetsfamilj och vägrar summera msk med g |
+| Tester | `test_units.py`, `test_verified_density.py`, `test_vitloksklyftor.py`, `test_skafferi_enheter.py`, `test_mangder_och_enheter.py` (P06a: paketorden, importvakten, checklistan), `tests/calculations.test.js` |
+| Saknas | "1 st" för en förpackad vara är olöst (`KRAVTABELL`: 13 av 35 hemmavaror får inget pris); tomatpuré/sirap/currypasta/sambal saknar densitet (O10b, kräver källa); enhetsfamiljen delas inte som modul mellan frontend och backend (dubbelrader för samma vara) |
 | Restarbete | En delad enhetsfamiljstabell (JSON som både `pricing.py` och `calculations.js` läser), receptenheterna paket/burk/påse med förpackningsstorlek ur produktdata, och ett beslut om vad "1 st" betyder för en förpackad vara |
 
 ### N · Produktmatchning med explainability — **PARTIAL**
