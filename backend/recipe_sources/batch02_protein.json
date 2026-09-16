@@ -506,104 +506,10 @@
     ]
   },
   {
-    "id": "linsbolognese-proteinrik",
-    "name": "Linsbolognese med fullkornspasta",
-    "description": "Vegetarisk bolognese där röda linser ger både protein och fyllighet. Mättande utan att kännas tung.",
-    "servings": 4,
-    "mealType": "middag",
-    "prepTime": 10,
-    "cookTime": 25,
-    "difficulty": "lätt",
-    "nutrition": {
-      "kcal": 540,
-      "protein": 30,
-      "carbs": 84,
-      "fat": 10,
-      "fiber": 18
-    },
-    "ingredients": [
-      {
-        "name": "Röda linser",
-        "amount": 300,
-        "unit": "g"
-      },
-      {
-        "name": "Pasta",
-        "amount": 400,
-        "unit": "g"
-      },
-      {
-        "name": "Krossade tomater",
-        "amount": 400,
-        "unit": "g"
-      },
-      {
-        "name": "Morötter",
-        "amount": 2,
-        "unit": "st"
-      },
-      {
-        "name": "Gul lök",
-        "amount": 1,
-        "unit": "st"
-      },
-      {
-        "name": "Vitlök",
-        "amount": 2,
-        "unit": "klyfta"
-      },
-      {
-        "name": "Tomatpuré",
-        "amount": 2,
-        "unit": "msk"
-      },
-      {
-        "name": "Olja",
-        "pantryStaple": true
-      },
-      {
-        "name": "Salt",
-        "pantryStaple": true
-      },
-      {
-        "name": "Oregano",
-        "amount": 5,
-        "unit": "g"
-      }
-    ],
-    "instructions": [
-      "Hacka lök och vitlök, riv morötterna.",
-      "Fräs lök och morot mjuka i olja, cirka 5 minuter.",
-      "Rör ner tomatpurén och låt den steka en minut.",
-      "Tillsätt linser, krossade tomater och 3 dl vatten. Krydda med oregano och salt.",
-      "Låt puttra 20 minuter tills linserna är mjuka och såsen tjocknat. Rör om då och då.",
-      "Koka pastan under tiden och servera såsen över den."
-    ],
-    "allergens": [
-      "gluten"
-    ],
-    "dietFlags": [
-      "veganskt"
-    ],
-    "image": "https://images.pexels.com/photos/4350120/pexels-photo-4350120.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-    "imageSource": "Pexels",
-    "imageSourceUrl": "https://www.pexels.com/photo/crop-young-lady-holding-plate-of-pasta-bolognese-4350120/",
-    "imageCredit": "Ketut Subiyanto",
-    "imageLicense": "Pexels License",
-    "imageAlt": "Linsbolognese med fullkornspasta upplagd på tallrik",
-    "imageStatus": "ok",
-    "labels": [
-      "pasta",
-      "vegetariskt",
-      "billigt",
-      "mealprep",
-      "proteinrikt",
-      "vardagsmat",
-      "veganskt"
-    ]
-  },
-  {
     "id": "flaskfile-rotfrukter",
+    "aliases": [
+      "flaskfilerotmos"
+    ],
     "name": "Fläskfilé med rostade rotfrukter",
     "description": "Hel fläskfilé som steks och får vila rosa i mitten, med rotfrukter som karamelliserats i ugnen.",
     "servings": 4,

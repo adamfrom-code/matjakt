@@ -1314,6 +1314,9 @@
   },
   {
     "id": "vegansk-bolognese-vegofars",
+    "aliases": [
+      "vegobolognese"
+    ],
     "name": "Vegansk bolognese på vegofärs",
     "description": "Klassisk bolognese där färsen är växtbaserad - samma djup, samma sug, ingen ko.",
     "servings": 4,

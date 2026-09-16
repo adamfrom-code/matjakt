@@ -51,7 +51,7 @@ from pathlib import Path
 # produkt, slutdatum, status, förnyelse, miljö, signeringstid).
 KONTON = 4
 BUTIKSDATA = 1
-RECEPT = 2
+RECEPT = 3   # 3 = recipe_aliases (P04b): ett gammalt id pekar på sitt kanoniska recept
 HUSHALL = 1
 PRISCACHE = 1
 

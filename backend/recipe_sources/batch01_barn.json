@@ -199,6 +199,9 @@
   },
   {
     "id": "tacos-kottfars",
+    "aliases": [
+      "kottfars-tacos"
+    ],
     "name": "Tacos med köttfärs och krispiga grönsaker",
     "description": "Fredagsmys med mjuka tortillas, kryddig färs och allt gott att toppa med. Alla bygger sin egen.",
     "servings": 4,
@@ -296,6 +299,9 @@
   },
   {
     "id": "pannkakor",
+    "aliases": [
+      "pannkakor-klassiska"
+    ],
     "name": "Pannkakor",
     "description": "Tunna, gyllene pannkakor som steks i smör. Servera med sylt och en klick grädde - eller bara som de är.",
     "servings": 4,
@@ -370,85 +376,6 @@
       "billigt",
       "vardagsmat",
       "vegetariskt"
-    ]
-  },
-  {
-    "id": "ugnspannkaka-bacon",
-    "name": "Ugnspannkaka med bacon",
-    "description": "Fluffig pannkaka som får svälla i ugnen med salt bacon i botten. Ett bleck räcker till hela familjen.",
-    "servings": 4,
-    "mealType": "middag",
-    "prepTime": 10,
-    "cookTime": 35,
-    "difficulty": "lätt",
-    "nutrition": {
-      "kcal": 560,
-      "protein": 22,
-      "carbs": 52,
-      "fat": 28,
-      "fiber": 2
-    },
-    "ingredients": [
-      {
-        "name": "Vetemjöl",
-        "amount": 300,
-        "unit": "g"
-      },
-      {
-        "name": "Mjölk",
-        "amount": 800,
-        "unit": "ml"
-      },
-      {
-        "name": "Ägg",
-        "amount": 4,
-        "unit": "st"
-      },
-      {
-        "name": "Bacon",
-        "amount": 140,
-        "unit": "g"
-      },
-      {
-        "name": "Lingonsylt",
-        "amount": 150,
-        "unit": "g"
-      },
-      {
-        "name": "Salt",
-        "pantryStaple": true
-      }
-    ],
-    "instructions": [
-      "Sätt ugnen på 225 grader.",
-      "Vispa ihop mjöl, salt och hälften av mjölken slät. Vispa ner resten av mjölken och äggen.",
-      "Stek baconet knaprigt och fördela det i en smord långpanna.",
-      "Häll smeten över baconet.",
-      "Grädda mitt i ugnen 30-35 minuter tills pannkakan svällt och fått gyllene yta.",
-      "Skär i bitar och servera med lingonsylt."
-    ],
-    "allergens": [
-      "gluten",
-      "laktos",
-      "ägg"
-    ],
-    "dietFlags": [
-      "blandkost"
-    ],
-    "imageAlt": "Ugnspannkaka med bacon upplagd på tallrik",
-    "imageStatus": "ok",
-    "image": "https://images.pexels.com/photos/22882256/pexels-photo-22882256.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
-    "imageSource": "Pexels",
-    "imageSourceUrl": "https://www.pexels.com/photo/breakfast-on-plate-22882256/",
-    "imageCredit": "Hebert  Santos",
-    "imageLicense": "Pexels License",
-    "labels": [
-      "familj",
-      "husmanskost",
-      "barn",
-      "billigt",
-      "mealprep",
-      "vardagsmat"
     ]
   },
   {

@@ -43,14 +43,17 @@ SOURCE_DIR = ROOT / "backend" / "recipe_sources"
 # att pröva mot något: "varje etikett som fanns före migreringen finns efter".
 # Utan den hade testet bara kunnat säga att banken är konsekvent MED SIG SJÄLV,
 # vilket en tom bank också är.
+# P04b tog bort tio dubblettrecept (docs/RECEPTIDENTITET.md, avsnitt 7). Talen
+# nedan är sänkta med exakt de tio receptens etiketter, så golvet fortsätter
+# betyda "inget ANNAT försvann".
 FORE_M4 = {
-    "billigt": 107, "vardagsmat": 97, "barn": 86, "snabbt": 84,
-    "husmanskost": 74, "Husmanskost": 69, "mealprep": 68, "vegetariskt": 66,
-    "Vegetariskt": 65, "proteinrikt": 64, "Familjefavorit": 54,
-    "helgmiddag": 47, "kott": 39, "Fisk": 38, "Kyckling": 34, "kyckling": 34,
-    "fisk": 30, "Pasta": 25, "Kött": 18, "lunch": 17, "Grytor": 16,
-    "familj": 16, "veganskt": 16, "Soppor": 15, "bulk": 14, "Familj": 11,
-    "Ris": 6, "Snabbt & enkelt": 6, "Helg": 4, "Helgmiddag": 3, "Lunch": 3,
+    "billigt": 102, "vardagsmat": 92, "barn": 83, "snabbt": 81,
+    "husmanskost": 72, "Husmanskost": 67, "mealprep": 65, "vegetariskt": 62,
+    "Vegetariskt": 61, "proteinrikt": 61, "Familjefavorit": 50,
+    "helgmiddag": 46, "kott": 38, "Fisk": 35, "Kyckling": 34, "kyckling": 34,
+    "fisk": 27, "Pasta": 24, "Kött": 17, "lunch": 17, "Grytor": 16,
+    "familj": 15, "veganskt": 13, "Soppor": 15, "bulk": 14, "Familj": 10,
+    "Ris": 6, "Snabbt & enkelt": 6, "Helg": 3, "Helgmiddag": 2, "Lunch": 3,
     "Soppa": 3,
 }
 
@@ -58,10 +61,11 @@ FORE_M4 = {
 # ritas ut på kortet i Ikväll, i bytesvyn och på hemskärmen. Fördelningen är
 # mätt på de 240 recepten före sammanslagningen och ska vara oförändrad efter
 # den. En etikettstädning får inte byta text på ett receptkort.
+# Sänkt på samma sätt av P04b: tio kort färre, inget kort med bytt text.
 BADGE_FORE_M4 = {
-    "Husmanskost": 49, "Fisk": 37, "Vegetariskt": 36, "Kyckling": 29,
-    "Familjefavorit": 16, "Grytor": 16, "Kött": 12, "Familj": 11, "Pasta": 11,
-    "Soppor": 7, "Snabbt & enkelt": 6, "Helg": 4, "Ris": 4, "Helgmiddag": 1,
+    "Husmanskost": 48, "Fisk": 34, "Vegetariskt": 34, "Kyckling": 29,
+    "Familjefavorit": 15, "Grytor": 16, "Kött": 12, "Familj": 10, "Pasta": 10,
+    "Soppor": 7, "Snabbt & enkelt": 6, "Helg": 3, "Ris": 4, "Helgmiddag": 1,
     "Lunch": 1,
 }
 

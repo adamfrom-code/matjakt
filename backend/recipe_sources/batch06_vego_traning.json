@@ -96,6 +96,9 @@
   },
   {
     "id": "linsbolognese",
+    "aliases": [
+      "linsbolognese-proteinrik"
+    ],
     "name": "Linsbolognese med spaghetti",
     "description": "Röda linser i mustig tomatsås med morot och rotselleri - bolognesen som råkar vara vegansk och nästan gratis.",
     "servings": 4,

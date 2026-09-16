@@ -82,13 +82,13 @@ MANGDER = {
     # Färsk ingefära vägs i gram. Banken har 20 g i 9 av 14 rader.
     ("biffwok", "ingefara"): (20, "g", "bankens vanligaste mängd (20 g, 9 av 14)"),
     ("butterchicken", "ingefara"): (20, "g", "bankens vanligaste mängd (20 g, 9 av 14)"),
-    ("teriyakilax", "ingefara"): (20, "g", "bankens vanligaste mängd (20 g, 9 av 14)"),
     ("teriyakitofu", "ingefara"): (20, "g", "bankens vanligaste mängd (20 g, 9 av 14)"),
 
     # Honungen i teriyakiglasyren: receptet säger själv hur mycket. teriyakitofu
     # är samma glasyr på samma 30 ml soja och får samma mängd.
-    ("teriyakilax", "honung"): (1, "tsk", "receptets egen text: \"en tesked honung\""),
-    ("teriyakitofu", "honung"): (1, "tsk", "samma glasyr som teriyakilax"),
+    # teriyakilax är sedan P04b ett alias för lax-teriyaki, som bär mängder
+    # själv; teriyakitofu har samma glasyr på samma 30 ml soja.
+    ("teriyakitofu", "honung"): (1, "tsk", "receptets egen text: \"en tesked honung\""),
 
     # Buljong: sopporna i banken. Linssoppan har en tvilling, linssoppa-rod,
     # med 700 ml. Tomatsoppan ligger mellan tomatsoppa-grillost (400 ml) och
@@ -114,7 +114,6 @@ MANGDER = {
     ("svarta-bonor-tacos", "paprikapulver"): (10, "g", "bankens vanligaste mängd vid 4 port"),
     ("spaghetti-kottfarssas", "oregano"): (5, "g", "bankens oreganorader (5 g i 8 av 9)"),
     ("lasagne-klassisk", "oregano"): (5, "g", "bankens oreganorader (5 g i 8 av 9)"),
-    ("linsbolognese-proteinrik", "oregano"): (5, "g", "bankens oreganorader (5 g i 8 av 9)"),
 }
 
 
