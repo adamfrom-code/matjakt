@@ -851,7 +851,21 @@ def verified_density(ingredient: str) -> float | None:
 
 # Styckfamiljen: st, förp, p, pack, pk är samma räknesort - "Ägg 6p" mot
 # receptets "3 st" är exakt jämförbart, inte ett estimat.
-COUNT_UNITS = frozenset({"st", "forp", "frp", "p", "pack", "pk", "styck"})
+# P06a: paketorden är STYCKENHETER. "1 burk krossade tomater" betyder en
+# köpbar enhet, inte en mängd - precis som "1 st". Mot en vara som mäts i
+# gram eller ml vägrar convert_amount fortfarande (styck mot massa), så
+# raden blir ett ärligt estimat; mot en vara som räknas i styck/förp blir
+# den exakt. Inget antagande om storlek smygs in.
+#
+# INTE här, med flit: "klyfta" (eget mått, 5 g, KLYFTA_UNITS - 3 klyftor
+# lästa som 3 knoppar gav 840 g vitlök på en vecka) och "skiva" (en skiva
+# är en del av en vara, inte en vara; som styck hade den köpt ett bröd per
+# skiva). En delenhet får aldrig bli en förpackning.
+#
+# Orden är vikta (påse -> pase, förpackning -> forpackning): tabellen
+# jämförs mot _fold()-ade enheter.
+COUNT_UNITS = frozenset({"st", "forp", "frp", "p", "pack", "pk", "styck",
+                         "burk", "pase", "paket", "forpackning", "knippe", "bunt"})
 
 
 def convert_amount(amount: float | None, from_unit: str | None, to_unit: str | None) -> float | None:
