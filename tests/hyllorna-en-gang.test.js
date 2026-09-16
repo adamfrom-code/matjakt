@@ -64,6 +64,11 @@ test("AM2: ett tomt svar öppnar för ett nytt försök senare - men inte medan 
   await new Promise(r => setTimeout(r, 0));
   renderRecipeShelves();
   assert.equal(anrop.length, 2, "efter ett tomt svar får nästa omritning försöka igen");
+  // Lämna inget i luften: shelvesInFlight är modulnivå-tillstånd, och en
+  // obesvarad begäran här gjorde nästa test tomt - dess avvisande laddare
+  // anropades aldrig, och sabotaget "ta bort .catch" kunde inte fälla det.
+  svara([]);
+  await new Promise(r => setTimeout(r, 0));
 });
 
 test("AM2: ett nätfel river inte omritningen - och läcker inte som ohanterad avvisning", async () => {
@@ -71,7 +76,8 @@ test("AM2: ett nätfel river inte omritningen - och läcker inte som ohanterad a
   // inte: den loggas som fel i webbläsaren. Vakten nedan gör att sabotaget
   // "ta bort .catch" faktiskt fäller testet.
   initAppState({ storage: null }); state.hyllor = [];
-  initRecipesView({ loadShelves: () => Promise.reject(new Error("nätet nere")),
+  let anropad = 0;
+  initRecipesView({ loadShelves: () => { anropad++; return Promise.reject(new Error("nätet nere")); },
     invalidate() {}, localRecipesForUser: () => [], dietFilterIsActive: () => false });
   const ohanterade = [];
   const lyssnare = fel => ohanterade.push(fel);
@@ -79,6 +85,7 @@ test("AM2: ett nätfel river inte omritningen - och läcker inte som ohanterad a
   try {
     assert.doesNotThrow(() => renderRecipeShelves());
     await new Promise(r => setTimeout(r, 10));
+    assert.equal(anropad, 1, "laddaren anropades inte - testet är tomt");
     assert.equal(state.hyllor.length, 0);
     assert.deepEqual(ohanterade.map(String), [], "nätfelet läckte som ohanterad avvisning");
   } finally {
