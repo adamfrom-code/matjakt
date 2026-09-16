@@ -365,8 +365,8 @@ Varje rad: status · filer · PR/commit · tester · nuvarande beteende · exakt
 | | |
 |---|---|
 | Finns | Varje prisrad ur `price_item()` (`pricing.py:1940–1985`) bär `productName`, `brand`, `category` ("so a caller can see WHY this product was accepted"), `packageSize`, `packageSource` (DABAS_VERIFIED/PROVIDER_VERIFIED/NORMALIZED), `packages`, `unitPrice`, `perKg`, `exactPackaging`, `unreasonable` (orsak när raden är osäker), `priceTier`, `priceSource`, `verifiedAt`; UI: "Ser något fel ut?" → `prisfel_rapporterat`; auditen namnger osäkra rader per ingrediens (#16) |
-| Tester | `test_category_matching.py`, `test_rimlighetssparr.py`, `test_pricing_audit.py`, `test_pricing_audit_rules.py` |
-| Saknas | Ingen läsbar förklaring per rad i appen ("vald för att: kategori Mejeri, ordet 'mjölk' som helord, 1,5 l ryms i 1 paket"), inga alternativa kandidater i svaret (U27 "billigare produktval" att göra), ingen `matchReason`-nyckel |
+| Tester | `test_category_matching.py`, `test_rimlighetssparr.py`, `test_pricing_audit.py`, `test_pricing_audit_rules.py`, `test_matchningen_forklarar_sig.py` (P07a) |
+| Saknas | Raden i appen som skriver ut förklaringen ("vald för att: …"), och alternativa kandidater i svaret (U27, topp 3). **P07a** gav `explain_match()` (åtta namngivna avvisningsregler, `helord`/`sammansattningshuvud`, kategorisk säkerhet) och `matchRule` på varje prisrad, med `alias:<alias>/<regel>` när aliaset släppte in produkten |
 | Restarbete | `matchReason: {rule, headWord, category, alternativesConsidered}` i raden, och en rad i Handla-detaljen som skriver ut den; kandidatlistan (topp 3) för U27 |
 
 ### O · Jämförbar butikskorg — **DONE**
