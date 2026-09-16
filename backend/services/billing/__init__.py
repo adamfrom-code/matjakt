@@ -16,3 +16,4 @@ from . import oss  # noqa: E402,F401
 from . import dunning  # noqa: E402,F401
 from . import codes  # noqa: E402,F401
 from . import referral  # noqa: E402,F401
+from . import apple  # noqa: E402,F401

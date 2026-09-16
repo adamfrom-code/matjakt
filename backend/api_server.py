@@ -56,6 +56,7 @@ from services.billing import oss as stripe_oss
 from services.billing import withdrawal
 from services.billing import gate as paywall
 from services.billing import activation as billing_activation
+from services.billing import apple as billing_apple
 from services.billing import dunning as billing_dunning
 from services.billing import referral as billing_referral
 from services.billing.codes import CodeError, PremiumCodeStore, expiry_in
@@ -680,6 +681,17 @@ def seed_env_premium_code() -> None:
 
 
 seed_env_premium_code()
+# P02c: Apple In-App Purchase. Av tills MATJAKT_APPLE_IAP=1 - då finns
+# notismottagaren och appens köpanmälan (services/billing/apple.py). Ingen
+# hemlighet: verifieringen bygger på Apples publika rot. Notistabellen delar
+# anslutning och lås med kontona, som koderna gör - markeringen av ett
+# notificationUUID och tillståndsändringen ska ligga i samma transaktion.
+APPLE_IAP = billing_apple.AppleIapConfig.from_env(os.environ)
+APPLE_NOTIFICATIONS = billing_apple.AppleNotificationStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
+if APPLE_IAP.enabled:
+    logger.info("Apple IAP är PÅ (sandbox %s, Apple ID %s)",
+                "godtas" if APPLE_IAP.accept_sandbox else "ignoreras",
+                "satt" if APPLE_IAP.app_apple_id else "inte satt - appAppleId prövas inte")
 MAIL_LOG = mailings.MailingStore(ACCOUNT_STORE.connection, lock=ACCOUNT_STORE.lock)
 # J5: livscykeln efter köpet. Lagret, mejlvägen och uppsägningen skickas in
 # som funktioner, så hela dunning-logiken går att pröva mot en lista i minnet
@@ -2451,6 +2463,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
         # Stripe-läge utan hemligheter: bara om nyckeln är en TEST- eller
         # LIVE-nyckel (prefix) och vilka delar som är satta. Svarar på
         # "används inga live-nycklar?" utan att någonsin visa nyckeln.
+        # P02c: är Apple IAP på i den här miljön, och godtas sandbox? Svarar
+        # på "varför gav mitt TestFlight-köp inget Premium?" utan admin-token.
+        "appleIap": {"enabled": APPLE_IAP.enabled, "acceptSandbox": APPLE_IAP.accept_sandbox,
+                     "appIdConfigured": bool(APPLE_IAP.app_apple_id)},
         "stripe": {"configured": bool(STRIPE_SECRET_KEY),
                    "mode": (("test" if STRIPE_SECRET_KEY.startswith("sk_test_") else
                              "live" if STRIPE_SECRET_KEY.startswith("sk_live_") else "unknown")
@@ -2685,11 +2701,17 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # flags, dinner cap and the central pricing copy. Anonymous =
             # free. The frontend renders locks from THIS, never from its own
             # idea of what Premium means.
-            user = ACCOUNT_STORE.user_for_token(self._bearer_token())
+            token = self._bearer_token()
+            user = ACCOUNT_STORE.user_for_token(token)
             plan = plan_features.plan_for_user(user)
             # B3: ångerrättstexten kommer härifrån, precis som priserna - så
             # rutan i köpflödet aldrig kan säga en annan sak än den som sparas.
-            self.send_json(200, {**plan_features.entitlements(plan), "withdrawal": withdrawal.terms()})
+            # P02c: och Apple-blocket - om IAP är på, vilka produkt-id:n, och
+            # för en inloggad kontots appAccountToken. Appen läser det här,
+            # aldrig en egen kopia av strängarna.
+            self.send_json(200, {**plan_features.entitlements(plan), "withdrawal": withdrawal.terms(),
+                                 "apple": billing_apple.entitlement_block(
+                                     APPLE_IAP, ACCOUNT_STORE.user_id_for_token(token) if user else None)})
             return
         if parsed.path == "/api/referral":
             # LÄSVÄGEN: statistiken, aldrig koden. Den råa strängen lämnades
@@ -3375,6 +3397,69 @@ class ApiHandler(SimpleHTTPRequestHandler):
             except AccountError as error:
                 self.send_json(401, {"error": str(error)})
             return
+        if parsed.path == "/api/billing/apple/notifications":
+            # P02c: App Store Server Notifications V2. Av = vägen finns inte,
+            # som adminvägarna utan token. Ingen rate limit, som för Stripes
+            # webhook: allt som kommer in är signerat eller avvisas.
+            if not APPLE_IAP.enabled:
+                self.send_json(404, {"error": "Okänd endpoint"})
+                return
+            try:
+                result = billing_apple.handle_notification(
+                    ACCOUNT_STORE, APPLE_NOTIFICATIONS, payload.get("signedPayload"), APPLE_IAP)
+            except (billing_apple.AppleJwsError, billing_apple.AppleIapError) as error:
+                # Osignerat, fel rot, fel app: 400 - loggat, men aldrig
+                # payloaden, som kan vara vad som helst.
+                logger.warning("Avvisad Apple-notis: %s", error)
+                METRICS.incr("apple_notification_rejected")
+                self.send_json(400, {"error": str(error)})
+                return
+            except Exception:
+                # Inget är sparat (transaktionen rullades tillbaka). 500 gör
+                # att Apple försöker igen i stället för att händelsen tappas.
+                logger.exception("Apple-notis kunde inte behandlas")
+                METRICS.incr("apple_notification_errors")
+                self.send_json(500, {"error": "Kunde inte behandla händelsen just nu"})
+                return
+            outcome = result["outcome"]
+            if outcome == "unknown_customer":
+                # B1:s regel, oförändrad: 200 här vore slutet. Apple försöker
+                # igen efter 1, 12, 24, 48 och 72 timmar, och under tiden
+                # hinner appens egen anmälan binda köpet till kontot.
+                METRICS.incr("apple_notification_unknown_customer")
+                logger.error("Apple-notis %s (%s): ingen kundrad - svarar 500 så Apple försöker igen.",
+                             result.get("uuid"), result.get("type"))
+                self.send_json(500, {"error": "Köpet hör inte ihop med något konto ännu"})
+                return
+            if outcome == "applied":
+                METRICS.incr("apple_notification_applied")
+            logger.info("Apple-notis %s (%s/%s): %s", result.get("uuid"), result.get("type"),
+                        result.get("subtype"), outcome)
+            self.send_json(200, {"received": True, "outcome": outcome})
+            return
+        if parsed.path == "/api/billing/apple/transaction":
+            # P02c: appens egen anmälan av ett köp eller en återställning -
+            # transaktionens JWS från StoreKit 2, bunden till DET INLOGGADE
+            # kontot och bara om appAccountToken är kontots.
+            if not APPLE_IAP.enabled:
+                self.send_json(404, {"error": "Okänd endpoint"})
+                return
+            if self._rate_limit("billing"):
+                return
+            user_id = ACCOUNT_STORE.user_id_for_token(self._bearer_token())
+            if not user_id:
+                self.send_json(401, {"error": "Du måste vara inloggad"})
+                return
+            try:
+                result = billing_apple.bind_transaction(ACCOUNT_STORE, user_id, payload.get("jws"), APPLE_IAP)
+            except (billing_apple.AppleJwsError, billing_apple.AppleIapError) as error:
+                logger.warning("Avvisad Apple-transaktion för konto %s: %s", user_id, error)
+                METRICS.incr("apple_transaction_rejected")
+                self.send_json(400, {"error": str(error)})
+                return
+            METRICS.incr("apple_transaction_bound")
+            self.send_json(200, {**result, "user": ACCOUNT_STORE.user_for_token(self._bearer_token())})
+            return
         if parsed.path == "/api/billing/checkout":
             if self._rate_limit("billing"):
                 return
@@ -3403,6 +3488,14 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     # En andra Checkout ger två prenumerationer. Planbyte
                     # och uppsägning sker i Stripes portal.
                     self.send_json(409, {"error": "Du har redan en prenumeration. Byt plan eller säg upp under Hantera prenumeration.",
+                                         "code": "ALREADY_SUBSCRIBED"})
+                    return
+                if current.get("entitlementSource") == "apple":
+                    # P02c: samma sak med en levande App Store-prenumeration.
+                    # Två leverantörer för samma Premium är dubbel debitering,
+                    # och kunden ska sägas var den befintliga hanteras.
+                    self.send_json(409, {"error": "Du har redan en prenumeration via App Store. Hantera den i "
+                                                  "iPhonens inställningar under Prenumerationer.",
                                          "code": "ALREADY_SUBSCRIBED"})
                     return
                 # B3, ångerrätten. Kryssrutan följer med köpet och sparas med

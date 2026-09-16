@@ -43,14 +43,17 @@ SOURCE_DIR = ROOT / "backend" / "recipe_sources"
 # att pröva mot något: "varje etikett som fanns före migreringen finns efter".
 # Utan den hade testet bara kunnat säga att banken är konsekvent MED SIG SJÄLV,
 # vilket en tom bank också är.
+# P04b tog bort tio dubblettrecept (docs/RECEPTIDENTITET.md, avsnitt 7). Talen
+# nedan är sänkta med exakt de tio receptens etiketter, så golvet fortsätter
+# betyda "inget ANNAT försvann".
 FORE_M4 = {
-    "billigt": 107, "vardagsmat": 97, "barn": 86, "snabbt": 84,
-    "husmanskost": 74, "Husmanskost": 69, "mealprep": 68, "vegetariskt": 66,
-    "Vegetariskt": 65, "proteinrikt": 64, "Familjefavorit": 54,
-    "helgmiddag": 47, "kott": 39, "Fisk": 38, "Kyckling": 34, "kyckling": 34,
-    "fisk": 30, "Pasta": 25, "Kött": 18, "lunch": 17, "Grytor": 16,
-    "familj": 16, "veganskt": 16, "Soppor": 15, "bulk": 14, "Familj": 11,
-    "Ris": 6, "Snabbt & enkelt": 6, "Helg": 4, "Helgmiddag": 3, "Lunch": 3,
+    "billigt": 102, "vardagsmat": 92, "barn": 83, "snabbt": 81,
+    "husmanskost": 72, "Husmanskost": 67, "mealprep": 65, "vegetariskt": 62,
+    "Vegetariskt": 61, "proteinrikt": 61, "Familjefavorit": 50,
+    "helgmiddag": 46, "kott": 38, "Fisk": 35, "Kyckling": 34, "kyckling": 34,
+    "fisk": 27, "Pasta": 24, "Kött": 17, "lunch": 17, "Grytor": 16,
+    "familj": 15, "veganskt": 13, "Soppor": 15, "bulk": 14, "Familj": 10,
+    "Ris": 6, "Snabbt & enkelt": 6, "Helg": 3, "Helgmiddag": 2, "Lunch": 3,
     "Soppa": 3,
 }
 
@@ -58,10 +61,11 @@ FORE_M4 = {
 # ritas ut på kortet i Ikväll, i bytesvyn och på hemskärmen. Fördelningen är
 # mätt på de 240 recepten före sammanslagningen och ska vara oförändrad efter
 # den. En etikettstädning får inte byta text på ett receptkort.
+# Sänkt på samma sätt av P04b: tio kort färre, inget kort med bytt text.
 BADGE_FORE_M4 = {
-    "Husmanskost": 49, "Fisk": 37, "Vegetariskt": 36, "Kyckling": 29,
-    "Familjefavorit": 16, "Grytor": 16, "Kött": 12, "Familj": 11, "Pasta": 11,
-    "Soppor": 7, "Snabbt & enkelt": 6, "Helg": 4, "Ris": 4, "Helgmiddag": 1,
+    "Husmanskost": 48, "Fisk": 34, "Vegetariskt": 34, "Kyckling": 29,
+    "Familjefavorit": 15, "Grytor": 16, "Kött": 12, "Familj": 10, "Pasta": 10,
+    "Soppor": 7, "Snabbt & enkelt": 6, "Helg": 3, "Ris": 4, "Helgmiddag": 1,
     "Lunch": 1,
 }
 
@@ -153,7 +157,9 @@ class KallornaTest(unittest.TestCase):
         gånger."""
         rader = sum(len(r[LABELS]) for r in self.recept)
         self.assertLess(rader, sum(FORE_M4.values()))
-        self.assertGreater(rader, 1000)
+        # 240 recept gav drygt 1 000 rader; 230 (P04b) ger 972. Golvet säger
+        # bara att banken inte är tom - inte hur många rätter den har.
+        self.assertGreater(rader, 900)
 
     def test_skriptet_ar_gront(self):
         """Samma fråga en gång till, genom skriptet som rättar."""
@@ -235,8 +241,9 @@ class BankenTest(unittest.TestCase):
 
     def test_familjefavorit_hittas_nu_pa_sin_nyckel(self):
         """Den skarpaste av dem: etiketten satt på 54 recept och den
-        normaliserade formen gav noll."""
-        self.assertEqual(len(self.store.search(tags=["familjefavorit"], limit=500)), 54)
+        normaliserade formen gav noll. 50 sedan P04b - fyra av de tio
+        sammanslagna recepten bar den."""
+        self.assertEqual(len(self.store.search(tags=["familjefavorit"], limit=500)), 50)
 
     def test_de_tre_faltnamnen_ar_vyer_av_en_enda_lista(self):
         """`labels` är fältet; `tags` är nycklarna och `categories` namnen ur
@@ -252,9 +259,11 @@ class BankenTest(unittest.TestCase):
         """Adminpanelen räknade `Kött` och `kott` som två olika etiketter,
         vilket gjorde varje siffra om katalogen till en halv siffra."""
         by_label = self.store.stats()["byLabel"]
-        self.assertEqual(by_label["Husmanskost"], 81)
+        # 81 respektive 39 före P04b; två husmanskost- och ett kötträtt-id
+        # blev alias för recept som redan bar samma etikett.
+        self.assertEqual(by_label["Husmanskost"], 79)
         self.assertNotIn("husmanskost", by_label)
-        self.assertEqual(by_label["Kött"], 39)
+        self.assertEqual(by_label["Kött"], 38)
 
     def test_allergener_och_kosttyper_ror_ingen(self):
         """De är egna vokabulärer som svarar på andra frågor, och de var

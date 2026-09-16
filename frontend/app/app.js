@@ -7,7 +7,8 @@ if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "functi
     return controller.signal;
   };
 }
-import { applySyncBlob, buildSyncPayload, flushServerSync, initAppState, persistLocally, saveState, selectedRecipes, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
+import { applySyncBlob, buildSyncPayload, flushServerSync, initAppState, persistLocally, reconcileRecipeAliases, saveState, selectedRecipes, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
+import { aliasMap, canonicalRecipeId } from "./src/services/recipe-aliases.js";
 import { aggregateShopping, chainListTotal, chainRowAmount, initShoppingView, prunePhantomItemNames, renderBasket, wireReportPriceButtons } from "./src/views/shopping.js";
 import { watchOtherTabs } from "./src/state/tab-sync.js";
 import { aggregateIngredients, budgetRemaining, calculateShoppingTotal, clampBudget, portionFactor } from "./src/services/calculations.js";
@@ -4393,7 +4394,19 @@ if (pendingVerifyToken) {
 fetchEntitlements();
 loadRecipes().then(recipes => {
   RECEPT.push(...recipes);
-  if (new URLSearchParams(location.search).get("recept")) renderRecipePage();
+  // P04b: tio recept-id är sedan dess alias. Veckan, favoriterna och
+  // historiken skrevs med de gamla, och servern tolkar inte blobben - så de
+  // pekas om här, när banken finns att peka mot, och sparas om något ändrades.
+  if (reconcileRecipeAliases()) saveState();
+  const deepLinkId = new URLSearchParams(location.search).get("recept");
+  if (deepLinkId) {
+    // En delad länk bär det id den delades med. Adressen byts till det
+    // kanoniska innan receptsidan slår upp den, så gamla länkar fortsätter
+    // öppna sin rätt.
+    const canonical = canonicalRecipeId(deepLinkId, aliasMap(RECEPT));
+    if (canonical !== deepLinkId) history.replaceState(history.state, "", `${location.pathname}?recept=${encodeURIComponent(canonical)}`);
+    renderRecipePage();
+  }
   if (!RECEPT.length) return;
   // H1: personen kom hit genom att trycka på söndagsnotisen. Då är veckan
   // det ENDA som ska hända - före "har du redan en vecka"-logiken nedan.
