@@ -69,6 +69,20 @@ class Bildstatus(unittest.TestCase):
         src = SKRIPT.read_text(encoding="utf-8")
         self.assertNotIn('r.get("imageAlt")', src.split("def klassificera")[1])
 
+    def test_beskrivningen_ar_text_utan_klartextlankar(self):
+        """Commons skickar HTML, ibland escapad. Cachen ska bära text: inga
+        taggar, inga entiteter, och ingen http-adress - klartextvakten
+        fäller annars hela repot för en fotografs hemsida."""
+        m = self.m
+        self.assertEqual(m.ren_text('&lt;a href="http://x.example/" rel="nofollow"&gt;Namn&lt;/a&gt; <b>fet</b>'), "Namn fet")
+        self.assertEqual(m.ren_text("se  http://x.example/ &amp; mer"), "se https://x.example/ & mer")
+        self.assertEqual(m.ren_text(None), "")
+        cache = json.loads((ROOT / "docs" / "bildstatus-wikimedia.json").read_text(encoding="utf-8"))
+        for titel, meta in cache["meta"].items():
+            b = meta.get("beskrivning") or ""
+            self.assertNotIn("http://", b, titel)
+            self.assertNotRegex(b, r"<[^>]+>|&lt;|&amp;", titel)
+
 
 if __name__ == "__main__":
     unittest.main()

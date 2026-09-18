@@ -5,10 +5,10 @@ Genererad av `backend/scripts/bildstatus.py`. Redigera inte för hand — kör s
 | status | antal | betyder |
 |---|---|---|
 | MISSING | 11 | ingen bild i källan |
-| REJECTED | 55 | källan säger att fotot visar något annat, eller ett generiskt foto, eller delas av rätter med olika protein |
+| REJECTED | 52 | källan säger att fotot visar något annat, eller ett generiskt foto, eller delas av rätter med olika protein |
 | EXACT-KANDIDAT | 62 | fotografens titel nämner rättens protein eller rättterm — bekräftas med ögat |
-| GOOD_VARIANT-KANDIDAT | 64 | delas av recept med samma rättyp; högst ett kan vara EXACT |
-| NEEDS_REVIEW | 48 | titeln avgör inte |
+| GOOD_VARIANT-KANDIDAT | 54 | delas av recept med samma rättyp; högst ett kan vara EXACT |
+| NEEDS_REVIEW | 51 | titeln avgör inte |
 
 ## Alt-texten är inget bevis
 
@@ -28,7 +28,6 @@ Genererad av `backend/scripts/bildstatus.py`. Redigera inte för hand — kör s
 | `rotfruktsgratang` | Rotfruktsgratäng med rökt falukorv | delas av 5 recept med olika huvudprotein (fisk, fläsk, korv) |
 | `svartbonsbowl` | Svartbönsbowl med matvete | generiskt matfoto ("close up of variety of rice in bowls") - visar ingen bestämd rätt |
 | `tacobonor` | Tacobowl med svarta bönor | generiskt matfoto ("close up of variety of rice in bowls") - visar ingen bestämd rätt |
-| `vegobolognese` | Vegobolognese med spaghetti | delas av 2 recept med olika huvudprotein (färs, vego) |
 | `vegofarsgryta` | Vegofärsgryta med ris | generiskt matfoto ("top view of cooking ingredients") - visar ingen bestämd rätt |
 | `kottbullar-potatismos` | Köttbullar med potatismos och lingon | fotot visar en köttbit ("fried meat cutlet served with boiled potatoes and salad"), rätten är färs |
 | `tacos-kottfars` | Tacos med köttfärs och krispiga grönsaker | generiskt matfoto ("close up of tacos with assorted fillings and sauce") - visar ingen bestämd rätt |
@@ -56,7 +55,6 @@ Genererad av `backend/scripts/bildstatus.py`. Redigera inte för hand — kör s
 | `tacogratang` | Tacogratäng med tortillachips | delas av 5 recept med olika huvudprotein (fläsk, färs, korv, kyckling) |
 | `pastasallad-kyckling-lunch` | Pastasallad med kyckling och pesto | delas av 2 recept med olika huvudprotein (fisk, kyckling) |
 | `biffgryta-rotter` | Mustig köttgryta med rotfrukter och timjan | generiskt matfoto ("top view of cooking ingredients") - visar ingen bestämd rätt |
-| `vegansk-bolognese-vegofars` | Vegansk bolognese på vegofärs | delas av 2 recept med olika huvudprotein (färs, vego) |
 | `bulk-kyckling-jattebowl` | Bulkbowl med kyckling, ris och jordnötssås | fotot visar vego ("grains and beans on bowls"), rätten är kyckling |
 | `laxpoke` | Pokébowl med lax och ris | generiskt matfoto ("close up of variety of rice in bowls") - visar ingen bestämd rätt |
 | `krogarens-makaroner` | Stuvade makaroner med falukorv | fotot visar nöt ("delicious macaroni and ground beef dish"), rätten är korv |
@@ -67,7 +65,6 @@ Genererad av `backend/scripts/bildstatus.py`. Redigera inte för hand — kör s
 | `makaroner-kottbullar` | Makaroner och köttbullar | fotot visar nöt ("delicious macaroni and ground beef dish"), rätten är färs |
 | `kramig-kycklinggryta` | Krämig kycklinggryta med grönsaker | delas av 5 recept med olika huvudprotein (färs, kyckling) |
 | `kycklinggratang-broccoli` | Kycklinggratäng med broccoli | delas av 5 recept med olika huvudprotein (fläsk, färs, korv, kyckling) |
-| `kottfars-tacos` | Tacos med köttfärs | generiskt matfoto ("close up of tacos with assorted fillings and sauce") - visar ingen bestämd rätt |
 | `korvgryta-curry` | Korvgryta med curry | generiskt matfoto ("top view of cooking ingredients") - visar ingen bestämd rätt |
 | `flaskgryta-paprika` | Fläskgryta med paprika | generiskt matfoto ("top view of cooking ingredients") - visar ingen bestämd rätt |
 | `kottfarsgratang-mos` | Köttfärsgratäng med potatismos | delas av 5 recept med olika huvudprotein (fläsk, färs, korv, kyckling) |

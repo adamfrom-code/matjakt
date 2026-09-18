@@ -1,21 +1,5 @@
 [
  {
-  "id": "flaskfilerotmos",
-  "namn": "Baconlindad fläskfilé med rotsaker",
-  "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
-  "bevis": {
-   "kalla": "Pexels",
-   "kallankning": "https://www.pexels.com/photo/food-menu-restaurant-dinner-11001292/",
-   "fotografens_titel": "food menu restaurant dinner"
-  },
-  "delas_med": [
-   "citronflaskfile",
-   "flaskfile-rotfrukter",
-   "flaskfile-svampsas"
-  ]
- },
- {
   "id": "biffmedlok",
   "namn": "Biff med lökröra och potatismos",
   "status": "EXACT-KANDIDAT",
@@ -101,14 +85,13 @@
   "id": "citronflaskfile",
   "namn": "Citronmarinerad fläskfilé med matvete",
   "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
   "bevis": {
    "kalla": "Pexels",
    "kallankning": "https://www.pexels.com/photo/food-menu-restaurant-dinner-11001292/",
    "fotografens_titel": "food menu restaurant dinner"
   },
   "delas_med": [
-   "flaskfilerotmos",
    "flaskfile-rotfrukter",
    "flaskfile-svampsas"
   ]
@@ -496,36 +479,6 @@
   "delas_med": []
  },
  {
-  "id": "linssoppa",
-  "namn": "Röd linssoppa",
-  "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
-  "bevis": {
-   "kalla": "Pexels",
-   "kallankning": "https://www.pexels.com/photo/a-flatlay-shot-of-a-bowl-of-soup-on-a-rustic-background-7160694/",
-   "fotografens_titel": "a flatlay shot of a bowl of soup on a rustic background"
-  },
-  "delas_med": [
-   "linssoppa-rod"
-  ]
- },
- {
-  "id": "scampi",
-  "namn": "Scampi pasta med vitlök och citron",
-  "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
-  "bevis": {
-   "kalla": "Pexels",
-   "kallankning": "https://www.pexels.com/photo/food-photography-of-pasta-1438672/",
-   "fotografens_titel": "food photography of pasta"
-  },
-  "delas_med": [
-   "fetapasta",
-   "pasta-tomatsas-vitlok",
-   "pasta-skinksas"
-  ]
- },
- {
   "id": "sparrispastacitron",
   "namn": "Sparrispasta med citron och vitlök",
   "status": "GOOD_VARIANT-KANDIDAT",
@@ -594,20 +547,6 @@
   "delas_med": []
  },
  {
-  "id": "teriyakilax",
-  "namn": "Teriyakilax med wokgrönsaker och ris",
-  "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
-  "bevis": {
-   "kalla": "Pexels",
-   "kallankning": "https://www.pexels.com/photo/a-bowl-of-rice-with-meat-and-green-onions-17308546/",
-   "fotografens_titel": "a bowl of rice with meat and green onions"
-  },
-  "delas_med": [
-   "lax-teriyaki"
-  ]
- },
- {
   "id": "teriyakitofu",
   "namn": "Teriyakitofu med matvetesallad",
   "status": "EXACT-KANDIDAT",
@@ -648,14 +587,13 @@
   "id": "fetapasta",
   "namn": "Ugnsbakad fetaost-pasta",
   "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
   "bevis": {
    "kalla": "Pexels",
    "kallankning": "https://www.pexels.com/photo/food-photography-of-pasta-1438672/",
    "fotografens_titel": "food photography of pasta"
   },
   "delas_med": [
-   "scampi",
    "pasta-tomatsas-vitlok",
    "pasta-skinksas"
   ]
@@ -701,20 +639,6 @@
   },
   "delas_med": [
    "lasagne-klassisk"
-  ]
- },
- {
-  "id": "vegobolognese",
-  "namn": "Vegobolognese med spaghetti",
-  "status": "REJECTED",
-  "skal": "delas av 2 recept med olika huvudprotein (färs, vego)",
-  "bevis": {
-   "kalla": "Pexels",
-   "kallankning": "https://www.pexels.com/photo/spaghetti-bolognese-on-plate-5807018/",
-   "fotografens_titel": "spaghetti bolognese on plate"
-  },
-  "delas_med": [
-   "vegansk-bolognese-vegofars"
   ]
  },
  {
@@ -787,33 +711,18 @@
    "fotografens_titel": "close up of tacos with assorted fillings and sauce"
   },
   "delas_med": [
-   "svarta-bonor-tacos",
-   "kottfars-tacos"
+   "svarta-bonor-tacos"
   ]
  },
  {
   "id": "pannkakor",
   "namn": "Pannkakor",
-  "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"person filling crepe with custard\")",
   "bevis": {
    "kalla": "Pexels",
    "kallankning": "https://www.pexels.com/photo/person-filling-crepe-with-custard-3807390/",
    "fotografens_titel": "person filling crepe with custard"
-  },
-  "delas_med": [
-   "pannkakor-klassiska"
-  ]
- },
- {
-  "id": "ugnspannkaka-bacon",
-  "namn": "Ugnspannkaka med bacon",
-  "status": "NEEDS_REVIEW",
-  "skal": "titeln avgör inte (\"breakfast on plate\")",
-  "bevis": {
-   "kalla": "Pexels",
-   "kallankning": "https://www.pexels.com/photo/breakfast-on-plate-22882256/",
-   "fotografens_titel": "breakfast on plate"
   },
   "delas_med": []
  },
@@ -958,31 +867,16 @@
   "delas_med": []
  },
  {
-  "id": "linsbolognese-proteinrik",
-  "namn": "Linsbolognese med fullkornspasta",
-  "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
-  "bevis": {
-   "kalla": "Pexels",
-   "kallankning": "https://www.pexels.com/photo/crop-young-lady-holding-plate-of-pasta-bolognese-4350120/",
-   "fotografens_titel": "crop young lady holding plate of pasta bolognese"
-  },
-  "delas_med": [
-   "linsbolognese"
-  ]
- },
- {
   "id": "flaskfile-rotfrukter",
   "namn": "Fläskfilé med rostade rotfrukter",
   "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
   "bevis": {
    "kalla": "Pexels",
    "kallankning": "https://www.pexels.com/photo/food-menu-restaurant-dinner-11001292/",
    "fotografens_titel": "food menu restaurant dinner"
   },
   "delas_med": [
-   "flaskfilerotmos",
    "citronflaskfile",
    "flaskfile-svampsas"
   ]
@@ -1051,16 +945,14 @@
  {
   "id": "linssoppa-rod",
   "namn": "Röd linssoppa med kokosmjölk",
-  "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "status": "EXACT-KANDIDAT",
+  "skal": "titeln nämner soppa (\"a flatlay shot of a bowl of soup on a rustic background\") - bekräfta med ögat",
   "bevis": {
    "kalla": "Pexels",
    "kallankning": "https://www.pexels.com/photo/a-flatlay-shot-of-a-bowl-of-soup-on-a-rustic-background-7160694/",
    "fotografens_titel": "a flatlay shot of a bowl of soup on a rustic background"
   },
-  "delas_med": [
-   "linssoppa"
-  ]
+  "delas_med": []
  },
  {
   "id": "pyttipanna",
@@ -1078,14 +970,13 @@
   "id": "pasta-tomatsas-vitlok",
   "namn": "Pasta med tomatsås och vitlök",
   "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
   "bevis": {
    "kalla": "Pexels",
    "kallankning": "https://www.pexels.com/photo/food-photography-of-pasta-1438672/",
    "fotografens_titel": "food photography of pasta"
   },
   "delas_med": [
-   "scampi",
    "fetapasta",
    "pasta-skinksas"
   ]
@@ -1537,16 +1428,14 @@
  {
   "id": "lax-teriyaki",
   "namn": "Teriyakilax med ris och broccoli",
-  "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"a bowl of rice with meat and green onions\")",
   "bevis": {
    "kalla": "Pexels",
    "kallankning": "https://www.pexels.com/photo/a-bowl-of-rice-with-meat-and-green-onions-17308546/",
    "fotografens_titel": "a bowl of rice with meat and green onions"
   },
-  "delas_med": [
-   "teriyakilax"
-  ]
+  "delas_med": []
  },
  {
   "id": "ugnslax-citron",
@@ -1814,16 +1703,14 @@
  {
   "id": "linsbolognese",
   "namn": "Linsbolognese med spaghetti",
-  "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"crop young lady holding plate of pasta bolognese\")",
   "bevis": {
    "kalla": "Pexels",
    "kallankning": "https://www.pexels.com/photo/crop-young-lady-holding-plate-of-pasta-bolognese-4350120/",
    "fotografens_titel": "crop young lady holding plate of pasta bolognese"
   },
-  "delas_med": [
-   "linsbolognese-proteinrik"
-  ]
+  "delas_med": []
  },
  {
   "id": "svamprisotto",
@@ -1860,8 +1747,7 @@
    "fotografens_titel": "close up of tacos with assorted fillings and sauce"
   },
   "delas_med": [
-   "tacos-kottfars",
-   "kottfars-tacos"
+   "tacos-kottfars"
   ]
  },
  {
@@ -2182,14 +2068,13 @@
   "id": "flaskfile-svampsas",
   "namn": "Fläskfilé med svampsås och råstekt potatis",
   "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
   "bevis": {
    "kalla": "Pexels",
    "kallankning": "https://www.pexels.com/photo/food-menu-restaurant-dinner-11001292/",
    "fotografens_titel": "food menu restaurant dinner"
   },
   "delas_med": [
-   "flaskfilerotmos",
    "citronflaskfile",
    "flaskfile-rotfrukter"
   ]
@@ -2329,16 +2214,14 @@
  {
   "id": "vegansk-bolognese-vegofars",
   "namn": "Vegansk bolognese på vegofärs",
-  "status": "REJECTED",
-  "skal": "delas av 2 recept med olika huvudprotein (färs, vego)",
+  "status": "NEEDS_REVIEW",
+  "skal": "titeln avgör inte (\"spaghetti bolognese on plate\")",
   "bevis": {
    "kalla": "Pexels",
    "kallankning": "https://www.pexels.com/photo/spaghetti-bolognese-on-plate-5807018/",
    "fotografens_titel": "spaghetti bolognese on plate"
   },
-  "delas_med": [
-   "vegobolognese"
-  ]
+  "delas_med": []
  },
  {
   "id": "torskrygg-ortstekt",
@@ -2436,20 +2319,6 @@
   },
   "delas_med": [
    "sotpotatis-bulk-bowl"
-  ]
- },
- {
-  "id": "pannkakor-klassiska",
-  "namn": "Pannkakor med sylt och grädde",
-  "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 2 recept med samma rättyp; högst ett kan vara EXACT",
-  "bevis": {
-   "kalla": "Pexels",
-   "kallankning": "https://www.pexels.com/photo/person-filling-crepe-with-custard-3807390/",
-   "fotografens_titel": "person filling crepe with custard"
-  },
-  "delas_med": [
-   "pannkakor"
   ]
  },
  {
@@ -3004,33 +2873,6 @@
   ]
  },
  {
-  "id": "lax-kall-dillsas",
-  "namn": "Ugnslax med kokt potatis och kall dillsås",
-  "status": "EXACT-KANDIDAT",
-  "skal": "titeln nämner lax (\"close up of salmon in sauce with broccoli\") - bekräfta med ögat",
-  "bevis": {
-   "kalla": "Pexels",
-   "kallankning": "https://www.pexels.com/photo/close-up-of-salmon-in-sauce-with-broccoli-20182311/",
-   "fotografens_titel": "close up of salmon in sauce with broccoli"
-  },
-  "delas_med": []
- },
- {
-  "id": "kottfars-tacos",
-  "namn": "Tacos med köttfärs",
-  "status": "REJECTED",
-  "skal": "generiskt matfoto (\"close up of tacos with assorted fillings and sauce\") - visar ingen bestämd rätt",
-  "bevis": {
-   "kalla": "Pexels",
-   "kallankning": "https://www.pexels.com/photo/close-up-of-tacos-with-assorted-fillings-and-sauce-28895976/",
-   "fotografens_titel": "close up of tacos with assorted fillings and sauce"
-  },
-  "delas_med": [
-   "tacos-kottfars",
-   "svarta-bonor-tacos"
-  ]
- },
- {
   "id": "kottfarslasagne",
   "namn": "Klassisk köttfärslasagne",
   "status": "EXACT-KANDIDAT",
@@ -3104,14 +2946,13 @@
   "id": "pasta-skinksas",
   "namn": "Pasta med krämig skinksås",
   "status": "GOOD_VARIANT-KANDIDAT",
-  "skal": "delas av 4 recept med samma rättyp; högst ett kan vara EXACT",
+  "skal": "delas av 3 recept med samma rättyp; högst ett kan vara EXACT",
   "bevis": {
    "kalla": "Pexels",
    "kallankning": "https://www.pexels.com/photo/food-photography-of-pasta-1438672/",
    "fotografens_titel": "food photography of pasta"
   },
   "delas_med": [
-   "scampi",
    "fetapasta",
    "pasta-tomatsas-vitlok"
   ]

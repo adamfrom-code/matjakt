@@ -38,6 +38,7 @@ den här filen och visa reservkortet för REJECTED. Hellre MISSING än fel bild.
 
 import argparse
 import collections
+import html
 import json
 import re
 import sys
@@ -114,6 +115,24 @@ def _terms(name, text):
     return [k for k, ens in TERM.items() if k in n and any(e in t for e in ens)]
 
 
+def ren_text(value: str) -> str:
+    """Commons-beskrivningen som TEXT: entiteter avkodade, taggar borta.
+
+    Commons skickar ibland HTML-escapad HTML ("&lt;a href=...&gt;"), och
+    ett taggfilter som bara ser riktiga taggar släppte igenom en hel
+    fotografs länk i klartext - och klartextvakten (test_utgaende_i_klartext)
+    fällde cachen för en http-adress vi aldrig anropar. Länkar är inte
+    beskrivning; namnet räcker som attribution. Skulle en bar adress ändå
+    stå kvar i löptexten skrivs den med https - det är en adress i en
+    text, inte något vi hämtar, och vakten gör ingen skillnad på de två.
+    """
+    text = html.unescape(value or "")
+    text = html.unescape(text)  # dubbelt escapad förekommer (&amp;lt;)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text.replace("http://", "https://")
+
+
 def hamta_wikimedia(recept) -> dict:
     """Nät. Körs bara med --hamta; resultatet committas."""
     titlar = {}
@@ -132,7 +151,7 @@ def hamta_wikimedia(recept) -> dict:
             data = json.load(resp)
         for page in data.get("query", {}).get("pages", {}).values():
             ii = (page.get("imageinfo") or [{}])[0].get("extmetadata", {})
-            desc = re.sub(r"<[^>]+>", "", ii.get("ImageDescription", {}).get("value", "")).strip()
+            desc = ren_text(ii.get("ImageDescription", {}).get("value", ""))
             meta[page.get("title")] = {"beskrivning": desc[:200],
                                        "licens": ii.get("LicenseShortName", {}).get("value", "")}
     return {"titlar": titlar, "meta": meta}
