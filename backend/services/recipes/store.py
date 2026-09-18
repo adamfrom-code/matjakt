@@ -544,9 +544,16 @@ class RecipeStore:
 
     def _to_dict(self, row) -> dict:
         recipe_id = row["id"]
+        # P05b: varje rad bär sitt kanoniska id (services/ingredients). Det är
+        # länken RecipeIngredient -> CanonicalIngredient som saknades; utan
+        # den var normalizedId bara en stavningsnyckel (tomat != tomater).
+        # None om ingrediensen är okänd - aldrig en gissning - och P05a:s
+        # täckningsvakt gör en okänd ingrediens i banken till röd CI.
+        from services.ingredients import canonical_id
         ingredients = [
             {"name": r["name"], "amount": r["amount"], "unit": r["unit"],
-             "normalizedId": r["normalized_id"], "optional": bool(r["optional"]),
+             "normalizedId": r["normalized_id"], "canonicalId": canonical_id(r["name"]),
+             "optional": bool(r["optional"]),
              "pantryStaple": bool(r["pantry_staple"]), "note": r["note"]}
             for r in self._connection.execute(
                 "SELECT * FROM recipe_ingredients WHERE recipe_id = ? ORDER BY position",
