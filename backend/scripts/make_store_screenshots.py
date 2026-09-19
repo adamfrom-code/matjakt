@@ -98,17 +98,29 @@ def logga_in(sida, epost: str, lösenord: str, registrera: bool):
     sparkortet är Premium. Utan ett Premium-konto blir två av sex scener
     omöjliga att nå - inte för att något är trasigt, utan för att en
     gratisanvändare aldrig ser dem."""
+    # G11: profilknappen leder till Inställningar, och kontoraden där öppnar
+    # arket - samma väg som browser-E2E:ns open_account().
     sida.click("#profileBtn")
+    _vänta(sida, '[data-settings="konto"]')
+    sida.click('[data-settings="konto"]')
     _vänta(sida, "#accountModal")
     flik = "register" if registrera else "login"
     sida.click(f'[data-account-tab="{flik}"]')
     sida.fill(f"#{flik}Email", epost)
     sida.fill(f"#{flik}Password", lösenord)
     sida.click(f'#account{flik.capitalize()}Form button[type="submit"]')
-    _vänta(sida, "#accountLoggedIn" if registrera else "#profileBtn")
+    # Registreringen visar det inloggade arket (#accountLoggedIn); en
+    # inloggning stänger arket. Profilknappen bär sedan initialerna.
+    if registrera:
+        _vänta(sida, "#accountLoggedIn")
+    else:
+        sida.wait_for_selector("#accountModal", state="hidden", timeout=30_000)
+    sida.wait_for_function("t => document.querySelector('#profileBtn')?.textContent.trim() === t",
+                           arg=epost[:2].upper(), timeout=30_000)
     if sida.locator("#accountModal").is_visible():
         sida.click("#accountModal .account-modal-close")
         sida.wait_for_selector("#accountModal", state="hidden", timeout=15_000)
+    sida.click('.bottom-nav-item[data-view="home"]')
 
 
 def onboarda(sida, bas: str):
@@ -134,7 +146,9 @@ def förvärm(sida):
     """Butikskorten, jämförelseknappen och sparkortet på Hem finns alla
     först när serverns prisjämförelse svarat. Utan det här blir tre av sex
     scener en bild av ett tomt tillstånd, vilket är värre än ingen bild."""
-    sida.click('.bottom-nav-item[data-view="basket"]')
+    # L2/L3: butikskorten ("Var blir det billigast?") ritas på Veckan, inte
+    # på Handla. Vänta där, annars finns korten men är dolda.
+    sida.click('.bottom-nav-item[data-view="week"]')
     _vänta(sida, "#storeCards .store-card", timeout=90_000)
     _vänta_pa_priser(sida)
 
@@ -153,7 +167,7 @@ def gå_till(sida, scen: str) -> bool:
     elif scen == "jamforelse":
         # Jämförelseknappen sitter bland butikskorten på Handla, och finns
         # bara när serverns jämförelse kröner en kedja.
-        sida.click('.bottom-nav-item[data-view="basket"]')
+        sida.click('.bottom-nav-item[data-view="week"]')
         if not _synlig(sida, "#storeCardsCompareBtn"):
             return False
         sida.click("#storeCardsCompareBtn")
@@ -176,14 +190,10 @@ def gå_till(sida, scen: str) -> bool:
         if not _synlig(sida, "#openStatsBtn"):
             return False
         sida.click("#openStatsBtn")
+        # L5: "Sparat" är en skärm med sparsumman på den mörka ytan; det
+        # gamla #statSavedWeek finns inte. Rubriken räcker som grind - och
+        # skärmen är sann även utan historik ("saknas" är ett ärligt svar).
         _vänta(sida, "#statsTitle")
-        # Sparsiffrorna bygger på handlade veckor. Ett nyss skapat konto har
-        # ingen historik, och då står det "Underlag saknas" på skärmen - en
-        # sann skärm, men inte en bild att sälja med.
-        if "Underlag saknas" in (sida.locator("#statSavedWeek").inner_text() or ""):
-            print("    sparat: skärmen saknar historik (\"Underlag saknas\"). Kör "
-                  "--base mot ett konto som handlat klart en vecka för en bild "
-                  "värd att lämna in.", file=sys.stderr)
     else:
         raise ValueError(scen)
     # Layouten hinner lägga sig; annars fångas ett halvritat tillstånd.
