@@ -60,6 +60,13 @@ export function openBillingPortal(token) {
   return request("/billing/portal", { method: "POST", token });
 }
 
+// P02d: appens anmälan av ett StoreKit-köp (eller en återställning). `jws`
+// är transaktionen som Apple signerat; servern verifierar den mot Apples rot
+// och binder den till kontot bara om appAccountToken är kontots.
+export function claimAppleTransaction(token, jws) {
+  return request("/billing/apple/transaction", { method: "POST", token, body: { jws } });
+}
+
 export function changePassword(token, currentPassword, newPassword) {
   return request("/auth/change-password", { method: "POST", token, body: { currentPassword, newPassword } });
 }
