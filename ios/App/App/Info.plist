@@ -41,6 +41,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocationDefaultAccuracyReduced</key>
+	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Matjakt använder din plats för att hitta matbutiker nära dig.</string>
 	<key>UIApplicationSceneManifest</key>

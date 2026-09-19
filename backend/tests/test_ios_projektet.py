@@ -56,6 +56,15 @@ class IosProjektetGarAttBygga(unittest.TestCase):
         info = plistlib.loads((ROT / "ios" / "App" / "App" / "Info.plist").read_bytes())
         self.assertEqual(info.get("CFBundleDisplayName"), "Matjakt")
 
+    def test_platsen_ar_ungefarlig_som_standard(self):
+        # N1b. "Hitta mig" skickar koordinater till servern för att hitta
+        # butiker nära användaren - det behöver inte vara på metern, och
+        # App Privacy-etiketten säger Coarse Location. Med nyckeln ger iOS
+        # ungefärlig plats (kilometer, inte meter) utan att fråga extra, och
+        # etiketten, reviewnoterna och koden säger samma sak.
+        info = plistlib.loads((ROT / "ios" / "App" / "App" / "Info.plist").read_bytes())
+        self.assertIs(info.get("NSLocationDefaultAccuracyReduced"), True)
+
     def test_systemgranssnittet_ar_ljust(self):
         # N1b. Appen är ljus (styles.css: mörkt läge är ett uttryckligt
         # data-theme, inte prefers-color-scheme). Utan nyckeln följer

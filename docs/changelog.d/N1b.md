@@ -12,3 +12,9 @@ historiken; `test_ios_nycklarna` kräver 2 och förbjuder 1.
 är ett uttryckligt `data-theme`, inte `prefers-color-scheme`), och utan
 nyckeln följde tangentbord, ark och statusfält telefonens mörka läge över
 en ljus app.
+
+`NSLocationDefaultAccuracyReduced = true`: "Hitta mig" skickar koordinater
+till servern för att hitta butiker nära användaren — det behöver inte vara
+på metern. Med nyckeln ger iOS ungefärlig plats (kilometer), så App
+Privacy-etiketten (Coarse Location), reviewnoterna ("no precise location")
+och koden säger samma sak.
