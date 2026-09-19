@@ -137,6 +137,8 @@ function fromApi(recipe) {
     ...recipe,
     namn: recipe.name ?? recipe.namn,
     bild: recipe.image ?? recipe.bild,
+    // P09c: alt-texten är bevisets (P09b), aldrig receptnamnets.
+    bildAlt: recipe.imageAlt ?? recipe.bildAlt ?? "",
     tid: recipe.totalTime ?? recipe.tid,
     portioner: recipe.servings ?? recipe.portioner,
     kcal: recipe.nutrition?.kcal ?? recipe.kcal,
