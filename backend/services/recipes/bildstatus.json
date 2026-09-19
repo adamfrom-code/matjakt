@@ -1,0 +1,922 @@
+{
+ "aggrora-bacon-bonor": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "aggwok-ris": {
+  "alt": "fried rice with eggs in bowls (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "artsoppa-klassisk": {
+  "alt": "close up of homemade vegetable soup in bowl (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "artsoppa-vegetarisk": {
+  "alt": "Pea soup in Loviisa (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "bankebiff": {
+  "alt": "creamy fettuccine with beef and mushroom sauce (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "biff-a-la-lindstrom": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "biff-bearnaise-vardag": {
+  "alt": "meal with beef on plate (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "biff-rodvinssas": {
+  "alt": "Steak au poivre at La Famiglia, Flamingo, Vantaa (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "biff-sotpotatis": {
+  "alt": "meal with beef on plate (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "biffbowl-teriyaki": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "biffgraddtimjan": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "biffgryta-rotter": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "biffmatvetesallad": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "biffmedlok": {
+  "alt": "Beef medallion topped with fried onions (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "biffwok": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "blodpudding-lingon": {
+  "alt": "raw smoked sausage with grapes and bacon on plate (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "blomkalscurry": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "bonbowlmatvete": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "bonburgare": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "bonsoppa-tomat": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "broccoligratang-skinka": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "broccolisoppa": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "bruna-bonor-flask": {
+  "alt": null,
+  "status": "MISSING"
+ },
+ "bulgur-halloumi-bulk": {
+  "alt": "healthy quinoa salad with chickpeas on wooden table (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "bulk-kyckling-jattebowl": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "butterchicken": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "carbonara": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "chevrasallad-ronnbar": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "chili-con-carne": {
+  "alt": "tomatoes and peppers on green background (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "chili-sin-carne-budget": {
+  "alt": "tomatoes and peppers on green background (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "citronflaskfile": {
+  "alt": "food menu restaurant dinner (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "citronkyckling": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "currykottfarsgryta": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "dillkott": {
+  "alt": null,
+  "status": "MISSING"
+ },
+ "falafel-pitabrod": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "falukorv-ugn": {
+  "alt": "red sausage on white ceramic plate (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "fetagryta": {
+  "alt": "delicious vegetable stew in black skillet (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "fetapasta": {
+  "alt": "food photography of pasta (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "fishtacos": {
+  "alt": "top view of a plate with tacos and red cabbage salad (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "fiskbullar-dillsas": {
+  "alt": null,
+  "status": "MISSING"
+ },
+ "fiskgratang-dill": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "fiskpasta": {
+  "alt": "delicious dinner with fish (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "fiskpinnar-potatismos": {
+  "alt": "crispy breaded fish sticks in tray (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "fisksoppa-saffran": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "flaskcurrygryta": {
+  "alt": "a stew dish in macro shot photography (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "flaskfile-rotfrukter": {
+  "alt": "food menu restaurant dinner (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "flaskfile-svampsas": {
+  "alt": "food menu restaurant dinner (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "flaskgryta-paprika": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "flaskkarre": {
+  "alt": "roasted meat over a wooden tray (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "flaskkotlett-artor": {
+  "alt": null,
+  "status": "MISSING"
+ },
+ "flaskpannkaka": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "flasktomatpasta": {
+  "alt": "04666 Polish spaghetti pasta with sauce made of pork meat, tomatoes, garlic and olive (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "flaskytterfile-appelmos": {
+  "alt": "roasted meat over a wooden tray (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "flygande-jakob": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "gnocchi-tomat-mozzarella": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "gravlax-hovmastarsas": {
+  "alt": "smoked salmon with mozzarella cheese dill and olive oil (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "gronsakslasagne": {
+  "alt": "delicious homemade lasagna dinner setting (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "gronsakspaj": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "gronsakssoppa-med-pasta": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "gulaschgryta": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "halloumibowl": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "halloumiburgare": {
+  "alt": "burger with tomato and lettuce (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "halloumicurry": {
+  "alt": "curry rice dish in a plate (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "halloumigryta-tomat": {
+  "alt": "delicious vegetable stew in black skillet (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "halloumipasta": {
+  "alt": "pasta with herbs on a white plate (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "halloumisallad-quinoa": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "hamburgare-klyftpotatis": {
+  "alt": "close up shot of a burger beside the french fries (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "helstekt-kyckling-rotfrukter": {
+  "alt": "appetizing roasted chicken with vegetables in baking dish (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "hemmagjord-pizza": {
+  "alt": "plates of pizzas on a wooden table (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "hoisin-flask-ris": {
+  "alt": "authentic thai grilled pork with sticky rice dish (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "isterband-dillstuvad": {
+  "alt": "IsterbandMedMos (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kaldolmar": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "kalops": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "kalpudding": {
+  "alt": "Kålpudding i långpanna (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kalvschnitzel": {
+  "alt": "crispy schnitzel with caramelized onions (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "kalvschnitzelmatvete": {
+  "alt": "crispy schnitzel with caramelized onions (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "kassler-ananas-gratang": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kassler-potatisgratang": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kebabgryta": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kikartscurry": {
+  "alt": "cooked food on the table (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "kikartscurry-protein": {
+  "alt": "cooked food on the table (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "kikartscurry-snabb": {
+  "alt": "curry and rice served on blue plate (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kikartssallad": {
+  "alt": "mediterranean chickpea and hummus salad dish (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "korv-med-mos": {
+  "alt": "Charlecote Park Sausage and Mash Warwickshire England 01 lighter (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "korv-med-rostad-potatis": {
+  "alt": "sausages on a metal tray (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "korv-stroganoff-klassisk": {
+  "alt": "Korvstroganoff with rice 1 (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "korvgratang": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "korvgryta-curry": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "korvgryta-krossade-tomater": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "korvgryta-potatis": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "korvsoppa": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "korvstroganoff": {
+  "alt": "Korvstroganoff with rice 4 (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kottbullar-potatismos": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kottfarsgratang-mos": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kottfarsgryta-bulk": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kottfarslasagne": {
+  "alt": "delicious lasagna slice on a ceramic plate (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kottfarslimpa-graddsas": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kottfarssas": {
+  "alt": "delicious pasta with bolognese and bell peppers (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kottfarssoppa": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kottsoppa": {
+  "alt": "close up of homemade vegetable soup in bowl (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "kraftig-omelett-lunch": {
+  "alt": "golden omelette on red plate against black background (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kramig-kycklinggryta": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kramig-kycklingpasta": {
+  "alt": "pasta with chicken stew (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "krispig-kyckling-nudelwok": {
+  "alt": "colorful asian stir fry with vegetables and noodles (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "krispig-tofu-ris-bulk": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "krispiga-kikartor-bowl": {
+  "alt": null,
+  "status": "MISSING"
+ },
+ "krogarens-makaroner": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kroppkakor": {
+  "alt": "Kroppkaka (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "krämig-svampasta": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "kvargbowl-kyckling": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kyckling-caesarsallad": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kyckling-currysas-ris": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "kyckling-fajitas": {
+  "alt": "delicious grilled chicken fajitas in mexico city (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kyckling-gnocchipanna": {
+  "alt": "a person grating a cheese on a gnocchi (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kyckling-parmesan-pasta-bulk": {
+  "alt": "pasta with chicken stew (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "kyckling-pesto-pasta": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "kyckling-quesadillas": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "kyckling-ris-broccoli": {
+  "alt": "appetizing roasted chicken with vegetables in baking dish (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "kyckling-ris-mild": {
+  "alt": "a close up shot of a delicious chicken soup (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kyckling-rod-curry": {
+  "alt": "curry meat with rice and salad (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kyckling-shawarma-bowl": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kyckling-tikka": {
+  "alt": "delicious chicken tikka platter with chutney (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kycklingcaesar": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "kycklingcouscous": {
+  "alt": "appetizing roasted chicken with vegetables in baking dish (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "kycklingfarsbiffar-ris": {
+  "alt": "homemade fried chicken cakes (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kycklinggratang-broccoli": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kycklinggryta": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kycklinggryta-honung-senap": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kycklinggryta-paprika": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kycklingklubbor-bbq": {
+  "alt": "close up of grilled chicken legs on a plate (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kycklingklubbor-klyftpotatis": {
+  "alt": null,
+  "status": "MISSING"
+ },
+ "kycklinglada-sotpotatis": {
+  "alt": "gourmet fried chicken with salad on elegant plate (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kycklingmatvete": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "kycklingschnitzel": {
+  "alt": "delicious homemade schnitzel with fries (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "kycklingsoppa-nudlar": {
+  "alt": "soup in white ceramic bowl (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "kycklingsoppa-ris": {
+  "alt": "soup in white ceramic bowl (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "kycklingspett-jordnot": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "kycklingwok-nudlar-protein": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "kycklingwraps-lunch": {
+  "alt": "Fajitas Wraps (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "lammfarsbiffar-tzatziki": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "lantlig-potatissoppa-purjolok": {
+  "alt": "Leek Soup (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "lasagne-klassisk": {
+  "alt": "delicious homemade lasagna with tomato sauce (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "lax-i-ugn-fetaost": {
+  "alt": null,
+  "status": "MISSING"
+ },
+ "lax-pasta-bulk": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "lax-teriyaki": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "laxfile-quinoa": {
+  "alt": "grilled salmon fillet with seasoned rice close up (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "laxpoke": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "laxpudding": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "laxsallad": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "linsbolognese": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "linsdaal": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "linssoppa-rod": {
+  "alt": "a flatlay shot of a bowl of soup on a rustic background (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "makaroner-kottbullar": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "makaronipudding": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "morotsbiffar-tzatziki": {
+  "alt": null,
+  "status": "MISSING"
+ },
+ "morotscurry": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "morotssoppa-ingefara": {
+  "alt": "a bowl of pumpkin soup (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "overnight-bulgursallad-kyckling": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "panerad-flundra-ugn": {
+  "alt": "fish with lemon slices (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "panerad-torsk-potatismos": {
+  "alt": "a white plate with fish and vegetables on it (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "pannbiff-lok": {
+  "alt": "meal with beef on plate (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "pannkakor": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "pasta-carbonara": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "pasta-skinksas": {
+  "alt": "food photography of pasta (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "pasta-tomatsas-vitlok": {
+  "alt": "food photography of pasta (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "pastagratang": {
+  "alt": "delicious baked penne pasta with cheese and vegetables (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "pastasallad-kyckling-lunch": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "pitepalt": {
+  "alt": null,
+  "status": "MISSING"
+ },
+ "potatisgratang-skinka": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "proteinpannkakor": {
+  "alt": "delicious pancakes with cream and berries (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "pulled-chicken-tacos": {
+  "alt": "delicious tacos with guacamole and lime garnish (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "pyttipanna": {
+  "alt": "egg with vegetable dish (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "raggmunk": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "rakcurry": {
+  "alt": "close up photo of shrimp curry with green rice (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "rakpasta-vitlok": {
+  "alt": "pasta prawn (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "raksallad": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "raksallad-avokado": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "risgrynsgrot-lordag": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "rostbiff-potatissallad": {
+  "alt": "meal with beef on plate (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "rotfruktsgratang": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "shakshuka": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "sillunch-potatis": {
+  "alt": "Midsummer pickled herring (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "sjomansbiff": {
+  "alt": "creamy fettuccine with beef and mushroom sauce (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "skink-ostpaj": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "sondagsstek": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "sotpotatis-bulk-bowl": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "sotpotatissoppa": {
+  "alt": "a bowl of pumpkin soup (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "spaghetti-kottfarssas": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "sparrispastacitron": {
+  "alt": "pasta with herbs on a white plate (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "spenatsoppa-agg": {
+  "alt": "gourmet pumpkin soup with herb garnish (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "stekt-flask-loksas": {
+  "alt": null,
+  "status": "MISSING"
+ },
+ "stekt-sej-remoulad": {
+  "alt": "fish and potatoes on a plate (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "stekt-strommingsflundra": {
+  "alt": "fish and potatoes on a plate (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "strimlad-flaskkarre-ris": {
+  "alt": "Stir-fried ginger pork (8486598866) (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "svamprisotto": {
+  "alt": "risotto dish on black round plate (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "svarta-bonor-tacos": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "svartbonsbowl": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "tacobonor": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "tacogratang": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "tacos-kottfars": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "tandoorikyckling": {
+  "alt": "delicious indian meal with chicken tikka and rice (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "teriyakitofu": {
+  "alt": "stir fried tofu and vegetables on plate (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "toast-skagen": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "tofucurry": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "tofuwok": {
+  "alt": "close up photo of a tofu dish (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "tofuwok-jordnot": {
+  "alt": "tofu stir fry on white bowl with chopsticks (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "tomatsoppa": {
+  "alt": "white ceramic mug with soup beside spoon (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "tomatsoppa-grillost": {
+  "alt": "white ceramic mug with soup beside spoon (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "tonfiskpasta": {
+  "alt": "spaghetti on blue ceramic plate (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "tonfiskpasta-citron": {
+  "alt": "spaghetti on blue ceramic plate (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "tonfisksallad-bonor": {
+  "alt": "a bowl of tuna salad with eggs (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "torsk-aggsas": {
+  "alt": "a white plate with fish and vegetables on it (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "torsk-brynt-smor-agg": {
+  "alt": "a white plate with fish and vegetables on it (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "torsk-potatismos": {
+  "alt": "food restaurant fish cooking (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "torskgratang-vasterbotten": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "torskitomatsas": {
+  "alt": "Cod in tomato sauce (Oslo) (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "torskrygg-ortstekt": {
+  "alt": null,
+  "status": "MISSING"
+ },
+ "ugnskorv-potatismos-appel": {
+  "alt": "red sausage on white ceramic plate (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "ugnslax-citron": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "ugnstorsk": {
+  "alt": "food restaurant fish cooking (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "varmkorv-gourmet": {
+  "alt": "Hot dog on a plate - Evan Swigart (foto: Wikimedia Commons)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "vegansk-bolognese-vegofars": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "vegansk-chili-sin-carne": {
+  "alt": "tomatoes and peppers on green background (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "vegetarisklasagne": {
+  "alt": "delicious homemade lasagna with tomato sauce (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "vego-pytt": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ },
+ "vegofars-pastagratang": {
+  "alt": "delicious baked penne pasta with cheese and vegetables (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "vegofarsgryta": {
+  "alt": null,
+  "status": "REJECTED"
+ },
+ "vitkalssoppa-fars": {
+  "alt": "woman holding a plate with creamy soup (foto: Pexels)",
+  "status": "EXACT-KANDIDAT"
+ },
+ "wallenbergare": {
+  "alt": "fried meat cutlet served with boiled potatoes and salad (foto: Pexels)",
+  "status": "GOOD_VARIANT-KANDIDAT"
+ },
+ "zucchinipastafeta": {
+  "alt": null,
+  "status": "NEEDS_REVIEW"
+ }
+}
