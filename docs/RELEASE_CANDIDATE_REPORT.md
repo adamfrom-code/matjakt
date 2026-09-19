@@ -183,6 +183,25 @@ Inget P0 återstår **i koden**. Det som återstår för inlämning är externt
 Därför är versionen **inte inskickad till App Review**: ordern tillät det
 bara om alla release-gates var gröna, och de tre ovan är det inte.
 
+## 11b. Matjakt 2.0 — grunderna lagda efter release candidate (masterordern §16)
+
+Alla bakom funktionsflaggor (`src/services/flaggor.js`, alla av; slås på
+per webbläsare) — ingen ändrar något för dagens användare, varje paket
+har regressionstest och sabotage:
+
+| Paket | PR | Vad |
+|---|---|---|
+| R1 planeringskontexten | #228 | `planningContext(state, …)`: allt planeraren vet om hushållet på ett ställe; `flaggor.js` |
+| S1 medlemmens slag | #229 | `kind` adult/child/guest + `portionFactor` per medlem, `portionSum`; "Jag är" bakom `hushall.medlemmar` |
+| T1 vem äter hemma | #230 | `narvaro` per dag, "2 av 4 hemma" och stegknapp bakom `vecka.narvaro` |
+| Y1 planerna ändrades | #231 | `moveWeekPlanDay(from, to)`, veckan får en tom dag mitt i; "Flytta till" bakom `vecka.flytta` |
+| Z1 vad kan vi äta nu | #232 | `search(ingredients_any=…)` med kanoniska alias, `GET /api/recipes?ingredient=…` |
+| AA1 rester | #233 | `rester.js`: kokta − ätna per dag, resterdagar; kopplas in i AA2 bakom `vecka.rester` |
+
+Kvar i 2.0-listan: T2 (prissättning per dag), Z2/AA2 (klientdelarna),
+intelligent skafferi (AB), barnläge (U), Matmötet (V), Familjepuls (W),
+smartare receptsök, egna familjerecept, receptvarianter.
+
 ## 12. P1 REMAINING
 
 - Prisauditens estimat-rader (beslut om volymvikter, BLOCKED – ADAM 6).
