@@ -536,6 +536,11 @@
           <div id="householdCurrent" hidden>
             <p class="household-name" id="householdNameLabel"></p>
             <ul class="household-members" id="householdMembers"></ul>
+            <!-- W1: familjepulsen - dold tills flaggan hushall.puls är på. -->
+            <details class="household-puls-panel" id="householdPulsPanel" hidden>
+              <summary>Familjepuls</summary>
+              <div id="householdPuls"></div>
+            </details>
             <button class="btn btn-primary" type="button" id="householdInviteBtn"><span>Bjud in</span></button>
             <div class="household-invite" id="householdInviteBox" hidden>
               <p id="householdInviteHint">Skicka länken till den du vill bjuda in. Den gäller i tre dygn och kan bara användas en gång.</p>

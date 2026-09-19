@@ -163,6 +163,8 @@ class HouseholdRouter:
                 return self._sync(user_id, query)
             if path == "/api/household/notifications":
                 return self._notifications(user_id)
+            if path == "/api/household/events":
+                return self._events(user_id, query)
             return 404, {"error": "Okänd väg"}
 
         if method != "POST":
@@ -220,6 +222,23 @@ class HouseholdRouter:
         if payload["household"] is not None:
             payload["household"] = self._household_payload(household_id, user_id)
         return 200, payload
+
+    def _events(self, user_id, query):
+        """W1 Familjepuls: hushållets senaste händelser, nyast först, med
+        aktörens visningsnamn (aldrig e-post). Bara medlemmar - lagret kräver
+        medlemskap - och utan hushåll är svaret en tom lista, inte ett fel."""
+        try:
+            household_id = self._household_id(user_id)
+        except _NoHousehold:
+            return 200, {"events": []}
+        limit = max(1, min(100, _int(_first(query, "limit"), 30)))
+        events = []
+        for event in self.store.events(household_id, user_id, limit):
+            actor = self._actor_name(household_id, event["actorUserId"]) if event["actorUserId"] else None
+            events.append({"id": event["id"], "type": event["type"], "actor": actor,
+                           "isMe": event["actorUserId"] == user_id,
+                           "createdAt": event["createdAt"], "payload": event.get("payload") or {}})
+        return 200, {"events": events}
 
     def _notifications(self, user_id):
         return 200, {

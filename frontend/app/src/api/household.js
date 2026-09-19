@@ -49,6 +49,8 @@ export const removeInventoryItem = (token, key) => post("/inventory/remove", tok
 export const saveHouseholdDoc = (token, doc, body, meta = {}) => post("/doc", token, { doc, body, ...meta });
 
 export const fetchNotifications = token => get("/notifications", token);
+// W1: familjepulsen - hushållets senaste händelser, nyast först.
+export const fetchEvents = (token, limit = 30) => get(`/events?limit=${encodeURIComponent(limit)}`, token);
 export const saveNotificationPrefs = (token, preferences) => post("/notifications/prefs", token, { preferences });
 export const registerDevice = (token, deviceToken, platform) => post("/notifications/device", token, { token: deviceToken, platform });
 
