@@ -38,6 +38,15 @@ services:
       # Utskick (välkomstserie + Kampanjtorget): av tills Adam slår på.
       - key: MATJAKT_MAILINGS_ENABLED
         value: "0"
+      # P02d/P02f (beslut 2026-09-19): Apple In-App Purchase på, och
+      # sandbox-köp godtagna även här - det är så Apples granskare och
+      # TestFlight köper. Flaggan ändrar bara om miljön "Sandbox" godtas;
+      # signatur, bundle-id, produkt och appAccountToken prövas som för
+      # produktion (docs/IAP_COMPLIANCE.md C6).
+      - key: MATJAKT_APPLE_IAP
+        value: "1"
+      - key: MATJAKT_APPLE_IAP_ACCEPT_SANDBOX
+        value: "1"
       - key: MATJAKT_MAIL_SECRET
         sync: false
       # H1: SÖNDAGSNOTISENS NYCKELPAR (VAPID, RFC 8292). Genereras EN gång av
@@ -147,6 +156,10 @@ services:
         value: "0"
       - key: MATJAKT_MAX_SCRAPES
         value: "0"
+      - key: MATJAKT_APPLE_IAP
+        value: "1"
+      - key: MATJAKT_APPLE_IAP_ACCEPT_SANDBOX
+        value: "1"
       # Utskick: aldrig från staging. Ett välkomstmejl till en riktig
       # adress från en testmiljö är inte ett driftfel, det är ett
       # förtroendefel.
