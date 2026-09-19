@@ -111,3 +111,18 @@ export function isUserCancelled(error) {
   const text = String(error?.message || error || "").toLowerCase();
   return /cancel|avbr|user_cancelled|userCancelled/i.test(text);
 }
+
+/**
+ * Väntar köpet på godkännande? StoreKit 2 svarar `.pending` när kontot har
+ * "Be om att få köpa" (Ask to Buy) eller köpet kräver en åtgärd hos Apple;
+ * pluginet avvisar då anropet med "Transaction pending". Det är inget fel:
+ * transaktionen kommer senare genom `transactionUpdated`, och då anmäls
+ * den till servern som vilket köp som helst.
+ */
+export function isPending(error) {
+  const text = String(error?.message || error || "");
+  return /pending|deferred|v\u00e4ntar/i.test(text);
+}
+
+export const PENDING_TEXT =
+  "Köpet väntar på godkännande. Premium aktiveras så snart det godkänts - du behöver inte göra något mer.";

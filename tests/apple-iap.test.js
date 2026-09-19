@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  PENDING_TEXT, isPending,
   MANAGE_SUBSCRIPTIONS_URL, PLUGIN_NAME, isUserCancelled, overlayStoreKitPrices, planForProduct,
   productForPlan, productIdentifiers, purchaseOptions, restorableTransactions, storeKitActive,
 } from "../frontend/app/src/services/apple-iap.js";
@@ -82,6 +83,14 @@ test("återställning anmäler bara VÅRA aktiva köp med en JWS", () => {
   assert.deepEqual(restorableTransactions(purchases, ENT), ["a.b.c", "d.e.f"]);
   assert.deepEqual(restorableTransactions([], ENT), []);
   assert.deepEqual(restorableTransactions(undefined, ENT), []);
+});
+
+test("ett köp som väntar på godkännande är inget fel - och inget köp", () => {
+  assert.equal(isPending(new Error("Transaction pending")), true);
+  assert.equal(isPending({ message: "purchase deferred" }), true);
+  assert.equal(isPending(new Error("User cancelled")), false);
+  assert.equal(isPending(null), false);
+  assert.match(PENDING_TEXT, /godkänn/);
 });
 
 test("att kunden stänger köparket är inget fel", () => {

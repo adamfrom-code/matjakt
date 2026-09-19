@@ -49,7 +49,7 @@ import { ritaPlanval, synkaValet } from "./src/views/premiumskarmen.js";
 // P02d: StoreKit i iOS-appen. Logiken (när vägen gäller, vilka produkter,
 // hur StoreKits pris läggs ovanpå serverns) bor i modulen och prövas i node;
 // här nedanför finns bara tillstånd och anropen mot pluginet.
-import { MANAGE_SUBSCRIPTIONS_URL, PLUGIN_NAME as STOREKIT_PLUGIN, isUserCancelled, overlayStoreKitPrices, productIdentifiers, purchaseOptions, restorableTransactions, storeKitActive as storeKitActiveFor } from "./src/services/apple-iap.js";
+import { MANAGE_SUBSCRIPTIONS_URL, PENDING_TEXT, PLUGIN_NAME as STOREKIT_PLUGIN, isPending, isUserCancelled, overlayStoreKitPrices, planForProduct, productIdentifiers, purchaseOptions, restorableTransactions, storeKitActive as storeKitActiveFor } from "./src/services/apple-iap.js";
 import { adjustInventory, fetchHousehold, fetchNotifications, forgetPushSubscription, joinHousehold, markAtHome, markPurchased, previewInvite, removeInventoryItem, replaceWeekItems, savePushSubscription, setShoppingStatus, syncHousehold, undoShoppingAction, upsertInventoryItem, upsertShoppingItem } from "./src/api/household.js";
 import { ALREADY_HAVE, NEED_TO_BUY, PURCHASED, REMOVED, applyLocalRow, applySync, emptyHouseholdState, foldName, householdDietary, inventoryNames, inventoryRows, pantryAmountsFor, pantryEntriesFor, shoppingKey, shoppingRows } from "./src/services/household-state.js";
 import { categoryFor } from "./src/services/categories.js";
@@ -3211,7 +3211,7 @@ function renderPriceTabs() {
   }
   const restore = document.getElementById("restorePurchasesBtn");
   if (restore) restore.hidden = !storeKit;
-  if (storeKit) ensureStoreKitProducts();
+  if (storeKit) { ensureStoreKitProducts(); watchStoreKitUpdates(); syncStoreKitEntitlements(); }
 }
 // P02d: hämtar StoreKits produkter en gång och ritar om flikarna när de
 // kommit. Misslyckas hämtningen står serverns tal kvar och köpet kan ändå
@@ -3247,6 +3247,13 @@ async function purchaseWithStoreKit(plan, errorLine = $("checkoutError")) {
     if (errorLine) errorLine.textContent = "Köp i appen är inte tillgängligt just nu.";
     return false;
   }
+  // Väntläget: knappen är upptagen medan Apples köpark är öppet, så ett
+  // andra tryck inte startar ett andra köp - och texten säger vad som pågår.
+  const knapp = $("subscribeBtn");
+  const etikett = knapp?.querySelector("span");
+  const forut = etikett?.textContent;
+  if (knapp) { knapp.disabled = true; knapp.setAttribute("aria-busy", "true"); }
+  if (etikett) etikett.textContent = "Öppnar App Store…";
   try {
     await flushServerSync();
     const plugins = await loadNativePlugins();
@@ -3256,10 +3263,47 @@ async function purchaseWithStoreKit(plan, errorLine = $("checkoutError")) {
     await claimStoreKitTransaction(transaction.jwsRepresentation);
     return true;
   } catch (error) {
+    // "Be om att få köpa": köpet är varken klart eller misslyckat - det
+    // kommer genom transactionUpdated när målsman godkänt det.
+    if (isPending(error)) { if (errorLine) errorLine.textContent = PENDING_TEXT; return false; }
     // Att kunden stänger Apples köpark är inget fel att visa.
     if (errorLine && !isUserCancelled(error)) errorLine.textContent = errorText(error);
     return false;
+  } finally {
+    if (knapp) { knapp.disabled = false; knapp.removeAttribute("aria-busy"); }
+    if (etikett && forut != null) etikett.textContent = forut;
   }
+}
+// Transaktioner som kommer UTAN ett tryck på knappen: ett Ask to Buy-köp som
+// godkänts, en förnyelse medan appen är öppen, en ofullbordad transaktion
+// vid start (pluginet lyssnar på StoreKits Transaction.updates och skickar
+// varje sådan hit). Bara VÅRA produkter och bara inloggad: anmälan binder
+// köpet till kontot, och servern avgör resten. Lyssnaren sätts en gång.
+let storeKitWatching = false;
+function watchStoreKitUpdates() {
+  if (storeKitWatching) return;
+  storeKitWatching = true;
+  loadNativePlugins().then(plugins => plugins?.NativePurchases?.addListener?.("transactionUpdated", transaction => {
+    if (!state.authToken || !transaction?.jwsRepresentation) return;
+    if (!planForProduct(entitlements, transaction.productIdentifier)) return;
+    claimStoreKitTransaction(transaction.jwsRepresentation).catch(() => {});
+  })).catch(() => { storeKitWatching = false; });
+}
+// Återsynk vid start: det StoreKit säger att kontot äger just nu anmäls
+// tyst till servern - en gång per körning, bara inloggad. Utan den vore
+// servern beroende av Apples notiser för varje förnyelse; med den räcker
+// det att appen öppnas. Idempotent på servern (samma transaktion igen är
+// "ignored"), och en tom lista är inget att rapportera.
+let storeKitSynced = false;
+function syncStoreKitEntitlements() {
+  if (storeKitSynced || !state.authToken) return;
+  storeKitSynced = true;
+  loadNativePlugins()
+    .then(plugins => plugins?.NativePurchases?.getPurchases?.({ productType: "subs", onlyCurrentEntitlements: true }))
+    .then(async result => {
+      for (const jws of restorableTransactions(result?.purchases, entitlements)) await claimStoreKitTransaction(jws);
+    })
+    .catch(() => { storeKitSynced = false; });
 }
 async function restoreWithStoreKit() {
   const errorLine = $("checkoutError");

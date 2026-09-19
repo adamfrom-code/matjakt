@@ -103,3 +103,29 @@ test("markupen bär återställningsknappen (dold) och kodnotisens id", () => {
   assert.match(appJs, /\$\("restorePurchasesBtn"\)\.addEventListener\("click", restoreWithStoreKit\)/);
   for (const id of ["premiumCodeNote", "accountRedeemForm"]) assert.match(appJs, new RegExp(`"${id}"`));
 });
+
+test("köpet har ett väntläge, ett pending-svar och en lyssnare för sena transaktioner", () => {
+  const start = appJs.indexOf("async function purchaseWithStoreKit");
+  const body = appJs.slice(start, appJs.indexOf("let storeKitWatching", start));
+  // Knappen upptagen medan Apples ark är öppet - och alltid återställd.
+  assert.match(body, /knapp\.setAttribute\("aria-busy", "true"\)/);
+  assert.match(body, /finally \{[\s\S]*knapp\.removeAttribute\("aria-busy"\)/);
+  // Ask to Buy: väntläge före cancel-tystnaden, så ett väntande köp inte
+  // tystas som ett avbrutet.
+  assert.ok(body.indexOf("isPending(error)") < body.indexOf("isUserCancelled(error)"));
+  assert.match(body, /PENDING_TEXT/);
+  // Transaktioner utan knapptryck: lyssnaren finns, gäller bara våra
+  // produkter, och sätts från samma krok som produkthämtningen.
+  assert.match(appJs, /addListener\?\.\("transactionUpdated"/);
+  assert.match(appJs, /planForProduct\(entitlements, transaction\.productIdentifier\)/);
+  assert.match(appJs, /if \(storeKit\) \{ ensureStoreKitProducts\(\); watchStoreKitUpdates\(\); syncStoreKitEntitlements\(\); \}/);
+});
+
+test("vid start anmäls det StoreKit säger att kontot äger - en gång, bara inloggad", () => {
+  const start = appJs.indexOf("function syncStoreKitEntitlements");
+  const body = appJs.slice(start, appJs.indexOf("\n}\n", start));
+  assert.match(body, /if \(storeKitSynced \|\| !state\.authToken\) return;/);
+  assert.match(body, /onlyCurrentEntitlements: true/);
+  assert.match(body, /restorableTransactions\(result\?\.purchases, entitlements\)/);
+  assert.match(body, /claimStoreKitTransaction\(jws\)/);
+});
