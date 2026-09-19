@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { QUARANTINE_KEY, STORAGE_KEY } from "../frontend/app/src/state/storage.js";
 import {
   SCHEMA_VERSION, STORAGE_FULL_TEXT, addToWeekPlan, applySyncBlob, buildSyncPayload,
-  initAppState, normalizeState, removeFromWeekPlan, saveState, selectedRecipes,
+  clearPriceSnapshots, initAppState, normalizeState, removeFromWeekPlan, saveState, selectedRecipes,
   setWeekPlan, state, swapWeekPlanDay,
 } from "../frontend/app/src/state/app-state.js";
 
@@ -350,4 +350,35 @@ test("T3: när kontots prisbild går in följer inte den gamla hämtningens lås
   // Låg de kvar visade butikskorten två hänglås bredvid en uppsättning
   // summor de aldrig hörde till - en bild ingen hämtning svarat.
   assert.deepEqual(state.dbLockedChains, []);
+});
+
+
+// T5b: en veckomutation tömmer HELA prisbilden - även de låsta kedjorna.
+// Förra svarets lås stod kvar när totalerna tömdes, och butikskorten
+// ritades ur resterna: två hänglås och inget öppet kort, tills nästa
+// prissättning landat. Det var bildrutan G8-testet läste ("2 != 0").
+test("T5b: clearPriceSnapshots tömmer också de låsta kedjorna", () => {
+  const s = {
+    livePriser: { mjölk: 12 }, liveBranchTotals: { ica: 300 }, dbChainTotals: { ica: 310, coop: 330 },
+    dbLockedChains: [{ chain: "citygross", hasData: true, comparable: true }, { chain: "hemkop", hasData: true, comparable: true }],
+    dbComparison: { cheapestChain: "ica", priceSpread: 20 }, dbPricedAt: 1700000000000,
+    weekPlan: ["a", "b"],
+  };
+  clearPriceSnapshots(s);
+  assert.deepEqual(s.dbLockedChains, [], "låsen ska följa med totalerna ut");
+  assert.deepEqual(s.livePriser, {});
+  assert.deepEqual(s.liveBranchTotals, {});
+  assert.deepEqual(s.dbChainTotals, {});
+  assert.equal(s.dbComparison, null);
+  assert.equal(s.dbPricedAt, null);
+  assert.deepEqual(s.weekPlan, ["a", "b"], "veckan rörs inte - bara prisbilden");
+});
+
+test("T5b: app.js rensar genom tillståndsmodulen, inte med en egen lista", () => {
+  const appJs = readFileSync(new URL("../frontend/app/app.js", import.meta.url), "utf8");
+  const start = appJs.indexOf("function clearPriceSnapshots()");
+  assert.notEqual(start, -1);
+  const body = appJs.slice(start, appJs.indexOf("\n}\n", start));
+  assert.match(body, /clearPriceSnapshotsInState\(state\)/);
+  assert.doesNotMatch(body, /state\.livePriser =/, "en egen lista i app.js glider ifrån modulens");
 });
