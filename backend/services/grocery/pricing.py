@@ -477,12 +477,44 @@ def _explain_chosen(product, ingredient: str) -> "MatchVerdict":
         va = explain_match(product.name, alias, product.brand, product.category)
         if va.ok:
             return MatchVerdict(True, f"alias:{alias}/{va.rule}", va.detail, va.confidence)
+    # P05c: samma märkning för registrets namn - raden säger vilket namn
+    # som bar matchen, aldrig bara "ok".
+    for alias in canonical_names_for(ingredient):
+        va = explain_match(product.name, alias, product.brand, product.category)
+        if va.ok:
+            return MatchVerdict(True, f"kanonisk:{alias}/{va.rule}", va.detail, va.confidence)
     return v
 
 
 def aliases_for(ingredient: str) -> list:
     """Alternative shelf names for an ingredient, primary name first."""
     return _FOLDED_ALIASES.get(_fold(ingredient), [])
+
+
+def canonical_names_for(ingredient: str) -> list:
+    """P05c: det kanoniska ingredienslagrets namn för ingrediensen -
+    kanoniska namnet och dess kurerade alias (services/ingredients/
+    kanoniska.json) - utöver INGREDIENT_ALIASES. "tomat" når därmed
+    hyllans "Tomater", "feta" når "Fetaost", "soja" når "Sojasås".
+
+    Ingen fuzzy-gissning: registret är en handskriven lista, och resolve()
+    svarar None för allt det inte känner - då tillförs ingenting. Namnen
+    som redan täcks (ingrediensen själv, INGREDIENT_ALIASES) hoppas över.
+    Importen är lokal: services.ingredients importerar enhetsfamiljerna
+    härifrån, så en modulimport vore cirkulär."""
+    from services.ingredients import resolve as _resolve
+    kanonisk = _resolve(ingredient)
+    if kanonisk is None:
+        return []
+    known = {_fold(ingredient)} | {_fold(a) for a in aliases_for(ingredient)}
+    out = []
+    for name in (kanonisk.namn, *kanonisk.alias):
+        folded = _fold(name)
+        if folded in known:
+            continue
+        known.add(folded)
+        out.append(name)
+    return out
 
 
 def is_whole_cut(ingredient: str) -> bool:
@@ -1825,7 +1857,12 @@ class RecipePricingEngine:
         # each alias candidate still passes the same matcher and category
         # guards under the alias's name.
         matched_ids = {p.id for p in matched}
-        for alias in aliases_for(ingredient):
+        # P05c: registrets kanoniska namn och alias konkurrerar på exakt
+        # samma villkor som INGREDIENT_ALIASES - matcharen under aliasets
+        # namn, ORIGINALETS uteslutningar och kategorivakter. "Krossade
+        # tomater" i konservhyllan når aldrig "tomat" den vägen: kravet
+        # (frukt & grönt) följer med, bara namnet vidgas.
+        for alias in [*aliases_for(ingredient), *canonical_names_for(ingredient)]:
             alias_words = sorted((w for w in _words(alias) if len(w) > 2), key=len, reverse=True)
             if not alias_words:
                 continue
