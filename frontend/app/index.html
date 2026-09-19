@@ -643,7 +643,15 @@
           <button class="btn btn-primary" type="button" id="subscribeBtn"><span>Prenumerera</span></button>
           <p class="account-error" id="checkoutError"></p>
           <p class="prem-avsluta">Avsluta när du vill, direkt i appen.</p>
-          <p class="premium-pitch-note">Har du en Premium-kod?</p>
+          <!-- P02d: "Återställ köp" krävs av App Store Review Guidelines 3.1.1
+               ("make sure you have a restore mechanism"). Visas bara när
+               StoreKit-vägen är på (iOS-appen med MATJAKT_APPLE_IAP); på
+               webben finns inget att återställa. -->
+          <button class="btn btn-ghost account-redeem-btn" type="button" id="restorePurchasesBtn" hidden>Återställ köp</button>
+          <!-- P02d: kodinlösen döljs i iOS-appen när StoreKit-vägen är på -
+               3.1.1 räknar "license keys" som en egen upplåsningsmekanism.
+               Koder löses in på webben och slår igenom i appen (3.1.3(b)). -->
+          <p class="premium-pitch-note" id="premiumCodeNote">Har du en Premium-kod?</p>
           <form id="accountRedeemForm" class="account-form">
             <label class="sr-only" for="premiumCode">Premium-kod</label>
             <input id="premiumCode" type="text" placeholder="Premium-kod" autocomplete="off">
