@@ -42,8 +42,9 @@ isolated_test_data_dir()          # MATJAKT_DATA_DIR -> tempkatalog INNAN api_se
 
 import api_server  # noqa: E402
 import apple_testkedja as kedja  # noqa: E402
-from services.accounts import features  # noqa: E402
+from services.accounts import features, ratelimit  # noqa: E402
 from services.billing import apple as billing_apple  # noqa: E402
+from services.billing.apple_jws import b64url_decode  # noqa: E402
 
 MONTHLY = features.PRICING["monthly"]["storekitProductId"]
 YEARLY = features.PRICING["yearly"]["storekitProductId"]
@@ -141,10 +142,11 @@ class Bas(unittest.TestCase):
         return self.request("POST", "/api/billing/apple/notifications", {"signedPayload": signed_payload})
 
     def transaktion(self, user_id, *, otid=None, product=MONTHLY, expires=None, environment="Production",
-                    app_account_token=None, revocation=None, chain=None, kind="Auto-Renewable Subscription"):
+                    app_account_token=None, revocation=None, chain=None, kind="Auto-Renewable Subscription",
+                    bundle_id=billing_apple.BUNDLE_ID):
         otid = otid or ("3" + self.otid[1:])
         tx = {"transactionId": "1", "originalTransactionId": otid, "productId": product,
-              "bundleId": billing_apple.BUNDLE_ID, "environment": environment, "type": kind,
+              "bundleId": bundle_id, "environment": environment, "type": kind,
               "purchaseDate": kedja.ms(_om(days=-1)), "expiresDate": kedja.ms(expires or _om(days=30)),
               "signedDate": kedja.ms(NU)}
         token_value = app_account_token if app_account_token is not None else billing_apple.app_account_token(user_id)
@@ -367,6 +369,92 @@ class AppensAnmalan(Bas):
                     self.transaktion(user_id, kind="Consumable")):
             self.assertEqual(self.request("POST", "/api/billing/apple/transaction", {"jws": jws}, token=token)[0], 400)
         self.assertEqual(self.request("POST", "/api/billing/apple/transaction", {}, token=token)[0], 400)
+        self.assertFalse(self.me(token)["premium"])
+
+
+class SandboxIProduktion(Bas):
+    """P02f (beslut 2026-09-19). Produktionsservern får ta emot ett SANDBOX-
+    köp - det är så Apples granskare och TestFlight-testare köper - men
+    bara verifierat: signaturen mot roten, bundle-id:t exakt, produkten i
+    allowlisten, miljön sparad som Sandbox ur den signerade transaktionen.
+    Att godta Sandbox är en flagga. Verifieringen har ingen flagga."""
+
+    def setUp(self):
+        super().setUp()
+        # Sju tester, upp till åtta anmälningar var, från samma IP: utan
+        # nollställning slår billing-spärren till mitt i klassen (429).
+        ratelimit.reset()
+        api_server.APPLE_IAP = replace(api_server.APPLE_IAP, accept_sandbox=True)
+
+    def anmal(self, token, jws):
+        return self.request("POST", "/api/billing/apple/transaction", {"jws": jws}, token=token)
+
+    def test_giltigt_sandbox_kop_ger_premium_och_sparas_som_sandbox(self):
+        token, user_id = self.konto()
+        status, svar = self.anmal(token, self.transaktion(user_id, environment="Sandbox"))
+        self.assertEqual((status, svar["outcome"]), (200, "applied"))
+        me = self.me(token)
+        self.assertTrue(me["premium"])
+        self.assertEqual(me["entitlementSource"], "apple")
+        self.assertEqual(me["plan"], "premium_monthly")
+        self.assertEqual(me["appleSubscription"]["environment"], "Sandbox")
+
+    def test_ogiltig_signatur_nekas_aven_nar_sandbox_ar_tillatet(self):
+        token, user_id = self.konto()
+        for jws in (self.transaktion(user_id, environment="Sandbox", chain=self.annan_kedja),
+                    self.transaktion(user_id, environment="Sandbox")[:-6] + "AAAAAA"):
+            self.assertEqual(self.anmal(token, jws)[0], 400)
+        self.assertFalse(self.me(token)["premium"])
+
+    def test_fel_bundle_id_nekas(self):
+        token, user_id = self.konto()
+        for bundle in ("se.matjakt.app.kopia", "se.matjakt", "SE.MATJAKT.APP"):
+            status, svar = self.anmal(token, self.transaktion(user_id, environment="Sandbox", bundle_id=bundle))
+            self.assertEqual(status, 400, bundle)
+            self.assertIn("wrong_bundle", svar["error"])
+        self.assertFalse(self.me(token)["premium"])
+
+    def test_okand_produkt_nekas_i_bada_miljoerna_och_i_notisen(self):
+        token, user_id = self.konto()
+        for env in ("Sandbox", "Production"):
+            status, svar = self.anmal(token, self.transaktion(user_id, environment=env,
+                                                             product="se.matjakt.premium.lifetime"))
+            self.assertEqual(status, 400, env)
+            self.assertIn("okänd produkt", svar["error"])
+        # En notis om en produkt vi inte säljer kvitteras men appliceras inte.
+        status, svar = self.skicka(self.notis("SUBSCRIBED", "INITIAL_BUY", user_id=user_id,
+                                              product="se.matjakt.premium.lifetime"))
+        self.assertEqual((status, svar["outcome"]), (200, "unknown_product"))
+        self.assertFalse(self.me(token)["premium"])
+
+    def test_manipulerad_miljo_nekas(self):
+        token, user_id = self.konto()
+        # Payloaden ändrad efter signeringen: Sandbox -> Production med
+        # den gamla signaturen kvar. Verifieraren ska fälla den.
+        huvud, kropp, sig = self.transaktion(user_id, environment="Sandbox").split(".")
+        payload = json.loads(b64url_decode(kropp))
+        payload["environment"] = "Production"
+        fusk = ".".join([huvud, kedja.b64url(json.dumps(payload).encode("utf-8")), sig])
+        self.assertEqual(self.anmal(token, fusk)[0], 400)
+        # ...och en signerad transaktion med en miljö som inte är någon av
+        # Apples två godtas inte heller, hur den än stavas.
+        for env in ("Xcode", "sandbox", "production", "Staging", ""):
+            self.assertEqual(self.anmal(token, self.transaktion(user_id, environment=env))[0], 400, env)
+        self.assertFalse(self.me(token)["premium"])
+
+    def test_produktion_fungerar_nar_sandbox_ar_tillatet(self):
+        token, user_id = self.konto()
+        status, svar = self.anmal(token, self.transaktion(user_id, environment="Production", product=YEARLY))
+        self.assertEqual((status, svar["outcome"]), (200, "applied"))
+        me = self.me(token)
+        self.assertEqual((me["plan"], me["appleSubscription"]["environment"]), ("premium_yearly", "Production"))
+
+    def test_utan_flaggan_nekas_sandbox_som_forut(self):
+        api_server.APPLE_IAP = replace(api_server.APPLE_IAP, accept_sandbox=False)
+        token, user_id = self.konto()
+        status, svar = self.anmal(token, self.transaktion(user_id, environment="Sandbox"))
+        self.assertEqual(status, 400)
+        self.assertIn("sandbox", svar["error"].lower())
         self.assertFalse(self.me(token)["premium"])
 
 

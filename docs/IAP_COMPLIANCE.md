@@ -474,6 +474,39 @@ dokumentet till exakt de strängarna – P02c och P02d binder koden till
 Adam kontrollerar att inget annat redan ligger i App Store Connect innan
 produkterna skapas (BLOCKED – ADAM 3, första punkten).
 
+### C6. Sandbox i produktion (P02f)
+
+Apples granskare köper med ett Sandbox-konto, och TestFlight-köp dras
+alltid i sandbox. Ska de få Premium i appen måste **produktionsservern**
+godta en Sandbox-transaktion. Beslut 2026-09-19: det gör den, med
+`MATJAKT_APPLE_IAP_ACCEPT_SANDBOX=1` även i produktion.
+
+Flaggan ändrar exakt en sak — om miljön `Sandbox` godtas. Allt annat är
+som för produktion, utan undantag:
+
+| Kontroll | Var | Utan den |
+|---|---|---|
+| JWS-signaturen mot Apple Root CA – G3, hela kedjan | `apple_jws.verify_jws` | 400 |
+| `bundleId` exakt `se.matjakt.app` | `check_app` → `wrong_bundle` | 400 |
+| `productId` i allowlisten (`features.PRICING`) | `bind_transaction`, `handle_notification` → `unknown_product` | 400 / kvitteras utan åtgärd |
+| `environment` ur den **signerade** transaktionen, aldrig ur klientens ord; bara `Sandbox` eller `Production` | `check_app` → `unknown_environment` | 400 |
+| `appAccountToken` = det inloggade kontots | `bind_transaction` | 400 |
+| miljön sparas som den står (`apple_environment = "Sandbox"`) | `apply_apple_subscription` | — |
+
+Testerna (`test_apple_iap.SandboxIProduktion`): giltig sandbox → Premium
+med `environment: Sandbox`; ogiltig signatur → nekad; fel bundle-id →
+nekad; fel produkt-id → nekad (och notisen kvitteras utan åtgärd);
+manipulerad miljö (payloaden ändrad efter signeringen, eller en miljö som
+inte är Apples två) → nekad; produktion fortsätter fungera; utan flaggan
+nekas sandbox som förut.
+
+Konsekvens att känna till: en sandbox-prenumeration förnyas i
+**accelererad takt** (en månad ≈ 5 minuter, sex förnyelser, sedan utgång).
+Appens återsynk vid start och `transactionUpdated`-lyssnaren (P02d) anmäler
+förnyelserna; utan notis-URL:er (BLOCKED – ADAM 5) löper Premium ut när
+sista förnyelsen gått ut, vilket för en granskare är långt efter att
+köpet prövats.
+
 ---
 
 ## (d) Köp på iOS ger Premium på webben – och tvärtom
@@ -616,7 +649,9 @@ this action cannot be undone."
 - `MATJAKT_APPLE_IAP=1` (produktion, först när P02d är mergad och
   produkterna godkända), `MATJAKT_APPLE_APP_ID=<Apple ID>` (siffran under
   **App Information** → **General Information** → **Apple ID**),
-  `MATJAKT_APPLE_IAP_ACCEPT_SANDBOX=1` **bara** på staging.
+  `MATJAKT_APPLE_IAP_ACCEPT_SANDBOX=1` — **även i produktion** sedan
+  beslutet 2026-09-19 (P02f, C6 nedan): granskaren och TestFlight köper i
+  sandbox mot produktionsservern och får Premium på riktigt.
 - Inga hemligheter behövs för själva mottagaren: verifieringen bygger på
   Apples publika rot. (Det finns ingen "shared secret" i V2; den hör till
   det utfasade `verifyReceipt`.)

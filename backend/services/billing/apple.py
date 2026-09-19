@@ -36,9 +36,16 @@ har.
 REGLERNA FRÅN STRIPE-WEBHOOKEN GÄLLER (B1, J5): okänd kund förbrukar inte
 UUID:t och besvaras 500, så Apple försöker igen - "at 1, 12, 24, 48, and
 72 hours after the previous attempt" - och under tiden hinner appens
-anmälan binda transaktionen till kontot. Sandbox-notiser appliceras bara
-när MATJAKT_APPLE_IAP_ACCEPT_SANDBOX är satt (staging); i produktion
-kvitteras de utan åtgärd, så ett sandbox-köp aldrig ger riktigt Premium.
+anmälan binda transaktionen till kontot.
+
+SANDBOX (P02f, beslut 2026-09-19). Apples granskare och TestFlight-testare
+köper i sandbox, och de ska få Premium på riktigt - i produktion. Därför
+godtas en Sandbox-transaktion när MATJAKT_APPLE_IAP_ACCEPT_SANDBOX är
+satt, och flaggan sätts numera även i produktion. Flaggan ändrar EN sak:
+om miljön "Sandbox" godtas. Allt annat är exakt som för produktion -
+signaturen mot Apples rot, bundle-id:t exakt, produkten i allowlisten,
+miljön sparad som den står i den signerade transaktionen (aldrig ur
+klientens ord). Utan flaggan kvitteras sandbox utan åtgärd som förut.
 """
 
 from __future__ import annotations
@@ -351,7 +358,8 @@ def handle_notification(accounts, notifications: AppleNotificationStore, signed_
       ignored           äldre än det senast applicerade (eller inget att ändra)
       duplicate         notificationUUID redan behandlat
       unhandled         typ vi inte agerar på (TEST m.fl.) - kvitteras
-      sandbox_ignored   sandbox-notis i produktion - kvitteras
+      sandbox_ignored   sandbox-notis utan MATJAKT_APPLE_IAP_ACCEPT_SANDBOX - kvitteras
+      unknown_product   en produkt vi inte säljer - kvitteras, appliceras inte (P02f)
       unknown_customer  ingen kundrad - anroparen svarar 500 så Apple försöker igen
 
     Kastar AppleJwsError/AppleIapError när datan inte går att lita på
@@ -367,6 +375,11 @@ def handle_notification(accounts, notifications: AppleNotificationStore, signed_
     state = state_from(notification)
     if state is None:
         return {**base, "outcome": "unhandled"}
+    # P02f: samma allowlist som för appens anmälan. En notis om en produkt vi
+    # inte säljer kvitteras (200) men appliceras inte - Apple ska inte
+    # försöka igen, och ingen plan ska gissas ur ett okänt id.
+    if state.product_id is not None and state.product_id not in set(config.products.values()):
+        return {**base, "outcome": "unknown_product"}
     tx = notification.transaction or {}
     with accounts.lock:
         try:
@@ -420,6 +433,13 @@ def bind_transaction(accounts, user_id, jws, config: AppleIapConfig, *, now=None
     if token and token != expected:
         raise AppleIapError("köpet hör till ett annat Matjakt-konto")
     state = state_from_transaction(tx, now=now)
+    # P02f: produkten ska vara EN AV VÅRA - features.PRICING:s produkt-id:n,
+    # samma strängar som App Store Connect. En signerad transaktion för en
+    # annan produkt (en gammal, en felskriven, en annan apps) är äkta men
+    # ger inget här, och apply_apple_subscription ska aldrig behöva gissa
+    # vilken plan "se.matjakt.premium.lifetime" är.
+    if state.product_id not in set(config.products.values()):
+        raise AppleIapError(f"okänd produkt ({state.product_id})")
     owner = accounts.user_id_for_apple_transaction(state.original_transaction_id)
     if owner is not None and owner != int(user_id):
         raise AppleIapError("köpet hör till ett annat Matjakt-konto")
