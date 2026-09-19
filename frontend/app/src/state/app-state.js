@@ -235,6 +235,27 @@ export function reconcileRecipeAliases() {
   return migrateRecipeIds(state, map);
 }
 
+/**
+ * Allt som prissatte den FÖRRA veckan - och de LÅSTA kedjorna.
+ *
+ * T5b. clearPriceSnapshots i app.js tömde livepriser, totaler och
+ * jämförelsen vid varje veckomutation, men lämnade dbLockedChains kvar.
+ * Butikskorten ritas ur båda: när "Skapa min vecka" tömde totalerna stod
+ * förra svarets två låsta kedjor ensamma kvar, och korten ritades ur
+ * resterna - två hänglås och inget öppet kort - tills den nya
+ * prissättningen landat. På en lastad maskin var det bildrutan E2E:n
+ * läste ("2 != 0", G8-testet). Ett lås är ett löfte om att Premium visar
+ * ett pris; ett lås utan den hämtning det hörde till lovar ingenting.
+ */
+export function clearPriceSnapshots(target = state) {
+  target.livePriser = {};
+  target.liveBranchTotals = {};
+  target.dbChainTotals = {};
+  target.dbLockedChains = [];
+  target.dbComparison = null;
+  target.dbPricedAt = null;
+}
+
 export function setWeekPlan(ids) {
   // Papperskorgen: den vecka som just ersätts läggs överst i historiken (de
   // tolv senaste behålls, synkas med kontot). "Skapa ny vecka" av misstag ska
