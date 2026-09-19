@@ -2027,3 +2027,21 @@ button{color:inherit}
    priset som visas en konsument är det hon betalar. */
 .jamfor-not{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-6);margin:0 0 var(--sp-6);color:var(--ink-2);font:400 11px/1.5 var(--f-ui)}
 .jamfor-not-rad{display:flex;align-items:center;gap:var(--sp-3)}
+
+/* AO1 · mobil ergonomi (mätt i 375 px viewport, docs/changelog.d/AO1.md).
+   1. iOS zoomar in sidan när ett fält med typsnitt under 16 px får fokus -
+      sökfältet (15 px), filtren (13 px), "Lägg till vara" (15 px) och
+      onboardingens budgetfält (15 px) gjorde det. På telefonbredd är
+      fälten 16 px; på desktop står de som förut.
+   2. Tryckytor: dagens ＋ i Veckan var 34 px bred och receptchipsen 32 px
+      höga - under de 44 pt Apple kräver. Minsta höjd 40 px på chipsen
+      (raden är en rullist) och 44 px bredd på plustecknet. */
+@media (max-width:480px){
+  .recipe-search input,.recipe-filters select,.favorite-filter,.manual-add-row input,#manualItemInput,
+  #pantrySearch,.account-form input,.location-row input,.settings-content select,.nutrition-fields select,
+  #feedbackText,#premiumCode,#obBudget,.onboarding-card input:not([type=checkbox]):not([type=radio]):not([type=range]),
+  .onboarding-card select,.account-modal-card input:not([type=checkbox]):not([type=radio]):not([type=range]),
+  .account-modal-card select,.account-modal-card textarea{font-size:16px}
+  .recipe-tag{min-height:40px;display:inline-flex;align-items:center}
+  .vecka-dag-lagg{width:44px}
+}
