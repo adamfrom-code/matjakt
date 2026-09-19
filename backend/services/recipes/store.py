@@ -56,6 +56,29 @@ from .meal_types import require as require_meal_type
 from .pantry import is_pantry_staple
 
 
+def ingredient_query_ids(terms) -> list[str]:
+    """Z1: sökordens normaliserade id - ordet självt plus det kanoniska
+    lagrets namn och alias (P05a), så att "tomater"/"tomat" och "lök"/"gul
+    lök" når samma rader. Bara registrets kurerade alias, aldrig en
+    gissning: ett okänt ord ger bara sitt eget id."""
+    # Lokal import: services.ingredients importerar prissättningen, och
+    # prissättningen når det här lagret - en modulimport vore cirkulär.
+    from services.ingredients import resolve
+    out: set[str] = set()
+    for term in terms or []:
+        term = str(term or "").strip()
+        if not term:
+            continue
+        keys = {normalize_ingredient_id(term)}
+        kanonisk = resolve(term)
+        if kanonisk is not None:
+            keys.add(kanonisk.id)
+            keys.add(normalize_ingredient_id(kanonisk.namn))
+            keys.update(normalize_ingredient_id(alias) for alias in kanonisk.alias)
+        out.update(k for k in keys if k)
+    return sorted(out)
+
+
 def normalize_ingredient_id(name: str) -> str:
     """The stable key that links a recipe ingredient to grocery matching.
 
@@ -639,7 +662,7 @@ class RecipeStore:
         return self._connection.execute("SELECT COUNT(*) FROM recipes").fetchone()[0]
 
     def search(self, *, tags=None, max_time=None, min_protein=None, max_kcal=None,
-               query=None, meal_type=None, limit=200, offset=0) -> list[dict]:
+               query=None, meal_type=None, ingredients_any=None, limit=200, offset=0) -> list[dict]:
         """Filtering happens in SQL, not by loading every recipe and sifting
         it in Python - which is the difference between 58 recipes and 5 000.
 
@@ -673,10 +696,28 @@ class RecipeStore:
         if query:
             where.append("(name LIKE ? OR description LIKE ?)")
             params.extend([f"%{query}%", f"%{query}%"])
+        # Z1 "Vad kan vi äta nu": recept som innehåller NÅGON av de här
+        # ingredienserna, flest träffar först. Termerna löses mot det
+        # kanoniska lagret (P05a) så "tomater" och "tomat", "lök" och "gul
+        # lök" är samma fråga - aldrig fuzzy, bara registrets alias. Okända
+        # termer ger ingen träff, inte alla recept.
+        matched_ids = ingredient_query_ids(ingredients_any) if ingredients_any else []
+        order = "name"
+        order_params: list = []
+        if ingredients_any:
+            if not matched_ids:
+                return []
+            marks = ",".join("?" * len(matched_ids))
+            where.append(f"id IN (SELECT recipe_id FROM recipe_ingredients WHERE normalized_id IN ({marks}))")
+            params.extend(matched_ids)
+            order = (f"(SELECT COUNT(DISTINCT normalized_id) FROM recipe_ingredients ri "
+                     f"WHERE ri.recipe_id = recipes.id AND ri.normalized_id IN ({marks})) DESC, name")
+            order_params = list(matched_ids)
         sql = "SELECT * FROM recipes"
         if where:
             sql += " WHERE " + " AND ".join(where)
-        sql += " ORDER BY name LIMIT ? OFFSET ?"
+        sql += f" ORDER BY {order} LIMIT ? OFFSET ?"
+        params.extend(order_params)
         params.extend([limit, offset])
         recipes = [self._to_dict(row) for row in self._connection.execute(sql, params)]
         # IngrediensNAMNEN följer med listraderna (en batchfråga, inte N+1).
@@ -687,12 +728,18 @@ class RecipeStore:
             ids = [r["id"] for r in recipes]
             names: dict[str, list] = {}
             marks = ",".join("?" * len(ids))
+            matched: dict[str, list] = {}
+            wanted = set(matched_ids)
             for row in self._connection.execute(
-                    f"SELECT recipe_id, name FROM recipe_ingredients WHERE recipe_id IN ({marks}) ORDER BY position",
+                    f"SELECT recipe_id, name, normalized_id FROM recipe_ingredients WHERE recipe_id IN ({marks}) ORDER BY position",
                     ids):
                 names.setdefault(row["recipe_id"], []).append(row["name"])
+                if row["normalized_id"] in wanted:
+                    matched.setdefault(row["recipe_id"], []).append(row["name"])
             for recipe in recipes:
                 recipe["ingredientNames"] = names.get(recipe["id"], [])
+                if ingredients_any:
+                    recipe["matchedIngredients"] = matched.get(recipe["id"], [])
         return recipes
 
     def stats(self) -> dict:
