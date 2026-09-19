@@ -116,6 +116,10 @@ export function receptbildMarkup(recipe, { namn = true, full = false, klass = ""
   const url = receptbildUrl(recipe?.bild, { full });
   if (!url) return reservkortMarkup(recipe, { namn, klass });
   // Hjältebilden är det första man ser - den laddas inte lat.
+  // P09c: alt-texten säger vad FOTOT visar (P09b: bevisets titel och källa),
+  // inte vad rätten heter - namnet står redan bredvid bilden, och ett foto
+  // som visar något annat än rubriken ska en skärmläsare inte lova.
+  const alt = String(recipe?.bildAlt || recipe?.namn || "");
   return `<img class="recipe-photo${extra}" src="${escapeHtml(url)}" `
-    + `alt="${escapeHtml(String(recipe?.namn || ""))}"${lat ? ' loading="lazy"' : ""} decoding="async">`;
+    + `alt="${escapeHtml(alt)}"${lat ? ' loading="lazy"' : ""} decoding="async">`;
 }
