@@ -71,6 +71,12 @@ export function createEntitlementRefresh({
 
   return {
     // Appen skickade just personen till Stripes kundportal.
+    // AM1: boot och inloggning hämtade entitlementen DIREKT via
+    // fetchEntitlements() och gick förbi den här spärren - appens första
+    // sekund skickade två identiska anrop (modulens sista rad + refreshUser)
+    // innan något av dem svarat. refreshNow() är samma run() som
+    // uppvaknandet använder: ett anrop i luften delas av alla som frågar.
+    refreshNow() { return run(); },
     markBillingVisit() { billingVisitPending = true; },
     // Entitlementen hämtades någon annanstans ifrån (boot, inloggning) - det
     // svaret är lika färskt som ett vi hämtat själva.

@@ -3849,7 +3849,7 @@ $("deleteAccountBtn").addEventListener("click", async () => {
   } catch (error) { $("deleteError").textContent = errorText(error); }
 });
 async function refreshUser() {
-  fetchEntitlements();
+  entitlementRefresh.refreshNow();
   if (!state.authToken) { renderAccount(); return; }
   try {
     const { user } = await fetchCurrentUser(state.authToken);
@@ -4391,7 +4391,7 @@ if (pendingVerifyToken) {
 // Fill the recipe bank, then draw. Everything that reads RECEPT runs after
 // this resolves; an empty bank (network gone, file missing) leaves the app
 // working with whatever the account already had rather than throwing.
-fetchEntitlements();
+entitlementRefresh.refreshNow();
 loadRecipes().then(recipes => {
   RECEPT.push(...recipes);
   // P04b: tio recept-id är sedan dess alias. Veckan, favoriterna och
