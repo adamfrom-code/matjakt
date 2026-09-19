@@ -89,7 +89,11 @@ class Versionerna(unittest.TestCase):
     def test_marketing_och_build_version(self):
         t = PBXPROJ.read_text(encoding="utf-8")
         self.assertIn("MARKETING_VERSION = 1.0;", t)
-        self.assertIn("CURRENT_PROJECT_VERSION = 1;", t)
+        # N1b: byggnummer 2 - TestFlight 1.0 (1) var 2026-09-12; nästa
+        # uppladdning måste ha ett högre nummer, och det höjs här, i repot,
+        # så det som skickades går att läsa av i historiken.
+        self.assertIn("CURRENT_PROJECT_VERSION = 2;", t)
+        self.assertNotIn("CURRENT_PROJECT_VERSION = 1;", t)
 
 
 if __name__ == "__main__":
