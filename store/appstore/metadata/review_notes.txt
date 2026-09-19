@@ -46,9 +46,10 @@ Purchases) fetches an existing subscription for the same Apple ID, e.g.
 after reinstalling; it requires signing in to the Matjakt account that
 made the purchase.
 
-Location: used only to find stores near the user, and only through a
-postcode the user types in (optional). No precise location, no tracking,
-no analytics or advertising SDKs.
+Location: optional, and used only to find stores near the user - either a
+postcode the user types in, or, if the user taps "Hitta mig" (Find me),
+the device's approximate location (reduced accuracy; the app never asks
+for precise location). No tracking, no analytics or advertising SDKs.
 
 Account deletion: Konto > Radera konto (Delete account), directly in the
 app.

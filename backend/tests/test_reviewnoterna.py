@@ -127,7 +127,8 @@ class NoternaBeskriverKopetIAppen(unittest.TestCase):
         for fras in ("Så testar ni köpet", "Kontoradering:", "Betalning:"):
             self.assertFalse(fras in platt, f"svensk rubrik kvar i noterna: {fras!r}")
         # Inga tredjeparts-SDK:er och ingen exakt plats - det bygget faktiskt gör.
-        self._kräver("No precise location", "platsdeklarationen ska stämma med bygget (postnummer, ingen GPS)")
+        self._kräver("approximate location", "platsdeklarationen ska stämma med bygget (postnummer eller ungefärlig plats)")
+        self._kräver("never asks for precise location", "N1b: NSLocationDefaultAccuracyReduced - noterna ska säga det")
 
     def test_granskningskontots_platshallare_star_kvar(self):
         # Kontot hör hemma i App Store Connect, inte i repot (N0h); men
