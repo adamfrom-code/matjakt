@@ -42,11 +42,35 @@ import { prisMarkup } from "./pris.js";
 
 /** Månadspriset multiplicerat med tolv minus årspriset — det man sparar. */
 export function årsrabatt(pricing = {}) {
+  // P02d: bär planen StoreKits pris är webbens tal inte det kunden betalar,
+  // och en sparsumma räknad på dem vore ett påhittat tal.
+  if (visningspris(pricing.monthly) || visningspris(pricing.yearly)) return null;
   const perMånad = pricing.monthly?.pricePerMonth;
   const perÅr = pricing.yearly?.pricePerYear;
   if (!Number.isFinite(perMånad) || !Number.isFinite(perÅr)) return null;
   const rabatt = perMånad * 12 - perÅr;
   return rabatt > 0 ? rabatt : null;
+}
+
+/**
+ * P02d: StoreKits lokaliserade pris för en plan ("59,00 kr"), eller null.
+ *
+ * I iOS-appen väljs prispunkten i App Store Connect och kan skilja sig från
+ * webbens 59/399; det pris som visas ska vara det som dras. Strängen kommer
+ * färdig ur StoreKit (valuta, decimaler, språk) och formateras inte om här.
+ */
+export function visningspris(entry) {
+  const text = entry?.displayPrice;
+  return typeof text === "string" && text.trim() ? text.trim() : null;
+}
+
+/**
+ * Beloppet för en plan, genom L0:s komponent i båda fallen: StoreKits färdiga
+ * sträng när den finns (prisMarkup tar en färdig sträng som den är), annars
+ * serverns tal. Ingen egen prismarkup - det är regeln komponenten finns för.
+ */
+function beloppMarkup(entry, tal) {
+  return prisMarkup(visningspris(entry) ?? tal, undefined, { klass: "prem-plan-tal" });
 }
 
 /**
@@ -62,13 +86,13 @@ export function planMarkup(pricing = {}) {
   const perÅr = pricing.yearly?.pricePerYear;
   const rabatt = årsrabatt(pricing);
   const villkorÅr = ["per år", rabatt ? `spara ${rabatt} kr` : ""].filter(Boolean).join(" · ");
-  const rad = (namn, belopp, villkor) =>
+  const rad = (namn, entry, belopp, villkor) =>
     `<span class="prem-plan-namn">${escapeHtml(namn)}</span>`
-    + prisMarkup(belopp, undefined, { klass: "prem-plan-tal" })
+    + beloppMarkup(entry, belopp)
     + `<span class="prem-plan-villkor">${escapeHtml(villkor)}</span>`;
   return {
-    month: rad("Månad", perMånad, "per månad"),
-    year: rad("År", perÅr, villkorÅr),
+    month: rad("Månad", pricing.monthly, perMånad, "per månad"),
+    year: rad("År", pricing.yearly, perÅr, villkorÅr),
   };
 }
 
@@ -114,7 +138,9 @@ export function paywallPlanMarkup(pricing = {}) {
   const perMånad = pricing.monthly?.pricePerMonth;
   const perÅr = pricing.yearly?.pricePerYear;
   const rabatt = årsrabatt(pricing);
-  const perMånadAvÅr = Number.isFinite(perÅr) ? Math.round(perÅr / 12) : null;
+  // "motsvarar N kr per månad" är webbens aritmetik på webbens tal - inte
+  // på StoreKits (P02d).
+  const perMånadAvÅr = Number.isFinite(perÅr) && !visningspris(pricing.yearly) ? Math.round(perÅr / 12) : null;
   const villkorÅr = [
     "per år",
     perMånadAvÅr ? `motsvarar ${perMånadAvÅr} kr per månad` : "",
@@ -122,12 +148,12 @@ export function paywallPlanMarkup(pricing = {}) {
   ].filter(Boolean).join(" · ");
   return `<button type="button" class="btn btn-primary paywall-yearly" data-paywall-plan="yearly">
       <span class="prem-plan-namn">Ett år</span>
-      ${prisMarkup(perÅr, undefined, { klass: "prem-plan-tal" })}
+      ${beloppMarkup(pricing.yearly, perÅr)}
       <span class="prem-plan-villkor">${escapeHtml(villkorÅr)}</span>
     </button>
     <button type="button" class="btn btn-ghost paywall-monthly" data-paywall-plan="monthly">
       <span class="prem-plan-namn">Månad för månad</span>
-      ${prisMarkup(perMånad, undefined, { klass: "prem-plan-tal" })}
+      ${beloppMarkup(pricing.monthly, perMånad)}
       <span class="prem-plan-villkor">per månad</span>
     </button>`;
 }
