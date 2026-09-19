@@ -708,6 +708,16 @@
     <div class="account-modal-card" role="dialog" aria-modal="true" aria-labelledby="cookModalTitle">
       <button class="account-modal-close" type="button" data-cook-close aria-label="Stäng">×</button>
       <h2 id="cookModalTitle">Laga med det du har hemma</h2>
+      <!-- Z2: tidsvalet - dolt tills flaggan skafferi.laga-nu är på. -->
+      <div id="cookFilters" hidden>
+        <label class="sr-only" for="cookMaxTime">Hur lång tid har du?</label>
+        <select id="cookMaxTime">
+          <option value="">Hur lång tid som helst</option>
+          <option value="20">Max 20 min</option>
+          <option value="30">Max 30 min</option>
+          <option value="45">Max 45 min</option>
+        </select>
+      </div>
       <div id="cookResults"></div>
     </div>
   </div>

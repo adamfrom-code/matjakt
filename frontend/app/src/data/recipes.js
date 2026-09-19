@@ -90,9 +90,12 @@ export async function loadShelves(perShelf = 12) {
 
 /** A filtered list. tags are ANDed - "barn" plus "snabbt" means both, which
  *  is what a row of filter toggles means to the person using it. */
-export async function searchRecipes({ tags = [], maxTime, minProtein, maxKcal, query, limit = 60 } = {}) {
+export async function searchRecipes({ tags = [], maxTime, minProtein, maxKcal, query, ingredients = [], limit = 60 } = {}) {
   const params = new URLSearchParams();
   if (tags.length) params.set("tag", tags.join(","));
+  // Z2: en `ingredient` per vara - servern (Z1) löser dem mot det kanoniska
+  // lagret och svarar flest träffar först, med matchedIngredients per kort.
+  for (const name of ingredients) if (name) params.append("ingredient", name);
   if (maxTime) params.set("maxTime", maxTime);
   if (minProtein) params.set("minProtein", minProtein);
   if (maxKcal) params.set("maxKcal", maxKcal);
