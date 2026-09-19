@@ -54,6 +54,7 @@ if test_mode_active():
     from services.recipes import prices as recipe_prices
     from tests.e2e import avbockning
     from tests.e2e import fixture
+    from tests.e2e import leverans
     from tests.e2e import matt
     from tests.e2e import vantan
     from tests.e2e.diagnos import (rader_som_saenker_taeckningen, sammanfatta_begaran,
@@ -483,6 +484,13 @@ class BrowserJourney(unittest.TestCase):
         expect(self.page.locator("#accountModal")).to_be_hidden()
 
     def complete_onboarding(self, postcode=fixture.POSTCODE, budget="900"):
+        """Hela onboardingen, till och med "Skapa min vecka" - och väntan på
+        att veckan knappen skapade faktiskt står på skärmen (T5)."""
+        self.fill_onboarding(postcode, budget)
+        self.press_create_my_week()
+
+    def fill_onboarding(self, postcode=fixture.POSTCODE, budget="900"):
+        """De fyra stegen besvarade. Sista knappen är INTE tryckt."""
         page = self.page
         modal = page.locator("#onboardingModal")
         expect(modal).to_be_visible()
@@ -498,6 +506,25 @@ class BrowserJourney(unittest.TestCase):
         expect(page.locator("#onboardingTitle")).to_have_text("Var handlar ni?")
         expect(page.locator("#onboardingNext span")).to_have_text("Skapa min vecka")
         page.fill("#obPostcode", postcode)
+
+    def press_create_my_week(self):
+        """"Skapa min vecka" - och LEVERANSEN LÄST EFTER OMRITNINGEN.
+
+        Klicket skriver veckan och byter vyklass i samma andetag, men listan
+        och butikskorten ritas av render-bussen en bildruta senare. Fram till
+        dess står FÖRRA bildrutan kvar - och den är inte tom: postnumret i
+        steg fyra laddade butikerna, onBranchesLoaded byggde en vecka i
+        tysthet, och den hann prissättas bakom rutan. Varje villkor som stod
+        här förut (rutan borta, view-week, en rad i listan, erbjudanderaden)
+        var sant redan om den bildrutan, så G8-testet räknade hänglås i
+        glappet: "2 != 0" i CI, grönt vid omkörning. Se tests/e2e/leverans.py.
+        """
+        page = self.page
+        modal = page.locator("#onboardingModal")
+        # Raderna som står i listan NU är förra bildrutans. De märks, så att
+        # väntan nedan kan se att de bytts ut - även om den nya veckan råkar
+        # likna den gamla.
+        leverans.markera_raderna(page)
         page.click("#onboardingNext")
         expect(modal).to_be_hidden()
         # G8: KNAPPEN HETER "SKAPA MIN VECKA" OCH SKAPAR NU EN VECKA.
@@ -510,6 +537,13 @@ class BrowserJourney(unittest.TestCase):
         # ovanför den.
         expect(page.locator("#planModal")).to_be_hidden()
         expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
+        # T5: VECKAN KLICKET SKREV, och sedan väntan på att exakt den står i
+        # listan. Skrivningen är synkron i klickhanteraren, så den ligger i
+        # lagringen när Playwright får tillbaka kontrollen; omritningen
+        # väntas in, väckt av att listan byts ut.
+        plan = self.wait_for_state(lambda s: s.get("weekPlan"),
+                                   what="veckan klicket skrev")["weekPlan"]
+        leverans.vanta_pa_leveransen(page, plan)
         # L2: veckan är sju rader, inte sju dagflikar och ett kort. Den första
         # raden syns direkt - det är hela skärmen, inte en flik man valt.
         expect(page.locator("#weekPlanList .vecka-dag").first).to_be_visible()
@@ -848,6 +882,104 @@ class BrowserJourney(unittest.TestCase):
 
         self.assertEqual(self.console_errors, [])
         self.assertEqual(len(self.batch_requests), 0, "Free ska aldrig hämta livepriser per vara")
+
+    # ---- vaktposten: leveransen ----
+    #
+    # SPÄRRAR render-bussens bildrutor tills testet släpper dem. Skrivboken
+    # (vantan.py) bokför vad appen skriver; det här skriptet bestämmer NÄR
+    # appen får rita - och det är skillnaden mellan att hoppas på glappet
+    # mellan skrivning och omritning och att hålla det öppet.
+    #
+    # requestAnimationFrame byts ut i sidans egen värld; Playwrights väntor
+    # lever i en annan värld och rör sig inte. Spärrad kö, inte dropp:
+    # invalidate() i app.js ser ett köat anrop och lägger bara till banor,
+    # så EN flushRender ritar allt när grinden öppnas - precis som en sen
+    # bildruta på en lastad maskin gör.
+    BILDRUTEGRINDEN = """
+    (() => {
+      const riktig = window.requestAnimationFrame.bind(window);
+      const ko = [];
+      let stangd = false;
+      window.__bildrutegrinden = {
+        stang() { stangd = true; },
+        oppna() { stangd = false; for (const rita of ko.splice(0)) riktig(rita); },
+        vantande: () => ko.length,
+      };
+      window.requestAnimationFrame = rita => {
+        if (!stangd) return riktig(rita);
+        ko.push(rita);
+        return -1;
+      };
+    })();
+    """
+
+    def test_leveransen_lases_efter_omritningen_inte_efter_klicket(self):
+        """T5: att väntan på leveransen väcks av omritningen prövas i en
+        riktig sida.
+
+        Tolkningen har sina egna tester (tests/test_e2e_leverans.py, utan
+        browser). Det den halvan inte kan svara på är om glappet finns på
+        riktigt: att klicket skriver och byter vy medan förra bildrutan står
+        kvar, att den bildrutan bär hänglås, och att väntan inte släpper
+        förrän den bytts ut. CI läste i glappet ("2 != 0"); här hålls det
+        öppet med flit, så att det inte beror på hur lastad maskinen är.
+        """
+        page = self.page
+        page.add_init_script(self.BILDRUTEGRINDEN)
+        page.goto(self.app())
+
+        with self.step("den tysta veckan prissätts bakom rutan"):
+            self.fill_onboarding()
+            # Postnumret laddade butikerna, onBranchesLoaded byggde en vecka
+            # i tysthet, och den prissattes: butikskorten står bakom rutan,
+            # MED lås, för ögonblicket (G8) har inte börjat än. Det är
+            # förutsättningen för glappet - utan den finns inget att läsa fel.
+            try:
+                page.locator("#storeCards .store-card").first.wait_for(state="attached", timeout=30_000)
+            except Exception:                                  # noqa: BLE001
+                self.fail("förutsättningen saknas: ingen prissatt vecka bakom rutan"
+                          " - byggs den tysta veckan fortfarande vid onBranchesLoaded?")
+            fore = leverans.markera_raderna(page)
+            self.assertGreater(fore, 0, "veckolistan bakom rutan är tom")
+
+        with self.step("klicket skriver och byter vy - men ritar inte"):
+            page.evaluate("() => window.__bildrutegrinden.stang()")
+            page.click("#onboardingNext")
+            expect(page.locator("#onboardingModal")).to_be_hidden()
+            expect(page.locator("#top")).to_have_class(re.compile(r"view-week"))
+            plan = self.wait_for_state(lambda s: s.get("weekPlan"),
+                                       what="veckan klicket skrev")["weekPlan"]
+            # Allt complete_onboarding förut nöjde sig med är sant nu - om
+            # FÖRRA bildrutan. Varje rad i listan är en märkt rad från före
+            # klicket, omritningen står i kö, och butikskorten bär de lås
+            # CI räknade. Läst i ETT svep (T2b).
+            lage = page.evaluate(f"""() => ({{
+                gamla: document.querySelectorAll('#weekPlanList [{leverans.MARKE}]').length,
+                rader: document.querySelectorAll('#weekPlanList .vecka-dag').length,
+                lasta: document.querySelectorAll('#storeCards .store-card.locked').length,
+                koade: window.__bildrutegrinden.vantande() }})""")
+            self.assertEqual(lage["gamla"], fore, lage)
+            self.assertEqual(lage["rader"], fore, lage)
+            self.assertGreater(lage["koade"], 0, lage)
+            # Raden CI föll på: hänglås räknade i glappet ger förra bildrutans.
+            self.assertGreater(lage["lasta"], 0, lage)
+
+        with self.step("väntan släpper inte förrän omritningen landat"):
+            with self.assertRaises(leverans.Leveransen) as fel:
+                leverans.vanta_pa_leveransen(page, plan, tystnad=1.0)
+            self.assertIn("ritade den aldrig", str(fel.exception))
+            page.evaluate("() => window.__bildrutegrinden.oppna()")
+            svar = leverans.vanta_pa_leveransen(page, plan)
+            self.assertEqual(svar["gamla"], 0, svar)
+            self.assertEqual(svar["saknas"], [], svar)
+
+        with self.step("och först då gäller G8:s räkning"):
+            # Raden och korten ur samma bildruta - lästa i två steg gav
+            # "2 != 0" en gång av fem även HÄR, efter leveransen: korten
+            # ritas om av varje receptdetalj och varje prissvar.
+            bild = leverans.vanta_pa_prisbilden(page, tystnad=30.0)
+            self.assertEqual([k["text"] for k in bild["kort"] if k["last"]], [], bild)
+            self.assertTrue(bild["kort"], bild)
 
     # ---- den sena kontosynken ----
     #
@@ -1188,16 +1320,20 @@ class BrowserJourney(unittest.TestCase):
         # Spridningsraden är kvittot på att serverns jämförelse HAR landat:
         # det är samma svar som bär de låsta kedjorna. Utan den väntan vore
         # "noll hänglås" sant bara för att ingenting hunnit ritas.
-        expect(page.locator("#storeSpreadTeaser")).to_be_visible(timeout=30_000)
-        kort = page.locator("#storeCards .store-card")
-        self.assertEqual(page.locator("#storeCards .store-card.locked").count(), 0,
-                         kort.all_inner_texts())
-        self.assertEqual(page.locator("[data-store-card-paywall]").count(), 0,
-                         kort.all_inner_texts())
+        #
+        # T5: RADEN OCH KORTEN UR SAMMA BILDRUTA. Korten ritas om många
+        # gånger efter leveransen - render-bussen, varje receptdetalj som
+        # landar, varje prissvar - och lästa i tre steg (raden, antalet lås,
+        # texterna) gav CI två svar om två olika bildrutor: "2 != 0" med
+        # bara silhuetterna på skärmen. Se tests/e2e/leverans.py.
+        bild = leverans.vanta_pa_prisbilden(page, tystnad=30.0)
+        kort = bild["kort"]
+        self.assertEqual([k["text"] for k in kort if k["last"]], [], kort)
+        self.assertEqual([k["text"] for k in kort if k["betalvagg"]], [], kort)
         # ...och det som ÄR hennes står kvar: butiken, priset, spridningen.
-        expect(kort.first).to_be_visible()
-        self.assertRegex(kort.first.inner_text(), r"\d+ kr")
-        expect(page.locator("#storeSpreadTeaser")).to_contain_text("skiljer sig")
+        self.assertTrue(kort, "inga butikskort i bildrutan där spridningsraden syns")
+        self.assertRegex(kort[0]["text"], r"\d+ kr")
+        self.assertIn("skiljer sig", bild["spridning"])
 
         # ERBJUDANDET ÄR INTE BORTTAGET, det är flyttat bakom leveransen: så
         # fort hon navigerat vidare står de låsta butikerna där igen, och de
