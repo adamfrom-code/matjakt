@@ -79,23 +79,20 @@ class DokumentetFinnsOchArKomplett(unittest.TestCase):
         # ett beslutsunderlag. Meningen ska stå där, rakt ut.
         self.assertIn("får inte skickas till App Review", _platt())
 
-    def test_aktiveringstrialen_ar_auditerad_mot_koden_och_mot_apple(self):
+    def test_aktiveringstrialen_ar_avgjord_och_borta(self):
         # J3 gav sju dagars Premium efter första skapade veckan medan
-        # affärsbeslutet säger "ingen automatisk trial". Dokumentet ska
-        # peka på koden som gör det, citera Apples regel om free trials, och
-        # lämna beslutet till Adam - inte ändra beteendet på eget bevåg.
+        # affärsbeslutet sa "ingen automatisk trial". Beslutet togs
+        # 2026-09-19 (J3b): borttagen. Dokumentet ska bära beslutet med
+        # datum, och koden får inte längre bära konstanten eller metoden.
         text = _platt()
-        for spår in ("activation.py", "ACTIVATION_TRIAL_DAYS", "grant_activation_trial",
-                     "mark_first_week", "Provperiod aktiv"):
-            self.assertIn(spår, text, f"trial-auditen saknar spåret {spår!r}")
+        for spår in ("2026-09-19", "J3b", "ingen automatisk trial"):
+            self.assertIn(spår, text, f"beslutet om trialen saknar {spår!r}")
         self.assertIn("may offer a free trial period", text,
                       "Apples regel om free trials (3.1.2(a)) citeras inte")
-        self.assertIn("auto-renews at the standard price", text,
-                      "skillnaden mot Apples free trial - automatisk debitering - saknas")
-        self.assertIn("Aktiveringstrialen", text)
-        källa = (ROT / "backend" / "services" / "billing" / "activation.py").read_text(encoding="utf-8")
-        self.assertIn("ACTIVATION_TRIAL_DAYS = 7", källa,
-                      "trialen i koden har ändrats - A6 i dokumentet beskriver något annat")
+        for fil in ("services/billing/activation.py", "services/accounts/store.py"):
+            källa = (ROT / "backend" / fil).read_text(encoding="utf-8")
+            self.assertNotIn("ACTIVATION_TRIAL_DAYS", källa, fil)
+            self.assertNotIn("def grant_activation_trial", källa, fil)
 
     def test_produkt_idna_har_ursprung_och_ett_beslut(self):
         text = _platt()

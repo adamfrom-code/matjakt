@@ -12,8 +12,9 @@ avvisa (2.3, "accurate metadata") innan hon ens prövat köpet.
 Testet läser noterna mot koden, som `test_iap_compliance.py` läser
 `docs/IAP_COMPLIANCE.md`: produkt-id:na är strängarna i `features.PRICING`
 (de Adam skriver in i App Store Connect, och ett produkt-id går inte att
-byta i efterhand), gratisdagarna är `activation.ACTIVATION_TRIAL_DAYS`, och
-det gamla styckets tre påståenden får aldrig komma tillbaka. Belopp hör
+byta i efterhand), ingen gratisperiod får påstås (J3b, 2026-09-19: ingen
+automatisk trial), och det gamla styckets tre påståenden får aldrig komma
+tillbaka. Belopp hör
 inte hit: Apples prispunkt väljs i App Store Connect och appen visar
 StoreKits pris, så en siffra i kronor vore antingen webbens pris (fel för
 Apple) eller en avskrift ur ASC som tyst blir gammal.
@@ -31,7 +32,6 @@ HÄR = Path(__file__).resolve().parent
 sys.path.insert(0, str(HÄR.parent))
 
 from services.accounts import features  # noqa: E402
-from services.billing import activation  # noqa: E402
 
 ROT = HÄR.parents[1]
 NOTER = ROT / "store" / "appstore" / "metadata" / "review_notes.txt"
@@ -106,15 +106,15 @@ class NoternaBeskriverKopetIAppen(unittest.TestCase):
         self.assertIsNone(träff, "ett belopp står i noterna - Apples prispunkt hör hemma i "
                                  "App Store Connect, och appen visar StoreKits pris")
 
-    def test_gratisperioden_ar_kodens_och_beskrivs_som_en_gava(self):
-        # A6 i docs/IAP_COMPLIANCE.md: behålls aktiveringstrialen ska
-        # noterna säga att perioden är gratis, utan betalmetod och utan
-        # konvertering. Antalet dagar är kodens - ändras konstanten utan att
-        # texten ändras blir det här rött.
-        self._kräver(f"{activation.ACTIVATION_TRIAL_DAYS} dagar",
-                     "antalet gratisdagar ska vara activation.ACTIVATION_TRIAL_DAYS")
-        for fras in ("ingen betalmetod", "ingen debitering", "introductory offer"):
-            self._kräver(fras, "gratisperioden ska beskrivas som en gåva, inte som Apples free trial")
+    def test_ingen_gratisperiod_pastas(self):
+        # J3b (2026-09-19): ingen automatisk trial. En granskare som läser
+        # om sju gratisdagar och inte hittar dem har ett skäl att avvisa
+        # (2.3, accurate metadata) - och en introductory offer som inte är
+        # konfigurerad får inte utlovas.
+        text = _platt().lower()
+        for fras in ("gratis period", "gratisperiod", "provperiod", "free trial", "trial",
+                     "introductory offer", "7 dagar", "sju dagar", "7 days", "seven days"):
+            self.assertNotIn(fras, text, f"noterna påstår en gratisperiod: {fras!r}")
 
     def test_granskningskontots_platshallare_star_kvar(self):
         # Kontot hör hemma i App Store Connect, inte i repot (N0h); men

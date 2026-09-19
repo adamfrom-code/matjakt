@@ -3995,12 +3995,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 if gate and gate.blocks(plan):
                     result = mask_pricing_for_free(result)
                     break
-            # J3: en prissatt vecka ÄR en skapad vecka, och den första utlöser
-            # provperioden. Kroken är avsiktligt här - efter att veckan
-            # lyckats, före svaret - så en person som just sett att det
-            # skiljer 214 kr mellan butikerna får sju dagar Premium i samma
-            # ögonblick. En trial vid registrering testar nyfikenhet; den här
-            # testar produkten på någon som redan använt den.
+            # En prissatt vecka ÄR en skapad vecka: aktiveringssignalen (H5:s
+            # hänvisningsbelöning hänger på den). Kroken är avsiktligt här -
+            # efter att veckan lyckats, före svaret. Den ger INGEN Premium:
+            # J3:s sju dagar togs bort 2026-09-19 (J3b, ingen automatisk trial).
             self._record_first_week()
             self.send_json(200, result)
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
