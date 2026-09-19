@@ -14,7 +14,7 @@ Verkliga fynd, nu åtgärdade i `styles.css` under `@media (max-width:480px)`:
   (15 px), recept-filtren (13 px), "Lägg till vara" (15 px), onboardingens
   budgetfält (15 px), kodfältet. Nu 16 px på telefonbredd; desktop orörd.
 - **Tryckytor:** dagens ＋ i Veckan var 34 px bred (nu 44), receptchipsen
-  32 px höga (nu minst 40 i en rullande rad).
+  32 px höga (nu minst 44, som `tests/traffytor.test.js` kräver av varje interaktiv regel).
 
 Inte fel, noterat: filterraden i Recept rullar i sidled (kcal-selecten
 klipps vid kanten som rullhint, "Favoriter" nås genom att rulla);

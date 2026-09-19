@@ -5,7 +5,7 @@ Mätt i en 375 px viewport (docs/changelog.d/AO1.md): sökfältet var 15 px,
 filtren 13 px, "Lägg till vara" 15 px och onboardingens budgetfält 15 px.
 iOS Safari och WKWebView ZOOMAR IN SIDAN när ett fält med typsnitt under
 16 px får fokus - och zoomar inte ut igen. Dagens ＋ i Veckan var 34 px
-bred och receptchipsen 32 px höga; Apple kräver 44 pt tryckytor.
+bred och receptchipsen 32 px höga; Apple kräver tumytor (matt.TUMYTA_PX).
 
 Testet läser DATORNS beräknade stil, inte en skärmdump: i en 375 px
 kontext ska fälten vara 16 px och ytorna stora nog, och i en bred
@@ -18,6 +18,7 @@ import unittest
 from services.data_guard import test_mode_active
 
 if test_mode_active():
+    from tests.e2e import matt
     from tests.e2e.test_consumer_journey import HAVE_PLAYWRIGHT, _Server, _skip_reason
     if HAVE_PLAYWRIGHT:
         from playwright.sync_api import sync_playwright
@@ -103,12 +104,13 @@ class MobilErgonomi(unittest.TestCase):
         self.visa(page, "recipes")
         page.wait_for_selector(".recipe-tag")
         chip = self.yta(page, ".recipe-tag")
-        self.assertGreaterEqual(chip["h"], 40, f"receptchip {chip}")
+        # Tröskeln är matt.TUMYTA_PX (Apples tumyta), aldrig ett tal här.
+        self.assertTrue(matt.minst(chip["h"]), f"receptchip {chip} under {matt.golv()} px")
         self.visa(page, "week")
         page.wait_for_selector(".vecka-dag-lagg")
         plus = self.yta(page, ".vecka-dag-lagg")
-        self.assertGreaterEqual(plus["w"], 44, f"dagens ＋ {plus}")
-        self.assertGreaterEqual(plus["h"], 44, f"dagens ＋ {plus}")
+        self.assertTrue(matt.minst(plus["w"]), f"dagens ＋ {plus} smalare än {matt.golv()} px")
+        self.assertTrue(matt.minst(plus["h"]), f"dagens ＋ {plus} lägre än {matt.golv()} px")
 
     def test_desktop_star_orord(self):
         """Regeln är telefonens. På en bred skärm är sökfältet som förut -

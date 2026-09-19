@@ -2034,14 +2034,14 @@ button{color:inherit}
       onboardingens budgetfält (15 px) gjorde det. På telefonbredd är
       fälten 16 px; på desktop står de som förut.
    2. Tryckytor: dagens ＋ i Veckan var 34 px bred och receptchipsen 32 px
-      höga - under de 44 pt Apple kräver. Minsta höjd 40 px på chipsen
-      (raden är en rullist) och 44 px bredd på plustecknet. */
+      höga - under de 44 pt Apple kräver. Minsta höjd 44 px på chipsen
+      och 44 px bredd på plustecknet (tests/traffytor.test.js vaktar). */
 @media (max-width:480px){
   .recipe-search input,.recipe-filters select,.favorite-filter,.manual-add-row input,#manualItemInput,
   #pantrySearch,.account-form input,.location-row input,.settings-content select,.nutrition-fields select,
   #feedbackText,#premiumCode,#obBudget,.onboarding-card input:not([type=checkbox]):not([type=radio]):not([type=range]),
   .onboarding-card select,.account-modal-card input:not([type=checkbox]):not([type=radio]):not([type=range]),
   .account-modal-card select,.account-modal-card textarea{font-size:16px}
-  .recipe-tag{min-height:40px;display:inline-flex;align-items:center}
+  .recipe-tag{min-height:44px;display:inline-flex;align-items:center}
   .vecka-dag-lagg{width:44px}
 }
