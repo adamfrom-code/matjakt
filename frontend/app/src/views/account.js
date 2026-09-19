@@ -337,7 +337,11 @@ export function renderAccount() {
     $("marketingNote").textContent = state.user.marketingConsent && !state.user.emailVerified
       ? "(skickas när adressen är verifierad)" : "";
     const daysLeft = state.user.trialEndsAt ? Math.max(1, Math.ceil((new Date(state.user.trialEndsAt) - Date.now()) / 86400000)) : 0;
-    const hasSubscription = ["active", "trialing", "past_due", "canceled", "unpaid"].includes(state.user.subscriptionStatus);
+    // P02d: en App Store-prenumeration har ingen Stripe-status - källan säger
+    // det (entitlementSource, P02b), och panelen med "Hantera prenumeration"
+    // ska finnas för henne också.
+    const appleSub = state.user.entitlementSource === "apple";
+    const hasSubscription = ["active", "trialing", "past_due", "canceled", "unpaid"].includes(state.user.subscriptionStatus) || appleSub;
     const pastDue = ["past_due", "unpaid", "incomplete"].includes(state.user.subscriptionStatus);
     $("accountPremiumStatus").textContent = awaitingPremiumActivation && !app.hasPremium()
       ? "Kontrollerar om betalningen gått igenom…"
@@ -359,7 +363,17 @@ export function renderAccount() {
       const pricing = app.premiumPricing();
       const planLabel = planetikett(pricing, state.user.subscriptionPlan);
       let line;
-      if (state.user.subscriptionStatus === "active" && state.user.subscriptionCancelAtPeriodEnd) line = `Din prenumeration (${planLabel}) är uppsagd och gäller till ${periodEnd}, sedan återgår kontot till gratisversionen.`;
+      if (appleSub) {
+        // Priset står inte i meningen: Apples prispunkt är inte webbens tal,
+        // och planens namn (features.PRICING label) är sant på båda ställena.
+        const apple = state.user.appleSubscription || {};
+        const till = apple.expiresAt ? new Date(apple.expiresAt).toLocaleDateString("sv-SE") : "okänt datum";
+        const namn = (state.user.plan === "premium_yearly" ? pricing.yearly?.label : pricing.monthly?.label) || "Premium";
+        line = apple.autoRenew === false
+          ? `Din prenumeration (${namn}) via App Store är uppsagd och gäller till ${till}, sedan återgår kontot till gratisversionen.`
+          : `Din prenumeration (${namn}) förnyas via App Store ${till}. Byt plan eller säg upp under Hantera prenumeration.`;
+      }
+      else if (state.user.subscriptionStatus === "active" && state.user.subscriptionCancelAtPeriodEnd) line = `Din prenumeration (${planLabel}) är uppsagd och gäller till ${periodEnd}, sedan återgår kontot till gratisversionen.`;
       else if (state.user.subscriptionStatus === "active") line = `Din prenumeration (${planLabel}) förnyas automatiskt ${periodEnd}.`;
       else if (["past_due", "unpaid"].includes(state.user.subscriptionStatus)) line = `Senaste betalningen (${planLabel}) gick inte igenom, så Premium är pausat. Uppdatera betalmetoden under Hantera prenumeration så aktiveras det igen.`;
       else if (state.user.subscriptionStatus === "incomplete") line = `Betalningen är påbörjad men inte klar. Slutför den under Hantera prenumeration.`;
@@ -594,7 +608,7 @@ export function openPaywall(triggerFeature = "") {
     <h2 id="paywallTitle">Alla butikers priser, sida vid sida</h2>
     <p class="paywall-lead">Du planerar redan veckan och ser vad den kostar hos den billigaste butiken. Premium öppnar alla butikers priser, den exakta jämförelsen, hela hushållet och sparhistoriken.</p>
     ${jamforelseMarkup(pricing)}
-    ${paywallPlanMarkup(pricing)}
+    ${paywallPlanMarkup(app.storeKitPricing ? app.storeKitPricing() : pricing)}
     <p class="prem-moms">Alla priser är totalpris inklusive moms.</p>
     ${app.withdrawalConsentMarkup("paywallWithdrawalConsent")}
     <p class="account-error" id="paywallError"></p>
@@ -616,6 +630,13 @@ export async function beginCheckout(plan, root = document.getElementById("paywal
   }
   const errorLine = root?.querySelector("#paywallError");
   if (errorLine) errorLine.textContent = "";
+  // P02d: i iOS-appen med StoreKit-vägen på går köpet genom Apple - ingen
+  // ångerrättsruta (Apple är säljare) och ingen Stripe-URL. Samma funktion
+  // som kontoarkets knapp, så de två köpvägarna aldrig kan skilja sig åt.
+  if (app.storeKitActive?.()) {
+    await app.purchaseWithStoreKit(plan, errorLine);
+    return;
+  }
   // Ångerrätten kryssas i FÖRE knappen, inte bort efteråt: en digital tjänst
   // som levereras direkt får bara undantas från fjorton dagars ångerrätt om
   // kunden uttryckligen avstått den. Servern vägrar ändå utan samtycket -
