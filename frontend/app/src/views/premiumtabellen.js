@@ -52,14 +52,12 @@
 // sak på Stripe-sidan (backend/tests/test_billing_moms.py). Därför står
 // momsraden i foten och inte i ett villkorsdokument.
 //
-// PROVPERIODEN STÅR MED FLIT INTE I TABELLEN.
-// J3 gav sju dagars Premium efter den FÖRSTA skapade veckan
-// (billing/activation.py ACTIVATION_TRIAL_DAYS). Det är en belöning bunden
-// till kontots historik och kan bara delas ut en gång — för den som redan
-// förbrukat den vore "sju dagar ingår" en ny osanning av precis den sort
-// paketet finns för att ta bort. /api/entitlements svarar inte heller med
-// den, så klienten kan i dag inte veta vem den talar med. Den raden skrivs
-// när svaret bär informationen, inte innan.
+// INGEN PROVPERIOD I TABELLEN - DET FINNS INGEN.
+// J3 gav sju dagars Premium efter den FÖRSTA skapade veckan; beslutet
+// 2026-09-19 (J3b) tog bort den: ingen automatisk trial, varken vid
+// registrering eller aktivering. En rad om gratisdagar vore en osanning av
+// precis den sort tabellen finns för att ta bort, och
+// tests/premiumtabellen.test.js faller på den.
 // ---------------------------------------------------------------------------
 
 import { escapeHtml } from "../utils/html.js";
