@@ -34,11 +34,22 @@ const asset = url => new FakeRequest({ url, mode: "cors" });
 // utan query - precis som webbläsarens.
 function fakeCaches() {
   const stores = new Map();
+  const precached = [];
   const open = name => {
     if (!stores.has(name)) stores.set(name, new Map());
     const store = stores.get(name);
     return Promise.resolve({
       put: (request, response) => { store.set(request.url, response); return Promise.resolve(); },
+      // AN2: addAll hämtar och lägger in - här bokförs bara vad som begärdes,
+      // och en stubb läggs in så att offline-vägen kan hitta den.
+      addAll: urls => {
+        for (const url of urls) {
+          const full = new URL(url, `${ORIGIN}/app/sw.js`).href;
+          precached.push(full);
+          store.set(full, { body: `FÖRHANDSCACHAD:${full}`, ok: true, clone: () => ({ body: full }) });
+        }
+        return Promise.resolve();
+      },
     });
   };
   const lookup = (request, options = {}) => {
@@ -64,6 +75,7 @@ function fakeCaches() {
       stores.get(name).set(url, response);
     },
     names: () => [...stores.keys()],
+    precached,
   };
 }
 
@@ -90,6 +102,11 @@ function loadServiceWorker({ online = true, cached = [] } = {}) {
       const event = { request, respondWith: promise => { answered = promise; }, waitUntil: () => {} };
       listeners[type].forEach(fn => fn(event));
       return answered;
+    },
+    install() {
+      const waited = [];
+      listeners.install.forEach(fn => fn({ waitUntil: promise => waited.push(promise) }));
+      return Promise.all(waited);
     },
     activate() {
       const waited = [];
@@ -144,4 +161,26 @@ test("E15: gamla cachar städas bort vid aktivering", async () => {
   const sw = loadServiceWorker({ cached: [`${ORIGIN}/app/`] });
   await sw.activate();
   assert.deepEqual(sw.caches.names(), [], "en cache med ett annat namn än det nuvarande ska bort");
+});
+
+// AN2: reservbanken förhandscachas vid install och finns offline.
+test("AN2: reservbanken förhandscachas vid install", async () => {
+  const sw = loadServiceWorker({ online: true });
+  await sw.install();
+  assert.deepEqual(sw.caches.precached, [`${ORIGIN}/app/data/recipes.json`]);
+});
+
+test("AN2: offline svarar reservbanken ur förhandscachen", async () => {
+  const sw = loadServiceWorker({ online: true });
+  await sw.install();
+  // Nätet försvinner efter installationen: hämtningen faller, cachen svarar.
+  const offline = loadServiceWorker({ online: false, cached: [] });
+  offline.caches.seed("matjakt-shell-vTEST", `${ORIGIN}/app/data/recipes.json`, { body: "BANKEN", ok: true, clone: () => ({}) });
+  const svar = await offline.fire("fetch", asset(`${ORIGIN}/app/data/recipes.json`));
+  assert.equal(svar.body, "BANKEN");
+});
+
+test("AN2: en misslyckad förhandscachning stoppar inte installationen", async () => {
+  const sw = loadServiceWorker({ online: false });
+  await assert.doesNotReject(sw.install());
 });
