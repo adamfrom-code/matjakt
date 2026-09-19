@@ -63,6 +63,7 @@ let app = {
   maxDinners: () => 4,
   maxMeals: () => 7,
   isNativeApp: () => false,
+  flagga: () => false,
   openExternal: () => {},
   plural: (n, one, many) => `${n} ${n === 1 ? one : many}`,
   render: () => {},
@@ -123,7 +124,9 @@ export function renderHousehold() {
   const isAdmin = state.household.role === "admin";
   $("householdMembers").innerHTML = state.household.members.map(member => {
     const name = member.displayName || (member.email ? member.email.split("@")[0] : "Medlem");
-    const tags = [member.role === "admin" ? "administratör" : "", member.isMe ? "du" : ""].filter(Boolean).join(" · ");
+    // S1: slaget syns bakom flaggan - "barn"/"gäst" bredvid rollen.
+    const slag = app.flagga("hushall.medlemmar") ? ({ child: "barn", guest: "gäst" }[member.kind] || "") : "";
+    const tags = [member.role === "admin" ? "administratör" : "", slag, member.isMe ? "du" : ""].filter(Boolean).join(" · ");
     const remove = isAdmin && !member.isMe
       ? `<button type="button" class="household-remove" data-remove-member="${escapeHtml(String(member.userId))}" aria-label="Ta bort ${escapeHtml(name)}">Ta bort</button>` : "";
     return `<li><span><strong>${escapeHtml(name)}</strong>${tags ? `<small>${escapeHtml(tags)}</small>` : ""}</span>${remove}</li>`;
@@ -141,6 +144,12 @@ export function renderHousehold() {
     $("householdSpice").value = me.profile?.spice || "";
     $("householdDiet").value = me.profile?.diet || "";
     $("householdAllergies").value = (me.profile?.allergies || []).join(", ");
+    // S1: "Jag är" (vuxen/barn/gäst) - bara bakom flaggan hushall.medlemmar.
+    const kindRow = $("householdKindRow");
+    if (kindRow) {
+      kindRow.hidden = !app.flagga("hushall.medlemmar");
+      $("householdKind").value = me.kind || (me.profile?.child ? "child" : "adult");
+    }
   }
   renderNotificationPrefs();
 }
@@ -276,6 +285,9 @@ export function wireHouseholdUi() {
           spice: $("householdSpice").value || undefined,
           diet: $("householdDiet").value || undefined,
           allergies: $("householdAllergies").value.split(",").map(value => value.trim()).filter(Boolean),
+          // S1: slaget skickas bara när raden är synlig (flaggan på) - annars
+          // rörs inte det som redan står i profilen.
+          ...(app.flagga("hushall.medlemmar") && $("householdKind") ? { kind: $("householdKind").value } : {}),
         },
       });
       state.household = applySync(state.household, { household, revision: state.household.revision });

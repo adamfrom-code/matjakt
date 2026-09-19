@@ -20,6 +20,7 @@ import { extrasTotal, newExtraItem } from "./src/services/extras.js";
 import { filterByDiet, mergeDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
 import { planningContext } from "./src/services/planning-context.js";
+import { flagga } from "./src/services/flaggor.js";
 import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl } from "./src/api/config.js";
 import { setMarketingConsent, changePassword, claimAppleTransaction, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
 // errorText: inget rått fetch-fel når skärmen. "Failed to fetch" är inte
@@ -1152,7 +1153,11 @@ function chooseMenu(shouldScroll = true) {
   // R1: allt planeraren vet om hushållet, samlat och fryst. Samma tal som
   // förut går till bestMenuCombo - kontexten ändrar inget val, den gör
   // valets indata synliga (och ger S/T ett ställe att sätta sina fält).
-  const ctx = planningContext(state, { premium: hasPremium(), goals: currentNutritionGoals(), branch: selectedBranch() });
+  const ctx = planningContext(state, {
+    premium: hasPremium(), goals: currentNutritionGoals(), branch: selectedBranch(),
+    // S1: medlemmarnas slag räknas bara bakom flaggan - annars exakt som förut.
+    members: householdActive() ? state.household?.members : null, deriveFromMembers: flagga("hushall.medlemmar"),
+  });
   const { candidates, nutritionShortfall } = weekPlanCandidates();
   const combo = bestMenuCombo(candidates, ctx.dinners, ctx.budget, ctx.branch);
   // Varningen efter valet, inte före: först då vet vi hur många rätter
@@ -4466,6 +4471,7 @@ restoreNutritionGoalsForm();
 // gång, före första renderingen. Modulen ritar DOM och känner inte till
 // priser, recept eller vyer; allt sådant går genom de här funktionerna.
 initAccountView({
+  flagga,
   $,
   hasPremium, premiumPricing, withdrawalConsentMarkup, withdrawalConsentGiven,
   // P02d: betalväggens planknappar går samma väg som kontoarkets köpknapp,

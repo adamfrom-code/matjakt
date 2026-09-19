@@ -25,15 +25,25 @@ const TAL = (v, reserv) => (Number.isFinite(Number(v)) && v !== null && v !== ""
  * @param branch      selectedBranch() eller null
  * @param objective   "cheapest" | "balanced" | "protein" (veckotypens)
  */
-export function planningContext(state, { premium = false, goals = null, branch = null, objective = "cheapest" } = {}) {
+export function planningContext(state, { premium = false, goals = null, branch = null, objective = "cheapest",
+                                         members = null, deriveFromMembers = false } = {}) {
   const hushall = state.hushall || {};
-  const adults = Math.max(0, TAL(hushall.vuxna, TAL(state.personer, 2)));
-  const children = Math.max(0, TAL(hushall.barn, 0));
   const feedback = state.feedback || {};
+  // S1: bakom flaggan hushall.medlemmar härleds personer ur hushållets
+  // medlemmar (slag + portionsfaktor från servern) i stället för ur talet
+  // i inställningarna. Utan flagga, eller utan hushåll: som förut.
+  const kinds = Array.isArray(members) ? members.map(memberKind) : [];
+  const derived = Boolean(deriveFromMembers) && kinds.length > 0;
+  const portionSum = derived
+    ? members.reduce((sum, m) => sum + (Number.isFinite(Number(m?.portionFactor)) ? Number(m.portionFactor) : 1), 0)
+    : 0;
+  const adults = derived ? kinds.filter(k => k !== "child").length : Math.max(0, TAL(hushall.vuxna, TAL(state.personer, 2)));
+  const children = derived ? kinds.filter(k => k === "child").length : Math.max(0, TAL(hushall.barn, 0));
   return Object.freeze({
-    // Personer: dagens enda tal (state.personer, klampat 1-12 i state).
-    // adults/children bär hushållsformuläret så att S/T kan härleda i stället.
-    people: Math.min(12, Math.max(1, TAL(state.personer, adults + children || 2))),
+    // Personer: dagens enda tal (state.personer, klampat 1-12 i state) -
+    // eller, härlett, summan av medlemmarnas portionsfaktorer.
+    people: derived ? Math.min(12, Math.max(1, portionSum)) : Math.min(12, Math.max(1, TAL(state.personer, adults + children || 2))),
+    peopleSource: derived ? "medlemmar" : "installningar",
     adults,
     children,
     dinners: Math.max(1, TAL(state.middagar, 4)),
@@ -52,6 +62,13 @@ export function planningContext(state, { premium = false, goals = null, branch =
     objective: ["cheapest", "balanced", "protein"].includes(objective) ? objective : "cheapest",
     premium: Boolean(premium),
   });
+}
+
+/** Medlemmens slag: serverns `kind`, annars härlett ur J3:s `child`. */
+export function memberKind(member) {
+  const kind = String(member?.kind || "").toLowerCase();
+  if (["adult", "child", "guest"].includes(kind)) return kind;
+  return member?.profile?.child ? "child" : "adult";
 }
 
 /** En läsbar rad för loggar och felrapporter - inga id, bara talen. */

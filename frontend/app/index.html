@@ -552,6 +552,16 @@
               <form id="householdProfileForm" class="account-form">
                 <label for="householdDisplayName">Vad ska du heta här?</label>
                 <input id="householdDisplayName" type="text" maxlength="40">
+                <!-- S1: medlemmens slag. Dold tills flaggan hushall.medlemmar är på
+                     (src/services/flaggor.js); portionsfaktorn kommer från servern. -->
+                <div id="householdKindRow" hidden>
+                  <label for="householdKind">Jag är</label>
+                  <select id="householdKind">
+                    <option value="adult">Vuxen</option>
+                    <option value="child">Barn</option>
+                    <option value="guest">Gäst (äter med ibland)</option>
+                  </select>
+                </div>
                 <label for="householdSpice">Stark mat</label>
                 <select id="householdSpice">
                   <option value="">Ingen åsikt</option>
