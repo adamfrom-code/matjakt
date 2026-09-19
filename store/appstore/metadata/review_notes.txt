@@ -37,12 +37,6 @@ hushållet - är upplåsta direkt. "Återställ köp" hämtar en befintlig
 prenumeration för samma Apple-konto, t.ex. efter ominstallation; den
 kräver inloggning på det Matjakt-konto som gjorde köpet.
 
-Gratis period: efter kontots första skapade vecka ingår Premium i 7 dagar
-(i appen: "Provperiod aktiv - 7 dagar kvar (ingen betalning krävs)").
-Perioden är en gåva från servern: ingen betalmetod, ingen debitering och
-ingen övergång till prenumerationen. Den är inte en introductory offer, och
-ingen sådan är konfigurerad i App Store Connect.
-
 Plats: används bara för att hitta butiker nära användaren (valfritt -
 postnummer räcker). Ingen spårning, inga analys- eller annons-SDK:er.
 

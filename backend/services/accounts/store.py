@@ -628,9 +628,11 @@ class AccountStore:
             (str(original_transaction_id),)).fetchone()
         return int(row["id"]) if row else None
 
-    # start_trial vid REGISTRERING är och förblir borttagen. J3 lade
-    # tillbaka provperioden på ett annat ställe i tratten - efter den första
-    # skapade veckan - och de två metoderna nedan är hela den vägen.
+    # start_trial vid REGISTRERING togs bort 2026-08-31, och J3:s
+    # grant_activation_trial (sju dagar efter första veckan) 2026-09-19:
+    # ingen automatisk trial, punkt. trial_ends_at LÄSES fortfarande, så
+    # att en trial som redan delats ut löper ut av sig själv i stället för
+    # att någon demoteras av en refaktor - men ingen metod skriver den.
     def mark_first_week(self, user_id) -> bool:
         """Markerar att kontot skapat sin första vecka. True BARA första
         gången.
@@ -646,29 +648,6 @@ class AccountStore:
                 (datetime.now(timezone.utc).isoformat(), int(user_id)))
             self._connection.commit()
             return cursor.rowcount > 0
-
-    def grant_activation_trial(self, user_id, days: int) -> str | None:
-        """Sju dagars Premium efter den första veckan. Returnerar slutdatum,
-        eller None när ingen trial delades ut.
-
-        Delas INTE ut till den som redan betalar - en aktiv prenumerant som
-        får en trial ovanpå har inte fått något, och siffran i tratten hade
-        blivit fel. Delas inte heller ut två gånger: `trial_used` är
-        villkoret, och det är samma kolumn som grandfathering av de gamla
-        provperioderna läser."""
-        with self._lock:
-            row = self._connection.execute(
-                "SELECT * FROM users WHERE id = ?", (int(user_id),)).fetchone()
-            if not row:
-                return None
-            if row["trial_used"] or self._to_public(row).get("premium"):
-                return None
-            ends_at = (datetime.now(timezone.utc) + timedelta(days=int(days))).isoformat()
-            self._connection.execute(
-                "UPDATE users SET trial_ends_at = ?, trial_used = 1 WHERE id = ? AND trial_used = 0",
-                (ends_at, int(user_id)))
-            self._connection.commit()
-            return ends_at
 
     def billing_identity_for_token(self, token):
         """Returns (user_id, email, existing_stripe_customer_id_or_None) for a session token."""

@@ -39,6 +39,16 @@ def _om(**delta) -> str:
 
 
 class Bas(unittest.TestCase):
+    def gammal_trial(self, user_id, dagar=7):
+        """En trial utdelad före J3b, skriven som data - exakt raden som
+        grant_activation_trial skrev när den fanns."""
+        ends = (datetime.now(timezone.utc) + timedelta(days=dagar)).isoformat()
+        with self.store._lock:
+            self.store._connection.execute(
+                "UPDATE users SET trial_ends_at = ?, trial_used = 1 WHERE id = ?", (ends, int(user_id)))
+            self.store._connection.commit()
+        return ends
+
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.store = AccountStore(Path(self._tmp.name) / "konton.db")
@@ -121,12 +131,11 @@ class EnKallaITaget(Bas):
         self.assertEqual(features.plan_for_user(self.me(token)), "premium_monthly")
 
     def test_trial_kallan_har_giltighetstid(self):
-        # J3:s aktiveringstrial (billing/activation.py) är en EGEN källa med
-        # slutdatum - så att affärsbeslutet om den (BLOCKED – ADAM i
-        # docs/IAP_COMPLIANCE.md) kan tas utan att modellen skrivs om.
+        # En trial som delades ut FÖRE beslutet 2026-09-19 (J3b: ingen
+        # automatisk trial) är en EGEN källa med slutdatum, och den läses
+        # tills den löper ut. Ingen metod skriver den längre - raden är data.
         token, user_id = self.konto()
-        self.assertTrue(self.store.mark_first_week(user_id))
-        ends = self.store.grant_activation_trial(user_id, 7)
+        ends = self.gammal_trial(user_id)
         me = self.me(token)
         self.assertTrue(me["premium"])
         self.assertEqual(me["entitlementSource"], "trial")
@@ -238,8 +247,7 @@ class FleraKallorSamtidigt(Bas):
         # Betalande före gåva: den som köpt via App Store mitt i sina sju
         # gratisdagar är en Apple-kund, och planen är den hon köpte.
         token, user_id = self.konto()
-        self.store.mark_first_week(user_id)
-        self.store.grant_activation_trial(user_id, 7)
+        self.gammal_trial(user_id)
         self.apple(user_id, YEARLY)
         me = self.me(token)
         self.assertEqual(me["entitlementSource"], "apple")
@@ -318,10 +326,10 @@ class OrdningOchIdempotens(Bas):
         self.apple(user_id)
         self.assertTrue(self.store.any_premium([user_id]))
 
-    def test_ingen_aktiveringstrial_till_en_apple_prenumerant(self):
-        _, user_id = self.konto()
-        self.apple(user_id)
-        self.assertIsNone(self.store.grant_activation_trial(user_id, 7))
+    def test_ingen_metod_kan_dela_ut_en_trial(self):
+        # J3b. Den som fick sju dagar före beslutet behåller dem (raden
+        # läses); ingen kod kan skriva en ny.
+        self.assertFalse(hasattr(self.store, "grant_activation_trial"))
 
 
 class ExportenOchTratten(Bas):
