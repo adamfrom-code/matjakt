@@ -198,6 +198,9 @@ def card(recipe: dict) -> dict:
         # veta vad ett recept består av utan att listan sväller till
         # detaljsidans fulla payload.
         "ingredientNames": recipe.get("ingredientNames", []),
+        # Z1: bara med när sökningen var på ingredienser - då säger kortet
+        # vilka av dem receptet använder.
+        **({"matchedIngredients": recipe["matchedIngredients"]} if "matchedIngredients" in recipe else {}),
         # A real portion cost from the pricing run, never an estimate. Null
         # when the last run could not price every countable ingredient -
         # a portion price missing two of nine ingredients is not a price.
