@@ -51,6 +51,8 @@ KÄLLOR = ROOT / "backend" / "recipe_sources"
 UT_JSON = ROOT / "docs" / "bildstatus.json"
 UT_MD = ROOT / "docs" / "BILDSTATUS.md"
 WIKI_CACHE = ROOT / "docs" / "bildstatus-wikimedia.json"
+# P09b: det servern läser vid import - status och alt-text per recept.
+UT_APP = ROOT / "backend" / "services" / "recipes" / "bildstatus.json"
 
 STATUSAR = ("MISSING", "REJECTED", "EXACT-KANDIDAT", "GOOD_VARIANT-KANDIDAT", "NEEDS_REVIEW")
 
@@ -208,6 +210,31 @@ def klassificera(recept, wiki) -> list[dict]:
     return rader
 
 
+def alt_text(rad: dict) -> str | None:
+    """Alt-texten ur BEVISET, aldrig ur receptnamnet (P09a: alt-texten
+    "<namn> upplagd på tallrik" ljög med bilden). Fotografens titel eller
+    Commons-filnamnet säger vad fotot visar; källan står med, så en
+    skärmläsare hör var det kommer ifrån. None när det inte finns något
+    bevis att bygga på."""
+    if rad["status"] not in ("EXACT-KANDIDAT", "GOOD_VARIANT-KANDIDAT"):
+        return None
+    b = rad.get("bevis") or {}
+    titel = (b.get("fotografens_titel") or "").strip()
+    if not titel and b.get("fil"):
+        titel = b["fil"].replace("File:", "").rsplit(".", 1)[0].replace("_", " ").strip()
+    if not titel and b.get("beskrivning"):
+        titel = str(b["beskrivning"]).strip()[:120]
+    kalla = b.get("kalla") or "okänd källa"
+    return f"{titel} (foto: {kalla})" if titel else f"Foto: {kalla}"
+
+
+def rendera_app(rader) -> str:
+    """Den kompakta kartan servern läser: {id: {status, alt}}. Sorterad, så
+    en ändring i ett recept ger en diff på det receptet."""
+    karta = {r["id"]: {"status": r["status"], "alt": alt_text(r)} for r in sorted(rader, key=lambda r: r["id"])}
+    return json.dumps(karta, ensure_ascii=False, indent=1, sort_keys=True) + "\n"
+
+
 def rendera_md(rader) -> str:
     c = collections.Counter(r["status"] for r in rader)
     ut = ["# Bildstatus — vad källan säger att fotot visar", "",
@@ -245,13 +272,17 @@ def main(argv=None) -> int:
     rader = klassificera(recept, wiki)
     js = json.dumps(rader, ensure_ascii=False, indent=1) + "\n"
     md = rendera_md(rader)
+    app = rendera_app(rader)
     if arg.check:
-        ok = UT_JSON.exists() and UT_JSON.read_text(encoding="utf-8") == js and UT_MD.exists() and UT_MD.read_text(encoding="utf-8") == md
+        ok = (UT_JSON.exists() and UT_JSON.read_text(encoding="utf-8") == js and UT_MD.exists()
+              and UT_MD.read_text(encoding="utf-8") == md
+              and UT_APP.exists() and UT_APP.read_text(encoding="utf-8") == app)
         print("bildstatus stämmer med källorna" if ok else
               "bildstatus är INTE genererad ur dagens källor. Kör: python backend/scripts/bildstatus.py", file=sys.stdout if ok else sys.stderr)
         return 0 if ok else 1
     UT_JSON.write_text(js, encoding="utf-8")
     UT_MD.write_text(md, encoding="utf-8")
+    UT_APP.write_text(app, encoding="utf-8")
     c = collections.Counter(r["status"] for r in rader)
     print("skrev docs/bildstatus.json + docs/BILDSTATUS.md:", dict(c))
     return 0
