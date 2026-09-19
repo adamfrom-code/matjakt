@@ -1944,19 +1944,51 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return request_origin
         return ALLOWED_ORIGIN
 
-    def send_json(self, status, payload, cache_seconds=None):
+    def send_json(self, status, payload, cache_seconds=None, etag=False):
+        """JSON-svaret. `etag=True` (AN1) ger svaret en svag ETag ur
+        kroppens hash och svarar 304 utan kropp när klienten redan har
+        exakt den kroppen (If-None-Match). Receptbanken är 260 KB och
+        hämtades i sin helhet vid varje start; med ETag kostar en oförändrad
+        bank en rundresa och noll byte - och en ändrad bank kommer hel, för
+        hashen är kroppens, inte en klockas. Bara på cachebara svar: ett
+        no-store-svar får ingen ETag, och ett fel (status >= 400) inte
+        heller."""
         self._json_response = True
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        tag = None
+        if etag and cache_seconds and status == 200:
+            tag = 'W/"' + hashlib.sha1(body).hexdigest()[:32] + '"'
+            if self._matches_etag(tag):
+                status, body = 304, b""
         self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
+        if status != 304:
+            self.send_header("Content-Type", "application/json; charset=utf-8")
         request_id = getattr(self, "_request_id", None)
         if request_id:
             self.send_header("X-Request-Id", request_id)
         self.send_header("Access-Control-Allow-Origin", self._cors_origin())
         self.send_header("Vary", "Origin")
         self.send_header("Cache-Control", f"public, max-age={cache_seconds}" if cache_seconds else "no-store")
+        if tag:
+            self.send_header("ETag", tag)
         self.end_headers()
-        self.wfile.write(body)
+        if body:
+            self.wfile.write(body)
+
+    def _matches_etag(self, tag):
+        """If-None-Match får bära flera taggar, och en cache får skicka en
+        stark tagg för ett svar den fick med svag - jämför värdet."""
+        raw = self.headers.get("If-None-Match") if getattr(self, "headers", None) else None
+        if not raw:
+            return False
+        mine = tag[2:] if tag.startswith("W/") else tag
+        for candidate in raw.split(","):
+            candidate = candidate.strip()
+            if candidate == "*":
+                return True
+            if (candidate[2:] if candidate.startswith("W/") else candidate) == mine:
+                return True
+        return False
 
     # Sent on everything this server serves. The frontend also carries the
     # policy as a meta tag, because GitHub Pages serves it without any
@@ -2832,7 +2864,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 per_shelf = min(max(int(parse_qs(parsed.query).get("perShelf", ["12"])[0]), 1), 40)
             except ValueError:
                 per_shelf = 12
-            self.send_json(200, recipes_api.shelves(per_shelf), cache_seconds=120)
+            self.send_json(200, recipes_api.shelves(per_shelf), cache_seconds=120, etag=True)
             return
         if parsed.path == "/api/recipes":
             if self._rate_limit("public"):
@@ -2875,7 +2907,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 # Ett svar som beror på planen får ALDRIG ligga i en delad
                 # cache: "public, max-age" hade låtit en mellanhand servera
                 # Premiums svar vidare till nästa gratiskonto.
-            ), cache_seconds=None if asked_for_premium else 120)
+            ), cache_seconds=None if asked_for_premium else 120, etag=not asked_for_premium)
             return
         recipes_prefix = "/api/recipes/"
         if parsed.path.startswith(recipes_prefix):
@@ -2886,7 +2918,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if not recipe:
                 self.send_json(404, {"error": "Receptet finns inte"})
                 return
-            self.send_json(200, {"recipe": recipe}, cache_seconds=300)
+            self.send_json(200, {"recipe": recipe}, cache_seconds=300, etag=True)
             return
         if parsed.path == "/api/v1/recipes/search":
             if self._rate_limit("search"):
