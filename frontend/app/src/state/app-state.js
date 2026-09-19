@@ -66,6 +66,11 @@ const FIELDS = {
   harHemma: names,
   ogillar: names,
   weekPlan: names,
+  // T1: vem äter hemma, per dag. Sju platser; null = alla (state.personer),
+  // ett tal = så många den dagen. Formen garanteras, aldrig innehållet.
+  narvaro: value => (Array.isArray(value)
+    ? Array.from({ length: WEEK_DAY_COUNT }, (_, i) => normalizePresence(value[i]))
+    : undefined),
   apiRecipes: records,
   extraItems: records,
   savingsLog: records,
@@ -199,6 +204,7 @@ export function initAppState({ storage = null, authToken = null, recipeBank = []
     // plats som behöver dagordning läser weekPlan/selectedRecipes(), aldrig
     // valdas egen iterationsordning (ett Set har ingen knuten till dagar).
     weekPlan: saved.weekPlan || [...(saved.valda || [])],
+    narvaro: FIELDS.narvaro(saved.narvaro) || Array(WEEK_DAY_COUNT).fill(null),
   });
   // Sist, med tillståndet på plats: anroparen ritar en remsa och får läsa av
   // om någon är inloggad (då hämtas veckan från kontot) eller inte (då är den
@@ -256,7 +262,35 @@ export function clearPriceSnapshots(target = state) {
   target.dbPricedAt = null;
 }
 
+export const WEEK_DAY_COUNT = 7;
+
+function normalizePresence(value) {
+  // null = alla hemma. Noll eller mindre är inte "ingen hemma" i den här
+  // modellen (en middag utan ätare planeras inte) - det släpps som null.
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 1) return null;
+  return Math.min(12, Math.round(n));
+}
+
+/** T1: hur många som äter hemma dag `index` - dagens tal, annars alla. */
+export function presenceForDay(index) {
+  const own = Array.isArray(state.narvaro) ? state.narvaro[index] : null;
+  return own ?? state.personer;
+}
+
+/** T1: sätt dagens närvaro. null (eller alla) = "alla hemma" - inget eget tal. */
+export function setPresence(index, people) {
+  if (!Array.isArray(state.narvaro)) state.narvaro = Array(WEEK_DAY_COUNT).fill(null);
+  const n = normalizePresence(people);
+  state.narvaro[index] = n === null || n >= state.personer ? null : n;
+  return state.narvaro[index];
+}
+
 export function setWeekPlan(ids) {
+  // T1: en ny vecka börjar med alla hemma - förra veckans närvaro hör till
+  // förra veckans dagar.
+  state.narvaro = Array(WEEK_DAY_COUNT).fill(null);
   // Papperskorgen: den vecka som just ersätts läggs överst i historiken (de
   // tolv senaste behålls, synkas med kontot). "Skapa ny vecka" av misstag ska
   // aldrig kosta en kurerad vecka, och historiken är dessutom det som gör att
@@ -294,7 +328,7 @@ export function swapWeekPlanDay(dayIndex, newId) {
 // ---- sparning och synk ----------------------------------------------------
 
 export function buildSyncPayload() {
-  return { schemaVersion: SCHEMA_VERSION, budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], removedItems: [...state.removedItems], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan, weekHistory: state.weekHistory, foljdaVaror: state.foljdaVaror, extraItems: state.extraItems, harHemma: [...state.harHemma], stapleItems: state.stapleItems, stapleAsked: state.stapleAsked,
+  return { schemaVersion: SCHEMA_VERSION, budget: state.budget, personer: state.personer, middagar: state.middagar, butik: state.butik, postnummer: state.postnummer, maxTid: state.maxTid, pantry: state.pantry, favoriter: [...state.favoriter], valda: [...state.valda], avklarade: [...state.avklarade], removedItems: [...state.removedItems], apiRecipes: state.apiRecipes.filter(recipe => state.valda.has(recipe.id)), naringsmal: state.naringsmal, betyg: state.betyg, kost: { kosttyp: state.kost.kosttyp, avoidAllergens: [...state.kost.avoidAllergens] }, onboardingComplete: state.onboardingComplete, hushall: state.hushall, ogillar: [...state.ogillar], feedback: state.feedback, savingsLog: state.savingsLog, swapsThisWeek: state.swapsThisWeek, pinnedBranch: state.pinnedBranch, weekPlan: state.weekPlan, narvaro: state.narvaro, weekHistory: state.weekHistory, foljdaVaror: state.foljdaVaror, extraItems: state.extraItems, harHemma: [...state.harHemma], stapleItems: state.stapleItems, stapleAsked: state.stapleAsked,
     // Den senaste riktiga prissnapshotten. Målas direkt vid nästa besök med
     // sin egen tidsstämpel medan en ny hämtning körs - skillnaden mellan
     // "pris hämtas…" i sekunder vid varje öppning och priser som helt enkelt
@@ -367,6 +401,7 @@ export function applySyncBlob(blob, { onboardingOpen = false } = {}) {
   set("weekHistory", value => { state.weekHistory = value; });
   set("foljdaVaror", value => { state.foljdaVaror = value; });
   set("harHemma", value => { state.harHemma = new Set(value); });
+  set("narvaro", value => { state.narvaro = value; });
   set("stapleItems", value => { state.stapleItems = value; });
   set("stapleAsked", value => { state.stapleAsked = value; });
   // Prisbilden hör ihop och byts i ett stycke - eller inte alls. Lika gamla

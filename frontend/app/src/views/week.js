@@ -109,13 +109,26 @@ export function dagPrisTillstånd(recipe) {
 }
 
 /** Tiden och portionerna, i den ordning raden läses. Inget påhittat. */
-function dagMeta(recipe, { idag = false } = {}) {
+function dagMeta(recipe, { idag = false, index = -1 } = {}) {
+  // T1: bakom flaggan vecka.narvaro säger raden hur många som äter hemma
+  // just den dagen när det skiljer sig från hushållet ("2 av 4 hemma").
+  const alla = app.personer ? app.personer() : null;
+  const hemma = app.narvaroPa?.() && app.personerForDay && index >= 0 ? app.personerForDay(index) : null;
+  const portioner = hemma != null && hemma !== alla ? `${hemma} av ${alla} hemma` : (alla ? `${alla} port` : "");
   const bitar = [
     idag ? "Ikväll" : "",
     recipe.tid ? `${recipe.tid} min` : "",
-    app.personer ? `${app.personer()} port` : "",
+    portioner,
   ].filter(Boolean);
   return bitar.join(" · ");
+}
+
+/** T1: knappen som växlar dagens närvaro - bara bakom flaggan. */
+function narvaroKnapp(index, dagLång) {
+  if (!app.narvaroPa?.()) return "";
+  const hemma = app.personerForDay ? app.personerForDay(index) : app.personer?.();
+  return `<button type="button" class="vecka-dag-hemma" data-week-people="${index}"`
+    + ` aria-label="Vilka äter hemma på ${escapeHtml(dagLång)}? Nu ${hemma}"><span>${escapeHtml(String(hemma))} hemma</span></button>`;
 }
 
 /**
@@ -150,7 +163,7 @@ export function veckoDagMarkup(recipe, index, { idag = -1 } = {}) {
   const pris = prisMarkup(
     recipe.portionspris == null ? null : app.money(recipe.portionspris),
     dagPrisTillstånd(recipe));
-  const meta = dagMeta(recipe, { idag: ärIdag });
+  const meta = dagMeta(recipe, { idag: ärIdag, index });
   // M2: bildytan ritas ALDRIG som en egen <img> här. Elva av receptbankens
   // rätter har inget foto vi får publicera, och tio av dem är middagar -
   // reservkortet i den här raden är alltså vardag, inte randfall.
@@ -167,6 +180,7 @@ export function veckoDagMarkup(recipe, index, { idag = -1 } = {}) {
     + `</button>`
     + `<button type="button" class="vecka-dag-byt" data-week-swap="${escapeHtml(recipe.id)}"`
     + ` aria-label="Byt middag på ${escapeHtml(dagLång)}"><span>Byt</span></button>`
+    + narvaroKnapp(index, dagLång)
     // G3: "✓ Lagad" och "✗ Hoppade över" finns bara här. De var oåtkomliga
     // bakom ett hidden-attribut en gång; de får inte bli oåtkomliga igen för
     // att raden blev vackrare.
