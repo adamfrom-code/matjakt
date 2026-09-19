@@ -2882,6 +2882,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
             # ANDed - "barn" plus "snabbt" means both, which is what a filter
             # row of toggles means to a person using it.
             tags = [tag for value in params.get("tag", []) for tag in value.split(",") if tag]
+            # Z1: "Vad kan vi äta nu" - recept som innehåller någon av de här
+            # ingredienserna (skafferiet), flest träffar först. Gratis: det
+            # är samma sak som skafferiet, som J3 gjorde fritt.
+            ingredienser = [v.strip() for value in params.get("ingredient", []) for v in value.split(",") if v.strip()][:40]
             # J1: fritt närings- och meal prep-filter är Premium, och det
             # avgörs HÄR - inte av om klienten råkar rita ut låset. De
             # kurerade hyllorna (/api/recipes/shelves) är fortsatt gratis:
@@ -2903,6 +2907,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 max_time=number("maxTime"), min_protein=number("minProtein"),
                 max_kcal=number("maxKcal"),
                 query=clean_text(params.get("q", [""])[0]) or None,
+                ingredients_any=[clean_text(v) for v in ingredienser if clean_text(v)] or None,
                 limit=number("limit") or 60, offset=number("offset") or 0,
                 # Ett svar som beror på planen får ALDRIG ligga i en delad
                 # cache: "public, max-age" hade låtit en mellanhand servera
