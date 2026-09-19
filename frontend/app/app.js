@@ -7,7 +7,7 @@ if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "functi
     return controller.signal;
   };
 }
-import { applySyncBlob, buildSyncPayload, clearPriceSnapshots as clearPriceSnapshotsInState, flushServerSync, initAppState, persistLocally, presenceForDay, reconcileRecipeAliases, saveState, selectedRecipes, setPresence, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
+import { applySyncBlob, buildSyncPayload, clearPriceSnapshots as clearPriceSnapshotsInState, flushServerSync, initAppState, moveWeekPlanDay, persistLocally, presenceForDay, reconcileRecipeAliases, saveState, selectedRecipes, setPresence, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
 import { aliasMap, canonicalRecipeId } from "./src/services/recipe-aliases.js";
 import { aggregateShopping, chainListTotal, chainRowAmount, initShoppingView, prunePhantomItemNames, renderBasket, wireReportPriceButtons } from "./src/views/shopping.js";
 import { watchOtherTabs } from "./src/state/tab-sync.js";
@@ -2293,6 +2293,13 @@ function renderWeekOverview(selected, shoppingItems, total) {
       renderBasket();
     });
   });
+  // Y1: flytta dagens middag - byter plats med måldagen eller in i en tom.
+  // Samma rätter i veckan, så listan och priserna står kvar; bara dagarna
+  // byter. Bara ritad bakom flaggan vecka.flytta.
+  document.querySelectorAll("[data-week-move]").forEach(button => button.addEventListener("click", () => {
+    const [from, to] = String(button.dataset.weekMove).split(":").map(Number);
+    if (moveWeekPlanDay(from, to)) { trackEvent("middag_flyttad"); saveState(); invalidate("week", "home"); }
+  }));
   // T1: ett tryck stegar dagens närvaro nedåt (4 -> 3 -> 2 -> 1) och
   // tillbaka till alla. Bara ritad bakom flaggan vecka.narvaro.
   document.querySelectorAll("[data-week-people]").forEach(button => button.addEventListener("click", () => {
@@ -2540,6 +2547,8 @@ initWeekView({
   personer: () => state.personer,
   // T1: vem äter hemma per dag - bakom flaggan vecka.narvaro.
   narvaroPa: () => flagga("vecka.narvaro"),
+  // Y1: flytta en middag till en annan dag - bakom flaggan vecka.flytta.
+  flyttaPa: () => flagga("vecka.flytta"),
   personerForDay: index => presenceForDay(index),
   recipeFeedback,
   itemHasPrice: item => {

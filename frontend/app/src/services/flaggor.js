@@ -12,6 +12,7 @@ export const FLAGGOR = Object.freeze({
   "hushall.medlemmar": false,   // S: personer härleds ur medlemmarna (kind + portionsfaktor)
   "vecka.narvaro": false,       // T: vem äter hemma, per dag
   "vecka.rester": false,        // AA: rester som middag
+  "vecka.flytta": false,        // Y: flytta en middag till en annan dag
 });
 
 const NYCKEL = "matjakt.flaggor";
