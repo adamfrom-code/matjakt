@@ -7,7 +7,7 @@ if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "functi
     return controller.signal;
   };
 }
-import { applySyncBlob, buildSyncPayload, clearPriceSnapshots as clearPriceSnapshotsInState, flushServerSync, initAppState, persistLocally, reconcileRecipeAliases, saveState, selectedRecipes, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
+import { applySyncBlob, buildSyncPayload, clearPriceSnapshots as clearPriceSnapshotsInState, flushServerSync, initAppState, persistLocally, presenceForDay, reconcileRecipeAliases, saveState, selectedRecipes, setPresence, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
 import { aliasMap, canonicalRecipeId } from "./src/services/recipe-aliases.js";
 import { aggregateShopping, chainListTotal, chainRowAmount, initShoppingView, prunePhantomItemNames, renderBasket, wireReportPriceButtons } from "./src/views/shopping.js";
 import { watchOtherTabs } from "./src/state/tab-sync.js";
@@ -2293,6 +2293,14 @@ function renderWeekOverview(selected, shoppingItems, total) {
       renderBasket();
     });
   });
+  // T1: ett tryck stegar dagens närvaro nedåt (4 -> 3 -> 2 -> 1) och
+  // tillbaka till alla. Bara ritad bakom flaggan vecka.narvaro.
+  document.querySelectorAll("[data-week-people]").forEach(button => button.addEventListener("click", () => {
+    const index = Number(button.dataset.weekPeople);
+    const nu = presenceForDay(index);
+    setPresence(index, nu > 1 ? nu - 1 : state.personer);
+    saveState(); invalidate("week");
+  }));
   document.querySelectorAll("[data-week-swap]").forEach(button => button.addEventListener("click", () => openSwapModal(button.dataset.weekSwap)));
   document.querySelectorAll("[data-cooked]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.cooked; const fb = state.feedback[id] || {}; state.feedback[id] = { ...fb, cooked: (fb.cooked || 0) + 1 }; saveState(); renderBasket(); }));
   document.querySelectorAll("[data-skipped]").forEach(button => button.addEventListener("click", () => { const id = button.dataset.skipped; const fb = state.feedback[id] || {}; state.feedback[id] = { ...fb, skipped: (fb.skipped || 0) + 1 }; saveState(); renderBasket(); }));
@@ -2530,6 +2538,9 @@ const VALID_CHAINS = RELEASED_CHAINS;
 initWeekView({
   money, plural,
   personer: () => state.personer,
+  // T1: vem äter hemma per dag - bakom flaggan vecka.narvaro.
+  narvaroPa: () => flagga("vecka.narvaro"),
+  personerForDay: index => presenceForDay(index),
   recipeFeedback,
   itemHasPrice: item => {
     const match = databaseItemFor(item.namn);

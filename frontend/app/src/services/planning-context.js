@@ -58,6 +58,9 @@ export function planningContext(state, { premium = false, goals = null, branch =
     // De senaste veckorna, nyast först - recentlyEatenPenalty läser samma.
     history: Object.freeze((state.weekHistory || []).slice(0, 4).map(w => Object.freeze([...(w?.plan || [])]))),
     goals: premium && goals ? Object.freeze({ ...goals }) : null,
+    // T1: vem äter hemma per dag (null = alla). Läses av planeraren först
+    // när prissättningen kan räkna per dag (T2); tills dess en synlig fakta.
+    presence: Object.freeze(Array.isArray(state.narvaro) ? [...state.narvaro] : []),
     branch,
     objective: ["cheapest", "balanced", "protein"].includes(objective) ? objective : "cheapest",
     premium: Boolean(premium),
