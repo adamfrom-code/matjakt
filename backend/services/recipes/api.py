@@ -68,6 +68,7 @@ def import_sources(store: RecipeStore) -> int:
     import json as _json
     from .images import placeholder
 
+    bildstatus = las_bildstatus()
     imported = 0
     for path in sorted(RECIPE_SOURCE_DIR.glob("*.json")):
         try:
@@ -83,6 +84,11 @@ def import_sources(store: RecipeStore) -> int:
             # backfill script, which is where that belongs.
             if not recipe.get("image"):
                 recipe.update(placeholder(recipe))
+            # P09b: bildstatusen styr vad appen visar. En bild som källan
+            # säger visar något annat (REJECTED) eller som ingen kunnat
+            # bekräfta (NEEDS_REVIEW) visas inte - hellre reservkortet än
+            # fel matbild. Alt-texten är bevisets, aldrig receptnamnets.
+            tillampa_bildstatus(recipe, bildstatus.get(recipe["id"]))
             store.upsert_recipe(recipe)
             imported += 1
     return imported
@@ -322,3 +328,47 @@ def stats() -> dict:
         finally:
             store.close()
     return _cached(("stats",), build)
+
+
+# P09b. Klassificeringen från backend/scripts/bildstatus.py (P09a), i den
+# kompakta form servern läser: {id: {"status", "alt"}}. Genereras ur
+# källorna och committas; --check i CI håller den i takt med dem.
+BILDSTATUS_PATH = Path(__file__).resolve().parent / "bildstatus.json"
+
+# Vad varje status betyder för appen. Bara två visar fotot.
+BILDSTATUS_TILL_APP = {
+    "EXACT-KANDIDAT": "ok",
+    "GOOD_VARIANT-KANDIDAT": "ok",
+    "REJECTED": "rejected",
+    "NEEDS_REVIEW": "unverified",
+    "MISSING": "needs_image",
+}
+
+
+def las_bildstatus() -> dict:
+    """Kartan, eller tom när filen saknas (då visas inget foto alls -
+    fail closed, aldrig fel bild för att fylla en yta)."""
+    try:
+        import json as _json
+        return _json.loads(BILDSTATUS_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def tillampa_bildstatus(recipe: dict, post: dict | None) -> dict:
+    """Skriver imageStatus/imageAlt ur klassificeringen, och tar bort
+    bildreferensen när fotot inte får visas. Ett recept utan post är
+    oklassificerat: fotot visas inte förrän bildstatus.py körts."""
+    from .images import placeholder
+
+    if not recipe.get("image"):
+        recipe["imageStatus"] = "needs_image"
+        return recipe
+    status = BILDSTATUS_TILL_APP.get((post or {}).get("status"), "unverified")
+    if status == "ok":
+        recipe["imageStatus"] = "ok"
+        recipe["imageAlt"] = (post or {}).get("alt") or f"Foto: {recipe.get('imageSource') or 'okänd källa'}"
+        return recipe
+    recipe.update(placeholder(recipe))
+    recipe["imageStatus"] = status
+    return recipe
