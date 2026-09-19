@@ -13,6 +13,8 @@ export const FLAGGOR = Object.freeze({
   "vecka.narvaro": false,       // T: vem äter hemma, per dag
   "vecka.rester": false,        // AA: rester som middag
   "vecka.flytta": false,        // Y: flytta en middag till en annan dag
+  "hushall.puls": false,        // W: familjepulsen - vem gjorde vad, när
+  "planering.barn": false,      // U: barnvänliga rätter väger tyngre när hushållet har barn
   "skafferi.laga-nu": false,    // Z2: "Laga med det jag har" frågar banken med kanoniska alias + tid
 });
 
