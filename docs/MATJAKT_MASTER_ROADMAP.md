@@ -25,6 +25,12 @@ säger något annat är äldre än den här tabellen.
 | P03–P09 receptdata (sanning, identitet, kanoniska ingredienser, enheter, matchning, bildstatus) | **DONE** (#196 #201 #204 #197 #210 #218 #199 #203 #202 #221 #223) | se respektive changelog i `docs/changelog.d/` |
 | G8-flaken "första veckan utan betalvägg" | **DONE** (T5 #217, T5b #222) | läs efter omritningen + låsta kedjor rensas med prisbilden |
 | Native release 1.0 (2) | **DONE** i TestFlight (intern) | `docs/RELEASE_CANDIDATE_REPORT.md` |
+| R planeringsmotorns kontext | **PARTIAL → grund lagd** (R1 #228) | `planning-context.js`, `flaggor.js`; poängen och kandidaturvalet orörda |
+| S HouseholdMember med roller | **PARTIAL → grund lagd** (S1 #229) | `kind` + `portionFactor`, bakom `hushall.medlemmar` |
+| T vem äter hemma per dag | **NOT STARTED → grund lagd** (T1 #230) | `narvaro`, bakom `vecka.narvaro`; prissättning per dag = T2 |
+| Y planerna ändrades | **PARTIAL → flytt finns** (Y1 #231) | `moveWeekPlanDay`, bakom `vecka.flytta` |
+| Z vad kan vi äta nu | **PARTIAL → serversök finns** (Z1 #232) | `ingredients_any` + `/api/recipes?ingredient=`; klienten = Z2 |
+| AA leftovers | **NOT STARTED → grund lagd** (AA1 #233) | `rester.js`; Veckan = AA2 bakom `vecka.rester` |
 | Prisauditens grind | **BLOCKED EXTERNAL** | RÖD av 40 estimat-rader (volymvikter, beslut i `VOLYMVIKTER_ATT_GRANSKA.md`) |
 | IAP-produkter, App Privacy, Paid Apps, granskningskonto, Render-flaggor | **BLOCKED EXTERNAL** | BLOCKED – ADAM 1–7 i releaserapporten |
 
