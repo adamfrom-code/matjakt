@@ -7,7 +7,7 @@ if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "functi
     return controller.signal;
   };
 }
-import { applySyncBlob, buildSyncPayload, flushServerSync, initAppState, persistLocally, reconcileRecipeAliases, saveState, selectedRecipes, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
+import { applySyncBlob, buildSyncPayload, clearPriceSnapshots as clearPriceSnapshotsInState, flushServerSync, initAppState, persistLocally, reconcileRecipeAliases, saveState, selectedRecipes, setWeekPlan, state, swapWeekPlanDay } from "./src/state/app-state.js";
 import { aliasMap, canonicalRecipeId } from "./src/services/recipe-aliases.js";
 import { aggregateShopping, chainListTotal, chainRowAmount, initShoppingView, prunePhantomItemNames, renderBasket, wireReportPriceButtons } from "./src/views/shopping.js";
 import { watchOtherTabs } from "./src/state/tab-sync.js";
@@ -2657,14 +2657,9 @@ function settleWeekRecipeDetails() {
 }
 
 function clearPriceSnapshots() {
-  // Allt som prissatte den FÖRRA listan: live-totaler, databastotaler och
-  // jämförelsen. En veckomutation utan denna rensning målade förra veckans
-  // "Billigast"-krona och totaler som fakta tills en omhämtning råkade ske.
-  state.livePriser = {};
-  state.liveBranchTotals = {};
-  state.dbChainTotals = {};
-  state.dbComparison = null;
-  state.dbPricedAt = null;
+  // Allt som prissatte den FÖRRA listan - inklusive de låsta kedjorna
+  // (T5b). Rensningen bor i tillståndsmodulen och prövas i node.
+  clearPriceSnapshotsInState(state);
 }
 
 // Produkthändelseräknare - får aldrig blockera ett klick, aldrig kasta.
