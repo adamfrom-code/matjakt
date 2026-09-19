@@ -73,7 +73,7 @@ class NoternaBeskriverKopetIAppen(unittest.TestCase):
     def test_premium_saljs_via_in_app_purchase(self):
         self._kräver("In-App Purchase", "noterna säger inte att Premium köps i appen")
         self._kräver('"Prenumerera"', "köpknappens namn ska stå så granskaren hittar den")
-        self._kräver("samma subscription group",
+        self._kräver("same subscription group",
                      "att månad och år ligger i samma grupp är det som gör bytet Apples (3.1.2(b))")
 
     def test_bada_produkt_idna_ar_kodens(self):
@@ -99,7 +99,7 @@ class NoternaBeskriverKopetIAppen(unittest.TestCase):
     def test_granskaren_far_en_testvag_i_sandbox(self):
         self._kräver("sandbox", "hur granskaren testar köpet (Sandbox-konto) ska stå",
                      text=_platt().lower())
-        self._kräver("Så testar ni köpet", "ett stycke ska leda granskaren genom köpet")
+        self._kräver("How to test the purchase", "ett stycke ska leda granskaren genom köpet")
 
     def test_inga_belopp_ur_app_store_connect(self):
         träff = re.search(r"(?i)\b\d+([.,]\d+)?\s*(kr|kronor|sek)\b", _platt())
@@ -116,13 +116,26 @@ class NoternaBeskriverKopetIAppen(unittest.TestCase):
                      "introductory offer", "7 dagar", "sju dagar", "7 days", "seven days"):
             self.assertNotIn(fras, text, f"noterna påstår en gratisperiod: {fras!r}")
 
+    def test_noterna_ar_pa_engelska_med_appens_knappnamn(self):
+        # P02g (beslut 2026-09-19): App Review läser engelska. Knapparna
+        # citeras som de står i appen (svenska) med översättning i
+        # parentes, så granskaren hittar dem.
+        platt = _platt()
+        for fras in ("Notes for App Review", "How to test the purchase", "Restore Purchases",
+                     "Manage subscription", "Delete account", "Sandbox Apple ID"):
+            self._kräver(fras, "noterna ska vara på engelska och namnge vägarna")
+        for fras in ("Så testar ni köpet", "Kontoradering:", "Betalning:"):
+            self.assertFalse(fras in platt, f"svensk rubrik kvar i noterna: {fras!r}")
+        # Inga tredjeparts-SDK:er och ingen exakt plats - det bygget faktiskt gör.
+        self._kräver("No precise location", "platsdeklarationen ska stämma med bygget (postnummer, ingen GPS)")
+
     def test_granskningskontots_platshallare_star_kvar(self):
         # Kontot hör hemma i App Store Connect, inte i repot (N0h); men
         # raderna ska finnas, så att Adam ser var de fylls i. Tillåtet är
         # exakt det secret_scan.granskningskontot tillåter: hakparentes,
         # streck eller tomt.
         text = _text()
-        for fält in ("E-post", "Lösenord"):
+        for fält in ("Email", "Password"):
             with self.subTest(fält=fält):
                 self.assertIsNotNone(re.search(rf"(?m)^\s*{fält}:\s*(\[.*\]|-*)\s*$", text),
                                      f"raden för granskningskontots {fält.lower()} saknas eller är ifylld")

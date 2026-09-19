@@ -1,47 +1,58 @@
-Notes for App Review (fylls i i App Store Connect > App Review Information)
+Notes for App Review (entered in App Store Connect > App Review Information)
 
-Inloggning: appen fungerar utan konto. Konto skapas med e-post + lösenord i
-appen (ingen tredjepartsinloggning, därför ingen Sign in with Apple).
-Testkonto för granskning: skapa ett i appen, eller ange här:
-  E-post:    [FYLLS I AV ADAM - testkonto]
-  Lösenord:  [FYLLS I AV ADAM]
+Sign-in: the app works without an account. An account is created in the
+app with email + password (no third-party sign-in, hence no Sign in with
+Apple). Review account (create one in the app, or use this one):
+  Email:    [FILLED IN BY ADAM - review account]
+  Password: [FILLED IN BY ADAM]
 
-Inget förhandsvisningslås: appen och servern är öppna (utvecklingslåset
-avvecklades 2026-09-06). Granskaren kan använda appen direkt.
+No preview lock: the app and the server are open. The reviewer can use
+the app directly.
 
-Betalning: Premium säljs i appen via In-App Purchase (StoreKit 2) som
-auto-förnyande prenumeration. Två produkter i samma subscription group:
-se.matjakt.premium.monthly (1 månad) och se.matjakt.premium.yearly (1 år);
-byte mellan dem sköts av App Store. Priset i planvalet och på köpknappen
-är StoreKits lokaliserade pris för produkten. Köpknappen "Prenumerera"
-finns under Konto > Matjakt Premium och öppnar Apples köpark; samma köp
-går att göra från betalväggen som visas när en Premium-funktion öppnas.
-Bredvid köpknappen finns "Återställ köp". Prenumerationen sägs upp under
-"Hantera prenumeration" på kontosidan, som öppnar App Stores
-prenumerationssida. iOS-bygget har inga andra betalvägar: ingen
-kortbetalning, ingen länk till köp utanför appen, ingen kodinlösen.
+Payment: Premium is sold in the app via In-App Purchase (StoreKit 2) as an
+auto-renewable subscription. Two products in the same subscription group:
+se.matjakt.premium.monthly (1 month) and se.matjakt.premium.yearly
+(1 year); switching between them is handled by the App Store. The price
+shown in the plan picker and on the purchase button is StoreKit's
+localized price for the product - App Store Connect is the source of the
+price, and the app hardcodes no amount. The purchase button "Prenumerera"
+(Subscribe) is under Konto (Account) > Matjakt Premium and opens Apple's
+purchase sheet; the same purchase can be started from the paywall that
+appears when a Premium feature is opened. Below the purchase button is
+"Återställ köp" (Restore Purchases). The subscription is managed and
+cancelled under "Hantera prenumeration" (Manage subscription) on the
+account page, which opens the App Store's subscription management sheet.
+The iOS build has no other payment path: no card payment, no link to a
+purchase outside the app, no code redemption.
 
-Premium säljs också på webben (matjakt.store). Ett konto som köpt Premium
-där har Premium i appen så snart det loggar in, enligt riktlinje 3.1.3(b):
-samma prenumeration finns som In-App Purchase i appen. Den som redan har
-Premium ser ingen köpknapp, och appen hänvisar aldrig till köp någon
-annanstans.
+Premium is also sold on the web (matjakt.store). An account that bought
+Premium there has Premium in the app as soon as it signs in, per
+guideline 3.1.3(b): the same subscription is available as In-App Purchase
+in the app. A user who already has Premium sees no purchase button, and
+the app never refers to purchasing anywhere else.
 
-Så testar ni köpet: logga in med testkontot ovan (eller skapa ett nytt
-konto), öppna Konto > Matjakt Premium, välj Månad eller År och tryck
-Prenumerera. Köpet går genom Apples köpark och kan göras med ett
-Sandbox-konto, utan debitering. Efter köpet visar kontosidan
-prenumerationen (plan och förnyelsedatum via App Store), och
-Premium-funktionerna - alla butikers priser, exakt jämförelse, hela
-hushållet - är upplåsta direkt. "Återställ köp" hämtar en befintlig
-prenumeration för samma Apple-konto, t.ex. efter ominstallation; den
-kräver inloggning på det Matjakt-konto som gjorde köpet.
+How to test the purchase: sign in with the review account above (or
+create a new account), open Konto > Matjakt Premium, choose Månad (month)
+or År (year) and tap Prenumerera. The purchase goes through Apple's
+purchase sheet and can be made with a Sandbox Apple ID (Settings > App
+Store > Sandbox Account), with no charge. The server accepts sandbox
+transactions after full verification of Apple's signature, bundle id and
+product id, so Premium is active immediately after the purchase: the
+account page shows the subscription (plan and renewal date via the App
+Store), and the Premium features - every store's prices, the exact store
+comparison, the whole household - are unlocked. Sandbox subscriptions
+renew at Apple's accelerated sandbox rate. "Återställ köp" (Restore
+Purchases) fetches an existing subscription for the same Apple ID, e.g.
+after reinstalling; it requires signing in to the Matjakt account that
+made the purchase.
 
-Plats: används bara för att hitta butiker nära användaren (valfritt -
-postnummer räcker). Ingen spårning, inga analys- eller annons-SDK:er.
+Location: used only to find stores near the user, and only through a
+postcode the user types in (optional). No precise location, no tracking,
+no analytics or advertising SDKs.
 
-Kontoradering: Konto > Radera konto, direkt i appen.
+Account deletion: Konto > Radera konto (Delete account), directly in the
+app.
 
-Priser i appen kommer från butikskedjornas egna uppgifter; produktinformation
-delvis från Dabas. Kampanjbilder och receptfoton är licensierade (Pexels /
-Wikimedia Commons, kreditering på receptsidan).
+Prices in the app come from the grocery chains' own data; product
+information partly from Dabas. Campaign images and recipe photos are
+licensed (Pexels / Wikimedia Commons, credited on the recipe page).
