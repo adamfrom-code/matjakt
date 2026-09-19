@@ -56,6 +56,14 @@ class IosProjektetGarAttBygga(unittest.TestCase):
         info = plistlib.loads((ROT / "ios" / "App" / "App" / "Info.plist").read_bytes())
         self.assertEqual(info.get("CFBundleDisplayName"), "Matjakt")
 
+    def test_systemgranssnittet_ar_ljust(self):
+        # N1b. Appen är ljus (styles.css: mörkt läge är ett uttryckligt
+        # data-theme, inte prefers-color-scheme). Utan nyckeln följer
+        # tangentbord, ark och statusfält telefonens mörka läge över en ljus
+        # app - halvmörkt, inte ett tema.
+        info = plistlib.loads((ROT / "ios" / "App" / "App" / "Info.plist").read_bytes())
+        self.assertEqual(info.get("UIUserInterfaceStyle"), "Light")
+
     def test_byggutdata_ar_inte_sparad(self):
         import subprocess
         sparade = subprocess.run(
