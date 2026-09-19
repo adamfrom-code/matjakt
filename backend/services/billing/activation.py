@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
-"""Den första skapade veckan - och de saker som händer när den händer.
+"""Den första skapade veckan - och det som händer när den händer.
 
-Matjakt tog medvetet bort provperioden 2026-08-31. Det var rätt beslut på
-fel provperiod: en trial vid REGISTRERING testar nyfikenhet, och nyfikenhet
-konverterar inte. En trial efter AKTIVERING testar produkten på någon som
-redan har en vecka planerad och just sett att det skiljer 214 kr mellan
-butikerna. Det är ett helt annat köpbeslut.
+Registreringstrialen togs bort 2026-08-31 ("59/399, ingen automatisk
+trial"). J3 lade sedan en trial på ett annat ställe i tratten - sju dagars
+Premium efter den första skapade veckan - och affärsbeslutet 2026-09-19
+tog bort även den: INGEN automatisk trial, varken vid registrering eller
+vid aktivering. Premium är Free / Premium månad / Premium år, punkt.
+Gamla trialer som redan delats ut läses fortfarande (accounts/store.py,
+`trial_ends_at`) och får löpa ut av sig själva; ingen ny kan skrivas, för
+metoden som skrev dem finns inte längre.
 
-Därför finns ETT ställe som vet vad "kontot skapade sin första vecka"
-betyder, och allt som ska belönas hänger på det:
+Kvar är SIGNALEN. Ett ställe vet vad "kontot skapade sin första vecka"
+betyder, och det som fortfarande hänger på den:
 
-* J3 ger sju dagars Premium.
 * H5 (hänvisningen) betalar ut belöningen till den som bjöd in - just för
   att villkoret ska vara `vecka_skapad`, inte registrering, så vi inte
   betalar för tomma konton.
@@ -22,11 +24,6 @@ Signalen kommer från två håll och får bara utlösa EN gång:
    produkten.
 2. `/api/analytics/event` med `vecka_skapad` - klienten säger det själv.
 
-Att lita på (2) ensamt hade varit att låta vem som helst trigga sin egen
-trial genom att posta ett event. Det spelar mindre roll än det låter -
-belöningen är bunden till kontot och kan bara delas ut en gång - men (1)
-finns för att signalen ska vara sann även när ingen mäter.
-
 `AccountStore.mark_first_week` är atomär och returnerar True BARA på
 övergången. Allt här nedanför bygger på det: körs funktionen tio gånger
 händer belöningen en gång.
@@ -36,21 +33,19 @@ import logging
 
 logger = logging.getLogger("matjakt.billing.activation")
 
-# Sju dagar. Ett tal, ett ställe. Ändras det här ändras det överallt -
-# köpsidan läser det via /api/entitlements, inte ur en egen sträng.
-ACTIVATION_TRIAL_DAYS = 7
-
 
 def on_first_week(accounts, user_id, *, hooks=()) -> dict | None:
     """Anropas när ett konto kan ha skapat sin första vecka.
 
     Returnerar None när det INTE var den första (det vanliga fallet: varje
-    vecka efter den första), annars en sammanfattning av vad som delades ut.
+    vecka efter den första), annars en sammanfattning av vad krokarna gav.
+    Ingen entitlement ändras här - det är J3b:s hela poäng, och
+    test_packaging_j3.TheActivationTrialIsGone vaktar det.
 
     Varje hook får (accounts, user_id) och körs i sin egen try: en trasig
-    hänvisningsutbetalning får inte hindra provperioden, och tvärtom. Det
-    här är en belöningsväg, inte en betalväg - den får aldrig vara skälet
-    till att prissättningen av en vecka misslyckas."""
+    hänvisningsutbetalning får inte hindra nästa krok. Det här är en
+    belöningsväg, inte en betalväg - den får aldrig vara skälet till att
+    prissättningen av en vecka misslyckas."""
     if not user_id:
         return None
     try:
@@ -60,14 +55,7 @@ def on_first_week(accounts, user_id, *, hooks=()) -> dict | None:
         return None
     if not first:
         return None
-    granted = {"firstWeek": True, "trialDays": None, "hooks": []}
-    try:
-        trial_ends = accounts.grant_activation_trial(user_id, ACTIVATION_TRIAL_DAYS)
-        if trial_ends:
-            granted["trialDays"] = ACTIVATION_TRIAL_DAYS
-            granted["trialEndsAt"] = trial_ends
-    except Exception:
-        logger.exception("Kunde inte bevilja aktiveringstrial för konto %s", user_id)
+    granted = {"firstWeek": True, "hooks": []}
     for hook in hooks:
         try:
             result = hook(accounts, user_id)
