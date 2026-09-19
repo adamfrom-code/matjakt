@@ -244,6 +244,9 @@ bara om alla release-gates var gröna, och de tre ovan är det inte.
     generate-vapid-keys` → Render-miljövariabler.
 11. **Juridiska sakuppgifter** (från tidigare rapport): org.nr/adress i
     villkoren, DPA/SCC-underlag, support@matjakt.store, retention-beslut.
+12. **Simulatorpanelen**: i Claude Code-appen, öppna simulatorpanelen och
+    tryck "Let Claude use it" — då kan jag köra hela TestFlight-checklistan
+    (signup, vecka, IAP-sandbox) i simulatorn utan att du gör något mer.
 
 ## 14. Vad Apple gör nu
 
@@ -261,7 +264,20 @@ Ingenting väntar hos Apple just nu:
   *Submit to App Review* återstår — och efter godkännande släpps den
   **manuellt** (releaseType MANUAL), aldrig automatiskt till alla.
 
-## 15–20. Övrigt
+## 15. Simulatorkontroll av releasecommiten
+
+Samma commit (`40b715c`, samma webbundle som arkivet) byggd för iPhone 16e
+(iOS-simulator), **färsk installation**: appen startar, onboardingens
+ark "Vilka är ni hemma?" ligger över Ikväll, gränssnittet är ljust
+(statusfält, tangentbord), appen når produktionsbackenden. Inga fel i
+processloggen utöver simulatorns vanliga Security/BoardServices-brus.
+Tryckgenomgången (signup, vecka, byten, Handla, IAP-sandbox) gick inte att
+köra härifrån: Claude Codes simulatorpanel kräver ditt godkännande ("Let
+Claude use it") — BLOCKED – ADAM 12. Ett kosmetiskt fynd att ta i AO2:
+rubriken i onboardingens ark får en synlig fokusram (`outline`) när arket
+sätter fokus på den.
+
+## 16–20. Övrigt
 
 - **Deploy**: ingen manuell Render-deploy gjordes; hooken + hälsogrinden
   har tagit varje merge. Rollback inte utlöst (inga deployfel).
