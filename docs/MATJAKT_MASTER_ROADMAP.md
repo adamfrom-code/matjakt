@@ -339,9 +339,9 @@ Varje rad: status · filer · PR/commit · tester · nuvarande beteende · exakt
 | | |
 |---|---|
 | Finns | `recipes.image_status` med **två** värden (`ok`/`needs_image`), plus `image_source`, `image_source_url`, `image_credit`, `image_license`, `image_alt`; `services/recipes/images.py` `score_candidate()` (avvisar råvarufoton, icke-foton, fel rätt), `COMMERCIAL_LICENCES`; M2: 20 av 31 fick foto, 11 får reservkort (`src/views/receptbild.js`, `tests/reservkort.test.js`) |
-| PR | M2 #142, L1 #136 |
+| PR | M2 #142, L1 #136, **P09a** (bildstatus per recept med källbevis: 55 REJECTED · 62 EXACT-kandidater · 64 GOOD_VARIANT-kandidater · 48 NEEDS_REVIEW · 11 MISSING — `docs/BILDSTATUS.md`, `backend/scripts/bildstatus.py --check`) |
 | Tester | `test_recipe_images.py`, `tests/reservkort.test.js`, `tests/recipe-fallback.test.js` |
-| Restarbete | Utöka värdeförrådet till `EXACT | GOOD_VARIANT | MISSING | REJECTED`; låt `score_candidate` sätta EXACT/GOOD_VARIANT; ett REJECTED som hindrar att samma bild återkommer vid nästa `backfill_recipe_images.py`; adminvyn per status |
+| Restarbete | P09b: sätt `image_status` ur `docs/bildstatus.json` (REJECTED → reservkort, hellre MISSING än fel bild) och byt alt-texten mot källans beskrivning (den är idag genererad ur receptnamnet och ljuger med bilden); bekräfta kandidaterna med ögat; utöka värdeförrådet till `EXACT | GOOD_VARIANT | MISSING | REJECTED`; låt `score_candidate` sätta EXACT/GOOD_VARIANT; ett REJECTED som hindrar att samma bild återkommer vid nästa `backfill_recipe_images.py`; adminvyn per status |
 
 ### L · Kanoniska ingredienser — **PARTIAL**
 
