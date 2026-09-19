@@ -26,7 +26,18 @@
 // scripts/frontend_version.mjs och backend/scripts/check_frontend_version.py.
 const CACHE_NAME = "matjakt-shell-v__MATJAKT_VERSION__";
 
-self.addEventListener("install", () => self.skipWaiting());
+// AN2: reservbanken förhandscachas vid install. Den är vad appen visar när
+// backenden inte svarar - och offline hade den aldrig hunnit cachas, för
+// den hämtas först när API:t redan fallit. Versionen är skalets (CACHE_NAME
+// ur bygget), och filen genereras ur samma källor som API:t (P03a), så en
+// ny receptbank kommer med nästa bygge och den gamla städas vid activate.
+// Misslyckas hämtningen installeras skalet ändå - reservbanken fylls då
+// vid första lyckade hämtning, som förut.
+const PRECACHE = ["./data/recipes.json"];
+self.addEventListener("install", event => {
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE)).catch(() => {}));
+  self.skipWaiting();
+});
 
 self.addEventListener("activate", event => {
   event.waitUntil(
