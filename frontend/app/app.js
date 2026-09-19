@@ -21,6 +21,7 @@ import { filterByDiet, mergeDiet } from "./src/services/diet.js";
 import { inBudgetPool, limitCandidatePool, pickBalanced, pickCheapest, pickProtein } from "./src/services/planning.js";
 import { planningContext } from "./src/services/planning-context.js";
 import { flagga } from "./src/services/flaggor.js";
+import { barnBonus } from "./src/services/barnlage.js";
 import { API_BASE_URL, entitlementsApiUrl, geocodeApiUrl, pricingListApiUrl, pricingWeekApiUrl, productApiUrl as configuredProductApiUrl, recipeSearchApiUrl, recipesByPantryApiUrl } from "./src/api/config.js";
 import { setMarketingConsent, changePassword, claimAppleTransaction, deleteAccount, fetchAccountState, fetchCurrentUser, getStoredToken, login, logout as logoutRequest, openBillingPortal, redeemPremium, register, requestPasswordReset, resendVerification, resetPassword, saveAccountState, startCheckout, storeToken, verifyEmail } from "./src/api/auth.js";
 // errorText: inget rått fetch-fel når skärmen. "Failed to fetch" är inte
@@ -716,10 +717,21 @@ function comboPantryBonus(combo) {
   return combo.reduce((sum, recipe) => sum + pantryOverlap(recipe, home), 0) * PANTRY_BONUS_PER_ITEM;
 }
 
+// U1: barnvänliga rätter väger tyngre när hushållet har barn - bakom
+// flaggan planering.barn. Barnen räknas ur hushållsformuläret (vuxna/barn);
+// S1:s medlemsslag tar över när hushall.medlemmar är på och ett hushåll finns.
+function comboBarnBonus(combo) {
+  if (!flagga("planering.barn")) return 0;
+  const children = flagga("hushall.medlemmar") && householdActive()
+    ? (state.household?.members || []).filter(m => m.kind === "child" || m.profile?.child).length
+    : Number(state.hushall?.barn) || 0;
+  return barnBonus(combo, { children });
+}
 const comboAffinity = combo => combo.reduce((sum, recipe) => sum + recipeAffinity(recipe), 0)
   - comboVarietyPenalty(combo)
   - comboHistoryPenalty(combo)
-  + comboPantryBonus(combo);
+  + comboPantryBonus(combo)
+  + comboBarnBonus(combo);
 // combinations() is C(pool, count), so a fixed pool size makes the search
 // blow up as the week gets longer: with the previous fixed pool of 24 a
 // 7-dinner week evaluated 346,104 combos against 10,626 for 4 - measured at
