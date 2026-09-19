@@ -57,7 +57,30 @@ test("chooseMenu i app.js går genom kontexten - samma tre värden som förut", 
   const appJs = readFileSync(new URL("../frontend/app/app.js", import.meta.url), "utf8");
   const start = appJs.indexOf("function chooseMenu(");
   const body = appJs.slice(start, appJs.indexOf("\n}\n", start));
-  assert.match(body, /const ctx = planningContext\(state, \{ premium: hasPremium\(\), goals: currentNutritionGoals\(\), branch: selectedBranch\(\) \}\)/);
+  assert.match(body, /const ctx = planningContext\(state, \{\n\s+premium: hasPremium\(\), goals: currentNutritionGoals\(\), branch: selectedBranch\(\),/);
+  assert.match(body, /deriveFromMembers: flagga\("hushall\.medlemmar"\)/);
   assert.match(body, /bestMenuCombo\(candidates, ctx\.dinners, ctx\.budget, ctx\.branch\)/);
   assert.doesNotMatch(body, /bestMenuCombo\(candidates, state\.middagar/);
+});
+
+
+// S1: personer ur medlemmarna - bara bakom flaggan, och bara med ett hushåll.
+test("S1: personer härleds ur medlemmarnas slag och portionsfaktor bakom flaggan", () => {
+  const members = [
+    { userId: 1, kind: "adult", portionFactor: 1 },
+    { userId: 2, kind: "child", portionFactor: 1 },
+    { userId: 3, profile: { child: true } },          // gammal post utan kind
+    { userId: 4, kind: "guest", portionFactor: 1 },
+  ];
+  const av = planningContext({ personer: 2, hushall: { vuxna: 2, barn: 0 } }, { members, deriveFromMembers: false });
+  assert.deepEqual([av.people, av.adults, av.children, av.peopleSource], [2, 2, 0, "installningar"]);
+  const pa = planningContext({ personer: 2, hushall: { vuxna: 2, barn: 0 } }, { members, deriveFromMembers: true });
+  assert.deepEqual([pa.people, pa.adults, pa.children, pa.peopleSource], [4, 2, 2, "medlemmar"]);
+  // Utan hushåll gör flaggan ingenting.
+  const ensam = planningContext({ personer: 3 }, { members: null, deriveFromMembers: true });
+  assert.deepEqual([ensam.people, ensam.peopleSource], [3, "installningar"]);
+  // Portionsfaktorn från servern styr summan, klampad 1-12.
+  const halva = planningContext({}, { members: [{ kind: "adult", portionFactor: 1 }, { kind: "child", portionFactor: 0.5 }], deriveFromMembers: true });
+  assert.equal(halva.people, 1.5);
+  assert.equal(planningContext({}, { members: Array(20).fill({ kind: "adult", portionFactor: 1 }), deriveFromMembers: true }).people, 12);
 });

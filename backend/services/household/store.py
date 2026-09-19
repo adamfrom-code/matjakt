@@ -388,7 +388,7 @@ class HouseholdStore:
             "SELECT * FROM households WHERE id = ?", (int(household_id),)).fetchone()
         if not row:
             raise NotAMemberError("Hushållet finns inte")
-        return {
+        household = {
             "id": row["id"],
             "name": row["name"],
             "createdAt": row["created_at"],
@@ -396,6 +396,10 @@ class HouseholdStore:
             "role": member["role"],
             "members": self._members(household_id),
         }
+        # S1: summan av portionsfaktorerna - vad "personer" blir när den
+        # härleds ur medlemmarna (bakom flaggan hushall.medlemmar i appen).
+        household["portionSum"] = round(sum(m["portionFactor"] for m in household["members"]), 1)
+        return household
 
     def _members(self, household_id) -> list[dict]:
         """Medlemslistan. E-post kommer INTE härifrån - hushållsdatabasen ska
@@ -404,13 +408,21 @@ class HouseholdStore:
         rows = self._connection.execute(
             "SELECT * FROM household_members WHERE household_id = ? ORDER BY joined_at",
             (int(household_id),)).fetchall()
-        return [{
-            "userId": row["user_id"],
-            "role": row["role"],
-            "displayName": row["display_name"],
-            "profile": _json_or_none(row["profile"]) or {},
-            "joinedAt": row["joined_at"],
-        } for row in rows]
+        members = []
+        for row in rows:
+            profile = _json_or_none(row["profile"]) or {}
+            kind = member_kind(profile)
+            members.append({
+                "userId": row["user_id"],
+                "role": row["role"],
+                "displayName": row["display_name"],
+                "profile": profile,
+                "joinedAt": row["joined_at"],
+                # S1: slaget och dess portionsfaktor följer med varje medlem.
+                "kind": kind,
+                "portionFactor": PORTION_FACTOR[kind],
+            })
+        return members
 
     def member_user_ids(self, household_id) -> list[int]:
         return [row["user_id"] for row in self._connection.execute(
@@ -1101,6 +1113,26 @@ def _clean_product(product) -> dict | None:
 _SPICE = ("mild", "medel", "stark")
 _MAX_PROFILE_LIST = 12
 
+# S1: medlemmens SLAG. Rollen (admin/member) säger vad man får göra; slaget
+# säger vad man äter. `child` (J3) finns kvar och hålls i takt med slaget,
+# så gammal data och gamla klienter fortsätter fungera.
+MEMBER_KINDS = ("adult", "child", "guest")
+
+# Portionsfaktor per slag. Barnets faktor är ett PRODUKTBESLUT (hur mycket
+# mindre ett barn äter beror på åldern); tills det är taget räknas alla som
+# en portion - exakt som appen gör i dag (personer = vuxna + barn). Tabellen
+# finns för att beslutet ska vara EN rad med test, inte en spridd gissning.
+PORTION_FACTOR = {"adult": 1.0, "child": 1.0, "guest": 1.0}
+
+
+def member_kind(profile) -> str:
+    """Slaget ur profilen - `kind` om det finns, annars härlett ur `child`."""
+    profile = profile or {}
+    kind = str(profile.get("kind") or "").strip().lower()
+    if kind in MEMBER_KINDS:
+        return kind
+    return "child" if profile.get("child") else "adult"
+
 
 def _clean_profile(profile: dict) -> dict:
     """Profilen är avsiktligt LITEN (§3): kosttyp, styrka, allergier, ogillar.
@@ -1119,8 +1151,13 @@ def _clean_profile(profile: dict) -> dict:
             items = [item for item in items if item]
             if items:
                 cleaned[field] = items
-    if profile.get("child") is not None:
+    kind = str(profile.get("kind") or "").strip().lower()
+    if kind in MEMBER_KINDS:
+        cleaned["kind"] = kind
+        cleaned["child"] = kind == "child"
+    elif profile.get("child") is not None:
         cleaned["child"] = bool(profile.get("child"))
+        cleaned["kind"] = "child" if cleaned["child"] else "adult"
     return cleaned
 
 
