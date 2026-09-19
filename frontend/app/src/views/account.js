@@ -13,7 +13,8 @@
 // ---------------------------------------------------------------------------
 
 import { flushServerSync, saveState, state } from "../state/app-state.js";
-import { createHousehold, createInvite, leaveHousehold, removeMember, saveHouseholdProfile, saveNotificationPrefs } from "../api/household.js";
+import { createHousehold, createInvite, leaveHousehold, removeMember, saveHouseholdProfile, saveNotificationPrefs, fetchEvents } from "../api/household.js";
+import { pulsMarkup } from "./familjepuls.js";
 import { applySync, emptyHouseholdState } from "../services/household-state.js";
 import { getStoredToken, startCheckout } from "../api/auth.js";
 import { clampBudget } from "../services/calculations.js";
@@ -152,6 +153,25 @@ export function renderHousehold() {
     }
   }
   renderNotificationPrefs();
+  renderFamiljepuls();
+}
+
+// W1: familjepulsen - bakom flaggan hushall.puls. Hämtas när panelen ritas
+// och hushållet ändrats (id + revision); ett nätfel lämnar förra listan
+// kvar, aldrig ett felkort.
+let pulsHamtadFor = null;
+function renderFamiljepuls() {
+  const panel = $("householdPulsPanel");
+  if (!panel) return;
+  const pa = app.flagga("hushall.puls") && app.householdActive();
+  panel.hidden = !pa;
+  if (!pa) return;
+  const nyckel = `${state.household?.id}:${state.household?.revision}`;
+  if (pulsHamtadFor === nyckel) return;
+  pulsHamtadFor = nyckel;
+  fetchEvents(state.authToken, 30)
+    .then(({ events }) => { $("householdPuls").innerHTML = pulsMarkup(events); })
+    .catch(() => { pulsHamtadFor = null; });
 }
 
 // G13: HUSHÅLLET ÄR APPENS STARKASTE VIRALA KANAL och marknadsfördes inte en
