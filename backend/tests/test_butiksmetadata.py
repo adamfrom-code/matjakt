@@ -92,10 +92,17 @@ class AppStoreTexterna(unittest.TestCase):
         self.assertEqual(len(set(nyckelord.split(","))), len(nyckelord.split(",")),
                          "samma nyckelord står två gånger")
 
-    def test_beskrivningen_sager_priset_och_kallan(self):
+    def test_beskrivningen_sager_kallan_men_inget_ios_pris(self):
+        # I5b (beslut 2026-09-19): Premium köps i iOS-appen via App Store,
+        # och priset där är App Store Connects prispunkt - inte webbens
+        # 59/399. Copyn får inte lova en siffra som StoreKit kan visa
+        # annorlunda; den säger att det finns månad och år, och var priset
+        # visas.
         beskrivning = läs(APPSTORE / "description.txt")
-        for påstående in ("59 kr/mån", "399 kr/år", "Willys", "Hemköp", "City Gross", "Dabas"):
+        for påstående in ("Willys", "Hemköp", "City Gross", "Dabas", "prenumeration", "App Store"):
             self.assertIn(påstående, beskrivning, f"beskrivningen saknar {påstående!r}")
+        self.assertIsNone(re.search(r"\d+\s*kr(/|\b)", beskrivning),
+                          "ett belopp i kronor står i App Store-copyn - iOS-priset är App Stores, inte webbens")
         self.assertIn(KONTAKT, beskrivning)
 
     def test_beskrivningen_lovar_inget_gratislaget_inte_ger(self):
