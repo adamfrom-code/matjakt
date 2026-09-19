@@ -9,6 +9,25 @@ Inga tester har körts för det här dokumentet — siffrorna nedan är räknade
 (`grep -c 'def test_'` ger 2 463 backend-testfunktioner, `node:test` 796 fall) och
 CI:s täckningsgolv står i `backend/tests/tackningsgolv.txt` (70 %).
 
+## 0a. Tillägg 2026-09-19 — release candidate 1.0 (2)
+
+Läget efter nattens paket, avstämt i `docs/RELEASE_CANDIDATE_REPORT.md`
+(main `40b715c`, produktion samma SHA). Rader nedan i det här dokumentet som
+säger något annat är äldre än den här tabellen.
+
+| Krav / paket | Status 2026-09-19 | Bevis |
+|---|---|---|
+| N1 (våg N) köpflödet ut ur native-bygget | **DONE** (P02a–P02h, #198 #200 #206 #209 #212 #213 #215 #216) | StoreKit 2 via `@capgo/native-purchases`, `/api/billing/apple/transaction`, sandbox verifierat i produktion; `tests/storekit-i-appen.test.js`, `test_apple_iap.py` (33) |
+| J3 sju dagars trial | **REJECTED-SUPERSEDED** (J3b, #211) | beslut 2026-09-19: ingen automatisk trial; `TheActivationTrialIsGone` |
+| I5 skärmbilder efter våg L | **DONE** (I5b #220, I5c #225) | 18 bilder ur `make_store_screenshots.py`, uppladdade till ASC; copyn utan iOS-pris |
+| AM prestanda (dubbla anrop, 260 KB bank) | **DONE** (AM1 #208, AM2 #207, AN1 #219, AN2 #226) | 1 entitlements + 1 hyllor vid start; ETag/304; reservbanken offline |
+| AO mobilgranskning | **DONE** (AO1 #214) | `test_mobil_ergonomi.py` (375 px): fält 16 px, tumytor 44 px |
+| P03–P09 receptdata (sanning, identitet, kanoniska ingredienser, enheter, matchning, bildstatus) | **DONE** (#196 #201 #204 #197 #210 #218 #199 #203 #202 #221 #223) | se respektive changelog i `docs/changelog.d/` |
+| G8-flaken "första veckan utan betalvägg" | **DONE** (T5 #217, T5b #222) | läs efter omritningen + låsta kedjor rensas med prisbilden |
+| Native release 1.0 (2) | **DONE** i TestFlight (intern) | `docs/RELEASE_CANDIDATE_REPORT.md` |
+| Prisauditens grind | **BLOCKED EXTERNAL** | RÖD av 40 estimat-rader (volymvikter, beslut i `VOLYMVIKTER_ATT_GRANSKA.md`) |
+| IAP-produkter, App Privacy, Paid Apps, granskningskonto, Render-flaggor | **BLOCKED EXTERNAL** | BLOCKED – ADAM 1–7 i releaserapporten |
+
 ## Statusord
 
 | Status | Betyder här |
