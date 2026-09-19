@@ -33,6 +33,16 @@ const finiteNumber = value => (typeof value === "number" && Number.isFinite(valu
 const text = value => (typeof value === "string" ? value : undefined);
 const flag = value => (typeof value === "boolean" ? value : undefined);
 const names = value => (Array.isArray(value) ? value.filter(item => typeof item === "string") : undefined);
+// Y1: veckan får ha TOMMA dagar mitt i (null) - "flytta till fredag" när
+// torsdagen töms. Formen: strängar eller null, aldrig något annat, och inga
+// tomma platser på slutet (weekPlanDays fyller ut vid ritningen). Utan
+// flyttar förekommer ingen null, och då är det här exakt `names`.
+const planEntries = value => {
+  if (!Array.isArray(value)) return undefined;
+  const plan = value.filter(item => typeof item === "string" || item === null);
+  while (plan.length && plan[plan.length - 1] === null) plan.pop();
+  return plan;
+};
 const records = value => (Array.isArray(value) ? value.filter(isPlainObject) : undefined);
 const record = value => (isPlainObject(value) ? value : undefined);
 const recordOrNull = value => (isPlainObject(value) ? value : value === null ? null : undefined);
@@ -65,7 +75,7 @@ const FIELDS = {
   removedItems: names,
   harHemma: names,
   ogillar: names,
-  weekPlan: names,
+  weekPlan: planEntries,
   // T1: vem äter hemma, per dag. Sju platser; null = alla (state.personer),
   // ett tal = så många den dagen. Formen garanteras, aldrig innehållet.
   narvaro: value => (Array.isArray(value)
@@ -323,6 +333,26 @@ export function removeFromWeekPlan(id) {
 export function swapWeekPlanDay(dayIndex, newId) {
   state.weekPlan = state.weekPlan.map((id, index) => (index === dayIndex ? newId : id));
   state.valda = new Set(state.weekPlan);
+}
+
+/**
+ * Y1: flyttar dagens middag till en annan dag. Är den dagen tom flyttas
+ * rätten (avsändardagen blir tom); har den en middag byter de plats. Inget
+ * annat rörs: `valda` är samma mängd, närvaron (T1) hör till DAGEN och
+ * stannar, priserna gäller samma rätter. Ogiltiga index är en no-op.
+ */
+export function moveWeekPlanDay(from, to) {
+  const plan = Array.isArray(state.weekPlan) ? [...state.weekPlan] : [];
+  const giltig = i => Number.isInteger(i) && i >= 0 && i < WEEK_DAY_COUNT;
+  if (!giltig(from) || !giltig(to) || from === to || !plan[from]) return false;
+  while (plan.length < WEEK_DAY_COUNT) plan.push(null);
+  [plan[from], plan[to]] = [plan[to] ?? null, plan[from]];
+  // Trimma bort tomma platser på slutet - veckan lagras som förut, aldrig
+  // längre än sin sista middag (weekPlanDays fyller ut vid ritningen).
+  while (plan.length && plan[plan.length - 1] == null) plan.pop();
+  state.weekPlan = plan;
+  state.valda = new Set(plan.filter(Boolean));
+  return true;
 }
 
 // ---- sparning och synk ----------------------------------------------------

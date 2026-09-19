@@ -123,6 +123,14 @@ function dagMeta(recipe, { idag = false, index = -1 } = {}) {
   return bitar.join(" · ");
 }
 
+/** Y1: "Flytta till" - en knapp per annan dag, bara bakom flaggan vecka.flytta. */
+function flyttaMarkup(index, dagLång) {
+  if (!app.flyttaPa?.()) return "";
+  const knappar = DAYS.map((dag, till) => (till === index ? "" : `<button type="button" data-week-move="${index}:${till}"`
+    + ` aria-label="Flytta ${escapeHtml(dagLång)}s middag till ${escapeHtml(DAYS_LONG[till] || dag)}">${escapeHtml(dag)}</button>`)).join("");
+  return `<div class="vecka-dag-flytta"><span class="vecka-dag-flytta-rubrik">Flytta till</span>${knappar}</div>`;
+}
+
 /** T1: knappen som växlar dagens närvaro - bara bakom flaggan. */
 function narvaroKnapp(index, dagLång) {
   if (!app.narvaroPa?.()) return "";
@@ -190,7 +198,7 @@ export function veckoDagMarkup(recipe, index, { idag = -1 } = {}) {
     + `<div class="vecka-dag-meny-val">`
     + `<button type="button" class="${fb.cooked ? "marked" : ""}" data-cooked="${escapeHtml(recipe.id)}">✓ Lagad</button>`
     + `<button type="button" class="${fb.skipped ? "marked" : ""}" data-skipped="${escapeHtml(recipe.id)}">✗ Hoppade över</button>`
-    + `</div></details>`
+    + `</div>${flyttaMarkup(index, dagLång)}</details>`
     + `</div>`;
 }
 
