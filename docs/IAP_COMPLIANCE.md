@@ -20,6 +20,14 @@ ger sju dagars Premium efter kontots första skapade vecka (J3,
 Entitlement-modellen (P02b) bär provperioden som en egen källa med
 slutdatum, så beslutet kan tas åt vilket håll som helst utan omskrivning.
 
+> **Beslut 2026-09-19 (J3b): ingen automatisk trial.** Svar (C) i A6.
+> Aktiveringstrialen är borttagen ur koden: `ACTIVATION_TRIAL_DAYS` och
+> `grant_activation_trial` finns inte längre, `on_first_week` bär bara
+> signalen för hänvisningskroken (H5), och reviewnoterna nämner ingen
+> gratisperiod. Trialer som redan delats ut läses tills de löper ut.
+> Affärsmodellen är Free / Premium månad / Premium år. Det som står om
+> A6 och BLOCKED – ADAM 10 nedan är historik.
+
 ---
 
 ## (a) Vad Apples regler säger i dag

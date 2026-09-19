@@ -137,16 +137,15 @@ test("talen i tabellen är samma tal som features.py räknar med", () => {
   assert.ok(hushåll.premium.text.includes(String(MODELL.tal.PREMIUM_MAX_HOUSEHOLD_MEMBERS)));
 });
 
-test("provperioden utlovas inte i tabellen - den är bunden till kontot", () => {
-  // J3 ger sju dagar efter FÖRSTA skapade veckan, en gång per konto.
-  // /api/entitlements svarar inte med den, så klienten vet inte om den som
-  // läser tabellen redan förbrukat sin. "Sju dagar ingår" vore därför en ny
-  // osanning av exakt den sort paketet finns för att ta bort. Talet finns och
-  // står här så att raden går att skriva den dag svaret bär informationen.
-  assert.equal(läsKonstant("ACTIVATION_TRIAL_DAYS", läsPython(ACTIVATION_PY)), 7);
+test("ingen provperiod utlovas i tabellen - det finns ingen (J3b)", () => {
+  // J3 gav sju dagar efter FÖRSTA skapade veckan; beslutet 2026-09-19 tog
+  // bort den (J3b: ingen automatisk trial). Tabellen får därför inte lova
+  // någon - och konstanten som en gång bar talet finns inte längre i koden.
+  assert.ok(!/ACTIVATION_TRIAL_DAYS/.test(läsPython(ACTIVATION_PY)),
+    "billing/activation.py bär en trial-konstant igen - J3b tog bort den");
   const text = [...RADER.map(r => r.etikett), MARKUP].join(" ").toLowerCase();
-  assert.ok(!/provperiod|gratis i sju dagar|sju dagars/.test(text),
-    "tabellen lovar en provperiod den inte kan veta om användaren har kvar");
+  assert.ok(!/provperiod|gratis i sju dagar|sju dagars|prova gratis|free trial/.test(text),
+    "tabellen lovar en provperiod som inte finns");
 });
 
 // ---------------------------------------------------------------------------

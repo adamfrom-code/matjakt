@@ -31,6 +31,8 @@ import sys
 import tempfile
 import threading
 import unittest
+from datetime import datetime, timedelta, timezone
+import re
 import uuid
 from datetime import date
 from http.server import ThreadingHTTPServer
@@ -409,75 +411,106 @@ class TheSavingsHistory(PackagingTestCase):
         self.assertEqual(api_server.SAVINGS.weeks(user_id), [])
 
 
-class TheActivationTrial(PackagingTestCase):
-    """Sju dagar Premium efter den FÖRSTA veckan - inte vid registrering."""
+class TheActivationTrialIsGone(PackagingTestCase):
+    """Ingen automatisk trial - beslutet 2026-09-19 (J3b).
+
+    J3 gav sju dagars Premium efter den första skapade veckan. Det är borta:
+    varken registreringen, den första prissatta veckan eller klientens
+    vecka_skapad-händelse ändrar en entitlement. Signalen (mark_first_week)
+    är kvar för hänvisningskroken H5."""
+
+    def _user(self, token):
+        return self.request("GET", "/api/auth/me", token=token)[1]["user"]
+
+    def _assert_free(self, token):
+        user = self._user(token)
+        self.assertFalse(user["premium"], user)
+        self.assertIsNone(user["trialEndsAt"], user)
+        self.assertFalse(user["trialUsed"], user)
+        self.assertFalse(self.request("GET", "/api/entitlements", token=token)[1]["isPremium"])
 
     def test_registering_grants_nothing(self):
-        token = self.account()
-        payload = self.request("GET", "/api/entitlements", token=token)[1]
-        self.assertFalse(payload["isPremium"])
-        self.assertEqual(self.request("GET", "/api/auth/me", token=token)[1]["user"]["trialEndsAt"],
-                         None)
+        self._assert_free(self.account())
 
-    def test_the_first_priced_week_grants_seven_days(self):
+    def test_the_first_priced_week_grants_nothing(self):
         token = self.account()
         self.assertEqual(self.request("POST", "/api/pricing/week",
                                       {"items": _ITEMS, "people": 2}, token=token)[0], 200)
-        user = self.request("GET", "/api/auth/me", token=token)[1]["user"]
-        self.assertTrue(user["premium"])
-        self.assertEqual(user["premiumSource"], "trial")
-        self.assertTrue(user["trialEndsAt"])
-        self.assertTrue(self.request("GET", "/api/entitlements", token=token)[1]["isPremium"])
-
-    def test_the_trial_is_granted_exactly_once(self):
-        token = self.account()
-        self.request("POST", "/api/pricing/week", {"items": _ITEMS, "people": 2}, token=token)
-        first = self.request("GET", "/api/auth/me", token=token)[1]["user"]["trialEndsAt"]
-        for _ in range(3):
+        self._assert_free(token)
+        # ...och inte den andra eller tredje heller.
+        for _ in range(2):
             self.request("POST", "/api/pricing/week", {"items": _ITEMS, "people": 2}, token=token)
-        self.request("POST", "/api/analytics/event", {"event": "vecka_skapad"}, token=token)
-        self.assertEqual(self.request("GET", "/api/auth/me", token=token)[1]["user"]["trialEndsAt"],
-                         first)
+        self._assert_free(token)
 
-    def test_the_client_event_grants_it_too(self):
-        """Samma signal från andra hållet. Vilken som kommer först spelar
-        ingen roll - mark_first_week är atomär."""
+    def test_the_client_event_grants_nothing_either(self):
         token = self.account()
         self.request("POST", "/api/analytics/event", {"event": "vecka_skapad"}, token=token)
-        self.assertTrue(self.request("GET", "/api/auth/me", token=token)[1]["user"]["premium"])
+        self._assert_free(token)
 
-    def test_a_paying_account_is_not_handed_a_trial(self):
-        """En trial ovanpå en prenumeration är inget kunden fått, och det
-        gör siffran i tratten fel."""
-        token = self.account(premium=True)
-        self.request("POST", "/api/pricing/week", {"items": _ITEMS, "people": 2}, token=token)
-        user = self.request("GET", "/api/auth/me", token=token)[1]["user"]
-        self.assertEqual(user["premiumSource"], "comped")
-        self.assertIsNone(user["trialEndsAt"])
+    def test_the_self_serve_endpoint_still_refuses(self):
+        token = self.account()
+        status, _ = self.request("POST", "/api/auth/start-trial", {}, token=token)
+        self.assertGreaterEqual(status, 400)
+        self._assert_free(token)
 
-    def test_mark_first_week_is_the_one_atomic_signal(self):
-        """Kroken H5 hänger på. True BARA på övergången."""
+    def test_the_first_week_signal_still_fires_once_for_the_hooks(self):
+        """H5 hänger på övergången. True BARA första gången - och det som
+        kommer tillbaka är krokarnas resultat, aldrig en entitlement."""
         token = self.account()
         user_id = self.user_id(token)
-        store = api_server.ACCOUNT_STORE
-        self.assertTrue(store.mark_first_week(user_id))
-        self.assertFalse(store.mark_first_week(user_id))
-        self.assertFalse(store.mark_first_week(user_id))
+        seen = []
 
-    def test_a_hook_that_falls_does_not_take_the_trial_with_it(self):
-        """Belöningsvägen får aldrig vara skälet till att en vecka inte går
-        att prissätta."""
+        def hook(accounts, uid):
+            seen.append(uid)
+            return {"hook": "sett"}
+
+        first = activation.on_first_week(api_server.ACCOUNT_STORE, user_id, hooks=(hook,))
+        self.assertEqual(first, {"firstWeek": True, "hooks": [{"hook": "sett"}]})
+        self.assertIsNone(activation.on_first_week(api_server.ACCOUNT_STORE, user_id, hooks=(hook,)))
+        self.assertEqual(seen, [user_id])
+        self._assert_free(token)
+
+    def test_a_hook_that_falls_does_not_take_the_signal_with_it(self):
         token = self.account()
         user_id = self.user_id(token)
 
         def broken(accounts, uid):
             raise RuntimeError("hänvisningen sprack")
 
-        result = activation.on_first_week(api_server.ACCOUNT_STORE, user_id, hooks=(broken,))
-        self.assertEqual(result["trialDays"], activation.ACTIVATION_TRIAL_DAYS)
+        self.assertEqual(activation.on_first_week(api_server.ACCOUNT_STORE, user_id, hooks=(broken,)),
+                         {"firstWeek": True, "hooks": []})
 
-    def test_the_trial_length_is_one_constant(self):
-        self.assertEqual(activation.ACTIVATION_TRIAL_DAYS, 7)
+    def test_nothing_in_the_code_can_write_a_trial(self):
+        """Regressionsvakten. En trial som 'råkar' komma tillbaka kommer
+        tillbaka genom en av tre dörrar: konstanten, metoden eller en
+        UPDATE som sätter trial_ends_at till något annat än NULL."""
+        self.assertFalse(hasattr(activation, "ACTIVATION_TRIAL_DAYS"))
+        self.assertFalse(hasattr(api_server.ACCOUNT_STORE, "grant_activation_trial"))
+        rot = Path(api_server.__file__).resolve().parent
+        skrivningar = []
+        for fil in [rot / "api_server.py", *sorted((rot / "services").rglob("*.py"))]:
+            for nummer, rad in enumerate(fil.read_text(encoding="utf-8").splitlines(), 1):
+                if re.search(r"trial_ends_at\s*=(?!\s*NULL\b)", rad) and "UPDATE" in rad.upper():
+                    skrivningar.append(f"{fil.relative_to(rot)}:{nummer}: {rad.strip()}")
+                if "trial_period_days" in rad and "checkout" in rad.lower():
+                    skrivningar.append(f"{fil.relative_to(rot)}:{nummer}: {rad.strip()}")
+        self.assertEqual(skrivningar, [], "något skriver en trial:\n" + "\n".join(skrivningar))
+
+    def test_an_already_granted_trial_is_still_honoured_until_it_ends(self):
+        """Den som fick sina sju dagar före beslutet behåller dem: läsningen
+        är kvar, bara skrivningen är borta."""
+        token = self.account()
+        user_id = self.user_id(token)
+        store = api_server.ACCOUNT_STORE
+        ends = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
+        with store._lock:
+            store._connection.execute("UPDATE users SET trial_ends_at = ?, trial_used = 1 WHERE id = ?",
+                                      (ends, user_id))
+            store._connection.commit()
+        user = self._user(token)
+        self.assertTrue(user["premium"])
+        self.assertEqual(user["premiumSource"], "trial")
+        self.assertEqual(user["trialEndsAt"], ends)
 
 
 if __name__ == "__main__":
