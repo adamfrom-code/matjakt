@@ -29,8 +29,11 @@ säger något annat är äldre än den här tabellen.
 | S HouseholdMember med roller | **PARTIAL → grund lagd** (S1 #229) | `kind` + `portionFactor`, bakom `hushall.medlemmar` |
 | T vem äter hemma per dag | **NOT STARTED → grund lagd** (T1 #230) | `narvaro`, bakom `vecka.narvaro`; prissättning per dag = T2 |
 | Y planerna ändrades | **PARTIAL → flytt finns** (Y1 #231) | `moveWeekPlanDay`, bakom `vecka.flytta` |
-| Z vad kan vi äta nu | **PARTIAL → serversök finns** (Z1 #232) | `ingredients_any` + `/api/recipes?ingredient=`; klienten = Z2 |
+| Z vad kan vi äta nu | **PARTIAL → serversök finns** (Z1 #232) | `ingredients_any` + `/api/recipes?ingredient=`; klienten = Z2 (#235) |
 | AA leftovers | **NOT STARTED → grund lagd** (AA1 #233) | `rester.js`; Veckan = AA2 bakom `vecka.rester` |
+| Z klienten | **grund lagd** (Z2 #235) | "Laga med det jag har" frågar banken, bakom `skafferi.laga-nu` |
+| W Familjepuls | **NOT STARTED → grund lagd** (W1 #236) | `/api/household/events` + panelen, bakom `hushall.puls` |
+| U Barnläge | **PARTIAL → grund lagd** (U1 #237) | `barnlage.js` i `comboAffinity`, bakom `planering.barn` |
 | Prisauditens grind | **BLOCKED EXTERNAL** | RÖD av 40 estimat-rader (volymvikter, beslut i `VOLYMVIKTER_ATT_GRANSKA.md`) |
 | IAP-produkter, App Privacy, Paid Apps, granskningskonto, Render-flaggor | **BLOCKED EXTERNAL** | BLOCKED – ADAM 1–7 i releaserapporten |
 
