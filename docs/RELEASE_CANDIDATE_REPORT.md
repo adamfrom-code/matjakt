@@ -197,10 +197,13 @@ har regressionstest och sabotage:
 | Y1 planerna ändrades | #231 | `moveWeekPlanDay(from, to)`, veckan får en tom dag mitt i; "Flytta till" bakom `vecka.flytta` |
 | Z1 vad kan vi äta nu | #232 | `search(ingredients_any=…)` med kanoniska alias, `GET /api/recipes?ingredient=…` |
 | AA1 rester | #233 | `rester.js`: kokta − ätna per dag, resterdagar; kopplas in i AA2 bakom `vecka.rester` |
+| Z2 laga med det jag har | #235 | rutan frågar banken (kanoniska alias, tid), kostfiltret gäller svaret; bakom `skafferi.laga-nu` |
+| W1 familjepuls | #236 | `GET /api/household/events` (visningsnamn, aldrig e-post) + panelen "Familjepuls" bakom `hushall.puls` |
+| U1 barnläge | #237 | mjuk bonus för barnvänliga rätter i `comboAffinity` när hushållet har barn; bakom `planering.barn` |
 
-Kvar i 2.0-listan: T2 (prissättning per dag), Z2/AA2 (klientdelarna),
-intelligent skafferi (AB), barnläge (U), Matmötet (V), Familjepuls (W),
-smartare receptsök, egna familjerecept, receptvarianter.
+Kvar i 2.0-listan: T2 (prissättning per dag), AA2 (rester i Veckan),
+intelligent skafferi (AB), Matmötet (V), smartare receptsök, egna
+familjerecept, receptvarianter.
 
 ## 12. P1 REMAINING
 
