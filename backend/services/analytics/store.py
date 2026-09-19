@@ -32,6 +32,8 @@ from datetime import date, datetime, timedelta, timezone
 ANALYTICS_EVENTS = frozenset({
     "cta_testa_gratis", "cta_logga_in", "cta_se_hur_det_fungerar", "view_premium",
     "vecka_skapad", "fynd_tillagt", "lista_anvand", "recept_delat",
+    # Y1: en middag flyttad till en annan dag (bakom flaggan vecka.flytta).
+    "middag_flyttad",
     "prisfel_rapporterat", "recept_bytt",
     "view_home", "view_week", "view_recipes", "view_basket", "view_pantry",
     # Vyer appen redan skickade men listan avvisade. setView() i app.js
