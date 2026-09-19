@@ -30,7 +30,7 @@ import { escapeHtml, safeHttpUrl } from "./src/utils/html.js";
 import { closeModal, openModal } from "./src/utils/modal.js";
 import { askConfirm } from "./src/views/dialog.js";
 import { kopplaSvepBort, kopplaTangentbordsBorttag } from "./src/utils/swipe-remove.js";
-import { TAG_LABELS, hasTag, loadRecipe, loadRecipes } from "./src/data/recipes.js";
+import { TAG_LABELS, hasTag, loadRecipe, loadRecipes, searchRecipes } from "./src/data/recipes.js";
 import { PACKAGE_INFO, PRODUCT_CATALOG, RECIPE_DETAILS, RECIPE_QUANTITIES } from "./src/data/legacy-catalog.js";
 import { dinnerCandidates } from "./src/data/meal-type.js";
 import { initRecipesView, mapApiRecipe, openRecipeTab, recipeFallbackMarkup, recipePhoto, renderRecipePage, renderRecipes } from "./src/views/recipes.js";
@@ -4465,10 +4465,34 @@ function renderCookResults(localMatches, externalRecipes, hiddenByDiet = false) 
   $("cookResults").innerHTML = (localHtml || externalHtml) ? localHtml + externalHtml : `<p class="live-loading">Lägg till varor i skafferiet så letar vi fram recept du kan laga direkt.</p>`;
   document.querySelectorAll("[data-cook-open]").forEach(button => button.addEventListener("click", () => { closeCookModal(); openRecipeTab(button.dataset.cookOpen); }));
 }
+// Z2: bakom flaggan skafferi.laga-nu frågar "Laga med det jag har" BANKEN
+// (Z1: kanoniska alias, flest träffar först, tid) i stället för att matcha
+// exakta namn i klienten. Svaret snävas till det kost-/allergifiltret
+// släpper igenom (localRecipesForUser) - servern vet inget om kosten, och
+// ett recept med allergener får inte smyga in bakvägen.
+async function serverMatchesForPantry(pantryNames) {
+  const tillatna = new Map(localRecipesForUser().map(recipe => [recipe.id, recipe]));
+  const maxTime = Number($("cookMaxTime")?.value) || undefined;
+  const hits = await searchRecipes({ ingredients: pantryNames, maxTime, limit: 12 });
+  return hits.filter(hit => tillatna.has(hit.id))
+    .map(hit => ({ recipe: tillatna.get(hit.id), matched: hit.matchedIngredients || [] }));
+}
 async function openCookModal() {
   openModal($("cookModal"), { onClose: closeCookModal });
   const pantryNames = pantryNamesForCooking();
   const dietFilterActive = dietFilterIsActive();
+  const lagaNu = flagga("skafferi.laga-nu");
+  const filters = $("cookFilters");
+  if (filters) filters.hidden = !lagaNu;
+  if (lagaNu && pantryNames.length) {
+    renderCookResults([], null);
+    try {
+      renderCookResults(await serverMatchesForPantry(pantryNames), []);
+    } catch {
+      renderCookResults(matchLocalRecipesToPantry(localRecipesForUser(), pantryNames), []);
+    }
+    return;
+  }
   const localMatches = matchLocalRecipesToPantry(localRecipesForUser(), pantryNames);
   if (dietFilterActive) { renderCookResults(localMatches, [], true); return; }
   renderCookResults(localMatches, null);
@@ -4484,6 +4508,7 @@ async function openCookModal() {
 }
 function closeCookModal() { closeModal($("cookModal")); }
 $("cookFromPantryBtn").addEventListener("click", openCookModal);
+$("cookMaxTime")?.addEventListener("change", () => { if (flagga("skafferi.laga-nu")) openCookModal(); });
 document.querySelectorAll("[data-cook-close]").forEach(button => button.addEventListener("click", closeCookModal));
 restoreNutritionGoalsForm();
 // Kontovyn (kontoarket, hushållet, onboardingen, paywallen) bor i

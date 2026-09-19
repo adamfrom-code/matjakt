@@ -13,6 +13,7 @@ export const FLAGGOR = Object.freeze({
   "vecka.narvaro": false,       // T: vem äter hemma, per dag
   "vecka.rester": false,        // AA: rester som middag
   "vecka.flytta": false,        // Y: flytta en middag till en annan dag
+  "skafferi.laga-nu": false,    // Z2: "Laga med det jag har" frågar banken med kanoniska alias + tid
 });
 
 const NYCKEL = "matjakt.flaggor";
