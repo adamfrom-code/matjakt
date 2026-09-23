@@ -97,20 +97,25 @@ class TheThreeProductionErrors(unittest.TestCase):
             db.close(); tmp.cleanup()
 
     def test_a_dense_liquid_is_never_one_exact_package(self):
-        """2 msk honung behöver ~42 g (densitet ~1,4) och ryms INTE i en
-        15-gramsburk. Regeln prövade förut bara mängderna, inte att varan var
+        """2 msk honung behöver 42 g (uppmätt densitet 1,40) och ryms INTE i en
+        20-gramsburk. Regeln prövade förut bara mängderna, inte att varan var
         en torr krydda, så honung fick "1 förpackning, exakt" - och en
         underskattad rad räknas in i säkra totaler och går rakt in i
         billigast-jämförelsen mellan kedjor.
 
         Revisionen fångar den inte heller: audit.py flaggar volym-som-styck
         bara när paketenheten saknas i massregistret, vilket är precis det
-        här fallet. Testet är därför enda skyddet."""
-        for namn, produkt, kategori in [
-            ("Honung", "Honung Flytande", "Skafferi > Sötningsmedel"),
-            ("Sirap", "Sirap Ljus", "Skafferi > Sötningsmedel"),
-            ("Olivolja", "Olivolja Extra", "Skafferi > Olja & vinäger"),
-            ("Tomatpuré", "Tomatpuré", "Skafferi > Konserver"),
+        här fallet. Testet är därför enda skyddet.
+
+        Sedan P06b har honung, sirap och tomatpuré UPPMÄTTA densiteter
+        (Livsmedelsverkets vikttabell): raden räknas då exakt - men till
+        rätt antal burkar, aldrig till en. Olivolja saknar densitet och
+        förblir osäker."""
+        for namn, produkt, kategori, burkar in [
+            ("Honung", "Honung Flytande", "Skafferi > Sötningsmedel", 3),      # 42 g / 20 g
+            ("Sirap", "Sirap Ljus", "Skafferi > Sötningsmedel", 3),            # 42 g / 20 g
+            ("Olivolja", "Olivolja Extra", "Skafferi > Olja & vinäger", None),  # ingen densitet
+            ("Tomatpuré", "Tomatpuré", "Skafferi > Konserver", 2),             # 36 g / 20 g
         ]:
             engine, store_id, tmp, db = _engine_with([{
                 "id": "x", "name": produkt, "size": "20g", "quantity": 20.0,
@@ -120,8 +125,13 @@ class TheThreeProductionErrors(unittest.TestCase):
                 # Ingen tyst passering: matchas varan inte alls prövar testet
                 # ingenting, och då är det värdelöst som skydd.
                 self.assertIsNotNone(row, f"{namn} matchades inte - testet mäter inget")
-                self.assertFalse(row["exactPackaging"],
-                                 f"{namn} markerades som exakt förpackning")
+                # Felet var "EN förpackning, exakt". Det får aldrig komma tillbaka.
+                self.assertFalse(row["packages"] == 1 and row["exactPackaging"],
+                                 f"{namn} markerades som en exakt förpackning")
+                if burkar is None:
+                    self.assertFalse(row["exactPackaging"], f"{namn} markerades som exakt")
+                else:
+                    self.assertEqual((row["packages"], row["exactPackaging"]), (burkar, True), namn)
             finally:
                 db.close(); tmp.cleanup()
 

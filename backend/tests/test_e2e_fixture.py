@@ -58,8 +58,8 @@ class FixtureCoverage(unittest.TestCase):
     """Fixturen får inte TILLVERKA estimat.
 
     Ett estimat betyder att motorn inte kunde räkna om receptets mått till
-    förpackningens enhet. I verkligheten händer det - 2 msk tomatpuré mot en
-    gramtub är en äkta lucka - men en fixtur som säljer mjöl per liter
+    förpackningens enhet. I verkligheten händer det - 2 dl currypasta mot en
+    gramburk är en äkta lucka - men en fixtur som säljer mjöl per liter
     tillverkar luckor som inte finns, och då mäter resan fel sak.
 
     Gränsen är satt strax över de sex äkta raderna, inte över de 33 som

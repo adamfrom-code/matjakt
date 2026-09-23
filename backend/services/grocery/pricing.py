@@ -874,12 +874,42 @@ def dairy_gram_ml_equivalent(ingredient: str) -> bool:
 # priskällan (VERIFIED_STORE_PRICE / referenspris) svarar för om priset
 # stämmer.
 #
-# BARA KETCHUP. Samma tabell har rader för crème fraiche, yoghurt, filmjölk
-# och kvarg, och en annan tabell för mjöl och havregryn. De är inte inlagda:
-# ett liknande namn i en tabell är inte en granskad produktmatchning. De
-# ligger i docs/VOLYMVIKTER_ATT_GRANSKA.md med källa och konsekvens.
+# INTE MEJERIRADERNA. Samma PM har rader för crème fraiche, yoghurt,
+# filmjölk och kvarg, och en annan tabell för mjöl och havregryn. De är inte
+# inlagda: ett liknande namn i en tabell är inte en granskad produktmatchning
+# (fetthalt, naturell/smaksatt). De ligger i docs/VOLYMVIKTER_ATT_GRANSKA.md.
+#
+# P06b: TOMATPURÉ, SIRAP OCH HONUNG ur Livsmedelsverkets VIKTTABELL.
+#
+# KÄLLA: Livsmedelsverket, "Texter i den tryckta vikttabellen" (vikttabellen
+# uppdaterad senast 2001, gamla livsmedelskoder), kolumnerna g/mått och g/dl:
+#   1138  Tomatpuré konserv, konc, 1 msk   18 g   120 g/dl
+#   8003  Sirap ljus, 1 tsk                 7 g   140 g/dl
+#   8004  Honung, 1 tsk                     7 g   140 g/dl
+# Samma tabell har raden "1048 Tomatketchup, 1 msk 18 g, 120 g/dl" - exakt
+# det PM 2024 mätte upp tjugo år senare (18 g/msk, n=20). Den överens-
+# stämmelsen är skälet att den äldre tabellen får bära de här tre raderna.
+#
+# INGA MOTSTRIDIGA VÄGAR, samma prövning som för ketchup: 18/15 = 1,20 och
+# 120/100 = 1,20; 7/5 = 1,40 och 140/100 = 1,40. Måttet och decilitern ger
+# samma tal, så msk, tsk och dl går ihop.
+#
+# PRODUKTMATCHNINGEN. "Tomatpuré" i handeln är alltid koncentrerad (tub
+# eller burk) - tabellradens vara. "Sirap" i receptbanken är ljus sirap;
+# mörk sirap är samma sockerlösning och får samma tal - en mätning av just
+# den mörka finns inte, och skillnaden kan inte flytta en förpackning vid
+# receptens mängder (msk). Andra källor (USDA) väger en amerikansk matsked
+# tomatpuré till 16 g (~1,08 g/ml); den svenska myndighetens tal på den
+# svenska varan gäller här, och avvikelsen är dokumenterad, inte gömd.
+#
+# INTE currypasta och sambal oelek: ingen av Livsmedelsverkets tabeller
+# väger dem. De får ingen siffra - se THICK_PASTES nedan för hur deras
+# paketantal ändå kan vara säkert utan en densitet.
 VERIFIED_DENSITY_G_PER_ML = {
     "ketchup": 1.20,
+    "tomatpure": 1.20,
+    "sirap": 1.40,
+    "honung": 1.40,
 }
 
 
@@ -892,6 +922,28 @@ def verified_density(ingredient: str) -> float | None:
     träffar = [(len(namn), täthet) for namn, täthet in VERIFIED_DENSITY_G_PER_ML.items()
                if folded == namn or folded.endswith(namn)]
     return max(träffar)[1] if träffar else None
+
+
+# TJOCKA PASTOR UTAN UPPMÄTT DENSITET - currypasta och sambal oelek.
+#
+# Ingen av Livsmedelsverkets tabeller väger dem, och projektet hittar inte
+# på densiteter. Men PAKETANTALET kan vara säkert utan en densitet: ingen
+# matvara väger mer än 2 g/ml (de tyngsta i vikttabellen är sirap och honung
+# på 1,40). Behöver receptet 15 ml och burken rymmer 100 g ryms mängden
+# oavsett vad pastan faktiskt väger - 15 ml är högst 30 g. Antalet är då
+# exakt 1, inte gissat, och raden får räknas som exakt på samma grund som
+# de torra kryddorna: en ÖVRE GRÄNS, inte en uppskattning. Behöver receptet
+# mer än gränsen ger (2 dl currypasta mot en 200 g-burk) förblir raden ett
+# ärligt estimat. Listan är kort och explicit, som DRY_SPICES.
+THICK_PASTES = frozenset({
+    "currypasta", "rod currypasta", "gron currypasta", "gul currypasta",
+    "sambal oelek",
+})
+PASTE_MAX_DENSITY_G_PER_ML = 2.0
+
+
+def is_thick_paste(ingredient) -> bool:
+    return _fold(ingredient) in THICK_PASTES
 
 
 # Styckfamiljen: st, förp, p, pack, pk är samma räknesort - "Ägg 6p" mot
@@ -1928,8 +1980,11 @@ class RecipePricingEngine:
                     and (grams := baking_grams(ingredient, amount, unit)) is not None):
                 effective_amount, effective_unit = grams, "g"
             # Mejeri och släta såser. Uppmätt densitet där Livsmedelsverket
-            # har vägt varan, annars köksstandardens 1 g = 1 ml.
-            elif dairy_gram_ml_equivalent(ingredient) and package_unit:
+            # har vägt varan, annars köksstandardens 1 g = 1 ml. Varor med
+            # uppmätt densitet utanför mejerifamiljen (tomatpuré, sirap,
+            # honung) går samma väg - med sitt eget tal, aldrig med 1,0.
+            elif (dairy_gram_ml_equivalent(ingredient)
+                    or verified_density(ingredient) is not None) and package_unit:
                 pf = _fold(package_unit)
                 uf = _fold(unit)
                 täthet = verified_density(ingredient) or 1.0
@@ -2008,6 +2063,11 @@ class RecipePricingEngine:
                                  * (package_amount or 0))
                 if (is_dry_spice(ingredient)
                         and 0 < required_ml <= 30 and package_grams >= 15):
+                    count, exact = 1, True
+                elif (is_thick_paste(ingredient) and required_ml > 0
+                        and required_ml * PASTE_MAX_DENSITY_G_PER_ML <= package_grams):
+                    # Övre gräns, inte densitet: mängden ryms i EN burk vad
+                    # pastan än väger (se THICK_PASTES).
                     count, exact = 1, True
                 else:
                     # Fail-closed: en förpackning visas, men raden är osäker

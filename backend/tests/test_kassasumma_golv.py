@@ -7,6 +7,10 @@ uppskattat antal", men rubriksiffran var ändå lägre än kassan. Tre
 msk-rader - honung, olivolja, tomatpuré - gjorde ~60 kr osynliga:
 användaren budgeterade 640 och betalade 700.
 
+Honung och tomatpuré har sedan P06b uppmätta densiteter och räknas exakt;
+testerna använder därför harissa - msk mot gram utan densitet - som den
+osäkra raden.
+
 Det saknade begreppet var inte "den här RADEN vet vi inte" - det fanns redan
 - utan "den här SUMMAN är minst X".
 """
@@ -59,14 +63,14 @@ class _Priced(unittest.TestCase):
 
 class TheTotalSaysWhenItIsAFloor(_Priced):
     def test_an_uncertain_row_makes_the_total_a_floor(self):
-        """Honung i msk mot en 350 g-burk: priset är känt, antalet gissat.
+        """Harissa i msk mot en 140 g-burk: priset är känt, antalet gissat.
         Radens kostnad räknas inte in - då är summan en undre gräns."""
         self._add("Kycklingfilé Naturell", 79.90, 700, "g")
-        self._add("Honung Flytande", 32.0, 350, "g")
+        self._add("Harissa", 32.0, 140, "g")
 
         result = self.engine.price_list([
             {"name": "Kycklingfilé", "amount": 600, "unit": "g"},
-            {"name": "Honung", "amount": 2, "unit": "msk"},
+            {"name": "Harissa", "amount": 2, "unit": "msk"},
         ], "Willys", self.store.id)
 
         self.assertEqual(result["totalCheckoutCost"], 79.90)
@@ -108,11 +112,11 @@ class TheTotalSaysWhenItIsAFloor(_Priced):
 
     def test_the_floor_travels_all_the_way_out_in_the_payload(self):
         self._add("Kycklingfilé Naturell", 79.90, 700, "g")
-        self._add("Honung Flytande", 32.0, 350, "g")
+        self._add("Harissa", 32.0, 140, "g")
 
         payload = grocery_api.price_week([
             {"name": "Kycklingfilé", "amount": 600, "unit": "g"},
-            {"name": "Honung", "amount": 2, "unit": "msk"},
+            {"name": "Harissa", "amount": 2, "unit": "msk"},
         ], chains=["Willys"])
         willys = next(r for r in payload["results"] if r["chain"] == "Willys")
         self.assertTrue(willys["totalIsFloor"])
