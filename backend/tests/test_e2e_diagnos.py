@@ -33,7 +33,7 @@ class DiagnosenLaserRiktigaSvaret(unittest.TestCase):
             try:
                 store = db.upsert_store(chain="Willys", external_store_id="w1",
                                         name="Willys Test", active=True)
-                for namn, storlek, pris in (("Pasta", "1 kg", 24.9), ("Tomatpuré", "140 g", 12.5)):
+                for namn, storlek, pris in (("Pasta", "1 kg", 24.9), ("Harissa", "140 g", 12.5)):
                     product = db.find_or_create_product(RawProduct(
                         chain="Willys", external_product_id=namn.lower(), name=namn,
                         store_id="w1", store_name="Willys", gtin=None, brand=None,
@@ -45,7 +45,7 @@ class DiagnosenLaserRiktigaSvaret(unittest.TestCase):
                                             source_url=None, fetched_at=time.time())
                 return RecipePricingEngine(db).price_list([
                     {"name": "Pasta", "amount": 250, "unit": "g"},          # exakt
-                    {"name": "Tomatpuré", "amount": 2, "unit": "msk"},      # osäker: msk mot gram
+                    {"name": "Harissa", "amount": 2, "unit": "msk"},        # osäker: msk mot gram, ingen densitet
                     {"name": "Enhörningskött", "amount": 1, "unit": "st"},  # saknas
                 ], "Willys", store.id)
             finally:
@@ -60,13 +60,13 @@ class DiagnosenLaserRiktigaSvaret(unittest.TestCase):
         self.assertEqual(result["totalItems"], 3, result)
         self.assertEqual(result["realPriceItems"], 1, result)
         osäker = [r for r in result["matchedItems"] if r.get("rowUncertain")]
-        self.assertEqual([r["name"] for r in osäker], ["Tomatpuré"], result["matchedItems"])
+        self.assertEqual([r["name"] for r in osäker], ["Harissa"], result["matchedItems"])
         # En osäker rad har ingen radtotal - den får inte tyst bli 0 kr.
         self.assertIsNone(osäker[0]["totalCost"])
 
     def test_bade_saknad_och_osaker_rad_namnges_var_for_sig(self):
         rader = rader_som_saenker_taeckningen(self._prissatt())
-        self.assertEqual(rader, {"osäkra": ["Tomatpuré"], "saknade": ["Enhörningskött"]})
+        self.assertEqual(rader, {"osäkra": ["Harissa"], "saknade": ["Enhörningskött"]})
 
     def test_ett_svar_utan_problem_ger_tomma_listor(self):
         self.assertEqual(rader_som_saenker_taeckningen(

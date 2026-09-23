@@ -7,7 +7,7 @@ kategorikonflikter)."""
 
 from .pricing import (UNREASONABLE_PACKAGE_COUNT, UNREASONABLE_ROW_COST, RecipePricingEngine,
                       _MASS, _VOLUME, _exclusion_hit, _fold, _words, baking_grams,
-                      dairy_gram_ml_equivalent, kilo_price_as_pack_price)
+                      dairy_gram_ml_equivalent, kilo_price_as_pack_price, verified_density)
 
 # SMAKSORD: produktnamn som ser ut som en smaksatt eller söt VARIANT av
 # råvaran i stället för råvaran själv - "Kanel" prissatt mot kanelbullar,
@@ -104,7 +104,8 @@ def run_pricing_audit(grocery_store, recipe_store, chains: list[str], servings: 
                     note("estimat", recipe, ing, chain, row, f"({unit}->{row.get('packageUnit')})")
                     nyckel = f"{ing['name']} ({unit})"
                     estimat_per_ingrediens[nyckel] = estimat_per_ingrediens.get(nyckel, 0) + 1
-                if row.get("perKg") or dairy_gram_ml_equivalent(ing["name"]) or baking_grams(ing["name"], 1, "dl") is not None:
+                if (row.get("perKg") or dairy_gram_ml_equivalent(ing["name"]) or verified_density(ing["name"]) is not None
+                        or baking_grams(ing["name"], 1, "dl") is not None):
                     pass
                 elif folded_unit in _MASS and package_unit not in _MASS and exact:
                     note("gram_som_styck", recipe, ing, chain, row)

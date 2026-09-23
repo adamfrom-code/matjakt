@@ -22,8 +22,36 @@ Referens 1 i rapporten = "Volymviktsförsök utförda på Livsmedelsverket
 | Vara | Motorn | Källan | Var |
 |---|---|---|---|
 | Tomatketchup | 1,00 g/ml | **1,20 g/ml** | Tabell 10, s. 16. tsk 6 g (n=20), msk 18 g (n=20) |
+| Tomatpuré | ingen (estimat) | **1,20 g/ml** | Vikttabellen (källa 2), kod 1138 "Tomatpuré konserv, konc": 1 msk 18 g, 120 g/dl — P06b |
+| Sirap | ingen (estimat) | **1,40 g/ml** | Vikttabellen, kod 8003 "Sirap ljus": 1 tsk 7 g, 140 g/dl — P06b |
+| Honung | ingen (estimat) | **1,40 g/ml** | Vikttabellen, kod 8004 "Honung": 1 tsk 7 g, 140 g/dl — P06b |
 
 Se `VERIFIED_DENSITY_G_PER_ML` i `backend/services/grocery/pricing.py`.
+
+### Källa 2: Livsmedelsverkets vikttabell (P06b)
+
+PM 2024 väger varken tomatpuré, sirap eller honung. Det gör Livsmedelsverkets
+äldre **vikttabell** — "Texter i den tryckta vikttabellen", uppdaterad senast
+2001, med de gamla livsmedelskoderna. Kolumnerna är g per mått och g/dl.
+Myndigheten tillhandahåller inte längre filen själv; kopian som lästs ligger
+på <https://surdegsmakarn.wordpress.com/wp-content/uploads/2012/06/vikttabell.pdf>
+(rubriken "OBS! Viktabellen uppdaterades senast 2001 och har gamla
+livsmedelskoder").
+
+**Kontrollen som gör att den får användas:** tabellens rad "1048 Tomatketchup,
+1 msk 18 g, 120 g/dl" är exakt vad PM 2024 mätte upp tjugo år senare (msk
+18 g, n=20). De två källorna säger samma sak där de överlappar.
+
+**Ingen motstridig väg.** För alla tre ger måttet och decilitern samma tal:
+18/15 = 1,20 och 120/100 = 1,20; 7/5 = 1,40 och 140/100 = 1,40.
+
+**Produktfrågan.** Tomatpuré i handeln är alltid koncentrerad (tub eller
+burk), tabellradens vara. Receptbanken skriver "Sirap" och menar ljus sirap;
+mörk sirap får samma tal — det är samma sockerlösning och en egen mätning
+saknas. **Avvikande källa, inte gömd:** USDA väger en amerikansk matsked
+(14,8 ml) tomatpuré till 16 g, ~1,08 g/ml. Den svenska myndighetens tal på
+den svenska varan används; skillnaden (10 %) kan flytta antalet burkar bara
+vid en paketgräns (4 msk mot en 70 g-burk: 72 g mot 65 g).
 
 ---
 
@@ -69,10 +97,24 @@ banken, så det här slår bredare än mejerivarorna.
 
 ---
 
-## Vad som INTE finns i källan
+## Vad som INTE finns i någon av källorna
 
-Tomatpuré, sirap, currypasta och sambal oelek — de fyra rader som gör
-prisrevisionen röd (se O10b i `MASTER_BACKLOG.md`). De förblir osäkra.
+Currypasta och sambal oelek. Ingen av Livsmedelsverkets tabeller väger dem,
+och de får därför **ingen densitet** (`verified_density` svarar None,
+låst av `test_de_tva_osakra_far_ingen_pahittad_siffra`).
+
+Deras paketantal är ändå säkert i receptens mängder, utan att någon densitet
+antas: ingen matvara väger över 2 g/ml (tabellens tyngsta är sirap och honung
+på 1,40), så 1 tsk sambal oelek (5 ml) väger högst 10 g och 1 msk currypasta
+(15 ml) högst 30 g — båda ryms i varje burk i handeln. Motorn räknar då
+**en** förpackning och märker raden exakt, på samma grund som torra kryddor:
+en övre gräns, inte en uppskattning (`THICK_PASTES`,
+`PASTE_MAX_DENSITY_G_PER_ML` i `pricing.py`, P06b). Behöver ett recept mer
+än gränsen ger — 2 dl currypasta mot en 200 g-burk — förblir raden ett
+ärligt estimat.
+
+Tomatpuré, sirap och honung, som tidigare stod här, har fått sina tal ur
+vikttabellen (källa 2 ovan).
 
 ---
 

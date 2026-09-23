@@ -135,17 +135,18 @@ class Delenheter(unittest.TestCase):
 
 
 class OsakertHelaVagen(unittest.TestCase):
-    def _tomatpure(self):
-        # Tomatpuré i msk mot en tub i gram. Ingen källbelagd densitet finns
-        # (roadmap M: O10b) - alltså ett estimat, inte en gissning.
+    def _harissa(self):
+        # Harissa i msk mot en burk i gram. Ingen källbelagd densitet finns
+        # - alltså ett estimat, inte en gissning. (Tomatpuré spelade rollen
+        # till P06b, då den fick sin uppmätta densitet ur vikttabellen.)
         return _engine_with([
-            {"id": "tp", "name": "Tomatpuré", "quantity": 140, "unit": "g", "price": 9.0},
+            {"id": "ha", "name": "Harissa", "quantity": 140, "unit": "g", "price": 9.0},
         ])
 
     def test_msk_mot_gram_utan_densitet_ar_ett_estimat(self):
-        engine, store_id, tmp, db = self._tomatpure()
+        engine, store_id, tmp, db = self._harissa()
         try:
-            row = engine.price_item("Tomatpuré", 2, "msk", "Willys", store_id)
+            row = engine.price_item("Harissa", 2, "msk", "Willys", store_id)
             # Raden bär exactPackaging=False och ett golv på ett paket. Att
             # totalCost nollas och raden hålls ur summan sker i price_list -
             # två lager, och båda vaktas: det här testet vaktar signalen,
@@ -158,11 +159,11 @@ class OsakertHelaVagen(unittest.TestCase):
 
     def test_den_osakra_raden_halls_ur_totalen(self):
         engine, store_id, tmp, db = _engine_with([
-            {"id": "tp", "name": "Tomatpuré", "quantity": 140, "unit": "g", "price": 9.0},
+            {"id": "ha", "name": "Harissa", "quantity": 140, "unit": "g", "price": 9.0},
             {"id": "ps", "name": "Pasta", "quantity": 500, "unit": "g", "price": 15.0},
         ])
         try:
-            r = engine.price_list([{"name": "Tomatpuré", "amount": 2, "unit": "msk"},
+            r = engine.price_list([{"name": "Harissa", "amount": 2, "unit": "msk"},
                                    {"name": "Pasta", "amount": 400, "unit": "g"}],
                                   "Willys", store_id)
             self.assertTrue(r["totalIsFloor"])
