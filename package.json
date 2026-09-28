@@ -26,12 +26,12 @@
   },
   "homepage": "https://github.com/adamfrom-code/matjakt#readme",
   "dependencies": {
-    "@capacitor/android": "^8.5.1",
+    "@capacitor/android": "^8.5.2",
     "@capacitor/app": "^8.1.1",
     "@capacitor/browser": "^8.0.4",
-    "@capacitor/cli": "^8.5.1",
-    "@capacitor/core": "^8.5.1",
-    "@capacitor/ios": "^8.5.1",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
     "@capacitor/keyboard": "^8.0.5",
     "@capgo/native-purchases": "^8.7.0"
   },
