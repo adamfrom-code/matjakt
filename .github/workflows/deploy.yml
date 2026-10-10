@@ -103,7 +103,7 @@ jobs:
       - name: Cache-stämpeln i det som deployas är digesten av det som deployas
         run: python backend/scripts/check_frontend_version.py --build dist/frontend
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist/frontend
       - uses: actions/deploy-pages@v4
